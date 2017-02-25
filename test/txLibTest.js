@@ -1,12 +1,31 @@
 /* global
-describe it
+describe it beforeEach
 */
 
-const { expect } = require('chai')
-
+const chai = require('chai')
+const chaiAsPromised = require('chai-as-promised')
+chai.use(chaiAsPromised)
+const { expect } = chai
 const dataStore = require('../dataStore-btc')
-const lib = require('../abcWalletTxLib-btc')
-const btc = lib.makeEngine()
+const sim = require('../simulate-async.js')
+const initOptions = {
+  ABCTxLibAccess: 'this is the ABCTxLibAccess thing',
+  masterPrivateKey: 'KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
+  masterPublicKey: 'KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
+  callbacks: {
+    abcWalletTxAddressesChecked: (ABCWalletTx, progressRatio) => {
+      // console.log(progressRatio)
+    },
+    abcWalletTxTransactionsChanged: (abcTransactions) => {
+      // console.log(abcTransactions)
+    },
+    abcWalletTxBlockHeightChanged: (ABCWalletTx, height) => {
+      // console.log(height)
+    }
+  }
+}
+let lib = require('../abcWalletTxLib-btc')
+let btc = lib.makeEngine(initOptions)
 
 process.stdout.write('\x1Bc')
 
@@ -41,7 +60,7 @@ describe('BTC Engine', () => {
   })
 
   it('should return current balance', () => {
-    const expected = 4.6
+    const expected = 58
     const actual = btc.getBalance()
 
     expect(actual).to.equal(expected)
@@ -62,7 +81,7 @@ describe('BTC Engine', () => {
   })
 
   it('should return an unused/non-reserved addressed', () => {
-    const expected = '1pq3iwq5p889m1u4aepUA9271Tz'
+    const expected = '1this_is_a_fresh_address1111111111'
     const actual = btc.getFreshAddress()
 
     expect(actual).to.equal(expected)
@@ -75,9 +94,9 @@ describe('BTC Engine', () => {
     expect(actual).to.equal(expected)
   })
 
-  describe('getFreshAddress', () => {
-    let usedAddress = '1ap9c9md98tymqu3aeppqw23OT1'
-    let freshAddress = '1pq3iwq5p889m1u4aepUA9271Tz'
+  describe('isAddressUsed', () => {
+    let usedAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+    let freshAddress = '1this_is_a_fresh_address1111111111'
 
     it('should return true for a used address', () => {
       const expected = true
@@ -93,8 +112,39 @@ describe('BTC Engine', () => {
     })
   })
 
-//   it('should set an unsigned transaction to signed', () => {
-//       const expected =
-// adds 64 bytes of gibberish to the abcTransaction object
-//   })
+  it('should set an unsigned transaction to signed', () => {
+    let unsignedTx = dataStore.getNewTransaction()
+
+    expect(btc.signTx({abcTransaction: unsignedTx})).to.eventually.have.property(
+      'signedTx', '1234567890123456789012345678901234567890123456789012345678901234')
+  })
+
+  describe('async testing', () => {
+    it('should increase the numTransactions when a new transaction is detected', () => {
+      let before = btc.getNumTransactions()
+      dataStore.addNewTransaction()
+      let after = btc.getNumTransactions()
+
+      expect(after).to.equal(before + 1)
+    })
+
+    it('should update the balance when a new transaction is detected', () => {
+      let newTransaction = dataStore.getTransactions()[0]
+      let newAmount = newTransaction.amountSatoshi
+
+      const before = btc.getBalance()
+      dataStore.addNewTransactions([newTransaction])
+      const after = btc.getBalance()
+
+      expect(after).to.equal(before + newAmount)
+    })
+
+    it('should update the blockHeight when a new transaction is detected', () => {
+      const before = btc.getBlockHeight()
+      dataStore.addNewBlock()
+      const after = btc.getBlockHeight()
+
+      expect(after).to.equal(before + 1)
+    })
+  })
 })

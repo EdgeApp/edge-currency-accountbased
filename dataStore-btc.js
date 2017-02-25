@@ -1,30 +1,35 @@
+let faker = require('faker')
+
 let dataStore = {
-  masterPrivateKey: '', // KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
-  masterPublicKey: '',
-  callbacks: [],
+  initOptions: undefined,
+  masterPrivateKey: undefined, // KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
+  masterPublicKey: undefined,
+  abcTxLibAccess: undefined,
+  callbacks: undefined,
   tokensStatus: false,
   supportedTokens: ['XCP', 'TATIANACOIN'],
   enabledTokens: [],
   addresses: {
-    '1ap9c9md98tymqu3aeppqw23OT1': {currentBalance: 1.5, isUsed: true},
-    '1wp9cnm5p8xym0u3aepNAYECOTN': {currentBalance: 3.1, isUsed: true},
-    '1pq3iwq5p889m1u4aepUA9271Tz': {currentBalance: 0, isUsed: false}
+    '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa': {currentBalance: 58, isUsed: true},
+    '1this_is_a_fresh_address1111111111': {currentBalance: 0, isUsed: false},
+    '1this is a used address11111111111': {currentBalance: 0, isUsed: true}
   },
+  blockHeight: 1,
   transactions: [
     { // 00
       abcWalletTransaction: '',
       metadata: {
         payeeName: 'Satoshi Nakamoto',
-        category: 'Block Reward',
+        category: 'Income:Block Reward',
         notes: 'Some notes about this transaction',
-        amountFiat: 50000,
+        amountFiat: 5,
         bizId: undefined,
         miscJson: ''
       },
       txid: '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
       date: '2009-01-03 18:15:05',
-      blockHeight: 0,
-      amountSatoshi: 0,
+      blockHeight: 0, // 0 means unconfirmed, 1-based
+      amountSatoshi: 50,
       providerFee: 0,
       networkFee: 0,
       runningBalance: 50,
@@ -48,10 +53,10 @@ let dataStore = {
       txid: '3387418aaddb4927209c5032f515aa442a6587d6e54677f08a03b8fa7789e688',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 51,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -72,10 +77,10 @@ let dataStore = {
       txid: '4574958d135e66a53abf9c61950aba340e9e140be50efeea9456aa9f92bf40b5',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 52,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -96,10 +101,10 @@ let dataStore = {
       txid: '8b960c87f9f1a6e6910e214fcf5f9c69b60319ba58a39c61f299548412f5a1c6',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 53,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -120,10 +125,10 @@ let dataStore = {
       txid: 'f1db8d2c1ed576bc22f73016b3cbc1496797c442c7df9bbbe7649df2460c78aa',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 54,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -144,10 +149,10 @@ let dataStore = {
       txid: '60ff2dfdf67917040139903a0141f7525a7d152365b371b35fd1cf83f1d7f704',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 55,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -168,10 +173,10 @@ let dataStore = {
       txid: '8f6b63012753005236b1b76e4884e4dee7415e05ab96604d353001662cde6b53',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 56,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -192,10 +197,10 @@ let dataStore = {
       txid: '495167f5b9d55519717cb171208a98ffd347410169f258b598b1b65447d8e078',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 57,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -216,10 +221,10 @@ let dataStore = {
       txid: '1b703ca32b2da08cf896081a96c48f6433641e2c7d805fd170a31b0cbfb900df',
       date: '2009-01-03 18:15:05',
       blockHeight: 0,
-      amountSatoshi: 0,
+      amountSatoshi: 1,
       providerFee: 0,
       networkFee: 0,
-      runningBalance: 50,
+      runningBalance: 58,
       signedTx: true,
       otherParams: {
         isReplaceByFee: false,
@@ -269,14 +274,23 @@ let dataStore = {
     ]
   },
 
-  init: function (options = {}, callbacks = {}) {
+  init: function (options) {
     let {
       masterPrivateKey,
-      masterPublicKey
+      masterPublicKey,
+      ABCTxLibAccess,
+      callbacks
     } = options
+
     this.setMasterPrivateKey(masterPrivateKey)
     this.setMasterPublicKey(masterPublicKey)
+    this.setABCTxLibAccess(ABCTxLibAccess)
     this.setCallbacks(callbacks)
+    this.initOptions = options
+
+    // check all address for funds, then call abcWalletTxAddressesChecked aka logging into the app
+    let progressRatio = 1
+    this.callbacks.abcWalletTxAddressesChecked(this.abcWalletTx, progressRatio)
 
     return true
   },
@@ -289,6 +303,30 @@ let dataStore = {
 
   setMasterPublicKey: function (masterPublicKey) {
     this.masterPublicKey = masterPublicKey
+
+    return true
+  },
+
+  getMasterPrivateKey: function () {
+    return this.masterPrivateKey
+  },
+
+  getMasterPublicKey: function () {
+    return this.masterPublicKey
+  },
+
+  setCallbacks: function (callbacks) {
+    this.callbacks = callbacks
+
+    return true
+  },
+
+  getCallbacks: function () {
+    return this.callbacks
+  },
+
+  setABCTxLibAccess: function (ABCTxLibAccess) {
+    this.ABCTxLibAccess = ABCTxLibAccess
 
     return true
   },
@@ -312,16 +350,6 @@ let dataStore = {
 
   getTokensStatus: function () {
     return this.tokensStatus
-  },
-
-  setCallbacks: function (callbacks) {
-    this.callbacks = callbacks
-
-    return true
-  },
-
-  getCallbacks: function () {
-    return this.callbacks
   },
 
   getBalance: function (options) {
@@ -400,6 +428,94 @@ let dataStore = {
     } = options
 
     return true
+  },
+
+  makeSpend: function (options = {}) {
+    let {
+      abcTxLibAccess,
+      abcSpendInfo
+    } = options
+
+    if (!this.validCurrencyCode(abcSpendInfo.currencyCode)) {
+      return new Error()
+    }
+
+    let newTransaction = this.getTransactions()[0]
+
+    return newTransaction
+  },
+
+  validCurrencyCode: function (currencyCode) {
+    let validCurrencyCodes = this.supportedTokens.concat([undefined, null, 'BTC'])
+    let isCurrencyCodeValid = validCurrencyCodes.includes(currencyCode)
+
+    return isCurrencyCodeValid
+  },
+
+  getBlockHeight: function () {
+    return this.blockHeight
+  },
+
+  addNewTransactions: function (abcTransactions) {
+    abcTransactions.forEach((abcTransaction) => {
+      this.transactions.push(abcTransaction)
+      Object.entries(this.addresses)[0][1].currentBalance += abcTransaction.amountSatoshi
+
+      this.callbacks.abcWalletTxTransactionsChanged([abcTransaction])
+    })
+
+    return abcTransactions.length
+  },
+
+  addNewTransaction: function (abcTransactions) {
+    let newTransaction = this.getNewTransaction()
+    this.transactions.push(newTransaction)
+    Object.entries(this.addresses)[0][1].currentBalance += newTransaction.amountSatoshi
+
+    this.callbacks.abcWalletTxTransactionsChanged([newTransaction])
+
+    return newTransaction
+  },
+
+  addNewBlock: function () {
+    this.blockHeight += 1
+
+    this.callbacks.abcWalletTxBlockHeightChanged()
+
+    return this.blockHeight
+  },
+
+  getNewTransaction: function () {
+    return {
+      abcWalletTransaction: '',
+      metadata: {
+        payeeName: faker.name.findName(),
+        category: 'Income:Block Reward',
+        notes: faker.lorem.sentence(),
+        amountFiat: faker.random.number(1000),
+        bizId: undefined,
+        miscJson: ''
+      },
+      txid: '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
+      date: faker.date.past(),
+      blockHeight: 0,
+      amountSatoshi: faker.random.number(10),
+      providerFee: faker.random.number(1),
+      networkFee: 0,
+      runningBalance: 108,
+      signedTx: faker.random.arrayElement([undefined, '1234567890123456789012345678901234567890123456789012345678901234']),
+      otherParams: {
+        isReplaceByFee: faker.random.boolean(),
+        isDoubleSpend: faker.random.boolean(),
+        inputOutputList: []
+      }
+    }
+  },
+
+  signTx: function (newAbcTx) {
+    newAbcTx.signedTx = '1234567890123456789012345678901234567890123456789012345678901234'
+
+    return newAbcTx
   }
 }
 
