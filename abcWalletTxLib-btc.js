@@ -14,6 +14,9 @@ const TxLibBTC = {
   }
 }
 
+/**
+ * A public wrapper around the BtcTxEngine, which implements the real logic.
+ */
 class ABCTxLibBTC {
   constructor (options) {
     dataStore.init(options)
@@ -37,16 +40,7 @@ class ABCTxLibBTC {
 
   // asynchronous
   enableTokens (options = {}) {
-    return new Promise((resolve, reject) => {
-      let enabledTokens = dataStore.enableTokens(options)
-
-      let error = null
-      if (error) {
-        return reject(error)
-      }
-
-      return resolve(enabledTokens)
-    })
+    return Promise.resolve(dataStore.enableTokens(options))
   }
 
   // synchronous
@@ -56,102 +50,53 @@ class ABCTxLibBTC {
 
   // synchronous
   getBalance (options = {}) {
-    let balance = dataStore.getBalance(options)
-
-    return balance // Balance in the smallest unit of the currency
+    return dataStore.getBalance(options)
   }
 
   // synchronous
   getNumTransactions (options = {}) {
-    let numTransactions = dataStore.getNumTransactions(options = {})
-
-    return numTransactions
+    return dataStore.getNumTransactions(options = {})
   }
 
   // asynchronous
   getTransactions (options = {}) {
-    return new Promise((resolve, reject) => {
-      let transactions = dataStore.getTransactions(options = {})
-
-      let error = null
-      if (error) {
-        return reject(error)
-      }
-
-      resolve(transactions)
-    })
+    return Promise.resolve(dataStore.getTransactions(options = {}))
   }
 
   // synchronous
   getFreshAddress (options = {}) {
-    let freshAddress = dataStore.getFreshAddress(options)
-
-    return freshAddress
+    return dataStore.getFreshAddress(options)
   }
 
   // synchronous
   addGapLimitAddresses (options) {
     dataStore.addGapLimitAddresses(options)
-
     return true
   }
 
   // synchronous
   isAddressUsed (options = {}) {
-    let isUsed = dataStore.isAddressUsed(options)
-
-    return isUsed
+    return dataStore.isAddressUsed(options)
   }
 
   // synchronous
   makeSpend (options = {}) { // returns an ABCTransaction data structure, and checks for valid info
-    let newABCTransaction = dataStore.makeSpend(options)
-
-    return newABCTransaction
+    return dataStore.makeSpend(options)
   }
 
   // asynchronous
   signTx (options = {}) {
-    return new Promise((resolve, reject) => {
-      let { abcTransaction } = options
-
-      let signedTx = dataStore.signTx(abcTransaction)
-
-      let error = null
-      if (error) {
-        return reject(error)
-      }
-
-      resolve(signedTx)
-    })
+    return Promise.resolve(dataStore.signTx(options))
   }
 
   // asynchronous
   broadcastTx (options = {}) {
-    return new Promise((resolve, reject) => {
-      let { abcTransaction } = options
-
-      let error = null
-      if (error) {
-        return reject(error)
-      }
-
-      resolve(abcTransaction)
-    })
+    return Promise.resolve(true)
   }
 
   // asynchronous
   saveTx (options = {}) {
-    return new Promise((resolve, reject) => {
-      let { abcTransaction } = options
-
-      let error = null
-      if (error) {
-        return reject(error)
-      }
-
-      resolve(abcTransaction)
-    })
+    return Promise.resolve(true)
   }
 }
 
