@@ -1,5 +1,5 @@
 /* global
-describe it beforeEach
+describe it
 */
 
 const chai = require('chai')

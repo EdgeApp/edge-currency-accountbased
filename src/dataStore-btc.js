@@ -1,4 +1,6 @@
-let faker = require('faker')
+/* global */
+
+const faker = require('faker')
 
 export const dataStore = {
   initOptions: undefined,
@@ -9,6 +11,11 @@ export const dataStore = {
   tokensStatus: false,
   supportedTokens: ['XCP', 'TATIANACOIN'],
   enabledTokens: [],
+  transactionFees: {
+    high: 15,
+    standard: 10,
+    low: 5
+  },
   addresses: {
     '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa': {currentBalance: 58, isUsed: true},
     '1this_is_a_fresh_address1111111111': {currentBalance: 0, isUsed: false},
@@ -436,11 +443,24 @@ export const dataStore = {
       abcSpendInfo
     } = options
 
-    if (!this.validCurrencyCode(abcSpendInfo.currencyCode)) {
-      return new Error()
+    let {
+      currencyCode,
+      noUnconfirmed,
+      spendTargets,
+      networkFeeOption,
+      customNetworkFee,
+      metadata
+    } = abcSpendInfo
+
+    if (!this.validCurrencyCode(currencyCode)) {
+      return new Error('Invalid currencyCode')
     }
 
-    let newTransaction = this.getTransactions()[0]
+    let amountSatoshi = abcSpendInfo.spendTargets.reduce((acc, target) => {
+      return acc + target.amountSatoshi
+    }, 0)
+
+    let newTransaction = this.getNewTransaction({amountSatoshi})
 
     return newTransaction
   },
@@ -485,31 +505,47 @@ export const dataStore = {
     return this.blockHeight
   },
 
-  getNewTransaction: function () {
-    return {
-      abcWalletTransaction: '',
-      metadata: {
-        payeeName: faker.name.findName(),
-        category: 'Income:Block Reward',
-        notes: faker.lorem.sentence(),
+  getNewTransaction: function (options = {}) {
+    let {
+      abcWalletTransaction,
+      metadata,
+      txid,
+      date,
+      blockHeight,
+      amountSatoshi,
+      providerFee,
+      networkFee,
+      runningBalance,
+      signedTx,
+      otherParams
+    } = options
+
+    let newTransaction = {
+      abcWalletTransaction: abcWalletTransaction || '',
+      metadata: metadata || {
+        payeeName: faker.random.arrayElement([undefined, faker.name.findName()]),
+        category: faker.random.arrayElement([undefined, 'Income:Block Reward']),
+        notes: faker.random.arrayElement([undefined, faker.lorem.sentence()]),
         amountFiat: faker.random.number(1000),
-        bizId: undefined,
+        bizId: faker.random.arrayElement([undefined, '12345']),
         miscJson: ''
       },
-      txid: '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
-      date: faker.date.past(),
-      blockHeight: 0,
-      amountSatoshi: faker.random.number(10),
-      providerFee: faker.random.number(1),
-      networkFee: 0,
-      runningBalance: 108,
-      signedTx: faker.random.arrayElement([undefined, '1234567890123456789012345678901234567890123456789012345678901234']),
-      otherParams: {
+      txid: txid || '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
+      date: date || faker.date.past(),
+      blockHeight: blockHeight || faker.random.number(100000),
+      amountSatoshi: amountSatoshi || faker.random.number(10),
+      providerFee: providerFee || faker.random.arrayElement([undefined, faker.random.number(1)]),
+      networkFee: networkFee || faker.random.number(100),
+      runningBalance: runningBalance || faker.random.number(100),
+      signedTx: signedTx || faker.random.arrayElement([undefined, '1234567890123456789012345678901234567890123456789012345678901234']),
+      otherParams: otherParams || {
         isReplaceByFee: faker.random.boolean(),
         isDoubleSpend: faker.random.boolean(),
         inputOutputList: []
       }
     }
+
+    return newTransaction
   },
 
   signTx: function (newAbcTx) {
