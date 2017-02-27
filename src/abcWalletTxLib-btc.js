@@ -3,13 +3,13 @@ import {dataStore} from './dataStore-btc.js'
 
 export const TxLibBTC = {
   getInfo: () => {
-    let currencyDetails = dataStore.getInfo
+    const currencyDetails = dataStore.getInfo
 
     return currencyDetails
   },
 
   makeEngine: (options) => {
-    let abcTxLib = new ABCTxLibBTC(options)
+    const abcTxLib = new ABCTxLibBTC(options)
 
     return abcTxLib
   }

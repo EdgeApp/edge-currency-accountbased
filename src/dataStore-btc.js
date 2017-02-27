@@ -282,7 +282,7 @@ export const dataStore = {
   },
 
   init: function (options) {
-    let {
+    const {
       masterPrivateKey,
       masterPublicKey,
       ABCTxLibAccess,
@@ -296,7 +296,7 @@ export const dataStore = {
     this.initOptions = options
 
     // check all address for funds, then call abcWalletTxAddressesChecked aka logging into the app
-    let progressRatio = 1
+    const progressRatio = 1
     this.callbacks.abcWalletTxAddressesChecked(this.abcWalletTx, progressRatio)
 
     return true
@@ -339,11 +339,11 @@ export const dataStore = {
   },
 
   enableTokens: function (options = {}) {
-    let {
-      abcTxLibAccess,
+    const {
+      // abcTxLibAccess,
       tokens
     } = options
-    let desiredTokens = tokens.filter((token) => {
+    const desiredTokens = tokens.filter((token) => {
       return this.supportedTokens.includes(token)
     })
 
@@ -360,13 +360,13 @@ export const dataStore = {
   },
 
   getBalance: function (options) {
-    let {
-      abcTxLibGetBalance,
-      currencyCode
-    } = options
+    // let {
+    //   abcTxLibGetBalance,
+    //   currencyCode
+    // } = options
 
-    let addresses = Object.values(this.addresses)
-    let balance =
+    const addresses = Object.values(this.addresses)
+    const balance =
       addresses.reduce((acc, address) => {
         return acc + address.currentBalance
       }, 0)
@@ -375,39 +375,39 @@ export const dataStore = {
   },
 
   getNumTransactions: function (options = {}) {
-    let {
-      abcTxLibGetBalance,
-      currencyCode
-    } = options
+    // let {
+    //   abcTxLibGetBalance,
+    //   currencyCode
+    // } = options
 
-    let transactions = this.transactions
-    let numTransactions = transactions.length
+    const transactions = this.transactions
+    const numTransactions = transactions.length
 
     return numTransactions
   },
 
   getTransactions: function (options = {}) {
-    let {
-      abcTxLibAccess,
-      currencyCode,
+    const {
+      // abcTxLibAccess,
+      // currencyCode,
       startIndex, // The starting index into the list of transactions. 0 specifies the newest transaction
       numEntries // The number of entries to return. If there aren’t enough transactions to return numEntries, then the TxLib should return the maximum possible
     } = options
-    let endIndex = (startIndex + numEntries) || undefined // if user doesn't supply a startIndex or numEntries, return undefined instead of NaN
+    const endIndex = (startIndex + numEntries) || undefined // if user doesn't supply a startIndex or numEntries, return undefined instead of NaN
 
-    let transactions = this.transactions.slice(startIndex, endIndex)
+    const transactions = this.transactions.slice(startIndex, endIndex)
 
     return transactions
   },
 
   getFreshAddress: function (options = {}) {
-    let {
-      abcTxLibAccess,
-      currencyCode
-    } = options
+    // let {
+    //   abcTxLibAccess,
+    //   currencyCode
+    // } = options
 
-    let addressList = Object.entries(this.addresses)
-    let address = addressList.find((address) => {
+    const addressList = Object.entries(this.addresses)
+    const address = addressList.find((address) => {
       return address[1].isUsed === false
     })
 
@@ -415,59 +415,59 @@ export const dataStore = {
   },
 
   isAddressUsed: function (options = {}) {
-    let {
-      abcTxLibAccess,
-      address,
-      currencyCode
+    const {
+      // abcTxLibAccess,
+      // currencyCode,
+      address
     } = options
 
-    let targetAddress = this.addresses[address]
-    let isUsed = targetAddress.isUsed
+    const targetAddress = this.addresses[address]
+    const isUsed = targetAddress.isUsed
 
     return isUsed
   },
 
   addGapLimitAddresses: function (options = {}) {
-    let {
-      abcTxLibAccess,
-      addresses,
-      currencyCode
-    } = options
+    // let {
+    //   abcTxLibAccess,
+    //   addresses,
+    //   currencyCode
+    // } = options
 
     return true
   },
 
   makeSpend: function (options = {}) {
-    let {
-      abcTxLibAccess,
+    const {
+      // abcTxLibAccess,
       abcSpendInfo
     } = options
 
-    let {
-      currencyCode,
-      noUnconfirmed,
-      spendTargets,
-      networkFeeOption,
-      customNetworkFee,
-      metadata
+    const {
+      // noUnconfirmed,
+      // spendTargets,
+      // networkFeeOption,
+      // customNetworkFee,
+      // metadata,
+      currencyCode
     } = abcSpendInfo
 
     if (!this.validCurrencyCode(currencyCode)) {
       return new Error('Invalid currencyCode')
     }
 
-    let amountSatoshi = abcSpendInfo.spendTargets.reduce((acc, target) => {
+    const amountSatoshi = abcSpendInfo.spendTargets.reduce((acc, target) => {
       return acc + target.amountSatoshi
     }, 0)
 
-    let newTransaction = this.getNewTransaction({amountSatoshi})
+    const newTransaction = this.getNewTransaction({amountSatoshi})
 
     return newTransaction
   },
 
   validCurrencyCode: function (currencyCode) {
-    let validCurrencyCodes = this.supportedTokens.concat([undefined, null, 'BTC'])
-    let isCurrencyCodeValid = validCurrencyCodes.includes(currencyCode)
+    const validCurrencyCodes = this.supportedTokens.concat([undefined, null, 'BTC'])
+    const isCurrencyCodeValid = validCurrencyCodes.includes(currencyCode)
 
     return isCurrencyCodeValid
   },
@@ -488,7 +488,7 @@ export const dataStore = {
   },
 
   addNewTransaction: function (abcTransactions) {
-    let newTransaction = this.getNewTransaction()
+    const newTransaction = this.getNewTransaction()
     this.transactions.push(newTransaction)
     Object.entries(this.addresses)[0][1].currentBalance += newTransaction.amountSatoshi
 
@@ -506,7 +506,7 @@ export const dataStore = {
   },
 
   getNewTransaction: function (options = {}) {
-    let {
+    const {
       abcWalletTransaction,
       metadata,
       txid,
@@ -520,7 +520,7 @@ export const dataStore = {
       otherParams
     } = options
 
-    let newTransaction = {
+    const newTransaction = {
       abcWalletTransaction: abcWalletTransaction || '',
       metadata: metadata || {
         payeeName: faker.random.arrayElement([undefined, faker.name.findName()]),

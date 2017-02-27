@@ -7,7 +7,6 @@ const chaiAsPromised = require('chai-as-promised')
 chai.use(chaiAsPromised)
 const { expect } = chai
 const dataStore = require('../dist/index.js').dataStore
-const sim = require('../simulate-async.js')
 const initOptions = {
   ABCTxLibAccess: 'this is the ABCTxLibAccess thing',
   masterPrivateKey: 'KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
@@ -24,8 +23,8 @@ const initOptions = {
     }
   }
 }
-let lib = require('../dist/index.js').TxLibBTC
-let btc = lib.makeEngine(initOptions)
+const lib = require('../dist/index.js').TxLibBTC
+const btc = lib.makeEngine(initOptions)
 
 process.stdout.write('\x1Bc')
 
@@ -51,7 +50,7 @@ describe('BTC Engine', () => {
       const expected = ['TATIANACOIN']
       btc.enableTokens({tokens: expected})
         .then(
-          (actual) => { expect(actual).to.eql(expected) },
+          (actual) => { return expect(actual).to.eql(expected) },
           (error) => { console.log(error) })
         .catch((error) => {
           console.log(error)
@@ -95,8 +94,8 @@ describe('BTC Engine', () => {
   })
 
   describe('isAddressUsed', () => {
-    let usedAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
-    let freshAddress = '1this_is_a_fresh_address1111111111'
+    const usedAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
+    const freshAddress = '1this_is_a_fresh_address1111111111'
 
     it('should return true for a used address', () => {
       const expected = true
@@ -113,7 +112,7 @@ describe('BTC Engine', () => {
   })
 
   it('should set an unsigned transaction to signed', () => {
-    let unsignedTx = dataStore.getNewTransaction()
+    const unsignedTx = dataStore.getNewTransaction()
 
     expect(btc.signTx({abcTransaction: unsignedTx})).to.eventually.have.property(
       'signedTx', '1234567890123456789012345678901234567890123456789012345678901234')
@@ -121,16 +120,16 @@ describe('BTC Engine', () => {
 
   describe('async testing', () => {
     it('should increase the numTransactions when a new transaction is detected', () => {
-      let before = btc.getNumTransactions()
+      const before = btc.getNumTransactions()
       dataStore.addNewTransaction()
-      let after = btc.getNumTransactions()
+      const after = btc.getNumTransactions()
 
       expect(after).to.equal(before + 1)
     })
 
     it('should update the balance when a new transaction is detected', () => {
-      let newTransaction = dataStore.getTransactions()[0]
-      let newAmount = newTransaction.amountSatoshi
+      const newTransaction = dataStore.getTransactions()[0]
+      const newAmount = newTransaction.amountSatoshi
 
       const before = btc.getBalance()
       dataStore.addNewTransactions([newTransaction])
