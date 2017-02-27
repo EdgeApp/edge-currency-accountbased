@@ -1,6 +1,7 @@
 // abcWalletTxLib-btc.js
-const dataStore = require('./dataStore-btc.js')
-const TxLibBTC = {
+import {dataStore} from './dataStore-btc.js'
+
+export const TxLibBTC = {
   getInfo: () => {
     let currencyDetails = dataStore.getInfo
 
@@ -99,5 +100,3 @@ class ABCTxLibBTC {
     return Promise.resolve(true)
   }
 }
-
-module.exports = TxLibBTC

@@ -6,7 +6,7 @@ const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
 chai.use(chaiAsPromised)
 const { expect } = chai
-const dataStore = require('../dataStore-btc')
+const dataStore = require('../dist/index.js').dataStore
 const sim = require('../simulate-async.js')
 const initOptions = {
   ABCTxLibAccess: 'this is the ABCTxLibAccess thing',
@@ -24,7 +24,7 @@ const initOptions = {
     }
   }
 }
-let lib = require('../abcWalletTxLib-btc')
+let lib = require('../dist/index.js').TxLibBTC
 let btc = lib.makeEngine(initOptions)
 
 process.stdout.write('\x1Bc')

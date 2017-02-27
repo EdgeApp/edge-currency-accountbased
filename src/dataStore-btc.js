@@ -1,6 +1,6 @@
 let faker = require('faker')
 
-let dataStore = {
+export const dataStore = {
   initOptions: undefined,
   masterPrivateKey: undefined, // KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
   masterPublicKey: undefined,
@@ -518,5 +518,3 @@ let dataStore = {
     return newAbcTx
   }
 }
-
-module.exports = dataStore
