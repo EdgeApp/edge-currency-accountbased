@@ -66,17 +66,20 @@ describe('BTC Engine', () => {
   })
 
   it('should return number of transactions', () => {
-    const expected = 9
+    const expected = dataStore.transactions.length
     const actual = btc.getNumTransactions()
 
     expect(actual).to.equal(expected)
   })
 
   it('should return list of transactions', () => {
-    const expected = dataStore.transactions.length
-    const actual = btc.getNumTransactions()
-
-    expect(actual).to.equal(expected)
+    const expected = dataStore.transactions.toString()
+    btc.getTransactions().then(
+          (actual) => { return expect(actual.toString()).to.eql(expected) },
+          (error) => { console.log(error) })
+        .catch((error) => {
+          console.log(error)
+        })
   })
 
   it('should return an unused/non-reserved addressed', () => {
@@ -118,6 +121,36 @@ describe('BTC Engine', () => {
       'signedTx', '1234567890123456789012345678901234567890123456789012345678901234')
   })
 
+  it('should return a transaction with correct amountSatoshi', () => {
+    const abcSpendInfo = {
+      currencyCode: 'BTC',
+      noUnconfirmed: false,
+      spendTargets: [
+        {
+          address: '1CsaBND4GNA5eeGGvU5PhKUZWxyKYxrFqs',
+          amountSatoshi: 10000000 // 0.1 BTC
+        },
+        {
+          address: '1CsaBND4GNA5eeGGvU5PhKUZWxyKYxrFqs',
+          amountSatoshi: 110000000 // 1.1 BTC
+        }
+      ],
+      networkFeeOption: 'high',
+      metadata: {
+        payeeName: 'Transfer to College Fund',
+        category: 'Transfer:Wallet:College Fund',
+        notes: 'Here are some notes',
+        amountFiat: 250000,
+        bizId: 123,
+        miscJson: '{a: 1}'
+      }
+    }
+
+    const expectedAmountSatoshi = 10000000 + 110000000
+    const newTransaction = btc.makeSpend({abcSpendInfo})
+
+    expect(newTransaction.amountSatoshi).to.equal(expectedAmountSatoshi)
+  })
   describe('async testing', () => {
     it('should increase the numTransactions when a new transaction is detected', () => {
       const before = btc.getNumTransactions()
