@@ -4,8 +4,8 @@ const faker = require('faker')
 
 export const dataStore = {
   initOptions: undefined,
-  masterPrivateKey: undefined, // KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
-  masterPublicKey: undefined,
+  masterPrivateKey: undefined, // PRIVATEgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
+  masterPublicKey: undefined, // PUBLICDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr
   abcTxLibAccess: undefined,
   callbacks: undefined,
   tokensStatus: false,
@@ -281,25 +281,25 @@ export const dataStore = {
     ]
   },
 
-  init: function (options) {
-    const {
-      masterPrivateKey,
-      masterPublicKey,
-      ABCTxLibAccess,
-      callbacks
-    } = options
-
-    this.setMasterPrivateKey(masterPrivateKey)
-    this.setMasterPublicKey(masterPublicKey)
-    this.setABCTxLibAccess(ABCTxLibAccess)
+  init: function (abcTxLibAccess, options, callbacks) {
+    this.setABCTxLibAccess(abcTxLibAccess)
     this.setCallbacks(callbacks)
-    this.initOptions = options
-
+    this.setKeys(options)
     // check all address for funds, then call abcWalletTxAddressesChecked aka logging into the app
     const progressRatio = 1
     this.callbacks.abcWalletTxAddressesChecked(this.abcWalletTx, progressRatio)
 
     return true
+  },
+
+  setKeys: function (keys) {
+    const {
+      masterPrivateKey,
+      masterPublicKey
+    } = keys
+
+    this.setMasterPrivateKey(masterPrivateKey)
+    this.setMasterPublicKey(masterPublicKey)
   },
 
   setMasterPrivateKey: function (masterPrivateKey) {
@@ -340,7 +340,6 @@ export const dataStore = {
 
   enableTokens: function (options = {}) {
     const {
-      // abcTxLibAccess,
       tokens
     } = options
     const desiredTokens = tokens.filter((token) => {
@@ -360,11 +359,6 @@ export const dataStore = {
   },
 
   getBalance: function (options) {
-    // let {
-    //   abcTxLibGetBalance,
-    //   currencyCode
-    // } = options
-
     const addresses = Object.values(this.addresses)
     const balance =
       addresses.reduce((acc, address) => {
@@ -375,11 +369,6 @@ export const dataStore = {
   },
 
   getNumTransactions: function (options = {}) {
-    // let {
-    //   abcTxLibGetBalance,
-    //   currencyCode
-    // } = options
-
     const transactions = this.transactions
     const numTransactions = transactions.length
 
@@ -388,8 +377,6 @@ export const dataStore = {
 
   getTransactions: function (options = {}) {
     const {
-      // abcTxLibAccess,
-      // currencyCode,
       startIndex, // The starting index into the list of transactions. 0 specifies the newest transaction
       numEntries // The number of entries to return. If there aren’t enough transactions to return numEntries, then the TxLib should return the maximum possible
     } = options
@@ -401,11 +388,6 @@ export const dataStore = {
   },
 
   getFreshAddress: function (options = {}) {
-    // let {
-    //   abcTxLibAccess,
-    //   currencyCode
-    // } = options
-
     const addressList = Object.entries(this.addresses)
     const address = addressList.find((address) => {
       return address[1].isUsed === false
@@ -414,13 +396,7 @@ export const dataStore = {
     return address[0]
   },
 
-  isAddressUsed: function (options = {}) {
-    const {
-      // abcTxLibAccess,
-      // currencyCode,
-      address
-    } = options
-
+  isAddressUsed: function (address) {
     const targetAddress = this.addresses[address]
     const isUsed = targetAddress.isUsed
 
@@ -428,27 +404,11 @@ export const dataStore = {
   },
 
   addGapLimitAddresses: function (options = {}) {
-    // let {
-    //   abcTxLibAccess,
-    //   addresses,
-    //   currencyCode
-    // } = options
-
     return true
   },
 
-  makeSpend: function (options = {}) {
+  makeSpend: function (abcSpendInfo) {
     const {
-      // abcTxLibAccess,
-      abcSpendInfo
-    } = options
-
-    const {
-      // noUnconfirmed,
-      // spendTargets,
-      // networkFeeOption,
-      // customNetworkFee,
-      // metadata,
       currencyCode
     } = abcSpendInfo
 
@@ -508,7 +468,6 @@ export const dataStore = {
   getNewTransaction: function (options = {}) {
     const {
       abcWalletTransaction,
-      metadata,
       txid,
       date,
       blockHeight,
@@ -522,14 +481,6 @@ export const dataStore = {
 
     const newTransaction = {
       abcWalletTransaction: abcWalletTransaction || '',
-      metadata: metadata || {
-        payeeName: faker.random.arrayElement([undefined, faker.name.findName()]),
-        category: faker.random.arrayElement([undefined, 'Income:Block Reward']),
-        notes: faker.random.arrayElement([undefined, faker.lorem.sentence()]),
-        amountFiat: faker.random.number(1000),
-        bizId: faker.random.arrayElement([undefined, '12345']),
-        miscJson: ''
-      },
       txid: txid || '4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b',
       date: date || faker.date.past(),
       blockHeight: blockHeight || faker.random.number(100000),

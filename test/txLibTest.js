@@ -7,24 +7,28 @@ const chaiAsPromised = require('chai-as-promised')
 chai.use(chaiAsPromised)
 const { expect } = chai
 const dataStore = require('../dist/index.js').dataStore
-const initOptions = {
-  ABCTxLibAccess: 'this is the ABCTxLibAccess thing',
-  masterPrivateKey: 'KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
-  masterPublicKey: 'KyP8beDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
-  callbacks: {
-    abcWalletTxAddressesChecked: (ABCWalletTx, progressRatio) => {
+const ABCTxLibAccess = {
+  accountDataStore: {},
+  walletDataStore: {}
+}
+const options = {
+  masterPrivateKey: 'PRIVATEgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr',
+  masterPublicKey: 'PUBLICDgjXJSvjNRSLic2xvcep9AP9n1UKwC2CwmXb3Y5sSNspyr'
+}
+const callbacks = {
+  abcWalletTxAddressesChecked: (ABCWalletTx, progressRatio) => {
       // console.log(progressRatio)
-    },
-    abcWalletTxTransactionsChanged: (abcTransactions) => {
+  },
+  abcWalletTxTransactionsChanged: (abcTransactions) => {
       // console.log(abcTransactions)
-    },
-    abcWalletTxBlockHeightChanged: (ABCWalletTx, height) => {
+  },
+  abcWalletTxBlockHeightChanged: (ABCWalletTx, height) => {
       // console.log(height)
-    }
   }
 }
+
 const lib = require('../dist/index.js').TxLibBTC
-const btc = lib.makeEngine(initOptions)
+const btc = lib.makeEngine(ABCTxLibAccess, options, callbacks)
 
 process.stdout.write('\x1Bc')
 
@@ -48,13 +52,15 @@ describe('BTC Engine', () => {
 
     it('should enable token status', () => {
       const expected = ['TATIANACOIN']
-      btc.enableTokens({tokens: expected})
-        .then(
-          (actual) => { return expect(actual).to.eql(expected) },
-          (error) => { console.log(error) })
-        .catch((error) => {
-          console.log(error)
-        })
+      btc.enableTokens({
+        tokens: expected
+      })
+      .then(
+        (actual) => { return expect(actual).to.eql(expected) },
+        (error) => { console.log(error) })
+      .catch((error) => {
+        console.log(error)
+      })
     })
   })
 
@@ -74,12 +80,13 @@ describe('BTC Engine', () => {
 
   it('should return list of transactions', () => {
     const expected = dataStore.transactions.toString()
-    btc.getTransactions().then(
-          (actual) => { return expect(actual.toString()).to.eql(expected) },
-          (error) => { console.log(error) })
-        .catch((error) => {
-          console.log(error)
-        })
+    btc.getTransactions()
+    .then(
+      (actual) => { return expect(actual.toString()).to.eql(expected) },
+      (error) => { console.log(error) })
+    .catch((error) => {
+      console.log(error)
+    })
   })
 
   it('should return an unused/non-reserved addressed', () => {
@@ -102,13 +109,13 @@ describe('BTC Engine', () => {
 
     it('should return true for a used address', () => {
       const expected = true
-      const actual = btc.isAddressUsed({address: usedAddress})
+      const actual = btc.isAddressUsed(usedAddress)
 
       expect(actual).to.equal(expected)
     })
     it('should return false for a fresh address', () => {
       const expected = false
-      const actual = btc.isAddressUsed({address: freshAddress})
+      const actual = btc.isAddressUsed(freshAddress)
 
       expect(actual).to.equal(expected)
     })
@@ -117,7 +124,7 @@ describe('BTC Engine', () => {
   it('should set an unsigned transaction to signed', () => {
     const unsignedTx = dataStore.getNewTransaction()
 
-    expect(btc.signTx({abcTransaction: unsignedTx})).to.eventually.have.property(
+    expect(btc.signTx(unsignedTx)).to.eventually.have.property(
       'signedTx', '1234567890123456789012345678901234567890123456789012345678901234')
   })
 
@@ -135,19 +142,11 @@ describe('BTC Engine', () => {
           amountSatoshi: 110000000 // 1.1 BTC
         }
       ],
-      networkFeeOption: 'high',
-      metadata: {
-        payeeName: 'Transfer to College Fund',
-        category: 'Transfer:Wallet:College Fund',
-        notes: 'Here are some notes',
-        amountFiat: 250000,
-        bizId: 123,
-        miscJson: '{a: 1}'
-      }
+      networkFeeOption: 'high'
     }
 
     const expectedAmountSatoshi = 10000000 + 110000000
-    const newTransaction = btc.makeSpend({abcSpendInfo})
+    const newTransaction = btc.makeSpend(abcSpendInfo)
 
     expect(newTransaction.amountSatoshi).to.equal(expectedAmountSatoshi)
   })

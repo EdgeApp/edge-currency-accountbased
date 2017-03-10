@@ -1,5 +1,5 @@
 // abcWalletTxLib-btc.js
-import {dataStore} from './dataStore-btc.js'
+import { dataStore } from './dataStore-btc.js'
 
 export const TxLibBTC = {
   getInfo: () => {
@@ -8,8 +8,8 @@ export const TxLibBTC = {
     return currencyDetails
   },
 
-  makeEngine: (options) => {
-    const abcTxLib = new ABCTxLibBTC(options)
+  makeEngine: (abcTxLibAccess, options, callbacks) => {
+    const abcTxLib = new ABCTxLibBTC(abcTxLibAccess, options, callbacks)
 
     return abcTxLib
   }
@@ -19,8 +19,8 @@ export const TxLibBTC = {
  * A public wrapper around the BtcTxEngine, which implements the real logic.
  */
 class ABCTxLibBTC {
-  constructor (options) {
-    dataStore.init(options)
+  constructor (abcTxLibAccess, options, callbacks) {
+    dataStore.init(abcTxLibAccess, options, callbacks)
   }
 
   killEngine () {
@@ -40,8 +40,8 @@ class ABCTxLibBTC {
   }
 
   // asynchronous
-  enableTokens (options = {}) {
-    return Promise.resolve(dataStore.enableTokens(options))
+  enableTokens (tokens = {}) {
+    return Promise.resolve(dataStore.enableTokens(tokens))
   }
 
   // synchronous
@@ -81,22 +81,22 @@ class ABCTxLibBTC {
   }
 
   // synchronous
-  makeSpend (options = {}) { // returns an ABCTransaction data structure, and checks for valid info
-    return dataStore.makeSpend(options)
+  makeSpend (abcSpendInfo) { // returns an ABCTransaction data structure, and checks for valid info
+    return dataStore.makeSpend(abcSpendInfo)
   }
 
   // asynchronous
-  signTx (options = {}) {
-    return Promise.resolve(dataStore.signTx(options))
+  signTx (abcTransaction) {
+    return Promise.resolve(dataStore.signTx(abcTransaction))
   }
 
   // asynchronous
-  broadcastTx (options = {}) {
+  broadcastTx (abcTransaction) {
     return Promise.resolve(true)
   }
 
   // asynchronous
-  saveTx (options = {}) {
+  saveTx (abcTransaction) {
     return Promise.resolve(true)
   }
 }
