@@ -146,9 +146,8 @@ describe('BTC Engine', () => {
     }
 
     const expectedAmountSatoshi = 10000000 + 110000000
-    const newTransaction = btc.makeSpend(abcSpendInfo)
-
-    expect(newTransaction.amountSatoshi).to.equal(expectedAmountSatoshi)
+    return btc.makeSpend(abcSpendInfo).then(newTransaction =>
+      expect(newTransaction.amountSatoshi).to.equal(expectedAmountSatoshi))
   })
   describe('async testing', () => {
     it('should increase the numTransactions when a new transaction is detected', () => {

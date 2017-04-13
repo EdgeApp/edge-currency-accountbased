@@ -1,6 +1,6 @@
 /* global */
 
-const faker = require('faker')
+import faker from 'faker'
 
 export const dataStore = {
   initOptions: undefined,

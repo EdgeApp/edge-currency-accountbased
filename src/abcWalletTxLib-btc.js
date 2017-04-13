@@ -82,7 +82,7 @@ class ABCTxLibBTC {
 
   // synchronous
   makeSpend (abcSpendInfo) { // returns an ABCTransaction data structure, and checks for valid info
-    return dataStore.makeSpend(abcSpendInfo)
+    return Promise.resolve(dataStore.makeSpend(abcSpendInfo))
   }
 
   // asynchronous
