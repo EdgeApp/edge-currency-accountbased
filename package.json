@@ -2,11 +2,12 @@
   "main": "./dist/index.js",
   "module": "./dist/index.es.js",
   "scripts": {
-    "test": "npm run lint && rollup -c && node ./node_modules/mocha/bin/mocha",
+    "build": "rollup -c",
+    "test": "npm run lint && npm run build && node ./node_modules/mocha/bin/mocha",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint": "eslint '*.js' 'src/**/*.js' 'test/**/*.js'",
     "lint --fix": "standard --fix",
-    "prepackage": "npm run lint && rollup -c"
+    "prepackage": "npm run lint && npm run build"
   },
   "devDependencies": {
     "chai": "^3.5.0",
@@ -23,5 +24,8 @@
   },
   "directories": {
     "test": "test"
+  },
+  "dependencies": {
+    "random-js": "^1.0.8"
   }
 }
