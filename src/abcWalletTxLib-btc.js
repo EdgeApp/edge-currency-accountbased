@@ -18,7 +18,7 @@ export const TxLibBTC = {
     if (walletType === 'shitcoin') {
       const r = random()
       const masterPrivateKey = r.hex(16)
-      const masterPublicKey = 'pub' + privKey
+      const masterPublicKey = 'pub' + masterPrivateKey
       return { masterPrivateKey, masterPublicKey }
     } else {
       return null
