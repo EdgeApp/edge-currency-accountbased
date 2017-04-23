@@ -2,14 +2,14 @@
 import random from 'random-js'
 
 // const random = require('random-js')
-import { dataStore } from './dataStore-btc.js'
+import { txLibInfo } from './txLibInfo.js'
 
 // const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
 
 export const TxLibBTC = {
   getInfo: () => {
-    const currencyDetails = dataStore.getInfo
+    const currencyDetails = txLibInfo.getInfo
 
     return currencyDetails
   },
@@ -26,7 +26,7 @@ export const TxLibBTC = {
   },
 
   makeEngine: (abcTxLibAccess, options, callbacks) => {
-    const abcTxLib = new ABCTxLibBTC(abcTxLibAccess, options, callbacks)
+    const abcTxLib = new ABCTxLibTRD(abcTxLibAccess, options, callbacks)
 
     return abcTxLib
   }
@@ -72,10 +72,7 @@ class WalletLocalData {
   }
 }
 
-/**
- * A public wrapper around the BtcTxEngine, which implements the real logic.
- */
-class ABCTxLibBTC {
+class ABCTxLibTRD {
   constructor (abcTxLibAccess, options, callbacks) {
     // dataStore.init(abcTxLibAccess, options, callbacks)
     this.engineOn = false
@@ -190,10 +187,6 @@ class ABCTxLibBTC {
     return true
   }
 
-  test () {
-    return dataStore
-  }
-
   // synchronous
   getBlockHeight () {
     return this.walletLocalData.blockHeight
@@ -201,12 +194,12 @@ class ABCTxLibBTC {
 
   // asynchronous
   enableTokens (tokens = {}) {
-    return Promise.resolve(dataStore.enableTokens(tokens))
+    // return Promise.resolve(dataStore.enableTokens(tokens))
   }
 
   // synchronous
   getTokenStatus () {
-    return dataStore.getTokensStatus()
+    // return dataStore.getTokensStatus()
   }
 
   // synchronous
@@ -221,7 +214,7 @@ class ABCTxLibBTC {
 
   // asynchronous
   getTransactions (options = {}) {
-    return Promise.resolve(dataStore.getTransactions(options = {}))
+    // return Promise.resolve(dataStore.getTransactions(options = {}))
   }
 
   // synchronous
@@ -252,12 +245,12 @@ class ABCTxLibBTC {
 
   // synchronous
   makeSpend (abcSpendInfo) { // returns an ABCTransaction data structure, and checks for valid info
-    return Promise.resolve(dataStore.makeSpend(abcSpendInfo))
+    // return Promise.resolve(dataStore.makeSpend(abcSpendInfo))
   }
 
   // asynchronous
   signTx (abcTransaction) {
-    return Promise.resolve(dataStore.signTx(abcTransaction))
+    // return Promise.resolve(dataStore.signTx(abcTransaction))
   }
 
   // asynchronous
