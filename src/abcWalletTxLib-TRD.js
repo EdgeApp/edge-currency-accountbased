@@ -4,8 +4,10 @@ import random from 'random-js'
 // const random = require('random-js')
 import { txLibInfo } from './txLibInfo.js'
 
-// const GAP_LIMIT = 10
+const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
+const ADDRESS_POLL_MILLISECONDS = 20000
+const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
 
 export const TxLibBTC = {
   getInfo: () => {
@@ -57,6 +59,9 @@ class WalletLocalData {
     // Map of ABCTransaction objects indexed by txid
     this.transactionsArray = []
 
+    // Transactions to fetch
+    this.transactionsToFetch = []
+
     // Array of ABCTransactino objects in order by date
     this.transactionsByDate = []
 
@@ -76,6 +81,7 @@ class ABCTxLibTRD {
   constructor (abcTxLibAccess, options, callbacks) {
     // dataStore.init(abcTxLibAccess, options, callbacks)
     this.engineOn = false
+    this.transactionsDirty = true
     this.abcTxLibCallbacks = callbacks
     this.abcTxLibOptions = options
     this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
@@ -87,13 +93,13 @@ class ABCTxLibTRD {
   engineLoop () {
     this.engineOn = true
     this.blockHeightInnerLoop()
+    this.checkAddressesInnerLoop()
   }
 
+  // *************************************
+  // Poll on the blockheight
+  // *************************************
   blockHeightInnerLoop () {
-    // *************************************
-    // Poll on the blockheight
-    // *************************************
-
     if (this.engineOn) {
       const p = new Promise ((resolve, reject) => {
         fetchGet('height', '').then(function (response) {
@@ -113,40 +119,89 @@ class ABCTxLibTRD {
       p.then(() => {
         setTimeout(() => {
           this.blockHeightInnerLoop()
-        }, 1000)
+        }, BLOCKHEIGHT_POLL_MILLISECONDS)
       })
     }
 
   }
 
-  transactionListInnerLoop () {
-    // **********************************************
-    // Poll on the transaction list of all addresses
-    // **********************************************
+  // **********************************************
+  // Check all addresses for new transactions
+  // **********************************************
+  checkAddressesInnerLoop () {
 
     if (this.engineOn) {
-      const p = new Promise ((resolve, reject) => {
+      var promiseArray = []
+      // var promiseArrayCount = 0
+      for (var n = 0; n < this.walletLocalData.addressIndex + GAP_LIMIT; n++) {
+        const address = this.addressFromIndex(n)
+        const p = this.processAddressFromServer(address)
+        promiseArray.concat(p)
+        console.log('checkAddressesInnerLoop: check ' + address)
+      }
 
-        // fetchGet('height', '').then(function (response) {
-        //   this.blockHeight = response.height
-        //   resolve()
-        // }).catch(function (err) {
-        //   console.log('Error fetching height: ' + err)
-        //   resolve()
-        // })
-        resolve()
-      })
-      p.then(() => {
+      Promise.all(promiseArray).then(response => {
+        // Iterate over all the address balances and get a final balance
+        console.log('checkAddressesInnerLoop: Completed responses: ' + response.length)
+
+        var totalBalance = 0
+        for (const n in response) {
+          totalBalance += response[n]
+          console.log('checkAddressesInnerLoop: response[' + n + ']: ' + response[n] + 'total:' + totalBalance)
+        }
+        this.walletLocalData.totalBalance = totalBalance
         setTimeout(() => {
-          this.transactionListInnerLoop()
-        }, 1000)
+          this.checkAddressesInnerLoop()
+        }, ADDRESS_POLL_MILLISECONDS)
+      }).catch(err => {
+        console.log(new Error('Error: checkAddressesInnerLoop: should not get here'))
+        setTimeout(() => {
+          this.checkAddressesInnerLoop()
+        }, ADDRESS_POLL_MILLISECONDS)
       })
     }
   }
 
   addressFromIndex (index) {
-    const addr = '' + index + '-pub' + this.walletLocalData.masterPublicKey
+    let addr = '' + index + "-" + this.walletLocalData.masterPublicKey
+
+    if (index === 0) {
+      addr = addr + '__600000' // Preload first addresss with some funds
+    }
     return addr
+  }
+
+  processAddressFromServer (address) {
+    return fetchGet('address', address).then(function (response) {
+      return response.json()
+    }).then((jsonObj) => {
+      console.log('processAddressFromServer: response.json():')
+      console.log(jsonObj)
+      const txids = jsonObj.txids
+      // Iterate over txids in address
+      for (const n in txids) {
+        const txid = txids[n]
+        console.log('processAddressFromServer: txid:' + txid)
+
+        if (this.walletLocalData.transactionsArray[txid] == undefined &&
+            this.walletLocalData.transactionsToFetch[txid] == undefined) {
+          console.log('processAddressFromServer: txid not found. Adding:' + txid)
+          this.walletLocalData.transactionsToFetch[txid] = true
+          this.transactionsDirty = true
+        }
+      }
+      return jsonObj.balance
+    }).catch(function (err) {
+      console.log('Error fetching address: ' + address)
+      return 0
+    })
+
+  }
+
+  addTransaction (serverTxObj) {
+    // Add to transactionsArray
+
+    // Add to transactionsByDate
   }
 
   // *************************************
@@ -165,6 +220,7 @@ class ABCTxLibTRD {
         console.log(err)
         console.log('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(null)
+        this.walletLocalData.masterPublicKey = this.abcTxLibOptions.masterPublicKey
         this.walletLocalDataStore.writeData(DATA_STORE_FOLDER, 'walletLocalData', JSON.stringify(this.walletLocalData)).then((result) => {
           this.engineLoop()
           resolve()
