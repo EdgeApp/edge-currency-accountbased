@@ -57,7 +57,7 @@ class WalletLocalData {
     // Map of gap limit addresses
     this.gapLimitAddresses = []
 
-    // Array of ABCTransaction objects sorted by date
+    // Array of ABCTransaction objects sorted by date from newest to oldest
     this.transactionsArray = []
 
     // Array of txids to fetch
@@ -329,7 +329,7 @@ class ABCTxLibTRD {
   }
 
   sortTxByDate(a, b) {
-    return a.date - b.date
+    return b.date - a.date
   }
 
   addTransaction (abcTransaction) {
