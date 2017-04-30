@@ -9,6 +9,8 @@ const DATA_STORE_FOLDER = 'txEngineFolder'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
+const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
+// const baseUrl = 'http://localhost:8080/api/'
 
 export const TxLibBTC = {
   getInfo: () => {
@@ -35,7 +37,6 @@ export const TxLibBTC = {
   }
 }
 
-const baseUrl = 'http://localhost:8080/api/'
 
 function fetchGet (cmd, params) {
   return window.fetch(baseUrl + cmd + '/' + params, {
