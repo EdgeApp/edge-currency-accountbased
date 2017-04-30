@@ -410,7 +410,7 @@ class ABCTxLibTRD {
 
   // synchronous
   getNumTransactions (options = {}) {
-    return this.walletLocalData.transactionsArray.size
+    return this.walletLocalData.transactionsArray.length
   }
 
   // asynchronous
