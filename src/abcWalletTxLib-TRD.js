@@ -282,7 +282,7 @@ class ABCTxLibTRD {
   }
 
   addressFromIndex (index) {
-    let addr = '' + index + "-" + this.walletLocalData.masterPublicKey
+    let addr = '' + index + "_" + this.walletLocalData.masterPublicKey
 
     if (index === 0) {
       addr = addr + '__600000' // Preload first addresss with some funds
