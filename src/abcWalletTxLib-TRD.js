@@ -315,13 +315,17 @@ class ABCTxLibTRD {
           this.walletLocalData.transactionsToFetch.push(txid)
           this.transactionsDirty = true
         }
+      }
 
+      if ((txids != undefined && txids.length) ||
+          this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) != -1) {
         // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
         if (idx >= this.walletLocalData.unusedAddressIndex) {
           this.walletLocalData.unusedAddressIndex = idx + 1
           console.log('processAddressFromServer: set unusedAddressIndex:' + this.walletLocalData.unusedAddressIndex)
         }
       }
+
 
       return jsonObj.balance
     }).catch(function (err) {
@@ -484,7 +488,7 @@ class ABCTxLibTRD {
 
   // synchronous
   isAddressUsed (address, options = {}) {
-    const idx = this.findAddress(address)
+    let idx = this.findAddress(address)
     if (idx != -1) {
       const addrObj = this.walletLocalData.addressArray[ idx ]
       if (addrObj != undefined) {
@@ -492,6 +496,10 @@ class ABCTxLibTRD {
           return true
         }
       }
+    }
+    idx = this.walletLocalData.gapLimitAddresses.indexOf(addresses[i])
+    if (idx != -1) {
+      return true
     }
     return false
   }
