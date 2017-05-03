@@ -57,7 +57,7 @@ function fetchPost (cmd, body) {
 class WalletLocalData {
   constructor (jsonString) {
     this.blockHeight = 0
-    this.totalBalance = 0
+    this.totalBalances = { TRD: 0 }
 
     // Map of gap limit addresses
     this.gapLimitAddresses = []
@@ -73,6 +73,7 @@ class WalletLocalData {
 
     this.unusedAddressIndex = 0
     this.masterPublicKey = ''
+    this.enabledTokens = []
     if (jsonString != null) {
       const data = JSON.parse(jsonString)
       for (const k in data) this[k] = data[k]
@@ -258,12 +259,19 @@ class ABCTxLibTRD {
           // Iterate over all the address balances and get a final balance
           console.log('checkAddressesInnerLoop: Completed responses: ' + response.length)
 
-          var totalBalance = 0
-          for (const n in response) {
-            totalBalance += response[ n ]
-            console.log('checkAddressesInnerLoop: response[' + n + ']: ' + response[ n ] + ' total:' + totalBalance)
+          const arrayAmounts = response
+          var totalBalances = {TRD: 0}
+          for (const n in arrayAmounts) {
+            const amountsObj = arrayAmounts[n]
+            for (const currencyCode in amountsObj) {
+              if (totalBalances[currencyCode] == undefined) {
+                totalBalances[currencyCode] = 0
+              }
+              totalBalances[currencyCode] += amountsObj[currencyCode]
+              console.log('checkAddressesInnerLoop: arrayAmounts[' + n + '][' + currencyCode + ']: ' + arrayAmounts[n][currencyCode] + ' total:' + totalBalances[currencyCode])
+            }
           }
-          this.walletLocalData.totalBalance = totalBalance
+          this.walletLocalData.totalBalances = totalBalances
           setTimeout(() => {
             this.checkAddressesInnerLoop()
           }, ADDRESS_POLL_MILLISECONDS)
@@ -326,8 +334,7 @@ class ABCTxLibTRD {
         }
       }
 
-
-      return jsonObj.balance
+      return jsonObj.amounts
     }).catch(function (err) {
       console.log('Error fetching address: ' + address)
       return 0
@@ -413,8 +420,17 @@ class ABCTxLibTRD {
   }
 
   // asynchronous
-  enableTokens (tokens = {}) {
-    // return Promise.resolve(dataStore.enableTokens(tokens))
+  enableTokens (tokens = []) {
+    const prom = new Promise((resolve, reject) => {
+      for (const n in tokens) {
+        const token = tokens[n]
+        if (this.walletLocalData.enabledTokens.indexOf(token) != -1) {
+          this.walletLocalData.enabledTokens.push(token)
+        }
+      }
+      resolve(true)
+    })
+      // return Promise.resolve(dataStore.enableTokens(tokens))
   }
 
   // synchronous
@@ -424,7 +440,12 @@ class ABCTxLibTRD {
 
   // synchronous
   getBalance (options = {}) {
-    return this.walletLocalData.totalBalance
+    currencyCode = 'TRD'
+    if (options.currencyCode != undefined) {
+      currencyCode = options.currencyCode
+    }
+      
+    return this.walletLocalData.totalBalances[currencyCode]
   }
 
   // synchronous
@@ -527,59 +548,73 @@ class ABCTxLibTRD {
 
       // ******************************
       // Calculate the total to send
-      let totalSpend = 0
+      let totalSpends = { TRD: 0 }
       let outputs = []
       const spendTargets = abcSpendInfo.spendTargets
 
-      for (var n in spendTargets) {
-        if (spendTargets[n].amountSatoshi <= 0) {
+      for (let n in spendTargets) {
+        const spendTarget = spendTargets[n]
+        if (spendTarget.amountSatoshi <= 0) {
           reject(new Error('Error: invalid spendTarget amount'))
           return
         }
-        totalSpend += spendTargets[n].amountSatoshi
+        let currencyCode = 'TRD'
+        if (spendTarget.currencyCode != undefined) {
+          currencyCode = spendTarget.currencyCode
+        }
+        totalSpends[currencyCode] += spendTarget.amountSatoshi
         outputs.push({
-          address: spendTargets[n].publicAddress,
-          amount: spendTargets[n].amountSatoshi
+          currencyCode,
+          address: spendTarget.publicAddress,
+          amount: spendTarget.amountSatoshi
         })
       }
-      totalSpend += networkFee
+      totalSpends['TRD'] += networkFee
 
-      if (totalSpend > this.walletLocalData.totalBalance) {
-        reject(new Error('Error: insufficient balance'))
-        return
+      for (const n in totalSpends) {
+        const totalSpend = totalSpends[n]
+        // XXX check if spends exceed totals
+        if (totalSpend > this.walletLocalData.totalBalances[n]) {
+          reject(new Error('Error: insufficient balance for token:' + n))
+          return
+        }
       }
 
       // ****************************************************
       // Pick inputs. Picker will use all funds in an address
-      let totalInputAmount = 0
+      let totalInputAmounts = { TRD: 0 }
       let inputs = []
       const addressArray = this.walletLocalData.addressArray
-      for (let n in addressArray) {
-        if (addressArray[n].balance > 0) {
-          totalInputAmount += addressArray[n].balance
-          inputs.push({
-            address: addressArray[n].address,
-            amount: addressArray[n].balance
+      // Get a new address for change if needed
+      const changeAddress = this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
+
+      for (let currencyCode in totalSpends) {
+        for (let n in addressArray) {
+          let addressObj = addressArray[n]
+          if (addressObj.amounts[currencyCode] > 0) {
+            totalInputAmounts[currencyCode] += addressObj.amounts[currencyCode]
+            inputs.push({
+              currencyCode,
+              address: addressObj.address,
+              amount: addressObj.balance
+            })
+          }
+          if (totalInputAmounts[currencyCode] >= totalSpends[currencyCode]) {
+            break
+          }
+        }
+
+        if (totalInputAmounts[currencyCode] < totalSpends[currencyCode]) {
+          reject(new Error('Error: insufficient funds for token:' + currencyCode))
+          return
+        }
+        if (totalInputAmounts[currencyCode] > totalSpends[currencyCode]) {
+          outputs.push({
+            currencyCode,
+            address: changeAddress,
+            amount: (totalInputAmount[currencyCode] - totalSpends[currencyCode])
           })
         }
-        if (totalInputAmount >= totalSpend) {
-          break
-        }
-      }
-
-      if (totalInputAmount < totalSpend) {
-        reject(new Error('Error: insufficient funds'))
-        return
-      }
-
-      // Get a new address for change if needed
-      let changeAddress = ''
-      if (totalInputAmount > totalSpend) {
-        changeAddress = this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
-        outputs.push({
-          address: changeAddress,
-          amount: (totalInputAmount - totalSpend)
-        })
       }
 
       // **********************************
