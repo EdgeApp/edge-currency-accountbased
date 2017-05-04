@@ -12,6 +12,10 @@ const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
 const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
 // const baseUrl = 'http://localhost:8080/api/'
 
+const PRIMARY_CURRENCY      = txLibInfo.getInfo.currencyCode
+const TOKEN_CODES           = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
+
+
 export const TxLibBTC = {
   getInfo: () => {
     const currencyDetails = txLibInfo.getInfo
