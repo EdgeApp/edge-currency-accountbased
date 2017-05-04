@@ -61,9 +61,13 @@ class WalletLocalData {
 
     // Map of gap limit addresses
     this.gapLimitAddresses = []
+    this.transactionsObj = {}
 
     // Array of ABCTransaction objects sorted by date from newest to oldest
-    this.transactionsArray = []
+    for (const n in TOKEN_CODES) {
+      const currencyCode = TOKEN_CODES[n]
+      this.transactionsObj[currencyCode] = []
+    }
 
     // Array of txids to fetch
     this.transactionsToFetch = []
@@ -73,11 +77,23 @@ class WalletLocalData {
 
     this.unusedAddressIndex = 0
     this.masterPublicKey = ''
-    this.enabledTokens = []
+    this.enabledTokens = [PRIMARY_CURRENCY]
     if (jsonString != null) {
       const data = JSON.parse(jsonString)
       for (const k in data) this[k] = data[k]
     }
+  }
+}
+
+class ABCTransaction {
+  constructor (txid, date, blockHeight, amountSatoshi, networkFee, signedTx, otherParams) {
+    this.txid           = txid
+    this.date           = date
+    this.blockHeight    = blockHeight
+    this.amountSatoshi  = amountSatoshi
+    this.networkFee     = networkFee
+    this.signedTx       = signedTx
+    this.otherParams    = otherParams
   }
 }
 
@@ -99,6 +115,10 @@ class ABCTxLibTRD {
     this.blockHeightInnerLoop()
     this.checkAddressesInnerLoop()
     this.checkTransactionsInnerLoop()
+  }
+
+  isTokenEnabled(token) {
+    return this.walletLocalData.enabledTokens.indexOf(token) != -1
   }
 
   // *************************************
@@ -173,49 +193,56 @@ class ABCTxLibTRD {
       //
 
       // Iterate through all the inputs and see if any are in our wallet
-      var spendAmount = 0
-      var receiveAmount = 0
+      let spendAmounts = []
+      let receiveAmounts = []
+      let amountsSatoshi = []
 
       const inputs = jsonObj.inputs
-      for (var n in inputs) {
-        const input = inputs[n]
-        const addr = input.address
-        const idx = this.findAddress(addr)
-        if (idx != -1) {
-          spendAmount += input.amount
-        }
-      }
-
-      // Iterate through all the outputs and see if any are in our wallet
       const outputs = jsonObj.outputs
-      for (var n in outputs) {
-        const output = outputs[n]
-        const addr = output.address
-        const idx = this.findAddress(addr)
-        if (idx != -1) {
-          receiveAmount += output.amount
-        }
+
+      const otherParams = {
+        inputs,
+        outputs
       }
 
-      const amountSatoshi = receiveAmount - spendAmount
+      for (const c in TOKEN_CODES) {
+        const currencyCode = TOKEN_CODES[c]
+        receiveAmounts[currencyCode] = spendAmounts[currencyCode] = 0
 
-      // Create a txlib ABCTransaction object which must contain
-      // txid, date, blockHeight, amountSatoshi, networkFee, signedTx, and optionally otherParams
-      var abcTransaction = {
-        txid: jsonObj.txid,
-        date: jsonObj.txDate,
-        blockHeight: jsonObj.blockHeight,
-        amountSatoshi,
-        networkFee: jsonObj.networkFee,
-        signedTx: "iwassignedyoucantrustme",
-        otherParams: {
-          inputs: jsonObj.inputs,
-          outputs: jsonObj.outputs
+        for (var n in inputs) {
+          const input = inputs[n]
+          const addr = input.address
+          const ccode = input.currencyCode
+          const idx = this.findAddress(addr)
+          if (idx != -1 && ccode == currencyCode) {
+            spendAmounts[ccode] += input.amount
+          }
+        }
+
+        // Iterate through all the outputs and see if any are in our wallet
+        for (var n in outputs) {
+          const output = outputs[n]
+          const addr = output.address
+          const ccode = output.currencyCode
+          const idx = this.findAddress(addr)
+          if (idx != -1 && ccode == currencyCode) {
+            receiveAmounts[ccode] += output.amount
+          }
+        }
+        amountsSatoshi[currencyCode] = receiveAmounts[currencyCode] - spendAmounts[currencyCode]
+
+        // Create a txlib ABCTransaction object which must contain
+        // txid, date, blockHeight, amountSatoshi, networkFee, signedTx, and optionally otherParams
+        let networkFee = jsonObj.networkFee
+        if (currencyCode != PRIMARY_CURRENCY) {
+          networkFee = 0
+        }
+
+        if (receiveAmounts[currencyCode] != 0 || spendAmounts[currencyCode] != 0) {
+          var abcTransaction = new ABCTransaction(jsonObj.txid, jsonObj.txDate, jsonObj.blockHeight, amountsSatoshi[currencyCode], jsonObj.networkFee, 'iwassignedyoucantrustme', otherParams)
+          this.addTransaction(currencyCode, abcTransaction)
         }
       }
-
-      // Add transaction
-      this.addTransaction(abcTransaction)
 
       // Remove txid from transactionsToFetch
       const idx = this.walletLocalData.transactionsToFetch.indexOf(jsonObj.txid)
@@ -317,7 +344,7 @@ class ABCTxLibTRD {
         const txid = txids[ n ]
         console.log('processAddressFromServer: txid:' + txid)
 
-        if (this.findTransaction(txid) == -1 &&
+        if (this.findTransaction(PRIMARY_CURRENCY, txid) == -1 &&
           this.walletLocalData.transactionsToFetch.indexOf(txid) == -1) {
           console.log('processAddressFromServer: txid not found. Adding:' + txid)
           this.walletLocalData.transactionsToFetch.push(txid)
@@ -342,8 +369,12 @@ class ABCTxLibTRD {
 
   }
 
-  findTransaction(txid) {
-    return this.walletLocalData.transactionsArray.findIndex((element => {
+  findTransaction(currencyCode, txid) {
+    if (this.walletLocalData.transactionsObj[currencyCode] == undefined) {
+      return -1
+    }
+
+    return this.walletLocalData.transactionsObj[currencyCode].findIndex((element => {
       return element.txid == txid
     }))
   }
@@ -358,19 +389,19 @@ class ABCTxLibTRD {
     return b.date - a.date
   }
 
-  addTransaction (abcTransaction) {
-    // Add or update tx in transactionsArray
-    const idx = this.findTransaction(abcTransaction.txid)
+  addTransaction (currencyCode, abcTransaction) {
+    // Add or update tx in transactionsObj
+    const idx = this.findTransaction(currencyCode, abcTransaction.txid)
 
     if (idx == -1) {
       console.log('addTransaction: adding and sorting:' + abcTransaction.txid)
-      this.walletLocalData.transactionsArray.push(abcTransaction)
+      this.walletLocalData.transactionsObj[currencyCode].push(abcTransaction)
 
       // Sort
-      this.walletLocalData.transactionsArray.sort(this.sortTxByDate)
+      this.walletLocalData.transactionsObj[currencyCode].sort(this.sortTxByDate)
     } else {
       // Update the transaction
-      this.walletLocalData.transactionsArray[idx] = abcTransaction
+      this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
       console.log('addTransaction: updating:' + abcTransaction.txid)
     }
   }
@@ -440,7 +471,7 @@ class ABCTxLibTRD {
 
   // synchronous
   getBalance (options = {}) {
-    currencyCode = 'TRD'
+    let currencyCode = PRIMARY_CURRENCY
     if (options.currencyCode != undefined) {
       currencyCode = options.currencyCode
     }
@@ -450,29 +481,37 @@ class ABCTxLibTRD {
 
   // synchronous
   getNumTransactions (options = {}) {
-    return this.walletLocalData.transactionsArray.length
+    let currencyCode = PRIMARY_CURRENCY
+    if (options != null && options.currencyCode != undefined) {
+      currencyCode = options.currencyCode
+    }
+    return this.walletLocalData.transactionsObj[currencyCode].length
   }
 
   // asynchronous
   getTransactions (options = {}) {
+    let currencyCode = PRIMARY_CURRENCY
+    if (options != null && options.currencyCode != undefined) {
+      currencyCode = options.currencyCode
+    }
     const prom = new Promise((resolve, reject) => {
       let startIndex = 0
       let numEntries = 0
       if (options == null) {
-        resolve (this.walletLocalData.transactionsArray.slice(0))
+        resolve (this.walletLocalData.transactionsObj[currencyCode].slice(0))
         return
       }
       if (options.startIndex != undefined && options.startIndex > 0) {
         startIndex = options.startIndex
-        if (startIndex >= this.walletLocalData.transactionsArray.length) {
-          startIndex = this.walletLocalData.transactionsArray.length - 1
+        if (startIndex >= this.walletLocalData.transactionsObj[currencyCode].length) {
+          startIndex = this.walletLocalData.transactionsObj[currencyCode].length - 1
         }
       }
       if (options.numEntries != undefined && options.numEntries > 0) {
         numEntries = options.numEntries
-        if (numEntries + startIndex > this.walletLocalData.transactionsArray.length) {
-          // Don't read past the end of the transactionsArray
-          numEntries = this.walletLocalData.transactionsArray.length - startIndex
+        if (numEntries + startIndex > this.walletLocalData.transactionsObj[currencyCode].length) {
+          // Don't read past the end of the transactionsObj
+          numEntries = this.walletLocalData.transactionsObj[currencyCode].length - startIndex
         }
       }
 
@@ -480,9 +519,9 @@ class ABCTxLibTRD {
       let returnArray = []
 
       if (numEntries) {
-        returnArray = this.walletLocalData.transactionsArray.slice(startIndex, numEntries + startIndex)
+        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(startIndex, numEntries + startIndex)
       } else {
-        returnArray = this.walletLocalData.transactionsArray.slice(startIndex)
+        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(startIndex)
       }
       resolve(returnArray)
     })
@@ -548,7 +587,8 @@ class ABCTxLibTRD {
 
       // ******************************
       // Calculate the total to send
-      let totalSpends = { TRD: 0 }
+      let totalSpends = {}
+      totalSpends[PRIMARY_CURRENCY] = 0
       let outputs = []
       const spendTargets = abcSpendInfo.spendTargets
 
@@ -558,9 +598,12 @@ class ABCTxLibTRD {
           reject(new Error('Error: invalid spendTarget amount'))
           return
         }
-        let currencyCode = 'TRD'
+        let currencyCode = PRIMARY_CURRENCY
         if (spendTarget.currencyCode != undefined) {
           currencyCode = spendTarget.currencyCode
+        }
+        if (totalSpends[currencyCode] == undefined) {
+          totalSpends[currencyCode] = 0
         }
         totalSpends[currencyCode] += spendTarget.amountSatoshi
         outputs.push({
@@ -569,7 +612,7 @@ class ABCTxLibTRD {
           amount: spendTarget.amountSatoshi
         })
       }
-      totalSpends['TRD'] += networkFee
+      totalSpends[PRIMARY_CURRENCY] += networkFee
 
       for (const n in totalSpends) {
         const totalSpend = totalSpends[n]
@@ -582,7 +625,7 @@ class ABCTxLibTRD {
 
       // ****************************************************
       // Pick inputs. Picker will use all funds in an address
-      let totalInputAmounts = { TRD: 0 }
+      let totalInputAmounts = { }
       let inputs = []
       const addressArray = this.walletLocalData.addressArray
       // Get a new address for change if needed
@@ -592,11 +635,15 @@ class ABCTxLibTRD {
         for (let n in addressArray) {
           let addressObj = addressArray[n]
           if (addressObj.amounts[currencyCode] > 0) {
+            if (totalInputAmounts[currencyCode] == undefined) {
+              totalInputAmounts[currencyCode] = 0
+            }
+
             totalInputAmounts[currencyCode] += addressObj.amounts[currencyCode]
             inputs.push({
               currencyCode,
               address: addressObj.address,
-              amount: addressObj.balance
+              amount: addressObj.amounts[currencyCode]
             })
           }
           if (totalInputAmounts[currencyCode] >= totalSpends[currencyCode]) {
@@ -612,7 +659,7 @@ class ABCTxLibTRD {
           outputs.push({
             currencyCode,
             address: changeAddress,
-            amount: (totalInputAmount[currencyCode] - totalSpends[currencyCode])
+            amount: (totalInputAmounts[currencyCode] - totalSpends[currencyCode])
           })
         }
       }
@@ -621,7 +668,7 @@ class ABCTxLibTRD {
       // Create the unsigned ABCTransaction
 
       let abcTransaction = {
-        amountSatoshi: totalSpend,
+        amountSatoshi: totalSpends[PRIMARY_CURRENCY],
         networkFee,
         signedTx: null,
         otherParams: {
