@@ -42,22 +42,6 @@ export const TxLibBTC = {
 }
 
 
-function fetchGet (cmd, params) {
-  return window.fetch(baseUrl + cmd + '/' + params, {
-    method: 'get'
-  })
-}
-function fetchPost (cmd, body) {
-  return window.fetch(baseUrl + cmd, {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    method: 'post',
-    body: JSON.stringify(body)
-  })
-}
-
 class WalletLocalData {
   constructor (jsonString) {
     this.blockHeight = 0
@@ -108,6 +92,7 @@ class ABCTxLibTRD {
     this.transactionsDirty = true
     this.abcTxLibCallbacks = callbacks
     this.abcTxLibOptions = options
+    this.io = abcTxLibAccess.io
     this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
   }
 
@@ -125,13 +110,30 @@ class ABCTxLibTRD {
     return this.walletLocalData.enabledTokens.indexOf(token) != -1
   }
 
+  fetchGet (cmd, params) {
+    return this.io.fetch(baseUrl + cmd + '/' + params, {
+      method: 'get'
+    })
+  }
+
+  fetchPost (cmd, body) {
+    return this.io.fetch(baseUrl + cmd, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: 'post',
+      body: JSON.stringify(body)
+    })
+  }
+
   // *************************************
   // Poll on the blockheight
   // *************************************
   blockHeightInnerLoop () {
     if (this.engineOn) {
       const p = new Promise ((resolve, reject) => {
-        fetchGet('height', '').then(function (response) {
+        this.fetchGet('height', '').then(function (response) {
           return response.json()
         }).then((jsonObj) => {
           if (this.walletLocalData.blockHeight != jsonObj.height) {
@@ -186,7 +188,7 @@ class ABCTxLibTRD {
   }
 
   processTransactionFromServer(txid) {
-    return fetchGet('transaction', txid).then(function (response) {
+    return this.fetchGet('transaction', txid).then(function (response) {
       return response.json()
     }).then((jsonObj) => {
       console.log('processTransactionFromServer: response.json():')
@@ -330,7 +332,7 @@ class ABCTxLibTRD {
   }
 
   processAddressFromServer (address) {
-    return fetchGet('address', address).then(function (response) {
+    return this.fetchGet('address', address).then(function (response) {
       return response.json()
     }).then((jsonObj) => {
       console.log('processAddressFromServer: response.json():')
@@ -700,7 +702,7 @@ class ABCTxLibTRD {
   // asynchronous
   broadcastTx (abcTransaction) {
     const prom = new Promise((resolve, reject) => {
-      fetchPost('spend', abcTransaction.otherParams).then(function (response) {
+      this.fetchPost('spend', abcTransaction.otherParams).then(function (response) {
         return response.json()
       }).then((jsonObj) => {
         // Copy params from returned transaction object to our abcTransaction object
