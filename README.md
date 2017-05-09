@@ -1,6 +1,7 @@
 # Airbitz Core Shitcoin TxLib 
 
-Implement shitcoin transactions against the [airbitz-shitcoin-server](https://github.com/Airbitz/airbitz-shitcoin-server)
+Implement shitcoin transactions against the [airbitz-shitcoin-server](https://github.com/Airbitz/airbitz-shitcoin-server).
+The API can be found [here](https://developer.airbitz.co/javascript/#abctxengine)
 
 Add to your package.json like:
 ```
