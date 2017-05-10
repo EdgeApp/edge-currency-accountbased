@@ -13,8 +13,8 @@ const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
 const PRIMARY_CURRENCY      = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES           = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
-// const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
-const baseUrl = 'http://localhost:8080/api/'
+const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
+// const baseUrl = 'http://localhost:8080/api/'
 
 export const TxLibBTC = {
   getInfo: () => {
@@ -89,10 +89,13 @@ class ABCTxLibTRD {
     // dataStore.init(abcTxLibAccess, options, callbacks)
     this.engineOn = false
     this.transactionsDirty = true
+    this.addressesChecked = false
     this.abcTxLibCallbacks = callbacks
     this.abcTxLibOptions = options
     this.io = abcTxLibAccess.io
     this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
+    this.walletLocalData = {}
+    this.transactionsChangedArray = []
   }
 
   // *************************************
@@ -254,6 +257,11 @@ class ABCTxLibTRD {
       if (idx != -1) {
         this.walletLocalData.transactionsToFetch.splice(idx,1)
       }
+      
+      if (this.walletLocalData.transactionsToFetch.length == 0) {
+        this.abcTxLibCallbacks.transactionsChanged(this.transactionsChangedArray)
+        this.transactionsChangedArray = []
+      }
 
       return 0
     }).catch(function (err) {
@@ -304,6 +312,10 @@ class ABCTxLibTRD {
             }
           }
           this.walletLocalData.totalBalances = totalBalances
+          if (!this.addressesChecked) {
+            this.addressesChecked = true
+            this.abcTxLibCallbacks.addressesChecked(1)
+          }
           setTimeout(() => {
             this.checkAddressesInnerLoop()
           }, ADDRESS_POLL_MILLISECONDS)
@@ -409,6 +421,7 @@ class ABCTxLibTRD {
       this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
       console.log('addTransaction: updating:' + abcTransaction.txid)
     }
+    this.transactionsChangedArray.push(abcTransaction)
   }
 
   // *************************************
