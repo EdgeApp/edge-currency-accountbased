@@ -1,5 +1,5 @@
 // abcWalletTxLib-btc.js
-import random from 'random-js'
+import { base16 } from 'rfc4648'
 
 // const random = require('random-js')
 import { txLibInfo } from './txLibInfo.js'
@@ -9,12 +9,12 @@ const DATA_STORE_FOLDER = 'txEngineFolder'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
-const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
-// const baseUrl = 'http://localhost:8080/api/'
 
 const PRIMARY_CURRENCY      = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES           = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
+// const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
+const baseUrl = 'http://localhost:8080/api/'
 
 export const TxLibBTC = {
   getInfo: () => {
@@ -23,10 +23,9 @@ export const TxLibBTC = {
     return currencyDetails
   },
 
-  createMasterKeys: (walletType) => {
+  createMasterKeys: (io, walletType) => {
     if (walletType === 'shitcoin') {
-      const r = random()
-      const masterPrivateKey = r.hex(16)
+      const masterPrivateKey = base16.stringify(io.random(8))
       const masterPublicKey = 'pub' + masterPrivateKey
       return { masterPrivateKey, masterPublicKey }
     } else {

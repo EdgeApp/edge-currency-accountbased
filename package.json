@@ -26,6 +26,6 @@
     "test": "test"
   },
   "dependencies": {
-    "random-js": "^1.0.8"
+    "rfc4648": "^0.9.1"
   }
 }
