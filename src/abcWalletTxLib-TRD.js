@@ -130,7 +130,7 @@ class ABCTxLibTRD {
 
   fetchGet (cmd, params) {
     return this.io.fetch(baseUrl + cmd + '/' + params, {
-      method: 'get'
+      method: 'GET'
     })
   }
 
@@ -140,7 +140,7 @@ class ABCTxLibTRD {
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      method: 'post',
+      method: 'POST',
       body: JSON.stringify(body)
     })
   }
