@@ -9,6 +9,7 @@ const DATA_STORE_FOLDER = 'txEngineFolder'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
+const SAVE_DATASTORE_MILLISECONDS = 10000
 
 const PRIMARY_CURRENCY      = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES           = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
@@ -98,6 +99,7 @@ class ABCTxLibTRD {
     this.io = abcTxLibAccess.io
     this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
     this.walletLocalData = {}
+    this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
   }
 
@@ -109,6 +111,7 @@ class ABCTxLibTRD {
     this.blockHeightInnerLoop()
     this.checkAddressesInnerLoop()
     this.checkTransactionsInnerLoop()
+    this.saveWalletDataStore()
   }
 
   isTokenEnabled(token) {
@@ -143,6 +146,7 @@ class ABCTxLibTRD {
         }).then((jsonObj) => {
           if (this.walletLocalData.blockHeight != jsonObj.height) {
             this.walletLocalData.blockHeight = jsonObj.height
+            this.walletLocalDataDirty = true
             console.log('Block height changed: ' + this.walletLocalData.blockHeight)
             this.abcTxLibCallbacks.blockHeightChanged(this.walletLocalData.blockHeight)
           }
@@ -259,6 +263,7 @@ class ABCTxLibTRD {
       const idx = this.walletLocalData.transactionsToFetch.indexOf(jsonObj.txid)
       if (idx != -1) {
         this.walletLocalData.transactionsToFetch.splice(idx,1)
+        this.walletLocalDataDirty = true
       }
       
       if (this.walletLocalData.transactionsToFetch.length == 0) {
@@ -288,6 +293,7 @@ class ABCTxLibTRD {
 
         if (this.walletLocalData.addressArray[n] == undefined) {
           this.walletLocalData.addressArray[n] = { address }
+          this.walletLocalDataDirty = true
         } else {
           if (this.walletLocalData.addressArray[n].address != address) {
             throw new Error('Derived address mismatch on index ' + n)
@@ -317,6 +323,8 @@ class ABCTxLibTRD {
             }
           }
           this.walletLocalData.totalBalances = totalBalances
+          this.walletLocalDataDirty = true
+
           if (!this.addressesChecked) {
             this.addressesChecked = true
             this.abcTxLibCallbacks.addressesChecked(1)
@@ -361,6 +369,7 @@ class ABCTxLibTRD {
         throw new Error('Queried address not found in addressArray:' + jsonObj.address)
       }
       this.walletLocalData.addressArray[idx] = jsonObj
+      this.walletLocalDataDirty = true
 
       // Iterate over txids in address
       for (var n in txids) {
@@ -372,6 +381,8 @@ class ABCTxLibTRD {
           this.walletLocalData.transactionsToFetch.indexOf(txid) == -1) {
           console.log('processAddressFromServer: txid not found. Adding:' + txid)
           this.walletLocalData.transactionsToFetch.push(txid)
+          this.walletLocalDataDirty = true
+
           this.transactionsDirty = true
         }
       }
@@ -381,6 +392,7 @@ class ABCTxLibTRD {
         // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
         if (idx >= this.walletLocalData.unusedAddressIndex) {
           this.walletLocalData.unusedAddressIndex = idx + 1
+          this.walletLocalDataDirty = true
           console.log('processAddressFromServer: set unusedAddressIndex:' + this.walletLocalData.unusedAddressIndex)
         }
       }
@@ -430,13 +442,36 @@ class ABCTxLibTRD {
 
       // Sort
       this.walletLocalData.transactionsObj[currencyCode].sort(this.sortTxByDate)
+      this.walletLocalDataDirty = true
     } else {
       // Update the transaction
       this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
+      this.walletLocalDataDirty = true
       console.log('addTransaction: updating:' + abcTransaction.txid)
     }
     this.transactionsChangedArray.push(abcTransaction)
   }
+
+  // *************************************
+  // Save the wallet data store
+  // *************************************
+  saveWalletDataStore () {
+    if (this.engineOn) {
+
+      if (this.walletLocalDataDirty) {
+        const walletJson = JSON.stringify(this.walletLocalData)
+        this.walletLocalDataStore.writeData(DATA_STORE_FOLDER, 'walletLocalData', walletJson).then((result) => {
+          this.walletLocalDataDirty = false
+          setTimeout(() => {
+            this.saveWalletDataStore()
+          }, SAVE_DATASTORE_MILLISECONDS)
+        }).catch((err) => {
+          console.log(err)
+        })
+      }
+    }
+  }
+
 
   // *************************************
   // Public methods
