@@ -73,9 +73,10 @@ class WalletLocalData {
 }
 
 class ABCTransaction {
-  constructor (txid, date, blockHeight, amountSatoshi, networkFee, signedTx, otherParams) {
+  constructor (txid, date, currencyCode, blockHeight, amountSatoshi, networkFee, signedTx, otherParams) {
     this.txid           = txid
     this.date           = date
+    this.currencyCode   = currencyCode
     this.blockHeight    = blockHeight
     this.amountSatoshi  = amountSatoshi
     this.networkFee     = networkFee
@@ -90,6 +91,8 @@ class ABCTxLibTRD {
     this.engineOn = false
     this.transactionsDirty = true
     this.addressesChecked = false
+    this.numAddressesChecked = 0
+    this.numAddressesToCheck = 0
     this.abcTxLibCallbacks = callbacks
     this.abcTxLibOptions = options
     this.io = abcTxLibAccess.io
@@ -247,7 +250,7 @@ class ABCTxLibTRD {
         }
 
         if (receiveAmounts[currencyCode] != 0 || spendAmounts[currencyCode] != 0) {
-          var abcTransaction = new ABCTransaction(jsonObj.txid, jsonObj.txDate, jsonObj.blockHeight, amountsSatoshi[currencyCode], jsonObj.networkFee, 'iwassignedyoucantrustme', otherParams)
+          var abcTransaction = new ABCTransaction(jsonObj.txid, jsonObj.txDate, currencyCode, jsonObj.blockHeight, amountsSatoshi[currencyCode], jsonObj.networkFee, 'iwassignedyoucantrustme', otherParams)
           this.addTransaction(currencyCode, abcTransaction)
         }
       }
@@ -295,6 +298,8 @@ class ABCTxLibTRD {
       }
 
       if (promiseArray.length > 0) {
+        this.numAddressesChecked = 0
+        this.numAddressesToCheck = promiseArray.length
         Promise.all(promiseArray).then(response => {
           // Iterate over all the address balances and get a final balance
           console.log('checkAddressesInnerLoop: Completed responses: ' + response.length)
@@ -315,6 +320,8 @@ class ABCTxLibTRD {
           if (!this.addressesChecked) {
             this.addressesChecked = true
             this.abcTxLibCallbacks.addressesChecked(1)
+            this.numAddressesChecked = 0
+            this.numAddressesToCheck = 0
           }
           setTimeout(() => {
             this.checkAddressesInnerLoop()
@@ -376,6 +383,13 @@ class ABCTxLibTRD {
           this.walletLocalData.unusedAddressIndex = idx + 1
           console.log('processAddressFromServer: set unusedAddressIndex:' + this.walletLocalData.unusedAddressIndex)
         }
+      }
+
+      this.numAddressesChecked++;
+      const progress = this.numAddressesChecked / this.numAddressesToCheck
+
+      if (progress != 1) {
+        this.abcTxLibCallbacks.addressesChecked(progress)
       }
 
       return jsonObj.amounts
@@ -684,16 +698,7 @@ class ABCTxLibTRD {
 
       // **********************************
       // Create the unsigned ABCTransaction
-
-      let abcTransaction = {
-        amountSatoshi: totalSpends[PRIMARY_CURRENCY],
-        networkFee,
-        signedTx: null,
-        otherParams: {
-          inputs,
-          outputs
-        }
-      }
+      const abcTransaction = new ABCTransaction(null, null, null, null, totalSpends[PRIMARY_CURRENCY], networkFee, null, { inputs, outputs })
 
       resolve(abcTransaction)
 
@@ -719,6 +724,7 @@ class ABCTxLibTRD {
       }).then((jsonObj) => {
         // Copy params from returned transaction object to our abcTransaction object
         abcTransaction.blockHeight = jsonObj.blockHeight
+        abcTransaction.txid = jsonObj.txid
         abcTransaction.date = jsonObj.txDate
         resolve(abcTransaction)
       }).catch(err => {
