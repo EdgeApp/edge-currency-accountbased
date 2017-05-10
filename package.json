@@ -1,4 +1,14 @@
 {
+"name": "airbitz-txlib-shitcoin",
+ "version": "0.1.1",
+ "description": "Airbitz Txlib Shitcoin",
+ "url": "https://airbitz.co",
+ "author": "Airbitz, Inc.",
+ "contributors": [
+   "Paul Puey <paul@airbitz.co>",
+   "William Swanson <william@airbitz.co>"
+ ],
+ "license": "SEE LICENSE IN LICENSE",  
   "main": "./dist/index.js",
   "module": "./dist/index.es.js",
   "scripts": {
