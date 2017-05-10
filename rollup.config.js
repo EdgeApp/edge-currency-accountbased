@@ -3,9 +3,8 @@ const packageJson = require('./package.json')
 
 export default {
   entry: 'src/index.js',
-  plugins: [
-    buble()
-  ],
+  external: Object.keys(packageJson.dependencies),
+  plugins: [buble()],
   targets: [
     {
       dest: packageJson['main'],
