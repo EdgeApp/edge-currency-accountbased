@@ -6,6 +6,7 @@ import { txLibInfo } from './txLibInfo.js'
 
 const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
+const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
@@ -27,7 +28,7 @@ export function makeShitcoinPlugin (opts = {}) {
       return currencyDetails
     },
 
-    createMasterKeys: (walletType) => {
+    createMasterKeys: walletType => {
       if (walletType === 'shitcoin') {
         const masterPrivateKey = base16.stringify(io.random(8))
         const masterPublicKey = 'pub' + masterPrivateKey
@@ -37,8 +38,8 @@ export function makeShitcoinPlugin (opts = {}) {
       }
     },
 
-    makeEngine: (abcTxLibAccess, options, callbacks) => {
-      const abcTxLib = new ABCTxLibTRD(abcTxLibAccess, options, callbacks)
+    makeEngine: (keyInfo, opts = {}) => {
+      const abcTxLib = new ABCTxLibTRD(io, keyInfo, opts)
 
       return abcTxLib
     }
@@ -101,17 +102,20 @@ class ABCTransaction {
 }
 
 class ABCTxLibTRD {
-  constructor (abcTxLibAccess, options, callbacks) {
+  constructor (io, keyInfo, opts = {}) {
     // dataStore.init(abcTxLibAccess, options, callbacks)
+    const { walletLocalFolder, callbacks } = opts
+
+    this.io = io
+    this.keyInfo = keyInfo
+    this.abcTxLibCallbacks = callbacks
+    this.walletLocalFolder = walletLocalFolder
+
     this.engineOn = false
     this.transactionsDirty = true
     this.addressesChecked = false
     this.numAddressesChecked = 0
     this.numAddressesToCheck = 0
-    this.abcTxLibCallbacks = callbacks
-    this.abcTxLibOptions = options
-    this.io = abcTxLibAccess.io
-    this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
     this.walletLocalData = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
@@ -539,8 +543,10 @@ class ABCTxLibTRD {
     if (this.engineOn) {
       if (this.walletLocalDataDirty) {
         const walletJson = JSON.stringify(this.walletLocalData)
-        this.walletLocalDataStore
-          .writeData(DATA_STORE_FOLDER, 'walletLocalData', walletJson)
+        this.walletLocalFolder
+          .folder(DATA_STORE_FOLDER)
+          .file(DATA_STORE_FILE)
+          .setText(walletJson)
           .then(result => {
             this.walletLocalDataDirty = false
             setTimeout(() => {
@@ -560,11 +566,13 @@ class ABCTxLibTRD {
 
   startEngine () {
     const prom = new Promise((resolve, reject) => {
-      this.walletLocalDataStore
-        .readData(DATA_STORE_FOLDER, 'walletLocalData')
+      this.walletLocalFolder
+        .folder(DATA_STORE_FOLDER)
+        .file(DATA_STORE_FILE)
+        .getText(DATA_STORE_FOLDER, 'walletLocalData')
         .then(result => {
           this.walletLocalData = new WalletLocalData(result)
-          this.walletLocalData.masterPublicKey = this.abcTxLibOptions.masterPublicKey
+          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
           this.engineLoop()
           resolve()
         })
@@ -572,13 +580,11 @@ class ABCTxLibTRD {
           console.log(err)
           console.log('No walletLocalData setup yet: Failure is ok')
           this.walletLocalData = new WalletLocalData(null)
-          this.walletLocalData.masterPublicKey = this.abcTxLibOptions.masterPublicKey
-          this.walletLocalDataStore
-            .writeData(
-              DATA_STORE_FOLDER,
-              'walletLocalData',
-              JSON.stringify(this.walletLocalData)
-            )
+          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+          this.walletLocalFolder
+            .folder(DATA_STORE_FOLDER)
+            .file(DATA_STORE_FILE)
+            .setText(JSON.stringify(this.walletLocalData))
             .then(result => {
               this.engineLoop()
               resolve()
