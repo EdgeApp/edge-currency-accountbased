@@ -17,27 +17,31 @@ const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
 // const baseUrl = 'http://localhost:8080/api/'
 
-export const TxLibBTC = {
-  getInfo: () => {
-    const currencyDetails = txLibInfo.getInfo
+export function makeShitcoinPlugin (opts = {}) {
+  const { io } = opts
 
-    return currencyDetails
-  },
+  return {
+    getInfo: () => {
+      const currencyDetails = txLibInfo.getInfo
 
-  createMasterKeys: (io, walletType) => {
-    if (walletType === 'shitcoin') {
-      const masterPrivateKey = base16.stringify(io.random(8))
-      const masterPublicKey = 'pub' + masterPrivateKey
-      return { masterPrivateKey, masterPublicKey }
-    } else {
-      return null
+      return currencyDetails
+    },
+
+    createMasterKeys: (walletType) => {
+      if (walletType === 'shitcoin') {
+        const masterPrivateKey = base16.stringify(io.random(8))
+        const masterPublicKey = 'pub' + masterPrivateKey
+        return { masterPrivateKey, masterPublicKey }
+      } else {
+        return null
+      }
+    },
+
+    makeEngine: (abcTxLibAccess, options, callbacks) => {
+      const abcTxLib = new ABCTxLibTRD(abcTxLibAccess, options, callbacks)
+
+      return abcTxLib
     }
-  },
-
-  makeEngine: (abcTxLibAccess, options, callbacks) => {
-    const abcTxLib = new ABCTxLibTRD(abcTxLibAccess, options, callbacks)
-
-    return abcTxLib
   }
 }
 
