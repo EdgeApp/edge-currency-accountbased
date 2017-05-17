@@ -1,7 +1,7 @@
 {
-  "name": "airbitz-txlib-shitcoin",
+  "name": "airbitz-currency-shitcoin",
   "version": "0.1.1",
-  "description": "Airbitz Txlib Shitcoin",
+  "description": "Airbitz Shitcoin currency plugin",
   "author": "Airbitz, Inc.",
   "contributors": [
     "Paul Puey <paul@airbitz.co>",
