@@ -170,7 +170,7 @@ class ABCTxLibTRD {
               console.log(
                 'Block height changed: ' + this.walletLocalData.blockHeight
               )
-              this.abcTxLibCallbacks.blockHeightChanged(
+              this.abcTxLibCallbacks.onBlockHeightChanged(
                 this.walletLocalData.blockHeight
               )
             }
@@ -316,7 +316,7 @@ class ABCTxLibTRD {
         }
 
         if (this.walletLocalData.transactionsToFetch.length === 0) {
-          this.abcTxLibCallbacks.transactionsChanged(
+          this.abcTxLibCallbacks.onTransactionsChanged(
             this.transactionsChangedArray
           )
           this.transactionsChangedArray = []
@@ -394,7 +394,7 @@ class ABCTxLibTRD {
 
             if (!this.addressesChecked) {
               this.addressesChecked = true
-              this.abcTxLibCallbacks.addressesChecked(1)
+              this.abcTxLibCallbacks.onAddressesChecked(1)
               this.numAddressesChecked = 0
               this.numAddressesToCheck = 0
             }
@@ -484,7 +484,7 @@ class ABCTxLibTRD {
         const progress = this.numAddressesChecked / this.numAddressesToCheck
 
         if (progress !== 1) {
-          this.abcTxLibCallbacks.addressesChecked(progress)
+          this.abcTxLibCallbacks.onAddressesChecked(progress)
         }
 
         return jsonObj.amounts
