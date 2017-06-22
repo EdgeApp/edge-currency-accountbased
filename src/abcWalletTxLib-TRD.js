@@ -6,41 +6,45 @@ import { txLibInfo } from './txLibInfo.js'
 
 const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
+const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
 const SAVE_DATASTORE_MILLISECONDS = 10000
 
-const PRIMARY_CURRENCY      = txLibInfo.getInfo.currencyCode
-const TOKEN_CODES           = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
+const PRIMARY_CURRENCY = txLibInfo.getInfo.currencyCode
+const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
 const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
 // const baseUrl = 'http://localhost:8080/api/'
 
-export const TxLibBTC = {
-  getInfo: () => {
-    const currencyDetails = txLibInfo.getInfo
+export function makeShitcoinPlugin (opts = {}) {
+  const { io } = opts
 
-    return currencyDetails
-  },
+  return {
+    getInfo: () => {
+      const currencyDetails = txLibInfo.getInfo
 
-  createMasterKeys: (io, walletType) => {
-    if (walletType === 'shitcoin') {
-      const masterPrivateKey = base16.stringify(io.random(8))
-      const masterPublicKey = 'pub' + masterPrivateKey
-      return { masterPrivateKey, masterPublicKey }
-    } else {
-      return null
+      return currencyDetails
+    },
+
+    createMasterKeys: walletType => {
+      if (walletType === 'shitcoin') {
+        const masterPrivateKey = base16.stringify(io.random(8))
+        const masterPublicKey = 'pub' + masterPrivateKey
+        return { masterPrivateKey, masterPublicKey }
+      } else {
+        return null
+      }
+    },
+
+    makeEngine: (keyInfo, opts = {}) => {
+      const abcTxLib = new ABCTxLibTRD(io, keyInfo, opts)
+
+      return abcTxLib
     }
-  },
-
-  makeEngine: (abcTxLibAccess, options, callbacks) => {
-    const abcTxLib = new ABCTxLibTRD(abcTxLibAccess, options, callbacks)
-
-    return abcTxLib
   }
 }
-
 
 class WalletLocalData {
   constructor (jsonString) {
@@ -68,36 +72,50 @@ class WalletLocalData {
     this.enabledTokens = [PRIMARY_CURRENCY]
     if (jsonString != null) {
       const data = JSON.parse(jsonString)
-      for (const k in data) this[k] = data[k]
+      for (const k in data) {
+        this[k] = data[k]
+      }
     }
   }
 }
 
 class ABCTransaction {
-  constructor (txid, date, currencyCode, blockHeight, amountSatoshi, networkFee, signedTx, otherParams) {
-    this.txid           = txid
-    this.date           = date
-    this.currencyCode   = currencyCode
-    this.blockHeight    = blockHeight
-    this.amountSatoshi  = amountSatoshi
-    this.networkFee     = networkFee
-    this.signedTx       = signedTx
-    this.otherParams    = otherParams
+  constructor (
+    txid,
+    date,
+    currencyCode,
+    blockHeight,
+    amountSatoshi,
+    networkFee,
+    signedTx,
+    otherParams
+  ) {
+    this.txid = txid
+    this.date = date
+    this.currencyCode = currencyCode
+    this.blockHeight = blockHeight
+    this.amountSatoshi = amountSatoshi
+    this.networkFee = networkFee
+    this.signedTx = signedTx
+    this.otherParams = otherParams
   }
 }
 
 class ABCTxLibTRD {
-  constructor (abcTxLibAccess, options, callbacks) {
+  constructor (io, keyInfo, opts = {}) {
     // dataStore.init(abcTxLibAccess, options, callbacks)
+    const { walletLocalFolder, callbacks } = opts
+
+    this.io = io
+    this.keyInfo = keyInfo
+    this.abcTxLibCallbacks = callbacks
+    this.walletLocalFolder = walletLocalFolder
+
     this.engineOn = false
     this.transactionsDirty = true
     this.addressesChecked = false
     this.numAddressesChecked = 0
     this.numAddressesToCheck = 0
-    this.abcTxLibCallbacks = callbacks
-    this.abcTxLibOptions = options
-    this.io = abcTxLibAccess.io
-    this.walletLocalDataStore = abcTxLibAccess.walletLocalDataStore
     this.walletLocalData = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
@@ -114,23 +132,23 @@ class ABCTxLibTRD {
     this.saveWalletDataStore()
   }
 
-  isTokenEnabled(token) {
-    return this.walletLocalData.enabledTokens.indexOf(token) != -1
+  isTokenEnabled (token) {
+    return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
   fetchGet (cmd, params) {
     return this.io.fetch(baseUrl + cmd + '/' + params, {
-      method: 'get'
+      method: 'GET'
     })
   }
 
   fetchPost (cmd, body) {
     return this.io.fetch(baseUrl + cmd, {
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      method: 'post',
+      method: 'POST',
       body: JSON.stringify(body)
     })
   }
@@ -140,21 +158,28 @@ class ABCTxLibTRD {
   // *************************************
   blockHeightInnerLoop () {
     if (this.engineOn) {
-      const p = new Promise ((resolve, reject) => {
-        this.fetchGet('height', '').then(function (response) {
-          return response.json()
-        }).then((jsonObj) => {
-          if (this.walletLocalData.blockHeight != jsonObj.height) {
-            this.walletLocalData.blockHeight = jsonObj.height
-            this.walletLocalDataDirty = true
-            console.log('Block height changed: ' + this.walletLocalData.blockHeight)
-            this.abcTxLibCallbacks.blockHeightChanged(this.walletLocalData.blockHeight)
-          }
-          resolve()
-        }).catch(function (err) {
-          console.log('Error fetching height: ' + err)
-          resolve()
-        })
+      const p = new Promise((resolve, reject) => {
+        this.fetchGet('height', '')
+          .then(function (response) {
+            return response.json()
+          })
+          .then(jsonObj => {
+            if (this.walletLocalData.blockHeight !== jsonObj.height) {
+              this.walletLocalData.blockHeight = jsonObj.height
+              this.walletLocalDataDirty = true
+              console.log(
+                'Block height changed: ' + this.walletLocalData.blockHeight
+              )
+              this.abcTxLibCallbacks.onBlockHeightChanged(
+                this.walletLocalData.blockHeight
+              )
+            }
+            resolve()
+          })
+          .catch(function (err) {
+            console.log('Error fetching height: ' + err)
+            resolve()
+          })
       })
       p.then(() => {
         setTimeout(() => {
@@ -162,10 +187,9 @@ class ABCTxLibTRD {
         }, BLOCKHEIGHT_POLL_MILLISECONDS)
       })
     }
-
   }
 
-  checkTransactionsInnerLoop() {
+  checkTransactionsInnerLoop () {
     if (this.engineOn) {
       var promiseArray = []
       const numTransactions = this.walletLocalData.transactionsToFetch.length
@@ -178,16 +202,22 @@ class ABCTxLibTRD {
       }
 
       if (promiseArray.length > 0) {
-        Promise.all(promiseArray).then(response => {
-          setTimeout(() => {
-            this.checkTransactionsInnerLoop()
-          }, TRANSACTION_POLL_MILLISECONDS)
-        }).catch(err => {
-          console.log(new Error('Error: checkTransactionsInnerLoop: should not get here'))
-          setTimeout(() => {
-            this.checkTransactionsInnerLoop()
-          }, TRANSACTION_POLL_MILLISECONDS)
-        })
+        Promise.all(promiseArray)
+          .then(response => {
+            setTimeout(() => {
+              this.checkTransactionsInnerLoop()
+            }, TRANSACTION_POLL_MILLISECONDS)
+          })
+          .catch(e => {
+            console.log(
+              new Error(
+                'Error: checkTransactionsInnerLoop: should not get here'
+              )
+            )
+            setTimeout(() => {
+              this.checkTransactionsInnerLoop()
+            }, TRANSACTION_POLL_MILLISECONDS)
+          })
       } else {
         setTimeout(() => {
           this.checkTransactionsInnerLoop()
@@ -196,106 +226,131 @@ class ABCTxLibTRD {
     }
   }
 
-  processTransactionFromServer(txid) {
-    return this.fetchGet('transaction', txid).then(function (response) {
-      return response.json()
-    }).then((jsonObj) => {
-      console.log('processTransactionFromServer: response.json():')
-      console.log(jsonObj)
+  processTransactionFromServer (txid) {
+    return this.fetchGet('transaction', txid)
+      .then(function (response) {
+        return response.json()
+      })
+      .then(jsonObj => {
+        console.log('processTransactionFromServer: response.json():')
+        console.log(jsonObj)
 
-      //
-      // Calculate the amount sent from the wallet
-      //
+        //
+        // Calculate the amount sent from the wallet
+        //
 
-      // Iterate through all the inputs and see if any are in our wallet
-      let spendAmounts = []
-      let receiveAmounts = []
-      let amountsSatoshi = []
+        // Iterate through all the inputs and see if any are in our wallet
+        let spendAmounts = []
+        let receiveAmounts = []
+        let amountsSatoshi = []
 
-      const inputs = jsonObj.inputs
-      const outputs = jsonObj.outputs
+        const inputs = jsonObj.inputs
+        const outputs = jsonObj.outputs
 
-      const otherParams = {
-        inputs,
-        outputs
-      }
+        const otherParams = {
+          inputs,
+          outputs
+        }
 
-      for (const c in TOKEN_CODES) {
-        const currencyCode = TOKEN_CODES[c]
-        receiveAmounts[currencyCode] = spendAmounts[currencyCode] = 0
+        for (const c in TOKEN_CODES) {
+          const currencyCode = TOKEN_CODES[c]
+          receiveAmounts[currencyCode] = spendAmounts[currencyCode] = 0
 
-        for (var n in inputs) {
-          const input = inputs[n]
-          const addr = input.address
-          const ccode = input.currencyCode
-          const idx = this.findAddress(addr)
-          if (idx != -1 && ccode == currencyCode) {
-            spendAmounts[ccode] += input.amount
+          for (var n in inputs) {
+            const input = inputs[n]
+            const addr = input.address
+            const ccode = input.currencyCode
+            const idx = this.findAddress(addr)
+            if (idx !== -1 && ccode === currencyCode) {
+              spendAmounts[ccode] += input.amount
+            }
+          }
+
+          // Iterate through all the outputs and see if any are in our wallet
+          for (let n in outputs) {
+            const output = outputs[n]
+            const addr = output.address
+            const ccode = output.currencyCode
+            const idx = this.findAddress(addr)
+            if (idx !== -1 && ccode === currencyCode) {
+              receiveAmounts[ccode] += output.amount
+            }
+          }
+          amountsSatoshi[currencyCode] =
+            receiveAmounts[currencyCode] - spendAmounts[currencyCode]
+
+          // Create a txlib ABCTransaction object which must contain
+          // txid, date, blockHeight, amountSatoshi, networkFee, signedTx, and optionally otherParams
+          /*
+          let networkFee = jsonObj.networkFee
+          if (currencyCode != PRIMARY_CURRENCY) {
+            networkFee = 0
+          }
+          */
+
+          if (
+            receiveAmounts[currencyCode] !== 0 ||
+            spendAmounts[currencyCode] !== 0
+          ) {
+            var abcTransaction = new ABCTransaction(
+              jsonObj.txid,
+              jsonObj.txDate,
+              currencyCode,
+              jsonObj.blockHeight,
+              amountsSatoshi[currencyCode],
+              jsonObj.networkFee,
+              'iwassignedyoucantrustme',
+              otherParams
+            )
+            this.addTransaction(currencyCode, abcTransaction)
           }
         }
 
-        // Iterate through all the outputs and see if any are in our wallet
-        for (var n in outputs) {
-          const output = outputs[n]
-          const addr = output.address
-          const ccode = output.currencyCode
-          const idx = this.findAddress(addr)
-          if (idx != -1 && ccode == currencyCode) {
-            receiveAmounts[ccode] += output.amount
-          }
-        }
-        amountsSatoshi[currencyCode] = receiveAmounts[currencyCode] - spendAmounts[currencyCode]
-
-        // Create a txlib ABCTransaction object which must contain
-        // txid, date, blockHeight, amountSatoshi, networkFee, signedTx, and optionally otherParams
-        let networkFee = jsonObj.networkFee
-        if (currencyCode != PRIMARY_CURRENCY) {
-          networkFee = 0
+        // Remove txid from transactionsToFetch
+        const idx = this.walletLocalData.transactionsToFetch.indexOf(
+          jsonObj.txid
+        )
+        if (idx !== -1) {
+          this.walletLocalData.transactionsToFetch.splice(idx, 1)
+          this.walletLocalDataDirty = true
         }
 
-        if (receiveAmounts[currencyCode] != 0 || spendAmounts[currencyCode] != 0) {
-          var abcTransaction = new ABCTransaction(jsonObj.txid, jsonObj.txDate, currencyCode, jsonObj.blockHeight, amountsSatoshi[currencyCode], jsonObj.networkFee, 'iwassignedyoucantrustme', otherParams)
-          this.addTransaction(currencyCode, abcTransaction)
+        if (this.walletLocalData.transactionsToFetch.length === 0) {
+          this.abcTxLibCallbacks.onTransactionsChanged(
+            this.transactionsChangedArray
+          )
+          this.transactionsChangedArray = []
         }
-      }
 
-      // Remove txid from transactionsToFetch
-      const idx = this.walletLocalData.transactionsToFetch.indexOf(jsonObj.txid)
-      if (idx != -1) {
-        this.walletLocalData.transactionsToFetch.splice(idx,1)
-        this.walletLocalDataDirty = true
-      }
-      
-      if (this.walletLocalData.transactionsToFetch.length == 0) {
-        this.abcTxLibCallbacks.transactionsChanged(this.transactionsChangedArray)
-        this.transactionsChangedArray = []
-      }
-
-      return 0
-    }).catch(function (err) {
-      console.log('Error fetching address: ' + address)
-      return 0
-    })
+        return 0
+      })
+      .catch(e => {
+        console.log('Error fetching address')
+        return 0
+      })
   }
 
   // **********************************************
   // Check all addresses for new transactions
   // **********************************************
   checkAddressesInnerLoop () {
-
     if (this.engineOn) {
       var promiseArray = []
       // var promiseArrayCount = 0
-      for (var n = 0; n < this.walletLocalData.unusedAddressIndex + GAP_LIMIT; n++) {
+      for (
+        var n = 0;
+        n < this.walletLocalData.unusedAddressIndex + GAP_LIMIT;
+        n++
+      ) {
         const address = this.addressFromIndex(n)
         const p = this.processAddressFromServer(address)
         promiseArray.push(p)
 
-        if (this.walletLocalData.addressArray[n] == undefined) {
+        if (this.walletLocalData.addressArray[n] == null) {
           this.walletLocalData.addressArray[n] = { address }
           this.walletLocalDataDirty = true
         } else {
-          if (this.walletLocalData.addressArray[n].address != address) {
+          if (this.walletLocalData.addressArray[n].address !== address) {
             throw new Error('Derived address mismatch on index ' + n)
           }
         }
@@ -306,40 +361,55 @@ class ABCTxLibTRD {
       if (promiseArray.length > 0) {
         this.numAddressesChecked = 0
         this.numAddressesToCheck = promiseArray.length
-        Promise.all(promiseArray).then(response => {
-          // Iterate over all the address balances and get a final balance
-          console.log('checkAddressesInnerLoop: Completed responses: ' + response.length)
+        Promise.all(promiseArray)
+          .then(response => {
+            // Iterate over all the address balances and get a final balance
+            console.log(
+              'checkAddressesInnerLoop: Completed responses: ' + response.length
+            )
 
-          const arrayAmounts = response
-          var totalBalances = {TRD: 0}
-          for (const n in arrayAmounts) {
-            const amountsObj = arrayAmounts[n]
-            for (const currencyCode in amountsObj) {
-              if (totalBalances[currencyCode] == undefined) {
-                totalBalances[currencyCode] = 0
+            const arrayAmounts = response
+            var totalBalances = { TRD: 0 }
+            for (const n in arrayAmounts) {
+              const amountsObj = arrayAmounts[n]
+              for (const currencyCode in amountsObj) {
+                if (totalBalances[currencyCode] == null) {
+                  totalBalances[currencyCode] = 0
+                }
+                totalBalances[currencyCode] += amountsObj[currencyCode]
+                console.log(
+                  'checkAddressesInnerLoop: arrayAmounts[' +
+                    n +
+                    '][' +
+                    currencyCode +
+                    ']: ' +
+                    arrayAmounts[n][currencyCode] +
+                    ' total:' +
+                    totalBalances[currencyCode]
+                )
               }
-              totalBalances[currencyCode] += amountsObj[currencyCode]
-              console.log('checkAddressesInnerLoop: arrayAmounts[' + n + '][' + currencyCode + ']: ' + arrayAmounts[n][currencyCode] + ' total:' + totalBalances[currencyCode])
             }
-          }
-          this.walletLocalData.totalBalances = totalBalances
-          this.walletLocalDataDirty = true
+            this.walletLocalData.totalBalances = totalBalances
+            this.walletLocalDataDirty = true
 
-          if (!this.addressesChecked) {
-            this.addressesChecked = true
-            this.abcTxLibCallbacks.addressesChecked(1)
-            this.numAddressesChecked = 0
-            this.numAddressesToCheck = 0
-          }
-          setTimeout(() => {
-            this.checkAddressesInnerLoop()
-          }, ADDRESS_POLL_MILLISECONDS)
-        }).catch(err => {
-          console.log(new Error('Error: checkAddressesInnerLoop: should not get here'))
-          setTimeout(() => {
-            this.checkAddressesInnerLoop()
-          }, ADDRESS_POLL_MILLISECONDS)
-        })
+            if (!this.addressesChecked) {
+              this.addressesChecked = true
+              this.abcTxLibCallbacks.onAddressesChecked(1)
+              this.numAddressesChecked = 0
+              this.numAddressesToCheck = 0
+            }
+            setTimeout(() => {
+              this.checkAddressesInnerLoop()
+            }, ADDRESS_POLL_MILLISECONDS)
+          })
+          .catch(e => {
+            console.log(
+              new Error('Error: checkAddressesInnerLoop: should not get here')
+            )
+            setTimeout(() => {
+              this.checkAddressesInnerLoop()
+            }, ADDRESS_POLL_MILLISECONDS)
+          })
       } else {
         setTimeout(() => {
           this.checkAddressesInnerLoop()
@@ -349,7 +419,7 @@ class ABCTxLibTRD {
   }
 
   addressFromIndex (index) {
-    let addr = '' + index + "_" + this.walletLocalData.masterPublicKey
+    let addr = '' + index + '_' + this.walletLocalData.masterPublicKey
 
     if (index === 0) {
       addr = addr + '__600000' // Preload first addresss with some funds
@@ -358,77 +428,91 @@ class ABCTxLibTRD {
   }
 
   processAddressFromServer (address) {
-    return this.fetchGet('address', address).then(function (response) {
-      return response.json()
-    }).then((jsonObj) => {
-      console.log('processAddressFromServer: response.json():')
-      console.log(jsonObj)
-      const txids = jsonObj.txids
-      const idx = this.findAddress(jsonObj.address)
-      if (idx === -1) {
-        throw new Error('Queried address not found in addressArray:' + jsonObj.address)
-      }
-      this.walletLocalData.addressArray[idx] = jsonObj
-      this.walletLocalDataDirty = true
-
-      // Iterate over txids in address
-      for (var n in txids) {
-        // This address has transactions
-        const txid = txids[ n ]
-        console.log('processAddressFromServer: txid:' + txid)
-
-        if (this.findTransaction(PRIMARY_CURRENCY, txid) == -1 &&
-          this.walletLocalData.transactionsToFetch.indexOf(txid) == -1) {
-          console.log('processAddressFromServer: txid not found. Adding:' + txid)
-          this.walletLocalData.transactionsToFetch.push(txid)
-          this.walletLocalDataDirty = true
-
-          this.transactionsDirty = true
+    return this.fetchGet('address', address)
+      .then(function (response) {
+        return response.json()
+      })
+      .then(jsonObj => {
+        console.log('processAddressFromServer: response.json():')
+        console.log(jsonObj)
+        const txids = jsonObj.txids
+        const idx = this.findAddress(jsonObj.address)
+        if (idx === -1) {
+          throw new Error(
+            'Queried address not found in addressArray:' + jsonObj.address
+          )
         }
-      }
+        this.walletLocalData.addressArray[idx] = jsonObj
+        this.walletLocalDataDirty = true
 
-      if ((txids != undefined && txids.length) ||
-          this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) != -1) {
-        // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
-        if (idx >= this.walletLocalData.unusedAddressIndex) {
-          this.walletLocalData.unusedAddressIndex = idx + 1
-          this.walletLocalDataDirty = true
-          console.log('processAddressFromServer: set unusedAddressIndex:' + this.walletLocalData.unusedAddressIndex)
+        // Iterate over txids in address
+        for (var n in txids) {
+          // This address has transactions
+          const txid = txids[n]
+          console.log('processAddressFromServer: txid:' + txid)
+
+          if (
+            this.findTransaction(PRIMARY_CURRENCY, txid) === -1 &&
+            this.walletLocalData.transactionsToFetch.indexOf(txid) === -1
+          ) {
+            console.log(
+              'processAddressFromServer: txid not found. Adding:' + txid
+            )
+            this.walletLocalData.transactionsToFetch.push(txid)
+            this.walletLocalDataDirty = true
+
+            this.transactionsDirty = true
+          }
         }
-      }
 
-      this.numAddressesChecked++;
-      const progress = this.numAddressesChecked / this.numAddressesToCheck
+        if (
+          (txids != null && txids.length) ||
+          this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) !== -1
+        ) {
+          // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
+          if (idx >= this.walletLocalData.unusedAddressIndex) {
+            this.walletLocalData.unusedAddressIndex = idx + 1
+            this.walletLocalDataDirty = true
+            console.log(
+              'processAddressFromServer: set unusedAddressIndex:' +
+                this.walletLocalData.unusedAddressIndex
+            )
+          }
+        }
 
-      if (progress != 1) {
-        this.abcTxLibCallbacks.addressesChecked(progress)
-      }
+        this.numAddressesChecked++
+        const progress = this.numAddressesChecked / this.numAddressesToCheck
 
-      return jsonObj.amounts
-    }).catch(function (err) {
-      console.log('Error fetching address: ' + address)
-      return 0
-    })
+        if (progress !== 1) {
+          this.abcTxLibCallbacks.onAddressesChecked(progress)
+        }
 
+        return jsonObj.amounts
+      })
+      .catch(e => {
+        console.log('Error fetching address: ' + address)
+        return 0
+      })
   }
 
-  findTransaction(currencyCode, txid) {
-    if (this.walletLocalData.transactionsObj[currencyCode] == undefined) {
+  findTransaction (currencyCode, txid) {
+    if (this.walletLocalData.transactionsObj[currencyCode] == null) {
       return -1
     }
 
-    return this.walletLocalData.transactionsObj[currencyCode].findIndex((element => {
-      return element.txid == txid
-    }))
+    const currency = this.walletLocalData.transactionsObj[currencyCode]
+    return currency.findIndex(element => {
+      return element.txid === txid
+    })
   }
 
-  findAddress(address) {
-    return this.walletLocalData.addressArray.findIndex((element => {
-      return element.address == address
-    }))
+  findAddress (address) {
+    return this.walletLocalData.addressArray.findIndex(element => {
+      return element.address === address
+    })
   }
 
-  sortTxByDate(a, b) {
+  sortTxByDate (a, b) {
     return b.date - a.date
   }
 
@@ -436,7 +520,7 @@ class ABCTxLibTRD {
     // Add or update tx in transactionsObj
     const idx = this.findTransaction(currencyCode, abcTransaction.txid)
 
-    if (idx == -1) {
+    if (idx === -1) {
       console.log('addTransaction: adding and sorting:' + abcTransaction.txid)
       this.walletLocalData.transactionsObj[currencyCode].push(abcTransaction)
 
@@ -457,21 +541,24 @@ class ABCTxLibTRD {
   // *************************************
   saveWalletDataStore () {
     if (this.engineOn) {
-
       if (this.walletLocalDataDirty) {
         const walletJson = JSON.stringify(this.walletLocalData)
-        this.walletLocalDataStore.writeData(DATA_STORE_FOLDER, 'walletLocalData', walletJson).then((result) => {
-          this.walletLocalDataDirty = false
-          setTimeout(() => {
-            this.saveWalletDataStore()
-          }, SAVE_DATASTORE_MILLISECONDS)
-        }).catch((err) => {
-          console.log(err)
-        })
+        this.walletLocalFolder
+          .folder(DATA_STORE_FOLDER)
+          .file(DATA_STORE_FILE)
+          .setText(walletJson)
+          .then(result => {
+            this.walletLocalDataDirty = false
+            setTimeout(() => {
+              this.saveWalletDataStore()
+            }, SAVE_DATASTORE_MILLISECONDS)
+          })
+          .catch(err => {
+            console.log(err)
+          })
       }
     }
   }
-
 
   // *************************************
   // Public methods
@@ -479,25 +566,34 @@ class ABCTxLibTRD {
 
   startEngine () {
     const prom = new Promise((resolve, reject) => {
-
-      this.walletLocalDataStore.readData(DATA_STORE_FOLDER, 'walletLocalData').then((result) => {
-        this.walletLocalData = new WalletLocalData(result)
-        this.walletLocalData.masterPublicKey = this.abcTxLibOptions.masterPublicKey
-        this.engineLoop()
-        resolve()
-      }).catch((err) => {
-        console.log(err)
-        console.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(null)
-        this.walletLocalData.masterPublicKey = this.abcTxLibOptions.masterPublicKey
-        this.walletLocalDataStore.writeData(DATA_STORE_FOLDER, 'walletLocalData', JSON.stringify(this.walletLocalData)).then((result) => {
+      this.walletLocalFolder
+        .folder(DATA_STORE_FOLDER)
+        .file(DATA_STORE_FILE)
+        .getText(DATA_STORE_FOLDER, 'walletLocalData')
+        .then(result => {
+          this.walletLocalData = new WalletLocalData(result)
+          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
           this.engineLoop()
           resolve()
-        }).catch((err) => {
-          console.log('Error writing to localDataStore:' + err)
-          resolve()
         })
-      })
+        .catch(err => {
+          console.log(err)
+          console.log('No walletLocalData setup yet: Failure is ok')
+          this.walletLocalData = new WalletLocalData(null)
+          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+          this.walletLocalFolder
+            .folder(DATA_STORE_FOLDER)
+            .file(DATA_STORE_FILE)
+            .setText(JSON.stringify(this.walletLocalData))
+            .then(result => {
+              this.engineLoop()
+              resolve()
+            })
+            .catch(err => {
+              console.log('Error writing to localDataStore:' + err)
+              resolve()
+            })
+        })
     })
 
     return prom
@@ -519,16 +615,13 @@ class ABCTxLibTRD {
 
   // asynchronous
   enableTokens (tokens = []) {
-    const prom = new Promise((resolve, reject) => {
-      for (const n in tokens) {
-        const token = tokens[n]
-        if (this.walletLocalData.enabledTokens.indexOf(token) != -1) {
-          this.walletLocalData.enabledTokens.push(token)
-        }
+    for (const n in tokens) {
+      const token = tokens[n]
+      if (this.walletLocalData.enabledTokens.indexOf(token) !== -1) {
+        this.walletLocalData.enabledTokens.push(token)
       }
-      resolve(true)
-    })
-      // return Promise.resolve(dataStore.enableTokens(tokens))
+    }
+    // return Promise.resolve(dataStore.enableTokens(tokens))
   }
 
   // synchronous
@@ -539,17 +632,17 @@ class ABCTxLibTRD {
   // synchronous
   getBalance (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options.currencyCode != undefined) {
+    if (options.currencyCode != null) {
       currencyCode = options.currencyCode
     }
-      
+
     return this.walletLocalData.totalBalances[currencyCode]
   }
 
   // synchronous
   getNumTransactions (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options != null && options.currencyCode != undefined) {
+    if (options != null && options.currencyCode != null) {
       currencyCode = options.currencyCode
     }
     return this.walletLocalData.transactionsObj[currencyCode].length
@@ -558,27 +651,36 @@ class ABCTxLibTRD {
   // asynchronous
   getTransactions (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options != null && options.currencyCode != undefined) {
+    if (options != null && options.currencyCode != null) {
       currencyCode = options.currencyCode
     }
     const prom = new Promise((resolve, reject) => {
       let startIndex = 0
       let numEntries = 0
       if (options == null) {
-        resolve (this.walletLocalData.transactionsObj[currencyCode].slice(0))
+        resolve(this.walletLocalData.transactionsObj[currencyCode].slice(0))
         return
       }
-      if (options.startIndex != undefined && options.startIndex > 0) {
+      if (options.startIndex != null && options.startIndex > 0) {
         startIndex = options.startIndex
-        if (startIndex >= this.walletLocalData.transactionsObj[currencyCode].length) {
-          startIndex = this.walletLocalData.transactionsObj[currencyCode].length - 1
+        if (
+          startIndex >=
+          this.walletLocalData.transactionsObj[currencyCode].length
+        ) {
+          startIndex =
+            this.walletLocalData.transactionsObj[currencyCode].length - 1
         }
       }
-      if (options.numEntries != undefined && options.numEntries > 0) {
+      if (options.numEntries != null && options.numEntries > 0) {
         numEntries = options.numEntries
-        if (numEntries + startIndex > this.walletLocalData.transactionsObj[currencyCode].length) {
+        if (
+          numEntries + startIndex >
+          this.walletLocalData.transactionsObj[currencyCode].length
+        ) {
           // Don't read past the end of the transactionsObj
-          numEntries = this.walletLocalData.transactionsObj[currencyCode].length - startIndex
+          numEntries =
+            this.walletLocalData.transactionsObj[currencyCode].length -
+            startIndex
         }
       }
 
@@ -586,9 +688,14 @@ class ABCTxLibTRD {
       let returnArray = []
 
       if (numEntries) {
-        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(startIndex, numEntries + startIndex)
+        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
+          startIndex,
+          numEntries + startIndex
+        )
       } else {
-        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(startIndex)
+        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
+          startIndex
+        )
       }
       resolve(returnArray)
     })
@@ -607,7 +714,7 @@ class ABCTxLibTRD {
   // synchronous
   addGapLimitAddresses (addresses, options) {
     for (var i in addresses) {
-      if (this.walletLocalData.gapLimitAddresses.indexOf(addresses[i]) == -1) {
+      if (this.walletLocalData.gapLimitAddresses.indexOf(addresses[i]) === -1) {
         this.walletLocalData.gapLimitAddresses.push(addresses[i])
       }
     }
@@ -616,35 +723,37 @@ class ABCTxLibTRD {
   // synchronous
   isAddressUsed (address, options = {}) {
     let idx = this.findAddress(address)
-    if (idx != -1) {
-      const addrObj = this.walletLocalData.addressArray[ idx ]
-      if (addrObj != undefined) {
+    if (idx !== -1) {
+      const addrObj = this.walletLocalData.addressArray[idx]
+      if (addrObj != null) {
         if (addrObj.txids.length > 0) {
           return true
         }
       }
     }
-    idx = this.walletLocalData.gapLimitAddresses.indexOf(addresses[i])
-    if (idx != -1) {
+    idx = this.walletLocalData.gapLimitAddresses.indexOf(address)
+    if (idx !== -1) {
       return true
     }
     return false
   }
 
   // synchronous
-  makeSpend (abcSpendInfo) { // returns an ABCTransaction data structure, and checks for valid info
+  makeSpend (abcSpendInfo) {
+    // returns an ABCTransaction data structure, and checks for valid info
     const prom = new Promise((resolve, reject) => {
-
       // ******************************
       // Get the fee amount
       let networkFee = 50000
-      if (abcSpendInfo.networkFeeOption == 'high') {
+      if (abcSpendInfo.networkFeeOption === 'high') {
         networkFee += 10000
-      } else if (abcSpendInfo.networkFeeOption == 'low') {
+      } else if (abcSpendInfo.networkFeeOption === 'low') {
         networkFee -= 10000
-      } else if (abcSpendInfo.networkFeeOption == 'custom') {
-        if (abcSpendInfo.customNetworkFee == undefined ||
-          abcSpendInfo.customNetworkFee <= 0) {
+      } else if (abcSpendInfo.networkFeeOption === 'custom') {
+        if (
+          abcSpendInfo.customNetworkFee == null ||
+          abcSpendInfo.customNetworkFee <= 0
+        ) {
           reject(new Error('Invalid custom fee'))
           return
         } else {
@@ -666,10 +775,10 @@ class ABCTxLibTRD {
           return
         }
         let currencyCode = PRIMARY_CURRENCY
-        if (spendTarget.currencyCode != undefined) {
+        if (spendTarget.currencyCode != null) {
           currencyCode = spendTarget.currencyCode
         }
-        if (totalSpends[currencyCode] == undefined) {
+        if (totalSpends[currencyCode] == null) {
           totalSpends[currencyCode] = 0
         }
         totalSpends[currencyCode] += spendTarget.amountSatoshi
@@ -692,17 +801,19 @@ class ABCTxLibTRD {
 
       // ****************************************************
       // Pick inputs. Picker will use all funds in an address
-      let totalInputAmounts = { }
+      let totalInputAmounts = {}
       let inputs = []
       const addressArray = this.walletLocalData.addressArray
       // Get a new address for change if needed
-      const changeAddress = this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
+      const changeAddress = this.addressFromIndex(
+        this.walletLocalData.unusedAddressIndex
+      )
 
       for (let currencyCode in totalSpends) {
         for (let n in addressArray) {
           let addressObj = addressArray[n]
           if (addressObj.amounts[currencyCode] > 0) {
-            if (totalInputAmounts[currencyCode] == undefined) {
+            if (totalInputAmounts[currencyCode] == null) {
               totalInputAmounts[currencyCode] = 0
             }
 
@@ -719,24 +830,34 @@ class ABCTxLibTRD {
         }
 
         if (totalInputAmounts[currencyCode] < totalSpends[currencyCode]) {
-          reject(new Error('Error: insufficient funds for token:' + currencyCode))
+          reject(
+            new Error('Error: insufficient funds for token:' + currencyCode)
+          )
           return
         }
         if (totalInputAmounts[currencyCode] > totalSpends[currencyCode]) {
           outputs.push({
             currencyCode,
             address: changeAddress,
-            amount: (totalInputAmounts[currencyCode] - totalSpends[currencyCode])
+            amount: totalInputAmounts[currencyCode] - totalSpends[currencyCode]
           })
         }
       }
 
       // **********************************
       // Create the unsigned ABCTransaction
-      const abcTransaction = new ABCTransaction(null, null, null, null, totalSpends[PRIMARY_CURRENCY], networkFee, null, { inputs, outputs })
+      const abcTransaction = new ABCTransaction(
+        null,
+        null,
+        null,
+        null,
+        totalSpends[PRIMARY_CURRENCY],
+        networkFee,
+        null,
+        { inputs, outputs }
+      )
 
       resolve(abcTransaction)
-
     })
     return prom
   }
@@ -754,17 +875,20 @@ class ABCTxLibTRD {
   // asynchronous
   broadcastTx (abcTransaction) {
     const prom = new Promise((resolve, reject) => {
-      this.fetchPost('spend', abcTransaction.otherParams).then(function (response) {
-        return response.json()
-      }).then((jsonObj) => {
-        // Copy params from returned transaction object to our abcTransaction object
-        abcTransaction.blockHeight = jsonObj.blockHeight
-        abcTransaction.txid = jsonObj.txid
-        abcTransaction.date = jsonObj.txDate
-        resolve(abcTransaction)
-      }).catch(err => {
-        reject(new Error('Error: broadcastTx failed'))
-      })
+      this.fetchPost('spend', abcTransaction.otherParams)
+        .then(function (response) {
+          return response.json()
+        })
+        .then(jsonObj => {
+          // Copy params from returned transaction object to our abcTransaction object
+          abcTransaction.blockHeight = jsonObj.blockHeight
+          abcTransaction.txid = jsonObj.txid
+          abcTransaction.date = jsonObj.txDate
+          resolve(abcTransaction)
+        })
+        .catch(e => {
+          reject(new Error('Error: broadcastTx failed'))
+        })
     })
     return prom
   }

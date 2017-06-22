@@ -1,1 +1,1 @@
-export { TxLibBTC } from './abcWalletTxLib-TRD.js'
+export { makeShitcoinPlugin } from './abcWalletTxLib-TRD.js'

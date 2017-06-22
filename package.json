@@ -1,41 +1,42 @@
 {
-"name": "airbitz-txlib-shitcoin",
- "version": "0.1.1",
- "description": "Airbitz Txlib Shitcoin",
- "url": "https://airbitz.co",
- "author": "Airbitz, Inc.",
- "contributors": [
-   "Paul Puey <paul@airbitz.co>",
-   "William Swanson <william@airbitz.co>"
- ],
- "license": "SEE LICENSE IN LICENSE",  
-  "main": "./dist/index.js",
-  "module": "./dist/index.es.js",
-  "scripts": {
-    "build": "rollup -c",
-    "test": "npm run lint && npm run build && node ./node_modules/mocha/bin/mocha",
-    "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
-    "lint": "eslint '*.js' 'src/**/*.js' 'test/**/*.js'",
-    "lint --fix": "standard --fix",
-    "prepackage": "npm run lint && npm run build"
+  "name": "airbitz-currency-shitcoin",
+  "version": "0.1.1",
+  "description": "Airbitz Shitcoin currency plugin",
+  "author": "Airbitz, Inc.",
+  "contributors": [
+    "Paul Puey <paul@airbitz.co>",
+    "William Swanson <william@airbitz.co>"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Airbitz/disklet.git"
+  },
+  "url": "https://airbitz.co",
+  "main": "./lib/index.js",
+  "module": "./lib/index.es.js",
+  "files": [
+    "changelog.md",
+    "lib/*"
+  ],
+  "dependencies": {
+    "rfc4648": "^0.9.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
-    "eslint": "^3.12.2",
-    "eslint-config-standard": "^6.2.1",
-    "eslint-plugin-promise": "^3.4.0",
-    "eslint-plugin-standard": "^2.0.1",
-    "faker": "^4.1.0",
     "mocha": "^2.4.5",
     "nyc": "^6.0.0",
     "rollup": "^0.41.4",
-    "rollup-plugin-buble": "^0.15.0"
+    "rollup-plugin-buble": "^0.15.0",
+    "standard": "^10.0.2"
   },
-  "directories": {
-    "test": "test"
-  },
-  "dependencies": {
-    "rfc4648": "^0.9.1"
+  "scripts": {
+    "build": "rollup -c",
+    "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
+    "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
+    "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js'",
+    "prepare": "npm run lint && npm run build",
+    "test": "npm run lint && npm run build && mocha"
   }
 }
