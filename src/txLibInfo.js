@@ -3,9 +3,12 @@
 import faker from 'faker'
 
 export const txLibInfo = {
-  supportedTokens: [ 'ANA', 'DOGESHIT', 'CRAP' ],
+  supportedTokens: [ 'ANA', 'DOGESHIT', 'HOLYSHIT' ],
 
   getInfo: { // Details of supported currency
+    walletTypes: [
+      "shitcoin"
+    ],
     currencyCode: 'TRD', // The 3 character code for the currency
     denominations: [ // An array of Objects of the possible denominations for this currency
       {
