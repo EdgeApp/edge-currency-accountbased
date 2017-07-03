@@ -1,16 +1,15 @@
 {
-  "name": "airbitz-currency-shitcoin",
-  "version": "0.1.1",
-  "description": "Airbitz Shitcoin currency plugin",
+  "name": "airbitz-currency-ethereum",
+  "version": "0.0.1",
+  "description": "Airbitz Ethereum currency plugin",
   "author": "Airbitz, Inc.",
   "contributors": [
-    "Paul Puey <paul@airbitz.co>",
-    "William Swanson <william@airbitz.co>"
+    "Paul Puey <paul@airbitz.co>"
   ],
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "git@github.com:Airbitz/disklet.git"
+    "url": "git@github.com:Airbitz/airbitz-currency-ethereum.git"
   },
   "url": "https://airbitz.co",
   "main": "./lib/index.js",

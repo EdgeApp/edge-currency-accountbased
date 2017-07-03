@@ -18,7 +18,7 @@ const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
 // const baseUrl = 'http://localhost:8080/api/'
 
-export function makeShitcoinPlugin (opts = {}) {
+export function makeEthereumPlugin (opts = {}) {
   const { io } = opts
 
   return {
@@ -29,7 +29,7 @@ export function makeShitcoinPlugin (opts = {}) {
     },
 
     createMasterKeys: walletType => {
-      if (walletType === 'shitcoin') {
+      if (walletType === 'ethereum') {
         const masterPrivateKey = base16.stringify(io.random(8))
         const masterPublicKey = 'pub' + masterPrivateKey
         return { masterPrivateKey, masterPublicKey }
