@@ -1,8 +1,13 @@
 // abcWalletTxLib-btc.js
-import { base16 } from 'rfc4648'
+// import { base16 } from 'rfc4648'
+// import { ethUtil } from 'ethereumjs-util'
+// import { secp256k1 } from 'secp256k1'
 
 // const random = require('random-js')
 import { txLibInfo } from './txLibInfo.js'
+import { Buffer } from 'buffer'
+
+const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 
 const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
@@ -21,6 +26,11 @@ const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
 export function makeEthereumPlugin (opts = {}) {
   const { io } = opts
 
+  const randomBuffer = (size) => {
+    const array = io.random(size)
+    return Buffer.from(array)
+  }
+
   return {
     getInfo: () => {
       const currencyDetails = txLibInfo.getInfo
@@ -30,8 +40,14 @@ export function makeEthereumPlugin (opts = {}) {
 
     createMasterKeys: walletType => {
       if (walletType === 'ethereum') {
-        const masterPrivateKey = base16.stringify(io.random(8))
-        const masterPublicKey = 'pub' + masterPrivateKey
+        const cryptoObj = {
+          randomBytes: randomBuffer
+        }
+        ethWallet.overrideCrypto(cryptoObj)
+
+        let wallet = ethWallet.generate(false)
+        const masterPrivateKey = wallet.getPrivateKeyString()
+        const masterPublicKey = wallet.getPublicKeyString()
         return { masterPrivateKey, masterPublicKey }
       } else {
         return null
