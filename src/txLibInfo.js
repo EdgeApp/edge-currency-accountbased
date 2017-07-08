@@ -12,7 +12,7 @@ export const txLibInfo = {
       // An array of Objects of the possible denominations for this currency
       {
         name: 'ETH',
-        multiplier: '1000000000000000000'
+        multiplier: '1000000000000000000',
         symbol: 'Ξ'
       }
     ],
