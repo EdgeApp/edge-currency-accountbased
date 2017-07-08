@@ -3,7 +3,7 @@
  */
 
 module.exports = {
-  entry: './src/export-fixes.js',
+  entry: './intermediate/export-fixes.js',
   externals: ['buffer'],
   module: {
     loaders: [{ test: /\.json$/, loader: 'json-loader' }]

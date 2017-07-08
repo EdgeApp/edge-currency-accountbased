@@ -2,4 +2,5 @@
 .nyc_output
 /coverage
 /lib
+/intermediate
 /node_modules

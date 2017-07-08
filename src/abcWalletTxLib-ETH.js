@@ -1,4 +1,8 @@
-// abcWalletTxLib-btc.js
+/**
+ * Created by paul on 7/7/17.
+ */
+// @flow
+
 // import { base16 } from 'rfc4648'
 // import { ethUtil } from 'ethereumjs-util'
 // import { secp256k1 } from 'secp256k1'
