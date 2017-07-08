@@ -1,10 +1,10 @@
-import buble from 'rollup-plugin-buble'
+// import buble from 'rollup-plugin-buble'
 const packageJson = require('./package.json')
 
 export default {
   entry: 'intermediate/index.js',
   external: Object.keys(packageJson.dependencies),
-  plugins: [buble()],
+  // plugins: [buble()],
   targets: [
     {
       dest: packageJson['main'],

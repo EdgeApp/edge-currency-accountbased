@@ -33,7 +33,7 @@
     "json-loader": "^0.5.4",
     "mocha": "^2.4.5",
     "nyc": "^6.0.0",
-    "rollup": "^0.41.4",
+    "rollup": "^0.43.0",
     "rollup-plugin-buble": "^0.15.0",
     "standard": "^10.0.2",
     "webpack": "^1.14.0"
@@ -41,7 +41,9 @@
   "scripts": {
     "flow": "flow",
     "babel": "babel src/ -d intermediate/",
-    "build": "npm run babel && webpack && rollup -c",
+    "webpack": "webpack",
+    "rollup": "rollup -c",
+    "build": "npm run babel && npm run webpack && npm run rollup",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
     "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js'",

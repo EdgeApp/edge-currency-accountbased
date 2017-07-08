@@ -61,7 +61,7 @@ export function makeEthereumPlugin (opts = {}) {
     },
 
     makeEngine: (keyInfo, opts = {}) => {
-      const abcTxLib = new ABCTxLibTRD(io, keyInfo, opts)
+      const abcTxLib = new ABCTxLibETH(io, keyInfo, opts)
 
       return abcTxLib
     }
@@ -121,6 +121,8 @@ function nativeToSatoshi(nativeAmount: string) {
   return amountSatoshi
 }
 
+const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
+
 class ABCTransaction {
   constructor (
     txid: string,
@@ -145,9 +147,8 @@ class ABCTransaction {
   }
 }
 
-class ABCTxLibTRD {
+class ABCTxLibETH {
   constructor (io, keyInfo, opts = {}) {
-    // dataStore.init(abcTxLibAccess, options, callbacks)
     const { walletLocalFolder, callbacks } = opts
 
     this.io = io
@@ -209,39 +210,28 @@ class ABCTxLibTRD {
   // *************************************
   // Poll on the blockheight
   // *************************************
-  blockHeightInnerLoop () {
-    if (this.engineOn) {
-      const p = new Promise((resolve, reject) => {
-        this.fetchGet('?module=proxy&action=eth_blockNumber')
-          .then(function (response) {
-            return response.json()
-          })
-          .then(jsonObj => {
-            const heightHex = jsonObj.result.slice(2)
-            const heightBN = new BN(heightHex, 16)
-            const blockHeight = heightBN.toNumber()
-            if (this.walletLocalData.blockHeight !== blockHeight) {
-              this.walletLocalData.blockHeight = blockHeight
-              this.walletLocalDataDirty = true
-              console.log(
-                'Block height changed: ' + this.walletLocalData.blockHeight
-              )
-              this.abcTxLibCallbacks.onBlockHeightChanged(
-                this.walletLocalData.blockHeight
-              )
-            }
-            resolve()
-          })
-          .catch(function (err) {
-            console.log('Error fetching height: ' + err)
-            resolve()
-          })
-      })
-      p.then(() => {
-        setTimeout(() => {
-          this.blockHeightInnerLoop()
-        }, BLOCKHEIGHT_POLL_MILLISECONDS)
-      })
+  async blockHeightInnerLoop () {
+    while (this.engineOn) {
+      try {
+        const response = await this.fetchGet('?module=proxy&action=eth_blockNumber')
+        const jsonObj  = await response.json()
+        const heightHex = jsonObj.result.slice(2)
+        const heightBN = new BN(heightHex, 16)
+        const blockHeight = heightBN.toNumber()
+        if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.walletLocalData.blockHeight = blockHeight
+          this.walletLocalDataDirty = true
+          console.log(
+            'Block height changed: ' + this.walletLocalData.blockHeight
+          )
+          this.abcTxLibCallbacks.onBlockHeightChanged(
+            this.walletLocalData.blockHeight
+          )
+        }
+      } catch (e) {
+        console.log('Error fetching height: ' + err)
+      }
+      await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
     }
   }
 
