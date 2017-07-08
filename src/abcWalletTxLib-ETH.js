@@ -10,6 +10,8 @@
 // const random = require('random-js')
 import { txLibInfo } from './txLibInfo.js'
 import { Buffer } from 'buffer'
+import { BN } from 'bn.js'
+import { sprintf } from 'sprintf-js'
 
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 
@@ -18,14 +20,14 @@ const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
-const BLOCKHEIGHT_POLL_MILLISECONDS = 60000
+const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
+const ZERO = new BN('0', 10)
 
 const PRIMARY_CURRENCY = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
-const baseUrl = 'http://shitcoin-az-braz.airbitz.co:8080/api/'
-// const baseUrl = 'http://localhost:8080/api/'
+const baseUrl = 'https://api.etherscan.io/api'
 
 export function makeEthereumPlugin (opts = {}) {
   const { io } = opts
@@ -99,22 +101,44 @@ class WalletLocalData {
   }
 }
 
+//
+// satoshiToNative converts satoshi-like units to a big number string nativeAmount which is in Wei.
+// amountSatoshi is 1/100,000,000 of an ether to match the satoshi units of bitcoin
+//
+function satoshiToNative(amountSatoshi: number) {
+  const converter = new BN('10000000000', 10)
+  let nativeAmountBN = new BN(amountSatoshi, 10)
+  nativeAmountBN = nativeAmountBN.mul(converter)
+  const nativeAmount = nativeAmountBN.toString(10)
+  return nativeAmount
+}
+
+function nativeToSatoshi(nativeAmount: string) {
+  let nativeAmountBN = new BN(nativeAmount, 10)
+  const converter = new BN('10000000000', 10)
+  const amountSatoshiBN = nativeAmountBN.div(converter)
+  const amountSatoshi = amountSatoshiBN.toString(10)
+  return amountSatoshi
+}
+
 class ABCTransaction {
   constructor (
-    txid,
-    date,
-    currencyCode,
-    blockHeight,
-    amountSatoshi,
-    networkFee,
-    signedTx,
+    txid: string,
+    date: number,
+    currencyCode: string,
+    blockHeightNative: string,
+    nativeAmount: string,
+    networkFee: string,
+    signedTx: string,
     otherParams
   ) {
     this.txid = txid
     this.date = date
     this.currencyCode = currencyCode
-    this.blockHeight = blockHeight
-    this.amountSatoshi = amountSatoshi
+    this.blockHeightNative = blockHeightNative
+    this.blockHeight = (new BN(blockHeightNative,10)).toNumber(10)
+    this.nativeAmount = nativeAmount
+    this.amountSatoshi = nativeToSatoshi(nativeAmount)
     this.networkFee = networkFee
     this.signedTx = signedTx
     this.otherParams = otherParams
@@ -147,8 +171,8 @@ class ABCTxLibTRD {
   engineLoop () {
     this.engineOn = true
     this.blockHeightInnerLoop()
-    this.checkAddressesInnerLoop()
-    this.checkTransactionsInnerLoop()
+    // this.checkAddressesInnerLoop()
+    // this.checkTransactionsInnerLoop()
     this.saveWalletDataStore()
   }
 
@@ -156,14 +180,23 @@ class ABCTxLibTRD {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  fetchGet (cmd, params) {
-    return this.io.fetch(baseUrl + cmd + '/' + params, {
+  fetchGet (cmd: string) {
+    let apiKey = ''
+    if (typeof API_KEY === 'string' && API_KEY.length > 5) {
+      apiKey = '&apikey=' + API_KEY
+    }
+    const url = sprintf('%s%s%s', baseUrl, cmd, apiKey)
+    return this.io.fetch(url, {
       method: 'GET'
     })
   }
 
-  fetchPost (cmd, body) {
-    return this.io.fetch(baseUrl + cmd, {
+  fetchPost (cmd: string, body) {
+    let apiKey = ''
+    if (typeof API_KEY === 'string' && API_KEY.length > 5) {
+      apiKey = '&apikey=' + API_KEY
+    }
+    return this.io.fetch(baseUrl + cmd + apiKey, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -179,13 +212,16 @@ class ABCTxLibTRD {
   blockHeightInnerLoop () {
     if (this.engineOn) {
       const p = new Promise((resolve, reject) => {
-        this.fetchGet('height', '')
+        this.fetchGet('?module=proxy&action=eth_blockNumber')
           .then(function (response) {
             return response.json()
           })
           .then(jsonObj => {
-            if (this.walletLocalData.blockHeight !== jsonObj.height) {
-              this.walletLocalData.blockHeight = jsonObj.height
+            const heightHex = jsonObj.result.slice(2)
+            const heightBN = new BN(heightHex, 16)
+            const blockHeight = heightBN.toNumber()
+            if (this.walletLocalData.blockHeight !== blockHeight) {
+              this.walletLocalData.blockHeight = blockHeight
               this.walletLocalDataDirty = true
               console.log(
                 'Block height changed: ' + this.walletLocalData.blockHeight

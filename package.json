@@ -21,7 +21,8 @@
   "dependencies": {
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
-    "ethereumjs-wallet": "file:../ethereumjs-wallet"
+    "ethereumjs-wallet": "file:../ethereumjs-wallet",
+    "sprintf-js": "^1.1.1"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
