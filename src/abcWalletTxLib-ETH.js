@@ -47,7 +47,7 @@ export function makeEthereumPlugin (opts = {}) {
 
         let wallet = ethWallet.generate(false)
         const masterPrivateKey = wallet.getPrivateKeyString()
-        const masterPublicKey = wallet.getPublicKeyString()
+        const masterPublicKey = wallet.getAddressString()
         return { masterPrivateKey, masterPublicKey }
       } else {
         return null
