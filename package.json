@@ -22,13 +22,16 @@
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
     "ethereumjs-wallet": "file:../ethereumjs-wallet",
+    "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
+    "babel-eslint": "^7.2.3",
     "babel-preset-flow": "^6.23.0",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
+    "eslint-plugin-flowtype": "^2.34.1",
     "flow-bin": "^0.49.1",
     "json-loader": "^0.5.4",
     "mocha": "^2.4.5",
@@ -38,16 +41,20 @@
     "standard": "^10.0.2",
     "webpack": "^1.14.0"
   },
+  "standard": {
+    "parser": "babel-eslint",
+    "plugins": [ "flowtype" ]
+  },
   "scripts": {
     "flow": "flow",
     "babel": "babel src/ -d intermediate/",
     "webpack": "webpack",
     "rollup": "rollup -c",
-    "build": "npm run babel && npm run webpack && npm run rollup",
+    "build": "npm run lint && npm run babel && npm run webpack && npm run rollup",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
     "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js'",
-    "prepare": "npm run lint && npm run build",
-    "test": "npm run lint && npm run build && mocha"
+    "prepare": "npm run build",
+    "test": "npm run build && mocha"
   }
 }
