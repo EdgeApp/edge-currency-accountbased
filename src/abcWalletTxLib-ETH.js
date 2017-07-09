@@ -31,6 +31,43 @@ const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
 const baseUrl = 'https://api.etherscan.io/api'
 
+// Utility functions
+//
+// satoshiToNative converts satoshi-like units to a big number string nativeAmount which is in Wei.
+// amountSatoshi is 1/100,000,000 of an ether to match the satoshi units of bitcoin
+//
+// function satoshiToNative (amountSatoshi: number) {
+//   const converter = new BN('10000000000', 10)
+//   let nativeAmountBN = new BN(amountSatoshi.toString(), 10)
+//   nativeAmountBN = nativeAmountBN.mul(converter)
+//   const nativeAmount = nativeAmountBN.toString(10)
+//   return nativeAmount
+// }
+
+function nativeToSatoshi (nativeAmount: string) {
+  let nativeAmountBN = new BN(nativeAmount, 10)
+  const converter = new BN('10000000000', 10)
+  const amountSatoshiBN = nativeAmountBN.div(converter)
+  const amountSatoshi = amountSatoshiBN.toNumber()
+  return amountSatoshi
+}
+
+const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+function validateObject (object, schema) {
+  const result = validate(object, schema)
+
+  if (result.errors.length === 0) {
+    return true
+  } else {
+    for (const n in result.errors) {
+      const errMsg = result.errors[n].message
+      console.log(errMsg)
+    }
+    return false
+  }
+}
+
 export function makeEthereumPlugin (opts = {}) {
   const { io } = opts
 
@@ -104,28 +141,6 @@ class WalletLocalData {
   }
 }
 
-//
-// satoshiToNative converts satoshi-like units to a big number string nativeAmount which is in Wei.
-// amountSatoshi is 1/100,000,000 of an ether to match the satoshi units of bitcoin
-//
-// function satoshiToNative (amountSatoshi: number) {
-//   const converter = new BN('10000000000', 10)
-//   let nativeAmountBN = new BN(amountSatoshi.toString(), 10)
-//   nativeAmountBN = nativeAmountBN.mul(converter)
-//   const nativeAmount = nativeAmountBN.toString(10)
-//   return nativeAmount
-// }
-
-function nativeToSatoshi (nativeAmount: string) {
-  let nativeAmountBN = new BN(nativeAmount, 10)
-  const converter = new BN('10000000000', 10)
-  const amountSatoshiBN = nativeAmountBN.div(converter)
-  const amountSatoshi = amountSatoshiBN.toNumber()
-  return amountSatoshi
-}
-
-const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
-
 class ABCTransaction {
   constructor (
     txid: string,
@@ -174,10 +189,14 @@ class ABCTxLibETH {
   // *************************************
   engineLoop () {
     this.engineOn = true
-    this.blockHeightInnerLoop()
-    // this.checkAddressesInnerLoop()
-    // this.checkTransactionsInnerLoop()
-    this.saveWalletDataStore()
+    try {
+      this.blockHeightInnerLoop()
+      // this.checkAddressesInnerLoop()
+      // this.checkTransactionsInnerLoop()
+      this.saveWalletDataStore()
+    } catch (err) {
+      console.log(err)
+    }
   }
 
   isTokenEnabled (token) {
@@ -219,32 +238,37 @@ class ABCTxLibETH {
     while (this.engineOn) {
       try {
         const jsonObj = await this.fetchGet('?module=proxy&action=eth_blockNumber')
-        const valid = validate(jsonObj, {
+        const valid = validateObject(jsonObj, {
           'type': 'object',
           'properties': {
             'result': {'type': 'string'}
           },
           'required': ['result']
         })
-        console.log(valid)
 
-        const heightHex = jsonObj.result.slice(2)
-        const heightBN = new BN(heightHex, 16)
-        const blockHeight = heightBN.toNumber()
-        if (this.walletLocalData.blockHeight !== blockHeight) {
-          this.walletLocalData.blockHeight = blockHeight
-          this.walletLocalDataDirty = true
-          console.log(
-            'Block height changed: ' + this.walletLocalData.blockHeight
-          )
-          this.abcTxLibCallbacks.onBlockHeightChanged(
-            this.walletLocalData.blockHeight
-          )
+        if (valid) {
+          const heightHex = jsonObj.result.slice(2)
+          const heightBN = new BN(heightHex, 16)
+          const blockHeight = heightBN.toNumber()
+          if (this.walletLocalData.blockHeight !== blockHeight) {
+            this.walletLocalData.blockHeight = blockHeight
+            this.walletLocalDataDirty = true
+            console.log(
+              'Block height changed: ' + this.walletLocalData.blockHeight
+            )
+            this.abcTxLibCallbacks.onBlockHeightChanged(
+              this.walletLocalData.blockHeight
+            )
+          }
         }
       } catch (err) {
         console.log('Error fetching height: ' + err)
       }
-      await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
+      try {
+        await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
+      } catch (err) {
+        console.log(err)
+      }
     }
   }
 
