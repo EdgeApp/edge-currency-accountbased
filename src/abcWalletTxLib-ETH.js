@@ -899,7 +899,7 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getBalance (options = {}) {
+  getBalance (options) {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
@@ -922,7 +922,7 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getNumTransactions (options = {}) {
+  getNumTransactions (options) {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
@@ -944,7 +944,7 @@ class ABCTxLibETH {
   }
 
   // asynchronous
-  async getTransactions (options = {}) {
+  async getTransactions (options) {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
