@@ -3,11 +3,6 @@
  */
 // @flow
 
-// import { base16 } from 'rfc4648'
-// import { ethUtil } from 'ethereumjs-util'
-// import { secp256k1 } from 'secp256k1'
-
-// const random = require('random-js')
 import { txLibInfo } from './txLibInfo.js'
 import { Buffer } from 'buffer'
 import { BN } from 'bn.js'
@@ -16,17 +11,14 @@ import { validate } from 'jsonschema'
 
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 
-// const GAP_LIMIT = 10
 const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 7000
-const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 2) // ~ 2 minutes
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
-// const ZERO = new BN('0', 10)
 
 const PRIMARY_CURRENCY = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
@@ -129,7 +121,6 @@ class WalletLocalData {
     }
 
     // // Array of txids to fetch
-    // this.transactionsToFetch = []
     this.lastAddressQueryHeight = 0
 
     // Array of address objects, unsorted
@@ -181,10 +172,7 @@ class ABCTxLibETH {
     this.walletLocalFolder = walletLocalFolder
 
     this.engineOn = false
-    this.transactionsDirty = true
     this.addressesChecked = false
-    this.numAddressesChecked = 0
-    this.numAddressesToCheck = 0
     this.walletLocalData = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
@@ -277,43 +265,6 @@ class ABCTxLibETH {
     }
   }
 
-  checkTransactionsInnerLoop () {
-    if (this.engineOn) {
-      var promiseArray = []
-      const numTransactions = this.walletLocalData.transactionsToFetch.length
-
-      for (var n = 0; n < numTransactions; n++) {
-        const txid = this.walletLocalData.transactionsToFetch[n]
-        const p = this.processTransactionFromServer(txid)
-        promiseArray.push(p)
-        console.log('checkTransactionsInnerLoop: check ' + txid)
-      }
-
-      if (promiseArray.length > 0) {
-        Promise.all(promiseArray)
-          .then(response => {
-            setTimeout(() => {
-              this.checkTransactionsInnerLoop()
-            }, TRANSACTION_POLL_MILLISECONDS)
-          })
-          .catch(e => {
-            console.log(
-              new Error(
-                'Error: checkTransactionsInnerLoop: should not get here'
-              )
-            )
-            setTimeout(() => {
-              this.checkTransactionsInnerLoop()
-            }, TRANSACTION_POLL_MILLISECONDS)
-          })
-      } else {
-        setTimeout(() => {
-          this.checkTransactionsInnerLoop()
-        }, TRANSACTION_POLL_MILLISECONDS)
-      }
-    }
-  }
-
   processTransaction (tx) {
     //
     // Calculate the amount sent from the wallet
@@ -331,18 +282,6 @@ class ABCTxLibETH {
       netNativeAmountBN.isub(nativeValueBN)
     }
     const netNativeAmount = netNativeAmountBN.toString(10)
-    //
-    // let confirmationsBN = new BN(tx.confirmations.toString(), 10)
-    // let txNativeBlockHeight:string = '0'
-    // if (
-    //   this.walletLocalData.blockHeight > 0 &&
-    //   confirmationsBN.isZero() !== true
-    // ) {
-    //   let txBlockHeightBN = new BN(this.walletLocalData.blockHeight.toString(), 10)
-    //   txBlockHeightBN.isub(confirmationsBN)
-    //   txBlockHeightBN.iadd(1)
-    //   txNativeBlockHeight = txBlockHeightBN.toString(10)
-    // }
 
     const gasPriceBN = new BN(tx.gasPrice, 10)
     const gasUsedBN = new BN(tx.gasUsed, 10)
@@ -398,91 +337,6 @@ class ABCTxLibETH {
       }
     }
   }
-  //
-        // // Iterate through all the inputs and see if any are in our wallet
-        // let spendAmounts = []
-        // let receiveAmounts = []
-        // let amountsSatoshi = []
-        //
-        // const inputs = jsonObj.inputs
-        // const outputs = jsonObj.outputs
-        //
-        // const otherParams = {
-        //   inputs,
-        //   outputs
-        // }
-        //
-        // for (const c in TOKEN_CODES) {
-        //   const currencyCode = TOKEN_CODES[c]
-        //   receiveAmounts[currencyCode] = spendAmounts[currencyCode] = 0
-        //
-        //   for (var n in inputs) {
-        //     const input = inputs[n]
-        //     const addr = input.address
-        //     const ccode = input.currencyCode
-        //     const idx = this.findAddress(addr)
-        //     if (idx !== -1 && ccode === currencyCode) {
-        //       spendAmounts[ccode] += input.amount
-        //     }
-        //   }
-        //
-        //   // Iterate through all the outputs and see if any are in our wallet
-        //   for (let n in outputs) {
-        //     const output = outputs[n]
-        //     const addr = output.address
-        //     const ccode = output.currencyCode
-        //     const idx = this.findAddress(addr)
-        //     if (idx !== -1 && ccode === currencyCode) {
-        //       receiveAmounts[ccode] += output.amount
-        //     }
-        //   }
-        //   amountsSatoshi[currencyCode] =
-        //     receiveAmounts[currencyCode] - spendAmounts[currencyCode]
-        //
-        //   // Create a txlib ABCTransaction object which must contain
-        //   // txid, date, blockHeight, amountSatoshi, networkFee, signedTx, and optionally otherParams
-        //   /*
-        //   let networkFee = jsonObj.networkFee
-        //   if (currencyCode != PRIMARY_CURRENCY) {
-        //     networkFee = 0
-        //   }
-        //   */
-        //
-        //   if (
-        //     receiveAmounts[currencyCode] !== 0 ||
-        //     spendAmounts[currencyCode] !== 0
-        //   ) {
-        //     var abcTransaction = new ABCTransaction(
-        //       jsonObj.txid,
-        //       jsonObj.txDate,
-        //       currencyCode,
-        //       jsonObj.blockHeight,
-        //       amountsSatoshi[currencyCode],
-        //       jsonObj.networkFee,
-        //       'iwassignedyoucantrustme',
-        //       otherParams
-        //     )
-        //     this.addTransaction(currencyCode, abcTransaction)
-        //   }
-        // }
-        //
-        // // Remove txid from transactionsToFetch
-        // const idx = this.walletLocalData.transactionsToFetch.indexOf(
-        //   jsonObj.txid
-        // )
-        // if (idx !== -1) {
-        //   this.walletLocalData.transactionsToFetch.splice(idx, 1)
-        //   this.walletLocalDataDirty = true
-        // }
-        //
-        // if (this.walletLocalData.transactionsToFetch.length === 0) {
-        //   this.abcTxLibCallbacks.onTransactionsChanged(
-        //     this.transactionsChangedArray
-        //   )
-        //   this.transactionsChangedArray = []
-        // }
-        //
-        // return 0
 
   // **********************************************
   // Check all addresses for new transactions
@@ -592,165 +446,6 @@ class ABCTxLibETH {
           console.log(err)
         }
       }
-      // var promiseArray = []
-      // // var promiseArrayCount = 0
-      //
-      // for (
-      //   var n = 0;
-      //   n < this.walletLocalData.unusedAddressIndex + GAP_LIMIT;
-      //   n++
-      // ) {
-      //   const address = this.addressFromIndex(n)
-      //   const p = this.processAddressFromServer(address)
-      //   promiseArray.push(p)
-      //
-      //   if (this.walletLocalData.addressArray[n] == null) {
-      //     this.walletLocalData.addressArray[n] = { address }
-      //     this.walletLocalDataDirty = true
-      //   } else {
-      //     if (this.walletLocalData.addressArray[n].address !== address) {
-      //       throw new Error('Derived address mismatch on index ' + n)
-      //     }
-      //   }
-      //
-      //   console.log('checkAddressesInnerLoop: check ' + address)
-      // }
-      //
-      // if (promiseArray.length > 0) {
-      //   this.numAddressesChecked = 0
-      //   this.numAddressesToCheck = promiseArray.length
-      //   Promise.all(promiseArray)
-      //     .then(response => {
-      //       // Iterate over all the address balances and get a final balance
-      //       console.log(
-      //         'checkAddressesInnerLoop: Completed responses: ' + response.length
-      //       )
-      //
-      //       const arrayAmounts = response
-      //       var totalBalances = { TRD: 0 }
-      //       for (const n in arrayAmounts) {
-      //         const amountsObj = arrayAmounts[n]
-      //         for (const currencyCode in amountsObj) {
-      //           if (totalBalances[currencyCode] == null) {
-      //             totalBalances[currencyCode] = 0
-      //           }
-      //           totalBalances[currencyCode] += amountsObj[currencyCode]
-      //           console.log(
-      //             'checkAddressesInnerLoop: arrayAmounts[' +
-      //               n +
-      //               '][' +
-      //               currencyCode +
-      //               ']: ' +
-      //               arrayAmounts[n][currencyCode] +
-      //               ' total:' +
-      //               totalBalances[currencyCode]
-      //           )
-      //         }
-      //       }
-      //       this.walletLocalData.totalBalances = totalBalances
-      //       this.walletLocalDataDirty = true
-      //
-      //       if (!this.addressesChecked) {
-      //         this.addressesChecked = true
-      //         this.abcTxLibCallbacks.onAddressesChecked(1)
-      //         this.numAddressesChecked = 0
-      //         this.numAddressesToCheck = 0
-      //       }
-      //       setTimeout(() => {
-      //         this.checkAddressesInnerLoop()
-      //       }, ADDRESS_POLL_MILLISECONDS)
-      //     })
-      //     .catch(e => {
-      //       console.log(
-      //         new Error('Error: checkAddressesInnerLoop: should not get here')
-      //       )
-      //       setTimeout(() => {
-      //         this.checkAddressesInnerLoop()
-      //       }, ADDRESS_POLL_MILLISECONDS)
-      //     })
-      // } else {
-      //   setTimeout(() => {
-      //     this.checkAddressesInnerLoop()
-      //   }, ADDRESS_POLL_MILLISECONDS)
-      // }
-      //   }
-      // }
-
-      // addressFromIndex (index) {
-      //   let addr = '' + index + '_' + this.walletLocalData.masterPublicKey
-      //
-      //   if (index === 0) {
-      //     addr = addr + '__600000' // Preload first addresss with some funds
-      //   }
-      //   return addr
-      // }
-
-      // async processAddressFromServer (address) {
-      // return this.fetchGet('address', address)
-      //   .then(function (response) {
-      //     return response.json()
-      //   })
-      //   .then(jsonObj => {
-      //     console.log('processAddressFromServer: response.json():')
-      //     console.log(jsonObj)
-      //     const txids = jsonObj.txids
-      //     const idx = this.findAddress(jsonObj.address)
-      //     if (idx === -1) {
-      //       throw new Error(
-      //         'Queried address not found in addressArray:' + jsonObj.address
-      //       )
-      //     }
-      //     this.walletLocalData.addressArray[idx] = jsonObj
-      //     this.walletLocalDataDirty = true
-      //
-      //     // Iterate over txids in address
-      //     for (var n in txids) {
-      //       // This address has transactions
-      //       const txid = txids[n]
-      //       console.log('processAddressFromServer: txid:' + txid)
-      //
-      //       if (
-      //         this.findTransaction(PRIMARY_CURRENCY, txid) === -1 &&
-      //         this.walletLocalData.transactionsToFetch.indexOf(txid) === -1
-      //       ) {
-      //         console.log(
-      //           'processAddressFromServer: txid not found. Adding:' + txid
-      //         )
-      //         this.walletLocalData.transactionsToFetch.push(txid)
-      //         this.walletLocalDataDirty = true
-      //
-      //         this.transactionsDirty = true
-      //       }
-      //     }
-      //
-      //     if (
-      //       (txids != null && txids.length) ||
-      //       this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) !== -1
-      //     ) {
-      //       // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
-      //       if (idx >= this.walletLocalData.unusedAddressIndex) {
-      //         this.walletLocalData.unusedAddressIndex = idx + 1
-      //         this.walletLocalDataDirty = true
-      //         console.log(
-      //           'processAddressFromServer: set unusedAddressIndex:' +
-      //             this.walletLocalData.unusedAddressIndex
-      //         )
-      //       }
-      //     }
-      //
-      //     this.numAddressesChecked++
-      //     const progress = this.numAddressesChecked / this.numAddressesToCheck
-      //
-      //     if (progress !== 1) {
-      //       this.abcTxLibCallbacks.onAddressesChecked(progress)
-      //     }
-      //
-      //     return jsonObj.amounts
-      //   })
-      //   .catch(e => {
-      //     console.log('Error fetching address: ' + address)
-      //     return 0
-      //   })
     }
   }
 
@@ -1009,33 +704,14 @@ class ABCTxLibETH {
   // synchronous
   getFreshAddress (options = {}) {
     return this.walletLocalData.masterPublicKey
-    // return this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
   }
 
   // synchronous
   addGapLimitAddresses (addresses, options) {
-    // for (var i in addresses) {
-    //   if (this.walletLocalData.gapLimitAddresses.indexOf(addresses[i]) === -1) {
-    //     this.walletLocalData.gapLimitAddresses.push(addresses[i])
-    //   }
-    // }
   }
 
   // synchronous
   isAddressUsed (address, options = {}) {
-    // let idx = this.findAddress(address)
-    // if (idx !== -1) {
-    //   const addrObj = this.walletLocalData.addressArray[idx]
-    //   if (addrObj != null) {
-    //     if (addrObj.txids.length > 0) {
-    //       return true
-    //     }
-    //   }
-    // }
-    // idx = this.walletLocalData.gapLimitAddresses.indexOf(address)
-    // if (idx !== -1) {
-    //   return true
-    // }
     return false
   }
 
