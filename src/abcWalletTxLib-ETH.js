@@ -23,7 +23,8 @@ const ADDRESS_POLL_MILLISECONDS = 7000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 2) // ~ 2 minutes
+// const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 // const ZERO = new BN('0', 10)
 
@@ -197,8 +198,7 @@ class ABCTxLibETH {
     try {
       this.blockHeightInnerLoop()
       this.checkAddressesInnerLoop()
-      // this.checkTransactionsInnerLoop()
-      this.saveWalletDataStore()
+      this.saveWalletLoop()
     } catch (err) {
       console.log(err)
     }
@@ -314,13 +314,91 @@ class ABCTxLibETH {
     }
   }
 
-  // processTransactionFromServer (tx) {
-  //   console.log('processTransactionFromServer: tx:')
-  //   console.log(tx)
+  processTransaction (tx) {
     //
     // Calculate the amount sent from the wallet
     //
-        //
+
+    let netNativeAmountBN = new BN('0', 10) // Amount received into wallet
+
+    const nativeValueBN = new BN(tx.value, 10)
+
+    if (tx.to === this.walletLocalData.masterPublicKey) {
+      netNativeAmountBN.iadd(nativeValueBN)
+    }
+
+    if (tx.from === this.walletLocalData.masterPublicKey) {
+      netNativeAmountBN.isub(nativeValueBN)
+    }
+    const netNativeAmount = netNativeAmountBN.toString(10)
+    //
+    // let confirmationsBN = new BN(tx.confirmations.toString(), 10)
+    // let txNativeBlockHeight:string = '0'
+    // if (
+    //   this.walletLocalData.blockHeight > 0 &&
+    //   confirmationsBN.isZero() !== true
+    // ) {
+    //   let txBlockHeightBN = new BN(this.walletLocalData.blockHeight.toString(), 10)
+    //   txBlockHeightBN.isub(confirmationsBN)
+    //   txBlockHeightBN.iadd(1)
+    //   txNativeBlockHeight = txBlockHeightBN.toString(10)
+    // }
+
+    const gasPriceBN = new BN(tx.gasPrice, 10)
+    const gasUsedBN = new BN(tx.gasUsed, 10)
+    const etherUsedBN = gasPriceBN.mul(gasUsedBN)
+    const networkFee = etherUsedBN.toString(10)
+
+    const otherParams = {
+      inputs: [tx.from],
+      outputs: [tx.to],
+      gas: tx.gas,
+      gasPrice: tx.gasPrice,
+      gasUsed: tx.gasUsed,
+      cumulativeGasUsed: tx.cumulativeGasUsed,
+      blockHash: tx.blockHash
+    }
+
+    let abcTransaction = new ABCTransaction(
+      tx.hash,
+      parseInt(tx.timeStamp),
+      'ETH',
+      tx.blockNumber,
+      netNativeAmount,
+      networkFee,
+      'iwassignedyoucantrustme',
+      otherParams
+    )
+
+    const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
+    if (idx === -1) {
+      console.log(sprintf('New transaction: %s', tx.hash))
+
+      // New transaction not in database
+      this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
+
+      this.abcTxLibCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    } else {
+      // Already have this tx in the database. See if anything changed
+      const transactionsArray = this.walletLocalData.transactionsObj[PRIMARY_CURRENCY]
+      const abcTx = transactionsArray[idx]
+
+      if (abcTx.blockHeightNative !== tx.blockNumber) {
+        console.log(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
+        this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
+        this.abcTxLibCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      } else {
+        console.log(sprintf('Old transaction. No Update: %s', tx.hash))
+      }
+    }
+  }
+  //
         // // Iterate through all the inputs and see if any are in our wallet
         // let spendAmounts = []
         // let receiveAmounts = []
@@ -405,7 +483,6 @@ class ABCTxLibETH {
         // }
         //
         // return 0
-  // }
 
   // **********************************************
   // Check all addresses for new transactions
@@ -503,17 +580,7 @@ class ABCTxLibETH {
           // Iterate over transactions in address
           for (const n in transactions) {
             const tx = transactions[n]
-            if (this.findTransaction(PRIMARY_CURRENCY, tx.hash) === -1) {
-              console.log(
-                'processAddressFromServer: txid not found. Adding:' + tx
-              )
-              this.processTransactionFromServer(tx)
-              this.walletLocalDataDirty = true
-              this.transactionsDirty = true
-            } else {
-              // Tx already in database, see if anything changed
-              // XXX todo
-            }
+            this.processTransaction(tx)
           }
         }
         await snooze(ADDRESS_POLL_MILLISECONDS)
@@ -708,7 +775,7 @@ class ABCTxLibETH {
     return b.date - a.date
   }
 
-  addTransaction (currencyCode, abcTransaction) {
+  addTransaction (currencyCode:string, abcTransaction) {
     // Add or update tx in transactionsObj
     const idx = this.findTransaction(currencyCode, abcTransaction.txid)
 
@@ -719,35 +786,45 @@ class ABCTxLibETH {
       // Sort
       this.walletLocalData.transactionsObj[currencyCode].sort(this.sortTxByDate)
       this.walletLocalDataDirty = true
+      this.transactionsChangedArray.push(abcTransaction)
     } else {
-      // Update the transaction
-      this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
-      this.walletLocalDataDirty = true
-      console.log('addTransaction: updating:' + abcTransaction.txid)
+      this.updateTransaction(currencyCode, abcTransaction, idx)
     }
+  }
+
+  updateTransaction (currencyCode:string, abcTransaction, idx:number) {
+    // Update the transaction
+    this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
+    this.walletLocalDataDirty = true
     this.transactionsChangedArray.push(abcTransaction)
+    console.log('updateTransaction:' + abcTransaction.txid)
   }
 
   // *************************************
   // Save the wallet data store
   // *************************************
-  saveWalletDataStore () {
-    if (this.engineOn) {
-      if (this.walletLocalDataDirty) {
-        const walletJson = JSON.stringify(this.walletLocalData)
-        this.walletLocalFolder
-          .folder(DATA_STORE_FOLDER)
-          .file(DATA_STORE_FILE)
-          .setText(walletJson)
-          .then(result => {
-            this.walletLocalDataDirty = false
-            setTimeout(() => {
-              this.saveWalletDataStore()
-            }, SAVE_DATASTORE_MILLISECONDS)
-          })
-          .catch(err => {
-            console.log(err)
-          })
+  async saveWalletLoop () {
+    while (this.engineOn) {
+      try {
+        if (this.walletLocalDataDirty) {
+          console.log('walletLocalDataDirty. Saving...')
+          const walletJson = JSON.stringify(this.walletLocalData)
+          await this.walletLocalFolder
+            .folder(DATA_STORE_FOLDER)
+            .file(DATA_STORE_FILE)
+            .setText(walletJson)
+          this.walletLocalDataDirty = false
+        } else {
+          console.log('walletLocalData clean')
+        }
+        await snooze(SAVE_DATASTORE_MILLISECONDS)
+      } catch (err) {
+        console.log(err)
+        try {
+          await snooze(SAVE_DATASTORE_MILLISECONDS)
+        } catch (err) {
+          console.log(err)
+        }
       }
     }
   }
@@ -824,109 +901,141 @@ class ABCTxLibETH {
   // synchronous
   getBalance (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options.currencyCode != null) {
+
+    const valid = validateObject(options, {
+      'type': 'object',
+      'properties': {
+        'currencyCode': {'type': 'string'}
+      }
+    })
+
+    if (valid) {
       currencyCode = options.currencyCode
     }
 
-    return this.walletLocalData.totalBalances[currencyCode]
+    if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
+      return 0
+    } else {
+      const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[currencyCode])
+      return balanceSatoshi
+    }
   }
 
   // synchronous
   getNumTransactions (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options != null && options.currencyCode != null) {
+
+    const valid = validateObject(options, {
+      'type': 'object',
+      'properties': {
+        'currencyCode': {'type': 'string'}
+      }
+    })
+
+    if (valid) {
       currencyCode = options.currencyCode
     }
-    return this.walletLocalData.transactionsObj[currencyCode].length
+
+    if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
+      return 0
+    } else {
+      return this.walletLocalData.transactionsObj[currencyCode].length
+    }
   }
 
   // asynchronous
-  getTransactions (options = {}) {
+  async getTransactions (options = {}) {
     let currencyCode = PRIMARY_CURRENCY
-    if (options != null && options.currencyCode != null) {
-      currencyCode = options.currencyCode
-    }
-    const prom = new Promise((resolve, reject) => {
-      let startIndex = 0
-      let numEntries = 0
-      if (options == null) {
-        resolve(this.walletLocalData.transactionsObj[currencyCode].slice(0))
-        return
-      }
-      if (options.startIndex != null && options.startIndex > 0) {
-        startIndex = options.startIndex
-        if (
-          startIndex >=
-          this.walletLocalData.transactionsObj[currencyCode].length
-        ) {
-          startIndex =
-            this.walletLocalData.transactionsObj[currencyCode].length - 1
-        }
-      }
-      if (options.numEntries != null && options.numEntries > 0) {
-        numEntries = options.numEntries
-        if (
-          numEntries + startIndex >
-          this.walletLocalData.transactionsObj[currencyCode].length
-        ) {
-          // Don't read past the end of the transactionsObj
-          numEntries =
-            this.walletLocalData.transactionsObj[currencyCode].length -
-            startIndex
-        }
-      }
 
-      // Copy the appropriate entries from the arrayTransactions
-      let returnArray = []
-
-      if (numEntries) {
-        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
-          startIndex,
-          numEntries + startIndex
-        )
-      } else {
-        returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
-          startIndex
-        )
+    const valid = validateObject(options, {
+      'type': 'object',
+      'properties': {
+        'currencyCode': {'type': 'string'}
       }
-      resolve(returnArray)
     })
 
-    return prom
+    if (valid) {
+      currencyCode = options.currencyCode
+    }
+
+    if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
+      return []
+    }
+
+    let startIndex = 0
+    let numEntries = 0
+    if (options === null) {
+      return this.walletLocalData.transactionsObj[currencyCode].slice(0)
+    }
+    if (options.startIndex !== null && options.startIndex > 0) {
+      startIndex = options.startIndex
+      if (
+        startIndex >=
+        this.walletLocalData.transactionsObj[currencyCode].length
+      ) {
+        startIndex =
+          this.walletLocalData.transactionsObj[currencyCode].length - 1
+      }
+    }
+    if (options.numEntries !== null && options.numEntries > 0) {
+      numEntries = options.numEntries
+      if (
+        numEntries + startIndex >
+        this.walletLocalData.transactionsObj[currencyCode].length
+      ) {
+        // Don't read past the end of the transactionsObj
+        numEntries =
+          this.walletLocalData.transactionsObj[currencyCode].length -
+          startIndex
+      }
+    }
+
+    // Copy the appropriate entries from the arrayTransactions
+    let returnArray = []
+
+    if (numEntries) {
+      returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
+        startIndex,
+        numEntries + startIndex
+      )
+    } else {
+      returnArray = this.walletLocalData.transactionsObj[currencyCode].slice(
+        startIndex
+      )
+    }
+    return returnArray
   }
 
   // synchronous
   getFreshAddress (options = {}) {
-    // Algorithm to derive master pub key from master private key
-    //  master public key = "pub[masterPrivateKey]". ie. "pub294709fe7a0sb0c8f7398f"
-    // Algorithm to drive an address from index is "[index]-[masterPublicKey]" ie. "102-pub294709fe7a0sb0c8f7398f"
-    return this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
+    return this.walletLocalData.masterPublicKey
+    // return this.addressFromIndex(this.walletLocalData.unusedAddressIndex)
   }
 
   // synchronous
   addGapLimitAddresses (addresses, options) {
-    for (var i in addresses) {
-      if (this.walletLocalData.gapLimitAddresses.indexOf(addresses[i]) === -1) {
-        this.walletLocalData.gapLimitAddresses.push(addresses[i])
-      }
-    }
+    // for (var i in addresses) {
+    //   if (this.walletLocalData.gapLimitAddresses.indexOf(addresses[i]) === -1) {
+    //     this.walletLocalData.gapLimitAddresses.push(addresses[i])
+    //   }
+    // }
   }
 
   // synchronous
   isAddressUsed (address, options = {}) {
-    let idx = this.findAddress(address)
-    if (idx !== -1) {
-      const addrObj = this.walletLocalData.addressArray[idx]
-      if (addrObj != null) {
-        if (addrObj.txids.length > 0) {
-          return true
-        }
-      }
-    }
-    idx = this.walletLocalData.gapLimitAddresses.indexOf(address)
-    if (idx !== -1) {
-      return true
-    }
+    // let idx = this.findAddress(address)
+    // if (idx !== -1) {
+    //   const addrObj = this.walletLocalData.addressArray[idx]
+    //   if (addrObj != null) {
+    //     if (addrObj.txids.length > 0) {
+    //       return true
+    //     }
+    //   }
+    // }
+    // idx = this.walletLocalData.gapLimitAddresses.indexOf(address)
+    // if (idx !== -1) {
+    //   return true
+    // }
     return false
   }
 
