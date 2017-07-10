@@ -23,6 +23,7 @@ const ADDRESS_POLL_MILLISECONDS = 7000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 // const ZERO = new BN('0', 10)
 
@@ -110,7 +111,11 @@ export function makeEthereumPlugin (opts = {}) {
 class WalletLocalData {
   constructor (jsonString) {
     this.blockHeight = 0
-    this.totalBalances = { TRD: '0' }
+    this.totalBalances = {
+      ETH: '0',
+      REP: '0',
+      WINGS: '0'
+    }
 
     // Map of gap limit addresses
     this.gapLimitAddresses = []
@@ -191,7 +196,7 @@ class ABCTxLibETH {
     this.engineOn = true
     try {
       this.blockHeightInnerLoop()
-      // this.checkAddressesInnerLoop()
+      this.checkAddressesInnerLoop()
       // this.checkTransactionsInnerLoop()
       this.saveWalletDataStore()
     } catch (err) {
@@ -309,12 +314,12 @@ class ABCTxLibETH {
     }
   }
 
-  processTransactionFromServer (tx) {
-    console.log('processTransactionFromServer: tx:')
-    console.log(tx)
-        // //
-        // // Calculate the amount sent from the wallet
-        // //
+  // processTransactionFromServer (tx) {
+  //   console.log('processTransactionFromServer: tx:')
+  //   console.log(tx)
+    //
+    // Calculate the amount sent from the wallet
+    //
         //
         // // Iterate through all the inputs and see if any are in our wallet
         // let spendAmounts = []
@@ -400,7 +405,7 @@ class ABCTxLibETH {
         // }
         //
         // return 0
-  }
+  // }
 
   // **********************************************
   // Check all addresses for new transactions
@@ -408,9 +413,118 @@ class ABCTxLibETH {
   async checkAddressesInnerLoop () {
     while (this.engineOn) {
       // Ethereum only has one address
-      await this.processAddressFromServer(this.walletLocalData.masterPublicKey)
-      snooze(ADDRESS_POLL_MILLISECONDS)
+      const address = this.walletLocalData.masterPublicKey
+      let url
+      let jsonObj
+      let valid
+      try {
+        // Get balance
+        url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
+        jsonObj = await this.fetchGet(url)
+        valid = validateObject(jsonObj, {
+          'type': 'object',
+          'properties': {
+            'result': {'type': 'string'}
+          },
+          'required': ['result']
+        })
 
+        if (valid) {
+          const balance = jsonObj.result
+          console.log('Address balance: ' + balance)
+          const balanceBN = new BN(balance, 10)
+          const oldBalanceBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
+
+          if (!balanceBN.eq(oldBalanceBN)) {
+            this.walletLocalData.totalBalances.ETH = balance
+
+            const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances.ETH)
+            this.abcTxLibCallbacks.onBalanceChanged('ETH', balanceSatoshi, this.walletLocalData.totalBalances.ETH)
+          }
+        }
+      } catch (e) {
+        console.log('Error fetching address balance: ' + address)
+      }
+
+      try {
+        const endBlock = 999999999999999
+        let startBlock = 0
+
+        if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+          startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+        }
+
+        url = sprintf('?module=account&action=txlist&address=%s&startblock=%d&endblock=%d&sort=asc', address, startBlock, endBlock)
+        jsonObj = await this.fetchGet(url)
+        valid = validateObject(jsonObj, {
+          'type': 'object',
+          'properties': {
+            'result': {
+              'type': 'array',
+              'items': {
+                'type': 'object',
+                'properties': {
+                  'blockNumber': {'type': 'string'},
+                  'timeStamp': {'type': 'string'},
+                  'hash': {'type': 'string'},
+                  'from': {'type': 'string'},
+                  'to': {'type': 'string'},
+                  'value': {'type': 'string'},
+                  'gas': {'type': 'string'},
+                  'gasPrice': {'type': 'string'},
+                  'cumulativeGasUsed': {'type': 'string'},
+                  'gasUsed': {'type': 'string'},
+                  'confirmations': {'type': 'string'}
+                },
+                'required': [
+                  'blockNumber',
+                  'timeStamp',
+                  'hash',
+                  'from',
+                  'to',
+                  'value',
+                  'gas',
+                  'gasPrice',
+                  'cumulativeGasUsed',
+                  'gasUsed',
+                  'confirmations'
+                ]
+              }
+            }
+          },
+          'required': ['result']
+        })
+
+        if (valid) {
+          const transactions = jsonObj.result
+          console.log('Fetched transactions count: ' + transactions.length)
+
+          // Get transactions
+          // Iterate over transactions in address
+          for (const n in transactions) {
+            const tx = transactions[n]
+            if (this.findTransaction(PRIMARY_CURRENCY, tx.hash) === -1) {
+              console.log(
+                'processAddressFromServer: txid not found. Adding:' + tx
+              )
+              this.processTransactionFromServer(tx)
+              this.walletLocalDataDirty = true
+              this.transactionsDirty = true
+            } else {
+              // Tx already in database, see if anything changed
+              // XXX todo
+            }
+          }
+        }
+        await snooze(ADDRESS_POLL_MILLISECONDS)
+      } catch (e) {
+        console.log('Error fetching address transactions: ' + address)
+        try {
+          await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
+        } catch (err) {
+          console.log(err)
+        }
+      }
       // var promiseArray = []
       // // var promiseArrayCount = 0
       //
@@ -492,131 +606,85 @@ class ABCTxLibETH {
       //     this.checkAddressesInnerLoop()
       //   }, ADDRESS_POLL_MILLISECONDS)
       // }
+      //   }
+      // }
+
+      // addressFromIndex (index) {
+      //   let addr = '' + index + '_' + this.walletLocalData.masterPublicKey
+      //
+      //   if (index === 0) {
+      //     addr = addr + '__600000' // Preload first addresss with some funds
+      //   }
+      //   return addr
+      // }
+
+      // async processAddressFromServer (address) {
+      // return this.fetchGet('address', address)
+      //   .then(function (response) {
+      //     return response.json()
+      //   })
+      //   .then(jsonObj => {
+      //     console.log('processAddressFromServer: response.json():')
+      //     console.log(jsonObj)
+      //     const txids = jsonObj.txids
+      //     const idx = this.findAddress(jsonObj.address)
+      //     if (idx === -1) {
+      //       throw new Error(
+      //         'Queried address not found in addressArray:' + jsonObj.address
+      //       )
+      //     }
+      //     this.walletLocalData.addressArray[idx] = jsonObj
+      //     this.walletLocalDataDirty = true
+      //
+      //     // Iterate over txids in address
+      //     for (var n in txids) {
+      //       // This address has transactions
+      //       const txid = txids[n]
+      //       console.log('processAddressFromServer: txid:' + txid)
+      //
+      //       if (
+      //         this.findTransaction(PRIMARY_CURRENCY, txid) === -1 &&
+      //         this.walletLocalData.transactionsToFetch.indexOf(txid) === -1
+      //       ) {
+      //         console.log(
+      //           'processAddressFromServer: txid not found. Adding:' + txid
+      //         )
+      //         this.walletLocalData.transactionsToFetch.push(txid)
+      //         this.walletLocalDataDirty = true
+      //
+      //         this.transactionsDirty = true
+      //       }
+      //     }
+      //
+      //     if (
+      //       (txids != null && txids.length) ||
+      //       this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) !== -1
+      //     ) {
+      //       // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
+      //       if (idx >= this.walletLocalData.unusedAddressIndex) {
+      //         this.walletLocalData.unusedAddressIndex = idx + 1
+      //         this.walletLocalDataDirty = true
+      //         console.log(
+      //           'processAddressFromServer: set unusedAddressIndex:' +
+      //             this.walletLocalData.unusedAddressIndex
+      //         )
+      //       }
+      //     }
+      //
+      //     this.numAddressesChecked++
+      //     const progress = this.numAddressesChecked / this.numAddressesToCheck
+      //
+      //     if (progress !== 1) {
+      //       this.abcTxLibCallbacks.onAddressesChecked(progress)
+      //     }
+      //
+      //     return jsonObj.amounts
+      //   })
+      //   .catch(e => {
+      //     console.log('Error fetching address: ' + address)
+      //     return 0
+      //   })
     }
-  }
-
-  // addressFromIndex (index) {
-  //   let addr = '' + index + '_' + this.walletLocalData.masterPublicKey
-  //
-  //   if (index === 0) {
-  //     addr = addr + '__600000' // Preload first addresss with some funds
-  //   }
-  //   return addr
-  // }
-
-  async processAddressFromServer (address) {
-    try {
-      // Get balance
-      const url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
-      const jsonObj = await this.fetchGet(url)
-      const balance = jsonObj.result
-      const balanceBN = new BN(balance, 10)
-
-      const oldBalanceBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
-
-      if (!balanceBN.eq(oldBalanceBN)) {
-        this.walletLocalData.totalBalances.ETH = balanceBN.toString(10)
-
-        const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances.ETH)
-        this.abcTxLibCallbacks.onBalanceChanged(balanceSatoshi, this.walletLocalData.totalBalances.ETH)
-      }
-    } catch (e) {
-      console.log('Error fetching address balance: ' + address)
-    }
-
-    try {
-      const startBlock = 0
-      const endBlock = 999999999999
-      const url = sprintf('?module=account&action=txlist&address=%s&startblock=%d&endblock=%d&sort=asc', address, startBlock, endBlock)
-      const jsonObj = await this.fetchGet(url)
-      const transactions = jsonObj.result
-
-      // Get transactions
-      // Iterate over transactions in address
-      for (const n in transactions) {
-        // This address has transactions
-        const tx = transactions[n]
-        if (tx === null || typeof tx.hash !== 'string') {
-          continue
-        }
-        if (this.findTransaction(PRIMARY_CURRENCY, tx.hash) === -1) {
-          console.log(
-            'processAddressFromServer: txid not found. Adding:' + tx
-          )
-          this.processTransactionFromServer(tx)
-          this.walletLocalDataDirty = true
-
-          this.transactionsDirty = true
-        }
-      }
-    } catch (e) {
-      console.log('Error fetching address transactions: ' + address)
-    }
-    // return this.fetchGet('address', address)
-    //   .then(function (response) {
-    //     return response.json()
-    //   })
-    //   .then(jsonObj => {
-    //     console.log('processAddressFromServer: response.json():')
-    //     console.log(jsonObj)
-    //     const txids = jsonObj.txids
-    //     const idx = this.findAddress(jsonObj.address)
-    //     if (idx === -1) {
-    //       throw new Error(
-    //         'Queried address not found in addressArray:' + jsonObj.address
-    //       )
-    //     }
-    //     this.walletLocalData.addressArray[idx] = jsonObj
-    //     this.walletLocalDataDirty = true
-    //
-    //     // Iterate over txids in address
-    //     for (var n in txids) {
-    //       // This address has transactions
-    //       const txid = txids[n]
-    //       console.log('processAddressFromServer: txid:' + txid)
-    //
-    //       if (
-    //         this.findTransaction(PRIMARY_CURRENCY, txid) === -1 &&
-    //         this.walletLocalData.transactionsToFetch.indexOf(txid) === -1
-    //       ) {
-    //         console.log(
-    //           'processAddressFromServer: txid not found. Adding:' + txid
-    //         )
-    //         this.walletLocalData.transactionsToFetch.push(txid)
-    //         this.walletLocalDataDirty = true
-    //
-    //         this.transactionsDirty = true
-    //       }
-    //     }
-    //
-    //     if (
-    //       (txids != null && txids.length) ||
-    //       this.walletLocalData.gapLimitAddresses.indexOf(jsonObj.address) !== -1
-    //     ) {
-    //       // Since this address is "used", make sure the unusedAddressIndex is incremented if needed
-    //       if (idx >= this.walletLocalData.unusedAddressIndex) {
-    //         this.walletLocalData.unusedAddressIndex = idx + 1
-    //         this.walletLocalDataDirty = true
-    //         console.log(
-    //           'processAddressFromServer: set unusedAddressIndex:' +
-    //             this.walletLocalData.unusedAddressIndex
-    //         )
-    //       }
-    //     }
-    //
-    //     this.numAddressesChecked++
-    //     const progress = this.numAddressesChecked / this.numAddressesToCheck
-    //
-    //     if (progress !== 1) {
-    //       this.abcTxLibCallbacks.onAddressesChecked(progress)
-    //     }
-    //
-    //     return jsonObj.amounts
-    //   })
-    //   .catch(e => {
-    //     console.log('Error fetching address: ' + address)
-    //     return 0
-    //   })
   }
 
   findTransaction (currencyCode, txid) {
