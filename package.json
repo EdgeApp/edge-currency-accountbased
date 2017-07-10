@@ -21,7 +21,7 @@
   "dependencies": {
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
-    "ethereumjs-wallet": "file:../ethereumjs-wallet",
+    "ethereumjs-wallet": "git+ssh://git@github.com:Airbitz/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
     "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1"
   },
@@ -43,7 +43,9 @@
   },
   "standard": {
     "parser": "babel-eslint",
-    "plugins": [ "flowtype" ]
+    "plugins": [
+      "flowtype"
+    ]
   },
   "scripts": {
     "flow": "flow",
