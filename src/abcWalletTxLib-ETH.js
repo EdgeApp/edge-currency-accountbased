@@ -345,6 +345,7 @@ class ABCTxLibETH {
     while (this.engineOn) {
       // Ethereum only has one address
       const address = this.walletLocalData.masterPublicKey
+      let checkAddressSuccess = 0
       let url
       let jsonObj
       let valid
@@ -372,6 +373,7 @@ class ABCTxLibETH {
             const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances.ETH)
             this.abcTxLibCallbacks.onBalanceChanged('ETH', balanceSatoshi, this.walletLocalData.totalBalances.ETH)
           }
+          checkAddressSuccess++
         }
       } catch (e) {
         console.log('Error fetching address balance: ' + address)
@@ -435,6 +437,11 @@ class ABCTxLibETH {
           for (const n in transactions) {
             const tx = transactions[n]
             this.processTransaction(tx)
+          }
+          checkAddressSuccess++
+          if (checkAddressSuccess >= 2 && this.addressesChecked === false) {
+            this.addressesChecked = true
+            this.abcTxLibCallbacks.onAddressesChecked(1)
           }
         }
         await snooze(ADDRESS_POLL_MILLISECONDS)
