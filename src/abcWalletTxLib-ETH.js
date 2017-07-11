@@ -184,6 +184,7 @@ class ABCTxLibETH {
   engineLoop () {
     this.engineOn = true
     try {
+      this.doInitialCallbacks()
       this.blockHeightInnerLoop()
       this.checkAddressesInnerLoop()
       this.saveWalletLoop()
@@ -528,6 +529,20 @@ class ABCTxLibETH {
           console.log(err)
         }
       }
+    }
+  }
+
+  doInitialCallbacks () {
+    this.abcTxLibCallbacks.onBlockHeightChanged(
+      this.walletLocalData.blockHeight
+    )
+
+    for (const n in TOKEN_CODES) {
+      const currencyCode = TOKEN_CODES[n]
+      this.abcTxLibCallbacks.onTransactionsChanged(
+        this.walletLocalData.transactionsObj[currencyCode]
+      )
+      this.abcTxLibCallbacks.onBalanceChanged(currencyCode, this.walletLocalData.totalBalances[currencyCode])
     }
   }
 
