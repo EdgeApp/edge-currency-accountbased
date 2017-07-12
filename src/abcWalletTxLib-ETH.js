@@ -553,39 +553,32 @@ class ABCTxLibETH {
   // Public methods
   // *************************************
 
-  startEngine () {
-    const prom = new Promise((resolve, reject) => {
-      this.walletLocalFolder
+  async startEngine () {
+    try {
+      const result =
+        await this.walletLocalFolder
         .folder(DATA_STORE_FOLDER)
         .file(DATA_STORE_FILE)
         .getText(DATA_STORE_FOLDER, 'walletLocalData')
-        .then(result => {
-          this.walletLocalData = new WalletLocalData(result)
-          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
-          this.engineLoop()
-          resolve()
-        })
-        .catch(err => {
-          console.log(err)
-          console.log('No walletLocalData setup yet: Failure is ok')
-          this.walletLocalData = new WalletLocalData(null)
-          this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
-          this.walletLocalFolder
-            .folder(DATA_STORE_FOLDER)
-            .file(DATA_STORE_FILE)
-            .setText(JSON.stringify(this.walletLocalData))
-            .then(result => {
-              this.engineLoop()
-              resolve()
-            })
-            .catch(err => {
-              console.log('Error writing to localDataStore:' + err)
-              resolve()
-            })
-        })
-    })
 
-    return prom
+      this.walletLocalData = new WalletLocalData(result)
+      this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+      this.engineLoop()
+    } catch (err) {
+      try {
+        console.log(err)
+        console.log('No walletLocalData setup yet: Failure is ok')
+        this.walletLocalData = new WalletLocalData(null)
+        this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+        await this.walletLocalFolder
+          .folder(DATA_STORE_FOLDER)
+          .file(DATA_STORE_FILE)
+          .setText(JSON.stringify(this.walletLocalData))
+        this.engineLoop()
+      } catch (e) {
+        console.log('Error writing to localDataStore. Engine not started:' + err)
+      }
+    }
   }
 
   killEngine () {
