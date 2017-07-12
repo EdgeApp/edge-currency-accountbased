@@ -381,7 +381,7 @@ class ABCTxLibETH {
       }
 
       try {
-        const endBlock = 999999999999999
+        const endBlock = 999999999
         let startBlock = 0
 
         if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
@@ -458,7 +458,7 @@ class ABCTxLibETH {
   }
 
   findTransaction (currencyCode, txid) {
-    if (this.walletLocalData.transactionsObj[currencyCode] == null) {
+    if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
       return -1
     }
 
@@ -484,6 +484,9 @@ class ABCTxLibETH {
 
     if (idx === -1) {
       console.log('addTransaction: adding and sorting:' + abcTransaction.txid)
+      if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
+        this.walletLocalData.transactionsObj[currencyCode] = []
+      }
       this.walletLocalData.transactionsObj[currencyCode].push(abcTransaction)
 
       // Sort
