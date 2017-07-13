@@ -38,12 +38,13 @@ const baseUrl = 'https://api.etherscan.io/api'
 //   return nativeAmount
 // }
 
-function nativeToSatoshi (nativeAmount: string) {
+function nativeToSatoshi (nativeAmount:string) {
   let nativeAmountBN = new BN(nativeAmount, 10)
-  const converter = new BN('10000000000', 10)
-  const amountSatoshiBN = nativeAmountBN.div(converter)
-  const amountSatoshi = amountSatoshiBN.toNumber()
-  return amountSatoshi
+  return nativeAmountBN.toNumber()
+  // const converter = new BN('10000000000', 10)
+  // const amountSatoshiBN = nativeAmountBN.div(converter)
+  // const amountSatoshi = amountSatoshiBN.toNumber()
+  // return amountSatoshi
 }
 
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -175,7 +176,8 @@ class ABCTransaction {
   blockHeightNative:string
   amountSatoshi:number
   nativeAmount:string
-  networkFee:string
+  networkFee:number
+  nativeNetworkFee:string
   signedTx:string
   otherParams:EthereumParams
 
@@ -184,7 +186,7 @@ class ABCTransaction {
                currencyCode:string,
                blockHeightNative:string,
                nativeAmount:string,
-               networkFee:string,
+               nativeNetworkFee:string,
                signedTx:string,
                otherParams) {
     this.txid = txid
@@ -194,7 +196,8 @@ class ABCTransaction {
     this.blockHeight = (new BN(blockHeightNative, 10)).toNumber(10)
     this.nativeAmount = nativeAmount
     this.amountSatoshi = nativeToSatoshi(nativeAmount)
-    this.networkFee = networkFee
+    this.nativeNetworkFee = nativeNetworkFee
+    this.networkFee = nativeToSatoshi(nativeNetworkFee)
     this.signedTx = signedTx
     this.otherParams = otherParams
   }
