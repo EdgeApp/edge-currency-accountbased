@@ -4,11 +4,11 @@
 // @flow
 
 import { txLibInfo } from './txLibInfo.js'
-import { Buffer } from 'buffer'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
 
+const Buffer = require('buffer/').Buffer
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 
 const DATA_STORE_FOLDER = 'txEngineFolder'
