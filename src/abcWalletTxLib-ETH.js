@@ -62,7 +62,7 @@ function validateObject (object, schema) {
   }
 }
 
-export function makeEthereumPlugin (opts = {}) {
+export function makeEthereumPlugin (opts:any) {
   const { io } = opts
 
   const randomBuffer = (size) => {
@@ -77,23 +77,25 @@ export function makeEthereumPlugin (opts = {}) {
       return currencyDetails
     },
 
-    createMasterKeys: walletType => {
+    createMasterKeys: (walletType:string) => {
       if (walletType === 'ethereum') {
         const cryptoObj = {
           randomBytes: randomBuffer
         }
         ethWallet.overrideCrypto(cryptoObj)
 
-        let wallet = ethWallet.generate(false)
-        const masterPrivateKey = wallet.getPrivateKeyString()
-        const masterPublicKey = wallet.getAddressString()
+        // let wallet = ethWallet.generate(false)
+        // const masterPrivateKey = wallet.getPrivateKeyString()
+        // const masterPublicKey = wallet.getAddressString()
+        const masterPrivateKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+        const masterPublicKey = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
         return { masterPrivateKey, masterPublicKey }
       } else {
         return null
       }
     },
 
-    makeEngine: (keyInfo, opts = {}) => {
+    makeEngine: (keyInfo:any, opts:any = {}) => {
       const abcTxLib = new ABCTxLibETH(io, keyInfo, opts)
 
       return abcTxLib
@@ -102,6 +104,13 @@ export function makeEthereumPlugin (opts = {}) {
 }
 
 class WalletLocalData {
+  blockHeight:number
+  lastAddressQueryHeight:number
+  masterPublicKey:string
+  totalBalances: {}
+  enabledTokens:Array<string>
+  transactionsObj:{}
+
   constructor (jsonString) {
     this.blockHeight = 0
     this.totalBalances = {
@@ -110,12 +119,10 @@ class WalletLocalData {
       WINGS: '0'
     }
 
-    // Map of gap limit addresses
-    this.gapLimitAddresses = []
     this.transactionsObj = {}
 
     // Array of ABCTransaction objects sorted by date from newest to oldest
-    for (const n in TOKEN_CODES) {
+    for (let n = 0; n < TOKEN_CODES.length; n++) {
       const currencyCode = TOKEN_CODES[n]
       this.transactionsObj[currencyCode] = []
     }
@@ -123,10 +130,6 @@ class WalletLocalData {
     // // Array of txids to fetch
     this.lastAddressQueryHeight = 0
 
-    // Array of address objects, unsorted
-    this.addressArray = []
-
-    this.unusedAddressIndex = 0
     this.masterPublicKey = ''
     this.enabledTokens = [PRIMARY_CURRENCY]
     if (jsonString != null) {
@@ -138,17 +141,52 @@ class WalletLocalData {
   }
 }
 
+class EthereumParams {
+  from:Array<string>
+  to: Array<string>
+  gas: string
+  gasPrice: string
+  gasUsed: string
+  cumulativeGasUsed: string
+  blockHash: string
+
+  constructor (from:Array<string>,
+               to:Array<string>,
+               gas:string,
+               gasPrice:string,
+               gasUsed:string,
+               cumulativeGasUsed:string,
+               blockHash: string) {
+    this.from = from
+    this.to = to
+    this.gas = gas
+    this.gasPrice = gasPrice
+    this.gasUsed = gasUsed
+    this.cumulativeGasUsed = cumulativeGasUsed
+    this.blockHash = blockHash
+  }
+}
+
 class ABCTransaction {
-  constructor (
-    txid: string,
-    date: number,
-    currencyCode: string,
-    blockHeightNative: string,
-    nativeAmount: string,
-    networkFee: string,
-    signedTx: string,
-    otherParams
-  ) {
+  txid:string
+  date:number
+  currencyCode:string
+  blockHeight:number
+  blockHeightNative:string
+  amountSatoshi:number
+  nativeAmount:string
+  networkFee:string
+  signedTx:string
+  otherParams:EthereumParams
+
+  constructor (txid:string,
+               date:number,
+               currencyCode:string,
+               blockHeightNative:string,
+               nativeAmount:string,
+               networkFee:string,
+               signedTx:string,
+               otherParams) {
     this.txid = txid
     this.date = date
     this.currencyCode = currencyCode
@@ -163,19 +201,28 @@ class ABCTransaction {
 }
 
 class ABCTxLibETH {
-  constructor (io, keyInfo, opts = {}) {
+  io:any
+  keyInfo:any
+  abcTxLibCallbacks:any
+  walletLocalFolder:any
+  engineOn:boolean
+  addressesChecked:boolean
+  walletLocalData:any
+  walletLocalDataDirty:boolean
+  transactionsChangedArray:Array<{}>
+
+  constructor (io:any, keyInfo:any, opts:any) {
     const { walletLocalFolder, callbacks } = opts
 
+    this.engineOn = false
+    this.addressesChecked = false
+    this.walletLocalDataDirty = false
+    this.walletLocalData = {}
+    this.transactionsChangedArray = []
     this.io = io
     this.keyInfo = keyInfo
     this.abcTxLibCallbacks = callbacks
     this.walletLocalFolder = walletLocalFolder
-
-    this.engineOn = false
-    this.addressesChecked = false
-    this.walletLocalData = {}
-    this.walletLocalDataDirty = false
-    this.transactionsChangedArray = []
   }
 
   // *************************************
@@ -193,11 +240,11 @@ class ABCTxLibETH {
     }
   }
 
-  isTokenEnabled (token) {
+  isTokenEnabled (token:string) {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  async fetchGet (cmd: string) {
+  async fetchGet (cmd:string) {
     let apiKey = ''
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
@@ -209,7 +256,7 @@ class ABCTxLibETH {
     return response.json()
   }
 
-  async fetchPost (cmd: string, body) {
+  async fetchPost (cmd:string, body:any) {
     let apiKey = ''
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
@@ -266,7 +313,7 @@ class ABCTxLibETH {
     }
   }
 
-  processTransaction (tx) {
+  processTransaction (tx:any) {
     //
     // Calculate the amount sent from the wallet
     //
@@ -289,15 +336,14 @@ class ABCTxLibETH {
     const etherUsedBN = gasPriceBN.mul(gasUsedBN)
     const networkFee = etherUsedBN.toString(10)
 
-    const otherParams = {
-      inputs: [tx.from],
-      outputs: [tx.to],
-      gas: tx.gas,
-      gasPrice: tx.gasPrice,
-      gasUsed: tx.gasUsed,
-      cumulativeGasUsed: tx.cumulativeGasUsed,
-      blockHash: tx.blockHash
-    }
+    const ethParams = new EthereumParams(
+      [tx.from],
+      [tx.to],
+      tx.gas,
+      tx.gasPrice,
+      tx.gasUsed,
+      tx.cumulativeGasUsed,
+      tx.blockHeight)
 
     let abcTransaction = new ABCTransaction(
       tx.hash,
@@ -307,7 +353,7 @@ class ABCTxLibETH {
       netNativeAmount,
       networkFee,
       'iwassignedyoucantrustme',
-      otherParams
+      ethParams
     )
 
     const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
@@ -457,7 +503,7 @@ class ABCTxLibETH {
     }
   }
 
-  findTransaction (currencyCode, txid) {
+  findTransaction (currencyCode:string, txid:string) {
     if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
       return -1
     }
@@ -468,17 +514,17 @@ class ABCTxLibETH {
     })
   }
 
-  findAddress (address) {
+  findAddress (address:string) {
     return this.walletLocalData.addressArray.findIndex(element => {
       return element.address === address
     })
   }
 
-  sortTxByDate (a, b) {
+  sortTxByDate (a:ABCTransaction, b:ABCTransaction) {
     return b.date - a.date
   }
 
-  addTransaction (currencyCode:string, abcTransaction) {
+  addTransaction (currencyCode:string, abcTransaction:ABCTransaction) {
     // Add or update tx in transactionsObj
     const idx = this.findTransaction(currencyCode, abcTransaction.txid)
 
@@ -498,7 +544,7 @@ class ABCTxLibETH {
     }
   }
 
-  updateTransaction (currencyCode:string, abcTransaction, idx:number) {
+  updateTransaction (currencyCode:string, abcTransaction:ABCTransaction, idx:number) {
     // Update the transaction
     this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
     this.walletLocalDataDirty = true
@@ -540,7 +586,7 @@ class ABCTxLibETH {
       this.walletLocalData.blockHeight
     )
 
-    for (const n in TOKEN_CODES) {
+    for (let n = 0; n < TOKEN_CODES.length; n++) {
       const currencyCode = TOKEN_CODES[n]
       this.abcTxLibCallbacks.onTransactionsChanged(
         this.walletLocalData.transactionsObj[currencyCode]
@@ -596,8 +642,8 @@ class ABCTxLibETH {
   }
 
   // asynchronous
-  enableTokens (tokens = []) {
-    for (const n in tokens) {
+  enableTokens (tokens:Array<string>) {
+    for (let n = 0; n < tokens.length; n++) {
       const token = tokens[n]
       if (this.walletLocalData.enabledTokens.indexOf(token) !== -1) {
         this.walletLocalData.enabledTokens.push(token)
@@ -612,7 +658,7 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getBalance (options) {
+  getBalance (options:any) {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
@@ -635,7 +681,7 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getNumTransactions (options) {
+  getNumTransactions (options:any) {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
@@ -657,10 +703,10 @@ class ABCTxLibETH {
   }
 
   // asynchronous
-  async getTransactions (options) {
-    let currencyCode = PRIMARY_CURRENCY
+  async getTransactions (options:any) {
+    let currencyCode:string = PRIMARY_CURRENCY
 
-    const valid = validateObject(options, {
+    const valid:boolean = validateObject(options, {
       'type': 'object',
       'properties': {
         'currencyCode': {'type': 'string'}
@@ -675,8 +721,8 @@ class ABCTxLibETH {
       return []
     }
 
-    let startIndex = 0
-    let numEntries = 0
+    let startIndex:number = 0
+    let numEntries:number = 0
     if (options === null) {
       return this.walletLocalData.transactionsObj[currencyCode].slice(0)
     }
@@ -720,155 +766,172 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getFreshAddress (options = {}) {
+  getFreshAddress (options:any) {
     return this.walletLocalData.masterPublicKey
   }
 
   // synchronous
-  addGapLimitAddresses (addresses, options) {
+  addGapLimitAddresses (addresses:Array<string>, options:any) {
   }
 
   // synchronous
-  isAddressUsed (address, options = {}) {
+  isAddressUsed (address:string, options:any) {
     return false
   }
 
   // synchronous
-  makeSpend (abcSpendInfo) {
-    // returns an ABCTransaction data structure, and checks for valid info
-    const prom = new Promise((resolve, reject) => {
-      // ******************************
-      // Get the fee amount
-      let networkFee = 50000
-      if (abcSpendInfo.networkFeeOption === 'high') {
-        networkFee += 10000
-      } else if (abcSpendInfo.networkFeeOption === 'low') {
-        networkFee -= 10000
-      } else if (abcSpendInfo.networkFeeOption === 'custom') {
-        if (
-          abcSpendInfo.customNetworkFee == null ||
-          abcSpendInfo.customNetworkFee <= 0
-        ) {
-          reject(new Error('Invalid custom fee'))
-          return
-        } else {
-          networkFee = abcSpendInfo.customNetworkFee
-        }
-      }
-
-      // ******************************
-      // Calculate the total to send
-      let totalSpends = {}
-      totalSpends[PRIMARY_CURRENCY] = 0
-      let outputs = []
-      const spendTargets = abcSpendInfo.spendTargets
-
-      for (let n in spendTargets) {
-        const spendTarget = spendTargets[n]
-        if (spendTarget.amountSatoshi <= 0) {
-          reject(new Error('Error: invalid spendTarget amount'))
-          return
-        }
-        let currencyCode = PRIMARY_CURRENCY
-        if (spendTarget.currencyCode != null) {
-          currencyCode = spendTarget.currencyCode
-        }
-        if (totalSpends[currencyCode] == null) {
-          totalSpends[currencyCode] = 0
-        }
-        totalSpends[currencyCode] += spendTarget.amountSatoshi
-        outputs.push({
-          currencyCode,
-          address: spendTarget.publicAddress,
-          amount: spendTarget.amountSatoshi
-        })
-      }
-      totalSpends[PRIMARY_CURRENCY] += networkFee
-
-      for (const n in totalSpends) {
-        const totalSpend = totalSpends[n]
-        // XXX check if spends exceed totals
-        if (totalSpend > this.walletLocalData.totalBalances[n]) {
-          reject(new Error('Error: insufficient balance for token:' + n))
-          return
-        }
-      }
-
-      // ****************************************************
-      // Pick inputs. Picker will use all funds in an address
-      let totalInputAmounts = {}
-      let inputs = []
-      const addressArray = this.walletLocalData.addressArray
-      // Get a new address for change if needed
-      const changeAddress = this.addressFromIndex(
-        this.walletLocalData.unusedAddressIndex
-      )
-
-      for (let currencyCode in totalSpends) {
-        for (let n in addressArray) {
-          let addressObj = addressArray[n]
-          if (addressObj.amounts[currencyCode] > 0) {
-            if (totalInputAmounts[currencyCode] == null) {
-              totalInputAmounts[currencyCode] = 0
-            }
-
-            totalInputAmounts[currencyCode] += addressObj.amounts[currencyCode]
-            inputs.push({
-              currencyCode,
-              address: addressObj.address,
-              amount: addressObj.amounts[currencyCode]
-            })
-          }
-          if (totalInputAmounts[currencyCode] >= totalSpends[currencyCode]) {
-            break
+  async makeSpend (abcSpendInfo:any) {
+    // Validate the spendInfo
+    const valid = validateObject(abcSpendInfo, {
+      'type': 'object',
+      'properties': {
+        'networkFeeOption': { 'type': 'string' },
+        'spendTargets': {
+          'type': 'array',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'currencyCode': { 'type': 'string' },
+              'publicAddress': { 'type': 'string' },
+              'amountSatoshi': { 'type': 'number' },
+              'nativeAmount': { 'type': 'string' },
+              'destMetadata': { 'type': 'object' },
+              'destWallet': { 'type': 'object' }
+            },
+            'required': [
+              'publicAddress'
+            ]
           }
         }
-
-        if (totalInputAmounts[currencyCode] < totalSpends[currencyCode]) {
-          reject(
-            new Error('Error: insufficient funds for token:' + currencyCode)
-          )
-          return
-        }
-        if (totalInputAmounts[currencyCode] > totalSpends[currencyCode]) {
-          outputs.push({
-            currencyCode,
-            address: changeAddress,
-            amount: totalInputAmounts[currencyCode] - totalSpends[currencyCode]
-          })
-        }
-      }
-
-      // **********************************
-      // Create the unsigned ABCTransaction
-      const abcTransaction = new ABCTransaction(
-        null,
-        null,
-        null,
-        null,
-        totalSpends[PRIMARY_CURRENCY],
-        networkFee,
-        null,
-        { inputs, outputs }
-      )
-
-      resolve(abcTransaction)
+      },
+      'required': [ 'spendTargets' ]
     })
-    return prom
+
+    if (!valid) {
+      throw (new Error('Error: invalid ABCSpendInfo'))
+    }
+
+    // ******************************
+    // Get the fee amount
+    // let networkFee:number = 50000
+    // if (abcSpendInfo.networkFeeOption === 'high') {
+    //   networkFee += 10000
+    // } else if (abcSpendInfo.networkFeeOption === 'low') {
+    //   networkFee -= 10000
+    // } else if (abcSpendInfo.networkFeeOption === 'custom') {
+    //   if (
+    //     abcSpendInfo.customNetworkFee == null ||
+    //     abcSpendInfo.customNetworkFee <= 0
+    //   ) {
+    //     throw (new Error('Invalid custom fee'))
+    //   } else {
+    //     networkFee = abcSpendInfo.customNetworkFee
+    //   }
+    // }
+    //
+    // // ******************************
+    // // Calculate the total to send
+    // let totalSpends = {}
+    // totalSpends[ PRIMARY_CURRENCY ] = 0
+    // let outputs = []
+    // const spendTargets = abcSpendInfo.spendTargets
+    //
+    // for (let n in spendTargets) {
+    //   const spendTarget = spendTargets[ n ]
+    //   if (spendTarget.amountSatoshi <= 0) {
+    //     throw (new Error('Error: invalid spendTarget amount'))
+    //   }
+    //   let currencyCode = PRIMARY_CURRENCY
+    //   if (spendTarget.currencyCode != null) {
+    //     currencyCode = spendTarget.currencyCode
+    //   }
+    //   if (totalSpends[ currencyCode ] == null) {
+    //     totalSpends[ currencyCode ] = 0
+    //   }
+    //   totalSpends[ currencyCode ] += spendTarget.amountSatoshi
+    //   outputs.push({
+    //     currencyCode,
+    //     address: spendTarget.publicAddress,
+    //     amount: spendTarget.amountSatoshi
+    //   })
+    // }
+    // totalSpends[ PRIMARY_CURRENCY ] += networkFee
+    //
+    // for (const n in totalSpends) {
+    //   const totalSpend = totalSpends[ n ]
+    //   // XXX check if spends exceed totals
+    //   if (totalSpend > this.walletLocalData.totalBalances[ n ]) {
+    //     throw (new Error('Error: insufficient balance for token:' + n))
+    //   }
+    // }
+    //
+    // // ****************************************************
+    // // Pick inputs. Picker will use all funds in an address
+    // let totalInputAmounts = {}
+    // let inputs = []
+    // const addressArray = this.walletLocalData.addressArray
+    // // Get a new address for change if needed
+    // const changeAddress = this.addressFromIndex(
+    //   this.walletLocalData.unusedAddressIndex
+    // )
+    //
+    // for (let currencyCode in totalSpends) {
+    //   for (let n in addressArray) {
+    //     let addressObj = addressArray[ n ]
+    //     if (addressObj.amounts[ currencyCode ] > 0) {
+    //       if (totalInputAmounts[ currencyCode ] == null) {
+    //         totalInputAmounts[ currencyCode ] = 0
+    //       }
+    //
+    //       totalInputAmounts[ currencyCode ] += addressObj.amounts[ currencyCode ]
+    //       inputs.push({
+    //         currencyCode,
+    //         address: addressObj.address,
+    //         amount: addressObj.amounts[ currencyCode ]
+    //       })
+    //     }
+    //     if (totalInputAmounts[ currencyCode ] >= totalSpends[ currencyCode ]) {
+    //       break
+    //     }
+    //   }
+    //
+    //   if (totalInputAmounts[ currencyCode ] < totalSpends[ currencyCode ]) {
+    //     throw (new Error('Error: insufficient funds for token:' + currencyCode))
+    //   }
+    //   if (totalInputAmounts[ currencyCode ] > totalSpends[ currencyCode ]) {
+    //     outputs.push({
+    //       currencyCode,
+    //       address: changeAddress,
+    //       amount: totalInputAmounts[ currencyCode ] - totalSpends[ currencyCode ]
+    //     })
+    //   }
+    // }
+    //
+    // // **********************************
+    // // Create the unsigned ABCTransaction
+    // const abcTransaction = new ABCTransaction(
+    //   null,
+    //   null,
+    //   null,
+    //   null,
+    //   totalSpends[ PRIMARY_CURRENCY ],
+    //   networkFee,
+    //   null,
+    //   { inputs, outputs }
+    // )
+    //
+    // return abcTransaction
   }
 
   // asynchronous
-  signTx (abcTransaction) {
-    const prom = new Promise((resolve, reject) => {
-      abcTransaction.signedTx = 'iwassignedjusttrustme'
-      resolve(abcTransaction)
-    })
-
-    return prom
+  async signTx (abcTransaction:ABCTransaction) {
+    // Do signing
+    abcTransaction.signedTx = ''
+    return abcTransaction
   }
 
   // asynchronous
-  broadcastTx (abcTransaction) {
+  async broadcastTx (abcTransaction:ABCTransaction) {
     const prom = new Promise((resolve, reject) => {
       this.fetchPost('spend', abcTransaction.otherParams)
         .then(function (response) {
@@ -889,11 +952,7 @@ class ABCTxLibETH {
   }
 
   // asynchronous
-  saveTx (abcTransaction) {
-    const prom = new Promise((resolve, reject) => {
-      resolve(abcTransaction)
-    })
-
-    return prom
+  async saveTx (abcTransaction:ABCTransaction) {
+    return abcTransaction
   }
 }
