@@ -133,7 +133,7 @@ class WalletLocalData {
 
     this.masterPublicKey = ''
     this.enabledTokens = [PRIMARY_CURRENCY]
-    if (jsonString != null) {
+    if (jsonString !== null) {
       const data = JSON.parse(jsonString)
       for (const k in data) {
         this[k] = data[k]
@@ -388,6 +388,12 @@ class ABCTxLibETH {
     }
   }
 
+  getTokenInfo (token:string) {
+    return txLibInfo.getInfo.metaTokens.find(element => {
+      return element.currencyCode === token
+    })
+  }
+
   // **********************************************
   // Check all addresses for new transactions
   // **********************************************
@@ -395,40 +401,60 @@ class ABCTxLibETH {
     while (this.engineOn) {
       // Ethereum only has one address
       const address = this.walletLocalData.masterPublicKey
-      let checkAddressSuccess = 0
-      let url
-      let jsonObj
-      let valid
-      try {
-        // Get balance
-        url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
-        jsonObj = await this.fetchGet(url)
-        valid = validateObject(jsonObj, {
-          'type': 'object',
-          'properties': {
-            'result': {'type': 'string'}
-          },
-          'required': ['result']
-        })
+      let checkAddressSuccess = true
+      let url = ''
+      let jsonObj = {}
+      let valid = false
 
-        if (valid) {
-          const balance = jsonObj.result
-          console.log('Address balance: ' + balance)
-          const balanceBN = new BN(balance, 10)
-          const oldBalanceBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
+      // ************************************
+      // Fetch token balances
+      // ************************************
+      // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
+      for (let n = 0; n < TOKEN_CODES.length; n++) {
+        const tk = TOKEN_CODES[n]
 
-          if (!balanceBN.eq(oldBalanceBN)) {
-            this.walletLocalData.totalBalances.ETH = balance
-
-            const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances.ETH)
-            this.abcTxLibCallbacks.onBalanceChanged('ETH', balanceSatoshi, this.walletLocalData.totalBalances.ETH)
+        if (tk === PRIMARY_CURRENCY) {
+          url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
+        } else {
+          if (this.isTokenEnabled(tk)) {
+            const tokenInfo = this.getTokenInfo(tk)
+            url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.masterPublicKey)
+          } else {
+            continue
           }
-          checkAddressSuccess++
         }
-      } catch (e) {
-        console.log('Error fetching address balance: ' + address)
+        try {
+          jsonObj = await this.fetchGet(url)
+          valid = validateObject(jsonObj, {
+            'type': 'object',
+            'properties': {
+              'result': {'type': 'string'}
+            },
+            'required': ['result']
+          })
+          if (valid) {
+            const balance = jsonObj.result
+            console.log(tk + ': token Address balance: ' + balance)
+            const balanceBN = new BN(balance, 10)
+            const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
+
+            if (!balanceBN.eq(oldBalanceBN)) {
+              this.walletLocalData.totalBalances[tk] = balance
+
+              const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[tk])
+              this.abcTxLibCallbacks.onBalanceChanged(tk, balanceSatoshi, this.walletLocalData.totalBalances[tk])
+            }
+          } else {
+            checkAddressSuccess = false
+          }
+        } catch (e) {
+          checkAddressSuccess = false
+        }
       }
 
+      // ************************************
+      // Fetch transactions
+      // ************************************
       try {
         const endBlock = 999999999
         let startBlock = 0
@@ -488,8 +514,7 @@ class ABCTxLibETH {
             const tx = transactions[n]
             this.processTransaction(tx)
           }
-          checkAddressSuccess++
-          if (checkAddressSuccess >= 2 && this.addressesChecked === false) {
+          if (checkAddressSuccess === true && this.addressesChecked === false) {
             this.addressesChecked = true
             this.abcTxLibCallbacks.onAddressesChecked(1)
           }
