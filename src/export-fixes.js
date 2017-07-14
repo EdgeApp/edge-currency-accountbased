@@ -3,3 +3,4 @@
  */
 
 exports.Wallet = require('ethereumjs-wallet')
+exports.Transaction = require('ethereumjs-tx')
