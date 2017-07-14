@@ -87,11 +87,11 @@ export function makeEthereumPlugin (opts:any) {
         ethWallet.overrideCrypto(cryptoObj)
 
         let wallet = ethWallet.generate(false)
-        const masterPrivateKey = wallet.getPrivateKeyString()
-        const masterPublicKey = wallet.getAddressString()
-        // const masterPrivateKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-        // const masterPublicKey = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
-        return { masterPrivateKey, masterPublicKey }
+        const ethereumKey = wallet.getPrivateKeyString()
+        const ethereumPublicAddress = wallet.getAddressString()
+        // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+        // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
+        return { ethereumKey, ethereumPublicAddress }
       } else {
         return null
       }
@@ -108,7 +108,7 @@ export function makeEthereumPlugin (opts:any) {
 class WalletLocalData {
   blockHeight:number
   lastAddressQueryHeight:number
-  masterPublicKey:string
+  ethereumPublicAddress:string
   totalBalances: {}
   enabledTokens:Array<string>
   transactionsObj:{}
@@ -132,7 +132,7 @@ class WalletLocalData {
     // // Array of txids to fetch
     this.lastAddressQueryHeight = 0
 
-    this.masterPublicKey = ''
+    this.ethereumPublicAddress = ''
     this.enabledTokens = [PRIMARY_CURRENCY]
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
@@ -326,11 +326,11 @@ class ABCTxLibETH {
 
     const nativeValueBN = new BN(tx.value, 10)
 
-    if (tx.to === this.walletLocalData.masterPublicKey) {
+    if (tx.to === this.walletLocalData.ethereumPublicAddress) {
       netNativeAmountBN.iadd(nativeValueBN)
     }
 
-    if (tx.from === this.walletLocalData.masterPublicKey) {
+    if (tx.from === this.walletLocalData.ethereumPublicAddress) {
       netNativeAmountBN.isub(nativeValueBN)
     }
     const netNativeAmount = netNativeAmountBN.toString(10)
@@ -401,7 +401,7 @@ class ABCTxLibETH {
   async checkAddressesInnerLoop () {
     while (this.engineOn) {
       // Ethereum only has one address
-      const address = this.walletLocalData.masterPublicKey
+      const address = this.walletLocalData.ethereumPublicAddress
       let checkAddressSuccess = true
       let url = ''
       let jsonObj = {}
@@ -419,7 +419,7 @@ class ABCTxLibETH {
         } else {
           if (this.isTokenEnabled(tk)) {
             const tokenInfo = this.getTokenInfo(tk)
-            url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.masterPublicKey)
+            url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
           } else {
             continue
           }
@@ -637,14 +637,14 @@ class ABCTxLibETH {
         .getText(DATA_STORE_FOLDER, 'walletLocalData')
 
       this.walletLocalData = new WalletLocalData(result)
-      this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+      this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
       this.engineLoop()
     } catch (err) {
       try {
         console.log(err)
         console.log('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(null)
-        this.walletLocalData.masterPublicKey = this.keyInfo.keys.masterPublicKey
+        this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
         await this.walletLocalFolder
           .folder(DATA_STORE_FOLDER)
           .file(DATA_STORE_FILE)
@@ -796,7 +796,7 @@ class ABCTxLibETH {
 
   // synchronous
   getFreshAddress (options:any) {
-    return this.walletLocalData.masterPublicKey
+    return this.walletLocalData.ethereumPublicAddress
   }
 
   // synchronous
@@ -858,7 +858,7 @@ class ABCTxLibETH {
     let gasPrice = '28000000000' // 28 Gwei
 
     const ethParams = new EthereumParams(
-      [this.walletLocalData.masterPublicKey],
+      [this.walletLocalData.ethereumPublicAddress],
       [abcSpendInfo.spendTargets[0].publicAddress],
       gasLimit,
       gasPrice,
@@ -918,7 +918,7 @@ class ABCTxLibETH {
       chainId: 1
     }
 
-    const privateKeyNoHexPrefix = this.keyInfo.keys.masterPrivateKey.slice(2)
+    const privateKeyNoHexPrefix = this.keyInfo.keys.ethereumKey.slice(2)
     const privateKeyNoHexPrefixBN = new BN(privateKeyNoHexPrefix, 16)
     const privKeyArray = privateKeyNoHexPrefixBN.toArray()
     const privKey = Buffer.from(privKeyArray)
