@@ -12,7 +12,7 @@ export const txLibInfo = {
       // An array of Objects of the possible denominations for this currency
       {
         name: 'ETH',
-        multiplier: 1000000000000000000,
+        multiplier: 100000000,
         symbol: 'Ξ'
       }
     ],
@@ -24,7 +24,7 @@ export const txLibInfo = {
         denominations: [
           {
             name: 'REP',
-            multiplier: 1000000000000000000
+            multiplier: 100000000
           }
         ],
         contractAddress: '0x48c80f1f4d53d5951e5d5438b54cba84f29f32a5',
@@ -35,7 +35,7 @@ export const txLibInfo = {
         denominations: [
           {
             name: 'WINGS',
-            multiplier: 1000000000000000000
+            multiplier: 100000000
           }
         ],
         contractAddress: '0x667088b212ce3d06a1b553a7221E1fD19000d9aF',
@@ -46,7 +46,7 @@ export const txLibInfo = {
         denominations: [
           {
             name: 'LUN',
-            multiplier: 1000000000000000000
+            multiplier: 100000000
           }
         ],
         contractAddress: '0xfa05a73ffe78ef8f1a739473e462c54bae6567d9',

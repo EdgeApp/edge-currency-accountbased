@@ -32,21 +32,21 @@ const baseUrl = 'https://api.etherscan.io/api'
 // satoshiToNative converts satoshi-like units to a big number string nativeAmount which is in Wei.
 // amountSatoshi is 1/100,000,000 of an ether to match the satoshi units of bitcoin
 //
-// function satoshiToNative (amountSatoshi: number) {
-//   const converter = new BN('10000000000', 10)
-//   let nativeAmountBN = new BN(amountSatoshi.toString(), 10)
-//   nativeAmountBN = nativeAmountBN.mul(converter)
-//   const nativeAmount = nativeAmountBN.toString(10)
-//   return nativeAmount
-// }
+function satoshiToNative (amountSatoshi: number) {
+  const converter = new BN('10000000000', 10)
+  let nativeAmountBN = new BN(amountSatoshi.toString(), 10)
+  nativeAmountBN = nativeAmountBN.mul(converter)
+  const nativeAmount = nativeAmountBN.toString(10)
+  return nativeAmount
+}
 
 function nativeToSatoshi (nativeAmount:string) {
   let nativeAmountBN = new BN(nativeAmount, 10)
-  return nativeAmountBN.toNumber()
-  // const converter = new BN('10000000000', 10)
-  // const amountSatoshiBN = nativeAmountBN.div(converter)
-  // const amountSatoshi = amountSatoshiBN.toNumber()
-  // return amountSatoshi
+  // return nativeAmountBN.toNumber()
+  const converter = new BN('10000000000', 10)
+  const amountSatoshiBN = nativeAmountBN.div(converter)
+  const amountSatoshi = amountSatoshiBN.toNumber()
+  return amountSatoshi
 }
 
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
@@ -945,9 +945,10 @@ class ABCTxLibETH {
     let nativeAmount = '0'
     if (typeof abcSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = abcSpendInfo.spendTargets[0].nativeAmount
+    } else if (typeof abcSpendInfo.spendTargets[0].amountSatoshi === 'number') {
+      nativeAmount = satoshiToNative(abcSpendInfo.spendTargets[0].amountSatoshi)
     } else {
-      const nativeAmountBN = new BN(abcSpendInfo.spendTargets[0].amountSatoshi.toString(), 10)
-      nativeAmount = nativeAmountBN.toString(10)
+      return (new Error('Error: no amount specified'))
     }
 
     // **********************************
