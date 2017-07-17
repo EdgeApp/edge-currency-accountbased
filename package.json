@@ -54,7 +54,7 @@
     "babel": "babel src/ -d intermediate/",
     "webpack": "webpack",
     "rollup": "rollup -c",
-    "build": "npm run flow && npm run prepare",
+    "build": "npm run prepare && npm run flow",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
     "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js'",
