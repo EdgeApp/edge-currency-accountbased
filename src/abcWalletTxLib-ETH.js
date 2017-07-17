@@ -114,11 +114,11 @@ export function makeEthereumPlugin (opts:any) {
         }
         ethWallet.overrideCrypto(cryptoObj)
 
-        // let wallet = ethWallet.generate(false)
-        // const ethereumKey = wallet.getPrivateKeyString()
-        // const ethereumPublicAddress = wallet.getAddressString()
-        const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-        const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
+        let wallet = ethWallet.generate(false)
+        const ethereumKey = wallet.getPrivateKeyString()
+        const ethereumPublicAddress = wallet.getAddressString()
+        // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+        // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
         return { ethereumKey, ethereumPublicAddress }
       } else {
         return null
