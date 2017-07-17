@@ -9,6 +9,7 @@ import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
 
 const Buffer = require('buffer/').Buffer
+const abi = require('../lib/export-fixes-bundle.js').ABI
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 const EthereumTx = require('../lib/export-fixes-bundle.js').Transaction
 
@@ -64,6 +65,33 @@ function validateObject (object, schema) {
   }
 }
 
+function bufToHex (buf:any) {
+  const signedTxBuf = Buffer.from(buf)
+  const hex = '0x' + signedTxBuf.toString('hex')
+  return hex
+}
+
+function hexToBuf (hex:string) {
+  const noHexPrefix = hex.replace('0x', '')
+  const noHexPrefixBN = new BN(noHexPrefix, 16)
+  const array = noHexPrefixBN.toArray()
+  const buf = Buffer.from(array)
+  return buf
+}
+
+function decimalToHex (decimal:string) {
+  const decimalBN = new BN(decimal, 10)
+  const hex = '0x' + decimalBN.toString(16)
+  return hex
+}
+
+// function hexToDecimal (hex:string) {
+//   const noHexPrefix = hex.replace('0x', '')
+//   const hexBN = new BN(noHexPrefix, 16)
+//   const decimal = hexBN.toString(10)
+//   return decimal
+// }
+
 export function makeEthereumPlugin (opts:any) {
   const { io } = opts
 
@@ -86,11 +114,11 @@ export function makeEthereumPlugin (opts:any) {
         }
         ethWallet.overrideCrypto(cryptoObj)
 
-        let wallet = ethWallet.generate(false)
-        const ethereumKey = wallet.getPrivateKeyString()
-        const ethereumPublicAddress = wallet.getAddressString()
-        // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-        // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
+        // let wallet = ethWallet.generate(false)
+        // const ethereumKey = wallet.getPrivateKeyString()
+        // const ethereumPublicAddress = wallet.getAddressString()
+        const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+        const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
         return { ethereumKey, ethereumPublicAddress }
       } else {
         return null
@@ -108,6 +136,7 @@ export function makeEthereumPlugin (opts:any) {
 class WalletLocalData {
   blockHeight:number
   lastAddressQueryHeight:number
+  nextNonce:number
   ethereumPublicAddress:string
   totalBalances: {}
   enabledTokens:Array<string>
@@ -122,6 +151,7 @@ class WalletLocalData {
     }
 
     this.transactionsObj = {}
+    this.nextNonce = 0
 
     // Array of ABCTransaction objects sorted by date from newest to oldest
     for (let n = 0; n < TOKEN_CODES.length; n++) {
@@ -136,9 +166,14 @@ class WalletLocalData {
     this.enabledTokens = [PRIMARY_CURRENCY]
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
-      for (const k in data) {
-        this[k] = data[k]
-      }
+
+      if (typeof data.blockHeight !== 'undefined') this.blockHeight = data.blockHeight
+      if (typeof data.lastAddressQueryHeight !== 'undefined') this.lastAddressQueryHeight = data.lastAddressQueryHeight
+      if (typeof data.nextNonce !== 'undefined') this.nextNonce = data.nextNonce
+      if (typeof data.ethereumPublicAddress !== 'undefined') this.ethereumPublicAddress = data.ethereumPublicAddress
+      if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
+      if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
+      if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
     }
   }
 }
@@ -151,6 +186,7 @@ class EthereumParams {
   gasUsed: string
   cumulativeGasUsed: string
   blockHash: string
+  tokenRecipientAddress:string|null
 
   constructor (from:Array<string>,
                to:Array<string>,
@@ -158,7 +194,8 @@ class EthereumParams {
                gasPrice:string,
                gasUsed:string,
                cumulativeGasUsed:string,
-               blockHash: string) {
+               blockHash: string,
+               tokenRecipientAddress:string|null) {
     this.from = from
     this.to = to
     this.gas = gas
@@ -166,6 +203,11 @@ class EthereumParams {
     this.gasUsed = gasUsed
     this.cumulativeGasUsed = cumulativeGasUsed
     this.blockHash = blockHash
+    if (typeof tokenRecipientAddress === 'string') {
+      this.tokenRecipientAddress = tokenRecipientAddress
+    } else {
+      tokenRecipientAddress = null
+    }
   }
 }
 
@@ -326,8 +368,15 @@ class ABCTxLibETH {
 
     const nativeValueBN = new BN(tx.value, 10)
 
-    if (tx.to === this.walletLocalData.ethereumPublicAddress) {
+    if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
       netNativeAmountBN.iadd(nativeValueBN)
+      const newNonceBN = new BN(tx.nonce, 16)
+      const nonceBN = new BN(this.walletLocalData.nextNonce)
+
+      if (newNonceBN.gte(nonceBN)) {
+        newNonceBN.iadd(new BN('1', 10))
+        this.walletLocalData.nextNonce = newNonceBN.toNumber()
+      }
     }
 
     if (tx.from === this.walletLocalData.ethereumPublicAddress) {
@@ -347,7 +396,9 @@ class ABCTxLibETH {
       tx.gasPrice,
       tx.gasUsed,
       tx.cumulativeGasUsed,
-      tx.blockHeight)
+      tx.blockHeight,
+      null
+    )
 
     let abcTransaction = new ABCTransaction(
       tx.hash,
@@ -479,6 +530,7 @@ class ABCTxLibETH {
                   'hash': {'type': 'string'},
                   'from': {'type': 'string'},
                   'to': {'type': 'string'},
+                  'nonce': {'type': 'string'},
                   'value': {'type': 'string'},
                   'gas': {'type': 'string'},
                   'gasPrice': {'type': 'string'},
@@ -492,6 +544,7 @@ class ABCTxLibETH {
                   'hash',
                   'from',
                   'to',
+                  'nonce',
                   'value',
                   'gas',
                   'gasPrice',
@@ -846,26 +899,47 @@ class ABCTxLibETH {
     }
 
     if (typeof abcSpendInfo.spendTargets[0].currencyCode === 'string') {
-      if (abcSpendInfo.spendTargets[0].currencyCode !== 'ETH') {
-        return (new Error('Error: only support for ETH right now'))
+      if (!this.isTokenEnabled(abcSpendInfo.spendTargets[0].currencyCode)) {
+        return (new Error('Error: Token not supported or enabled'))
       }
+    } else {
+      abcSpendInfo.spendTargets[0].currencyCode = 'ETH'
     }
+    const currencyCode = abcSpendInfo.spendTargets[0].currencyCode
 
     // ******************************
     // Get the fee amount
 
-    let gasLimit = '21000'
-    let gasPrice = '28000000000' // 28 Gwei
+    let ethParams = {}
+    if (currencyCode === PRIMARY_CURRENCY) {
+      const gasLimit = '21000'
+      const gasPrice = '28000000000' // 28 Gwei
 
-    const ethParams = new EthereumParams(
-      [this.walletLocalData.ethereumPublicAddress],
-      [abcSpendInfo.spendTargets[0].publicAddress],
-      gasLimit,
-      gasPrice,
-      '0',
-      '0',
-      '0'
-    )
+      ethParams = new EthereumParams(
+        [this.walletLocalData.ethereumPublicAddress],
+        [abcSpendInfo.spendTargets[0].publicAddress],
+        gasLimit,
+        gasPrice,
+        '0',
+        '0',
+        '0',
+        null
+      )
+    } else {
+      const gasLimit = '40000'
+      const gasPrice = '28000000000' // 28 Gwei
+
+      ethParams = new EthereumParams(
+        [this.walletLocalData.ethereumPublicAddress],
+        [this.getTokenInfo(currencyCode).contractAddress],
+        gasLimit,
+        gasPrice,
+        '0',
+        '0',
+        '0',
+        abcSpendInfo.spendTargets[0].publicAddress
+      )
+    }
 
     // Use nativeAmount if available. Otherwise convert from amountSatoshi
     let nativeAmount = '0'
@@ -882,7 +956,7 @@ class ABCTxLibETH {
     const abcTransaction = new ABCTransaction(
       '', // txid
       0, // date
-      'ETH', // currencyCode
+      currencyCode, // currencyCode
       '0', // blockHeightNative
       nativeAmount, // nativeAmount
       '0', // nativeNetworkFee
@@ -897,31 +971,38 @@ class ABCTxLibETH {
   async signTx (abcTransaction:ABCTransaction) {
     // Do signing
 
-    const gasLimitBN = new BN(abcTransaction.otherParams.gas, 10)
-    const gasLimitHex = '0x' + gasLimitBN.toString(16)
-    const gasPriceBN = new BN(abcTransaction.otherParams.gasPrice, 10)
-    const gasPriceHex = '0x' + gasPriceBN.toString(16)
-    const nativeAmountBN = new BN(abcTransaction.nativeAmount, 10)
-    const nativeAmountHex = '0x' + nativeAmountBN.toString(16)
-    const numTxs = this.walletLocalData.transactionsObj[abcTransaction.currencyCode].length
-    const numTxsBN = new BN(numTxs.toString(), 10)
-    const numTxsHex = '0x' + numTxsBN.toString(16)
+    const gasLimitHex = decimalToHex(abcTransaction.otherParams.gas)
+    const gasPriceHex = decimalToHex(abcTransaction.otherParams.gasPrice)
+    let nativeAmountHex = decimalToHex(abcTransaction.nativeAmount)
+
+    const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
+    const nonceHex = '0x' + nonceBN.toString(16)
+
+    let data
+    if (abcTransaction.currencyCode === PRIMARY_CURRENCY) {
+      data = ''
+    } else {
+      const dataArray = abi.simpleEncode(
+        'transfer(address,uint256):(uint256)',
+        abcTransaction.otherParams.tokenRecipientAddress,
+        nativeAmountHex
+      )
+      data = '0x' + Buffer.from(dataArray).toString('hex')
+      nativeAmountHex = '0x00'
+    }
 
     const txParams = {
-      nonce: numTxsHex,
+      nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
       to: abcTransaction.otherParams.to[0],
       value: nativeAmountHex,
-      data: '',
+      data: data,
       // EIP 155 chainId - mainnet: 1, ropsten: 3
       chainId: 1
     }
 
-    const privateKeyNoHexPrefix = this.keyInfo.keys.ethereumKey.slice(2)
-    const privateKeyNoHexPrefixBN = new BN(privateKeyNoHexPrefix, 16)
-    const privKeyArray = privateKeyNoHexPrefixBN.toArray()
-    const privKey = Buffer.from(privKeyArray)
+    const privKey = hexToBuf(this.keyInfo.keys.ethereumKey)
     const wallet = ethWallet.fromPrivateKey(privKey)
 
     console.log(wallet.getAddressString())
@@ -929,13 +1010,8 @@ class ABCTxLibETH {
     const tx = new EthereumTx(txParams)
     tx.sign(privKey)
 
-    const signedTxBuf = tx.serialize()
-    const signedTxBuf2 = Buffer.from(signedTxBuf)
-    abcTransaction.signedTx = '0x' + signedTxBuf2.toString('hex')
-
-    const hashBuf = tx.hash()
-    const hashBuf2 = Buffer.from(hashBuf)
-    abcTransaction.txid = '0x' + hashBuf2.toString('hex')
+    abcTransaction.signedTx = bufToHex(tx.serialize())
+    abcTransaction.txid = bufToHex(tx.hash())
     abcTransaction.date = (new Date()).getTime()
 
     return abcTransaction
@@ -974,13 +1050,6 @@ class ABCTxLibETH {
     } catch (e) {
       throw (e)
     }
-    // const valid = validateObject(jsonObj, {
-    //   'type': 'object',
-    //   'properties': {
-    //     'result': {'type': 'string'}
-    //   },
-    //   'required': ['result']
-    // })
   }
 
   // asynchronous
