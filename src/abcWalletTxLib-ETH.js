@@ -163,7 +163,7 @@ class WalletLocalData {
     this.lastAddressQueryHeight = 0
 
     this.ethereumPublicAddress = ''
-    this.enabledTokens = [PRIMARY_CURRENCY]
+    this.enabledTokens = TOKEN_CODES
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
 
