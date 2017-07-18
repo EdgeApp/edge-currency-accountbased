@@ -1017,7 +1017,7 @@ class ABCTxLibETH {
 
     abcTransaction.signedTx = bufToHex(tx.serialize())
     abcTransaction.txid = bufToHex(tx.hash())
-    abcTransaction.date = (new Date()).getTime()
+    abcTransaction.date = Date.now() / 1000
 
     return abcTransaction
   }
