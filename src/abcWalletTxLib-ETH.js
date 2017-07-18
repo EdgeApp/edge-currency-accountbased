@@ -745,15 +745,17 @@ class ABCTxLibETH {
   getBalance (options:any) {
     let currencyCode = PRIMARY_CURRENCY
 
-    const valid = validateObject(options, {
-      'type': 'object',
-      'properties': {
-        'currencyCode': {'type': 'string'}
-      }
-    })
+    if (typeof options !== 'undefined') {
+      const valid = validateObject(options, {
+        'type': 'object',
+        'properties': {
+          'currencyCode': {'type': 'string'}
+        }
+      })
 
-    if (valid) {
-      currencyCode = options.currencyCode
+      if (valid) {
+        currencyCode = options.currencyCode
+      }
     }
 
     if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
