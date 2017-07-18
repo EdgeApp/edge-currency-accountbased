@@ -381,6 +381,8 @@ class ABCTxLibETH {
 
     if (tx.from === this.walletLocalData.ethereumPublicAddress) {
       netNativeAmountBN.isub(nativeValueBN)
+    } else {
+      netNativeAmountBN.iadd(nativeValueBN)
     }
     const netNativeAmount = netNativeAmountBN.toString(10)
 
