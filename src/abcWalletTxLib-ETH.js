@@ -26,6 +26,7 @@ const PRIMARY_CURRENCY = txLibInfo.getInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 
 const baseUrl = 'https://api.etherscan.io/api'
+let io
 
 // Utility functions
 //
@@ -59,7 +60,7 @@ function validateObject (object, schema) {
   } else {
     for (const n in result.errors) {
       const errMsg = result.errors[n].message
-      console.log(errMsg)
+      io.console.error(errMsg)
     }
     return false
   }
@@ -93,7 +94,7 @@ function decimalToHex (decimal:string) {
 // }
 
 export function makeEthereumPlugin (opts:any) {
-  const { io } = opts
+  io = opts.io
 
   const randomBuffer = (size) => {
     const array = io.random(size)
@@ -282,7 +283,7 @@ class ABCTxLibETH {
       this.checkAddressesInnerLoop()
       this.saveWalletLoop()
     } catch (err) {
-      console.log(err)
+      io.console.error(err)
     }
   }
 
@@ -340,7 +341,7 @@ class ABCTxLibETH {
           if (this.walletLocalData.blockHeight !== blockHeight) {
             this.walletLocalData.blockHeight = blockHeight
             this.walletLocalDataDirty = true
-            console.log(
+            io.console.info(
               'Block height changed: ' + this.walletLocalData.blockHeight
             )
             this.abcTxLibCallbacks.onBlockHeightChanged(
@@ -349,12 +350,12 @@ class ABCTxLibETH {
           }
         }
       } catch (err) {
-        console.log('Error fetching height: ' + err)
+        io.console.info('Error fetching height: ' + err)
       }
       try {
         await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
       } catch (err) {
-        console.log(err)
+        io.console.error(err)
       }
     }
   }
@@ -392,8 +393,8 @@ class ABCTxLibETH {
     const networkFee = etherUsedBN.toString(10)
 
     const ethParams = new EthereumParams(
-      [tx.from],
-      [tx.to],
+      [ tx.from ],
+      [ tx.to ],
       tx.gas,
       tx.gasPrice,
       tx.gasUsed,
@@ -415,7 +416,7 @@ class ABCTxLibETH {
 
     const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
     if (idx === -1) {
-      console.log(sprintf('New transaction: %s', tx.hash))
+      io.console.info(sprintf('New transaction: %s', tx.hash))
 
       // New transaction not in database
       this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
@@ -426,18 +427,18 @@ class ABCTxLibETH {
       this.transactionsChangedArray = []
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray = this.walletLocalData.transactionsObj[PRIMARY_CURRENCY]
-      const abcTx = transactionsArray[idx]
+      const transactionsArray = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
+      const abcTx = transactionsArray[ idx ]
 
       if (abcTx.blockHeightNative !== tx.blockNumber) {
-        console.log(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
+        io.console.info(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
         this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
         )
         this.transactionsChangedArray = []
       } else {
-        console.log(sprintf('Old transaction. No Update: %s', tx.hash))
+        io.console.info(sprintf('Old transaction. No Update: %s', tx.hash))
       }
     }
   }
@@ -459,13 +460,14 @@ class ABCTxLibETH {
       let url = ''
       let jsonObj = {}
       let valid = false
+      let promiseArray = []
 
       // ************************************
       // Fetch token balances
       // ************************************
       // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
       for (let n = 0; n < TOKEN_CODES.length; n++) {
-        const tk = TOKEN_CODES[n]
+        const tk = TOKEN_CODES[ n ]
 
         if (tk === PRIMARY_CURRENCY) {
           url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
@@ -562,7 +564,7 @@ class ABCTxLibETH {
 
         if (valid) {
           const transactions = jsonObj.result
-          console.log('Fetched transactions count: ' + transactions.length)
+          io.console.info('Fetched transactions count: ' + transactions.length)
 
           // Get transactions
           // Iterate over transactions in address
@@ -577,11 +579,11 @@ class ABCTxLibETH {
         }
         await snooze(ADDRESS_POLL_MILLISECONDS)
       } catch (e) {
-        console.log('Error fetching address transactions: ' + address)
+        io.console.error('Error fetching address transactions: ' + address)
         try {
           await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
         } catch (err) {
-          console.log(err)
+          io.console.error(err)
         }
       }
     }
@@ -613,7 +615,7 @@ class ABCTxLibETH {
     const idx = this.findTransaction(currencyCode, abcTransaction.txid)
 
     if (idx === -1) {
-      console.log('addTransaction: adding and sorting:' + abcTransaction.txid)
+      io.console.info('addTransaction: adding and sorting:' + abcTransaction.txid)
       if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
         this.walletLocalData.transactionsObj[currencyCode] = []
       }
@@ -633,7 +635,7 @@ class ABCTxLibETH {
     this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
     this.walletLocalDataDirty = true
     this.transactionsChangedArray.push(abcTransaction)
-    console.log('updateTransaction:' + abcTransaction.txid)
+    io.console.info('updateTransaction:' + abcTransaction.txid)
   }
 
   // *************************************
@@ -643,7 +645,7 @@ class ABCTxLibETH {
     while (this.engineOn) {
       try {
         if (this.walletLocalDataDirty) {
-          console.log('walletLocalDataDirty. Saving...')
+          io.console.info('walletLocalDataDirty. Saving...')
           const walletJson = JSON.stringify(this.walletLocalData)
           await this.walletLocalFolder
             .folder(DATA_STORE_FOLDER)
@@ -651,15 +653,15 @@ class ABCTxLibETH {
             .setText(walletJson)
           this.walletLocalDataDirty = false
         } else {
-          console.log('walletLocalData clean')
+          io.console.info('walletLocalData clean')
         }
         await snooze(SAVE_DATASTORE_MILLISECONDS)
       } catch (err) {
-        console.log(err)
+        io.console.error(err)
         try {
           await snooze(SAVE_DATASTORE_MILLISECONDS)
         } catch (err) {
-          console.log(err)
+          io.console.error(err)
         }
       }
     }
@@ -696,8 +698,8 @@ class ABCTxLibETH {
       this.engineLoop()
     } catch (err) {
       try {
-        console.log(err)
-        console.log('No walletLocalData setup yet: Failure is ok')
+        io.console.info(err)
+        io.console.info('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(null)
         this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
         await this.walletLocalFolder
@@ -706,7 +708,7 @@ class ABCTxLibETH {
           .setText(JSON.stringify(this.walletLocalData))
         this.engineLoop()
       } catch (e) {
-        console.log('Error writing to localDataStore. Engine not started:' + err)
+        io.console.error('Error writing to localDataStore. Engine not started:' + err)
       }
     }
   }
@@ -1010,7 +1012,7 @@ class ABCTxLibETH {
     const privKey = hexToBuf(this.keyInfo.keys.ethereumKey)
     const wallet = ethWallet.fromPrivateKey(privKey)
 
-    console.log(wallet.getAddressString())
+    io.console.info(wallet.getAddressString())
 
     const tx = new EthereumTx(txParams)
     tx.sign(privKey)
@@ -1043,8 +1045,8 @@ class ABCTxLibETH {
       //   "result": "0xe3d056a756e98505460f599cb2a58db062da8705eb36ea3539cb42f82d69099b",
       //   "id": 1
       // }
-      console.log('Sent transaction to network. Response:')
-      console.log(jsonObj)
+      io.console.info('Sent transaction to network. Response:')
+      io.console.info(jsonObj)
 
       if (typeof jsonObj.error === 'string') {
         throw (jsonObj.error)
