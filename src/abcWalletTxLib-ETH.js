@@ -895,17 +895,17 @@ class ABCTxLibETH {
     })
 
     if (!valid) {
-      return (new Error('Error: invalid ABCSpendInfo'))
+      throw (new Error('Error: invalid ABCSpendInfo'))
     }
 
     // Ethereum can only have one output
     if (abcSpendInfo.spendTargets.length !== 1) {
-      return (new Error('Error: only one output allowed'))
+      throw (new Error('Error: only one output allowed'))
     }
 
     if (typeof abcSpendInfo.spendTargets[0].currencyCode === 'string') {
       if (!this.isTokenEnabled(abcSpendInfo.spendTargets[0].currencyCode)) {
-        return (new Error('Error: Token not supported or enabled'))
+        throw (new Error('Error: Token not supported or enabled'))
       }
     } else {
       abcSpendInfo.spendTargets[0].currencyCode = 'ETH'
@@ -953,7 +953,31 @@ class ABCTxLibETH {
     } else if (typeof abcSpendInfo.spendTargets[0].amountSatoshi === 'number') {
       nativeAmount = satoshiToNative(abcSpendInfo.spendTargets[0].amountSatoshi)
     } else {
-      return (new Error('Error: no amount specified'))
+      throw (new Error('Error: no amount specified'))
+    }
+
+    // Check if the spend amount plus mining fee is more than the account balance
+    // if (nativeAmount + (gasLimit + gasprice) > account balance) error
+    const nativeAmountBN = new BN(nativeAmount, 10)
+    io.console.info('makeSpend: nativeAmount:' + nativeAmountBN.toString(10))
+
+    const gasPriceBN = new BN(gasPrice, 10)
+    io.console.info('makeSpend: gasPrice:' + gasPriceBN.toString(10))
+
+    const gasLimitBN = new BN(gasLimit, 10)
+    io.console.info('makeSpend: gasLimit:' + gasLimitBN.toString(10))
+
+    const totalFeeBN = gasPriceBN.mul(gasLimitBN)
+    io.console.info('makeSpend: totalFee:' + totalFeeBN.toString(10))
+
+    const totalSpendBN = totalFeeBN.add(nativeAmountBN)
+    io.console.info('makeSpend: totalSpend:' + totalSpendBN.toString(10))
+
+    const balanceBN = new BN(this.walletLocalData.totalBalances[currencyCode], 10)
+    io.console.info('makeSpend: balance:' + balanceBN.toString(10))
+
+    if (balanceBN.lt(totalSpendBN)) {
+      throw (new Error('Error: Insufficient funds'))
     }
 
     // **********************************
