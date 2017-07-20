@@ -866,8 +866,8 @@ class ABCTxLibETH {
     return false
   }
 
-  // synchronous
-  makeSpend (abcSpendInfo:any) {
+  // ssynchronous
+  async makeSpend (abcSpendInfo:any) {
     // Validate the spendInfo
     const valid = validateObject(abcSpendInfo, {
       'type': 'object',
