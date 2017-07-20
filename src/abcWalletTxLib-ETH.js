@@ -460,7 +460,6 @@ class ABCTxLibETH {
       let url = ''
       let jsonObj = {}
       let valid = false
-      let promiseArray = []
 
       // ************************************
       // Fetch token balances
