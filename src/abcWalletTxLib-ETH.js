@@ -348,6 +348,8 @@ class ABCTxLibETH {
               this.walletLocalData.blockHeight
             )
           }
+        } else {
+          io.console.err(jsonObj)
         }
       } catch (err) {
         io.console.info('Error fetching height: ' + err)
@@ -500,6 +502,7 @@ class ABCTxLibETH {
               this.abcTxLibCallbacks.onBalanceChanged(tk, balanceSatoshi, this.walletLocalData.totalBalances[tk])
             }
           } else {
+            io.console.err(jsonObj)
             checkAddressSuccess = false
           }
         } catch (e) {
@@ -575,6 +578,8 @@ class ABCTxLibETH {
             this.addressesChecked = true
             this.abcTxLibCallbacks.onAddressesChecked(1)
           }
+        } else {
+          io.console.err(jsonObj)
         }
         await snooze(ADDRESS_POLL_MILLISECONDS)
       } catch (e) {
