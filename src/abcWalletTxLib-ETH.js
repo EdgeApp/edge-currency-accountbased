@@ -916,9 +916,11 @@ class ABCTxLibETH {
     // Get the fee amount
 
     let ethParams = {}
+    let gasPrice
+    let gasLimit
     if (currencyCode === PRIMARY_CURRENCY) {
-      const gasLimit = '21000'
-      const gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '21000'
+      gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -931,8 +933,8 @@ class ABCTxLibETH {
         null
       )
     } else {
-      const gasLimit = '40000'
-      const gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '40000'
+      gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
