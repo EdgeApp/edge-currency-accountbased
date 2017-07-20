@@ -15,7 +15,7 @@ const EthereumTx = require('../lib/export-fixes-bundle.js').Transaction
 
 const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
-const ADDRESS_POLL_MILLISECONDS = 7000
+const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 2) // ~ 2 minutes
@@ -291,12 +291,16 @@ class ABCTxLibETH {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  async fetchGet (cmd:string) {
+  async fetchGetEtherscan (cmd:string) {
     let apiKey = ''
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
     const url = sprintf('%s%s%s', baseUrl, cmd, apiKey)
+    return this.fetchGet(url)
+  }
+
+  async fetchGet (url:string) {
     const response = await this.io.fetch(url, {
       method: 'GET'
     })
@@ -325,7 +329,7 @@ class ABCTxLibETH {
   async blockHeightInnerLoop () {
     while (this.engineOn) {
       try {
-        const jsonObj = await this.fetchGet('?module=proxy&action=eth_blockNumber')
+        const jsonObj = await this.fetchGetEtherscan('?module=proxy&action=eth_blockNumber')
         const valid = validateObject(jsonObj, {
           'type': 'object',
           'properties': {
@@ -348,8 +352,6 @@ class ABCTxLibETH {
               this.walletLocalData.blockHeight
             )
           }
-        } else {
-          io.console.err(jsonObj)
         }
       } catch (err) {
         io.console.info('Error fetching height: ' + err)
@@ -362,11 +364,7 @@ class ABCTxLibETH {
     }
   }
 
-  processTransaction (tx:any) {
-    //
-    // Calculate the amount sent from the wallet
-    //
-
+  processEtherscanTransaction (tx:any) {
     let netNativeAmountBN = new BN('0', 10) // Amount received into wallet
 
     const nativeValueBN = new BN(tx.value, 10)
@@ -392,7 +390,7 @@ class ABCTxLibETH {
     const gasPriceBN = new BN(tx.gasPrice, 10)
     const gasUsedBN = new BN(tx.gasUsed, 10)
     const etherUsedBN = gasPriceBN.mul(gasUsedBN)
-    const networkFee = etherUsedBN.toString(10)
+    const nativeNetworkFee = etherUsedBN.toString(10)
 
     const ethParams = new EthereumParams(
       [ tx.from ],
@@ -411,7 +409,7 @@ class ABCTxLibETH {
       'ETH',
       tx.blockNumber,
       netNativeAmount,
-      networkFee,
+      nativeNetworkFee,
       'iwassignedyoucantrustme',
       ethParams
     )
@@ -432,7 +430,10 @@ class ABCTxLibETH {
       const transactionsArray = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
       const abcTx = transactionsArray[ idx ]
 
-      if (abcTx.blockHeightNative !== tx.blockNumber) {
+      if (
+        abcTx.blockHeightNative !== tx.blockNumber ||
+        abcTx.nativeNetworkFee !== nativeNetworkFee
+      ) {
         io.console.info(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
         this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
@@ -445,23 +446,299 @@ class ABCTxLibETH {
     }
   }
 
+  processBlockCypherTransaction (tx:any) {
+    // let netNativeAmountBN = new BN('0', 10) // Amount received into wallet
+    //
+    // const nativeValueBN = new BN(tx.value, 10)
+    //
+    // if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
+    //   netNativeAmountBN.iadd(nativeValueBN)
+    //   const newNonceBN = new BN(tx.nonce, 16)
+    //   const nonceBN = new BN(this.walletLocalData.nextNonce)
+    //
+    //   if (newNonceBN.gte(nonceBN)) {
+    //     newNonceBN.iadd(new BN('1', 10))
+    //     this.walletLocalData.nextNonce = newNonceBN.toNumber()
+    //   }
+    // }
+    //
+    // if (tx.from === this.walletLocalData.ethereumPublicAddress) {
+    //   netNativeAmountBN.isub(nativeValueBN)
+    // } else {
+    //   netNativeAmountBN.iadd(nativeValueBN)
+    // }
+    // const netNativeAmount = netNativeAmountBN.toString(10)
+    //
+    // const gasPriceBN = new BN(tx.gasPrice, 10)
+    // const gasUsedBN = new BN(tx.gasUsed, 10)
+    // const etherUsedBN = gasPriceBN.mul(gasUsedBN)
+    // const networkFee = etherUsedBN.toString(10)
+    const fromAddress = '0x' + tx.inputs.addresses[0]
+    const toAddress = '0x' + tx.outputs.addresses[0]
+    const epochTime = Date.parse(tx.received) / 1000
+    let nativeAmount
+    if (fromAddress === this.walletLocalData.ethereumPublicAddress) {
+      nativeAmount = (0 - tx.total).toString(10)
+    } else {
+      nativeAmount = tx.total.toString(10)
+    }
+
+    const ethParams = new EthereumParams(
+      [ fromAddress ],
+      [ toAddress ],
+      '',
+      '',
+      tx.fees.toString(10),
+      '',
+      tx.block_height,
+      null
+    )
+
+    let abcTransaction = new ABCTransaction(
+      tx.hash,
+      epochTime,
+      'ETH',
+      tx.blockNumber,
+      nativeAmount,
+      tx.fees.toString(10),
+      'iwassignedyoucantrustme',
+      ethParams
+    )
+
+    const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
+    if (idx === -1) {
+      io.console.info(sprintf('processBlockCypherTransaction: New transaction: %s', tx.hash))
+
+      // New transaction not in database
+      this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
+
+      this.abcTxLibCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    } else {
+      // Already have this tx in the database. See if anything changed
+      const transactionsArray = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
+      const abcTx = transactionsArray[ idx ]
+
+      if (abcTx.blockHeightNative !== tx.blockNumber) {
+        io.console.info(sprintf('processBlockCypherTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
+        this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
+        this.abcTxLibCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      } else {
+        io.console.info(sprintf('processBlockCypherTransaction: Old transaction. No Update: %s', tx.hash))
+      }
+    }
+  }
+
   getTokenInfo (token:string) {
     return txLibInfo.getInfo.metaTokens.find(element => {
       return element.currencyCode === token
     })
   }
 
-  // **********************************************
+  async checkAddressFetch (tk:string, url:string) {
+    let checkAddressSuccess = true
+    let jsonObj = {}
+    let valid = false
+
+    try {
+      jsonObj = await this.fetchGetEtherscan(url)
+      valid = validateObject(jsonObj, {
+        'type': 'object',
+        'properties': {
+          'result': {'type': 'string'}
+        },
+        'required': ['result']
+      })
+      if (valid) {
+        const balance = jsonObj.result
+        io.console.info(tk + ': token Address balance: ' + balance)
+        const balanceBN = new BN(balance, 10)
+        const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
+
+        if (!balanceBN.eq(oldBalanceBN)) {
+          this.walletLocalData.totalBalances[tk] = balance
+
+          const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[tk])
+          this.abcTxLibCallbacks.onBalanceChanged(tk, balanceSatoshi, this.walletLocalData.totalBalances[tk])
+        }
+      } else {
+        checkAddressSuccess = false
+      }
+    } catch (e) {
+      checkAddressSuccess = false
+    }
+    return checkAddressSuccess
+  }
+
+  async checkTransactionsFetch () {
+    const address = this.walletLocalData.ethereumPublicAddress
+    const endBlock = 999999999
+    let startBlock = 0
+    let checkAddressSuccess = true
+    let url = ''
+    let jsonObj = {}
+    let valid = false
+
+    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+      startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+    }
+
+    try {
+      url = sprintf('?module=account&action=txlist&address=%s&startblock=%d&endblock=%d&sort=asc', address, startBlock, endBlock)
+      jsonObj = await this.fetchGetEtherscan(url)
+      valid = validateObject(jsonObj, {
+        'type': 'object',
+        'properties': {
+          'result': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'blockNumber': {'type': 'string'},
+                'timeStamp': {'type': 'string'},
+                'hash': {'type': 'string'},
+                'from': {'type': 'string'},
+                'to': {'type': 'string'},
+                'nonce': {'type': 'string'},
+                'value': {'type': 'string'},
+                'gas': {'type': 'string'},
+                'gasPrice': {'type': 'string'},
+                'cumulativeGasUsed': {'type': 'string'},
+                'gasUsed': {'type': 'string'},
+                'confirmations': {'type': 'string'}
+              },
+              'required': [
+                'blockNumber',
+                'timeStamp',
+                'hash',
+                'from',
+                'to',
+                'nonce',
+                'value',
+                'gas',
+                'gasPrice',
+                'cumulativeGasUsed',
+                'gasUsed',
+                'confirmations'
+              ]
+            }
+          }
+        },
+        'required': ['result']
+      })
+
+      if (valid) {
+        const transactions = jsonObj.result
+        io.console.info('Fetched transactions count: ' + transactions.length)
+
+        // Get transactions
+        // Iterate over transactions in address
+        for (const n in transactions) {
+          const tx = transactions[n]
+          this.processEtherscanTransaction(tx)
+        }
+        if (checkAddressSuccess === true && this.addressesChecked === false) {
+          this.addressesChecked = true
+          this.abcTxLibCallbacks.onAddressesChecked(1)
+        }
+      } else {
+        checkAddressSuccess = false
+      }
+    } catch (e) {
+      io.console.error(e)
+      checkAddressSuccess = false
+    }
+    return checkAddressSuccess
+  }
+
+  async checkUnconfirmedTransactionsFetch () {
+    const address = this.walletLocalData.ethereumPublicAddress
+    const url = sprintf('https://api.blockcypher.com/v1/eth/main/txs')
+    const jsonObj = await this.fetchGet(url)
+
+    const valid = validateObject(jsonObj, {
+      'type': 'array',
+      'items': {
+        'type': 'object',
+        'properties': {
+          'block_height': { 'type': 'number' },
+          'fees': { 'type': 'number' },
+          'received': { 'type': 'string' },
+          'addresses': {
+            'type': 'array',
+            'items': { 'type': 'string' }
+          },
+          'inputs': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'addresses': {
+                  'type': 'array',
+                  'items': { 'type': 'string' }
+                }
+              },
+              'required': [
+                'addresses'
+              ]
+            }
+          },
+          'outputs': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'addresses': {
+                  'type': 'array',
+                  'items': { 'type': 'string' }
+                }
+              },
+              'required': [
+                'addresses'
+              ]
+            }
+          }
+        },
+        'required': [
+          'fees',
+          'received',
+          'addresses',
+          'inputs',
+          'outputs'
+        ]
+      }
+    })
+
+    if (valid) {
+      const transactions = jsonObj
+
+      for (const n of transactions) {
+        const tx = transactions[n]
+
+        if (
+          tx.inputs[0].addresses[0] === address ||
+          tx.outputs[0].addresses[0] === address
+        ) {
+          this.processBlockCypherTransaction(tx)
+        }
+      }
+    }
+  }
+
+    // **********************************************
   // Check all addresses for new transactions
   // **********************************************
   async checkAddressesInnerLoop () {
     while (this.engineOn) {
       // Ethereum only has one address
       const address = this.walletLocalData.ethereumPublicAddress
-      let checkAddressSuccess = true
       let url = ''
-      let jsonObj = {}
-      let valid = false
+      let promiseArray = []
 
       // ************************************
       // Fetch token balances
@@ -480,114 +757,23 @@ class ABCTxLibETH {
             continue
           }
         }
-        try {
-          jsonObj = await this.fetchGet(url)
-          valid = validateObject(jsonObj, {
-            'type': 'object',
-            'properties': {
-              'result': {'type': 'string'}
-            },
-            'required': ['result']
-          })
-          if (valid) {
-            const balance = jsonObj.result
-            console.log(tk + ': token Address balance: ' + balance)
-            const balanceBN = new BN(balance, 10)
-            const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
 
-            if (!balanceBN.eq(oldBalanceBN)) {
-              this.walletLocalData.totalBalances[tk] = balance
-
-              const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[tk])
-              this.abcTxLibCallbacks.onBalanceChanged(tk, balanceSatoshi, this.walletLocalData.totalBalances[tk])
-            }
-          } else {
-            io.console.err(jsonObj)
-            checkAddressSuccess = false
-          }
-        } catch (e) {
-          checkAddressSuccess = false
-        }
+        promiseArray.push(this.checkAddressFetch(tk, url))
       }
 
-      // ************************************
-      // Fetch transactions
-      // ************************************
+      promiseArray.push(this.checkTransactionsFetch())
+      // promiseArray.push(this.checkUnconfirmedTransactionsFetch())
+
       try {
-        const endBlock = 999999999
-        let startBlock = 0
-
-        if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-          startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
-        }
-
-        url = sprintf('?module=account&action=txlist&address=%s&startblock=%d&endblock=%d&sort=asc', address, startBlock, endBlock)
-        jsonObj = await this.fetchGet(url)
-        valid = validateObject(jsonObj, {
-          'type': 'object',
-          'properties': {
-            'result': {
-              'type': 'array',
-              'items': {
-                'type': 'object',
-                'properties': {
-                  'blockNumber': {'type': 'string'},
-                  'timeStamp': {'type': 'string'},
-                  'hash': {'type': 'string'},
-                  'from': {'type': 'string'},
-                  'to': {'type': 'string'},
-                  'nonce': {'type': 'string'},
-                  'value': {'type': 'string'},
-                  'gas': {'type': 'string'},
-                  'gasPrice': {'type': 'string'},
-                  'cumulativeGasUsed': {'type': 'string'},
-                  'gasUsed': {'type': 'string'},
-                  'confirmations': {'type': 'string'}
-                },
-                'required': [
-                  'blockNumber',
-                  'timeStamp',
-                  'hash',
-                  'from',
-                  'to',
-                  'nonce',
-                  'value',
-                  'gas',
-                  'gasPrice',
-                  'cumulativeGasUsed',
-                  'gasUsed',
-                  'confirmations'
-                ]
-              }
-            }
-          },
-          'required': ['result']
-        })
-
-        if (valid) {
-          const transactions = jsonObj.result
-          io.console.info('Fetched transactions count: ' + transactions.length)
-
-          // Get transactions
-          // Iterate over transactions in address
-          for (const n in transactions) {
-            const tx = transactions[n]
-            this.processTransaction(tx)
-          }
-          if (checkAddressSuccess === true && this.addressesChecked === false) {
-            this.addressesChecked = true
-            this.abcTxLibCallbacks.onAddressesChecked(1)
-          }
-        } else {
-          io.console.err(jsonObj)
-        }
+        const results = await Promise.all(promiseArray)
+        io.console.info(results)
         await snooze(ADDRESS_POLL_MILLISECONDS)
       } catch (e) {
         io.console.error('Error fetching address transactions: ' + address)
         try {
-          await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
-        } catch (err) {
-          io.console.error(err)
+          await snooze(ADDRESS_POLL_MILLISECONDS)
+        } catch (e) {
+
         }
       }
     }
@@ -871,7 +1057,7 @@ class ABCTxLibETH {
     return false
   }
 
-  // ssynchronous
+  // synchronous
   async makeSpend (abcSpendInfo:any) {
     // Validate the spendInfo
     const valid = validateObject(abcSpendInfo, {
@@ -900,17 +1086,17 @@ class ABCTxLibETH {
     })
 
     if (!valid) {
-      throw (new Error('Error: invalid ABCSpendInfo'))
+      return (new Error('Error: invalid ABCSpendInfo'))
     }
 
     // Ethereum can only have one output
     if (abcSpendInfo.spendTargets.length !== 1) {
-      throw (new Error('Error: only one output allowed'))
+      return (new Error('Error: only one output allowed'))
     }
 
     if (typeof abcSpendInfo.spendTargets[0].currencyCode === 'string') {
       if (!this.isTokenEnabled(abcSpendInfo.spendTargets[0].currencyCode)) {
-        throw (new Error('Error: Token not supported or enabled'))
+        return (new Error('Error: Token not supported or enabled'))
       }
     } else {
       abcSpendInfo.spendTargets[0].currencyCode = 'ETH'
@@ -921,11 +1107,9 @@ class ABCTxLibETH {
     // Get the fee amount
 
     let ethParams = {}
-    let gasPrice
-    let gasLimit
     if (currencyCode === PRIMARY_CURRENCY) {
-      gasLimit = '21000'
-      gasPrice = '28000000000' // 28 Gwei
+      const gasLimit = '21000'
+      const gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -938,8 +1122,8 @@ class ABCTxLibETH {
         null
       )
     } else {
-      gasLimit = '40000'
-      gasPrice = '28000000000' // 28 Gwei
+      const gasLimit = '40000'
+      const gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -960,31 +1144,7 @@ class ABCTxLibETH {
     } else if (typeof abcSpendInfo.spendTargets[0].amountSatoshi === 'number') {
       nativeAmount = satoshiToNative(abcSpendInfo.spendTargets[0].amountSatoshi)
     } else {
-      throw (new Error('Error: no amount specified'))
-    }
-
-    // Check if the spend amount plus mining fee is more than the account balance
-    // if (nativeAmount + (gasLimit + gasprice) > account balance) error
-    const nativeAmountBN = new BN(nativeAmount, 10)
-    io.console.info('makeSpend: nativeAmount:' + nativeAmountBN.toString(10))
-
-    const gasPriceBN = new BN(gasPrice, 10)
-    io.console.info('makeSpend: gasPrice:' + gasPriceBN.toString(10))
-
-    const gasLimitBN = new BN(gasLimit, 10)
-    io.console.info('makeSpend: gasLimit:' + gasLimitBN.toString(10))
-
-    const totalFeeBN = gasPriceBN.mul(gasLimitBN)
-    io.console.info('makeSpend: totalFee:' + totalFeeBN.toString(10))
-
-    const totalSpendBN = totalFeeBN.add(nativeAmountBN)
-    io.console.info('makeSpend: totalSpend:' + totalSpendBN.toString(10))
-
-    const balanceBN = new BN(this.walletLocalData.totalBalances[currencyCode], 10)
-    io.console.info('makeSpend: balance:' + balanceBN.toString(10))
-
-    if (balanceBN.lt(totalSpendBN)) {
-      throw (new Error('Error: Insufficient funds'))
+      return (new Error('Error: no amount specified'))
     }
 
     // **********************************
@@ -1058,7 +1218,7 @@ class ABCTxLibETH {
   async broadcastTx (abcTransaction:ABCTransaction) {
     try {
       const url = sprintf('?module=proxy&action=eth_sendRawTransaction&hex=%s', abcTransaction.signedTx)
-      const jsonObj = await this.fetchGet(url)
+      const jsonObj = await this.fetchGetEtherscan(url)
 
       // {
       //   "jsonrpc": "2.0",
