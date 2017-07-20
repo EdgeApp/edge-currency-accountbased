@@ -762,7 +762,7 @@ class ABCTxLibETH {
       }
 
       promiseArray.push(this.checkTransactionsFetch())
-      promiseArray.push(this.checkUnconfirmedTransactionsFetch())
+      // promiseArray.push(this.checkUnconfirmedTransactionsFetch())
 
       try {
         const results = await Promise.all(promiseArray)
