@@ -80,6 +80,12 @@ function hexToBuf (hex:string) {
   return buf
 }
 
+function decimalInvertSign (decimal:string) {
+  const decimalBN = new BN(decimal, 10)
+  const negativeOneBN = new BN('-1', 10)
+  return decimalBN.mul(negativeOneBN).toString(10)
+}
+
 function decimalToHex (decimal:string) {
   const decimalBN = new BN(decimal, 10)
   const hex = '0x' + decimalBN.toString(16)
@@ -370,7 +376,7 @@ class ABCTxLibETH {
     const nativeValueBN = new BN(tx.value, 10)
 
     if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
-      netNativeAmountBN.iadd(nativeValueBN)
+      netNativeAmountBN.isub(nativeValueBN)
       const newNonceBN = new BN(tx.nonce, 16)
       const nonceBN = new BN(this.walletLocalData.nextNonce)
 
@@ -378,10 +384,6 @@ class ABCTxLibETH {
         newNonceBN.iadd(new BN('1', 10))
         this.walletLocalData.nextNonce = newNonceBN.toNumber()
       }
-    }
-
-    if (tx.from === this.walletLocalData.ethereumPublicAddress) {
-      netNativeAmountBN.isub(nativeValueBN)
     } else {
       netNativeAmountBN.iadd(nativeValueBN)
     }
@@ -717,9 +719,7 @@ class ABCTxLibETH {
     if (valid) {
       const transactions = jsonObj
 
-      for (const n of transactions) {
-        const tx = transactions[n]
-
+      for (const tx of transactions) {
         if (
           tx.inputs[0].addresses[0] === address ||
           tx.outputs[0].addresses[0] === address
@@ -1146,6 +1146,10 @@ class ABCTxLibETH {
     } else {
       return (new Error('Error: no amount specified'))
     }
+    let nativeAmountBN = new BN(nativeAmount, '10')
+    const negativeOneBN = new BN('-1', 10)
+    nativeAmountBN.imul(negativeOneBN)
+    nativeAmount = nativeAmountBN.toString(10)
 
     // **********************************
     // Create the unsigned ABCTransaction
@@ -1170,7 +1174,8 @@ class ABCTxLibETH {
 
     const gasLimitHex = decimalToHex(abcTransaction.otherParams.gas)
     const gasPriceHex = decimalToHex(abcTransaction.otherParams.gasPrice)
-    let nativeAmountHex = decimalToHex(abcTransaction.nativeAmount)
+    const nativeAmount = decimalInvertSign(abcTransaction.nativeAmount)
+    let nativeAmountHex = decimalToHex(nativeAmount)
 
     const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
     const nonceHex = '0x' + nonceBN.toString(16)
