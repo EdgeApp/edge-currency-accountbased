@@ -1146,7 +1146,7 @@ class ABCTxLibETH {
     } else {
       return (new Error('Error: no amount specified'))
     }
-    let nativeAmountBN = new BN(nativeAmount, '10')
+    let nativeAmountBN = new BN(nativeAmount, 10)
     const negativeOneBN = new BN('-1', 10)
     nativeAmountBN.imul(negativeOneBN)
     nativeAmount = nativeAmountBN.toString(10)
