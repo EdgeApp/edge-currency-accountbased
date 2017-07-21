@@ -1107,9 +1107,11 @@ class ABCTxLibETH {
     // Get the fee amount
 
     let ethParams = {}
+    let gasLimit
+    let gasPrice
     if (currencyCode === PRIMARY_CURRENCY) {
-      const gasLimit = '21000'
-      const gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '21000'
+      gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -1122,8 +1124,8 @@ class ABCTxLibETH {
         null
       )
     } else {
-      const gasLimit = '40000'
-      const gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '40000'
+      gasPrice = '28000000000' // 28 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -1146,7 +1148,31 @@ class ABCTxLibETH {
     } else {
       return (new Error('Error: no amount specified'))
     }
+
+    const InsufficientFundsError = new Error('Insufficient funds')
+    InsufficientFundsError.name = 'InsufficientFundsError'
+
+    // Check for insufficient funds
     let nativeAmountBN = new BN(nativeAmount, 10)
+    const gasPriceBN = new BN(gasPrice, 10)
+    const gasLimitBN = new BN(gasLimit, 10)
+    const nativeNetworkFeeBN = gasPriceBN.mul(gasLimitBN)
+    const balanceEthBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
+    if (currencyCode === PRIMARY_CURRENCY) {
+      if (nativeNetworkFeeBN.add(nativeAmountBN).gt(balanceEthBN)) {
+        throw (InsufficientFundsError)
+      }
+    } else {
+      if (nativeNetworkFeeBN.gt(balanceEthBN)) {
+        throw (InsufficientFundsError)
+      } else {
+        const balanceTokenBN = new BN(this.walletLocalData.totalBalances[currencyCode], 10)
+        if (nativeAmountBN.gt(balanceTokenBN)) {
+          throw (InsufficientFundsError)
+        }
+      }
+    }
+
     const negativeOneBN = new BN('-1', 10)
     nativeAmountBN.imul(negativeOneBN)
     nativeAmount = nativeAmountBN.toString(10)
