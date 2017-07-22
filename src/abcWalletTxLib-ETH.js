@@ -1094,14 +1094,14 @@ class ABCTxLibETH {
       return (new Error('Error: only one output allowed'))
     }
 
-    if (typeof abcSpendInfo.spendTargets[0].currencyCode === 'string') {
-      if (!this.isTokenEnabled(abcSpendInfo.spendTargets[0].currencyCode)) {
+    if (typeof abcSpendInfo.currencyCode === 'string') {
+      if (!this.isTokenEnabled(abcSpendInfo.currencyCode)) {
         return (new Error('Error: Token not supported or enabled'))
       }
     } else {
-      abcSpendInfo.spendTargets[0].currencyCode = 'ETH'
+      abcSpendInfo.currencyCode = 'ETH'
     }
-    const currencyCode = abcSpendInfo.spendTargets[0].currencyCode
+    const currencyCode = abcSpendInfo.currencyCode
 
     // ******************************
     // Get the fee amount
@@ -1110,8 +1110,8 @@ class ABCTxLibETH {
     let gasLimit
     let gasPrice
     if (currencyCode === PRIMARY_CURRENCY) {
-      gasLimit = '21000'
-      gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '40000'
+      gasPrice = '40000000000' // 40 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
@@ -1124,8 +1124,8 @@ class ABCTxLibETH {
         null
       )
     } else {
-      gasLimit = '40000'
-      gasPrice = '28000000000' // 28 Gwei
+      gasLimit = '60000'
+      gasPrice = '40000000000' // 40 Gwei
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
