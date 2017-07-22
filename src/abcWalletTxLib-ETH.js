@@ -377,7 +377,7 @@ class ABCTxLibETH {
 
     if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
       netNativeAmountBN.isub(nativeValueBN)
-      const newNonceBN = new BN(tx.nonce, 16)
+      const newNonceBN = new BN(tx.nonce, 10)
       const nonceBN = new BN(this.walletLocalData.nextNonce)
 
       if (newNonceBN.gte(nonceBN)) {
