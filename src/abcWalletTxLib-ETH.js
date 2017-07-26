@@ -7,11 +7,13 @@ import { txLibInfo } from './txLibInfo.js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
+import { parse } from 'uri.js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 const EthereumTx = require('../lib/export-fixes-bundle.js').Transaction
+const EthereumUtil = require('../lib/export-fixes-bundle.js').Util
 
 const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
@@ -51,6 +53,15 @@ function nativeToSatoshi (nativeAmount:string) {
 }
 
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+function getParameterByName (url: string) {
+  const name = url.replace(/[[\]]/g, '\\$&')
+  const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)')
+  const results = regex.exec(url)
+  if (!results) return null
+  if (!results[2]) return ''
+  return decodeURIComponent(results[2].replace(/\+/g, ' '))
+}
 
 function validateObject (object, schema) {
   const result = validate(object, schema)
@@ -136,7 +147,52 @@ export function makeEthereumPlugin (opts:any) {
       const abcTxLib = new ABCTxLibETH(io, keyInfo, opts)
 
       return abcTxLib
+    },
+
+    parseURI: (uri:string) => {
+      const parsedUri = parse(uri)
+      let address:string
+      let amount:number = 0
+      if (
+        typeof parsedUri.scheme !== 'undefined' &&
+        parsedUri.scheme !== 'ethereum'
+      ) {
+        return { error: 'InvalidUriError' }
+      }
+      if (typeof parsedUri.host !== 'undefined') {
+        address = parsedUri.host
+      } else if (typeof parsedUri.path !== 'undefined') {
+        address = parsedUri.path
+      } else {
+        return { error: 'InvalidUriError' }
+      }
+      address = address.replace('/', '') // Remove any slashes
+      const valid:boolean = EthereumUtil.isValidChecksumAddress(address)
+      if (!valid) {
+        return { error: 'InvalidPublicAddressError' }
+      }
+      const params:any = getParameterByName(uri)
+
+      if (typeof params.amount !== 'undefined') {
+        amount = params.amount
+      }
+
+      return new ABCParsedURI(address, amount)
+    },
+
+    encodeURI: (publicAddress:string, amountSatoshi:number) => {
+
     }
+  }
+}
+
+class ABCParsedURI {
+  publicAddress:string
+  amountSatoshi:number
+
+  constructor (publicAddress:string, amountSatoshi:number) {
+    this.publicAddress = publicAddress
+    this.amountSatoshi = amountSatoshi
   }
 }
 
