@@ -7,7 +7,7 @@ import { txLibInfo } from './txLibInfo.js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
-import { parse } from 'uri-js'
+import { parse, serialize } from 'uri-js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -153,46 +153,89 @@ function makeEthereumPlugin (opts:any) {
       const parsedUri = parse(uri)
       let address:string
       let amount:number = 0
+      let label
+      let message
+
       if (
         typeof parsedUri.scheme !== 'undefined' &&
         parsedUri.scheme !== 'ethereum'
       ) {
-        return { error: 'InvalidUriError' }
+        throw new Error('InvalidUriError')
       }
       if (typeof parsedUri.host !== 'undefined') {
         address = parsedUri.host
       } else if (typeof parsedUri.path !== 'undefined') {
         address = parsedUri.path
       } else {
-        return { error: 'InvalidUriError' }
+        throw new Error('InvalidUriError')
       }
       address = address.replace('/', '') // Remove any slashes
       const valid:boolean = EthereumUtil.isValidAddress(address)
       if (!valid) {
-        return { error: 'InvalidPublicAddressError' }
+        throw new Error('InvalidPublicAddressError')
       }
       const amountStr = getParameterByName('amount', uri)
-
       if (amountStr && typeof amountStr === 'string') {
         amount = parseFloat(amountStr)
       }
+      label = getParameterByName('label', uri)
+      message = getParameterByName('message', uri)
 
-      return new ABCParsedURI(address, amount)
+      return new ABCParsedURI(address, amount, label, message)
     },
 
-    encodeURI: (publicAddress:string, amountSatoshi:number) => {
+    encodeUri: (obj:any) => {
+      if (!obj.publicAddress) {
+        throw new Error('InvalidPublicAddressError')
+      }
+      const valid:boolean = EthereumUtil.isValidAddress(obj.publicAddress)
+      if (!valid) {
+        throw new Error('InvalidPublicAddressError')
+      }
+      if (!obj.amount && !obj.label && !obj.message) {
+        return obj.publicAddress
+      } else {
+        let queryString:string = ''
 
+        if (obj.amount) {
+          queryString += 'amount=' + obj.amount.toString() + '&'
+        }
+        if (obj.label) {
+          queryString += 'label=' + obj.label + '&'
+        }
+        if (obj.message) {
+          queryString += 'message=' + obj.message + '&'
+        }
+        queryString = queryString.substr(0, queryString.length - 1)
+
+        const serializeObj = {
+          scheme: 'ethereum',
+          path: obj.publicAddress,
+          query: queryString
+        }
+        const url = serialize(serializeObj)
+        return url
+      }
     }
   }
 }
 
 class ABCParsedURI {
   publicAddress:string
-  amountSatoshi:number
+  amount:number
+  label:string|null
+  message:string|null
 
-  constructor (publicAddress:string, amountSatoshi:number) {
+  constructor (
+    publicAddress:string,
+    amount:number,
+    label:string|null,
+    message:string|null
+  ) {
     this.publicAddress = publicAddress
-    this.amountSatoshi = amountSatoshi
+    this.amount = amount
+    this.label = label
+    this.message = message
   }
 }
 
