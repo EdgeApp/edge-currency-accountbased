@@ -7,7 +7,7 @@ import { txLibInfo } from './txLibInfo.js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
-import { parse } from 'uri.js'
+import { parse } from 'uri-js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -54,8 +54,8 @@ function nativeToSatoshi (nativeAmount:string) {
 
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-function getParameterByName (url: string) {
-  const name = url.replace(/[[\]]/g, '\\$&')
+function getParameterByName (param, url) {
+  const name = param.replace(/[[\]]/g, '\\$&')
   const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)')
   const results = regex.exec(url)
   if (!results) return null
@@ -149,7 +149,7 @@ function makeEthereumPlugin (opts:any) {
       return abcTxLib
     },
 
-    parseURI: (uri:string) => {
+    parseUri: (uri:string) => {
       const parsedUri = parse(uri)
       let address:string
       let amount:number = 0
@@ -167,14 +167,14 @@ function makeEthereumPlugin (opts:any) {
         return { error: 'InvalidUriError' }
       }
       address = address.replace('/', '') // Remove any slashes
-      const valid:boolean = EthereumUtil.isValidChecksumAddress(address)
+      const valid:boolean = EthereumUtil.isValidAddress(address)
       if (!valid) {
         return { error: 'InvalidPublicAddressError' }
       }
-      const params:any = getParameterByName(uri)
+      const amountStr = getParameterByName('amount', uri)
 
-      if (typeof params.amount !== 'undefined') {
-        amount = params.amount
+      if (amountStr && typeof amountStr === 'string') {
+        amount = parseFloat(amountStr)
       }
 
       return new ABCParsedURI(address, amount)
