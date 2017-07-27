@@ -110,7 +110,7 @@ function decimalToHex (decimal:string) {
 //   return decimal
 // }
 
-export function makeEthereumPlugin (opts:any) {
+function makeEthereumPlugin (opts:any) {
   io = opts.io
 
   const randomBuffer = (size) => {
@@ -786,7 +786,7 @@ class ABCTxLibETH {
     }
   }
 
-    // **********************************************
+  // **********************************************
   // Check all addresses for new transactions
   // **********************************************
   async checkAddressesInnerLoop () {
@@ -935,9 +935,9 @@ class ABCTxLibETH {
     try {
       const result =
         await this.walletLocalFolder
-        .folder(DATA_STORE_FOLDER)
-        .file(DATA_STORE_FILE)
-        .getText(DATA_STORE_FOLDER, 'walletLocalData')
+          .folder(DATA_STORE_FOLDER)
+          .file(DATA_STORE_FILE)
+          .getText(DATA_STORE_FOLDER, 'walletLocalData')
 
       this.walletLocalData = new WalletLocalData(result)
       this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
@@ -1343,3 +1343,5 @@ class ABCTxLibETH {
     this.abcTxLibCallbacks.onTransactionsChanged([abcTransaction])
   }
 }
+
+export { makeEthereumPlugin }

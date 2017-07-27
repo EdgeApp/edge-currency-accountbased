@@ -2,7 +2,7 @@
 const packageJson = require('./package.json')
 
 export default {
-  entry: 'intermediate/index.js',
+  entry: 'intermediate/txLib.js',
   external: Object.keys(packageJson.dependencies),
   // plugins: [buble()],
   targets: [
