@@ -1355,8 +1355,17 @@ class ABCTxLibETH {
       io.console.info('Sent transaction to network. Response:')
       io.console.info(jsonObj)
 
-      if (typeof jsonObj.error === 'string') {
-        throw (jsonObj.error)
+      if (typeof jsonObj.error !== 'undefined') {
+        io.console.warn('Error sending transaction')
+        if (jsonObj.error.message.includes('nonce is too low')) {
+          this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
+          io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
+          // Nonce error. Increment nonce and try again
+          const abcTx = await this.signTx(abcTransaction)
+          return await this.broadcastTx(abcTx)
+        } else {
+          throw (jsonObj.error)
+        }
       } else if (typeof jsonObj.result === 'string') {
         // Success!!
         return abcTransaction
