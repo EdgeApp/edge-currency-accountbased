@@ -21,8 +21,8 @@ const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
-// const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
+// const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = '40320' // (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 
 const PRIMARY_CURRENCY = txLibInfo.getInfo.currencyCode
@@ -673,6 +673,7 @@ class ABCTxLibETH {
     let valid = false
 
     if (bns.gt(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
       startBlock = bns.sub(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)
     }
 
@@ -740,6 +741,9 @@ class ABCTxLibETH {
     } catch (e) {
       io.console.error(e)
       checkAddressSuccess = false
+    }
+    if (checkAddressSuccess) {
+      this.walletLocalData.lastAddressQueryHeight = this.walletLocalData.blockHeight
     }
     return checkAddressSuccess
   }
