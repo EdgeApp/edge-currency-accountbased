@@ -1,10 +1,11 @@
-// import buble from 'rollup-plugin-buble'
+import babel from 'rollup-plugin-babel'
 const packageJson = require('./package.json')
 
 export default {
-  entry: 'intermediate/txLib.js',
+  entry: 'src/txLib.js',
   external: Object.keys(packageJson.dependencies),
-  // plugins: [buble()],
+  plugins: [babel({})],
+
   targets: [
     {
       dest: packageJson['main'],
