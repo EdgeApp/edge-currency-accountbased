@@ -270,10 +270,10 @@ class WalletLocalData {
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
 
-      if (typeof data.blockHeight !== 'undefined') this.blockHeight = data.blockHeight
-      if (typeof data.lastAddressQueryHeight !== 'undefined') this.lastAddressQueryHeight = data.lastAddressQueryHeight
-      if (typeof data.nextNonce !== 'undefined') this.nextNonce = data.nextNonce
-      if (typeof data.ethereumPublicAddress !== 'undefined') this.ethereumPublicAddress = data.ethereumPublicAddress
+      if (typeof data.blockHeight === 'string') this.blockHeight = data.blockHeight
+      if (typeof data.lastAddressQueryHeight === 'string') this.lastAddressQueryHeight = data.lastAddressQueryHeight
+      if (typeof data.nextNonce === 'string') this.nextNonce = data.nextNonce
+      if (typeof data.ethereumPublicAddress === 'string') this.ethereumPublicAddress = data.ethereumPublicAddress
       if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
       if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
       if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
