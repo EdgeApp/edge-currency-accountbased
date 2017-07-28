@@ -55,7 +55,6 @@
   },
   "scripts": {
     "precommit": "npm test",
-    "prepush": "npm test",
     "flow": "flow",
     "webpack": "webpack",
     "rollup": "rollup -c",
