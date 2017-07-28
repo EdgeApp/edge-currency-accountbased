@@ -8,6 +8,7 @@ import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
 import { parse, serialize } from 'uri-js'
+import { bns } from 'biggystring'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -20,7 +21,7 @@ const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 2) // ~ 2 minutes
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 
@@ -91,16 +92,12 @@ function hexToBuf (hex:string) {
   return buf
 }
 
-function decimalInvertSign (decimal:string) {
-  const decimalBN = new BN(decimal, 10)
-  const negativeOneBN = new BN('-1', 10)
-  return decimalBN.mul(negativeOneBN).toString(10)
+function toHex (num:string) {
+  return bns.add(num, '0', 16)
 }
 
-function decimalToHex (decimal:string) {
-  const decimalBN = new BN(decimal, 10)
-  const hex = '0x' + decimalBN.toString(16)
-  return hex
+function toDecimal (num:string) {
+  return bns.add(num, '0')
 }
 
 // function hexToDecimal (hex:string) {
@@ -240,16 +237,16 @@ class ABCParsedURI {
 }
 
 class WalletLocalData {
-  blockHeight:number
-  lastAddressQueryHeight:number
-  nextNonce:number
+  blockHeight:string
+  lastAddressQueryHeight:string
+  nextNonce:string
   ethereumPublicAddress:string
-  totalBalances: {}
+  totalBalances: any
   enabledTokens:Array<string>
   transactionsObj:{}
 
   constructor (jsonString) {
-    this.blockHeight = 0
+    this.blockHeight = '0'
     this.totalBalances = {
       ETH: '0',
       REP: '0',
@@ -257,7 +254,7 @@ class WalletLocalData {
     }
 
     this.transactionsObj = {}
-    this.nextNonce = 0
+    this.nextNonce = '0'
 
     // Array of ABCTransaction objects sorted by date from newest to oldest
     for (let n = 0; n < TOKEN_CODES.length; n++) {
@@ -266,7 +263,7 @@ class WalletLocalData {
     }
 
     // // Array of txids to fetch
-    this.lastAddressQueryHeight = 0
+    this.lastAddressQueryHeight = '0'
 
     this.ethereumPublicAddress = ''
     this.enabledTokens = TOKEN_CODES
@@ -321,11 +318,10 @@ class ABCTransaction {
   txid:string
   date:number
   currencyCode:string
-  blockHeight:number
-  blockHeightNative:string
   amountSatoshi:number
+  blockHeight:string
   nativeAmount:string
-  networkFee:number
+  networkFee:string
   nativeNetworkFee:string
   signedTx:string
   otherParams:EthereumParams
@@ -333,20 +329,18 @@ class ABCTransaction {
   constructor (txid:string,
                date:number,
                currencyCode:string,
-               blockHeightNative:string,
+               blockHeight:string,
                nativeAmount:string,
-               nativeNetworkFee:string,
+               networkFee:string,
                signedTx:string,
                otherParams:any) {
     this.txid = txid
     this.date = date
     this.currencyCode = currencyCode
-    this.blockHeightNative = blockHeightNative
-    this.blockHeight = (new BN(blockHeightNative, 10)).toNumber(10)
+    this.blockHeight = blockHeight
     this.nativeAmount = nativeAmount
     this.amountSatoshi = nativeToSatoshi(nativeAmount)
-    this.nativeNetworkFee = nativeNetworkFee
-    this.networkFee = nativeToSatoshi(nativeNetworkFee)
+    this.networkFee = networkFee
     this.signedTx = signedTx
     this.otherParams = otherParams
   }
@@ -359,7 +353,7 @@ class ABCTxLibETH {
   walletLocalFolder:any
   engineOn:boolean
   addressesChecked:boolean
-  walletLocalData:any
+  walletLocalData:WalletLocalData
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<{}>
 
@@ -369,7 +363,6 @@ class ABCTxLibETH {
     this.engineOn = false
     this.addressesChecked = false
     this.walletLocalDataDirty = false
-    this.walletLocalData = {}
     this.transactionsChangedArray = []
     this.io = io
     this.keyInfo = keyInfo
@@ -444,11 +437,9 @@ class ABCTxLibETH {
         })
 
         if (valid) {
-          const heightHex = jsonObj.result.slice(2)
-          const heightBN = new BN(heightHex, 16)
-          const blockHeight = heightBN.toNumber()
-          if (this.walletLocalData.blockHeight !== blockHeight) {
-            this.walletLocalData.blockHeight = blockHeight
+          const blockHeight = jsonObj.result.slice(2)
+          if (!bns.eq(this.walletLocalData.blockHeight, blockHeight)) {
+            this.walletLocalData.blockHeight = toDecimal(blockHeight) // Convert to decimal
             this.walletLocalDataDirty = true
             io.console.info(
               'Block height changed: ' + this.walletLocalData.blockHeight
@@ -470,28 +461,24 @@ class ABCTxLibETH {
   }
 
   processEtherscanTransaction (tx:any) {
-    let netNativeAmountBN = new BN('0', 10) // Amount received into wallet
+    let netNativeAmount:string // Amount received into wallet
 
-    const nativeValueBN = new BN(tx.value, 10)
+    // const nativeValueBN = new BN(tx.value, 10)
 
     if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
-      netNativeAmountBN.isub(nativeValueBN)
-      const newNonceBN = new BN(tx.nonce, 10)
-      const nonceBN = new BN(this.walletLocalData.nextNonce)
+      netNativeAmount = bns.sub('0', tx.value)
 
-      if (newNonceBN.gte(nonceBN)) {
-        newNonceBN.iadd(new BN('1', 10))
-        this.walletLocalData.nextNonce = newNonceBN.toNumber()
+      if (bns.gte(tx.nonce, this.walletLocalData.nextNonce)) {
+        this.walletLocalData.nextNonce = bns.add(tx.nonce, '1')
       }
     } else {
-      netNativeAmountBN.iadd(nativeValueBN)
+      netNativeAmount = bns.add('0', tx.value)
     }
-    const netNativeAmount = netNativeAmountBN.toString(10)
-
-    const gasPriceBN = new BN(tx.gasPrice, 10)
-    const gasUsedBN = new BN(tx.gasUsed, 10)
-    const etherUsedBN = gasPriceBN.mul(gasUsedBN)
-    const nativeNetworkFee = etherUsedBN.toString(10)
+    // const gasPriceBN = new BN(tx.gasPrice, 10)
+    // const gasUsedBN = new BN(tx.gasUsed, 10)
+    // const etherUsedBN = gasPriceBN.mul(gasUsedBN)
+    const nativeNetworkFee:string = bns.mul(tx.gasPrice, tx.gasUsed)
+    // const nativeNetworkFee = etherUsedBN.toString(10)
 
     const ethParams = new EthereumParams(
       [ tx.from ],
@@ -511,7 +498,7 @@ class ABCTxLibETH {
       tx.blockNumber,
       netNativeAmount,
       nativeNetworkFee,
-      'iwassignedyoucantrustme',
+      'nosignature',
       ethParams
     )
 
@@ -658,10 +645,10 @@ class ABCTxLibETH {
       if (valid) {
         const balance = jsonObj.result
         io.console.info(tk + ': token Address balance: ' + balance)
-        const balanceBN = new BN(balance, 10)
-        const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
+        // const balanceBN = new BN(balance, 10)
+        // const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
 
-        if (!balanceBN.eq(oldBalanceBN)) {
+        if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
           this.walletLocalData.totalBalances[tk] = balance
 
           const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[tk])
@@ -678,15 +665,15 @@ class ABCTxLibETH {
 
   async checkTransactionsFetch () {
     const address = this.walletLocalData.ethereumPublicAddress
-    const endBlock = 999999999
-    let startBlock = 0
+    const endBlock = '999999999'
+    let startBlock = '0'
     let checkAddressSuccess = true
     let url = ''
     let jsonObj = {}
     let valid = false
 
-    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-      startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+    if (bns.gt(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)) {
+      startBlock = bns.sub(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)
     }
 
     try {
@@ -886,12 +873,6 @@ class ABCTxLibETH {
     const currency = this.walletLocalData.transactionsObj[currencyCode]
     return currency.findIndex(element => {
       return element.txid === txid
-    })
-  }
-
-  findAddress (address:string) {
-    return this.walletLocalData.addressArray.findIndex(element => {
-      return element.address === address
     })
   }
 
@@ -1252,29 +1233,35 @@ class ABCTxLibETH {
     InsufficientFundsError.name = 'InsufficientFundsError'
 
     // Check for insufficient funds
-    let nativeAmountBN = new BN(nativeAmount, 10)
-    const gasPriceBN = new BN(gasPrice, 10)
-    const gasLimitBN = new BN(gasLimit, 10)
-    const nativeNetworkFeeBN = gasPriceBN.mul(gasLimitBN)
-    const balanceEthBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
+    // let nativeAmountBN = new BN(nativeAmount, 10)
+    // const gasPriceBN = new BN(gasPrice, 10)
+    // const gasLimitBN = new BN(gasLimit, 10)
+    // const nativeNetworkFeeBN = gasPriceBN.mul(gasLimitBN)
+    // const balanceEthBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
+
+    const balanceEth = this.walletLocalData.totalBalances.ETH
+    const nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+
     if (currencyCode === PRIMARY_CURRENCY) {
-      if (nativeNetworkFeeBN.add(nativeAmountBN).gt(balanceEthBN)) {
+      const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+      if (bns.gt(totalTxAmount, balanceEth)) {
         throw (InsufficientFundsError)
       }
     } else {
-      if (nativeNetworkFeeBN.gt(balanceEthBN)) {
+      if (bns.gt(nativeNetworkFee, balanceEth)) {
         throw (InsufficientFundsError)
       } else {
-        const balanceTokenBN = new BN(this.walletLocalData.totalBalances[currencyCode], 10)
-        if (nativeAmountBN.gt(balanceTokenBN)) {
+        const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+        if (bns.gt(nativeAmount, balanceToken)) {
           throw (InsufficientFundsError)
         }
       }
     }
 
-    const negativeOneBN = new BN('-1', 10)
-    nativeAmountBN.imul(negativeOneBN)
-    nativeAmount = nativeAmountBN.toString(10)
+    // const negativeOneBN = new BN('-1', 10)
+    // nativeAmountBN.imul(negativeOneBN)
+    // nativeAmount = nativeAmountBN.toString(10)
+    nativeAmount = bns.mul(nativeAmount, '-1')
 
     // **********************************
     // Create the unsigned ABCTransaction
@@ -1297,14 +1284,14 @@ class ABCTxLibETH {
   async signTx (abcTransaction:ABCTransaction) {
     // Do signing
 
-    const gasLimitHex = decimalToHex(abcTransaction.otherParams.gas)
-    const gasPriceHex = decimalToHex(abcTransaction.otherParams.gasPrice)
-    const nativeAmount = decimalInvertSign(abcTransaction.nativeAmount)
-    let nativeAmountHex = decimalToHex(nativeAmount)
+    const gasLimitHex = toHex(abcTransaction.otherParams.gas)
+    const gasPriceHex = toHex(abcTransaction.otherParams.gasPrice)
+    let nativeAmountHex = bns.mul('-1', abcTransaction.nativeAmount, 16)
 
-    const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
-    const nonceHex = '0x' + nonceBN.toString(16)
-
+    // const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
+    // const nonceHex = '0x' + nonceBN.toString(16)
+    //
+    const nonceHex = toHex(this.walletLocalData.nextNonce)
     let data
     if (abcTransaction.currencyCode === PRIMARY_CURRENCY) {
       data = ''
