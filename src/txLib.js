@@ -100,6 +100,18 @@ function toDecimal (num:string) {
   return bns.add(num, '0')
 }
 
+function getDenomInfo (denom:string) {
+  return txLibInfo.getInfo.denominations.find(element => {
+    return element.name === denom
+  })
+}
+
+function getTokenInfo (token:string) {
+  return txLibInfo.getInfo.metaTokens.find(element => {
+    return element.currencyCode === token
+  })
+}
+
 // function hexToDecimal (hex:string) {
 //   const noHexPrefix = hex.replace('0x', '')
 //   const hexBN = new BN(noHexPrefix, 16)
@@ -150,6 +162,8 @@ function makeEthereumPlugin (opts:any) {
       const parsedUri = parse(uri)
       let address:string
       let amount:number = 0
+      let nativeAmount:string|null = null
+      let currencyCode:string|null = null
       let label
       let message
 
@@ -174,11 +188,17 @@ function makeEthereumPlugin (opts:any) {
       const amountStr = getParameterByName('amount', uri)
       if (amountStr && typeof amountStr === 'string') {
         amount = parseFloat(amountStr)
+        let multiplier:string|number = getDenomInfo('ETH').multiplier
+        if (typeof multiplier !== 'string') {
+          multiplier = multiplier.toString()
+        }
+        nativeAmount = bns.mulf(amount, multiplier)
+        currencyCode = 'ETH'
       }
       label = getParameterByName('label', uri)
       message = getParameterByName('message', uri)
 
-      return new ABCParsedURI(address, amount, label, message)
+      return new ABCParsedURI(address, nativeAmount, currencyCode, label, message)
     },
 
     encodeUri: (obj:any) => {
@@ -219,18 +239,21 @@ function makeEthereumPlugin (opts:any) {
 
 class ABCParsedURI {
   publicAddress:string
-  amount:number
+  nativeAmount:string|null
+  currencyCode:string|null
   label:string|null
   message:string|null
 
   constructor (
     publicAddress:string,
-    amount:number,
+    nativeAmount:string|null,
+    currencyCode:string|null,
     label:string|null,
     message:string|null
   ) {
     this.publicAddress = publicAddress
-    this.amount = amount
+    this.nativeAmount = nativeAmount
+    this.currencyCode = currencyCode
     this.label = label
     this.message = message
   }
@@ -622,12 +645,6 @@ class ABCTxLibETH {
     }
   }
 
-  getTokenInfo (token:string) {
-    return txLibInfo.getInfo.metaTokens.find(element => {
-      return element.currencyCode === token
-    })
-  }
-
   async checkAddressFetch (tk:string, url:string) {
     let checkAddressSuccess = true
     let jsonObj = {}
@@ -841,7 +858,7 @@ class ABCTxLibETH {
           url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
         } else {
           if (this.isTokenEnabled(tk)) {
-            const tokenInfo = this.getTokenInfo(tk)
+            const tokenInfo = getTokenInfo(tk)
             url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
           } else {
             continue
@@ -1213,7 +1230,7 @@ class ABCTxLibETH {
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
-        [this.getTokenInfo(currencyCode).contractAddress],
+        [getTokenInfo(currencyCode).contractAddress],
         gasLimit,
         gasPrice,
         '0',

@@ -28,6 +28,7 @@
     "ethereumjs-wallet": "git+ssh://git@github.com:Airbitz/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
     "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1",
+    "updot": "^1.0.2",
     "uri-js": "^3.0.2"
   },
   "devDependencies": {
@@ -58,6 +59,7 @@
     "flow": "flow",
     "webpack": "webpack",
     "rollup": "rollup -c",
+    "updot": "updot",
     "build": "npm run prepare && npm run flow",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
