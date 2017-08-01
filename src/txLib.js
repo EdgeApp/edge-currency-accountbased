@@ -209,13 +209,23 @@ function makeEthereumPlugin (opts:any) {
       if (!valid) {
         throw new Error('InvalidPublicAddressError')
       }
-      if (!obj.amount && !obj.label && !obj.message) {
+      if (!obj.nativeAmount && !obj.label && !obj.message) {
         return obj.publicAddress
       } else {
         let queryString:string = ''
 
-        if (obj.amount) {
-          queryString += 'amount=' + obj.amount.toString() + '&'
+        if (obj.nativeAmount) {
+          let currencyCode:string = 'ETH'
+          if (typeof obj.currencyCode === 'string') {
+            currencyCode = obj.currencyCode
+          }
+          let multiplier:string|number = getDenomInfo(currencyCode).multiplier
+          if (typeof multiplier !== 'string') {
+            multiplier = multiplier.toString()
+          }
+          let amount = bns.divf(obj.nativeAmount, multiplier)
+
+          queryString += 'amount=' + amount.toString() + '&'
         }
         if (obj.label) {
           queryString += 'label=' + obj.label + '&'

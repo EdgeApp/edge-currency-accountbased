@@ -58,7 +58,7 @@ describe('encodeUri', function () {
     const encodedUri = plugin.encodeUri(
       {
         publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
-        amount: 1234.5678
+        nativeAmount: '123456780000'
       }
     )
     assert.equal(encodedUri, 'ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.5678')
@@ -67,7 +67,8 @@ describe('encodeUri', function () {
     const encodedUri = plugin.encodeUri(
       {
         publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
-        amount: 1234.5678,
+        nativeAmount: '123456780000',
+        currencyCode: 'ETH',
         label: 'Johnny Bitcoin'
       }
     )
@@ -77,11 +78,25 @@ describe('encodeUri', function () {
     const encodedUri = plugin.encodeUri(
       {
         publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
-        amount: 1234.5678,
+        nativeAmount: '123456780000',
+        currencyCode: 'ETH',
         label: 'Johnny Bitcoin',
         message: 'Hello World, I miss you !'
       }
     )
     assert.equal(encodedUri, 'ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.5678&label=Johnny%20Bitcoin&message=Hello%20World,%20I%20miss%20you%20!')
+  })
+  it('invalid currencyCode', function () {
+    assert.throws(() => {
+      plugin.encodeUri(
+        {
+          publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
+          nativeAmount: '123456780000',
+          currencyCode: 'INVALID',
+          label: 'Johnny Bitcoin',
+          message: 'Hello World, I miss you !'
+        }
+      )
+    })
   })
 })
