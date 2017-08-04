@@ -153,9 +153,9 @@ function makeEthereumPlugin (opts:any) {
     },
 
     makeEngine: (keyInfo:any, opts:any = {}) => {
-      const abcTxLib = new ABCTxLibETH(io, keyInfo, opts)
+      const engine = new ABCTxLibETH(io, keyInfo, opts)
 
-      return abcTxLib
+      return engine
     },
 
     parseUri: (uri:string) => {
@@ -290,12 +290,10 @@ class WalletLocalData {
     this.nextNonce = '0'
 
     // Array of ABCTransaction objects sorted by date from newest to oldest
-    for (let n = 0; n < TOKEN_CODES.length; n++) {
-      const currencyCode = TOKEN_CODES[n]
+    for (let currencyCode of TOKEN_CODES) {
       this.transactionsObj[currencyCode] = []
     }
 
-    // // Array of txids to fetch
     this.lastAddressQueryHeight = '0'
 
     this.ethereumPublicAddress = ''
@@ -358,7 +356,6 @@ class ABCTransaction {
   blockHeight:string
   nativeAmount:string
   networkFee:string
-  nativeNetworkFee:string
   signedTx:string
   otherParams:EthereumParams
 
@@ -429,10 +426,6 @@ class ABCTxLibETH {
     }
   }
 
-  isTokenEnabled (token:string) {
-    return this.walletLocalData.enabledTokens.indexOf(token) !== -1
-  }
-
   async fetchGetEtherscan (cmd:string) {
     let apiKey = ''
     if (ETHERSCAN_API_KEY.length > 5) {
@@ -454,7 +447,7 @@ class ABCTxLibETH {
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
-    const response = this.io.fetch(baseUrl + cmd + apiKey, {
+    const response = await this.io.fetch(baseUrl + cmd + apiKey, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -565,7 +558,7 @@ class ABCTxLibETH {
 
       if (
         abcTx.blockHeight !== abcTransaction.blockHeight ||
-        abcTx.nativeNetworkFee !== abcTransaction.nativeNetworkFee ||
+        abcTx.networkFee !== abcTransaction.networkFee ||
         abcTx.nativeAmount !== abcTransaction.nativeAmount ||
         abcTx.otherParams.errorVal !== abcTransaction.otherParams.errorVal
       ) {
@@ -882,7 +875,7 @@ class ABCTxLibETH {
         if (tk === PRIMARY_CURRENCY) {
           url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
         } else {
-          if (this.isTokenEnabled(tk)) {
+          if (this.getTokenStatus(tk)) {
             const tokenInfo = getTokenInfo(tk)
             url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
           } else {
@@ -988,8 +981,7 @@ class ABCTxLibETH {
       this.walletLocalData.blockHeight
     )
 
-    for (let n = 0; n < TOKEN_CODES.length; n++) {
-      const currencyCode = TOKEN_CODES[n]
+    for (let currencyCode of TOKEN_CODES) {
       this.abcTxLibCallbacks.onTransactionsChanged(
         this.walletLocalData.transactionsObj[currencyCode]
       )
@@ -1039,7 +1031,7 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getBlockHeight () {
+  getBlockHeight ():string {
     return this.walletLocalData.blockHeight
   }
 
@@ -1055,8 +1047,8 @@ class ABCTxLibETH {
   }
 
   // synchronous
-  getTokenStatus () {
-    // return dataStore.getTokensStatus()
+  getTokenStatus (token:string) {
+    return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
   // synchronous
@@ -1221,7 +1213,7 @@ class ABCTxLibETH {
     }
 
     if (typeof abcSpendInfo.currencyCode === 'string') {
-      if (!this.isTokenEnabled(abcSpendInfo.currencyCode)) {
+      if (!this.getTokenStatus(abcSpendInfo.currencyCode)) {
         return (new Error('Error: Token not supported or enabled'))
       }
     } else {
@@ -1274,7 +1266,7 @@ class ABCTxLibETH {
     } else if (typeof abcSpendInfo.spendTargets[0].amountSatoshi === 'number') {
       nativeAmount = satoshiToNative(abcSpendInfo.spendTargets[0].amountSatoshi)
     } else {
-      return (new Error('Error: no amount specified'))
+      throw (new Error('Error: no amount specified'))
     }
 
     const InsufficientFundsError = new Error('Insufficient funds')
@@ -1320,7 +1312,7 @@ class ABCTxLibETH {
       currencyCode, // currencyCode
       '0', // blockHeightNative
       nativeAmount, // nativeAmount
-      '0', // nativeNetworkFee
+      '0', // networkFee
       '0', // signedTx
       ethParams // otherParams
     )
