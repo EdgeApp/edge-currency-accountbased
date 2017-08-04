@@ -322,6 +322,7 @@ class EthereumParams {
   gasUsed: string
   cumulativeGasUsed: string
   blockHash: string
+  errorVal: number
   tokenRecipientAddress:string|null
 
   constructor (from:Array<string>,
@@ -331,12 +332,14 @@ class EthereumParams {
                gasUsed:string,
                cumulativeGasUsed:string,
                blockHash: string,
+               errorVal: number,
                tokenRecipientAddress:string|null) {
     this.from = from
     this.to = to
     this.gas = gas
     this.gasPrice = gasPrice
     this.gasUsed = gasUsed
+    this.errorVal = errorVal
     this.cumulativeGasUsed = cumulativeGasUsed
     this.blockHash = blockHash
     if (typeof tokenRecipientAddress === 'string') {
@@ -366,12 +369,16 @@ class ABCTransaction {
                nativeAmount:string,
                networkFee:string,
                signedTx:string,
-               otherParams:any) {
+               otherParams:EthereumParams) {
     this.txid = txid
     this.date = date
     this.currencyCode = currencyCode
     this.blockHeight = blockHeight
-    this.nativeAmount = nativeAmount
+    if (otherParams.errorVal === 0) {
+      this.nativeAmount = nativeAmount
+    } else {
+      this.nativeAmount = '0'
+    }
     this.amountSatoshi = nativeToSatoshi(nativeAmount)
     this.networkFee = networkFee
     this.signedTx = signedTx
@@ -399,6 +406,10 @@ class ABCTxLibETH {
     this.transactionsChangedArray = []
     this.io = io
     this.keyInfo = keyInfo
+
+    // Hard coded for testing
+    this.keyInfo.keys.ethereumKey = '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+    this.keyInfo.keys.ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
     this.abcTxLibCallbacks = callbacks
     this.walletLocalFolder = walletLocalFolder
   }
@@ -521,6 +532,7 @@ class ABCTxLibETH {
       tx.gasUsed,
       tx.cumulativeGasUsed,
       tx.blockHeight,
+      parseInt(tx.isError),
       null
     )
 
@@ -552,8 +564,10 @@ class ABCTxLibETH {
       const abcTx = transactionsArray[ idx ]
 
       if (
-        abcTx.blockHeightNative !== tx.blockNumber ||
-        abcTx.nativeNetworkFee !== nativeNetworkFee
+        abcTx.blockHeight !== abcTransaction.blockHeight ||
+        abcTx.nativeNetworkFee !== abcTransaction.nativeNetworkFee ||
+        abcTx.nativeAmount !== abcTransaction.nativeAmount ||
+        abcTx.otherParams.errorVal !== abcTransaction.otherParams.errorVal
       ) {
         io.console.info(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
         this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
@@ -612,6 +626,7 @@ class ABCTxLibETH {
       tx.fees.toString(10),
       '',
       tx.block_height,
+      0,
       null
     )
 
@@ -1232,6 +1247,7 @@ class ABCTxLibETH {
         '0',
         '0',
         '0',
+        0,
         null
       )
     } else {
@@ -1246,6 +1262,7 @@ class ABCTxLibETH {
         '0',
         '0',
         '0',
+        0,
         abcSpendInfo.spendTargets[0].publicAddress
       )
     }
