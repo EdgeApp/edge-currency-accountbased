@@ -1,5 +1,5 @@
 /* global describe it */
-const { EthereumPlugin } = require('../lib/index.js')
+const { EthereumPlugin } = require('../lib/abc-ethereum')
 const assert = require('assert')
 
 function fakeRandom () {

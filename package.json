@@ -12,8 +12,8 @@
     "url": "git@github.com:Airbitz/airbitz-currency-ethereum.git"
   },
   "url": "https://airbitz.co",
-  "main": "./lib/index.js",
-  "module": "./lib/index.es.js",
+  "main": "./lib/abc-ethereum.js",
+  "module": "./lib/abc-ethereum.es.js",
   "files": [
     "changelog.md",
     "lib/*"
