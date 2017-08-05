@@ -1,11 +1,21 @@
 /* global describe it */
-const { makeEthereumPlugin } = require('../lib/index.js')
+const { EthereumPlugin } = require('../lib/index.js')
 const assert = require('assert')
 
 function fakeRandom () {
 
 }
-const plugin = makeEthereumPlugin({io: {random: fakeRandom}})
+
+let plugin
+
+describe('Plugin', function () {
+  it('Get currency info', function () {
+    EthereumPlugin.makePlugin({io: {random: fakeRandom}}).then((ethereumPlugin) => {
+      assert.equal(ethereumPlugin.getInfo().currencyCode, 'ETH')
+      plugin = ethereumPlugin
+    })
+  })
+})
 
 describe('parseUri', function () {
   it('address only', function () {
