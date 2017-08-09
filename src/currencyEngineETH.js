@@ -3,18 +3,16 @@
  */
 // @flow
 
-import { txLibInfo } from './txLibInfo.js'
+import { txLibInfo } from './currencyInfoETH.js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
-import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 const EthereumTx = require('../lib/export-fixes-bundle.js').Transaction
-const EthereumUtil = require('../lib/export-fixes-bundle.js').Util
 
 const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
@@ -55,15 +53,6 @@ function nativeToSatoshi (nativeAmount:string) {
 
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-function getParameterByName (param, url) {
-  const name = param.replace(/[[\]]/g, '\\$&')
-  const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)')
-  const results = regex.exec(url)
-  if (!results) return null
-  if (!results[2]) return ''
-  return decodeURIComponent(results[2].replace(/\+/g, ' '))
-}
-
 function validateObject (object, schema) {
   const result = validate(object, schema)
 
@@ -100,12 +89,6 @@ function toDecimal (num:string) {
   return bns.add(num, '0')
 }
 
-function getDenomInfo (denom:string) {
-  return txLibInfo.getInfo.denominations.find(element => {
-    return element.name === denom
-  })
-}
-
 function getTokenInfo (token:string) {
   return txLibInfo.getInfo.metaTokens.find(element => {
     return element.currencyCode === token
@@ -118,154 +101,6 @@ function getTokenInfo (token:string) {
 //   const decimal = hexBN.toString(10)
 //   return decimal
 // }
-
-const randomBuffer = (size) => {
-  const array = io.random(size)
-  return Buffer.from(array)
-}
-
-class EthereumPlugin {
-  static async makePlugin (opts: any) {
-    io = opts.io
-
-    return {
-      getInfo: () => {
-        return txLibInfo.getInfo
-      },
-
-      createMasterKeys: (walletType: string) => {
-        if (walletType === 'ethereum') {
-          const cryptoObj = {
-            randomBytes: randomBuffer
-          }
-          ethWallet.overrideCrypto(cryptoObj)
-
-          let wallet = ethWallet.generate(false)
-          const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
-          const ethereumPublicAddress = wallet.getAddressString()
-          // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-          // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
-          return {ethereumKey, ethereumPublicAddress}
-        } else {
-          return null
-        }
-      },
-
-      makeEngine: (keyInfo: any, opts: any = {}) => {
-        return new ABCTxLibETH(io, keyInfo, opts)
-      },
-
-      parseUri: (uri: string) => {
-        const parsedUri = parse(uri)
-        let address: string
-        let amount: number = 0
-        let nativeAmount: string | null = null
-        let currencyCode: string | null = null
-        let label
-        let message
-
-        if (
-          typeof parsedUri.scheme !== 'undefined' &&
-          parsedUri.scheme !== 'ethereum'
-        ) {
-          throw new Error('InvalidUriError')
-        }
-        if (typeof parsedUri.host !== 'undefined') {
-          address = parsedUri.host
-        } else if (typeof parsedUri.path !== 'undefined') {
-          address = parsedUri.path
-        } else {
-          throw new Error('InvalidUriError')
-        }
-        address = address.replace('/', '') // Remove any slashes
-        const valid: boolean = EthereumUtil.isValidAddress(address)
-        if (!valid) {
-          throw new Error('InvalidPublicAddressError')
-        }
-        const amountStr = getParameterByName('amount', uri)
-        if (amountStr && typeof amountStr === 'string') {
-          amount = parseFloat(amountStr)
-          let multiplier: string | number = getDenomInfo('ETH').multiplier
-          if (typeof multiplier !== 'string') {
-            multiplier = multiplier.toString()
-          }
-          nativeAmount = bns.mulf(amount, multiplier)
-          currencyCode = 'ETH'
-        }
-        label = getParameterByName('label', uri)
-        message = getParameterByName('message', uri)
-
-        return new ABCParsedURI(address, nativeAmount, currencyCode, label, message)
-      },
-
-      encodeUri: (obj: any) => {
-        if (!obj.publicAddress) {
-          throw new Error('InvalidPublicAddressError')
-        }
-        const valid: boolean = EthereumUtil.isValidAddress(obj.publicAddress)
-        if (!valid) {
-          throw new Error('InvalidPublicAddressError')
-        }
-        if (!obj.nativeAmount && !obj.label && !obj.message) {
-          return obj.publicAddress
-        } else {
-          let queryString: string = ''
-
-          if (obj.nativeAmount) {
-            let currencyCode: string = 'ETH'
-            if (typeof obj.currencyCode === 'string') {
-              currencyCode = obj.currencyCode
-            }
-            let multiplier: string | number = getDenomInfo(currencyCode).multiplier
-            if (typeof multiplier !== 'string') {
-              multiplier = multiplier.toString()
-            }
-            let amount = bns.divf(obj.nativeAmount, multiplier)
-
-            queryString += 'amount=' + amount.toString() + '&'
-          }
-          if (obj.label) {
-            queryString += 'label=' + obj.label + '&'
-          }
-          if (obj.message) {
-            queryString += 'message=' + obj.message + '&'
-          }
-          queryString = queryString.substr(0, queryString.length - 1)
-
-          const serializeObj = {
-            scheme: 'ethereum',
-            path: obj.publicAddress,
-            query: queryString
-          }
-          const url = serialize(serializeObj)
-          return url
-        }
-      }
-    }
-  }
-}
-
-class ABCParsedURI {
-  publicAddress:string
-  nativeAmount:string|null
-  currencyCode:string|null
-  label:string|null
-  message:string|null
-
-  constructor (
-    publicAddress:string,
-    nativeAmount:string|null,
-    currencyCode:string|null,
-    label:string|null,
-    message:string|null
-  ) {
-    this.publicAddress = publicAddress
-    this.nativeAmount = nativeAmount
-    this.currencyCode = currencyCode
-    this.label = label
-    this.message = message
-  }
-}
 
 class WalletLocalData {
   blockHeight:string
@@ -354,6 +189,7 @@ class ABCTransaction {
   blockHeight:string
   nativeAmount:string
   networkFee:string
+  ourReceiveAddresses:Array<string>
   signedTx:string
   otherParams:EthereumParams
 
@@ -363,6 +199,7 @@ class ABCTransaction {
                blockHeight:string,
                nativeAmount:string,
                networkFee:string,
+               ourReceiveAddresses:Array<string>,
                signedTx:string,
                otherParams:EthereumParams) {
     this.txid = txid
@@ -375,14 +212,14 @@ class ABCTransaction {
       this.nativeAmount = '0'
     }
     this.amountSatoshi = nativeToSatoshi(nativeAmount)
+    this.ourReceiveAddresses = ourReceiveAddresses
     this.networkFee = networkFee
     this.signedTx = signedTx
     this.otherParams = otherParams
   }
 }
 
-class ABCTxLibETH {
-  io:any
+class EthereumEngine {
   keyInfo:any
   abcTxLibCallbacks:any
   walletLocalFolder:any
@@ -392,14 +229,14 @@ class ABCTxLibETH {
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<{}>
 
-  constructor (io:any, keyInfo:any, opts:any) {
+  constructor (io_:any, keyInfo:any, opts:any) {
     const { walletLocalFolder, callbacks } = opts
 
+    io = io_
     this.engineOn = false
     this.addressesChecked = false
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
-    this.io = io
     this.keyInfo = keyInfo
 
     // Hard coded for testing
@@ -434,7 +271,7 @@ class ABCTxLibETH {
   }
 
   async fetchGet (url:string) {
-    const response = await this.io.fetch(url, {
+    const response = await io.fetch(url, {
       method: 'GET'
     })
     return response.json()
@@ -445,7 +282,7 @@ class ABCTxLibETH {
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
-    const response = await this.io.fetch(baseUrl + cmd + apiKey, {
+    const response = await io.fetch(baseUrl + cmd + apiKey, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -497,6 +334,7 @@ class ABCTxLibETH {
 
   processEtherscanTransaction (tx:any) {
     let netNativeAmount:string // Amount received into wallet
+    let ourReceiveAddresses:Array<string> = []
 
     // const nativeValueBN = new BN(tx.value, 10)
 
@@ -508,6 +346,7 @@ class ABCTxLibETH {
       }
     } else {
       netNativeAmount = bns.add('0', tx.value)
+      ourReceiveAddresses.push(this.walletLocalData.ethereumPublicAddress.toLowerCase())
     }
     // const gasPriceBN = new BN(tx.gasPrice, 10)
     // const gasUsedBN = new BN(tx.gasUsed, 10)
@@ -534,6 +373,7 @@ class ABCTxLibETH {
       tx.blockNumber,
       netNativeAmount,
       nativeNetworkFee,
+      ourReceiveAddresses,
       'nosignature',
       ethParams
     )
@@ -602,11 +442,14 @@ class ABCTxLibETH {
     const fromAddress = '0x' + tx.inputs.addresses[0]
     const toAddress = '0x' + tx.outputs.addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
+    let ourReceiveAddresses:Array<string> = []
+
     let nativeAmount
     if (fromAddress === this.walletLocalData.ethereumPublicAddress) {
       nativeAmount = (0 - tx.total).toString(10)
     } else {
       nativeAmount = tx.total.toString(10)
+      ourReceiveAddresses.push(this.walletLocalData.ethereumPublicAddress)
     }
 
     const ethParams = new EthereumParams(
@@ -628,6 +471,7 @@ class ABCTxLibETH {
       tx.blockNumber,
       nativeAmount,
       tx.fees.toString(10),
+      ourReceiveAddresses,
       'iwassignedyoucantrustme',
       ethParams
     )
@@ -1311,6 +1155,7 @@ class ABCTxLibETH {
       '0', // blockHeightNative
       nativeAmount, // nativeAmount
       '0', // networkFee
+      [], // ourReceiveAddresses
       '0', // signedTx
       ethParams // otherParams
     )
@@ -1421,4 +1266,4 @@ class ABCTxLibETH {
   }
 }
 
-export { EthereumPlugin }
+export { EthereumEngine }

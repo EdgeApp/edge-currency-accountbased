@@ -1,5 +1,5 @@
 /* global describe it */
-const { EthereumPlugin } = require('../lib/abc-ethereum')
+const { EthereumPlugin } = require('../lib/indexEthereum.js')
 const assert = require('assert')
 
 function fakeRandom () {
@@ -11,7 +11,7 @@ let plugin
 describe('Plugin', function () {
   it('Get currency info', function () {
     EthereumPlugin.makePlugin({io: {random: fakeRandom}}).then((ethereumPlugin) => {
-      assert.equal(ethereumPlugin.getInfo().currencyCode, 'ETH')
+      assert.equal(ethereumPlugin.currencyInfo.currencyCode, 'ETH')
       plugin = ethereumPlugin
     })
   })
