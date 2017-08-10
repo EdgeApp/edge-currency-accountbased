@@ -2,7 +2,7 @@
 // @flow
 
 export const txLibInfo = {
-  supportedTokens: [ 'REP', 'WINGS', 'LUN' ],
+  supportedTokens: [ 'REP', 'WINGS' ],
 
   getInfo: { // Details of supported currency
     walletTypes: [
@@ -10,6 +10,8 @@ export const txLibInfo = {
     ],
     currencyName: 'Ethereum',
     currencyCode: 'ETH', // The 3 character code for the currency
+    addressExplorer: 'https://etherscan.io/address/%s',
+    transactionExplorer: 'https://etherscan.io/tx/%s',
     denominations: [
       // An array of Objects of the possible denominations for this currency
       {
