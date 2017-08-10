@@ -109,7 +109,7 @@ class WalletLocalData {
   ethereumPublicAddress:string
   totalBalances: any
   enabledTokens:Array<string>
-  transactionsObj:{}
+  transactionsObj:any
 
   constructor (jsonString) {
     this.blockHeight = '0'
@@ -176,7 +176,7 @@ class EthereumParams {
     if (typeof tokenRecipientAddress === 'string') {
       this.tokenRecipientAddress = tokenRecipientAddress
     } else {
-      tokenRecipientAddress = null
+      this.tokenRecipientAddress = null
     }
   }
 }
@@ -719,7 +719,11 @@ class EthereumEngine {
         } else {
           if (this.getTokenStatus(tk)) {
             const tokenInfo = getTokenInfo(tk)
-            url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
+            if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+              url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
+            } else {
+              continue
+            }
           } else {
             continue
           }
@@ -1054,9 +1058,17 @@ class EthereumEngine {
       return (new Error('Error: only one output allowed'))
     }
 
+    let tokenInfo = {}
+    tokenInfo.contractAddress = ''
+
     if (typeof abcSpendInfo.currencyCode === 'string') {
       if (!this.getTokenStatus(abcSpendInfo.currencyCode)) {
-        return (new Error('Error: Token not supported or enabled'))
+        throw (new Error('Error: Token not supported or enabled'))
+      } else {
+        tokenInfo = getTokenInfo(abcSpendInfo.currencyCode)
+        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+          throw (new Error('Error: Token not supported or invalid contract address'))
+        }
       }
     } else {
       abcSpendInfo.currencyCode = 'ETH'
@@ -1090,7 +1102,7 @@ class EthereumEngine {
 
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumPublicAddress],
-        [getTokenInfo(currencyCode).contractAddress],
+        [tokenInfo.contractAddress],
         gasLimit,
         gasPrice,
         '0',

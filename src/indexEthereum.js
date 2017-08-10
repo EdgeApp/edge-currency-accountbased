@@ -1,6 +1,7 @@
 /**
  * Created by paul on 8/8/17.
  */
+// @flow
 import { txLibInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import { parse, serialize } from 'uri-js'
@@ -113,7 +114,11 @@ class EthereumPlugin {
         const amountStr = getParameterByName('amount', uri)
         if (amountStr && typeof amountStr === 'string') {
           amount = parseFloat(amountStr)
-          let multiplier: string | number = getDenomInfo('ETH').multiplier
+          const denom = getDenomInfo('ETH')
+          if (!denom) {
+            throw new Error('InternalErrorInvalidCurrencyCode')
+          }
+          let multiplier: string | number = denom.multiplier
           if (typeof multiplier !== 'string') {
             multiplier = multiplier.toString()
           }
@@ -144,7 +149,11 @@ class EthereumPlugin {
             if (typeof obj.currencyCode === 'string') {
               currencyCode = obj.currencyCode
             }
-            let multiplier: string | number = getDenomInfo(currencyCode).multiplier
+            const denom = getDenomInfo(currencyCode)
+            if (!denom) {
+              throw new Error('InternalErrorInvalidCurrencyCode')
+            }
+            let multiplier: string | number = denom.multiplier
             if (typeof multiplier !== 'string') {
               multiplier = multiplier.toString()
             }
