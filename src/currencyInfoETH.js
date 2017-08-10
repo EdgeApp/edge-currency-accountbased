@@ -6,7 +6,7 @@ export const txLibInfo = {
 
   getInfo: { // Details of supported currency
     walletTypes: [
-      'ethereum'
+      'wallet:ethereum'
     ],
     currencyName: 'Ethereum',
     currencyCode: 'ETH', // The 3 character code for the currency
