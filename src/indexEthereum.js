@@ -93,17 +93,19 @@ class EthereumPlugin {
 
       derivePublicKey: (walletInfo: any) => {
         const type = walletInfo.type.replace('wallet:', '')
-        let info = walletInfo
-
         if (type === 'ethereum') {
+          let info = Object.assign({}, walletInfo)
+          let keys = Object.assign({}, walletInfo.keys)
+
           const privKey = hexToBuf(walletInfo.keys.ethereumKey)
           const wallet = ethWallet.fromPrivateKey(privKey)
 
           const ethereumAddress = wallet.getAddressString()
           // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
           // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
-          delete info.keys.ethereumKey
-          info.keys.ethereumAddress = ethereumAddress
+          delete keys.ethereumKey
+          keys.ethereumAddress = ethereumAddress
+          info.keys = keys
           return info
         } else {
           throw new Error('InvalidWalletType')

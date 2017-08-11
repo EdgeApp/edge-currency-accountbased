@@ -2,28 +2,45 @@
 const { EthereumPlugin } = require('../lib/indexEthereum.js')
 const assert = require('assert')
 
-function fakeRandom () {
-
+const io = {
+  random (size) {
+    const out = []
+    for (let i = 0; i < size; i++) {
+      out.push(i)
+    }
+    return out
+  }
 }
 
 let plugin
 
 describe('Plugin', function () {
   it('Get currency info', function () {
-    EthereumPlugin.makePlugin({io: {random: fakeRandom}}).then((ethereumPlugin) => {
+    EthereumPlugin.makePlugin({io}).then((ethereumPlugin) => {
       assert.equal(ethereumPlugin.currencyInfo.currencyCode, 'ETH')
       plugin = ethereumPlugin
     })
   })
 })
 
+describe('createPrivateKey', function () {
+  it('Create valid key', function () {
+    const walletInfo = plugin.createPrivateKey('wallet:ethereum')
+    assert.equal(!walletInfo.keys, false)
+    assert.equal(typeof walletInfo.keys.ethereumKey, 'string')
+    assert.equal(walletInfo.keys.ethereumKey, '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f')
+  })
+})
+
 describe('derivePublicKey', function () {
   it('Valid private key', function () {
-    const walletInfo = plugin.derivePublicKey({
+    const walletInfoprivate = {
       type: 'ethereum',
       keys: {'ethereumKey': '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'}
-    })
+    }
+    const walletInfo = plugin.derivePublicKey(walletInfoprivate)
     assert.equal(walletInfo.keys.ethereumAddress.toLowerCase(), '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'.toLowerCase())
+    assert.equal(walletInfoprivate.keys.ethereumKey, '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757')
   })
 
   it('Invalid private key', function () {
