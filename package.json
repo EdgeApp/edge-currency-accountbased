@@ -19,7 +19,7 @@
     "lib/*"
   ],
   "dependencies": {
-    "biggystring": "^1.0.3",
+    "biggystring": "^1.0.5",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
     "ethereumjs-abi": "^0.6.4",
