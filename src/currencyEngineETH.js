@@ -106,7 +106,7 @@ class WalletLocalData {
   blockHeight:string
   lastAddressQueryHeight:string
   nextNonce:string
-  ethereumPublicAddress:string
+  ethereumAddress:string
   totalBalances: any
   enabledTokens:Array<string>
   transactionsObj:any
@@ -129,7 +129,7 @@ class WalletLocalData {
 
     this.lastAddressQueryHeight = '0'
 
-    this.ethereumPublicAddress = ''
+    this.ethereumAddress = ''
     this.enabledTokens = TOKEN_CODES
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
@@ -137,7 +137,7 @@ class WalletLocalData {
       if (typeof data.blockHeight === 'string') this.blockHeight = data.blockHeight
       if (typeof data.lastAddressQueryHeight === 'string') this.lastAddressQueryHeight = data.lastAddressQueryHeight
       if (typeof data.nextNonce === 'string') this.nextNonce = data.nextNonce
-      if (typeof data.ethereumPublicAddress === 'string') this.ethereumPublicAddress = data.ethereumPublicAddress
+      if (typeof data.ethereumAddress === 'string') this.ethereumAddress = data.ethereumAddress
       if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
       if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
       if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
@@ -220,7 +220,7 @@ class ABCTransaction {
 }
 
 class EthereumEngine {
-  keyInfo:any
+  walletInfo:any
   abcTxLibCallbacks:any
   walletLocalFolder:any
   engineOn:boolean
@@ -229,7 +229,7 @@ class EthereumEngine {
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<{}>
 
-  constructor (io_:any, keyInfo:any, opts:any) {
+  constructor (io_:any, walletInfo:any, opts:any) {
     const { walletLocalFolder, callbacks } = opts
 
     io = io_
@@ -237,11 +237,11 @@ class EthereumEngine {
     this.addressesChecked = false
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
-    this.keyInfo = keyInfo
+    this.walletInfo = walletInfo
 
     // Hard coded for testing
-    this.keyInfo.keys.ethereumKey = '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-    this.keyInfo.keys.ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
+    // this.walletInfo.keys.ethereumKey = '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+    // this.walletInfo.keys.ethereumAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
     this.abcTxLibCallbacks = callbacks
     this.walletLocalFolder = walletLocalFolder
   }
@@ -338,7 +338,7 @@ class EthereumEngine {
 
     // const nativeValueBN = new BN(tx.value, 10)
 
-    if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
+    if (tx.from.toLowerCase() === this.walletLocalData.ethereumAddress.toLowerCase()) {
       netNativeAmount = bns.sub('0', tx.value)
 
       if (bns.gte(tx.nonce, this.walletLocalData.nextNonce)) {
@@ -346,7 +346,7 @@ class EthereumEngine {
       }
     } else {
       netNativeAmount = bns.add('0', tx.value)
-      ourReceiveAddresses.push(this.walletLocalData.ethereumPublicAddress.toLowerCase())
+      ourReceiveAddresses.push(this.walletLocalData.ethereumAddress.toLowerCase())
     }
     // const gasPriceBN = new BN(tx.gasPrice, 10)
     // const gasUsedBN = new BN(tx.gasUsed, 10)
@@ -417,7 +417,7 @@ class EthereumEngine {
     //
     // const nativeValueBN = new BN(tx.value, 10)
     //
-    // if (tx.from.toLowerCase() === this.walletLocalData.ethereumPublicAddress.toLowerCase()) {
+    // if (tx.from.toLowerCase() === this.walletLocalData.ethereumAddress.toLowerCase()) {
     //   netNativeAmountBN.iadd(nativeValueBN)
     //   const newNonceBN = new BN(tx.nonce, 16)
     //   const nonceBN = new BN(this.walletLocalData.nextNonce)
@@ -428,7 +428,7 @@ class EthereumEngine {
     //   }
     // }
     //
-    // if (tx.from === this.walletLocalData.ethereumPublicAddress) {
+    // if (tx.from === this.walletLocalData.ethereumAddress) {
     //   netNativeAmountBN.isub(nativeValueBN)
     // } else {
     //   netNativeAmountBN.iadd(nativeValueBN)
@@ -445,11 +445,11 @@ class EthereumEngine {
     let ourReceiveAddresses:Array<string> = []
 
     let nativeAmount
-    if (fromAddress === this.walletLocalData.ethereumPublicAddress) {
+    if (fromAddress === this.walletLocalData.ethereumAddress) {
       nativeAmount = (0 - tx.total).toString(10)
     } else {
       nativeAmount = tx.total.toString(10)
-      ourReceiveAddresses.push(this.walletLocalData.ethereumPublicAddress)
+      ourReceiveAddresses.push(this.walletLocalData.ethereumAddress)
     }
 
     const ethParams = new EthereumParams(
@@ -541,7 +541,7 @@ class EthereumEngine {
   }
 
   async checkTransactionsFetch () {
-    const address = this.walletLocalData.ethereumPublicAddress
+    const address = this.walletLocalData.ethereumAddress
     const endBlock = '999999999'
     let startBlock = '0'
     let checkAddressSuccess = true
@@ -626,7 +626,7 @@ class EthereumEngine {
   }
 
   async checkUnconfirmedTransactionsFetch () {
-    const address = this.walletLocalData.ethereumPublicAddress
+    const address = this.walletLocalData.ethereumAddress
     const url = sprintf('https://api.blockcypher.com/v1/eth/main/txs')
     const jsonObj = await this.fetchGet(url)
 
@@ -703,7 +703,7 @@ class EthereumEngine {
   async checkAddressesInnerLoop () {
     while (this.engineOn) {
       // Ethereum only has one address
-      const address = this.walletLocalData.ethereumPublicAddress
+      const address = this.walletLocalData.ethereumAddress
       let url = ''
       let promiseArray = []
 
@@ -720,7 +720,7 @@ class EthereumEngine {
           if (this.getTokenStatus(tk)) {
             const tokenInfo = getTokenInfo(tk)
             if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-              url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumPublicAddress)
+              url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumAddress)
             } else {
               continue
             }
@@ -848,14 +848,14 @@ class EthereumEngine {
           .getText(DATA_STORE_FOLDER, 'walletLocalData')
 
       this.walletLocalData = new WalletLocalData(result)
-      this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
+      this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
       this.engineLoop()
     } catch (err) {
       try {
         io.console.info(err)
         io.console.info('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(null)
-        this.walletLocalData.ethereumPublicAddress = this.keyInfo.keys.ethereumPublicAddress
+        this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
         await this.walletLocalFolder
           .folder(DATA_STORE_FOLDER)
           .file(DATA_STORE_FILE)
@@ -1009,7 +1009,7 @@ class EthereumEngine {
 
   // synchronous
   getFreshAddress (options:any) {
-    return this.walletLocalData.ethereumPublicAddress
+    return this.walletLocalData.ethereumAddress
   }
 
   // synchronous
@@ -1086,7 +1086,7 @@ class EthereumEngine {
       gasPrice = '40000000000' // 40 Gwei
 
       ethParams = new EthereumParams(
-        [this.walletLocalData.ethereumPublicAddress],
+        [this.walletLocalData.ethereumAddress],
         [abcSpendInfo.spendTargets[0].publicAddress],
         gasLimit,
         gasPrice,
@@ -1101,7 +1101,7 @@ class EthereumEngine {
       gasPrice = '40000000000' // 40 Gwei
 
       ethParams = new EthereumParams(
-        [this.walletLocalData.ethereumPublicAddress],
+        [this.walletLocalData.ethereumAddress],
         [tokenInfo.contractAddress],
         gasLimit,
         gasPrice,
@@ -1211,7 +1211,7 @@ class EthereumEngine {
       chainId: 1
     }
 
-    const privKey = hexToBuf(this.keyInfo.keys.ethereumKey)
+    const privKey = hexToBuf(this.walletInfo.keys.ethereumKey)
     const wallet = ethWallet.fromPrivateKey(privKey)
 
     io.console.info(wallet.getAddressString())
