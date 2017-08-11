@@ -1,6 +1,7 @@
 /* global describe it */
 const { EthereumPlugin } = require('../lib/indexEthereum.js')
 const assert = require('assert')
+const bns = require('biggystring').bns
 
 const io = {
   random (size) {
@@ -16,19 +17,21 @@ function makePlugin () {
   return EthereumPlugin.makePlugin({io})
 }
 
-// function makeEngineStart () {
-//   const plugin = makePlugin()
-//   const walletInfoPrivate = plugin.createPrivateKey('wallet:shitcoin')
-//   const publicKeys = plugin.derivePublicKey(walletInfoPrivate)
-//   const keys = Object.assign({}, walletInfoPrivate.keys, publicKeys)
-//   const walletInfo = walletInfoPrivate
-//   walletInfo.keys = keys
-//   plugin.makeEngine(walletInfo).then(engine => {
-//     engine.startEngine().then(() => {
-//       return engine
-//     })
-//   })
-// }
+function makeEngineStart () {
+  return makePlugin().then((plugin) => {
+    const type = 'wallet:ethereum'
+    const walletInfoPrivate = plugin.createPrivateKey(type)
+    walletInfoPrivate.type = type
+    const publicKeys = plugin.derivePublicKey(walletInfoPrivate)
+    const keys = Object.assign({}, walletInfoPrivate.keys, publicKeys)
+    const walletInfo = walletInfoPrivate
+    walletInfo.keys = keys
+    const engine = plugin.makeEngine(walletInfo)
+    engine.startEngine().then(() => {
+      return engine
+    })
+  })
+}
 
 describe('Plugin', function () {
   it('Get currency info', function () {
@@ -206,6 +209,36 @@ describe('encodeUri', function () {
             message: 'Hello World, I miss you !'
           }
         )
+      })
+    })
+  })
+})
+
+describe('Engine', function () {
+  it('Get block height', function () {
+    makeEngineStart().then(engine => {
+      const height = engine.getBlockHeight()
+      const success = (height === '0' || bns.gt(height, '100000'))
+      assert.equal(success, true)
+    })
+  })
+  it('Make spend', function () {
+    makeEngineStart().then(engine => {
+      const abcSpendInfo = {
+        metadata: {
+          name: 'Transfer to College Fund',
+          category: 'Transfer:Wallet:College Fund'
+        },
+        spendTargets: [
+          {
+            currencyCode: 'TRD',
+            nativeAmount: '210000' // 2.1 TRD
+          }
+        ]
+      }
+
+      engine.makeSpend(abcSpendInfo).then(abcTx => {
+        console.log(abcTx)
       })
     })
   })
