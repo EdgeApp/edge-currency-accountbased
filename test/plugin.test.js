@@ -17,6 +17,16 @@ describe('Plugin', function () {
   })
 })
 
+describe('derivePublicKey', function () {
+  it('Fixed key', function () {
+    const walletInfo = plugin.derivePublicKey({
+      type: 'ethereum',
+      keys: {'ethereumKey': '389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'}
+    })
+    assert.equal(walletInfo.keys.ethereumAddress.toLowerCase(), '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'.toLowerCase())
+  })
+})
+
 describe('parseUri', function () {
   it('address only', function () {
     const parsedUri = plugin.parseUri('0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')

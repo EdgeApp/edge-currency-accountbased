@@ -6,6 +6,7 @@ import { txLibInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
+import { BN } from 'bn.js'
 
 const Buffer = require('buffer/').Buffer
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
@@ -22,6 +23,14 @@ function getDenomInfo (denom:string) {
   return txLibInfo.getInfo.denominations.find(element => {
     return element.name === denom
   })
+}
+
+function hexToBuf (hex:string) {
+  const noHexPrefix = hex.replace('0x', '')
+  const noHexPrefixBN = new BN(noHexPrefix, 16)
+  const array = noHexPrefixBN.toArray()
+  const buf = Buffer.from(array)
+  return buf
 }
 
 function getParameterByName (param, url) {
@@ -62,6 +71,46 @@ class EthereumPlugin {
     return {
       currencyInfo: txLibInfo.getInfo,
 
+      createPrivateKey: (walletType: string) => {
+        const type = walletType.replace('wallet:', '')
+
+        if (type === 'ethereum') {
+          const cryptoObj = {
+            randomBytes: randomBuffer
+          }
+          ethWallet.overrideCrypto(cryptoObj)
+
+          let wallet = ethWallet.generate(false)
+          const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
+          return {
+            type: walletType,
+            keys: { ethereumKey }
+          }
+        } else {
+          throw new Error('InvalidWalletType')
+        }
+      },
+
+      derivePublicKey: (walletInfo: any) => {
+        const type = walletInfo.type.replace('wallet:', '')
+        let info = walletInfo
+
+        if (type === 'ethereum') {
+          const privKey = hexToBuf(walletInfo.keys.ethereumKey)
+          const wallet = ethWallet.fromPrivateKey(privKey)
+
+          const ethereumAddress = wallet.getAddressString()
+          // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
+          // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
+          delete info.keys.ethereumKey
+          info.keys.ethereumAddress = ethereumAddress
+          return info
+        } else {
+          throw new Error('InvalidWalletType')
+        }
+      },
+
+      // XXX Deprecated. To be removed once Core supports createPrivateKey and derivePublicKey -paulvp
       createMasterKeys: (walletType: string) => {
         if (walletType === 'ethereum') {
           const cryptoObj = {
