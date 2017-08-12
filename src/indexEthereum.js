@@ -69,6 +69,7 @@ class EthereumPlugin {
     io = opts.io
 
     return {
+      pluginName: 'ethereum',
       currencyInfo: txLibInfo.getInfo,
 
       createPrivateKey: (walletType: string) => {
