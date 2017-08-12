@@ -1,15 +1,20 @@
 /* global describe it */
 const { EthereumPlugin } = require('../lib/indexEthereum.js')
 const assert = require('assert')
-const bns = require('biggystring').bns
 
 const io = {
   random (size) {
     const out = []
     for (let i = 0; i < size; i++) {
-      out.push(i)
+      const rand = (((i + 23) * 38239875) / (i + 481)) % 255
+      out.push(rand)
     }
     return out
+  },
+  console: {
+    info: console.log,
+    warn: console.log,
+    error: console.log
   }
 }
 
@@ -17,18 +22,22 @@ function makePlugin () {
   return EthereumPlugin.makePlugin({io})
 }
 
-function makeEngineStart () {
-  return makePlugin().then((plugin) => {
-    const type = 'wallet:ethereum'
-    const walletInfoPrivate = plugin.createPrivateKey(type)
-    walletInfoPrivate.type = type
-    const publicKeys = plugin.derivePublicKey(walletInfoPrivate)
-    const keys = Object.assign({}, walletInfoPrivate.keys, publicKeys)
-    const walletInfo = walletInfoPrivate
-    walletInfo.keys = keys
-    const engine = plugin.makeEngine(walletInfo)
-    engine.startEngine().then(() => {
-      return engine
+function makeEngine () {
+  return new Promise((resolve, reject) => {
+    makePlugin().then((plugin) => {
+      const type = 'wallet:ethereum'
+      const keys = plugin.createPrivateKey(type)
+      const walletInfo = {
+        type,
+        keys
+      }
+      const publicKeys = plugin.derivePublicKey(walletInfo)
+      const keys2 = Object.assign({}, walletInfo.keys, publicKeys)
+      walletInfo.keys = keys2
+      const engine = plugin.makeEngine(walletInfo)
+      resolve(engine)
+    }).catch(error => {
+      reject(error)
     })
   })
 }
@@ -47,7 +56,7 @@ describe('createPrivateKey', function () {
       const privateKeys = plugin.createPrivateKey('wallet:ethereum')
       assert.equal(!privateKeys, false)
       assert.equal(typeof privateKeys.ethereumKey, 'string')
-      assert.equal(privateKeys.ethereumKey, '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f')
+      assert.equal(privateKeys.ethereumKey, 'a7e6eab74dafdeddae52cb1b444727e3810062a9d7ededd9b27b34de7d119b1f')
     })
   })
 })
@@ -215,31 +224,14 @@ describe('encodeUri', function () {
 })
 
 describe('Engine', function () {
-  it('Get block height', function () {
-    makeEngineStart().then(engine => {
-      const height = engine.getBlockHeight()
-      const success = (height === '0' || bns.gt(height, '100000'))
-      assert.equal(success, true)
+  it('startEngine exists', function () {
+    makeEngine().then(engine => {
+      assert.equal(typeof engine.startEngine, 'function')
     })
   })
   it('Make spend', function () {
-    makeEngineStart().then(engine => {
-      const abcSpendInfo = {
-        metadata: {
-          name: 'Transfer to College Fund',
-          category: 'Transfer:Wallet:College Fund'
-        },
-        spendTargets: [
-          {
-            currencyCode: 'TRD',
-            nativeAmount: '210000' // 2.1 TRD
-          }
-        ]
-      }
-
-      engine.makeSpend(abcSpendInfo).then(abcTx => {
-        console.log(abcTx)
-      })
+    makeEngine().then(engine => {
+      assert.equal(typeof engine.killEngine, 'function')
     })
   })
 })
