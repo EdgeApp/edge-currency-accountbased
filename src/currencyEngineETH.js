@@ -29,28 +29,6 @@ const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const baseUrl = 'https://api.etherscan.io/api'
 let io
 
-// Utility functions
-//
-// satoshiToNative converts satoshi-like units to a big number string nativeAmount which is in Wei.
-// amountSatoshi is 1/100,000,000 of an ether to match the satoshi units of bitcoin
-//
-function satoshiToNative (amountSatoshi: number) {
-  const converter = new BN('10000000000', 10)
-  let nativeAmountBN = new BN(amountSatoshi.toString(), 10)
-  nativeAmountBN = nativeAmountBN.mul(converter)
-  const nativeAmount = nativeAmountBN.toString(10)
-  return nativeAmount
-}
-
-function nativeToSatoshi (nativeAmount:string) {
-  let nativeAmountBN = new BN(nativeAmount, 10)
-  // return nativeAmountBN.toNumber()
-  const converter = new BN('10000000000', 10)
-  const amountSatoshiBN = nativeAmountBN.div(converter)
-  const amountSatoshi = amountSatoshiBN.toNumber()
-  return amountSatoshi
-}
-
 const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 function validateObject (object, schema) {
@@ -185,7 +163,6 @@ class ABCTransaction {
   txid:string
   date:number
   currencyCode:string
-  amountSatoshi:number
   blockHeight:string
   nativeAmount:string
   networkFee:string
@@ -211,7 +188,6 @@ class ABCTransaction {
     } else {
       this.nativeAmount = '0'
     }
-    this.amountSatoshi = nativeToSatoshi(nativeAmount)
     this.ourReceiveAddresses = ourReceiveAddresses
     this.networkFee = networkFee
     this.signedTx = signedTx
@@ -528,8 +504,8 @@ class EthereumEngine {
         if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
           this.walletLocalData.totalBalances[tk] = balance
 
-          const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[tk])
-          this.abcTxLibCallbacks.onBalanceChanged(tk, balanceSatoshi, this.walletLocalData.totalBalances[tk])
+          const nativeBalance = this.walletLocalData.totalBalances[tk]
+          this.abcTxLibCallbacks.onBalanceChanged(tk, nativeBalance, this.walletLocalData.totalBalances[tk])
         }
       } else {
         checkAddressSuccess = false
@@ -898,7 +874,7 @@ class EthereumEngine {
   }
 
   // synchronous
-  getBalance (options:any) {
+  getBalance (options:any):string {
     let currencyCode = PRIMARY_CURRENCY
 
     if (typeof options !== 'undefined') {
@@ -915,15 +891,15 @@ class EthereumEngine {
     }
 
     if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
-      return 0
+      return '0'
     } else {
-      const balanceSatoshi = nativeToSatoshi(this.walletLocalData.totalBalances[currencyCode])
-      return balanceSatoshi
+      const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+      return nativeBalance
     }
   }
 
   // synchronous
-  getNumTransactions (options:any) {
+  getNumTransactions (options:any):number {
     let currencyCode = PRIMARY_CURRENCY
 
     const valid = validateObject(options, {
@@ -1035,7 +1011,7 @@ class EthereumEngine {
             'properties': {
               'currencyCode': { 'type': 'string' },
               'publicAddress': { 'type': 'string' },
-              'amountSatoshi': { 'type': 'number' },
+              'amountSatoshi': { 'type': 'string' },
               'nativeAmount': { 'type': 'string' },
               'destMetadata': { 'type': 'object' },
               'destWallet': { 'type': 'object' }
@@ -1117,9 +1093,6 @@ class EthereumEngine {
     let nativeAmount = '0'
     if (typeof abcSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = abcSpendInfo.spendTargets[0].nativeAmount
-    } else if (typeof abcSpendInfo.spendTargets[0].amountSatoshi === 'number') {
-      nativeAmount = satoshiToNative(abcSpendInfo.spendTargets[0].amountSatoshi)
-    } else {
       throw (new Error('Error: no amount specified'))
     }
 
