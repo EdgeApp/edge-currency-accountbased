@@ -220,6 +220,18 @@ class EthereumEngine {
     // this.walletInfo.keys.ethereumAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
     this.abcTxLibCallbacks = callbacks
     this.walletLocalFolder = walletLocalFolder
+
+    // Fix up old accounts that had messed up keyInfo structures
+    if (typeof this.walletInfo.keys.ethereumPublicAddress === 'string') {
+      this.walletInfo.keys.ethereumAddress = this.walletInfo.keys.ethereumPublicAddress
+    } else if (typeof this.walletInfo.keys.keys !== 'undefined') {
+      if (typeof this.walletInfo.keys.keys.ethereumPublicAddress === 'string') {
+        this.walletInfo.keys.ethereumAddress = this.walletInfo.keys.keys.ethereumPublicAddress
+      }
+      if (typeof this.walletInfo.keys.keys.ethereumKey === 'string') {
+        this.walletInfo.keys.ethereumKey = this.walletInfo.keys.keys.ethereumKey
+      }
+    }
   }
 
   // *************************************
