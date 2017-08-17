@@ -12,8 +12,8 @@
     "url": "git@github.com:Airbitz/airbitz-currency-ethereum.git"
   },
   "url": "https://airbitz.co",
-  "main": "./lib/index.js",
-  "module": "./lib/index.es.js",
+  "main": "./lib/indexEthereum.js",
+  "module": "./lib/indexEthereum.es.js",
   "files": [
     "changelog.md",
     "lib/*"
@@ -28,7 +28,6 @@
     "ethereumjs-wallet": "git+ssh://git@github.com:Airbitz/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
     "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1",
-    "updot": "^1.0.2",
     "uri-js": "^3.0.2"
   },
   "devDependencies": {
@@ -46,6 +45,7 @@
     "rollup": "^0.43.0",
     "rollup-plugin-babel": "^2.7.1",
     "standard": "^10.0.2",
+    "updot": "^1.0.2",
     "webpack": "^1.14.0"
   },
   "standard": {

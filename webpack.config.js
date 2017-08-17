@@ -4,7 +4,6 @@
 
 module.exports = {
   entry: './src/export-fixes.js',
-  externals: ['buffer'],
   module: {
     loaders: [{ test: /\.json$/, loader: 'json-loader' }]
   },

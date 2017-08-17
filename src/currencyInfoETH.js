@@ -1,19 +1,22 @@
 /* global */
+// @flow
 
 export const txLibInfo = {
-  supportedTokens: [ 'REP', 'WINGS', 'LUN' ],
+  supportedTokens: [ 'REP', 'WINGS' ],
 
   getInfo: { // Details of supported currency
     walletTypes: [
-      'ethereum'
+      'wallet:ethereum'
     ],
     currencyName: 'Ethereum',
     currencyCode: 'ETH', // The 3 character code for the currency
+    addressExplorer: 'https://etherscan.io/address/%s',
+    transactionExplorer: 'https://etherscan.io/tx/%s',
     denominations: [
       // An array of Objects of the possible denominations for this currency
       {
         name: 'ETH',
-        multiplier: 100000000,
+        multiplier: '1000000000000000000',
         symbol: 'Ξ'
       }
     ],
@@ -26,7 +29,7 @@ export const txLibInfo = {
         denominations: [
           {
             name: 'REP',
-            multiplier: 100000000
+            multiplier: '1000000000000000000'
           }
         ],
         contractAddress: '0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6',
@@ -38,21 +41,10 @@ export const txLibInfo = {
         denominations: [
           {
             name: 'WINGS',
-            multiplier: 100000000
+            multiplier: '1000000000000000000'
           }
         ],
         contractAddress: '0x667088b212ce3d06a1b553a7221E1fD19000d9aF'
-      },
-      {
-        currencyCode: 'LUN',
-        currencyName: 'Lunyr',
-        denominations: [
-          {
-            name: 'LUN',
-            multiplier: 100000000
-          }
-        ],
-        contractAddress: '0xfa05a73ffe78ef8f1a739473e462c54bae6567d9'
       }
     ]
   }

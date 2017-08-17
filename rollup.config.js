@@ -2,7 +2,7 @@ import babel from 'rollup-plugin-babel'
 const packageJson = require('./package.json')
 
 export default {
-  entry: 'src/txLib.js',
+  entry: 'src/indexEthereum.js',
   external: Object.keys(packageJson.dependencies),
   plugins: [babel({})],
 
