@@ -305,7 +305,7 @@ class EthereumEngine {
               'Block height changed: ' + this.walletLocalData.blockHeight
             )
             this.abcTxLibCallbacks.onBlockHeightChanged(
-              this.walletLocalData.blockHeight
+              parseInt(this.walletLocalData.blockHeight)
             )
           }
         }
@@ -812,7 +812,7 @@ class EthereumEngine {
 
   doInitialCallbacks () {
     this.abcTxLibCallbacks.onBlockHeightChanged(
-      this.walletLocalData.blockHeight
+      parseInt(this.walletLocalData.blockHeight)
     )
 
     for (let currencyCode of TOKEN_CODES) {
@@ -865,8 +865,8 @@ class EthereumEngine {
   }
 
   // synchronous
-  getBlockHeight ():string {
-    return this.walletLocalData.blockHeight
+  getBlockHeight ():number {
+    return parseInt(this.walletLocalData.blockHeight)
   }
 
   // asynchronous
