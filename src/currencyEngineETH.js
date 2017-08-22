@@ -1105,6 +1105,7 @@ class EthereumEngine {
     let nativeAmount = '0'
     if (typeof abcSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = abcSpendInfo.spendTargets[0].nativeAmount
+    } else {
       throw (new Error('Error: no amount specified'))
     }
 
