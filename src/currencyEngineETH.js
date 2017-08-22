@@ -1052,7 +1052,7 @@ class EthereumEngine {
     if (typeof abcSpendInfo.currencyCode === 'string') {
       if (!this.getTokenStatus(abcSpendInfo.currencyCode)) {
         throw (new Error('Error: Token not supported or enabled'))
-      } else {
+      } else if (abcSpendInfo.currencyCode !== 'ETH') {
         tokenInfo = getTokenInfo(abcSpendInfo.currencyCode)
         if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
           throw (new Error('Error: Token not supported or invalid contract address'))
