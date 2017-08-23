@@ -689,6 +689,8 @@ class EthereumEngine {
           this.processBlockCypherTransaction(tx)
         }
       }
+    } else {
+      console.log('Invalid data for unconfirmed transactions')
     }
   }
 
