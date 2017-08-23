@@ -615,8 +615,15 @@ class EthereumEngine {
 
   async checkUnconfirmedTransactionsFetch () {
     const address = this.walletLocalData.ethereumAddress
-    const url = sprintf('https://api.blockcypher.com/v1/eth/main/txs')
-    const jsonObj = await this.fetchGet(url)
+    const url = sprintf('http://supereth1.airbitz.co:8080/v1/eth/main/txs')
+    let jsonObj = null
+    try {
+      jsonObj = await this.fetchGet(url)
+    } catch (e) {
+      console.log(e)
+      console.log('Failed to fetch unconfirmed transactions')
+      return
+    }
 
     const valid = validateObject(jsonObj, {
       'type': 'array',
