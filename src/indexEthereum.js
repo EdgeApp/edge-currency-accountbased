@@ -161,10 +161,7 @@ class EthereumPlugin {
           if (!denom) {
             throw new Error('InternalErrorInvalidCurrencyCode')
           }
-          let multiplier: string | number = denom.multiplier
-          if (typeof multiplier !== 'string') {
-            multiplier = multiplier.toString()
-          }
+          const multiplier: string | number = denom.multiplier
           nativeAmount = bns.mulf(amount, multiplier)
           currencyCode = 'ETH'
         }
@@ -196,10 +193,7 @@ class EthereumPlugin {
             if (!denom) {
               throw new Error('InternalErrorInvalidCurrencyCode')
             }
-            let multiplier: string | number = denom.multiplier
-            if (typeof multiplier !== 'string') {
-              multiplier = multiplier.toString()
-            }
+            const multiplier: string | number = denom.multiplier
             let amount = bns.divf(obj.nativeAmount, multiplier)
 
             queryString += 'amount=' + amount.toString() + '&'
