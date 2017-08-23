@@ -401,32 +401,6 @@ class EthereumEngine {
   }
 
   processBlockCypherTransaction (tx:any) {
-    // let netNativeAmountBN = new BN('0', 10) // Amount received into wallet
-    //
-    // const nativeValueBN = new BN(tx.value, 10)
-    //
-    // if (tx.from.toLowerCase() === this.walletLocalData.ethereumAddress.toLowerCase()) {
-    //   netNativeAmountBN.iadd(nativeValueBN)
-    //   const newNonceBN = new BN(tx.nonce, 16)
-    //   const nonceBN = new BN(this.walletLocalData.nextNonce)
-    //
-    //   if (newNonceBN.gte(nonceBN)) {
-    //     newNonceBN.iadd(new BN('1', 10))
-    //     this.walletLocalData.nextNonce = newNonceBN.toNumber()
-    //   }
-    // }
-    //
-    // if (tx.from === this.walletLocalData.ethereumAddress) {
-    //   netNativeAmountBN.isub(nativeValueBN)
-    // } else {
-    //   netNativeAmountBN.iadd(nativeValueBN)
-    // }
-    // const netNativeAmount = netNativeAmountBN.toString(10)
-    //
-    // const gasPriceBN = new BN(tx.gasPrice, 10)
-    // const gasUsedBN = new BN(tx.gasUsed, 10)
-    // const etherUsedBN = gasPriceBN.mul(gasUsedBN)
-    // const networkFee = etherUsedBN.toString(10)
     const fromAddress = '0x' + tx.inputs.addresses[0]
     const toAddress = '0x' + tx.outputs.addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
