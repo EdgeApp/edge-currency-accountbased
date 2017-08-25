@@ -3,7 +3,8 @@
  */
 // @flow
 
-import { currencyInfo, EthereumSettings } from './currencyInfoETH.js'
+import { currencyInfo } from './currencyInfoETH.js'
+import type { EthereumSettings } from './currencyInfoETH.js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
