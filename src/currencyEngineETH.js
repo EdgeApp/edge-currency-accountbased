@@ -25,7 +25,7 @@ const ETHERSCAN_API_KEY = ''
 
 const PRIMARY_CURRENCY = currencyInfo.getInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(currencyInfo.supportedTokens)
-const CHECK_UNCONFIRMED = false
+const CHECK_UNCONFIRMED = true
 
 let io
 
@@ -597,7 +597,7 @@ class EthereumEngine {
 
   async checkUnconfirmedTransactionsFetch () {
     const address = this.walletLocalData.ethereumAddress
-    const url = sprintf('%s/v1/eth/main/txs', this.currentSettings.superethServers[0])
+    const url = sprintf('%s/v1/eth/main/txs/%s', this.currentSettings.superethServers[0], address)
     let jsonObj = null
     try {
       jsonObj = await this.fetchGet(url)
