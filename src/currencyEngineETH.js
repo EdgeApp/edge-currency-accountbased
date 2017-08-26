@@ -30,7 +30,9 @@ const CHECK_UNCONFIRMED = true
 
 let io
 
-const snooze = ms => new Promise(resolve => setTimeout(resolve, ms))
+function snooze (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 function validateObject (object, schema) {
   const result = validate(object, schema)
