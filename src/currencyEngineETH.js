@@ -34,6 +34,10 @@ function snooze (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+function normalizeAddress (address) {
+  return address.toLowerCase().replace('0x', '')
+}
+
 function validateObject (object, schema) {
   const result = validate(object, schema)
 
@@ -599,7 +603,7 @@ class EthereumEngine {
   }
 
   async checkUnconfirmedTransactionsFetch () {
-    const address = this.walletLocalData.ethereumAddress
+    const address = normalizeAddress(this.walletLocalData.ethereumAddress)
     const url = sprintf('%s/v1/eth/main/txs/%s', this.currentSettings.superethServers[0], address)
     let jsonObj = null
     try {
@@ -668,8 +672,8 @@ class EthereumEngine {
 
       for (const tx of transactions) {
         if (
-          tx.inputs[0].addresses[0] === address ||
-          tx.outputs[0].addresses[0] === address
+          normalizeAddress(tx.inputs[0].addresses[0]) === address ||
+          normalizeAddress(tx.outputs[0].addresses[0]) === address
         ) {
           this.processBlockCypherTransaction(tx)
         }
