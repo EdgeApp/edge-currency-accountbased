@@ -30,12 +30,20 @@ const CHECK_UNCONFIRMED = true
 
 let io
 
-function snooze (ms) {
+function snooze (ms:number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function normalizeAddress (address) {
+function normalizeAddress (address:string) {
   return address.toLowerCase().replace('0x', '')
+}
+
+function addHexPrefix (value:string) {
+  if (value.startsWith('0x')) {
+    return value
+  } else {
+    return '0x' + value
+  }
 }
 
 function validateObject (object, schema) {
@@ -407,13 +415,13 @@ class EthereumEngine {
   }
 
   processUnconfirmedTransaction (tx:any) {
-    const fromAddress = '0x' + tx.inputs.addresses[0]
-    const toAddress = '0x' + tx.outputs.addresses[0]
+    const fromAddress = '0x' + tx.inputs[0].addresses[0]
+    const toAddress = '0x' + tx.outputs[0].addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
     let ourReceiveAddresses:Array<string> = []
 
     let nativeAmount
-    if (fromAddress === this.walletLocalData.ethereumAddress) {
+    if (normalizeAddress(fromAddress) === normalizeAddress(this.walletLocalData.ethereumAddress)) {
       nativeAmount = (0 - tx.total).toString(10)
     } else {
       nativeAmount = tx.total.toString(10)
@@ -432,7 +440,7 @@ class EthereumEngine {
     )
 
     let abcTransaction = new ABCTransaction(
-      tx.hash,
+      addHexPrefix(tx.hash),
       epochTime,
       'ETH',
       tx.block_height,
@@ -459,7 +467,7 @@ class EthereumEngine {
       const transactionsArray:Array<ABCTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
       const abcTx:ABCTransaction = transactionsArray[ idx ]
 
-      if (abcTx.blockHeight !== tx.block_height) {
+      if (abcTx.blockHeight < tx.block_height || abcTx.date > epochTime) {
         io.console.info(sprintf('processUnconfirmedTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
         this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
@@ -731,7 +739,7 @@ class EthereumEngine {
 
     const currency = this.walletLocalData.transactionsObj[currencyCode]
     return currency.findIndex(element => {
-      return element.txid === txid
+      return normalizeAddress(element.txid) === normalizeAddress(txid)
     })
   }
 
