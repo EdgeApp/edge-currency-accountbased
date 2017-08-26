@@ -415,7 +415,7 @@ class EthereumEngine {
     }
   }
 
-  processBlockCypherTransaction (tx:any) {
+  processUnconfirmedTransaction (tx:any) {
     const fromAddress = '0x' + tx.inputs.addresses[0]
     const toAddress = '0x' + tx.outputs.addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
@@ -455,7 +455,7 @@ class EthereumEngine {
 
     const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
     if (idx === -1) {
-      io.console.info(sprintf('processBlockCypherTransaction: New transaction: %s', tx.hash))
+      io.console.info(sprintf('processUnconfirmedTransaction: New transaction: %s', tx.hash))
 
       // New transaction not in database
       this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
@@ -477,7 +477,7 @@ class EthereumEngine {
         )
         this.transactionsChangedArray = []
       } else {
-        io.console.info(sprintf('processBlockCypherTransaction: Old transaction. No Update: %s', tx.hash))
+        io.console.info(sprintf('processUnconfirmedTransaction: Old transaction. No Update: %s', tx.hash))
       }
     }
   }
@@ -675,7 +675,7 @@ class EthereumEngine {
           normalizeAddress(tx.inputs[0].addresses[0]) === address ||
           normalizeAddress(tx.outputs[0].addresses[0]) === address
         ) {
-          this.processBlockCypherTransaction(tx)
+          this.processUnconfirmedTransaction(tx)
         }
       }
     } else {
