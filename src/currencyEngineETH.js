@@ -21,7 +21,7 @@ const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const SAVE_DATASTORE_MILLISECONDS = 10000
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = '40320' // (4 * 60 * 24 * 7) // ~ one week
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 
 const PRIMARY_CURRENCY = currencyInfo.getInfo.currencyCode
@@ -88,38 +88,34 @@ function getTokenInfo (token:string) {
 // }
 
 class WalletLocalData {
-  blockHeight:string
-  lastAddressQueryHeight:string
+  blockHeight:number
+  lastAddressQueryHeight:number
   nextNonce:string
   ethereumAddress:string
-  totalBalances: any
+  totalBalances: {[currencyCode: string]: string}
   enabledTokens:Array<string>
-  transactionsObj:any
+  transactionsObj:{[currencyCode: string]: Array<ABCTransaction>}
 
   constructor (jsonString) {
-    this.blockHeight = '0'
-    this.totalBalances = {
-      ETH: '0',
-      REP: '0',
-      WINGS: '0'
-    }
+    this.blockHeight = 0
 
-    this.transactionsObj = {}
+    const totalBalances:{[currencyCode: string]: string} = {}
+    this.totalBalances = totalBalances
+
     this.nextNonce = '0'
 
-    // Array of ABCTransaction objects sorted by date from newest to oldest
-    for (let currencyCode of TOKEN_CODES) {
-      this.transactionsObj[currencyCode] = []
-    }
+    this.lastAddressQueryHeight = 0
 
-    this.lastAddressQueryHeight = '0'
+    // Dumb extra local var needed to make Flow happy
+    const transactionsObj:{[currencyCode: string]: Array<ABCTransaction>} = {}
+    this.transactionsObj = transactionsObj
 
     this.ethereumAddress = ''
     this.enabledTokens = TOKEN_CODES
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
 
-      if (typeof data.blockHeight === 'string') this.blockHeight = data.blockHeight
+      if (typeof data.blockHeight === 'number') this.blockHeight = data.blockHeight
       if (typeof data.lastAddressQueryHeight === 'string') this.lastAddressQueryHeight = data.lastAddressQueryHeight
       if (typeof data.nextNonce === 'string') this.nextNonce = data.nextNonce
       if (typeof data.ethereumAddress === 'string') this.ethereumAddress = data.ethereumAddress
@@ -137,7 +133,6 @@ class EthereumParams {
   gasPrice: string
   gasUsed: string
   cumulativeGasUsed: string
-  blockHash: string
   errorVal: number
   tokenRecipientAddress:string|null
 
@@ -147,7 +142,6 @@ class EthereumParams {
                gasPrice:string,
                gasUsed:string,
                cumulativeGasUsed:string,
-               blockHash: string,
                errorVal: number,
                tokenRecipientAddress:string|null) {
     this.from = from
@@ -157,7 +151,6 @@ class EthereumParams {
     this.gasUsed = gasUsed
     this.errorVal = errorVal
     this.cumulativeGasUsed = cumulativeGasUsed
-    this.blockHash = blockHash
     if (typeof tokenRecipientAddress === 'string') {
       this.tokenRecipientAddress = tokenRecipientAddress
     } else {
@@ -170,7 +163,7 @@ class ABCTransaction {
   txid:string
   date:number
   currencyCode:string
-  blockHeight:string
+  blockHeight:number
   nativeAmount:string
   networkFee:string
   ourReceiveAddresses:Array<string>
@@ -180,7 +173,7 @@ class ABCTransaction {
   constructor (txid:string,
                date:number,
                currencyCode:string,
-               blockHeight:string,
+               blockHeight:number,
                nativeAmount:string,
                networkFee:string,
                ourReceiveAddresses:Array<string>,
@@ -312,16 +305,15 @@ class EthereumEngine {
         })
 
         if (valid) {
-          const blockHeight = jsonObj.result.slice(2)
-          if (!bns.eq(this.walletLocalData.blockHeight, blockHeight)) {
-            this.walletLocalData.blockHeight = toDecimal(blockHeight) // Convert to decimal
+          const hexBlockHeight:string = jsonObj.result.slice(2)
+          const blockHeight:number = parseInt(toDecimal(hexBlockHeight))
+          if (this.walletLocalData.blockHeight !== blockHeight) {
+            this.walletLocalData.blockHeight = blockHeight // Convert to decimal
             this.walletLocalDataDirty = true
             io.console.info(
-              'Block height changed: ' + this.walletLocalData.blockHeight
+              'Block height changed: ' + this.walletLocalData.blockHeight.toString()
             )
-            this.abcTxLibCallbacks.onBlockHeightChanged(
-              parseInt(this.walletLocalData.blockHeight)
-            )
+            this.abcTxLibCallbacks.onBlockHeightChanged(this.walletLocalData.blockHeight)
           }
         }
       } catch (err) {
@@ -364,7 +356,6 @@ class EthereumEngine {
       tx.gasPrice,
       tx.gasUsed,
       tx.cumulativeGasUsed,
-      tx.blockHeight,
       parseInt(tx.isError),
       null
     )
@@ -373,7 +364,7 @@ class EthereumEngine {
       tx.hash,
       parseInt(tx.timeStamp),
       'ETH',
-      tx.blockNumber,
+      parseInt(tx.blockNumber),
       netNativeAmount,
       nativeNetworkFee,
       ourReceiveAddresses,
@@ -436,7 +427,6 @@ class EthereumEngine {
       '',
       tx.fees.toString(10),
       '',
-      tx.block_height,
       0,
       null
     )
@@ -445,7 +435,7 @@ class EthereumEngine {
       tx.hash,
       epochTime,
       'ETH',
-      tx.blockNumber,
+      tx.block_height,
       nativeAmount,
       tx.fees.toString(10),
       ourReceiveAddresses,
@@ -466,11 +456,11 @@ class EthereumEngine {
       this.transactionsChangedArray = []
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
-      const abcTx = transactionsArray[ idx ]
+      const transactionsArray:Array<ABCTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
+      const abcTx:ABCTransaction = transactionsArray[ idx ]
 
-      if (abcTx.blockHeightNative !== tx.blockNumber) {
-        io.console.info(sprintf('processBlockCypherTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
+      if (abcTx.blockHeight !== tx.block_height) {
+        io.console.info(sprintf('processUnconfirmedTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
         this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
@@ -499,8 +489,6 @@ class EthereumEngine {
       if (valid) {
         const balance = jsonObj.result
         io.console.info(tk + ': token Address balance: ' + balance)
-        // const balanceBN = new BN(balance, 10)
-        // const oldBalanceBN = new BN(this.walletLocalData.totalBalances[tk], 10)
 
         if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
           this.walletLocalData.totalBalances[tk] = balance
@@ -519,16 +507,15 @@ class EthereumEngine {
 
   async checkTransactionsFetch () {
     const address = this.walletLocalData.ethereumAddress
-    const endBlock = '999999999'
-    let startBlock = '0'
+    const endBlock:number = 999999999
+    let startBlock:number = 0
     let checkAddressSuccess = true
     let url = ''
     let jsonObj = {}
     let valid = false
-
-    if (bns.gt(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)) {
+    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
       // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-      startBlock = bns.sub(this.walletLocalData.lastAddressQueryHeight, ADDRESS_QUERY_LOOKBACK_BLOCKS)
+      startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
     }
 
     try {
@@ -581,8 +568,7 @@ class EthereumEngine {
 
         // Get transactions
         // Iterate over transactions in address
-        for (const n in transactions) {
-          const tx = transactions[n]
+        for (const tx of transactions) {
           this.processEtherscanTransaction(tx)
         }
         if (checkAddressSuccess === true && this.addressesChecked === false) {
@@ -1084,7 +1070,6 @@ class EthereumEngine {
         gasPrice,
         '0',
         '0',
-        '0',
         0,
         null
       )
@@ -1097,7 +1082,6 @@ class EthereumEngine {
         [tokenInfo.contractAddress],
         gasLimit,
         gasPrice,
-        '0',
         '0',
         '0',
         0,
@@ -1154,7 +1138,7 @@ class EthereumEngine {
       '', // txid
       0, // date
       currencyCode, // currencyCode
-      '0', // blockHeightNative
+      0, // blockHeight
       nativeAmount, // nativeAmount
       '0', // networkFee
       [], // ourReceiveAddresses
