@@ -498,6 +498,9 @@ class EthereumEngine {
         const balance = jsonObj.result
         io.console.info(tk + ': token Address balance: ' + balance)
 
+        if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+          this.walletLocalData.totalBalances[tk] = '0'
+        }
         if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
           this.walletLocalData.totalBalances[tk] = balance
 
