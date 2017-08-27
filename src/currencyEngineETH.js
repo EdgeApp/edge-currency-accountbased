@@ -4,7 +4,12 @@
 // @flow
 
 import { txLibInfo } from './currencyInfoETH.js'
-import type { EsCurrencyEngine, EsTransaction, EsCurrencySettings } from 'airbitz-core-js'
+import type {
+  EsCurrencyEngine,
+  EsTransaction,
+  EsCurrencySettings,
+  EsWalletInfo
+} from 'airbitz-core-js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
@@ -178,7 +183,7 @@ class EthereumEngine implements EsCurrencyEngine {
   transactionsChangedArray:Array<EsTransaction>
   currentSettings:EsCurrencySettings
 
-  constructor (io_:any, walletInfo:any, opts:any) {
+  constructor (io_:any, walletInfo:EsWalletInfo, opts:any) {
     const { walletLocalFolder, callbacks } = opts
 
     io = io_

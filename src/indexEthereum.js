@@ -107,8 +107,8 @@ export const makeEthereumPlugin:EsMakeCurrencyPlugin = (opts:any): Promise<EsCur
       }
     },
 
-    makeEngine: (keyInfo: any, opts: any = {}) => {
-      return new EthereumEngine(io, keyInfo, opts)
+    makeEngine: (walletInfo: EsWalletInfo, opts: any = {}) => {
+      return new EthereumEngine(io, walletInfo, opts)
     },
 
     parseUri: (uri: string) => {
