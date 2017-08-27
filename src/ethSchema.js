@@ -2,7 +2,7 @@
  * Created by paul on 8/27/17.
  */
 
-export const CurrencyInfoScheme = {
+export const CurrencyInfoSchema = {
   'type': 'object',
   'properties': {
     'walletTypes': {
@@ -80,4 +80,34 @@ export const CurrencyInfoScheme = {
     'denominations',
     'symbolImage'
   ]
+}
+
+export const NetworkFeesSchema = {
+  'type': 'object',
+  'additionalProperties': {
+    'type': 'object',
+    'properties': {
+      'gasLimit': {
+        'type': 'object',
+        'properties': {
+          'regularTransaction': { 'type': 'string' },
+          'tokenTransaction': { 'type': 'string' }
+        },
+        'required': [ 'regularTransaction', 'tokenTransaction' ]
+      },
+      'gasPrice': {
+        'type': 'object',
+        'properties': {
+          'lowFee': { 'type': 'string' },
+          'standardFeeLow': { 'type': 'string' },
+          'standardFeeHigh': { 'type': 'string' },
+          'standardFeeLowAmount': { 'type': 'string' },
+          'standardFeeHighAmount': { 'type': 'string' },
+          'highFee': { 'type': 'string' }
+        },
+        'required': [ 'lowFee', 'standardFeeLow', 'standardFeeHigh', 'standardFeeLowAmount', 'standardFeeHighAmount', 'highFee' ]
+      }
+    },
+    'required': [ 'gasLimit' ]
+  }
 }

@@ -17,6 +17,7 @@ import type {
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
+import { NetworkFeesSchema } from './ethSchema.js'
 import { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
@@ -28,6 +29,7 @@ const DATA_STORE_FOLDER = 'txEngineFolder'
 const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
+const NETWORKFEES_POLL_MILLISECONDS = (60 * 10 * 1000) // 10 minutes
 const SAVE_DATASTORE_MILLISECONDS = 10000
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
@@ -36,6 +38,7 @@ const ETHERSCAN_API_KEY = ''
 const PRIMARY_CURRENCY = txLibInfo.currencyInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const CHECK_UNCONFIRMED = true
+const INFO_SERVERS = ['http://info1.edgesecure.co:8080']
 
 let io
 
@@ -45,7 +48,7 @@ function getTokenInfo (token:string) {
   })
 }
 
-const networkFees = {
+const defaultNetworkFees = {
   default: {
     gasLimit: {
       regularTransaction: '21001',
@@ -106,7 +109,7 @@ class WalletLocalData {
     const transactionsObj:{[currencyCode: string]: Array<EsTransaction>} = {}
     this.transactionsObj = transactionsObj
 
-    this.networkFees = networkFees
+    this.networkFees = defaultNetworkFees
 
     this.ethereumAddress = ''
     this.enabledTokens = TOKEN_CODES
@@ -214,6 +217,7 @@ class EthereumEngine implements EsCurrencyEngine {
       this.doInitialCallbacks()
       this.blockHeightInnerLoop()
       this.checkAddressesInnerLoop()
+      this.checkUpdateNetworkFees()
       this.saveWalletLoop()
     } catch (err) {
       io.console.error(err)
@@ -762,6 +766,32 @@ class EthereumEngine implements EsCurrencyEngine {
     }
   }
 
+  async checkUpdateNetworkFees () {
+    while (this.engineOn) {
+      try {
+        const url = sprintf('%s/v1/networkFees/ETH', INFO_SERVERS[0])
+        const jsonObj = await this.fetchGet(url)
+        const valid = validateObject(jsonObj, NetworkFeesSchema)
+
+        if (valid) {
+          io.console.info('Fetched valid networkFees')
+          io.console.info(jsonObj)
+          this.walletLocalData.networkFees = jsonObj
+        } else {
+          io.console.info('Error: Fetched invalid networkFees')
+        }
+      } catch (err) {
+        io.console.info('Error fetching networkFees:')
+        io.console.info(err)
+      }
+      try {
+        await snooze(NETWORKFEES_POLL_MILLISECONDS)
+      } catch (err) {
+        io.console.error(err)
+      }
+    }
+  }
+
   doInitialCallbacks () {
     this.abcTxLibCallbacks.onBlockHeightChanged(
       parseInt(this.walletLocalData.blockHeight)
@@ -1020,7 +1050,7 @@ class EthereumEngine implements EsCurrencyEngine {
     // Get the fee amount
 
     let ethParams = {}
-    const { gasLimit, gasPrice } = calcMiningFee(esSpendInfo, networkFees)
+    const { gasLimit, gasPrice } = calcMiningFee(esSpendInfo, this.walletLocalData.networkFees)
 
     let publicAddress = ''
     if (typeof esSpendInfo.spendTargets[0].publicAddress === 'string') {
