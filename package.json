@@ -19,6 +19,7 @@
     "lib/*"
   ],
   "dependencies": {
+    "airbitz-core-js": "git+ssh://git@github.com:Airbitz/airbitz-core-js.git#develop",
     "biggystring": "^1.0.5",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
@@ -65,7 +66,7 @@
     "updot": "updot",
     "prepare": "npm run build",
     "build": "npm run lint && npm run webpack && npm run rollup && npm run build:flow",
-    "build:flow": "npm run flow && flow-copy-source -v -i '**/test/**' src lib",
+    "build:flow": "flow-copy-source -v -i '**/test/**' src lib && npm run flow",
     "build:clean": "rimraf lib",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",

@@ -1,13 +1,7 @@
 /* global */
 // @flow
 
-export interface EthereumSettings {
-  addressExplorer:string,
-  transactionExplorer:string,
-  denomCurrencyCode:string,
-  etherscanApiServers:Array<string>,
-  superethServers:Array<string>
-}
+import type { EthereumSettings } from './ethTypes.js'
 
 const defaultSettings:EthereumSettings = {
   addressExplorer: 'https://etherscan.io/address/%s',

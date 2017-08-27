@@ -4,7 +4,8 @@
 // @flow
 
 import { currencyInfo } from './currencyInfoETH.js'
-import type { EthereumSettings } from './currencyInfoETH.js'
+import type { EthereumSettings } from './ethTypes.js'
+import type { EsCurrencyEngine, EsTransaction } from 'airbitz-core-js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
@@ -102,7 +103,7 @@ class WalletLocalData {
   ethereumAddress:string
   totalBalances: {[currencyCode: string]: string}
   enabledTokens:Array<string>
-  transactionsObj:{[currencyCode: string]: Array<ABCTransaction>}
+  transactionsObj:{[currencyCode: string]: Array<EsTransaction>}
 
   constructor (jsonString) {
     this.blockHeight = 0
@@ -115,7 +116,7 @@ class WalletLocalData {
     this.lastAddressQueryHeight = 0
 
     // Dumb extra local var needed to make Flow happy
-    const transactionsObj:{[currencyCode: string]: Array<ABCTransaction>} = {}
+    const transactionsObj:{[currencyCode: string]: Array<EsTransaction>} = {}
     this.transactionsObj = transactionsObj
 
     this.ethereumAddress = ''
@@ -167,43 +168,7 @@ class EthereumParams {
   }
 }
 
-class ABCTransaction {
-  txid:string
-  date:number
-  currencyCode:string
-  blockHeight:number
-  nativeAmount:string
-  networkFee:string
-  ourReceiveAddresses:Array<string>
-  signedTx:string
-  otherParams:EthereumParams
-
-  constructor (txid:string,
-               date:number,
-               currencyCode:string,
-               blockHeight:number,
-               nativeAmount:string,
-               networkFee:string,
-               ourReceiveAddresses:Array<string>,
-               signedTx:string,
-               otherParams:EthereumParams) {
-    this.txid = txid
-    this.date = date
-    this.currencyCode = currencyCode
-    this.blockHeight = blockHeight
-    if (otherParams.errorVal === 0) {
-      this.nativeAmount = nativeAmount
-    } else {
-      this.nativeAmount = '0'
-    }
-    this.ourReceiveAddresses = ourReceiveAddresses
-    this.networkFee = networkFee
-    this.signedTx = signedTx
-    this.otherParams = otherParams
-  }
-}
-
-class EthereumEngine {
+class EthereumEngine implements EsCurrencyEngine {
   walletInfo:any
   abcTxLibCallbacks:any
   walletLocalFolder:any
@@ -368,24 +333,24 @@ class EthereumEngine {
       null
     )
 
-    let abcTransaction = new ABCTransaction(
-      tx.hash,
-      parseInt(tx.timeStamp),
-      'ETH',
-      parseInt(tx.blockNumber),
-      netNativeAmount,
-      nativeNetworkFee,
+    let esTransaction:EsTransaction = {
+      txid: tx.hash,
+      date: parseInt(tx.timeStamp),
+      currencyCode: 'ETH',
+      blockHeight: parseInt(tx.blockNumber),
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
       ourReceiveAddresses,
-      'nosignature',
-      ethParams
-    )
+      signedTx: 'unsigned_right_now',
+      otherParams: ethParams
+    }
 
     const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
     if (idx === -1) {
       io.console.info(sprintf('New transaction: %s', tx.hash))
 
       // New transaction not in database
-      this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
+      this.addTransaction(PRIMARY_CURRENCY, esTransaction)
 
       this.abcTxLibCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
@@ -397,13 +362,13 @@ class EthereumEngine {
       const abcTx = transactionsArray[ idx ]
 
       if (
-        abcTx.blockHeight !== abcTransaction.blockHeight ||
-        abcTx.networkFee !== abcTransaction.networkFee ||
-        abcTx.nativeAmount !== abcTransaction.nativeAmount ||
-        abcTx.otherParams.errorVal !== abcTransaction.otherParams.errorVal
+        abcTx.blockHeight !== esTransaction.blockHeight ||
+        abcTx.networkFee !== esTransaction.networkFee ||
+        abcTx.nativeAmount !== esTransaction.nativeAmount ||
+        abcTx.otherParams.errorVal !== esTransaction.otherParams.errorVal
       ) {
         io.console.info(sprintf('Update transaction: %s height:%s', tx.hash, tx.blockNumber))
-        this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
+        this.updateTransaction(PRIMARY_CURRENCY, esTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
         )
@@ -439,24 +404,24 @@ class EthereumEngine {
       null
     )
 
-    let abcTransaction = new ABCTransaction(
-      addHexPrefix(tx.hash),
-      epochTime,
-      'ETH',
-      tx.block_height,
+    let esTransaction:EsTransaction = {
+      txid: addHexPrefix(tx.hash),
+      date: epochTime,
+      currencyCode: 'ETH',
+      blockHeight: tx.block_height,
       nativeAmount,
-      tx.fees.toString(10),
+      networkFee: tx.fees.toString(10),
       ourReceiveAddresses,
-      'iwassignedyoucantrustme',
-      ethParams
-    )
+      signedTx: 'iwassignedyoucantrustme',
+      otherParams: ethParams
+    }
 
     const idx = this.findTransaction(PRIMARY_CURRENCY, tx.hash)
     if (idx === -1) {
       io.console.info(sprintf('processUnconfirmedTransaction: New transaction: %s', tx.hash))
 
       // New transaction not in database
-      this.addTransaction(PRIMARY_CURRENCY, abcTransaction)
+      this.addTransaction(PRIMARY_CURRENCY, esTransaction)
 
       this.abcTxLibCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
@@ -464,12 +429,12 @@ class EthereumEngine {
       this.transactionsChangedArray = []
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray:Array<ABCTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
-      const abcTx:ABCTransaction = transactionsArray[ idx ]
+      const transactionsArray:Array<EsTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
+      const abcTx:EsTransaction = transactionsArray[ idx ]
 
       if (abcTx.blockHeight < tx.block_height || abcTx.date > epochTime) {
         io.console.info(sprintf('processUnconfirmedTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
-        this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
+        this.updateTransaction(PRIMARY_CURRENCY, esTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
         )
@@ -746,36 +711,36 @@ class EthereumEngine {
     })
   }
 
-  sortTxByDate (a:ABCTransaction, b:ABCTransaction) {
+  sortTxByDate (a:EsTransaction, b:EsTransaction) {
     return b.date - a.date
   }
 
-  addTransaction (currencyCode:string, abcTransaction:ABCTransaction) {
+  addTransaction (currencyCode:string, esTransaction:EsTransaction) {
     // Add or update tx in transactionsObj
-    const idx = this.findTransaction(currencyCode, abcTransaction.txid)
+    const idx = this.findTransaction(currencyCode, esTransaction.txid)
 
     if (idx === -1) {
-      io.console.info('addTransaction: adding and sorting:' + abcTransaction.txid)
+      io.console.info('addTransaction: adding and sorting:' + esTransaction.txid)
       if (typeof this.walletLocalData.transactionsObj[currencyCode] === 'undefined') {
         this.walletLocalData.transactionsObj[currencyCode] = []
       }
-      this.walletLocalData.transactionsObj[currencyCode].push(abcTransaction)
+      this.walletLocalData.transactionsObj[currencyCode].push(esTransaction)
 
       // Sort
       this.walletLocalData.transactionsObj[currencyCode].sort(this.sortTxByDate)
       this.walletLocalDataDirty = true
-      this.transactionsChangedArray.push(abcTransaction)
+      this.transactionsChangedArray.push(esTransaction)
     } else {
-      this.updateTransaction(currencyCode, abcTransaction, idx)
+      this.updateTransaction(currencyCode, esTransaction, idx)
     }
   }
 
-  updateTransaction (currencyCode:string, abcTransaction:ABCTransaction, idx:number) {
+  updateTransaction (currencyCode:string, esTransaction:EsTransaction, idx:number) {
     // Update the transaction
-    this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
+    this.walletLocalData.transactionsObj[currencyCode][idx] = esTransaction
     this.walletLocalDataDirty = true
-    this.transactionsChangedArray.push(abcTransaction)
-    io.console.info('updateTransaction:' + abcTransaction.txid)
+    this.transactionsChangedArray.push(esTransaction)
+    io.console.info('updateTransaction:' + esTransaction.txid)
   }
 
   // *************************************
@@ -858,11 +823,7 @@ class EthereumEngine {
 
   killEngine () {
     // disconnect network connections
-    // clear caches
-
     this.engineOn = false
-
-    return true
   }
 
   // synchronous
@@ -870,7 +831,7 @@ class EthereumEngine {
     return parseInt(this.walletLocalData.blockHeight)
   }
 
-  // asynchronous
+  // synchronous
   enableTokens (tokens:Array<string>) {
     for (let n = 0; n < tokens.length; n++) {
       const token = tokens[n]
@@ -878,7 +839,6 @@ class EthereumEngine {
         this.walletLocalData.enabledTokens.push(token)
       }
     }
-    // return Promise.resolve(dataStore.enableTokens(tokens))
   }
 
   // synchronous
@@ -1039,12 +999,12 @@ class EthereumEngine {
     })
 
     if (!valid) {
-      return (new Error('Error: invalid ABCSpendInfo'))
+      throw (new Error('Error: invalid ABCSpendInfo'))
     }
 
     // Ethereum can only have one output
     if (abcSpendInfo.spendTargets.length !== 1) {
-      return (new Error('Error: only one output allowed'))
+      throw (new Error('Error: only one output allowed'))
     }
 
     let tokenInfo = {}
@@ -1143,42 +1103,42 @@ class EthereumEngine {
     nativeAmount = bns.mul(nativeAmount, '-1')
 
     // **********************************
-    // Create the unsigned ABCTransaction
+    // Create the unsigned EsTransaction
 
-    const abcTransaction = new ABCTransaction(
-      '', // txid
-      0, // date
+    const esTransaction:EsTransaction = {
+      txid: '', // txid
+      date: 0, // date
       currencyCode, // currencyCode
-      0, // blockHeight
+      blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      '0', // networkFee
-      [], // ourReceiveAddresses
-      '0', // signedTx
-      ethParams // otherParams
-    )
+      networkFee: '0', // networkFee
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '0', // signedTx
+      otherParams: ethParams // otherParams
+    }
 
-    return abcTransaction
+    return esTransaction
   }
 
   // asynchronous
-  async signTx (abcTransaction:ABCTransaction) {
+  async signTx (esTransaction:EsTransaction):Promise<EsTransaction> {
     // Do signing
 
-    const gasLimitHex = toHex(abcTransaction.otherParams.gas)
-    const gasPriceHex = toHex(abcTransaction.otherParams.gasPrice)
-    let nativeAmountHex = bns.mul('-1', abcTransaction.nativeAmount, 16)
+    const gasLimitHex = toHex(esTransaction.otherParams.gas)
+    const gasPriceHex = toHex(esTransaction.otherParams.gasPrice)
+    let nativeAmountHex = bns.mul('-1', esTransaction.nativeAmount, 16)
 
     // const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
     // const nonceHex = '0x' + nonceBN.toString(16)
     //
     const nonceHex = toHex(this.walletLocalData.nextNonce)
     let data
-    if (abcTransaction.currencyCode === PRIMARY_CURRENCY) {
+    if (esTransaction.currencyCode === PRIMARY_CURRENCY) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
         'transfer(address,uint256):(uint256)',
-        abcTransaction.otherParams.tokenRecipientAddress,
+        esTransaction.otherParams.tokenRecipientAddress,
         nativeAmountHex
       )
       data = '0x' + Buffer.from(dataArray).toString('hex')
@@ -1189,7 +1149,7 @@ class EthereumEngine {
       nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
-      to: abcTransaction.otherParams.to[0],
+      to: esTransaction.otherParams.to[0],
       value: nativeAmountHex,
       data: data,
       // EIP 155 chainId - mainnet: 1, ropsten: 3
@@ -1204,17 +1164,17 @@ class EthereumEngine {
     const tx = new EthereumTx(txParams)
     tx.sign(privKey)
 
-    abcTransaction.signedTx = bufToHex(tx.serialize())
-    abcTransaction.txid = bufToHex(tx.hash())
-    abcTransaction.date = Date.now() / 1000
+    esTransaction.signedTx = bufToHex(tx.serialize())
+    esTransaction.txid = bufToHex(tx.hash())
+    esTransaction.date = Date.now() / 1000
 
-    return abcTransaction
+    return esTransaction
   }
 
   // asynchronous
-  async broadcastTx (abcTransaction:ABCTransaction) {
+  async broadcastTx (esTransaction:EsTransaction):Promise<EsTransaction> {
     try {
-      const url = sprintf('?module=proxy&action=eth_sendRawTransaction&hex=%s', abcTransaction.signedTx)
+      const url = sprintf('?module=proxy&action=eth_sendRawTransaction&hex=%s', esTransaction.signedTx)
       const jsonObj = await this.fetchGetEtherscan(url)
 
       // {
@@ -1241,25 +1201,27 @@ class EthereumEngine {
           this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
           io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
           // Nonce error. Increment nonce and try again
-          const abcTx = await this.signTx(abcTransaction)
+          const abcTx = await this.signTx(esTransaction)
           return await this.broadcastTx(abcTx)
         } else {
           throw (jsonObj.error)
         }
       } else if (typeof jsonObj.result === 'string') {
         // Success!!
-        return abcTransaction
+      } else {
+        throw new Error('Invalid return valid on transaction send')
       }
     } catch (e) {
       throw (e)
     }
+    return esTransaction
   }
 
   // asynchronous
-  async saveTx (abcTransaction:ABCTransaction) {
-    this.addTransaction(abcTransaction.currencyCode, abcTransaction)
+  async saveTx (esTransaction:EsTransaction) {
+    this.addTransaction(esTransaction.currencyCode, esTransaction)
 
-    this.abcTxLibCallbacks.onTransactionsChanged([abcTransaction])
+    this.abcTxLibCallbacks.onTransactionsChanged([esTransaction])
   }
 }
 
