@@ -4,9 +4,6 @@
 // @flow
 
 export type EthereumSettings = {
-  addressExplorer:string,
-  transactionExplorer:string,
-  denomCurrencyCode:string,
   etherscanApiServers:Array<string>,
   superethServers:Array<string>
 }

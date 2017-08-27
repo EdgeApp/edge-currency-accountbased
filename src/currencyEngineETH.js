@@ -3,9 +3,8 @@
  */
 // @flow
 
-import { currencyInfo } from './currencyInfoETH.js'
-import type { EthereumSettings } from './ethTypes.js'
-import type { EsCurrencyEngine, EsTransaction } from 'airbitz-core-js'
+import { txLibInfo } from './currencyInfoETH.js'
+import type { EsCurrencyEngine, EsTransaction, EsCurrencySettings } from 'airbitz-core-js'
 import { BN } from 'bn.js'
 import { sprintf } from 'sprintf-js'
 import { validate } from 'jsonschema'
@@ -25,8 +24,8 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 
-const PRIMARY_CURRENCY = currencyInfo.getInfo.currencyCode
-const TOKEN_CODES = [PRIMARY_CURRENCY].concat(currencyInfo.supportedTokens)
+const PRIMARY_CURRENCY = txLibInfo.currencyInfo.currencyCode
+const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const CHECK_UNCONFIRMED = true
 
 let io
@@ -84,7 +83,7 @@ function toDecimal (num:string) {
 }
 
 function getTokenInfo (token:string) {
-  return currencyInfo.getInfo.metaTokens.find(element => {
+  return txLibInfo.currencyInfo.metaTokens.find(element => {
     return element.currencyCode === token
   })
 }
@@ -176,8 +175,8 @@ class EthereumEngine implements EsCurrencyEngine {
   addressesChecked:boolean
   walletLocalData:WalletLocalData
   walletLocalDataDirty:boolean
-  transactionsChangedArray:Array<{}>
-  currentSettings:EthereumSettings
+  transactionsChangedArray:Array<EsTransaction>
+  currentSettings:EsCurrencySettings
 
   constructor (io_:any, walletInfo:any, opts:any) {
     const { walletLocalFolder, callbacks } = opts
@@ -192,7 +191,7 @@ class EthereumEngine implements EsCurrencyEngine {
     if (typeof opts.optionalSettings !== 'undefined') {
       this.currentSettings = opts.optionalSettings
     } else {
-      this.currentSettings = currencyInfo.getInfo.defaultSettings
+      this.currentSettings = txLibInfo.currencyInfo.defaultSettings
     }
 
     // Hard coded for testing
@@ -234,7 +233,7 @@ class EthereumEngine implements EsCurrencyEngine {
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
-    const url = sprintf('%s/api%s%s', this.currentSettings.etherscanApiServers[0], cmd, apiKey)
+    const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
     return this.fetchGet(url)
   }
 
@@ -250,7 +249,7 @@ class EthereumEngine implements EsCurrencyEngine {
     if (ETHERSCAN_API_KEY.length > 5) {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
-    const url = sprintf('%s/api%s%s', this.currentSettings.etherscanApiServers[0], cmd, apiKey)
+    const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
     const response = await io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -566,7 +565,7 @@ class EthereumEngine implements EsCurrencyEngine {
 
   async checkUnconfirmedTransactionsFetch () {
     const address = normalizeAddress(this.walletLocalData.ethereumAddress)
-    const url = sprintf('%s/v1/eth/main/txs/%s', this.currentSettings.superethServers[0], address)
+    const url = sprintf('%s/v1/eth/main/txs/%s', this.currentSettings.otherSettings.superethServers[0], address)
     let jsonObj = null
     try {
       jsonObj = await this.fetchGet(url)
@@ -789,7 +788,7 @@ class EthereumEngine implements EsCurrencyEngine {
   // Public methods
   // *************************************
 
-  updateSettings (settings:EthereumSettings) {
+  updateSettings (settings:EsCurrencySettings) {
     this.currentSettings = settings
   }
 

@@ -2,8 +2,9 @@
  * Created by paul on 8/8/17.
  */
 // @flow
-import { currencyInfo } from './currencyInfoETH.js'
+import { txLibInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
+import type { EsParsedUri } from 'airbitz-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
@@ -20,7 +21,7 @@ const randomBuffer = (size) => {
 }
 
 function getDenomInfo (denom:string) {
-  return currencyInfo.getInfo.denominations.find(element => {
+  return txLibInfo.currencyInfo.denominations.find(element => {
     return element.name === denom
   })
 }
@@ -42,35 +43,13 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
-class ABCParsedURI {
-  publicAddress:string
-  nativeAmount:string|null
-  currencyCode:string|null
-  label:string|null
-  message:string|null
-
-  constructor (
-    publicAddress:string,
-    nativeAmount:string|null,
-    currencyCode:string|null,
-    label:string|null,
-    message:string|null
-  ) {
-    this.publicAddress = publicAddress
-    this.nativeAmount = nativeAmount
-    this.currencyCode = currencyCode
-    this.label = label
-    this.message = message
-  }
-}
-
 class EthereumPlugin {
   static async makePlugin (opts: any) {
     io = opts.io
 
     return {
       pluginName: 'ethereum',
-      currencyInfo: currencyInfo.getInfo,
+      currencyInfo: txLibInfo.currencyInfo,
 
       createPrivateKey: (walletType: string) => {
         const type = walletType.replace('wallet:', '')
@@ -167,7 +146,23 @@ class EthereumPlugin {
         label = getParameterByName('label', uri)
         message = getParameterByName('message', uri)
 
-        return new ABCParsedURI(address, nativeAmount, currencyCode, label, message)
+        const esParsedUri:EsParsedUri = {
+          publicAddress: address
+        }
+        if (nativeAmount) {
+          esParsedUri.nativeAmount = nativeAmount
+        }
+        if (currencyCode) {
+          esParsedUri.currencyCode = currencyCode
+        }
+        if (label) {
+          esParsedUri.label = label
+        }
+        if (message) {
+          esParsedUri.message = message
+        }
+
+        return esParsedUri
       },
 
       encodeUri: (obj: any) => {
