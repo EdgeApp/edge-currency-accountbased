@@ -1,5 +1,5 @@
 /* global describe it */
-const { EthereumPlugin } = require('../lib/indexEthereum.js')
+const { makeEthereumPlugin } = require('../lib/indexEthereum.js')
 const assert = require('assert')
 
 const io = {
@@ -19,7 +19,7 @@ const io = {
 }
 
 function makePlugin () {
-  return EthereumPlugin.makePlugin({io})
+  return makeEthereumPlugin({io})
 }
 
 function makeEngine () {
