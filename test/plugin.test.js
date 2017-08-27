@@ -1,5 +1,5 @@
 /* global describe it */
-const { makeEthereumPlugin } = require('../lib/indexEthereum.js')
+const { EthereumCurrencyPluginFactory } = require('../lib/indexEthereum.js')
 const { calcMiningFee } = require('../lib/indexEthereum.js')
 // const { EsSpendInfo, EthereumFees } = require('airbitz-core-js')
 
@@ -22,7 +22,7 @@ const io = {
 }
 
 function makePlugin () {
-  return makeEthereumPlugin({io})
+  return EthereumCurrencyPluginFactory.makePlugin({io})
 }
 
 function makeEngine () {
