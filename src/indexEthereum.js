@@ -8,7 +8,6 @@ import type {
   EsParsedUri,
   EsEncodeUri,
   EsCurrencyPlugin,
-  // EsCurrencyPluginFactory,
   EsWalletInfo,
   EsMakeCurrencyPlugin
 } from 'airbitz-core-js'
@@ -50,8 +49,6 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
-// class EthereumPlugin implements EsCurrencyPluginFactory {
-//   static async makePlugin (opts: any):Promise<EsCurrencyPlugin> {
 export const makeEthereumPlugin:EsMakeCurrencyPlugin = (opts:any): Promise<EsCurrencyPlugin> => {
   io = opts.io
 

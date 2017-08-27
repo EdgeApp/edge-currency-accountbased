@@ -27,8 +27,6 @@ const currencyInfo:EsCurrencyInfo = { // Details of supported currency
   currencyName: 'Ethereum',
   currencyCode: 'ETH', // The 3 character code for the currency
 
-  // Default settings are plugin specific options that are optionally changeable by the GUI application
-  // Using updateSettings()
   defaultSettings,
 
   denominations: [
