@@ -14,6 +14,7 @@ import type {
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
+export { calcMiningFee } from './miningFees.js'
 
 const Buffer = require('buffer/').Buffer
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet

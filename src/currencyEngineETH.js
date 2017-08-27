@@ -4,16 +4,20 @@
 // @flow
 
 import { txLibInfo } from './currencyInfoETH.js'
+import type { EthereumFees } from './ethTypes.js'
 import type {
   EsCurrencyEngine,
   EsTransaction,
   EsCurrencySettings,
+  EsCurrencyPluginCallbacks,
+  EsMakeEngineOptions,
+  EsSpendInfo,
   EsWalletInfo
 } from 'airbitz-core-js'
-import { BN } from 'bn.js'
+import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
-import { validate } from 'jsonschema'
 import { bns } from 'biggystring'
+import { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -35,70 +39,48 @@ const CHECK_UNCONFIRMED = true
 
 let io
 
-function snooze (ms:number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function normalizeAddress (address:string) {
-  return address.toLowerCase().replace('0x', '')
-}
-
-function addHexPrefix (value:string) {
-  if (value.startsWith('0x')) {
-    return value
-  } else {
-    return '0x' + value
-  }
-}
-
-function validateObject (object, schema) {
-  const result = validate(object, schema)
-
-  if (result.errors.length === 0) {
-    return true
-  } else {
-    for (const n in result.errors) {
-      const errMsg = result.errors[n].message
-      io.console.error(errMsg)
-    }
-    return false
-  }
-}
-
-function bufToHex (buf:any) {
-  const signedTxBuf = Buffer.from(buf)
-  const hex = '0x' + signedTxBuf.toString('hex')
-  return hex
-}
-
-function hexToBuf (hex:string) {
-  const noHexPrefix = hex.replace('0x', '')
-  const noHexPrefixBN = new BN(noHexPrefix, 16)
-  const array = noHexPrefixBN.toArray()
-  const buf = Buffer.from(array)
-  return buf
-}
-
-function toHex (num:string) {
-  return bns.add(num, '0', 16)
-}
-
-function toDecimal (num:string) {
-  return bns.add(num, '0')
-}
-
 function getTokenInfo (token:string) {
   return txLibInfo.currencyInfo.metaTokens.find(element => {
     return element.currencyCode === token
   })
 }
 
-// function hexToDecimal (hex:string) {
-//   const noHexPrefix = hex.replace('0x', '')
-//   const hexBN = new BN(noHexPrefix, 16)
-//   const decimal = hexBN.toString(10)
-//   return decimal
-// }
+const networkFees = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21001',
+      tokenTransaction: '37123'
+    },
+    gasPrice: {
+      lowFee: '1000000001',
+      standardFeeLow: '40000000001',
+      standardFeeHigh: '300000000001',
+      standardFeeLowAmount: '100000000000000000',
+      standardFeeHighAmount: '10000000000000000000',
+      highFee: '40000000001'
+    }
+  },
+  '1983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    },
+    gasPrice: {
+      lowFee: '1000000002',
+      standardFeeLow: '40000000002',
+      standardFeeHigh: '300000000002',
+      standardFeeLowAmount: '200000000000000000',
+      standardFeeHighAmount: '20000000000000000000',
+      highFee: '40000000002'
+    }
+  },
+  '2983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    }
+  }
+}
 
 class WalletLocalData {
   blockHeight:number
@@ -108,6 +90,7 @@ class WalletLocalData {
   totalBalances: {[currencyCode: string]: string}
   enabledTokens:Array<string>
   transactionsObj:{[currencyCode: string]: Array<EsTransaction>}
+  networkFees: EthereumFees
 
   constructor (jsonString) {
     this.blockHeight = 0
@@ -123,6 +106,8 @@ class WalletLocalData {
     const transactionsObj:{[currencyCode: string]: Array<EsTransaction>} = {}
     this.transactionsObj = transactionsObj
 
+    this.networkFees = networkFees
+
     this.ethereumAddress = ''
     this.enabledTokens = TOKEN_CODES
     if (jsonString !== null) {
@@ -134,6 +119,7 @@ class WalletLocalData {
       if (typeof data.ethereumAddress === 'string') this.ethereumAddress = data.ethereumAddress
       if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
       if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
+      if (typeof data.networkFees !== 'undefined') this.networkFees = data.networkFees
       if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
     }
   }
@@ -173,8 +159,8 @@ class EthereumParams {
 }
 
 class EthereumEngine implements EsCurrencyEngine {
-  walletInfo:any
-  abcTxLibCallbacks:any
+  walletInfo:EsWalletInfo
+  abcTxLibCallbacks:EsCurrencyPluginCallbacks
   walletLocalFolder:any
   engineOn:boolean
   addressesChecked:boolean
@@ -183,7 +169,7 @@ class EthereumEngine implements EsCurrencyEngine {
   transactionsChangedArray:Array<EsTransaction>
   currentSettings:EsCurrencySettings
 
-  constructor (io_:any, walletInfo:EsWalletInfo, opts:any) {
+  constructor (io_:any, walletInfo:EsWalletInfo, opts:EsMakeEngineOptions) {
     const { walletLocalFolder, callbacks } = opts
 
     io = io_
@@ -194,7 +180,8 @@ class EthereumEngine implements EsCurrencyEngine {
     this.walletInfo = walletInfo
 
     if (typeof opts.optionalSettings !== 'undefined') {
-      this.currentSettings = opts.optionalSettings
+      const optionalSettings:EsCurrencySettings = opts.optionalSettings
+      this.currentSettings = optionalSettings
     } else {
       this.currentSettings = txLibInfo.currencyInfo.defaultSettings
     }
@@ -473,8 +460,7 @@ class EthereumEngine implements EsCurrencyEngine {
         if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
           this.walletLocalData.totalBalances[tk] = balance
 
-          const nativeBalance = this.walletLocalData.totalBalances[tk]
-          this.abcTxLibCallbacks.onBalanceChanged(tk, nativeBalance, this.walletLocalData.totalBalances[tk])
+          this.abcTxLibCallbacks.onBalanceChanged(tk, balance)
         }
       } else {
         checkAddressSuccess = false
@@ -975,11 +961,12 @@ class EthereumEngine implements EsCurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (abcSpendInfo:any) {
+  async makeSpend (esSpendInfo:EsSpendInfo) {
     // Validate the spendInfo
-    const valid = validateObject(abcSpendInfo, {
+    const valid = validateObject(esSpendInfo, {
       'type': 'object',
       'properties': {
+        'currencyCode': { 'type': 'string' },
         'networkFeeOption': { 'type': 'string' },
         'spendTargets': {
           'type': 'array',
@@ -988,7 +975,6 @@ class EthereumEngine implements EsCurrencyEngine {
             'properties': {
               'currencyCode': { 'type': 'string' },
               'publicAddress': { 'type': 'string' },
-              'amountSatoshi': { 'type': 'string' },
               'nativeAmount': { 'type': 'string' },
               'destMetadata': { 'type': 'object' },
               'destWallet': { 'type': 'object' }
@@ -1007,40 +993,46 @@ class EthereumEngine implements EsCurrencyEngine {
     }
 
     // Ethereum can only have one output
-    if (abcSpendInfo.spendTargets.length !== 1) {
+    if (esSpendInfo.spendTargets.length !== 1) {
       throw (new Error('Error: only one output allowed'))
     }
 
     let tokenInfo = {}
     tokenInfo.contractAddress = ''
 
-    if (typeof abcSpendInfo.currencyCode === 'string') {
-      if (!this.getTokenStatus(abcSpendInfo.currencyCode)) {
+    let currencyCode:string = ''
+    if (typeof esSpendInfo.currencyCode === 'string') {
+      currencyCode = esSpendInfo.currencyCode
+      if (!this.getTokenStatus(currencyCode)) {
         throw (new Error('Error: Token not supported or enabled'))
-      } else if (abcSpendInfo.currencyCode !== 'ETH') {
-        tokenInfo = getTokenInfo(abcSpendInfo.currencyCode)
+      } else if (currencyCode !== 'ETH') {
+        tokenInfo = getTokenInfo(currencyCode)
         if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
           throw (new Error('Error: Token not supported or invalid contract address'))
         }
       }
     } else {
-      abcSpendInfo.currencyCode = 'ETH'
+      currencyCode = 'ETH'
     }
-    const currencyCode = abcSpendInfo.currencyCode
+    esSpendInfo.currencyCode = currencyCode
 
     // ******************************
     // Get the fee amount
 
     let ethParams = {}
-    let gasLimit
-    let gasPrice
-    if (currencyCode === PRIMARY_CURRENCY) {
-      gasLimit = '40000'
-      gasPrice = '40000000000' // 40 Gwei
+    const { gasLimit, gasPrice } = calcMiningFee(esSpendInfo, networkFees)
 
+    let publicAddress = ''
+    if (typeof esSpendInfo.spendTargets[0].publicAddress === 'string') {
+      publicAddress = esSpendInfo.spendTargets[0].publicAddress
+    } else {
+      throw new Error('No valid spendTarget')
+    }
+
+    if (currencyCode === PRIMARY_CURRENCY) {
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumAddress],
-        [abcSpendInfo.spendTargets[0].publicAddress],
+        [publicAddress],
         gasLimit,
         gasPrice,
         '0',
@@ -1049,25 +1041,27 @@ class EthereumEngine implements EsCurrencyEngine {
         null
       )
     } else {
-      gasLimit = '60000'
-      gasPrice = '40000000000' // 40 Gwei
-
+      let contractAddress = ''
+      if (typeof tokenInfo.contractAddress === 'string') {
+        contractAddress = tokenInfo.contractAddress
+      } else {
+        throw new Error('makeSpend: Invalid contract address')
+      }
       ethParams = new EthereumParams(
         [this.walletLocalData.ethereumAddress],
-        [tokenInfo.contractAddress],
+        [contractAddress],
         gasLimit,
         gasPrice,
         '0',
         '0',
         0,
-        abcSpendInfo.spendTargets[0].publicAddress
+        publicAddress
       )
     }
 
-    // Use nativeAmount if available. Otherwise convert from amountSatoshi
     let nativeAmount = '0'
-    if (typeof abcSpendInfo.spendTargets[0].nativeAmount === 'string') {
-      nativeAmount = abcSpendInfo.spendTargets[0].nativeAmount
+    if (typeof esSpendInfo.spendTargets[0].nativeAmount === 'string') {
+      nativeAmount = esSpendInfo.spendTargets[0].nativeAmount
     } else {
       throw (new Error('Error: no amount specified'))
     }

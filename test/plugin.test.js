@@ -1,5 +1,8 @@
 /* global describe it */
 const { makeEthereumPlugin } = require('../lib/indexEthereum.js')
+const { calcMiningFee } = require('../lib/indexEthereum.js')
+// const { EsSpendInfo, EthereumFees } = require('airbitz-core-js')
+
 const assert = require('assert')
 
 const io = {
@@ -220,6 +223,202 @@ describe('encodeUri', function () {
         )
       })
     })
+  })
+})
+
+const networkFees = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21001',
+      tokenTransaction: '37123'
+    },
+    gasPrice: {
+      lowFee: '1000000001',
+      standardFeeLow: '40000000001',
+      standardFeeHigh: '300000000001',
+      standardFeeLowAmount: '100000000000000000',
+      standardFeeHighAmount: '10000000000000000000',
+      highFee: '40000000001'
+    }
+  },
+  '1983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    },
+    gasPrice: {
+      lowFee: '1000000002',
+      standardFeeLow: '40000000002',
+      standardFeeHigh: '300000000002',
+      standardFeeLowAmount: '200000000000000000',
+      standardFeeHighAmount: '20000000000000000000',
+      highFee: '40000000002'
+    }
+  },
+  '2983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    }
+  }
+}
+
+const networkFees2 = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21001',
+      tokenTransaction: '37123'
+    },
+    gasPrice: {
+      lowFee: '5',
+      standardFeeLow: '10',
+      standardFeeHigh: '1000',
+      standardFeeLowAmount: '10000',
+      standardFeeHighAmount: '100000',
+      highFee: '200000'
+    }
+  }
+}
+describe('Mining Fees', function () {
+  it('ETH standard high', function () {
+    const spendInfo = {
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '10000000000000000001'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '300000000001')
+    assert.equal(gasLimit, '21001')
+  })
+  it('ETH standard low', function () {
+    const spendInfo = {
+      currencyCode: 'ETH',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '50000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '40000000001')
+    assert.equal(gasLimit, '21001')
+  })
+  it('ETH standard mid', function () {
+    const spendInfo = {
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '15000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees2)
+    assert.equal(gasPrice, '65')
+    assert.equal(gasLimit, '21001')
+  })
+  it('ETH low', function () {
+    const spendInfo = {
+      networkFeeOption: 'low',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '3000000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '1000000001')
+    assert.equal(gasLimit, '21001')
+  })
+  it('ETH high', function () {
+    const spendInfo = {
+      networkFeeOption: 'high',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '3000000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '40000000001')
+    assert.equal(gasLimit, '21001')
+  })
+  it('Token standard high', function () {
+    const spendInfo = {
+      currencyCode: 'WINGS',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '100000000000000000010'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '300000000001')
+    assert.equal(gasLimit, '37123')
+  })
+  it('Token standard low', function () {
+    const spendInfo = {
+      currencyCode: 'WINGS',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '500000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '40000000001')
+    assert.equal(gasLimit, '37123')
+  })
+  it('Token standard mid', function () {
+    const spendInfo = {
+      currencyCode: 'REP',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '150000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees2)
+    assert.equal(gasPrice, '65')
+    assert.equal(gasLimit, '37123')
+  })
+  it('Token low', function () {
+    const spendInfo = {
+      currencyCode: 'REP',
+      networkFeeOption: 'low',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '3000000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '1000000001')
+    assert.equal(gasLimit, '37123')
+  })
+  it('Token high', function () {
+    const spendInfo = {
+      currencyCode: 'REP',
+      networkFeeOption: 'high',
+      spendTargets: [
+        {
+          publicAddress: '2000987abc9837fbabc0982347ad828',
+          nativeAmount: '3000000000000000000'
+        }
+      ]
+    }
+    const { gasPrice, gasLimit } = calcMiningFee(spendInfo, networkFees)
+    assert.equal(gasPrice, '40000000001')
+    assert.equal(gasLimit, '37123')
   })
 })
 
