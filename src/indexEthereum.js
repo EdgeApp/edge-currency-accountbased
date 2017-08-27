@@ -8,12 +8,15 @@ import type {
   EsParsedUri,
   EsEncodeUri,
   EsCurrencyPlugin,
+  // EsCurrencyInfo,
   EsWalletInfo,
   EsMakeCurrencyPlugin
 } from 'airbitz-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
+// import { CurrencyInfoScheme } from './ethSchema.js'
+
 export { calcMiningFee } from './miningFees.js'
 
 const Buffer = require('buffer/').Buffer
@@ -50,10 +53,34 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
+// async function checkUpdateCurrencyInfo () {
+//   while (this.engineOn) {
+//     try {
+//       const url = sprintf('%s/v1/currencyInfo/ETH', INFO_SERVERS[0])
+//       const jsonObj = await this.fetchGet(url)
+//       const valid = validateObject(jsonObj, CurrencyInfoScheme)
+//
+//       if (valid) {
+//         io.console.info('Fetched valid currencyInfo')
+//         io.console.info(jsonObj)
+//       } else {
+//         io.console.info('Error: Fetched invalid currencyInfo')
+//       }
+//     } catch (err) {
+//       io.console.info('Error fetching currencyInfo: ' + err)
+//     }
+//     try {
+//       await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
+//     } catch (err) {
+//       io.console.error(err)
+//     }
+//   }
+// }
+
 export const makeEthereumPlugin:EsMakeCurrencyPlugin = (opts:any): Promise<EsCurrencyPlugin> => {
   io = opts.io
 
-  const plugin:EsCurrencyPlugin = {
+  const ethereumPlugin:EsCurrencyPlugin = {
     pluginName: 'ethereum',
     currencyInfo: txLibInfo.currencyInfo,
 
@@ -216,8 +243,23 @@ export const makeEthereumPlugin:EsMakeCurrencyPlugin = (opts:any): Promise<EsCur
       }
     }
   }
-  async function helperfunc (opts:any) {
-    return plugin
+  async function initPlugin (opts:any) {
+    // Try to grab currencyInfo from disk. If that fails, use defaults
+
+    // try {
+    //   const result =
+    //     await this.walletLocalFolder
+    //       .folder(DATA_STORE_FOLDER)
+    //       .file(DATA_STORE_FILE)
+    //       .getText(DATA_STORE_FOLDER, 'walletLocalData')
+    //
+    //   this.walletLocalData = new WalletLocalData(result)
+    //   this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
+    // }
+
+    // Spin off network query to get updated currencyInfo and save that to disk for future bootups
+
+    return ethereumPlugin
   }
-  return helperfunc(opts)
+  return initPlugin(opts)
 }
