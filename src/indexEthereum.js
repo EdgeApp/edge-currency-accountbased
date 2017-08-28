@@ -77,8 +77,10 @@ function getParameterByName (param, url) {
 //   }
 // }
 
-export class EthereumCurrencyPluginFactory implements EsCurrencyPluginFactory {
-  static async makePlugin (opts:any):Promise<EsCurrencyPlugin> {
+export const EthereumCurrencyPluginFactory: EsCurrencyPluginFactory = {
+  pluginType: 'currency',
+
+  async makePlugin (opts:any):Promise<EsCurrencyPlugin> {
     io = opts.io
 
     const ethereumPlugin:EsCurrencyPlugin = {
