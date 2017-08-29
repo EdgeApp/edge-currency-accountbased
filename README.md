@@ -1,41 +1,34 @@
 # Airbitz Ethereum Currency Plugin
 
-Implements Ethereum send/receive functionality per the spec for currency plugins for airbitz-core-js
+Implements Bitcoin send/receive functionality per the spec for currency plugins for [airbitz-core-js](https://github.com/Airbitz/airbitz-core-js)
 
 ## Installing
 
-Since this package is not on NPM, you will have to do things manually:
+Since this package is not on NPM, you will have to use the current git version
 
-1. Clone this project into a directory next to your project.
-2. Install dependencies & build the library:
-
-    ```
-    cd airbitz-currency-ethereum
-    yarn
-    yarn build
-    ```
-
-3. Add to your project's `package.json` like:
-
-    ```
-    cd ../your-project
-    yarn add 'file:../airbitz-currency-ethereum'
-    ```
-
-Please note that the final step, `yarn link`, breaks the React Native packager. If that's your platform, just skip it. You'll have to manually update `node_modules` if the shitcoin library changes.
-
-This package uses rollup.js to bundle its sources. If you would like to avoid having to re-build every time you test something (particularly when running the CLI tool), simply rename `lib/` to `src/` in the `main` and `module` properties of `package.json`.
-
-## Usage
-
-Initialize the plugin:
+npm i git+ssh://git@github.com/Airbitz/airbitz-currency-ethereum.git -s
 
 ```
-import { makeEthereumPlugin } from `airbitz-currency-ethereum`
+import { EthereumCurrencyPluginFactory } from `airbitz-currency-ethereum`
+```
 
-const ethereumPlugin = makeEthereumPlugin({
-  io: yourPlatformSpecifcIo
+Now you can pass `EthereumCurrencyPluginFactory` to `airbitz-core-js`.
+
+```
+const context = makeReactNativeContext({
+  apiKey: YOUR_API_KEY,
+  plugins: [ EthereumCurrencyPluginFactory ]
 })
 ```
 
-Now you can pass `ethereumPlugin` to `airbitz-core-js`.
+This plugin exposes the following `otherSettings` which can be set using abcAccount.updateSettings()
+
+```
+{
+  etherscanApiServers: Array<string>
+  superethServers: Array<string>
+}
+```
+`etherscanApiServers` is an array of servers to use that follow the etherscan.io API for querying address balance and transactions. ie. `https://api.etherscan.io`
+
+`superethServers` is an array of servers to use that follow the [Supereth](https://github.com/Airbitz/edge-supereth) API
