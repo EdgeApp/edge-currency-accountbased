@@ -3,7 +3,7 @@
  */
 
 import type { EthereumFees, EthereumFee, EthereumCalcedFees } from './ethTypes.js'
-import type { EsSpendInfo } from 'airbitz-core-js'
+import type { AbcSpendInfo } from 'airbitz-core-js'
 import { normalizeAddress } from './ethUtils.js'
 import { bns } from 'biggystring'
 
@@ -12,7 +12,7 @@ export const ES_FEE_STANDARD = 'standard'
 export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
-export function calcMiningFee (spendInfo: EsSpendInfo, networkFees:EthereumFees):EthereumCalcedFees {
+export function calcMiningFee (spendInfo: AbcSpendInfo, networkFees:EthereumFees):EthereumCalcedFees {
   const targetAddress = normalizeAddress(spendInfo.spendTargets[0].publicAddress)
   let networkFeeForGasPrice:EthereumFee = networkFees['default']
   let networkFeeForGasLimit:EthereumFee = networkFees['default']
@@ -38,7 +38,7 @@ export function calcMiningFee (spendInfo: EsSpendInfo, networkFees:EthereumFees)
   let gasPrice
   let nativeAmount = spendInfo.spendTargets[0].nativeAmount
   if (useLimit === 'tokenTransaction') {
-    // Small hack. Estimate the relative value of token to ethereum as 10%
+    // Small hack. Abctimate the relative value of token to ethereum as 10%
     nativeAmount = bns.div(nativeAmount, '10')
   }
   switch (networkFeeOption) {

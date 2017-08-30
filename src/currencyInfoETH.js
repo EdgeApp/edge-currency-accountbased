@@ -1,7 +1,7 @@
 /* global */
 // @flow
 
-import type { EsCurrencyInfo, EsCurrencySettings } from 'airbitz-core-js'
+import type { AbcCurrencyInfo, AbcCurrencySettings } from 'airbitz-core-js'
 import type { EthereumSettings } from './ethTypes'
 
 const otherSettings:EthereumSettings = {
@@ -13,14 +13,14 @@ const otherSettings:EthereumSettings = {
   ]
 }
 
-const defaultSettings:EsCurrencySettings = {
+const defaultSettings:AbcCurrencySettings = {
   addressExplorer: 'https://etherscan.io/address/%s',
   transactionExplorer: 'https://etherscan.io/tx/%s',
   denomCurrencyCode: 'ETH',
   otherSettings
 }
 
-const currencyInfo:EsCurrencyInfo = { // Details of supported currency
+const currencyInfo:AbcCurrencyInfo = { // Details of supported currency
   walletTypes: [
     'wallet:ethereum'
   ],

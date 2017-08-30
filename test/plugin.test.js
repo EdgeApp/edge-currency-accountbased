@@ -1,7 +1,7 @@
 /* global describe it */
 const { EthereumCurrencyPluginFactory } = require('../lib/indexEthereum.js')
 const { calcMiningFee } = require('../lib/indexEthereum.js')
-// const { EsSpendInfo, EthereumFees } = require('airbitz-core-js')
+// const { AbcSpendInfo, EthereumFees } = require('airbitz-core-js')
 
 const assert = require('assert')
 

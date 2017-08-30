@@ -5,12 +5,12 @@
 import { txLibInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import type {
-  EsParsedUri,
-  EsEncodeUri,
-  EsCurrencyPlugin,
-  // EsCurrencyInfo,
-  EsCurrencyPluginFactory,
-  EsWalletInfo
+  AbcParsedUri,
+  AbcEncodeUri,
+  AbcCurrencyPlugin,
+  // AbcCurrencyInfo,
+  AbcCurrencyPluginFactory,
+  AbcWalletInfo
 } from 'airbitz-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
@@ -77,13 +77,13 @@ function getParameterByName (param, url) {
 //   }
 // }
 
-export const EthereumCurrencyPluginFactory: EsCurrencyPluginFactory = {
+export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   pluginType: 'currency',
 
-  async makePlugin (opts:any):Promise<EsCurrencyPlugin> {
+  async makePlugin (opts:any):Promise<AbcCurrencyPlugin> {
     io = opts.io
 
-    const ethereumPlugin:EsCurrencyPlugin = {
+    const ethereumPlugin:AbcCurrencyPlugin = {
       pluginName: 'ethereum',
       currencyInfo: txLibInfo.currencyInfo,
 
@@ -104,7 +104,7 @@ export const EthereumCurrencyPluginFactory: EsCurrencyPluginFactory = {
         }
       },
 
-      derivePublicKey: (walletInfo: EsWalletInfo) => {
+      derivePublicKey: (walletInfo: AbcWalletInfo) => {
         const type = walletInfo.type.replace('wallet:', '')
         if (type === 'ethereum') {
           const privKey = hexToBuf(walletInfo.keys.ethereumKey)
@@ -138,7 +138,7 @@ export const EthereumCurrencyPluginFactory: EsCurrencyPluginFactory = {
         }
       },
 
-      makeEngine: (walletInfo: EsWalletInfo, opts: any = {}) => {
+      makeEngine: (walletInfo: AbcWalletInfo, opts: any = {}) => {
         return new EthereumEngine(io, walletInfo, opts)
       },
 
@@ -182,26 +182,26 @@ export const EthereumCurrencyPluginFactory: EsCurrencyPluginFactory = {
         label = getParameterByName('label', uri)
         message = getParameterByName('message', uri)
 
-        const esParsedUri:EsParsedUri = {
+        const abcParsedUri:AbcParsedUri = {
           publicAddress: address
         }
         if (nativeAmount) {
-          esParsedUri.nativeAmount = nativeAmount
+          abcParsedUri.nativeAmount = nativeAmount
         }
         if (currencyCode) {
-          esParsedUri.currencyCode = currencyCode
+          abcParsedUri.currencyCode = currencyCode
         }
         if (label) {
-          esParsedUri.label = label
+          abcParsedUri.label = label
         }
         if (message) {
-          esParsedUri.message = message
+          abcParsedUri.message = message
         }
 
-        return esParsedUri
+        return abcParsedUri
       },
 
-      encodeUri: (obj: EsEncodeUri) => {
+      encodeUri: (obj: AbcEncodeUri) => {
         if (!obj.publicAddress) {
           throw new Error('InvalidPublicAddressError')
         }
