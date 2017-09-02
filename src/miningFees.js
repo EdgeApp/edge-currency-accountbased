@@ -3,7 +3,7 @@
  */
 
 import type { EthereumFees, EthereumFee, EthereumCalcedFees } from './ethTypes.js'
-import type { AbcSpendInfo } from 'airbitz-core-js'
+import type { AbcSpendInfo } from 'airbitz-core-types'
 import { normalizeAddress } from './ethUtils.js'
 import { bns } from 'biggystring'
 

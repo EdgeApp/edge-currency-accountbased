@@ -13,7 +13,7 @@ import type {
   AbcMakeEngineOptions,
   AbcSpendInfo,
   AbcWalletInfo
-} from 'airbitz-core-js'
+} from 'airbitz-core-types'
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
