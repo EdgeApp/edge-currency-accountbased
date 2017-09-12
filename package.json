@@ -19,7 +19,7 @@
     "lib/*"
   ],
   "dependencies": {
-    "airbitz-core-types": "^0.0.1",
+    "airbitz-core-types": "git+ssh://git@github.com/Airbitz/airbitz-core-types.git",
     "biggystring": "^1.0.6",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
