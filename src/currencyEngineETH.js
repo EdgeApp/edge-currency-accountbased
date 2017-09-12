@@ -4,7 +4,6 @@
 // @flow
 
 import { txLibInfo } from './currencyInfoETH.js'
-import type { EthereumFees } from './ethTypes.js'
 import type {
   AbcCurrencyEngine,
   AbcTransaction,
@@ -18,6 +17,7 @@ import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
 import { NetworkFeesSchema } from './ethSchema.js'
+import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
 import { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
@@ -25,8 +25,6 @@ const abi = require('../lib/export-fixes-bundle.js').ABI
 const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
 const EthereumTx = require('../lib/export-fixes-bundle.js').Transaction
 
-const DATA_STORE_FOLDER = 'txEngineFolder'
-const DATA_STORE_FILE = 'walletLocalData.json'
 const ADDRESS_POLL_MILLISECONDS = 3000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 5000
 const NETWORKFEES_POLL_MILLISECONDS = (60 * 10 * 1000) // 10 minutes
@@ -46,86 +44,6 @@ function getTokenInfo (token:string) {
   return txLibInfo.currencyInfo.metaTokens.find(element => {
     return element.currencyCode === token
   })
-}
-
-const defaultNetworkFees = {
-  default: {
-    gasLimit: {
-      regularTransaction: '21001',
-      tokenTransaction: '37123'
-    },
-    gasPrice: {
-      lowFee: '1000000001',
-      standardFeeLow: '40000000001',
-      standardFeeHigh: '300000000001',
-      standardFeeLowAmount: '100000000000000000',
-      standardFeeHighAmount: '10000000000000000000',
-      highFee: '40000000001'
-    }
-  },
-  '1983987abc9837fbabc0982347ad828': {
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    gasPrice: {
-      lowFee: '1000000002',
-      standardFeeLow: '40000000002',
-      standardFeeHigh: '300000000002',
-      standardFeeLowAmount: '200000000000000000',
-      standardFeeHighAmount: '20000000000000000000',
-      highFee: '40000000002'
-    }
-  },
-  '2983987abc9837fbabc0982347ad828': {
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    }
-  }
-}
-
-class WalletLocalData {
-  blockHeight:number
-  lastAddressQueryHeight:number
-  nextNonce:string
-  ethereumAddress:string
-  totalBalances: {[currencyCode: string]: string}
-  enabledTokens:Array<string>
-  transactionsObj:{[currencyCode: string]: Array<AbcTransaction>}
-  networkFees: EthereumFees
-
-  constructor (jsonString) {
-    this.blockHeight = 0
-
-    const totalBalances:{[currencyCode: string]: string} = {}
-    this.totalBalances = totalBalances
-
-    this.nextNonce = '0'
-
-    this.lastAddressQueryHeight = 0
-
-    // Dumb extra local var needed to make Flow happy
-    const transactionsObj:{[currencyCode: string]: Array<AbcTransaction>} = {}
-    this.transactionsObj = transactionsObj
-
-    this.networkFees = defaultNetworkFees
-
-    this.ethereumAddress = ''
-    this.enabledTokens = TOKEN_CODES
-    if (jsonString !== null) {
-      const data = JSON.parse(jsonString)
-
-      if (typeof data.blockHeight === 'number') this.blockHeight = data.blockHeight
-      if (typeof data.lastAddressQueryHeight === 'string') this.lastAddressQueryHeight = data.lastAddressQueryHeight
-      if (typeof data.nextNonce === 'string') this.nextNonce = data.nextNonce
-      if (typeof data.ethereumAddress === 'string') this.ethereumAddress = data.ethereumAddress
-      if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
-      if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
-      if (typeof data.networkFees !== 'undefined') this.networkFees = data.networkFees
-      if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
-    }
-  }
 }
 
 class EthereumParams {
@@ -211,19 +129,6 @@ class EthereumEngine implements AbcCurrencyEngine {
   // *************************************
   // Private methods
   // *************************************
-  engineLoop () {
-    this.engineOn = true
-    try {
-      this.doInitialCallbacks()
-      this.blockHeightInnerLoop()
-      this.checkAddressesInnerLoop()
-      this.checkUpdateNetworkFees()
-      this.saveWalletLoop()
-    } catch (err) {
-      io.console.error(err)
-    }
-  }
-
   async fetchGetEtherscan (cmd:string) {
     let apiKey = ''
     if (ETHERSCAN_API_KEY.length > 5) {
@@ -814,30 +719,31 @@ class EthereumEngine implements AbcCurrencyEngine {
   }
 
   async startEngine () {
+    this.engineOn = true
     try {
-      const result =
-        await this.walletLocalFolder
-          .folder(DATA_STORE_FOLDER)
-          .file(DATA_STORE_FILE)
-          .getText(DATA_STORE_FOLDER, 'walletLocalData')
-
-      this.walletLocalData = new WalletLocalData(result)
-      this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
-      this.engineLoop()
+      this.doInitialCallbacks()
     } catch (err) {
-      try {
-        io.console.info(err)
-        io.console.info('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(null)
-        this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
-        await this.walletLocalFolder
-          .folder(DATA_STORE_FOLDER)
-          .file(DATA_STORE_FILE)
-          .setText(JSON.stringify(this.walletLocalData))
-        this.engineLoop()
-      } catch (e) {
-        io.console.error('Error writing to localDataStore. Engine not started:' + err)
-      }
+      io.console.error(err)
+    }
+    try {
+      this.blockHeightInnerLoop()
+    } catch (err) {
+      io.console.error(err)
+    }
+    try {
+      this.checkAddressesInnerLoop()
+    } catch (err) {
+      io.console.error(err)
+    }
+    try {
+      this.checkUpdateNetworkFees()
+    } catch (err) {
+      io.console.error(err)
+    }
+    try {
+      this.saveWalletLoop()
+    } catch (err) {
+      io.console.error(err)
     }
   }
 

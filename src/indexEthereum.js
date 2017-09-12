@@ -4,11 +4,11 @@
 // @flow
 import { txLibInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
+import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
 import type {
   AbcParsedUri,
   AbcEncodeUri,
   AbcCurrencyPlugin,
-  // AbcCurrencyInfo,
   AbcCurrencyPluginFactory,
   AbcWalletInfo
 } from 'airbitz-core-types'
@@ -138,8 +138,32 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
       },
 
-      makeEngine: (walletInfo: AbcWalletInfo, opts: any = {}) => {
-        return new EthereumEngine(io, walletInfo, opts)
+      async makeEngine (walletInfo: AbcWalletInfo, opts: any = {}):any {
+        const ethereumEngine = new EthereumEngine(io, walletInfo, opts)
+        try {
+          const result =
+            await ethereumEngine.walletLocalFolder
+              .folder(DATA_STORE_FOLDER)
+              .file(DATA_STORE_FILE)
+              .getText(DATA_STORE_FOLDER, 'walletLocalData')
+
+          ethereumEngine.walletLocalData = new WalletLocalData(result)
+          ethereumEngine.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
+        } catch (err) {
+          try {
+            io.console.info(err)
+            io.console.info('No walletLocalData setup yet: Failure is ok')
+            ethereumEngine.walletLocalData = new WalletLocalData(null)
+            ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
+            await ethereumEngine.walletLocalFolder
+              .folder(DATA_STORE_FOLDER)
+              .file(DATA_STORE_FILE)
+              .setText(JSON.stringify(this.walletLocalData))
+          } catch (e) {
+            io.console.error('Error writing to localDataStore. Engine not started:' + err)
+          }
+          return ethereumEngine
+        }
       },
 
       parseUri: (uri: string) => {

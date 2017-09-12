@@ -37,8 +37,9 @@ function makeEngine () {
       const publicKeys = plugin.derivePublicKey(walletInfo)
       const keys2 = Object.assign({}, walletInfo.keys, publicKeys)
       walletInfo.keys = keys2
-      const engine = plugin.makeEngine(walletInfo)
-      resolve(engine)
+      plugin.makeEngine(walletInfo).then(engine => {
+        resolve(engine)
+      })
     }).catch(error => {
       reject(error)
     })
