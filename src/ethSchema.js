@@ -11,12 +11,11 @@ export const CurrencyInfoSchema = {
     },
     'currencyCode': { 'type': 'string' },
     'currencyName': { 'type': 'string' },
+    'addressExplorer': { 'type': 'string' },
+    'transactionExplorer': { 'type': 'string' },
     'defaultSettings': {
       'type': 'object',
       'properties': {
-        'addressExplorer': { 'type': 'string' },
-        'transactionExplorer': { 'type': 'string' },
-        'denomCurrencyCode': { 'type': 'string' },
         'otherSettings': {
           'type': 'object',
           'properties': {
@@ -30,8 +29,7 @@ export const CurrencyInfoSchema = {
             }
           }
         }
-      },
-      'required': [ 'addressExplorer', 'transactionExplorer', 'denomCurrencyCode' ]
+      }
     },
     'denominations': {
       'type': 'array',
@@ -78,7 +76,9 @@ export const CurrencyInfoSchema = {
     'currencyName',
     'defaultSettings',
     'denominations',
-    'symbolImage'
+    'symbolImage',
+    'addressExplorer',
+    'transactionExplorer'
   ]
 }
 

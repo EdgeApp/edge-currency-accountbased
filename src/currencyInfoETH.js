@@ -14,9 +14,6 @@ const otherSettings:EthereumSettings = {
 }
 
 const defaultSettings:AbcCurrencySettings = {
-  addressExplorer: 'https://etherscan.io/address/%s',
-  transactionExplorer: 'https://etherscan.io/tx/%s',
-  denomCurrencyCode: 'ETH',
   otherSettings
 }
 
@@ -28,6 +25,9 @@ const currencyInfo:AbcCurrencyInfo = { // Details of supported currency
   currencyCode: 'ETH', // The 3 character code for the currency
 
   defaultSettings,
+
+  addressExplorer: 'https://etherscan.io/address/%s',
+  transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
