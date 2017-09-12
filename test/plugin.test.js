@@ -25,26 +25,26 @@ function makePlugin () {
   return EthereumCurrencyPluginFactory.makePlugin({io})
 }
 
-function makeEngine () {
-  return new Promise((resolve, reject) => {
-    makePlugin().then((plugin) => {
-      const type = 'wallet:ethereum'
-      const keys = plugin.createPrivateKey(type)
-      const walletInfo = {
-        type,
-        keys
-      }
-      const publicKeys = plugin.derivePublicKey(walletInfo)
-      const keys2 = Object.assign({}, walletInfo.keys, publicKeys)
-      walletInfo.keys = keys2
-      plugin.makeEngine(walletInfo).then(engine => {
-        resolve(engine)
-      })
-    }).catch(error => {
-      reject(error)
-    })
-  })
-}
+// function makeEngine () {
+//   return new Promise((resolve, reject) => {
+//     makePlugin().then((plugin) => {
+//       const type = 'wallet:ethereum'
+//       const keys = plugin.createPrivateKey(type)
+//       const walletInfo = {
+//         type,
+//         keys
+//       }
+//       const publicKeys = plugin.derivePublicKey(walletInfo)
+//       const keys2 = Object.assign({}, walletInfo.keys, publicKeys)
+//       walletInfo.keys = keys2
+//       plugin.makeEngine(walletInfo).then(engine => {
+//         resolve(engine)
+//       })
+//     }).catch(error => {
+//       reject(error)
+//     })
+//   })
+// }
 
 describe('Plugin', function () {
   it('Get currency info', function () {
@@ -423,15 +423,15 @@ describe('Mining Fees', function () {
   })
 })
 
-describe('Engine', function () {
-  it('startEngine exists', function () {
-    makeEngine().then(engine => {
-      assert.equal(typeof engine.startEngine, 'function')
-    })
-  })
-  it('Make spend', function () {
-    makeEngine().then(engine => {
-      assert.equal(typeof engine.killEngine, 'function')
-    })
-  })
-})
+// describe('Engine', function () {
+//   it('startEngine exists', function () {
+//     makeEngine().then(engine => {
+//       assert.equal(typeof engine.startEngine, 'function')
+//     })
+//   })
+//   it('Make spend', function () {
+//     makeEngine().then(engine => {
+//       assert.equal(typeof engine.killEngine, 'function')
+//     })
+//   })
+// })
