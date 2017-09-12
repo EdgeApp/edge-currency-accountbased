@@ -1,7 +1,7 @@
 /* global */
 // @flow
 
-import type { AbcCurrencyInfo, AbcCurrencySettings } from 'airbitz-core-types'
+import type { AbcCurrencyInfo } from 'airbitz-core-types'
 import type { EthereumSettings } from './ethTypes'
 
 const otherSettings:EthereumSettings = {
@@ -13,7 +13,7 @@ const otherSettings:EthereumSettings = {
   ]
 }
 
-const defaultSettings:AbcCurrencySettings = {
+const defaultSettings:any = {
   otherSettings
 }
 

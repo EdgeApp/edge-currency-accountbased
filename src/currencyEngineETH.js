@@ -7,7 +7,6 @@ import { txLibInfo } from './currencyInfoETH.js'
 import type {
   AbcCurrencyEngine,
   AbcTransaction,
-  AbcCurrencySettings,
   AbcCurrencyPluginCallbacks,
   AbcMakeEngineOptions,
   AbcSpendInfo,
@@ -88,7 +87,7 @@ class EthereumEngine implements AbcCurrencyEngine {
   walletLocalData:WalletLocalData
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<AbcTransaction>
-  currentSettings:AbcCurrencySettings
+  currentSettings:any
 
   constructor (io_:any, walletInfo:AbcWalletInfo, opts:AbcMakeEngineOptions) {
     const { walletLocalFolder, callbacks } = opts
@@ -101,8 +100,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.walletInfo = walletInfo
 
     if (typeof opts.optionalSettings !== 'undefined') {
-      const optionalSettings:AbcCurrencySettings = opts.optionalSettings
-      this.currentSettings = optionalSettings
+      this.currentSettings = opts.optionalSettings
     } else {
       this.currentSettings = txLibInfo.currencyInfo.defaultSettings
     }
@@ -714,7 +712,7 @@ class EthereumEngine implements AbcCurrencyEngine {
   // Public methods
   // *************************************
 
-  updateSettings (settings:AbcCurrencySettings) {
+  updateSettings (settings:any) {
     this.currentSettings = settings
   }
 
