@@ -215,11 +215,14 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         if (currencyCode) {
           abcParsedUri.currencyCode = currencyCode
         }
-        if (label) {
-          abcParsedUri.label = label
-        }
-        if (message) {
-          abcParsedUri.message = message
+        if (label || message) {
+          abcParsedUri.metadata = {}
+          if (label) {
+            abcParsedUri.metadata.name = label
+          }
+          if (message) {
+            abcParsedUri.metadata.message = message
+          }
         }
 
         return abcParsedUri
@@ -252,11 +255,13 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
 
             queryString += 'amount=' + amount.toString() + '&'
           }
-          if (typeof obj.label === 'string') {
-            queryString += 'label=' + obj.label + '&'
-          }
-          if (typeof obj.message === 'string') {
-            queryString += 'message=' + obj.message + '&'
+          if (obj.metadata && (obj.metadata.name || obj.metadata.message)) {
+            if (typeof obj.metadata.name === 'string') {
+              queryString += 'label=' + obj.metadata.name + '&'
+            }
+            if (typeof obj.metadata.message === 'string') {
+              queryString += 'message=' + obj.metadata.message + '&'
+            }
           }
           queryString = queryString.substr(0, queryString.length - 1)
 

@@ -47,26 +47,28 @@ function makePlugin () {
 // }
 
 describe('Plugin', function () {
-  it('Get currency info', function () {
+  it('Get currency info', function (done) {
     makePlugin().then((plugin) => {
       assert.equal(plugin.currencyInfo.currencyCode, 'ETH')
+      done()
     })
   })
 })
 
 describe('createPrivateKey', function () {
-  it('Create valid key', function () {
+  it('Create valid key', function (done) {
     makePlugin().then((plugin) => {
       const privateKeys = plugin.createPrivateKey('wallet:ethereum')
       assert.equal(!privateKeys, false)
       assert.equal(typeof privateKeys.ethereumKey, 'string')
       assert.equal(privateKeys.ethereumKey, 'a7e6eab74dafdeddae52cb1b444727e3810062a9d7ededd9b27b34de7d119b1f')
+      done()
     })
   })
 })
 
 describe('derivePublicKey', function () {
-  it('Valid private key', function () {
+  it('Valid private key', function (done) {
     makePlugin().then((plugin) => {
       const walletInfoprivate = {
         type: 'ethereum',
@@ -74,6 +76,7 @@ describe('derivePublicKey', function () {
       }
       const publicKeys = plugin.derivePublicKey(walletInfoprivate)
       assert.equal(publicKeys.ethereumAddress.toLowerCase(), '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'.toLowerCase())
+      done()
     })
   })
 
@@ -112,67 +115,74 @@ describe('derivePublicKey', function () {
 })
 
 describe('parseUri', function () {
-  it('address only', function () {
+  it('address only', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, null)
       assert.equal(parsedUri.currencyCode, null)
+      done()
     })
   })
-  it('uri address', function () {
+  it('uri address', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, null)
       assert.equal(parsedUri.currencyCode, null)
+      done()
     })
   })
-  it('uri address with amount', function () {
+  it('uri address with amount', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=12345.6789')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, '12345678900000000000000')
       assert.equal(parsedUri.currencyCode, 'ETH')
+      done()
     })
   })
-  it('uri address with amount & label', function () {
+  it('uri address with amount & label', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.56789&label=Johnny%20Bitcoin')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, '1234567890000000000000')
       assert.equal(parsedUri.currencyCode, 'ETH')
-      assert.equal(parsedUri.label, 'Johnny Bitcoin')
+      assert.equal(parsedUri.metadata.name, 'Johnny Bitcoin')
+      done()
     })
   })
-  it('uri address with amount, label & message', function () {
+  it('uri address with amount, label & message', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.56789&label=Johnny%20Bitcoin&message=Hello%20World,%20I%20miss%20you%20!')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, '1234567890000000000000')
       assert.equal(parsedUri.currencyCode, 'ETH')
-      assert.equal(parsedUri.label, 'Johnny Bitcoin')
-      assert.equal(parsedUri.message, 'Hello World, I miss you !')
+      assert.equal(parsedUri.metadata.name, 'Johnny Bitcoin')
+      assert.equal(parsedUri.metadata.message, 'Hello World, I miss you !')
+      done()
     })
   })
-  it('uri address with unsupported param', function () {
+  it('uri address with unsupported param', function (done) {
     makePlugin().then((plugin) => {
       const parsedUri = plugin.parseUri('ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?unsupported=helloworld&amount=12345.6789')
       assert.equal(parsedUri.publicAddress, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
       assert.equal(parsedUri.nativeAmount, '12345678900000000000000')
       assert.equal(parsedUri.currencyCode, 'ETH')
+      done()
     })
   })
 })
 
 describe('encodeUri', function () {
-  it('address only', function () {
+  it('address only', function (done) {
     makePlugin().then((plugin) => {
       const encodedUri = plugin.encodeUri({publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8'})
       assert.equal(encodedUri, '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8')
+      done()
     })
   })
-  it('address & amount', function () {
+  it('address & amount', function (done) {
     makePlugin().then((plugin) => {
       const encodedUri = plugin.encodeUri(
         {
@@ -181,33 +191,40 @@ describe('encodeUri', function () {
         }
       )
       assert.equal(encodedUri, 'ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.5678')
+      done()
     })
   })
-  it('address, amount, and label', function () {
+  it('address, amount, and label', function (done) {
     makePlugin().then((plugin) => {
       const encodedUri = plugin.encodeUri(
         {
           publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
           nativeAmount: '1234567800000000000000',
           currencyCode: 'ETH',
-          label: 'Johnny Bitcoin'
+          metadata: {
+            name: 'Johnny Bitcoin'
+          }
         }
       )
       assert.equal(encodedUri, 'ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.5678&label=Johnny%20Bitcoin')
+      done()
     })
   })
-  it('address, amount, label, & message', function () {
+  it('address, amount, label, & message', function (done) {
     makePlugin().then((plugin) => {
       const encodedUri = plugin.encodeUri(
         {
           publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
           nativeAmount: '1234567800000000000000',
           currencyCode: 'ETH',
-          label: 'Johnny Bitcoin',
-          message: 'Hello World, I miss you !'
+          metadata: {
+            name: 'Johnny Bitcoin',
+            message: 'Hello World, I miss you !'
+          }
         }
       )
       assert.equal(encodedUri, 'ethereum:0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8?amount=1234.5678&label=Johnny%20Bitcoin&message=Hello%20World,%20I%20miss%20you%20!')
+      done()
     })
   })
   it('invalid currencyCode', function () {
@@ -218,7 +235,7 @@ describe('encodeUri', function () {
             publicAddress: '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8',
             nativeAmount: '1234567800000000000000',
             currencyCode: 'INVALID',
-            label: 'Johnny Bitcoin',
+            name: 'Johnny Bitcoin',
             message: 'Hello World, I miss you !'
           }
         )
