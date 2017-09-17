@@ -148,7 +148,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
               .getText(DATA_STORE_FOLDER, 'walletLocalData')
 
           ethereumEngine.walletLocalData = new WalletLocalData(result)
-          ethereumEngine.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
+          ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
         } catch (err) {
           try {
             io.console.info(err)
@@ -162,8 +162,8 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
           } catch (e) {
             io.console.error('Error writing to localDataStore. Engine not started:' + err)
           }
-          return ethereumEngine
         }
+        return ethereumEngine
       },
 
       parseUri: (uri: string) => {
