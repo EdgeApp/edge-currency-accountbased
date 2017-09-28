@@ -755,10 +755,9 @@ class EthereumEngine implements AbcCurrencyEngine {
     return parseInt(this.walletLocalData.blockHeight)
   }
 
-  // synchronous
-  enableTokens (tokens:Array<string>) {
-    for (let n = 0; n < tokens.length; n++) {
-      const token = tokens[n]
+  // asynchronous
+  async enableTokens (tokens:Array<string>) {
+    for (const token of tokens) {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
       }
