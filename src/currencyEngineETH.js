@@ -745,7 +745,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
   }
 
-  killEngine () {
+  async killEngine () {
     // disconnect network connections
     this.engineOn = false
   }
