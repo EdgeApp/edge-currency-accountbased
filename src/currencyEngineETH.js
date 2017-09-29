@@ -10,7 +10,8 @@ import type {
   AbcCurrencyPluginCallbacks,
   AbcMakeEngineOptions,
   AbcSpendInfo,
-  AbcWalletInfo
+  AbcWalletInfo,
+  AbcFreshAddress
 } from 'airbitz-core-types'
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
@@ -880,8 +881,8 @@ class EthereumEngine implements AbcCurrencyEngine {
   }
 
   // synchronous
-  getFreshAddress (options:any) {
-    return this.walletLocalData.ethereumAddress
+  getFreshAddress (options:any): AbcFreshAddress {
+    return { publicAddress: this.walletLocalData.ethereumAddress }
   }
 
   // synchronous
