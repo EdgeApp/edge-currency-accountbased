@@ -36,7 +36,7 @@ const ETHERSCAN_API_KEY = ''
 const PRIMARY_CURRENCY = txLibInfo.currencyInfo.currencyCode
 const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
 const CHECK_UNCONFIRMED = true
-const INFO_SERVERS = ['http://info1.edgesecure.co:8080']
+const INFO_SERVERS = ['https://info1.edgesecure.co:8444']
 
 let io
 

@@ -9,7 +9,7 @@ const otherSettings:EthereumSettings = {
     'https://api.etherscan.io'
   ],
   superethServers: [
-    'http://supereth1.airbitz.co:8080'
+    'https://supereth1.edgesecure.co:8443'
   ]
 }
 
