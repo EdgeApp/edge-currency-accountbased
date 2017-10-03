@@ -163,6 +163,9 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
             io.console.error('Error writing to localDataStore. Engine not started:' + err)
           }
         }
+        for (const token of ethereumEngine.walletLocalData.enabledTokens) {
+          ethereumEngine.tokenCheckStatus[token] = 0
+        }
         return ethereumEngine
       },
 
