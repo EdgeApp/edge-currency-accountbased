@@ -46,6 +46,19 @@ function getTokenInfo (token:string) {
   })
 }
 
+function unpadAddress (address: string): string {
+  const unpadded = bns.add('0', address, 16)
+  return unpadded
+}
+
+function padAddress (address: string): string {
+  const normalizedAddress = normalizeAddress(address)
+  const padding = 64 - normalizedAddress.length
+  const zeroString = '0000000000000000000000000000000000000000000000000000000000000000'
+  const out = '0x' + zeroString.slice(0, padding) + normalizedAddress
+  return out
+}
+
 class EthereumParams {
   from:Array<string>
   to: Array<string>
@@ -84,7 +97,8 @@ class EthereumEngine implements AbcCurrencyEngine {
   abcTxLibCallbacks:AbcCurrencyPluginCallbacks
   walletLocalFolder:any
   engineOn:boolean
-  addressesChecked:boolean
+  addressesChecked: boolean
+  tokenCheckStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData:WalletLocalData
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<AbcTransaction>
@@ -96,6 +110,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     io = io_
     this.engineOn = false
     this.addressesChecked = false
+    this.tokenCheckStatus = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
     this.walletInfo = walletInfo
@@ -278,6 +293,84 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
   }
 
+  processEtherscanTokenTransaction (tx:any, currencyCode: string) {
+    let netNativeAmount:string // Amount received into wallet
+    let ourReceiveAddresses:Array<string> = []
+
+    // const nativeValueBN = new BN(tx.value, 10)
+    const paddedAddress = padAddress(this.walletLocalData.ethereumAddress)
+    let fromAddress
+    let toAddress
+
+    if (tx.topics[1] === paddedAddress) {
+      netNativeAmount = bns.sub('0', tx.data)
+      fromAddress = this.walletLocalData.ethereumAddress
+      toAddress = unpadAddress(tx.topics[2])
+    } else {
+      fromAddress = unpadAddress(tx.topics[1])
+      toAddress = this.walletLocalData.ethereumAddress
+      netNativeAmount = bns.add('0', tx.data)
+      ourReceiveAddresses.push(this.walletLocalData.ethereumAddress.toLowerCase())
+    }
+    // const nativeNetworkFee:string = bns.mul(tx.gasPrice, tx.gasUsed)
+
+    const ethParams = new EthereumParams(
+      [ fromAddress ],
+      [ toAddress ],
+      '',
+      tx.gasPrice,
+      tx.gasUsed,
+      '',
+      0,
+      null
+    )
+
+    let abcTransaction:AbcTransaction = {
+      txid: tx.transactionHash,
+      date: parseInt(tx.timeStamp),
+      currencyCode,
+      blockHeight: parseInt(bns.add('0', tx.blockNumber)),
+      nativeAmount: netNativeAmount,
+      networkFee: '0',
+      ourReceiveAddresses,
+      signedTx: 'unsigned_right_now',
+      otherParams: ethParams
+    }
+
+    const idx = this.findTransaction(currencyCode, tx.transactionHash)
+    if (idx === -1) {
+      console.log(sprintf('New token transaction: %s', tx.transactionHash))
+
+      // New transaction not in database
+      this.addTransaction(currencyCode, abcTransaction)
+
+      this.abcTxLibCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    } else {
+      // Already have this tx in the database. See if anything changed
+      const transactionsArray = this.walletLocalData.transactionsObj[ currencyCode ]
+      const abcTx = transactionsArray[ idx ]
+
+      if (
+        abcTx.blockHeight !== abcTransaction.blockHeight ||
+        abcTx.networkFee !== abcTransaction.networkFee ||
+        abcTx.nativeAmount !== abcTransaction.nativeAmount ||
+        abcTx.otherParams.errorVal !== abcTransaction.otherParams.errorVal
+      ) {
+        console.log(sprintf('Update token transaction: %s height:%s', abcTx.txid, abcTx.blockHeight))
+        this.updateTransaction(currencyCode, abcTransaction, idx)
+        this.abcTxLibCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      } else {
+        console.log(sprintf('Old transaction. No Update: %s', abcTx.txid))
+      }
+    }
+  }
+
   processUnconfirmedTransaction (tx:any) {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
@@ -442,13 +535,18 @@ class EthereumEngine implements AbcCurrencyEngine {
 
         // Get transactions
         // Iterate over transactions in address
-        for (const tx of transactions) {
+        for (let i = 0; i < transactions.length; i++) {
+          const tx = transactions[i]
           this.processEtherscanTransaction(tx)
+          this.tokenCheckStatus[ PRIMARY_CURRENCY ] = ((i + 1) / transactions.length)
+          if (i % 10 === 0) {
+            this.updateOnAddressesChecked()
+          }
         }
-        if (checkAddressSuccess === true && this.addressesChecked === false) {
-          this.addressesChecked = true
-          this.abcTxLibCallbacks.onAddressesChecked(1)
+        if (transactions.length === 0) {
+          this.tokenCheckStatus[ PRIMARY_CURRENCY ] = 1
         }
+        this.updateOnAddressesChecked()
       } else {
         checkAddressSuccess = false
       }
@@ -456,8 +554,117 @@ class EthereumEngine implements AbcCurrencyEngine {
       io.console.error(e)
       checkAddressSuccess = false
     }
-    if (checkAddressSuccess) {
+    return checkAddressSuccess
+  }
+
+  updateOnAddressesChecked () {
+    if (this.addressesChecked) {
+      return
+    }
+    const numTokens = this.walletLocalData.enabledTokens.length
+    const perTokenSlice = 1 / numTokens
+    let numCompleteStatus = 0
+    let totalStatus = 0
+    for (const token of this.walletLocalData.enabledTokens) {
+      const status = this.tokenCheckStatus[token]
+      totalStatus += status * perTokenSlice
+      if (status === 1) {
+        numCompleteStatus++
+      }
+    }
+    if (numCompleteStatus === this.walletLocalData.enabledTokens.length) {
+      this.addressesChecked = true
+      console.log('onAddressesChecked: 1')
+      this.abcTxLibCallbacks.onAddressesChecked(1)
       this.walletLocalData.lastAddressQueryHeight = this.walletLocalData.blockHeight
+    } else {
+      console.log('onAddressesChecked: ' + totalStatus.toString())
+      this.abcTxLibCallbacks.onAddressesChecked(totalStatus)
+    }
+  }
+
+  async checkTokenTransactionsFetch (currencyCode: string) {
+    const address = padAddress(this.walletLocalData.ethereumAddress)
+    let startBlock:number = 0
+    let checkAddressSuccess = true
+    let url = ''
+    let jsonObj = {}
+    let valid = false
+    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+      startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+    }
+
+    const tokenInfo = getTokenInfo(currencyCode)
+    let contractAddress = ''
+    if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+      contractAddress = tokenInfo.contractAddress
+    } else {
+      return
+    }
+
+    try {
+      url = sprintf('?module=logs&action=getLogs&fromBlock=%d&toBlock=latest&address=%s&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&topic0_1_opr=and&topic1=%s&topic1_2_opr=or&topic2=%s&apikey=YourApiKeyToken',
+        startBlock, contractAddress, address, address)
+      jsonObj = await this.fetchGetEtherscan(url)
+      valid = validateObject(jsonObj, {
+        'type': 'object',
+        'properties': {
+          'result': {
+            'type': 'array',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'data': {'type': 'string'},
+                'blockNumber': {'type': 'string'},
+                'timeStamp': {'type': 'string'},
+                'transactionHash': {'type': 'string'},
+                'gasPrice': {'type': 'string'},
+                'gasUsed': {'type': 'string'},
+                'topics': {
+                  'type': 'array',
+                  'items': { 'type': 'string' }
+                }
+              },
+              'required': [
+                'data',
+                'blockNumber',
+                'timeStamp',
+                'transactionHash',
+                'gasPrice',
+                'gasUsed',
+                'topics'
+              ]
+            }
+          }
+        },
+        'required': ['result']
+      })
+
+      if (valid) {
+        const transactions = jsonObj.result
+        console.log('Fetched transactions count: ' + transactions.length)
+
+        // Get transactions
+        // Iterate over transactions in address
+        for (let i = 0; i < transactions.length; i++) {
+          const tx = transactions[i]
+          this.processEtherscanTokenTransaction(tx, currencyCode)
+          this.tokenCheckStatus[currencyCode] = ((i + 1) / transactions.length)
+          if (i % 10 === 0) {
+            this.updateOnAddressesChecked()
+          }
+        }
+        if (transactions.length === 0) {
+          this.tokenCheckStatus[currencyCode] = 1
+        }
+        this.updateOnAddressesChecked()
+      } else {
+        checkAddressSuccess = false
+      }
+    } catch (e) {
+      io.console.error(e)
+      checkAddressSuccess = false
     }
     return checkAddressSuccess
   }
@@ -567,6 +774,7 @@ class EthereumEngine implements AbcCurrencyEngine {
             const tokenInfo = getTokenInfo(tk)
             if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
               url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumAddress)
+              promiseArray.push(this.checkTokenTransactionsFetch(tk))
             } else {
               continue
             }
@@ -574,7 +782,6 @@ class EthereumEngine implements AbcCurrencyEngine {
             continue
           }
         }
-
         promiseArray.push(this.checkAddressFetch(tk, url))
       }
 
