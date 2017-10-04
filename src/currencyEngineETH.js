@@ -339,7 +339,7 @@ class EthereumEngine implements AbcCurrencyEngine {
 
     const idx = this.findTransaction(currencyCode, tx.transactionHash)
     if (idx === -1) {
-      console.log(sprintf('New token transaction: %s', tx.transactionHash))
+      // console.log(sprintf('New token transaction: %s', tx.transactionHash))
 
       // New transaction not in database
       this.addTransaction(currencyCode, abcTransaction)
@@ -359,14 +359,14 @@ class EthereumEngine implements AbcCurrencyEngine {
         abcTx.nativeAmount !== abcTransaction.nativeAmount ||
         abcTx.otherParams.errorVal !== abcTransaction.otherParams.errorVal
       ) {
-        console.log(sprintf('Update token transaction: %s height:%s', abcTx.txid, abcTx.blockHeight))
+        // console.log(sprintf('Update token transaction: %s height:%s', abcTx.txid, abcTx.blockHeight))
         this.updateTransaction(currencyCode, abcTransaction, idx)
         this.abcTxLibCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
         )
         this.transactionsChangedArray = []
       } else {
-        console.log(sprintf('Old transaction. No Update: %s', abcTx.txid))
+        // console.log(sprintf('Old transaction. No Update: %s', abcTx.txid))
       }
     }
   }
@@ -574,11 +574,11 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
     if (numCompleteStatus === this.walletLocalData.enabledTokens.length) {
       this.addressesChecked = true
-      console.log('onAddressesChecked: 1')
+      // console.log('onAddressesChecked: 1')
       this.abcTxLibCallbacks.onAddressesChecked(1)
       this.walletLocalData.lastAddressQueryHeight = this.walletLocalData.blockHeight
     } else {
-      console.log('onAddressesChecked: ' + totalStatus.toString())
+      // console.log('onAddressesChecked: ' + totalStatus.toString())
       this.abcTxLibCallbacks.onAddressesChecked(totalStatus)
     }
   }
@@ -643,7 +643,7 @@ class EthereumEngine implements AbcCurrencyEngine {
 
       if (valid) {
         const transactions = jsonObj.result
-        console.log('Fetched transactions count: ' + transactions.length)
+        // console.log('Fetched transactions count: ' + transactions.length)
 
         // Get transactions
         // Iterate over transactions in address
