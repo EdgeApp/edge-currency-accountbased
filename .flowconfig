@@ -16,7 +16,8 @@
 
 .*/react-native-fs/.*
 
-.*/*.js.flow
+<PROJECT_ROOT>/lib/.*.js.flow
+
 [include]
 
 [libs]
