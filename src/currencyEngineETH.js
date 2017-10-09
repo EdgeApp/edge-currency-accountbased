@@ -288,7 +288,7 @@ class EthereumEngine implements AbcCurrencyEngine {
         )
         this.transactionsChangedArray = []
       } else {
-        io.console.info(sprintf('Old transaction. No Update: %s', tx.hash))
+        // io.console.info(sprintf('Old transaction. No Update: %s', tx.hash))
       }
     }
   }
@@ -453,7 +453,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       })
       if (valid) {
         const balance = jsonObj.result
-        io.console.info(tk + ': token Address balance: ' + balance)
+        // io.console.info(tk + ': token Address balance: ' + balance)
 
         if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
           this.walletLocalData.totalBalances[tk] = '0'
@@ -531,7 +531,7 @@ class EthereumEngine implements AbcCurrencyEngine {
 
       if (valid) {
         const transactions = jsonObj.result
-        io.console.info('Fetched transactions count: ' + transactions.length)
+        // io.console.info('Fetched transactions count: ' + transactions.length)
 
         // Get transactions
         // Iterate over transactions in address
@@ -791,8 +791,8 @@ class EthereumEngine implements AbcCurrencyEngine {
       }
 
       try {
-        const results = await Promise.all(promiseArray)
-        io.console.info(results)
+        /* const results = */ await Promise.all(promiseArray)
+        // io.console.info(results)
         await snooze(ADDRESS_POLL_MILLISECONDS)
       } catch (e) {
         io.console.error('Error fetching address transactions: ' + address)
@@ -863,7 +863,7 @@ class EthereumEngine implements AbcCurrencyEngine {
             .setText(walletJson)
           this.walletLocalDataDirty = false
         } else {
-          io.console.info('walletLocalData clean')
+          // io.console.info('walletLocalData clean')
         }
         await snooze(SAVE_DATASTORE_MILLISECONDS)
       } catch (err) {
