@@ -140,6 +140,10 @@ class EthereumEngine implements AbcCurrencyEngine {
         this.walletInfo.keys.ethereumAddress = walletInfo.keys.ethereumPublicAddress
       } else if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumPublicAddress) {
         this.walletInfo.keys.ethereumAddress = walletInfo.keys.keys.ethereumPublicAddress
+      } else {
+        const privKey = hexToBuf(this.walletInfo.keys.ethereumKey)
+        const wallet = ethWallet.fromPrivateKey(privKey)
+        this.walletInfo.keys.ethereumAddress = wallet.getAddressString()
       }
     }
   }
