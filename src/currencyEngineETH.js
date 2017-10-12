@@ -226,10 +226,13 @@ class EthereumEngine implements AbcCurrencyEngine {
     let netNativeAmount:string // Amount received into wallet
     let ourReceiveAddresses:Array<string> = []
 
-    // const nativeValueBN = new BN(tx.value, 10)
+    const nativeNetworkFee:string = bns.mul(tx.gasPrice, tx.gasUsed)
 
     if (tx.from.toLowerCase() === this.walletLocalData.ethereumAddress.toLowerCase()) {
       netNativeAmount = bns.sub('0', tx.value)
+
+      // For spends, include the network fee in the transaction amount
+      netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
 
       if (bns.gte(tx.nonce, this.walletLocalData.nextNonce)) {
         this.walletLocalData.nextNonce = bns.add(tx.nonce, '1')
@@ -238,11 +241,6 @@ class EthereumEngine implements AbcCurrencyEngine {
       netNativeAmount = bns.add('0', tx.value)
       ourReceiveAddresses.push(this.walletLocalData.ethereumAddress.toLowerCase())
     }
-    // const gasPriceBN = new BN(tx.gasPrice, 10)
-    // const gasUsedBN = new BN(tx.gasUsed, 10)
-    // const etherUsedBN = gasPriceBN.mul(gasUsedBN)
-    const nativeNetworkFee:string = bns.mul(tx.gasPrice, tx.gasUsed)
-    // const nativeNetworkFee = etherUsedBN.toString(10)
 
     const ethParams = new EthereumParams(
       [ tx.from ],
@@ -385,9 +383,10 @@ class EthereumEngine implements AbcCurrencyEngine {
     const epochTime = Date.parse(tx.received) / 1000
     let ourReceiveAddresses:Array<string> = []
 
-    let nativeAmount
+    let nativeAmount: string
     if (normalizeAddress(fromAddress) === normalizeAddress(this.walletLocalData.ethereumAddress)) {
       nativeAmount = (0 - tx.total).toString(10)
+      nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
     } else {
       nativeAmount = tx.total.toString(10)
       ourReceiveAddresses.push(this.walletLocalData.ethereumAddress)
