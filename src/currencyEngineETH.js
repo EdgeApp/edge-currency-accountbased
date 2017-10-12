@@ -127,15 +127,23 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.abcTxLibCallbacks = callbacks
     this.walletLocalFolder = walletLocalFolder
 
-    // Fix up old accounts that had messed up keyInfo structures
-    if (typeof this.walletInfo.keys.ethereumPublicAddress === 'string') {
-      this.walletInfo.keys.ethereumAddress = this.walletInfo.keys.ethereumPublicAddress
-    } else if (typeof this.walletInfo.keys.keys !== 'undefined') {
-      if (typeof this.walletInfo.keys.keys.ethereumPublicAddress === 'string') {
-        this.walletInfo.keys.ethereumAddress = this.walletInfo.keys.keys.ethereumPublicAddress
+    // Fix messed-up wallets that have a private key in the wrong place:
+    if (typeof this.walletInfo.keys.ethereumKey !== 'string') {
+      if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumKey) {
+        this.walletInfo.keys.ethereumKey = walletInfo.keys.keys.ethereumKey
       }
-      if (typeof this.walletInfo.keys.keys.ethereumKey === 'string') {
-        this.walletInfo.keys.ethereumKey = this.walletInfo.keys.keys.ethereumKey
+    }
+
+    // Fix messed-up wallets that have a public address in the wrong place:
+    if (typeof this.walletInfo.keys.ethereumAddress !== 'string') {
+      if (walletInfo.keys.ethereumPublicAddress) {
+        this.walletInfo.keys.ethereumAddress = walletInfo.keys.ethereumPublicAddress
+      } else if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumPublicAddress) {
+        this.walletInfo.keys.ethereumAddress = walletInfo.keys.keys.ethereumPublicAddress
+      } else {
+        const privKey = hexToBuf(this.walletInfo.keys.ethereumKey)
+        const wallet = ethWallet.fromPrivateKey(privKey)
+        this.walletInfo.keys.ethereumAddress = wallet.getAddressString()
       }
     }
   }
