@@ -172,7 +172,6 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
       parseUri: (uri: string) => {
         const parsedUri = parse(uri)
         let address: string
-        let amount: number = 0
         let nativeAmount: string | null = null
         let currencyCode: string | null = null
         let label
@@ -198,12 +197,12 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
         const amountStr = getParameterByName('amount', uri)
         if (amountStr && typeof amountStr === 'string') {
-          amount = parseFloat(amountStr)
           const denom = getDenomInfo('ETH')
           if (!denom) {
             throw new Error('InternalErrorInvalidCurrencyCode')
           }
-          nativeAmount = bns.mulf(amount, denom.multiplier)
+          nativeAmount = bns.mul(amountStr, denom.multiplier)
+          nativeAmount = bns.toFixed(nativeAmount, 0, 0)
           currencyCode = 'ETH'
         }
         label = getParameterByName('label', uri)
@@ -254,9 +253,9 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
             if (!denom) {
               throw new Error('InternalErrorInvalidCurrencyCode')
             }
-            let amount = bns.divf(nativeAmount, denom.multiplier)
+            let amount = bns.div(nativeAmount, denom.multiplier, 18)
 
-            queryString += 'amount=' + amount.toString() + '&'
+            queryString += 'amount=' + amount + '&'
           }
           if (obj.metadata && (obj.metadata.name || obj.metadata.message)) {
             if (typeof obj.metadata.name === 'string') {

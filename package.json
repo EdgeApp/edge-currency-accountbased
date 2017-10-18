@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-ethereum",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Edge Ethereum currency plugin",
   "author": "Airbitz, Inc.",
   "contributors": [
@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "airbitz-core-types": "git+ssh://git@github.com/Airbitz/airbitz-core-types.git",
-    "biggystring": "^1.0.6",
+    "biggystring": "^3.0.0",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
     "ethereumjs-abi": "^0.6.4",
