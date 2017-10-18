@@ -1233,13 +1233,9 @@ class EthereumEngine implements AbcCurrencyEngine {
         throw (InsufficientFundsError)
       }
     } else {
-      if (bns.gt(nativeNetworkFee, balanceEth)) {
+      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      if (bns.gt(nativeAmount, balanceToken)) {
         throw (InsufficientFundsError)
-      } else {
-        const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-        if (bns.gt(nativeAmount, balanceToken)) {
-          throw (InsufficientFundsError)
-        }
       }
     }
 
