@@ -59,18 +59,18 @@
     ]
   },
   "scripts": {
-    "precommit": "npm test",
+    "precommit": "npm run build && npm test",
     "flow": "flow",
     "webpack": "webpack",
     "rollup": "rollup -c",
     "updot": "updot",
     "prepare": "npm run build",
-    "build": "npm run lint && npm run webpack && npm run rollup && npm run build:flow",
-    "build:flow": "flow-copy-source -v -i '**/test/**' src lib && npm run flow",
+    "build": "npm run webpack && npm run rollup && npm run build:flow",
+    "build:flow": "flow-copy-source -v -i '**/test/**' src lib",
     "build:clean": "rimraf lib",
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
-    "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js'",
-    "test": "npm run build && mocha"
+    "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js' && npm run flow",
+    "test": "npm run lint && npm run flow"
   }
 }
