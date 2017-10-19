@@ -2,7 +2,6 @@
  * Created by paul on 8/26/17.
  */
 
-import { BN } from 'bn.js'
 import { bns } from 'biggystring'
 import { validate } from 'jsonschema'
 const Buffer = require('buffer/').Buffer
@@ -44,10 +43,7 @@ function bufToHex (buf:any) {
 }
 
 function hexToBuf (hex:string) {
-  const noHexPrefix = hex.replace('0x', '')
-  const noHexPrefixBN = new BN(noHexPrefix, 16)
-  const array = noHexPrefixBN.toArray()
-  const buf = Buffer.from(array)
+  const buf = Buffer.from(hex, 'hex')
   return buf
 }
 
