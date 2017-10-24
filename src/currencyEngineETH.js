@@ -1225,7 +1225,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     // const balanceEthBN = new BN(this.walletLocalData.totalBalances.ETH, 10)
 
     const balanceEth = this.walletLocalData.totalBalances.ETH
-    const nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+    let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
@@ -1233,6 +1233,7 @@ class EthereumEngine implements AbcCurrencyEngine {
         throw (InsufficientFundsError)
       }
     } else {
+      nativeNetworkFee = '0' // Do not show a fee for token transations.
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
         throw (InsufficientFundsError)
@@ -1253,7 +1254,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: '0', // networkFee
+      networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
       otherParams: ethParams // otherParams
