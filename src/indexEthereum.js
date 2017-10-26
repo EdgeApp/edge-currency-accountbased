@@ -61,18 +61,18 @@ function getParameterByName (param, url) {
 //       const valid = validateObject(jsonObj, CurrencyInfoScheme)
 //
 //       if (valid) {
-//         io.console.info('Fetched valid currencyInfo')
-//         io.console.info(jsonObj)
+//         console.log('Fetched valid currencyInfo')
+//         console.log(jsonObj)
 //       } else {
-//         io.console.info('Error: Fetched invalid currencyInfo')
+//         console.log('Error: Fetched invalid currencyInfo')
 //       }
 //     } catch (err) {
-//       io.console.info('Error fetching currencyInfo: ' + err)
+//       console.log('Error fetching currencyInfo: ' + err)
 //     }
 //     try {
 //       await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
 //     } catch (err) {
-//       io.console.error(err)
+//       console.log(err)
 //     }
 //   }
 // }
@@ -151,8 +151,8 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
           ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
         } catch (err) {
           try {
-            io.console.info(err)
-            io.console.info('No walletLocalData setup yet: Failure is ok')
+            console.log(err)
+            console.log('No walletLocalData setup yet: Failure is ok')
             ethereumEngine.walletLocalData = new WalletLocalData(null)
             ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
             await ethereumEngine.walletLocalFolder
@@ -160,7 +160,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
               .file(DATA_STORE_FILE)
               .setText(JSON.stringify(this.walletLocalData))
           } catch (e) {
-            io.console.error('Error writing to localDataStore. Engine not started:' + err)
+            console.log('Error writing to localDataStore. Engine not started:' + err)
           }
         }
         for (const token of ethereumEngine.walletLocalData.enabledTokens) {
