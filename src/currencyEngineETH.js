@@ -428,19 +428,19 @@ class EthereumEngine implements AbcCurrencyEngine {
       this.transactionsChangedArray = []
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray:Array<AbcTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
-      const abcTx:AbcTransaction = transactionsArray[ idx ]
-
-      if (abcTx.blockHeight < tx.block_height || abcTx.date > epochTime) {
-        io.console.info(sprintf('processUnconfirmedTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
-        this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
-        this.abcTxLibCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
-        )
-        this.transactionsChangedArray = []
-      } else {
-        io.console.info(sprintf('processUnconfirmedTransaction: Old transaction. No Update: %s', tx.hash))
-      }
+      // const transactionsArray:Array<AbcTransaction> = this.walletLocalData.transactionsObj[ PRIMARY_CURRENCY ]
+      // const abcTx:AbcTransaction = transactionsArray[ idx ]
+      //
+      // if (abcTx.blockHeight < tx.block_height || abcTx.date > epochTime) {
+      //   io.console.info(sprintf('processUnconfirmedTransaction: Update transaction: %s height:%s', tx.hash, tx.blockNumber))
+      //   this.updateTransaction(PRIMARY_CURRENCY, abcTransaction, idx)
+      //   this.abcTxLibCallbacks.onTransactionsChanged(
+      //     this.transactionsChangedArray
+      //   )
+      //   this.transactionsChangedArray = []
+      // } else {
+      io.console.info(sprintf('processUnconfirmedTransaction: Old transaction. No Update: %s', tx.hash))
+      // }
     }
   }
 
