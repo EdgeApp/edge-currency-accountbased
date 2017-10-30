@@ -71,6 +71,6 @@
     "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
     "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
     "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js' && npm run flow",
-    "test": "npm run lint && npm run flow"
+    "test": "npm run lint && mocha"
   }
 }
