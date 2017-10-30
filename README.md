@@ -1,4 +1,5 @@
 # Edge Ethereum Currency Plugin
+[![Build Status](https://travis-ci.org/Airbitz/edge-currency-ethereum.svg?branch=master)](https://travis-ci.org/Airbitz/edge-currency-ethereum)
 
 [![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
