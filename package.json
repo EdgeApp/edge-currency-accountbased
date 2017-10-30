@@ -19,14 +19,14 @@
     "lib/*"
   ],
   "dependencies": {
-    "airbitz-core-types": "git+ssh://git@github.com/Airbitz/airbitz-core-types.git",
+    "airbitz-core-types": "git+https://git@github.com/Airbitz/airbitz-core-types.git",
     "biggystring": "^3.0.0",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
     "ethereumjs-abi": "^0.6.4",
     "ethereumjs-tx": "^1.3.3",
     "ethereumjs-util": "^5.1.2",
-    "ethereumjs-wallet": "git+ssh://git@github.com:Airbitz/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
+    "ethereumjs-wallet": "git+https://git@github.com:Airbitz/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
     "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1",
     "uri-js": "^3.0.2"
