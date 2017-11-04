@@ -1340,7 +1340,10 @@ class EthereumEngine implements AbcCurrencyEngine {
 
       if (typeof jsonObj.error !== 'undefined') {
         io.console.warn('Error sending transaction')
-        if (jsonObj.error.message.includes('nonce is too low')) {
+        if (
+          jsonObj.error.message.includes('nonce is too low') ||
+          jsonObj.error.message.includes('incrementing the nonce')
+        ) {
           this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
           io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
           // Nonce error. Increment nonce and try again
