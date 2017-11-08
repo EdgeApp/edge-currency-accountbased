@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-ethereum",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Edge Ethereum currency plugin",
   "author": "Airbitz, Inc.",
   "contributors": [
@@ -46,7 +46,7 @@
     "mocha": "^2.4.5",
     "nyc": "^6.0.0",
     "rimraf": "^2.6.1",
-    "rollup": "^0.43.0",
+    "rollup": "0.48.0",
     "rollup-plugin-babel": "^2.7.1",
     "standard": "^10.0.2",
     "updot": "^1.1.4",
