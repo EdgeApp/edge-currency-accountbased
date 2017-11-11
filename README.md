@@ -21,3 +21,6 @@ const context = makeReactNativeContext({
   plugins: [ EthereumCurrencyPluginFactory ]
 })
 ```
+
+## License
+BSD 3
