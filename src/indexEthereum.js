@@ -79,6 +79,7 @@ function getParameterByName (param, url) {
 
 export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   pluginType: 'currency',
+  pluginName: txLibInfo.currencyInfo.pluginName,
 
   async makePlugin (opts:any):Promise<AbcCurrencyPlugin> {
     io = opts.io

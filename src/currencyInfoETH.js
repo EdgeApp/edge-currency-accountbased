@@ -17,12 +17,14 @@ const defaultSettings:any = {
   otherSettings
 }
 
-const currencyInfo:AbcCurrencyInfo = { // Details of supported currency
+const currencyInfo: AbcCurrencyInfo = {
+  // Basic currency information:
+  currencyCode: 'ETH',
+  currencyName: 'Ethereum',
+  pluginName: 'ethereum',
   walletTypes: [
     'wallet:ethereum'
   ],
-  currencyName: 'Ethereum',
-  currencyCode: 'ETH', // The 3 character code for the currency
 
   defaultSettings,
 
