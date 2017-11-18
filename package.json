@@ -2,22 +2,38 @@
   "name": "edge-currency-ethereum",
   "version": "0.3.10",
   "description": "Edge Ethereum currency plugin",
+  "homepage": "https://edgesecure.co/",
+  "license": "SEE LICENSE IN LICENSE",
   "author": "Airbitz, Inc.",
   "contributors": [
     "Paul Puey <paul@airbitz.co>"
   ],
-  "license": "SEE LICENSE IN LICENSE",
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "lib/*"
+  ],
+  "main": "./lib/indexEthereum.js",
+  "module": "./lib/indexEthereum.es.js",
   "repository": {
     "type": "git",
     "url": "git@github.com:Airbitz/edge-currency-ethereum.git"
   },
-  "url": "https://airbitz.co",
-  "main": "./lib/indexEthereum.js",
-  "module": "./lib/indexEthereum.es.js",
-  "files": [
-    "changelog.md",
-    "lib/*"
-  ],
+  "scripts": {
+    "build": "npm run webpack && npm run rollup && npm run build:flow",
+    "build:clean": "rimraf lib",
+    "build:flow": "flow-copy-source -v -i '**/test/**' src lib",
+    "precommit": "npm run build && npm test",
+    "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
+    "flow": "flow",
+    "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js' && npm run flow",
+    "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
+    "prepare": "npm run build",
+    "rollup": "rollup -c",
+    "test": "npm run lint && mocha",
+    "updot": "updot",
+    "webpack": "webpack"
+  },
   "dependencies": {
     "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git#e2f1b03b8bcd42f950ec3daf442056ead7c68acd",
     "biggystring": "^3.0.0",
@@ -57,20 +73,5 @@
     "plugins": [
       "flowtype"
     ]
-  },
-  "scripts": {
-    "precommit": "npm run build && npm test",
-    "flow": "flow",
-    "webpack": "webpack",
-    "rollup": "rollup -c",
-    "updot": "updot",
-    "prepare": "npm run build",
-    "build": "npm run webpack && npm run rollup && npm run build:flow",
-    "build:flow": "flow-copy-source -v -i '**/test/**' src lib",
-    "build:clean": "rimraf lib",
-    "cover": "nyc --reporter=lcov --reporter=text --reporter=html --extension .js npm test",
-    "lint --fix": "standard '*.js' 'src/**/*.js' 'test/**/*.js' --fix",
-    "lint": "standard '*.js' 'src/**/*.js' 'test/**/*.js' && npm run flow",
-    "test": "npm run lint && mocha"
   }
 }
