@@ -4,10 +4,10 @@
 // @flow
 
 import type { AbcTransaction } from 'airbitz-core-types'
-import { txLibInfo } from './currencyInfoETH.js'
+import { currencyInfo } from './currencyInfoETH.js'
 export const DATA_STORE_FOLDER = 'txEngineFolder'
 export const DATA_STORE_FILE = 'walletLocalData.json'
-export const PRIMARY_CURRENCY = txLibInfo.currencyInfo.currencyCode
+export const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
 export type EthereumSettings = {
   etherscanApiServers:Array<string>,
@@ -80,6 +80,13 @@ const defaultNetworkFees = {
       tokenTransaction: '37124'
     }
   }
+}
+
+export type EthCustomToken = {
+  currencyCode: string,
+  currencyName: string,
+  multiplier: string,
+  contractAddress: string
 }
 
 export class WalletLocalData {

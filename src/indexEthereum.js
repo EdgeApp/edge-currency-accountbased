@@ -2,7 +2,7 @@
  * Created by paul on 8/8/17.
  */
 // @flow
-import { txLibInfo } from './currencyInfoETH.js'
+import { currencyInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
 import type {
@@ -31,7 +31,7 @@ const randomBuffer = (size) => {
 }
 
 function getDenomInfo (denom:string) {
-  return txLibInfo.currencyInfo.denominations.find(element => {
+  return currencyInfo.denominations.find(element => {
     return element.name === denom
   })
 }
@@ -79,14 +79,14 @@ function getParameterByName (param, url) {
 
 export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   pluginType: 'currency',
-  pluginName: txLibInfo.currencyInfo.pluginName,
+  pluginName: currencyInfo.pluginName,
 
   async makePlugin (opts:any):Promise<AbcCurrencyPlugin> {
     io = opts.io
 
     const ethereumPlugin:AbcCurrencyPlugin = {
       pluginName: 'ethereum',
-      currencyInfo: txLibInfo.currencyInfo,
+      currencyInfo,
 
       createPrivateKey: (walletType: string) => {
         const type = walletType.replace('wallet:', '')

@@ -3,7 +3,7 @@
  */
 // @flow
 
-import { txLibInfo } from './currencyInfoETH.js'
+import { currencyInfo } from './currencyInfoETH.js'
 import type {
   AbcCurrencyEngine,
   AbcTransaction,
@@ -11,13 +11,16 @@ import type {
   AbcMakeEngineOptions,
   AbcSpendInfo,
   AbcWalletInfo,
+  AbcMetaToken,
+  AbcCurrencyInfo,
+  AbcDenomination,
   AbcFreshAddress
 } from 'airbitz-core-types'
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
-import { NetworkFeesSchema } from './ethSchema.js'
-import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
+import { NetworkFeesSchema, CustomTokenSchema } from './ethSchema.js'
+import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData, type EthCustomToken } from './ethTypes.js'
 import { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
@@ -33,18 +36,11 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
 const ETHERSCAN_API_KEY = ''
 
-const PRIMARY_CURRENCY = txLibInfo.currencyInfo.currencyCode
-const TOKEN_CODES = [PRIMARY_CURRENCY].concat(txLibInfo.supportedTokens)
+const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const CHECK_UNCONFIRMED = true
 const INFO_SERVERS = ['https://info1.edgesecure.co:8444']
 
 let io
-
-function getTokenInfo (token:string) {
-  return txLibInfo.currencyInfo.metaTokens.find(element => {
-    return element.currencyCode === token
-  })
-}
 
 function unpadAddress (address: string): string {
   const unpadded = bns.add('0', address, 16)
@@ -102,6 +98,7 @@ class EthereumEngine implements AbcCurrencyEngine {
   walletLocalData:WalletLocalData
   walletLocalDataDirty:boolean
   transactionsChangedArray:Array<AbcTransaction>
+  currencyInfo: AbcCurrencyInfo
   currentSettings:any
 
   constructor (io_:any, walletInfo:AbcWalletInfo, opts:AbcMakeEngineOptions) {
@@ -114,11 +111,12 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
     this.walletInfo = walletInfo
+    this.currencyInfo = currencyInfo
 
     if (typeof opts.optionalSettings !== 'undefined') {
       this.currentSettings = opts.optionalSettings
     } else {
-      this.currentSettings = txLibInfo.currencyInfo.defaultSettings
+      this.currentSettings = this.currencyInfo.defaultSettings
     }
 
     // Hard coded for testing
@@ -602,7 +600,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
     }
 
-    const tokenInfo = getTokenInfo(currencyCode)
+    const tokenInfo = this.getTokenInfo(currencyCode)
     let contractAddress = ''
     if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
       contractAddress = tokenInfo.contractAddress
@@ -771,14 +769,12 @@ class EthereumEngine implements AbcCurrencyEngine {
       // Fetch token balances
       // ************************************
       // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
-      for (let n = 0; n < TOKEN_CODES.length; n++) {
-        const tk = TOKEN_CODES[ n ]
-
+      for (const tk of this.walletLocalData.enabledTokens) {
         if (tk === PRIMARY_CURRENCY) {
           url = sprintf('?module=account&action=balance&address=%s&tag=latest', address)
         } else {
           if (this.getTokenStatus(tk)) {
-            const tokenInfo = getTokenInfo(tk)
+            const tokenInfo = this.getTokenInfo(tk)
             if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
               url = sprintf('?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest', tokenInfo.contractAddress, this.walletLocalData.ethereumAddress)
               promiseArray.push(this.checkTokenTransactionsFetch(tk))
@@ -915,12 +911,18 @@ class EthereumEngine implements AbcCurrencyEngine {
       parseInt(this.walletLocalData.blockHeight)
     )
 
-    for (let currencyCode of TOKEN_CODES) {
+    for (let currencyCode of this.walletLocalData.enabledTokens) {
       this.abcTxLibCallbacks.onTransactionsChanged(
         this.walletLocalData.transactionsObj[currencyCode]
       )
       this.abcTxLibCallbacks.onBalanceChanged(currencyCode, this.walletLocalData.totalBalances[currencyCode])
     }
+  }
+
+  getTokenInfo (token:string) {
+    return this.currencyInfo.metaTokens.find(element => {
+      return element.currencyCode === token
+    })
   }
 
   // *************************************
@@ -976,6 +978,53 @@ class EthereumEngine implements AbcCurrencyEngine {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
       }
+    }
+  }
+
+  async disableTokens (tokens:Array<string>) {
+    for (const token of tokens) {
+      const index = this.walletLocalData.enabledTokens.indexOf(token)
+      if (index !== -1) {
+        this.walletLocalData.enabledTokens.splice(index, 1)
+      }
+    }
+  }
+
+  async getEnabledTokens (): Promise<Array<string>> {
+    return this.walletLocalData.enabledTokens
+  }
+
+  async addCustomToken (tokenObj: any) {
+    const valid = validateObject(tokenObj, CustomTokenSchema)
+
+    if (valid) {
+      const ethTokenObj: EthCustomToken = tokenObj
+      // If token is already in currencyInfo, just return
+      for (const tk of this.currencyInfo.metaTokens) {
+        if (
+          tk.currencyCode.toLowerCase() === ethTokenObj.currencyCode.toLowerCase() ||
+          tk.currencyName.toLowerCase() === ethTokenObj.currencyName.toLowerCase()
+        ) {
+          await this.enableTokens([tk.currencyCode])
+          return
+        }
+      }
+
+      // Create a token object for inclusion in currencyInfo
+      const denom: AbcDenomination = {
+        name: ethTokenObj.currencyCode,
+        multiplier: ethTokenObj.multiplier
+      }
+      const abcMetaToken: AbcMetaToken = {
+        currencyCode: ethTokenObj.currencyCode,
+        currencyName: ethTokenObj.currencyName,
+        denominations: [denom],
+        contractAddress: ethTokenObj.contractAddress
+      }
+      this.currencyInfo.metaTokens.push(abcMetaToken)
+      await this.enableTokens([abcMetaToken.currencyCode])
+    } else {
+      throw new Error('Invalid custom token object')
     }
   }
 
@@ -1154,7 +1203,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       if (!this.getTokenStatus(currencyCode)) {
         throw (new Error('Error: Token not supported or enabled'))
       } else if (currencyCode !== 'ETH') {
-        tokenInfo = getTokenInfo(currencyCode)
+        tokenInfo = this.getTokenInfo(currencyCode)
         if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
           throw (new Error('Error: Token not supported or invalid contract address'))
         }
