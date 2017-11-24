@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-ethereum",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Edge Ethereum currency plugin",
   "homepage": "https://edgesecure.co/",
   "license": "SEE LICENSE IN LICENSE",
@@ -35,7 +35,7 @@
     "webpack": "webpack"
   },
   "dependencies": {
-    "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git#8600b9c64feb4c2625e3ff9a21abd2439df2ff39",
+    "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git#153b010ee366ff670accb1a982103fde89323935",
     "biggystring": "^3.0.0",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
