@@ -1,12 +1,12 @@
 {
   "name": "edge-currency-ethereum",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Edge Ethereum currency plugin",
   "homepage": "https://edgesecure.co/",
   "license": "SEE LICENSE IN LICENSE",
-  "author": "Airbitz, Inc.",
+  "author": "Edge (Airbitz, Inc)",
   "contributors": [
-    "Paul Puey <paul@airbitz.co>"
+    "Paul Puey <paul@edgesecur.co>"
   ],
   "files": [
     "CHANGELOG.md",

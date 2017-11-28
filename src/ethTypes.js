@@ -11,7 +11,8 @@ export const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
 export type EthereumSettings = {
   etherscanApiServers:Array<string>,
-  superethServers:Array<string>
+  superethServers:Array<string>,
+  iosAllowedTokens: {[currencyCode: string]: boolean}
 }
 
 type EthereumFeesGasLimit = {
