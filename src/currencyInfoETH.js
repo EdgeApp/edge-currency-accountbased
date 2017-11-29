@@ -11,7 +11,7 @@ const otherSettings:EthereumSettings = {
   superethServers: [
     'https://supereth1.edgesecure.co:8443'
   ],
-  iosAllowedTokens: { 'REP': true }
+  iosAllowedTokens: { 'REP': true, 'WINGS': true }
 }
 
 const defaultSettings:any = {
