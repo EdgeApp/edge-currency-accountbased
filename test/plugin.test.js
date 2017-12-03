@@ -1,9 +1,11 @@
-/* global describe it */
+// @flow
+import { assert } from 'chai'
+import { describe, it } from 'mocha'
+
 const { EthereumCurrencyPluginFactory } = require('../lib/indexEthereum.js')
 const { calcMiningFee } = require('../lib/indexEthereum.js')
-// const { AbcSpendInfo, EthereumFees } = require('airbitz-core-js')
 
-const assert = require('assert')
+// const { AbcSpendInfo, EthereumFees } = require('airbitz-core-js')
 
 const io = {
   random (size) {

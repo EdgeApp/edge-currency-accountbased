@@ -10,8 +10,8 @@ export const DATA_STORE_FILE = 'walletLocalData.json'
 export const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
 export type EthereumSettings = {
-  etherscanApiServers:Array<string>,
-  superethServers:Array<string>,
+  etherscanApiServers: Array<string>,
+  superethServers: Array<string>,
   iosAllowedTokens: {[currencyCode: string]: boolean}
 }
 
@@ -34,11 +34,11 @@ type EthereumFeesGasPrice = {
 }
 
 export type EthereumFee = {
-  gasLimit:EthereumFeesGasLimit, gasPrice?:EthereumFeesGasPrice
+  gasLimit: EthereumFeesGasLimit, gasPrice?: EthereumFeesGasPrice
 }
 
 export type EthereumFees = {
-  [address:string]: EthereumFee
+  [address: string]: EthereumFee
 }
 
 export type EthereumCalcedFees = {
@@ -91,16 +91,16 @@ export type EthCustomToken = {
 }
 
 export class WalletLocalData {
-  blockHeight:number
-  lastAddressQueryHeight:number
-  nextNonce:string
-  ethereumAddress:string
+  blockHeight: number
+  lastAddressQueryHeight: number
+  nextNonce: string
+  ethereumAddress: string
   totalBalances: {[currencyCode: string]: string}
-  enabledTokens:Array<string>
-  transactionsObj:{[currencyCode: string]: Array<AbcTransaction>}
+  enabledTokens: Array<string>
+  transactionsObj: {[currencyCode: string]: Array<AbcTransaction>}
   networkFees: EthereumFees
 
-  constructor (jsonString:string|null) {
+  constructor (jsonString: string | null) {
     this.blockHeight = 0
 
     const totalBalances:{[currencyCode: string]: string} = {}

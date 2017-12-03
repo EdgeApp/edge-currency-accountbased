@@ -30,13 +30,13 @@ const randomBuffer = (size) => {
   return Buffer.from(array)
 }
 
-function getDenomInfo (denom:string) {
+function getDenomInfo (denom: string) {
   return currencyInfo.denominations.find(element => {
     return element.name === denom
   })
 }
 
-function hexToBuf (hex:string) {
+function hexToBuf (hex: string) {
   const noHexPrefix = hex.replace('0x', '')
   const noHexPrefixBN = new BN(noHexPrefix, 16)
   const array = noHexPrefixBN.toArray()
@@ -81,7 +81,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts:any):Promise<AbcCurrencyPlugin> {
+  async makePlugin (opts: any): Promise<AbcCurrencyPlugin> {
     io = opts.io
 
     const ethereumPlugin:AbcCurrencyPlugin = {
@@ -97,7 +97,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
           }
           ethWallet.overrideCrypto(cryptoObj)
 
-          let wallet = ethWallet.generate(false)
+          const wallet = ethWallet.generate(false)
           const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
           return { ethereumKey }
         } else {
@@ -128,7 +128,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
           }
           ethWallet.overrideCrypto(cryptoObj)
 
-          let wallet = ethWallet.generate(false)
+          const wallet = ethWallet.generate(false)
           const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
           const ethereumPublicAddress = wallet.getAddressString()
           // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
@@ -139,7 +139,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
       },
 
-      async makeEngine (walletInfo: AbcWalletInfo, opts: any = {}):any {
+      async makeEngine (walletInfo: AbcWalletInfo, opts: any = {}): any {
         const ethereumEngine = new EthereumEngine(io, walletInfo, opts)
         try {
           const result =
@@ -175,8 +175,6 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         let address: string
         let nativeAmount: string | null = null
         let currencyCode: string | null = null
-        let label
-        let message
 
         if (
           typeof parsedUri.scheme !== 'undefined' &&
@@ -206,8 +204,8 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
           nativeAmount = bns.toFixed(nativeAmount, 0, 0)
           currencyCode = 'ETH'
         }
-        label = getParameterByName('label', uri)
-        message = getParameterByName('message', uri)
+        const label = getParameterByName('label', uri)
+        const message = getParameterByName('message', uri)
 
         const abcParsedUri:AbcParsedUri = {
           publicAddress: address
@@ -246,7 +244,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
 
           if (typeof obj.nativeAmount === 'string') {
             let currencyCode: string = 'ETH'
-            let nativeAmount:string = obj.nativeAmount
+            const nativeAmount:string = obj.nativeAmount
             if (typeof obj.currencyCode === 'string') {
               currencyCode = obj.currencyCode
             }
@@ -254,7 +252,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
             if (!denom) {
               throw new Error('InternalErrorInvalidCurrencyCode')
             }
-            let amount = bns.div(nativeAmount, denom.multiplier, 18)
+            const amount = bns.div(nativeAmount, denom.multiplier, 18)
 
             queryString += 'amount=' + amount + '&'
           }
@@ -290,7 +288,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
       ethereumPlugin.currencyInfo.metaTokens = metaTokens
     }
 
-    async function initPlugin (opts:any) {
+    async function initPlugin (opts: any) {
       // Try to grab currencyInfo from disk. If that fails, use defaults
 
       // try {
