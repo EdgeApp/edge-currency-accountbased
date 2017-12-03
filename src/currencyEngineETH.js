@@ -21,7 +21,7 @@ import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
 import { NetworkFeesSchema, CustomTokenSchema } from './ethSchema.js'
 import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData, type EthCustomToken } from './ethTypes.js'
-import { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
+import { isHex, snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -995,19 +995,35 @@ class EthereumEngine implements AbcCurrencyEngine {
   }
 
   async addCustomToken (tokenObj: any) {
+    console.log('addCustomToken:', tokenObj)
     const valid = validateObject(tokenObj, CustomTokenSchema)
 
     if (valid) {
       const ethTokenObj: EthCustomToken = tokenObj
-      // If token is already in currencyInfo, just return
+      // If token is already in currencyInfo, remove and update the token info
       for (const tk of this.currencyInfo.metaTokens) {
         if (
           tk.currencyCode.toLowerCase() === ethTokenObj.currencyCode.toLowerCase() ||
           tk.currencyName.toLowerCase() === ethTokenObj.currencyName.toLowerCase()
         ) {
-          await this.enableTokens([tk.currencyCode])
-          return
+          console.log('Disabling already added token: ' + tk.currencyCode)
+          await this.disableTokens([tk.currencyCode])
         }
+      }
+
+      // Validate the token object
+      if (ethTokenObj.currencyCode.length < 3 || ethTokenObj.currencyCode.length > 5) {
+        throw new Error('ErrorInvalidCurrencyCode')
+      }
+      if (ethTokenObj.currencyName.length < 3 || ethTokenObj.currencyName.length > 20) {
+        throw new Error('ErrorInvalidCurrencyName')
+      }
+      if (bns.lt(ethTokenObj.multiplier, '1') || bns.gt(ethTokenObj.multiplier, '100000000000000000000000000000000')) {
+        throw new Error('ErrorInvalidMultiplier')
+      }
+      ethTokenObj.contractAddress = ethTokenObj.contractAddress.replace('0x', '')
+      if (!isHex(ethTokenObj.contractAddress) || ethTokenObj.contractAddress.length !== 40) {
+        throw new Error('ErrorInvalidContractAddress')
       }
 
       // Create a token object for inclusion in currencyInfo
@@ -1019,8 +1035,9 @@ class EthereumEngine implements AbcCurrencyEngine {
         currencyCode: ethTokenObj.currencyCode,
         currencyName: ethTokenObj.currencyName,
         denominations: [denom],
-        contractAddress: ethTokenObj.contractAddress
+        contractAddress: ethTokenObj.contractAddress.replace('0x', '')
       }
+
       this.currencyInfo.metaTokens.push(abcMetaToken)
       await this.enableTokens([abcMetaToken.currencyCode])
     } else {
