@@ -113,14 +113,12 @@ export const NetworkFeesSchema = {
 }
 
 export const CustomTokenSchema = {
-  'items': {
-    'type': 'object',
-    'properties': {
-      'currencyCode': {'type': 'string'},
-      'currencyName': {'type': 'string'},
-      'multiplier': {'type': 'string'},
-      'contractAddress': {'type': 'string'}
-    },
-    'required': ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
-  }
+  'type': 'object',
+  'properties': {
+    'currencyCode': {'type': 'string'},
+    'currencyName': {'type': 'string'},
+    'multiplier': {'type': 'string'},
+    'contractAddress': {'type': 'string'}
+  },
+  'required': ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
 }

@@ -99,6 +99,8 @@ class EthereumEngine implements AbcCurrencyEngine {
   walletLocalDataDirty: boolean
   transactionsChangedArray: Array<AbcTransaction>
   currencyInfo: AbcCurrencyInfo
+  allTokens: Array<AbcMetaToken>
+  customTokens: Array<AbcMetaToken>
   currentSettings: any
 
   constructor (io_: any, walletInfo: AbcWalletInfo, opts: AbcMakeEngineOptions) {
@@ -112,6 +114,8 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.transactionsChangedArray = []
     this.walletInfo = walletInfo
     this.currencyInfo = currencyInfo
+    this.allTokens = currencyInfo.metaTokens.slice(0)
+    this.customTokens = []
 
     if (typeof opts.optionalSettings !== 'undefined') {
       this.currentSettings = opts.optionalSettings
@@ -920,7 +924,7 @@ class EthereumEngine implements AbcCurrencyEngine {
   }
 
   getTokenInfo (token: string) {
-    return this.currencyInfo.metaTokens.find(element => {
+    return this.allTokens.find(element => {
       return element.currencyCode === token
     })
   }
@@ -972,8 +976,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     return parseInt(this.walletLocalData.blockHeight)
   }
 
-  // asynchronous
-  async enableTokens (tokens: Array<string>) {
+  enableTokensSync (tokens: Array<string>) {
     for (const token of tokens) {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
@@ -981,13 +984,23 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
   }
 
-  async disableTokens (tokens: Array<string>) {
+  // asynchronous
+  async enableTokens (tokens: Array<string>) {
+    this.enableTokensSync(tokens)
+  }
+
+  disableTokensSync (tokens: Array<string>) {
     for (const token of tokens) {
       const index = this.walletLocalData.enabledTokens.indexOf(token)
       if (index !== -1) {
         this.walletLocalData.enabledTokens.splice(index, 1)
       }
     }
+  }
+
+  // asynchronous
+  async disableTokens (tokens: Array<string>) {
+    this.disableTokensSync(tokens)
   }
 
   async getEnabledTokens (): Promise<Array<string>> {
@@ -1000,18 +1013,20 @@ class EthereumEngine implements AbcCurrencyEngine {
 
     if (valid) {
       const ethTokenObj: EthCustomToken = tokenObj
-      // If token is already in currencyInfo, remove and update the token info
+      // If token is already in currencyInfo, error as it cannot be changed
       for (const tk of this.currencyInfo.metaTokens) {
         if (
           tk.currencyCode.toLowerCase() === ethTokenObj.currencyCode.toLowerCase() ||
           tk.currencyName.toLowerCase() === ethTokenObj.currencyName.toLowerCase()
         ) {
-          console.log('Disabling already added token: ' + tk.currencyCode)
-          await this.disableTokens([tk.currencyCode])
+          throw new Error('ErrorCannotModifyToken')
         }
       }
 
       // Validate the token object
+      if (ethTokenObj.currencyCode.toUpperCase() !== ethTokenObj.currencyCode) {
+        throw new Error('ErrorInvalidCurrencyCode')
+      }
       if (ethTokenObj.currencyCode.length < 3 || ethTokenObj.currencyCode.length > 5) {
         throw new Error('ErrorInvalidCurrencyCode')
       }
@@ -1021,12 +1036,26 @@ class EthereumEngine implements AbcCurrencyEngine {
       if (bns.lt(ethTokenObj.multiplier, '1') || bns.gt(ethTokenObj.multiplier, '100000000000000000000000000000000')) {
         throw new Error('ErrorInvalidMultiplier')
       }
-      ethTokenObj.contractAddress = ethTokenObj.contractAddress.replace('0x', '')
-      if (!isHex(ethTokenObj.contractAddress) || ethTokenObj.contractAddress.length !== 40) {
+      let contractAddress = ethTokenObj.contractAddress.replace('0x', '')
+      if (!isHex(contractAddress) || contractAddress.length !== 40) {
         throw new Error('ErrorInvalidContractAddress')
       }
+      contractAddress = '0x' + contractAddress
 
-      // Create a token object for inclusion in currencyInfo
+      for (const tk of this.customTokens) {
+        if (
+          tk.currencyCode.toLowerCase() === ethTokenObj.currencyCode.toLowerCase() ||
+          tk.currencyName.toLowerCase() === ethTokenObj.currencyName.toLowerCase()
+        ) {
+          // Remove old token first then re-add it to incorporate any modifications
+          const idx = this.customTokens.findIndex(element => element.currencyCode === ethTokenObj.currencyCode)
+          if (idx !== -1) {
+            this.customTokens.splice(idx, 1)
+          }
+        }
+      }
+
+      // Create a token object for inclusion in customTokens
       const denom: AbcDenomination = {
         name: ethTokenObj.currencyCode,
         multiplier: ethTokenObj.multiplier
@@ -1035,11 +1064,12 @@ class EthereumEngine implements AbcCurrencyEngine {
         currencyCode: ethTokenObj.currencyCode,
         currencyName: ethTokenObj.currencyName,
         denominations: [denom],
-        contractAddress: ethTokenObj.contractAddress.replace('0x', '')
+        contractAddress
       }
 
-      this.currencyInfo.metaTokens.push(abcMetaToken)
-      await this.enableTokens([abcMetaToken.currencyCode])
+      this.customTokens.push(abcMetaToken)
+      this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
+      this.enableTokensSync([abcMetaToken.currencyCode])
     } else {
       throw new Error('Invalid custom token object')
     }
