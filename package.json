@@ -39,7 +39,7 @@
     "webpack": "webpack"
   },
   "dependencies": {
-    "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git#153b010ee366ff670accb1a982103fde89323935",
+    "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git",
     "biggystring": "^3.0.0",
     "bn.js": "^4.11.7",
     "buffer": "^5.0.6",
@@ -52,6 +52,7 @@
     "uri-js": "^3.0.2"
   },
   "devDependencies": {
+    "airbitz-core-js": "git+https://github.com/Airbitz/airbitz-core-js.git#develop",
     "babel-cli": "^6.24.1",
     "babel-eslint": "^7.2.3",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
@@ -70,6 +71,7 @@
     "husky": "^0.14.3",
     "json-loader": "^0.5.4",
     "mocha": "^4.0.0",
+    "node-fetch": "^1.7.3",
     "nyc": "^6.0.0",
     "prettier-eslint-cli": "^4.4.0",
     "rimraf": "^2.6.1",
@@ -78,7 +80,6 @@
     "rollup-plugin-babel": "^3.0.2",
     "rollup-plugin-json": "^2.3.0",
     "rollup-plugin-multi-entry": "^2.0.2",
-    "standard": "^10.0.2",
     "updot": "^1.1.4",
     "webpack": "^1.14.0"
   },
