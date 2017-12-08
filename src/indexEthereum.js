@@ -6,6 +6,8 @@ import { currencyInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
 import type {
+  AbcCurrencyEngine,
+  AbcMakeEngineOptions,
   AbcParsedUri,
   AbcEncodeUri,
   AbcCurrencyPlugin,
@@ -139,7 +141,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
       },
 
-      async makeEngine (walletInfo: AbcWalletInfo, opts: any = {}):any {
+      async makeEngine (walletInfo: AbcWalletInfo, opts: AbcMakeEngineOptions): Promise<AbcCurrencyEngine> {
         const ethereumEngine = new EthereumEngine(io, walletInfo, opts)
         try {
           const result =
@@ -159,7 +161,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
             await ethereumEngine.walletLocalFolder
               .folder(DATA_STORE_FOLDER)
               .file(DATA_STORE_FILE)
-              .setText(JSON.stringify(this.walletLocalData))
+              .setText(JSON.stringify(ethereumEngine.walletLocalData))
           } catch (e) {
             console.log('Error writing to localDataStore. Engine not started:' + err)
           }

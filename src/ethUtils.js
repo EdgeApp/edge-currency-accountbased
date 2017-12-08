@@ -55,4 +55,9 @@ function toDecimal (num:string) {
   return bns.add(num, '0')
 }
 
+export function isHex (h: string) {
+  const out = /^[0-9A-F]+$/i.test(h)
+  return out
+}
+
 export { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex }
