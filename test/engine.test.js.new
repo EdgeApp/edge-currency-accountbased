@@ -1,5 +1,9 @@
 // @flow
 import { makeFakeIos, makeContext } from 'airbitz-core-js'
+import type {
+  AbcCurrencyEngineOptions,
+  AbcCurrencyEngineCallbacks
+} from 'airbitz-core-types'
 import * as Factories from '../src/indexEthereum.js'
 // import assert from 'assert'
 import { describe, it, before, after } from 'mocha'
@@ -15,17 +19,23 @@ for (const fixture of fixtures) {
   const CurrencyPluginFactory = Factories[fixture['factory']]
   const WALLET_TYPE = fixture.WALLET_TYPE
 
-  let plugin, keys, engine
+  let plugin
+  let keys: any
+  let engine
+
   const emitter = new EventEmitter()
   const [fakeIo] = makeFakeIos(1)
+  if (!fakeIo.folder) {
+    throw new Error('Missing fakeio.folder')
+  }
   const walletLocalFolder = fakeIo.folder
   const plugins = [CurrencyPluginFactory]
-  const context = makeContext({ fakeIo, plugins })
+  const context = makeContext({ io: fakeIo, plugins })
 
   if (!fakeIo.console) throw new Error('Will never happen')
   const console = fakeIo.console
 
-  const callbacks = {
+  const callbacks: AbcCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
       // console.log('onAddressesCheck', progressRatio)
       emitter.emit('onAddressesCheck', progressRatio)
@@ -41,7 +51,16 @@ for (const fixture of fixtures) {
     onTransactionsChanged (transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)
+    },
+    onTxidsChanged (txids) {
+      emitter.emit('onTxidsChanged', txids)
     }
+  }
+
+  const currencyEngineOptions: AbcCurrencyEngineOptions = {
+    callbacks,
+    walletLocalFolder,
+    walletLocalEncryptedFolder: walletLocalFolder
   }
 
   describe(`Engine Creation Errors for Wallet type ${WALLET_TYPE}`, function () {
@@ -54,13 +73,13 @@ for (const fixture of fixtures) {
         )
         plugin = currencyPlugin
         keys = plugin.createPrivateKey(WALLET_TYPE)
-        keys = plugin.derivePublicKey({ type: WALLET_TYPE, keys })
+        keys = plugin.derivePublicKey({ id: '', type: WALLET_TYPE, keys })
       })
     })
 
     it('Error when Making Engine without local folder', function () {
       return plugin
-        .makeEngine({ type: WALLET_TYPE, keys }, { callbacks })
+        .makeEngine({ id: '', type: WALLET_TYPE, keys }, currencyEngineOptions)
         .catch(e => {
           assert.equal(
             e.message,
@@ -71,7 +90,7 @@ for (const fixture of fixtures) {
 
     it('Error when Making Engine without keys', function () {
       return plugin
-        .makeEngine({ type: WALLET_TYPE }, { callbacks, walletLocalFolder })
+        .makeEngine({ id: '', type: WALLET_TYPE, keys }, currencyEngineOptions)
         .catch(e => {
           assert.equal(e.message, 'Missing Master Key')
         })
@@ -80,8 +99,8 @@ for (const fixture of fixtures) {
     it('Error when Making Engine without bitcoin key', function () {
       return plugin
         .makeEngine(
-          { type: WALLET_TYPE, keys: { bitcoinXpub: keys.pub } },
-          { callbacks, walletLocalFolder }
+          { id: '', type: WALLET_TYPE, keys: { bitcoinXpub: keys.pub } },
+          currencyEngineOptions
         )
         .catch(e => {
           assert.equal(e.message, 'Missing Master Key')
@@ -112,10 +131,11 @@ for (const fixture of fixtures) {
     it('Make Engine', function () {
       return plugin
         .makeEngine(
-          { type: WALLET_TYPE, keys },
+          { id: '', type: WALLET_TYPE, keys },
           {
             callbacks,
             walletLocalFolder: walletLocalFolder.folder(DATA_STORE_FOLDER),
+            walletLocalEncryptedFolder: walletLocalFolder.folder(DATA_STORE_FOLDER),
             optionalSettings: {
               enableOverrideServers: true,
               electrumServers: [['testnetnode.arihanc.com', '51001']]
@@ -268,7 +288,7 @@ for (const fixture of fixtures) {
             done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
           })
           engine.startEngine().catch(e => {
-            console.log('startEngine error', e, e.message)
+            console.error('startEngine error', e, e.message)
           })
         }
       )
@@ -350,6 +370,7 @@ for (const fixture of fixtures) {
   describe(`Make Spend and Sign for Wallet type ${WALLET_TYPE}`, function () {
     it('Should fail since no spend target is given', function () {
       const abcSpendInfo = {
+        spendTargets: [],
         networkFeeOption: 'high',
         metadata: {
           name: 'Transfer to College Fund',
@@ -432,7 +453,7 @@ for (const fixture of fixtures) {
     })
 
     after('Stop the engine', function (done) {
-      console.log('kill engine')
+      console.info('kill engine')
       engine.killEngine().then(done)
     })
   })
