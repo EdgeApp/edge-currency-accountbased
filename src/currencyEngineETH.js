@@ -22,7 +22,7 @@ import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
 import { NetworkFeesSchema, CustomTokenSchema } from './ethSchema.js'
 import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData, type EthCustomToken } from './ethTypes.js'
-import { isHex, snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex } from './ethUtils.js'
+import { isHex, normalizeAddress, addHexPrefix, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
 const abi = require('../lib/export-fixes-bundle.js').ABI
@@ -145,7 +145,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       } else if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumPublicAddress) {
         this.walletInfo.keys.ethereumAddress = walletInfo.keys.keys.ethereumPublicAddress
       } else {
-        const privKey = hexToBuf(this.walletInfo.keys.ethereumKey)
+        const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
         const wallet = ethWallet.fromPrivateKey(privKey)
         this.walletInfo.keys.ethereumAddress = wallet.getAddressString()
       }
@@ -833,7 +833,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.walletLocalData.transactionsObj[currencyCode][idx] = abcTransaction
     this.walletLocalDataDirty = true
     this.transactionsChangedArray.push(abcTransaction)
-    console.log('updateTransaction:' + abcTransaction.txid)
+    // console.log('updateTransaction:' + abcTransaction.txid)
   }
 
   // *************************************
@@ -979,7 +979,7 @@ class EthereumEngine implements AbcCurrencyEngine {
   }
 
   async addCustomToken (tokenObj: any) {
-    console.log('addCustomToken:', tokenObj)
+    // console.log('addCustomToken:', tokenObj)
     const valid = validateObject(tokenObj, CustomTokenSchema)
 
     if (valid) {
@@ -1366,7 +1366,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       chainId: 1
     }
 
-    const privKey = hexToBuf(this.walletInfo.keys.ethereumKey)
+    const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
     const wallet = ethWallet.fromPrivateKey(privKey)
 
     console.log(wallet.getAddressString())

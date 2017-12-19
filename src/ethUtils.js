@@ -7,10 +7,6 @@ import { bns } from 'biggystring'
 import { validate } from 'jsonschema'
 const Buffer = require('buffer/').Buffer
 
-function snooze (ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 function normalizeAddress (address: string) {
   return address.toLowerCase().replace('0x', '')
 }
@@ -43,17 +39,8 @@ function bufToHex (buf: any) {
   return hex
 }
 
-function hexToBuf (hex: string) {
-  const buf = Buffer.from(hex, 'hex')
-  return buf
-}
-
 function toHex (num: string) {
   return bns.add(num, '0', 16)
-}
-
-function toDecimal (num: string) {
-  return bns.add(num, '0')
 }
 
 export function isHex (h: string) {
@@ -61,4 +48,4 @@ export function isHex (h: string) {
   return out
 }
 
-export { snooze, normalizeAddress, addHexPrefix, toDecimal, hexToBuf, bufToHex, validateObject, toHex }
+export { normalizeAddress, addHexPrefix, bufToHex, validateObject, toHex }
