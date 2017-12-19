@@ -499,8 +499,10 @@ for (const fixture of fixtures) {
   // })
   describe('Stop the engine', function () {
     it('Should stop the engine', function (done) {
-      engine.killEngine().then(done)
-      destroyAllContexts()
+      engine.killEngine().then(() => {
+        destroyAllContexts()
+        done()
+      })
     })
   })
 }
