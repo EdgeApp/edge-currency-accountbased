@@ -14,7 +14,8 @@ import type {
   AbcMetaToken,
   AbcCurrencyInfo,
   AbcDenomination,
-  AbcFreshAddress
+  AbcFreshAddress,
+  AbcIo
 } from 'airbitz-core-types'
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
@@ -39,8 +40,6 @@ const ETHERSCAN_API_KEY = ''
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const CHECK_UNCONFIRMED = true
 const INFO_SERVERS = ['https://info1.edgesecure.co:8444']
-
-let io
 
 function unpadAddress (address: string): string {
   const unpadded = bns.add('0', address, 16)
@@ -102,11 +101,12 @@ class EthereumEngine implements AbcCurrencyEngine {
   allTokens: Array<AbcMetaToken>
   customTokens: Array<AbcMetaToken>
   currentSettings: any
+  io: AbcIo
 
   constructor (io_: any, walletInfo: AbcWalletInfo, opts: AbcMakeEngineOptions) {
     const { walletLocalFolder, callbacks } = opts
 
-    io = io_
+    this.io = io_
     this.engineOn = false
     this.addressesChecked = false
     this.tokenCheckStatus = {}
@@ -175,7 +175,7 @@ class EthereumEngine implements AbcCurrencyEngine {
       apiKey = '&apikey=' + ETHERSCAN_API_KEY
     }
     const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
-    const response = await io.fetch(url, {
+    const response = await this.io.fetch(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -1435,13 +1435,13 @@ class EthereumEngine implements AbcCurrencyEngine {
       console.log(jsonObj)
 
       if (typeof jsonObj.error !== 'undefined') {
-        io.console.warn('Error sending transaction')
+        this.io.console.warn('Error sending transaction')
         if (
           jsonObj.error.message.includes('nonce is too low') ||
           jsonObj.error.message.includes('incrementing the nonce')
         ) {
           this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
-          io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
+          this.io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
           // Nonce error. Increment nonce and try again
           const abcTx = await this.signTx(abcTransaction)
           return await this.broadcastTx(abcTx)
