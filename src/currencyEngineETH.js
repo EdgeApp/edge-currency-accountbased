@@ -166,6 +166,9 @@ class EthereumEngine implements AbcCurrencyEngine {
     const response = await io.fetch(url, {
       method: 'GET'
     })
+    if (!response.ok) {
+      throw new Error(`The server returned error code ${response.status} for ${url}`)
+    }
     return response.json()
   }
 
@@ -183,6 +186,9 @@ class EthereumEngine implements AbcCurrencyEngine {
       method: 'POST',
       body: JSON.stringify(body)
     })
+    if (!response.ok) {
+      throw new Error(`The server returned error code ${response.status} for ${url}`)
+    }
     return response.json()
   }
 
