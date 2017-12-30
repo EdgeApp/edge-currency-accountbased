@@ -36,7 +36,7 @@
     "test": "nyc mocha --require source-map-support/register build/tests.cjs.js",
     "posttest": "nyc report --reporter=html",
     "updot": "updot",
-    "webpack": "webpack"
+    "webpack": "webpack --config ./webpack.config.js"
   },
   "dependencies": {
     "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git",
