@@ -948,6 +948,19 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.timers = {}
   }
 
+  async resyncBlockchain (): Promise<void> {
+    await this.killEngine()
+    const temp = JSON.stringify({
+      enabledTokens: this.walletLocalData.enabledTokens,
+      networkFees: this.walletLocalData.networkFees,
+      ethereumAddress: this.walletLocalData.ethereumAddress
+    })
+    this.walletLocalData = new WalletLocalData(temp)
+    this.walletLocalDataDirty = true
+    await this.saveWalletLoop()
+    await this.startEngine()
+  }
+
   // synchronous
   getBlockHeight (): number {
     return parseInt(this.walletLocalData.blockHeight)
@@ -1441,6 +1454,20 @@ class EthereumEngine implements AbcCurrencyEngine {
     this.addTransaction(abcTransaction.currencyCode, abcTransaction)
 
     this.abcTxLibCallbacks.onTransactionsChanged([abcTransaction])
+  }
+
+  getDisplayPrivateSeed () {
+    if (this.walletInfo.keys && this.walletInfo.keys.ethereumKey) {
+      return this.walletInfo.keys.ethereumKey
+    }
+    return ''
+  }
+
+  getDisplayPublicSeed () {
+    if (this.walletInfo.keys && this.walletInfo.keys.ethereumAddress) {
+      return this.walletInfo.keys.ethereumAddress
+    }
+    return ''
   }
 }
 
