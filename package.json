@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-ethereum",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Edge Ethereum currency plugin",
   "homepage": "https://edgesecure.co/",
   "license": "SEE LICENSE IN LICENSE",
@@ -59,7 +59,7 @@
     "babel-preset-flow": "^6.23.0",
     "chai": "^4.1.2",
     "chai-as-promised": "^6.0.0",
-    "eslint": "^4.5.0",
+    "eslint": "4.5.0",
     "eslint-config-standard": "^10.2.1",
     "eslint-plugin-flowtype": "^2.35.0",
     "eslint-plugin-import": "^2.7.0",
