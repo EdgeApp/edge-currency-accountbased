@@ -31,12 +31,11 @@
     "lint:fix": "eslint --fix '*.js' 'src/**/*.js' 'test/**/*.js' && npm run flow",
     "prepare": "npm run build",
     "rollup": "rollup -c",
-    "postinstall": "npm run build",
     "pretest": "npm run build:test && npm run lint",
     "test": "nyc mocha --require source-map-support/register build/tests.cjs.js",
     "posttest": "nyc report --reporter=html",
     "updot": "updot",
-    "webpack": "webpack --config ./webpack.config.js"
+    "webpack": "webpack"
   },
   "dependencies": {
     "airbitz-core-types": "git://github.com/Airbitz/airbitz-core-types.git",
