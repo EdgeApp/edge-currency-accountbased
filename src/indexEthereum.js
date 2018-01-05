@@ -86,6 +86,7 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   async makePlugin (opts: any): Promise<AbcCurrencyPlugin> {
     io = opts.io
 
+    console.log(`Creating Currency Plugin for ethereum`)
     const ethereumPlugin:AbcCurrencyPlugin = {
       pluginName: 'ethereum',
       currencyInfo,
