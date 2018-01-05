@@ -15,6 +15,7 @@ import type {
   AbcCurrencyInfo,
   AbcDenomination,
   AbcFreshAddress,
+  AbcDataDump,
   AbcIo
 } from 'airbitz-core-types'
 import { calcMiningFee } from './miningFees.js'
@@ -1468,15 +1469,15 @@ class EthereumEngine implements AbcCurrencyEngine {
     return ''
   }
 
-  dumpData () {
-    let dataDump = ''
-    dataDump += '--------------------- Wallet Data Dump ----------------------\n'
-    dataDump += `Wallet ID: ${this.walletInfo.id}\n`
-    dataDump += `Wallet Type: ${this.walletInfo.type}\n`
-    dataDump += `Plugin Type: ${this.currencyInfo.pluginName}\n`
-    dataDump += '------------------------- Data -------------------------\n'
-    dataDump += `${JSON.stringify(this.walletLocalData, null, 2)}\n`
-    dataDump += '------------------ End of Wallet Data Dump ------------------\n\n'
+  dumpData (): AbcDataDump {
+    const dataDump: AbcDataDump = {
+      walletId: this.walletId.split(' - ')[0],
+      walletType: this.walletInfo.type,
+      pluginType: this.currencyInfo.pluginName,
+      data: {
+        walletLocalData: this.walletLocalData
+      }
+    }
     return dataDump
   }
 }
