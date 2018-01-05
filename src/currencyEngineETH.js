@@ -1467,6 +1467,18 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
     return ''
   }
+
+  dumpData () {
+    let dataDump = ''
+    dataDump += '--------------------- Wallet Data Dump ----------------------\n'
+    dataDump += `Wallet ID: ${this.walletInfo.id}\n`
+    dataDump += `Wallet Type: ${this.walletInfo.type}\n`
+    dataDump += `Plugin Type: ${this.currencyInfo.pluginName}\n`
+    dataDump += '------------------------- Data -------------------------\n'
+    dataDump += `${JSON.stringify(this.walletLocalData, null, 2)}\n`
+    dataDump += '------------------ End of Wallet Data Dump ------------------\n\n'
+    return dataDump
+  }
 }
 
 export { EthereumEngine }
