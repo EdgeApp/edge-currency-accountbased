@@ -181,7 +181,8 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
 
         if (
           typeof parsedUri.scheme !== 'undefined' &&
-          parsedUri.scheme !== 'ethereum'
+          parsedUri.scheme !== 'ethereum' &&
+          parsedUri.scheme !== 'ether'
         ) {
           throw new Error('InvalidUriError')
         }
