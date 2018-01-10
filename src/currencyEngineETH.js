@@ -36,7 +36,6 @@ const NETWORKFEES_POLL_MILLISECONDS = (60 * 10 * 1000) // 10 minutes
 const SAVE_DATASTORE_MILLISECONDS = 10000
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = '8' // ~ 2 minutes
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = (4 * 60 * 24 * 7) // ~ one week
-const ETHERSCAN_API_KEY = ''
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const CHECK_UNCONFIRMED = true
@@ -161,8 +160,8 @@ class EthereumEngine implements AbcCurrencyEngine {
   // *************************************
   async fetchGetEtherscan (cmd: string) {
     let apiKey = ''
-    if (ETHERSCAN_API_KEY.length > 5) {
-      apiKey = '&apikey=' + ETHERSCAN_API_KEY
+    if (global.etherscanApiKey && global.etherscanApiKey.length > 5) {
+      apiKey = '&apikey=' + global.etherscanApiKey
     }
     const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
     return this.fetchGet(url)
@@ -180,8 +179,8 @@ class EthereumEngine implements AbcCurrencyEngine {
 
   async fetchPost (cmd: string, body: any) {
     let apiKey = ''
-    if (ETHERSCAN_API_KEY.length > 5) {
-      apiKey = '&apikey=' + ETHERSCAN_API_KEY
+    if (global.etherscanApiKey && global.etherscanApiKey.length > 5) {
+      apiKey = '&apikey=' + global.etherscanApiKey
     }
     const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
     const response = await this.io.fetch(url, {
@@ -611,7 +610,7 @@ class EthereumEngine implements AbcCurrencyEngine {
     }
 
     try {
-      url = sprintf('?module=logs&action=getLogs&fromBlock=%d&toBlock=latest&address=%s&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&topic0_1_opr=and&topic1=%s&topic1_2_opr=or&topic2=%s&apikey=YourApiKeyToken',
+      url = sprintf('?module=logs&action=getLogs&fromBlock=%d&toBlock=latest&address=%s&topic0=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&topic0_1_opr=and&topic1=%s&topic1_2_opr=or&topic2=%s',
         startBlock, contractAddress, address, address)
       jsonObj = await this.fetchGetEtherscan(url)
       valid = validateObject(jsonObj, {
