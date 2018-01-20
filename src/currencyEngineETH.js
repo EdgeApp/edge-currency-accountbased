@@ -1425,8 +1425,11 @@ class EthereumEngine implements AbcCurrencyEngine {
       if (typeof jsonObj.error !== 'undefined') {
         this.io.console.warn('Error sending transaction')
         if (
+          jsonObj.error.code === -32000 ||
           jsonObj.error.message.includes('nonce is too low') ||
-          jsonObj.error.message.includes('incrementing the nonce')
+          jsonObj.error.message.includes('nonce too low') ||
+          jsonObj.error.message.includes('incrementing the nonce') ||
+          jsonObj.error.message.includes('replacement transaction underpriced')
         ) {
           this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
           this.io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
@@ -1437,9 +1440,10 @@ class EthereumEngine implements AbcCurrencyEngine {
           throw (jsonObj.error)
         }
       } else if (typeof jsonObj.result === 'string') {
+        this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
         // Success!!
       } else {
-        throw new Error('Invalid return valid on transaction send')
+        throw new Error('Invalid return value on transaction send')
       }
     } catch (e) {
       throw (e)
