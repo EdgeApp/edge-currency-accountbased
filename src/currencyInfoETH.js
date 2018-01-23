@@ -15,6 +15,7 @@ const otherSettings:EthereumSettings = {
 }
 
 const defaultSettings:any = {
+  customFeeSettings: ['gasLimit', 'gasPrice'],
   otherSettings
 }
 
