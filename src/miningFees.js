@@ -4,7 +4,7 @@
  */
 
 import type { EthereumFees, EthereumFee, EthereumCalcedFees } from './ethTypes.js'
-import type { AbcSpendInfo } from 'airbitz-core-types'
+import type { AbcSpendInfo } from 'edge-login'
 import { normalizeAddress } from './ethUtils.js'
 import { bns } from 'biggystring'
 

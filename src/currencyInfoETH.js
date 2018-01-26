@@ -1,7 +1,7 @@
 /* global */
 // @flow
 
-import type { AbcCurrencyInfo } from 'airbitz-core-types'
+import type { AbcCurrencyInfo } from 'edge-login'
 import type { EthereumSettings } from './ethTypes'
 
 const otherSettings:EthereumSettings = {

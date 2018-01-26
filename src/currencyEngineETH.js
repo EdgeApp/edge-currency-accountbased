@@ -17,7 +17,7 @@ import type {
   AbcFreshAddress,
   AbcDataDump,
   AbcIo
-} from 'airbitz-core-types'
+} from 'edge-login'
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
@@ -87,7 +87,7 @@ class EthereumParams {
   }
 }
 
-class EthereumEngine implements AbcCurrencyEngine {
+class EthereumEngine {
   walletInfo: AbcWalletInfo
   abcTxLibCallbacks: AbcCurrencyPluginCallbacks
   walletLocalFolder: any
@@ -106,6 +106,10 @@ class EthereumEngine implements AbcCurrencyEngine {
   io: AbcIo
 
   constructor (io_: any, walletInfo: AbcWalletInfo, opts: AbcMakeEngineOptions) {
+    // Validate that we are a valid AbcCurrencyEngine:
+    // eslint-disable-next-line no-unused-vars
+    const test: AbcCurrencyEngine = this
+
     const { walletLocalFolder, callbacks } = opts
 
     this.io = io_

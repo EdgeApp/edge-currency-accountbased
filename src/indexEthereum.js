@@ -13,7 +13,7 @@ import type {
   AbcCurrencyPlugin,
   AbcCurrencyPluginFactory,
   AbcWalletInfo
-} from 'airbitz-core-types'
+} from 'edge-login'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
