@@ -2,12 +2,15 @@ import babel from 'rollup-plugin-babel'
 const packageJson = require('./package.json')
 
 const babelConf = {
-  'presets': ['flow']
+  presets: ['flow']
 }
 
 export default {
   entry: 'src/indexEthereum.js',
-  external: Object.keys(packageJson.dependencies),
+  external: [
+    ...Object.keys(packageJson.dependencies),
+    ...Object.keys(packageJson.devDependencies)
+  ],
   plugins: [babel(babelConf)],
 
   targets: [
