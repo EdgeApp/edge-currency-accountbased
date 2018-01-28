@@ -10,15 +10,15 @@ Implements Bitcoin send/receive functionality per the spec for crypto currency p
 npm i edge-currency-ethereum -s
 
 ```
-import { EthereumCurrencyPluginFactory } from `edge-currency-ethereum`
+import { ethereumCurrencyPluginFactory } from `edge-currency-ethereum`
 ```
 
-Now you can pass `EthereumCurrencyPluginFactory` to `airbitz-core-js`.
+Now you can pass `ethereumCurrencyPluginFactory` to `airbitz-core-js`.
 
 ```
 const context = makeReactNativeContext({
   apiKey: YOUR_API_KEY,
-  plugins: [ EthereumCurrencyPluginFactory ]
+  plugins: [ ethereumCurrencyPluginFactory ]
 })
 ```
 

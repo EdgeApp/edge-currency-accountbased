@@ -79,7 +79,7 @@ function getParameterByName (param, url) {
 //   }
 // }
 
-export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
+export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
@@ -313,3 +313,6 @@ export const EthereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
     return initPlugin(opts)
   }
 }
+
+// Capitalizing the name was a mistake, but we keep it around for now:
+export { ethereumCurrencyPluginFactory as EthereumCurrencyPluginFactory }
