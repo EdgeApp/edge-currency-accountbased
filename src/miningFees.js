@@ -15,7 +15,7 @@ export const ES_FEE_CUSTOM = 'custom'
 
 export function calcMiningFee (spendInfo: AbcSpendInfo, networkFees: EthereumFees): EthereumCalcedFees {
   if (spendInfo.spendTargets && spendInfo.spendTargets.length && spendInfo.spendTargets[0].publicAddress) {
-    const { customNetworkFee } = spendInfo.customNetworkFee || {}
+    const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
       const { gasLimit, gasPrice } = customNetworkFee
       if (gasLimit && bns.gt(gasLimit, '0') && gasPrice && bns.gt(gasPrice, '0')) return { gasLimit, gasPrice }
@@ -88,7 +88,7 @@ export function calcMiningFee (spendInfo: AbcSpendInfo, networkFees: EthereumFee
         gasPrice = networkFeeForGasPrice.gasPrice.highFee
         break
       default:
-        throw new Error(`Invalid networkFeeOption: ${networkFeeOption}, And/Or customNetworkFee: ${customNetworkFee}`)
+        throw new Error(`Invalid networkFeeOption`)
     }
     const out: EthereumCalcedFees = { gasLimit, gasPrice }
     return out
