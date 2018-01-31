@@ -8,10 +8,10 @@ import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.
 import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  AbcParsedUri,
-  AbcEncodeUri,
-  AbcCurrencyPlugin,
-  AbcCurrencyPluginFactory,
+  EdgeParsedUri,
+  EdgeEncodeUri,
+  EdgeCurrencyPlugin,
+  EdgeCurrencyPluginFactory,
   EdgeWalletInfo
 } from 'edge-core-js'
 import { parse, serialize } from 'uri-js'
@@ -79,15 +79,15 @@ function getParameterByName (param, url) {
 //   }
 // }
 
-export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
+export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<AbcCurrencyPlugin> {
+  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
     io = opts.io
 
     console.log(`Creating Currency Plugin for ethereum`)
-    const ethereumPlugin:AbcCurrencyPlugin = {
+    const ethereumPlugin:EdgeCurrencyPlugin = {
       pluginName: 'ethereum',
       currencyInfo,
 
@@ -211,7 +211,7 @@ export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         const label = getParameterByName('label', uri)
         const message = getParameterByName('message', uri)
 
-        const abcParsedUri:AbcParsedUri = {
+        const abcParsedUri:EdgeParsedUri = {
           publicAddress: address
         }
         if (nativeAmount) {
@@ -233,7 +233,7 @@ export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         return abcParsedUri
       },
 
-      encodeUri: (obj: AbcEncodeUri) => {
+      encodeUri: (obj: EdgeEncodeUri) => {
         if (!obj.publicAddress) {
           throw new Error('InvalidPublicAddressError')
         }

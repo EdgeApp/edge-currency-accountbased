@@ -11,7 +11,7 @@ import type {
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeWalletInfo,
-  AbcMetaToken,
+  EdgeMetaToken,
   EdgeCurrencyInfo,
   EdgeDenomination,
   EdgeFreshAddress,
@@ -110,8 +110,8 @@ class EthereumEngine {
   walletLocalDataDirty: boolean
   transactionsChangedArray: Array<EdgeTransaction>
   currencyInfo: EdgeCurrencyInfo
-  allTokens: Array<AbcMetaToken>
-  customTokens: Array<AbcMetaToken>
+  allTokens: Array<EdgeMetaToken>
+  customTokens: Array<EdgeMetaToken>
   currentSettings: any
   timers: any
   walletId: string
@@ -1115,7 +1115,7 @@ class EthereumEngine {
         name: ethTokenObj.currencyCode,
         multiplier: ethTokenObj.multiplier
       }
-      const abcMetaToken: AbcMetaToken = {
+      const abcMetaToken: EdgeMetaToken = {
         currencyCode: ethTokenObj.currencyCode,
         currencyName: ethTokenObj.currencyName,
         denominations: [denom],

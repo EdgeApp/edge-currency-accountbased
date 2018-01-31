@@ -51,7 +51,7 @@ export function calcMiningFee (spendInfo: EdgeSpendInfo, networkFees: EthereumFe
     }
     let nativeAmount = spendInfo.spendTargets[0].nativeAmount
     if (useLimit === 'tokenTransaction') {
-      // Small hack. Abctimate the relative value of token to ethereum as 10%
+      // Small hack. Edgetimate the relative value of token to ethereum as 10%
       nativeAmount = bns.div(nativeAmount, '10')
     }
     if (!networkFeeForGasPrice.gasPrice) {
