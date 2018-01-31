@@ -1313,24 +1313,26 @@ class EthereumEngine {
 
     const balanceEth = this.walletLocalData.totalBalances.ETH
     let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+    let totalTxAmount = '0'
 
     if (currencyCode === PRIMARY_CURRENCY) {
-      const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
       if (bns.gt(totalTxAmount, balanceEth)) {
         throw (InsufficientFundsError)
       }
+      nativeAmount = bns.mul(totalTxAmount, '-1')
     } else {
       nativeNetworkFee = '0' // Do not show a fee for token transations.
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
         throw (InsufficientFundsError)
       }
+      nativeAmount = bns.mul(nativeAmount, '-1')
     }
 
     // const negativeOneBN = new BN('-1', 10)
     // nativeAmountBN.imul(negativeOneBN)
     // nativeAmount = nativeAmountBN.toString(10)
-    nativeAmount = bns.mul(nativeAmount, '-1')
 
     // **********************************
     // Create the unsigned AbcTransaction
@@ -1356,7 +1358,16 @@ class EthereumEngine {
 
     const gasLimitHex = toHex(abcTransaction.otherParams.gas)
     const gasPriceHex = toHex(abcTransaction.otherParams.gasPrice)
-    let nativeAmountHex = bns.mul('-1', abcTransaction.nativeAmount, 16)
+    let nativeAmountHex
+
+    // let nativeAmountHex = bns.mul('-1', abcTransaction.nativeAmount, 16)
+    if (abcTransaction.currencyCode === PRIMARY_CURRENCY) {
+      // Remove the networkFee from the nativeAmount
+      const nativeAmount = bns.add(abcTransaction.nativeAmount, abcTransaction.networkFee)
+      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
+    } else {
+      nativeAmountHex = bns.mul('-1', abcTransaction.nativeAmount, 16)
+    }
 
     // const nonceBN = new BN(this.walletLocalData.nextNonce.toString(10), 10)
     // const nonceHex = '0x' + nonceBN.toString(16)
