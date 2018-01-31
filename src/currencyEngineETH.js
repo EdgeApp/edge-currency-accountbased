@@ -176,7 +176,10 @@ class EthereumEngine {
       method: 'GET'
     })
     if (!response.ok) {
-      throw new Error(`The server returned error code ${response.status} for ${url}`)
+      const cleanUrl = url.replace(global.etherscanApiKey, 'private')
+      throw new Error(
+        `The server returned error code ${response.status} for ${cleanUrl}`
+      )
     }
     return response.json()
   }
