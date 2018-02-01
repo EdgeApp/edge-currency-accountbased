@@ -211,26 +211,26 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         const label = getParameterByName('label', uri)
         const message = getParameterByName('message', uri)
 
-        const abcParsedUri:EdgeParsedUri = {
+        const edgeParsedUri:EdgeParsedUri = {
           publicAddress: address
         }
         if (nativeAmount) {
-          abcParsedUri.nativeAmount = nativeAmount
+          edgeParsedUri.nativeAmount = nativeAmount
         }
         if (currencyCode) {
-          abcParsedUri.currencyCode = currencyCode
+          edgeParsedUri.currencyCode = currencyCode
         }
         if (label || message) {
-          abcParsedUri.metadata = {}
+          edgeParsedUri.metadata = {}
           if (label) {
-            abcParsedUri.metadata.name = label
+            edgeParsedUri.metadata.name = label
           }
           if (message) {
-            abcParsedUri.metadata.message = message
+            edgeParsedUri.metadata.message = message
           }
         }
 
-        return abcParsedUri
+        return edgeParsedUri
       },
 
       encodeUri: (obj: EdgeEncodeUri) => {
