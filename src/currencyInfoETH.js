@@ -8,6 +8,9 @@ const otherSettings:EthereumSettings = {
   etherscanApiServers: [
     'https://api.etherscan.io'
   ],
+  blockcypherApiServers: [
+    'https://api.blockcypher.com'
+  ],
   superethServers: [
     'https://supereth1.edgesecure.co:8443'
   ],

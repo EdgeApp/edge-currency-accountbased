@@ -41,6 +41,11 @@ const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const CHECK_UNCONFIRMED = true
 const INFO_SERVERS = ['https://info1.edgesecure.co:8444']
 
+type BroadcastResults = {
+  incrementNonce: boolean,
+  decrementNonce: boolean
+}
+
 function unpadAddress (address: string): string {
   const unpadded = bns.add('0', address, 16)
   return unpadded
@@ -184,12 +189,12 @@ class EthereumEngine {
     return response.json()
   }
 
-  async fetchPost (cmd: string, body: any) {
+  async fetchPostBlockcypher (cmd: string, body: any) {
     let apiKey = ''
-    if (global.etherscanApiKey && global.etherscanApiKey.length > 5) {
-      apiKey = '&apikey=' + global.etherscanApiKey
+    if (global.blockcypherApiKey && global.blockcypherApiKey.length > 5) {
+      apiKey = '&token=' + global.blockcypherApiKey
     }
-    const url = sprintf('%s/api%s%s', this.currentSettings.otherSettings.etherscanApiServers[0], cmd, apiKey)
+    const url = sprintf('%s/%s%s', this.currentSettings.otherSettings.blockcypherApiServers[0], cmd, apiKey)
     const response = await this.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -198,9 +203,6 @@ class EthereumEngine {
       method: 'POST',
       body: JSON.stringify(body)
     })
-    if (!response.ok) {
-      throw new Error(`The server returned error code ${response.status} for ${url}`)
-    }
     return response.json()
   }
 
@@ -1415,57 +1417,164 @@ class EthereumEngine {
     return abcTransaction
   }
 
+  async broadcastEtherscan (abcTransaction: AbcTransaction): Promise<BroadcastResults> {
+    const result: BroadcastResults = {
+      incrementNonce: false,
+      decrementNonce: false
+    }
+    const transactionParsed = JSON.stringify(abcTransaction, null, 2)
+
+    this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
+    const url = sprintf('?module=proxy&action=eth_sendRawTransaction&hex=%s', abcTransaction.signedTx)
+    const jsonObj = await this.fetchGetEtherscan(url)
+
+    this.log('broadcastEtherscan jsonObj:', jsonObj)
+
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('Error sending transaction')
+      if (
+        jsonObj.error.code === -32000 ||
+        jsonObj.error.message.includes('nonce is too low') ||
+        jsonObj.error.message.includes('nonce too low') ||
+        jsonObj.error.message.includes('incrementing the nonce') ||
+        jsonObj.error.message.includes('replacement transaction underpriced')
+      ) {
+        result.incrementNonce = true
+      } else {
+        throw (jsonObj.error)
+      }
+      return result
+    } else if (typeof jsonObj.result === 'string') {
+      // Success!!
+      return result
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
+  async broadcastBlockCypher (abcTransaction: AbcTransaction): Promise<BroadcastResults> {
+    const result: BroadcastResults = {
+      incrementNonce: false,
+      decrementNonce: false
+    }
+
+    const transactionParsed = JSON.stringify(abcTransaction, null, 2)
+    this.log(`Blockcypher: sent transaction to network:\n${transactionParsed}\n`)
+
+    const url = sprintf('v1/eth/main/txs/push')
+    const hexTx = abcTransaction.signedTx.replace('0x', '')
+    const jsonObj = await this.fetchPostBlockcypher(url, {tx: hexTx})
+
+    this.log('broadcastBlockCypher jsonObj:', jsonObj)
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('Error sending transaction')
+      if (
+        typeof jsonObj.error === 'string' &&
+        jsonObj.error.includes('Account nonce ') &&
+        jsonObj.error.includes('higher than transaction')
+      ) {
+        result.incrementNonce = true
+      } else if (
+        typeof jsonObj.error === 'string' &&
+        jsonObj.error.includes('Error validating transaction') &&
+        jsonObj.error.includes('orphaned, missing reference')
+      ) {
+        result.decrementNonce = true
+      } else {
+        throw (jsonObj.error)
+      }
+      return result
+    } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
+      // Success!!
+      return result
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
   // asynchronous
   async broadcastTx (abcTransaction: AbcTransaction): Promise<AbcTransaction> {
+    const results: Array<BroadcastResults | null> = [null, null]
+    const errors: Array<Error | null> = [null, null]
+
+    // Because etherscan will allow use of a nonce that's too high, only use it if Blockcypher fails
+    // If we can fix this or replace etherscan, then we can use an array of promises instead of await
+    // on each broadcast type
     try {
-      const transactionParsed = JSON.stringify(abcTransaction, null, 2)
-      this.log(`Sent transaction to network:\n${transactionParsed}\n`)
-      const url = sprintf('?module=proxy&action=eth_sendRawTransaction&hex=%s', abcTransaction.signedTx)
-      const jsonObj = await this.fetchGetEtherscan(url)
-
-      // {
-      //   "jsonrpc": "2.0",
-      //   "error": {
-      //   "code": -32010,
-      //     "message": "Transaction nonce is too low. Try incrementing the nonce.",
-      //     "data": null
-      // },
-      //   "id": 1
-      // }
-
-      // {
-      //   "jsonrpc": "2.0",
-      //   "result": "0xe3d056a756e98505460f599cb2a58db062da8705eb36ea3539cb42f82d69099b",
-      //   "id": 1
-      // }
-      this.log(`Sent transaction to network. Response:\n${JSON.stringify(jsonObj, null, 2)}\n`)
-
-      if (typeof jsonObj.error !== 'undefined') {
-        this.io.console.warn('Error sending transaction')
-        if (
-          jsonObj.error.code === -32000 ||
-          jsonObj.error.message.includes('nonce is too low') ||
-          jsonObj.error.message.includes('nonce too low') ||
-          jsonObj.error.message.includes('incrementing the nonce') ||
-          jsonObj.error.message.includes('replacement transaction underpriced')
-        ) {
-          this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
-          this.io.console.warn('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
-          // Nonce error. Increment nonce and try again
-          const abcTx = await this.signTx(abcTransaction)
-          return await this.broadcastTx(abcTx)
-        } else {
-          throw (jsonObj.error)
-        }
-      } else if (typeof jsonObj.result === 'string') {
-        this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
-        // Success!!
-      } else {
-        throw new Error('Invalid return value on transaction send')
-      }
+      results[0] = await this.broadcastBlockCypher(abcTransaction)
     } catch (e) {
-      throw (e)
+      errors[0] = e
     }
+
+    if (errors[0]) {
+      try {
+        results[1] = await this.broadcastEtherscan(abcTransaction)
+      } catch (e) {
+        errors[1] = e
+      }
+    }
+
+    // Use code below once we actually use a Promise array and simultaneously broadcast with a Promise.all()
+    //
+    // for (let i = 0; i < results.length; i++) {
+    //   results[i] = null
+    //   errors[i] = null
+    //   try {
+    //     results[i] = await results[i]
+    //   } catch (e) {
+    //     errors[i] = e
+    //   }
+    // }
+
+    let allErrored = true
+
+    for (const e of errors) {
+      if (!e) {
+        allErrored = false
+        break
+      }
+    }
+
+    let anyResultIncNonce = false
+    let anyResultDecrementNonce = false
+
+    for (const r: BroadcastResults | null of results) {
+      if (r && r.incrementNonce) {
+        anyResultIncNonce = true
+      }
+      if (r && r.decrementNonce) {
+        anyResultDecrementNonce = true
+      }
+    }
+
+    if (allErrored) {
+      throw errors[0] // Can only throw one error so throw the first one
+    }
+
+    this.log('broadcastTx errors:', errors)
+    this.log('broadcastTx results:', results)
+
+    if (anyResultDecrementNonce) {
+      this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '-1')
+      this.log('Nonce too high. Decrementing to ' + this.walletLocalData.nextNonce.toString())
+      // Nonce error. Increment nonce and try again
+      const abcTx = await this.signTx(abcTransaction)
+      const out = await this.broadcastTx(abcTx)
+      return out
+    }
+
+    if (anyResultIncNonce) {
+      // All servers returned a nonce-too-low. Increment and retry sign and broadcast
+      this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
+      this.log('Nonce too low. Incrementing to ' + this.walletLocalData.nextNonce.toString())
+      // Nonce error. Increment nonce and try again
+      const abcTx = await this.signTx(abcTransaction)
+      const out = await this.broadcastTx(abcTx)
+      return out
+    }
+    // Success
+    this.walletLocalData.nextNonce = bns.add(this.walletLocalData.nextNonce, '1')
+
     return abcTransaction
   }
 
