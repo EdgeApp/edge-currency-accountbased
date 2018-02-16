@@ -18,7 +18,10 @@ export function calcMiningFee (spendInfo: AbcSpendInfo, networkFees: EthereumFee
     const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
       const { gasLimit, gasPrice } = customNetworkFee
-      if (gasLimit && bns.gt(gasLimit, '0') && gasPrice && bns.gt(gasPrice, '0')) return { gasLimit, gasPrice }
+      const gasPriceGwei = bns.mul(gasPrice, '1000000000')
+      if (gasLimit && bns.gt(gasLimit, '0') && gasPrice && bns.gt(gasPrice, '0')) {
+        return { gasLimit, gasPrice: gasPriceGwei }
+      }
     }
     const targetAddress = normalizeAddress(spendInfo.spendTargets[0].publicAddress)
     let networkFeeForGasPrice:EthereumFee = networkFees['default']
