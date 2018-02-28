@@ -329,7 +329,11 @@ class EthereumEngine {
       netNativeAmount = bns.add('0', tx.data)
       ourReceiveAddresses.push(this.walletLocalData.ethereumAddress.toLowerCase())
     }
-    // const nativeNetworkFee:string = bns.mul(tx.gasPrice, tx.gasUsed)
+
+    if (netNativeAmount.length > 50) {
+      // Etherscan occasionally send back a transactino with a corrupt amount in tx.data. Ignore this tx.
+      return
+    }
 
     const ethParams = new EthereumParams(
       [ fromAddress ],
