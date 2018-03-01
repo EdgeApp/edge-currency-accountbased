@@ -1023,16 +1023,16 @@ class EthereumEngine {
       if (ethTokenObj.currencyCode.toUpperCase() !== ethTokenObj.currencyCode) {
         throw new Error('ErrorInvalidCurrencyCode')
       }
-      if (ethTokenObj.currencyCode.length < 3 || ethTokenObj.currencyCode.length > 5) {
-        throw new Error('ErrorInvalidCurrencyCode')
+      if (ethTokenObj.currencyCode.length < 2 || ethTokenObj.currencyCode.length > 7) {
+        throw new Error('ErrorInvalidCurrencyCodeLength')
       }
       if (ethTokenObj.currencyName.length < 3 || ethTokenObj.currencyName.length > 20) {
-        throw new Error('ErrorInvalidCurrencyName')
+        throw new Error('ErrorInvalidCurrencyNameLength')
       }
       if (bns.lt(ethTokenObj.multiplier, '1') || bns.gt(ethTokenObj.multiplier, '100000000000000000000000000000000')) {
         throw new Error('ErrorInvalidMultiplier')
       }
-      let contractAddress = ethTokenObj.contractAddress.replace('0x', '')
+      let contractAddress = ethTokenObj.contractAddress.replace('0x', '').toLowerCase()
       if (!isHex(contractAddress) || contractAddress.length !== 40) {
         throw new Error('ErrorInvalidContractAddress')
       }
