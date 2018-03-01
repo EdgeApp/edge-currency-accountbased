@@ -1311,7 +1311,9 @@ class EthereumEngine {
     }
 
     const InsufficientFundsError = new Error('Insufficient funds')
-    InsufficientFundsError.name = 'InsufficientFundsError'
+    InsufficientFundsError.name = 'ErrorInsufficientFunds'
+    const InsufficientFundsEthError = new Error('Insufficient ETH for transaction fee')
+    InsufficientFundsEthError.name = 'ErrorInsufficientFundsMoreEth'
 
     // Check for insufficient funds
     // let nativeAmountBN = new BN(nativeAmount, 10)
@@ -1333,6 +1335,10 @@ class EthereumEngine {
       nativeAmount = bns.mul(totalTxAmount, '-1')
     } else {
       parentNetworkFee = nativeNetworkFee
+
+      if (bns.gt(nativeNetworkFee, balanceEth)) {
+        throw (InsufficientFundsEthError)
+      }
 
       nativeNetworkFee = '0' // Do not show a fee for token transations.
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
