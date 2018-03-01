@@ -1308,7 +1308,7 @@ class EthereumEngine {
 
     const InsufficientFundsError = new Error('Insufficient funds')
     InsufficientFundsError.name = 'ErrorInsufficientFunds'
-    const InsufficientFundsEthError = new Error('Insufficient funds. Need more ETH')
+    const InsufficientFundsEthError = new Error('Insufficient ETH for transaction fee')
     InsufficientFundsEthError.name = 'ErrorInsufficientFundsMoreEth'
 
     // Check for insufficient funds
