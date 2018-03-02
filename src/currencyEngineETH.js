@@ -21,8 +21,15 @@ import type {
 import { calcMiningFee } from './miningFees.js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
-import { NetworkFeesSchema, CustomTokenSchema } from './ethSchema.js'
-import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData, type EthCustomToken } from './ethTypes.js'
+import { NetworkFeesSchema, CustomTokenSchema, EthGasStationSchema } from './ethSchema.js'
+import {
+  DATA_STORE_FILE,
+  DATA_STORE_FOLDER,
+  WalletLocalData,
+  type EthCustomToken,
+  type EthereumFeesGasPrice,
+  type EthereumFee
+} from './ethTypes.js'
 import { isHex, normalizeAddress, addHexPrefix, bufToHex, validateObject, toHex } from './ethUtils.js'
 
 const Buffer = require('buffer/').Buffer
@@ -887,6 +894,54 @@ class EthereumEngine {
       }
     } catch (err) {
       this.log('Error fetching networkFees:')
+      this.log(err)
+    }
+
+    try {
+      const url = sprintf('https://www.ethgasstation.info/json/ethgasAPI.json')
+      const jsonObj = await this.fetchGet(url)
+      const valid = validateObject(jsonObj, EthGasStationSchema)
+
+      if (valid) {
+        const ethereumFee: EthereumFee = this.walletLocalData.networkFees['default']
+        if (!ethereumFee.gasPrice) {
+          return
+        }
+        const gasPrice: EthereumFeesGasPrice = ethereumFee.gasPrice
+
+        const safeLow = Math.floor(jsonObj.safeLow / 10)
+        let average = Math.floor(jsonObj.average / 10)
+        let fastest = Math.floor(jsonObj.fastest / 10)
+
+        // Sanity checks
+        if (safeLow < 1 || safeLow > 300) {
+          console.log('Invalid safeLow value from EthGasStation')
+          return
+        }
+        if (average < 1 || average > 300) {
+          console.log('Invalid average value from EthGasStation')
+          return
+        }
+        if (fastest < 1 || fastest > 300) {
+          console.log('Invalid fastest value from EthGasStation')
+          return
+        }
+
+        gasPrice.lowFee = (safeLow * 1000000000).toString()
+
+        if (average <= safeLow) average = safeLow + 1
+        gasPrice.standardFeeLow = (average * 1000000000).toString()
+
+        if (fastest <= average) fastest = average + 1
+        gasPrice.highFee = (fastest * 1000000000).toString()
+
+        // We use a value that is somewhere in between average and fastest for the standardFeeHigh
+        gasPrice.standardFeeHigh = (Math.floor((average + fastest) * 0.75) * 1000000000).toString()
+      } else {
+        this.log('Error: Fetched invalid networkFees from EthGasStation')
+      }
+    } catch (err) {
+      this.log('Error fetching networkFees from EthGasStation')
       this.log(err)
     }
   }
