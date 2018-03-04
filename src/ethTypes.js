@@ -21,7 +21,7 @@ type EthereumFeesGasLimit = {
   tokenTransaction: string
 }
 
-type EthereumFeesGasPrice = {
+export type EthereumFeesGasPrice = {
   lowFee: string,
   standardFeeLow: string,
   standardFeeHigh: string,

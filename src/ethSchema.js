@@ -112,6 +112,16 @@ export const NetworkFeesSchema = {
   }
 }
 
+export const EthGasStationSchema = {
+  'type': 'object',
+  'properties': {
+    'safeLow': {'type': 'number'},
+    'average': {'type': 'number'},
+    'fastest': {'type': 'number'}
+  },
+  'required': ['safeLow', 'average', 'fastest']
+}
+
 export const CustomTokenSchema = {
   'type': 'object',
   'properties': {
