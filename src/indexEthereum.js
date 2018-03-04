@@ -6,14 +6,14 @@ import { currencyInfo } from './currencyInfoETH.js'
 import { EthereumEngine } from './currencyEngineETH.js'
 import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
 import type {
-  AbcCurrencyEngine,
-  AbcMakeEngineOptions,
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineOptions,
   AbcParsedUri,
   AbcEncodeUri,
   AbcCurrencyPlugin,
   AbcCurrencyPluginFactory,
-  AbcWalletInfo
-} from 'edge-login'
+  EdgeWalletInfo
+} from 'edge-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
@@ -108,7 +108,7 @@ export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
       },
 
-      derivePublicKey: (walletInfo: AbcWalletInfo) => {
+      derivePublicKey: (walletInfo: EdgeWalletInfo) => {
         const type = walletInfo.type.replace('wallet:', '')
         if (type === 'ethereum') {
           const privKey = hexToBuf(walletInfo.keys.ethereumKey)
@@ -142,7 +142,7 @@ export const ethereumCurrencyPluginFactory: AbcCurrencyPluginFactory = {
         }
       },
 
-      async makeEngine (walletInfo: AbcWalletInfo, opts: AbcMakeEngineOptions): Promise<AbcCurrencyEngine> {
+      async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
         const ethereumEngine = new EthereumEngine(io, walletInfo, opts)
         try {
           const result =

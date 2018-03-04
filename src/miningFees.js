@@ -4,7 +4,7 @@
  */
 
 import type { EthereumFees, EthereumFee, EthereumCalcedFees } from './ethTypes.js'
-import type { AbcSpendInfo } from 'edge-login'
+import type { EdgeSpendInfo } from 'edge-core-js'
 import { normalizeAddress } from './ethUtils.js'
 import { bns } from 'biggystring'
 
@@ -13,7 +13,7 @@ export const ES_FEE_STANDARD = 'standard'
 export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
-export function calcMiningFee (spendInfo: AbcSpendInfo, networkFees: EthereumFees): EthereumCalcedFees {
+export function calcMiningFee (spendInfo: EdgeSpendInfo, networkFees: EthereumFees): EthereumCalcedFees {
   if (spendInfo.spendTargets && spendInfo.spendTargets.length && spendInfo.spendTargets[0].publicAddress) {
     const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {

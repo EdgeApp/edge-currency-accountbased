@@ -1,13 +1,13 @@
 // @flow
 import EventEmitter from 'events'
 
-import { makeFakeIos, makeContext, destroyAllContexts } from 'edge-login'
+import { makeFakeIos, makeContext, destroyAllContexts } from 'edge-core-js'
 import type {
-  // AbcSpendInfo,
-  AbcWalletInfo,
+  // EdgeSpendInfo,
+  EdgeWalletInfo,
   AbcCurrencyEngineOptions,
   AbcCurrencyEngineCallbacks
-} from 'edge-login'
+} from 'edge-core-js'
 import { assert } from 'chai'
 import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
@@ -75,7 +75,7 @@ for (const fixture of fixtures) {
         )
         plugin = currencyPlugin
         keys = plugin.createPrivateKey(WALLET_TYPE)
-        const info: AbcWalletInfo = {
+        const info: EdgeWalletInfo = {
           id: '1',
           type: WALLET_TYPE,
           keys
@@ -107,7 +107,7 @@ for (const fixture of fixtures) {
     // })
 
     it('Make Engine', function () {
-      const info: AbcWalletInfo = {
+      const info: EdgeWalletInfo = {
         id: '1',
         type: WALLET_TYPE,
         keys
@@ -287,7 +287,7 @@ for (const fixture of fixtures) {
   // describe(`Make Spend and Sign for Wallet type ${WALLET_TYPE}`, function () {
   //   it('Should build transaction with low fee', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'low',
   //       metadata: {
   //         name: 'Transfer to College Fund',
@@ -319,7 +319,7 @@ for (const fixture of fixtures) {
 
   //   it('Should build transaction with low standard fee', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'standard',
   //       metadata: {
   //         name: 'Transfer to College Fund',
@@ -345,7 +345,7 @@ for (const fixture of fixtures) {
 
   //   it('Should build transaction with middle standard fee', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'standard',
   //       metadata: {
   //         name: 'Transfer to College Fund',
@@ -371,7 +371,7 @@ for (const fixture of fixtures) {
 
   //   it('Should build transaction with high standard fee', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'standard',
   //       metadata: {
   //         name: 'Transfer to College Fund',
@@ -402,7 +402,7 @@ for (const fixture of fixtures) {
 
   //   it('Should build transaction with high fee', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'high',
   //       metadata: {
   //         name: 'Transfer to College Fund',
@@ -432,7 +432,7 @@ for (const fixture of fixtures) {
   //   })
 
   //   it('Should build transaction with custom fee', function () {
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'custom',
   //       customNetworkFee: '1000',
   //       metadata: {
@@ -467,7 +467,7 @@ for (const fixture of fixtures) {
 
   //   it('Should throw InsufficientFundsError', function () {
   //     // $FlowFixMe
-  //     const templateSpend: AbcSpendInfo = {
+  //     const templateSpend: EdgeSpendInfo = {
   //       networkFeeOption: 'high',
   //       metadata: {
   //         name: 'Transfer to College Fund',
