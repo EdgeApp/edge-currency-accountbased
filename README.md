@@ -1,5 +1,5 @@
 # Edge Ethereum Currency Plugin
-[![Build Status](https://travis-ci.org/Airbitz/edge-currency-ethereum.svg?branch=master)](https://travis-ci.org/Airbitz/edge-currency-ethereum)
+[![Build Status][travis-image]][travis-url] [![NPM version][npm-image]][npm-url] [![Dependency Status][daviddm-image]][daviddm-url]
 
 [![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
@@ -43,3 +43,10 @@ This will copy the necessary files from `edge-currency-ethereum` into the `edge-
 
 ## License
 BSD 3
+
+[npm-image]: https://badge.fury.io/js/edge-currency-ethereum.svg
+[npm-url]: https://npmjs.org/package/edge-currency-ethereum
+[travis-image]: https://travis-ci.org/Airbitz/edge-currency-ethereum.svg?branch=master
+[travis-url]: https://travis-ci.org/Airbitz/edge-currency-ethereum
+[daviddm-image]: https://david-dm.org/Airbitz/edge-currency-ethereum.svg?theme=shields.io
+[daviddm-url]: https://david-dm.org/Airbitz/edge-currency-ethereum
