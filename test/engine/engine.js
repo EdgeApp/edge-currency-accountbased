@@ -5,8 +5,8 @@ import { makeFakeIos, makeContext, destroyAllContexts } from 'edge-core-js'
 import type {
   // EdgeSpendInfo,
   EdgeWalletInfo,
-  AbcCurrencyEngineOptions,
-  AbcCurrencyEngineCallbacks
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineCallbacks
 } from 'edge-core-js'
 import { assert } from 'chai'
 import { describe, it } from 'mocha'
@@ -36,7 +36,7 @@ for (const fixture of fixtures) {
 
   const context = makeContext({ io: fakeIo, plugins })
 
-  const callbacks: AbcCurrencyEngineCallbacks = {
+  const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
       // console.log('onAddressesCheck', progressRatio)
       emitter.emit('onAddressesCheck', progressRatio)
@@ -59,7 +59,7 @@ for (const fixture of fixtures) {
     }
   }
 
-  const currencyEngineOptions: AbcCurrencyEngineOptions = {
+  const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
     walletLocalFolder,
     walletLocalEncryptedFolder: walletLocalFolder
