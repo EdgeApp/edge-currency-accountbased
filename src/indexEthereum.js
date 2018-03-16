@@ -194,9 +194,46 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           throw new Error('InvalidUriError')
         }
         address = address.replace('/', '') // Remove any slashes
+        let [prefix, contractAddress] = address.split('-') // Split the address to get the prefix according to EIP-681
+        // If contractAddress is null or undefined it means there is no prefix
+        if (!contractAddress) {
+          contractAddress = prefix // Set the contractAddress to be the prefix when the prefix is missing.
+          prefix = 'pay' // The default prefix according to EIP-681 is "pay"
+        }
+        address = contractAddress
         const valid: boolean = EthereumUtil.isValidAddress(address)
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
+        }
+        // If the address has a "token-" prefix, it means it's an "Add Token" URI and not a payment one.
+        if (prefix === 'token') {
+          const currencyCode = getParameterByName('symbol', uri)
+          if (!currencyCode || currencyCode.length < 2 || currencyCode.length > 5) {
+            throw new Error('Wrong Token symbol')
+          }
+          const currencyName = getParameterByName('name', uri) || currencyCode
+          const multiplier = getParameterByName('decimals', uri) || '18'
+          try {
+            const decimals = parseInt(multiplier)
+            if (decimals < 0 || decimals > 18) {
+              throw new Error('Wrong number of decimals')
+            }
+          } catch (e) {
+            throw e
+          }
+
+          const type = getParameterByName('type', uri) || 'erc20'
+
+          const edgeParsedUri: EdgeParsedUri = {
+            token: {
+              currencyCode,
+              contractAddress,
+              currencyName,
+              multiplier,
+              type
+            }
+          }
+          return edgeParsedUri
         }
         const amountStr = getParameterByName('amount', uri)
         if (amountStr && typeof amountStr === 'string') {
