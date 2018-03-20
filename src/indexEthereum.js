@@ -207,8 +207,8 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         }
         // If the address has a "token-" prefix, it means it's an "Add Token" URI and not a payment one.
         if (prefix === 'token') {
-          const currencyCode = getParameterByName('symbol', uri)
-          if (!currencyCode || currencyCode.length < 2 || currencyCode.length > 5) {
+          const currencyCode = getParameterByName('symbol', uri) || 'SYM'
+          if (currencyCode.length < 2 || currencyCode.length > 5) {
             throw new Error('Wrong Token symbol')
           }
           const currencyName = getParameterByName('name', uri) || currencyCode
@@ -222,7 +222,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
             throw e
           }
 
-          const type = getParameterByName('type', uri) || 'erc20'
+          const type = getParameterByName('type', uri) || 'ERC20'
 
           const edgeParsedUri: EdgeParsedUri = {
             token: {
@@ -230,7 +230,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
               contractAddress,
               currencyName,
               multiplier,
-              type
+              type: type.toUpperCase()
             }
           }
           return edgeParsedUri

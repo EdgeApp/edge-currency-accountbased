@@ -212,6 +212,240 @@ for (const fixture of fixtures) {
         fixture['parseUri']['uri address with amount & label'][3]
       )
     })
+
+    it('token address only', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token address only'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token address only'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token address only'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token address only'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token address only'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token address only'][5]
+      )
+    })
+
+    it('token with symbol only', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with symbol only'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with symbol only'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with symbol only'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with symbol only'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with symbol only'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with symbol only'][5]
+      )
+    })
+
+    it('token with name only', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with name only'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with name only'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with name only'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with name only'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with name only'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with name only'][5]
+      )
+    })
+
+    it('token with decimals only', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with decimals only'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with decimals only'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with decimals only'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with decimals only'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with decimals only'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with decimals only'][5]
+      )
+    })
+
+    it('token with type only', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with type only'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with type only'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with type only'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with type only'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with type only'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with type only'][5]
+      )
+    })
+
+    it('token with symbol decimals and type', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with symbol decimals and type'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with symbol decimals and type'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with symbol decimals and type'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with symbol decimals and type'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with symbol decimals and type'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with symbol decimals and type'][5]
+      )
+    })
+
+    it('token with symbol name decimals and type', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with symbol name decimals and type'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with symbol name decimals and type'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with symbol name decimals and type'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with symbol name decimals and type'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with symbol name decimals and type'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with symbol name decimals and type'][5]
+      )
+    })
+
+    it('token with symbol decimals and name', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with symbol decimals and name'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with symbol decimals and name'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with symbol decimals and name'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with symbol decimals and name'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with symbol decimals and name'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with symbol decimals and name'][5]
+      )
+    })
+
+    it('token with symbol decimals type and name', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['token with symbol decimals type and name'][0]
+      )
+      assert.equal(
+        parsedUri.token.contractAddress,
+        fixture['parseUri']['token with symbol decimals type and name'][1]
+      )
+      assert.equal(
+        parsedUri.token.currencyCode,
+        fixture['parseUri']['token with symbol decimals type and name'][2]
+      )
+      assert.equal(
+        parsedUri.token.currencyName,
+        fixture['parseUri']['token with symbol decimals type and name'][3]
+      )
+      assert.equal(
+        parsedUri.token.multiplier,
+        fixture['parseUri']['token with symbol decimals type and name'][4]
+      )
+      assert.equal(
+        parsedUri.token.type,
+        fixture['parseUri']['token with symbol decimals type and name'][5]
+      )
+    })
   })
 
   describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {

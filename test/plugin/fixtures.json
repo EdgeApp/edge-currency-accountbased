@@ -19,7 +19,16 @@
       "uri address with amount": ["ethereum:0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6?amount=12345.6789", "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6", "12345678900000000000000", "ETH"],
       "uri address with amount & label": ["ethereum:0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6?amount=1234.56789&label=Johnny%20Ethereum", "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6", "1234567890000000000000", "ETH", "Johnny Ethereum"],
       "uri address with amount, label & message": ["ethereum:0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6?amount=1234.56789&label=Johnny%20Ethereum&message=Hello%20World,%20I%20miss%20you%20!", "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6", "1234567890000000000000", "ETH", "Johnny Ethereum", "Hello World, I miss you !"],
-      "uri address with unsupported param": ["ethereum:0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6?unsupported=helloworld&amount=12345.6789", "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6", "12345678900000000000000", "ETH"]
+      "uri address with unsupported param": ["ethereum:0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6?unsupported=helloworld&amount=12345.6789", "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6", "12345678900000000000000", "ETH"],
+      "token address only": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274", "0x5121e348e897daef1eef23959ab290e5557cf274", "SYM", "SYM", 18, "ERC20"],
+      "token with symbol only": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?symbol=AI", "0x5121e348e897daef1eef23959ab290e5557cf274", "AI", "AI", 18, "ERC20"],
+      "token with name only": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?name=PolyAi", "0x5121e348e897daef1eef23959ab290e5557cf274", "SYM", "PolyAi", 18, "ERC20"],
+      "token with decimals only": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?decimals=18", "0x5121e348e897daef1eef23959ab290e5557cf274", "SYM", "SYM", 18, "ERC20"],
+      "token with type only": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?type=erc20", "0x5121e348e897daef1eef23959ab290e5557cf274", "SYM", "SYM", 18, "ERC20"],
+      "token with symbol decimals and type": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?symbol=AI&decimals=18&type=erc20", "0x5121e348e897daef1eef23959ab290e5557cf274", "AI", "AI", 18, "ERC20"],
+      "token with symbol name decimals and type": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?symbol=AI&name=PolyAi&decimals=0&type=erc20", "0x5121e348e897daef1eef23959ab290e5557cf274", "AI", "PolyAi", 0, "ERC20"],
+      "token with symbol decimals and name": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?symbol=AI&name=PolyAi&decimals=18", "0x5121e348e897daef1eef23959ab290e5557cf274", "AI", "PolyAi", 18, "ERC20"],
+      "token with symbol decimals type and name": ["ethereum:token-0x5121e348e897daef1eef23959ab290e5557cf274?symbol=AI&name=PolyAi&decimals=18&type=erc111", "0x5121e348e897daef1eef23959ab290e5557cf274", "AI", "PolyAi", 18, "ERC111"]
     },
     "encodeUri": {
       "address only": [{"publicAddress": "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6"}, "0xE94327D07Fc17907b4DB788E5aDf2ed424adDff6"],
