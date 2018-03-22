@@ -184,7 +184,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           parsedUri.scheme !== 'ethereum' &&
           parsedUri.scheme !== 'ether'
         ) {
-          throw new Error('InvalidUriError')
+          throw new Error('InvalidUriError') // possibly scanning wrong crypto type
         }
         if (typeof parsedUri.host !== 'undefined') {
           address = parsedUri.host
@@ -212,12 +212,14 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
             throw new Error('Wrong Token symbol')
           }
           const currencyName = getParameterByName('name', uri) || currencyCode
-          const multiplier = getParameterByName('decimals', uri) || '18'
+          const decimalsInput = getParameterByName('decimals', uri) || '18'
+          let multiplier = '1000000000000000000'
           try {
-            const decimals = parseInt(multiplier)
+            const decimals = parseInt(decimalsInput)
             if (decimals < 0 || decimals > 18) {
               throw new Error('Wrong number of decimals')
             }
+            multiplier = '1' + '0'.repeat(decimals)
           } catch (e) {
             throw e
           }
