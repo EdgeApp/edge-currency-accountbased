@@ -1,5 +1,9 @@
 # edge-currency-ethereum
 
+## 0.9.0
+
+* Parse the Add Token URI scheme
+
 ## 0.8.0
 
 * Change gasPrice to be in Gwei
