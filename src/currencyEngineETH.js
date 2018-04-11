@@ -597,9 +597,8 @@ class EthereumEngine {
         activeTokens.push(tokenCode)
       }
     }
-    const numTokens = activeTokens.length
 
-    const perTokenSlice = 1 / numTokens
+    const perTokenSlice = 1 / activeTokens.length
     let numCompleteStatus = 0
     let totalStatus = 0
     for (const token of activeTokens) {
