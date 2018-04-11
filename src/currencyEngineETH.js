@@ -589,18 +589,26 @@ class EthereumEngine {
     if (this.addressesChecked) {
       return
     }
-    const numTokens = this.walletLocalData.enabledTokens.length
-    const perTokenSlice = 1 / numTokens
+    const activeTokens: Array<string> = []
+
+    for (const tokenCode of this.walletLocalData.enabledTokens) {
+      const ti = this.getTokenInfo(tokenCode)
+      if (ti) {
+        activeTokens.push(tokenCode)
+      }
+    }
+
+    const perTokenSlice = 1 / activeTokens.length
     let numCompleteStatus = 0
     let totalStatus = 0
-    for (const token of this.walletLocalData.enabledTokens) {
+    for (const token of activeTokens) {
       const status = this.tokenCheckStatus[token]
       totalStatus += status * perTokenSlice
       if (status === 1) {
         numCompleteStatus++
       }
     }
-    if (numCompleteStatus === this.walletLocalData.enabledTokens.length) {
+    if (numCompleteStatus === activeTokens.length) {
       this.addressesChecked = true
       this.edgeTxLibCallbacks.onAddressesChecked(1)
       this.walletLocalData.lastAddressQueryHeight = this.walletLocalData.blockHeight
