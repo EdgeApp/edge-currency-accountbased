@@ -206,7 +206,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           throw new Error('InvalidPublicAddressError')
         }
         // If the address has a "token-" prefix, it means it's an "Add Token" URI and not a payment one.
-        if (prefix === 'token') {
+        if (prefix === 'token' || prefix === 'token_info') {
           const currencyCode = getParameterByName('symbol', uri) || 'SYM'
           if (currencyCode.length < 2 || currencyCode.length > 5) {
             throw new Error('Wrong Token symbol')
