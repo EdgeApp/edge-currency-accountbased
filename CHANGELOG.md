@@ -1,5 +1,14 @@
 # edge-currency-ethereum
 
+## 0.10.1
+
+* Support the `token_info` prefix inside token URI's.
+
+## 0.10.0
+
+* Fix progress ratio reporting.
+* Add Hurify & Indorse tokens by default.
+
 ## 0.9.0
 
 * Parse the Add Token URI scheme
