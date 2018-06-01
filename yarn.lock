@@ -1116,15 +1116,6 @@ edge-core-js@^0.6.1:
     scrypt-js "^2.0.3"
     utf8 "^3.0.0"
 
-elliptic@^5.1.0:
-  version "5.2.1"
-  resolved "http://registry.npmjs.org/elliptic/-/elliptic-5.2.1.tgz#fa294b6563c6ddbc9ba3dc8594687ae840858f10"
-  dependencies:
-    bn.js "^3.1.1"
-    brorand "^1.0.1"
-    hash.js "^1.0.0"
-    inherits "^2.0.1"
-
 elliptic@^6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-6.4.0.tgz#cac9af8762c85836187003c8dfe193e5e2eae5df"
@@ -3611,14 +3602,14 @@ ripple-hashes@^0.3.1:
     ripple-address-codec "^2.0.1"
     ripple-binary-codec "^0.1.0"
 
-ripple-keypairs@^0.10.1:
+ripple-keypairs@^0.10.1, "ripple-keypairs@git://github.com/Airbitz/ripple-keypairs.git#59ed87d":
   version "0.10.1"
-  resolved "https://registry.yarnpkg.com/ripple-keypairs/-/ripple-keypairs-0.10.1.tgz#ef796b519bb202682515e7cdd6063762636943e6"
+  resolved "git://github.com/Airbitz/ripple-keypairs.git#59ed87dad7061681dd01ff88a928cc39d3f0852b"
   dependencies:
     babel-runtime "^5.8.20"
     bn.js "^3.1.1"
     brorand "^1.0.5"
-    elliptic "^5.1.0"
+    elliptic "^6.4.0"
     hash.js "^1.0.3"
     ripple-address-codec "^2.0.1"
 
@@ -3629,9 +3620,9 @@ ripple-lib-transactionparser@^0.6.2:
     bignumber.js "^4.1.0"
     lodash "^4.17.4"
 
-ripple-lib@^1.0.0-beta.1:
+"ripple-lib@git://github.com/Airbitz/ripple-lib.git#56f65364":
   version "1.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/ripple-lib/-/ripple-lib-1.0.0-beta.1.tgz#2a09154033c16c1877484be43f777345437d13a2"
+  resolved "git://github.com/Airbitz/ripple-lib.git#56f65364252e49c896523238c1f6dfe593f2a12b"
   dependencies:
     "@types/lodash" "^4.14.85"
     "@types/ws" "^3.2.0"
@@ -3642,7 +3633,7 @@ ripple-lib@^1.0.0-beta.1:
     ripple-address-codec "^2.0.1"
     ripple-binary-codec "^0.1.13"
     ripple-hashes "^0.3.1"
-    ripple-keypairs "^0.10.1"
+    ripple-keypairs "git://github.com/Airbitz/ripple-keypairs.git#59ed87d"
     ripple-lib-transactionparser "^0.6.2"
     ws "^3.3.1"
 

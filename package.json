@@ -40,7 +40,7 @@
   "dependencies": {
     "biggystring": "^3.0.0",
     "jsonschema": "^1.1.1",
-    "ripple-lib": "git://github.com/Airbitz/ripple-lib.git#45395c5e",
+    "ripple-lib": "git://github.com/Airbitz/ripple-lib.git#56f65364",
     "sprintf-js": "^1.1.1",
     "uri-js": "^3.0.2"
   },
