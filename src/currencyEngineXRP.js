@@ -47,8 +47,9 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = (30 * 60) // ~ one minute
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
 type RippleParams = {
-  publicAddress?: string,
-  contractAddress?: string
+  preparedTx: Object
+  // publicAddress?: string,
+  // contractAddress?: string
 }
 
 class RippleEngine {
@@ -133,8 +134,12 @@ class RippleEngine {
   // *************************************
   // Poll on the blockheight
   // *************************************
-  async blockHeightInnerLoop () {
+  async checkServerInfoInnerLoop () {
     try {
+      const fee = await this.rippleApi.getFee()
+      if (typeof fee === 'string') {
+        this.walletLocalData.recommendedFee = fee
+      }
       const jsonObj = await this.rippleApi.getServerInfo()
       const valid = validateObject(jsonObj, GetServerInfoSchema)
       if (valid) {
@@ -153,7 +158,6 @@ class RippleEngine {
 
   processRippleTransaction (tx: XrpGetTransaction) {
     const ourReceiveAddresses:Array<string> = []
-    const xrpParams: RippleParams = {}
 
     const balanceChanges = tx.outcome.balanceChanges[this.walletLocalData.rippleAddress]
     if (balanceChanges) {
@@ -179,7 +183,7 @@ class RippleEngine {
         }
 
         const edgeTransaction: EdgeTransaction = {
-          txid: tx.id,
+          txid: tx.id.toLowerCase(),
           date,
           currencyCode,
           blockHeight,
@@ -188,7 +192,7 @@ class RippleEngine {
           parentNetworkFee,
           ourReceiveAddresses,
           signedTx: 'has_been_signed',
-          otherParams: xrpParams
+          otherParams: {}
         }
 
         const idx = this.findTransaction(currencyCode, edgeTransaction.txid)
@@ -419,7 +423,7 @@ class RippleEngine {
     this.engineOn = true
     this.doInitialCallbacks()
     await this.rippleApi.connect()
-    this.addToLoop('blockHeightInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
+    this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
     this.addToLoop('checkAddressesInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
@@ -717,52 +721,23 @@ class RippleEngine {
       throw (new Error('Error: only one output allowed'))
     }
 
-    let tokenInfo = {}
-    tokenInfo.contractAddress = ''
-
-    let currencyCode:string = ''
+    // let tokenInfo = {}
+    // tokenInfo.contractAddress = ''
+    //
+    let currencyCode: string = ''
     if (typeof edgeSpendInfo.currencyCode === 'string') {
       currencyCode = edgeSpendInfo.currencyCode
-      if (!this.getTokenStatus(currencyCode)) {
-        throw (new Error('Error: Token not supported or enabled'))
-      } else if (currencyCode !== 'XRP') {
-        tokenInfo = this.getTokenInfo(currencyCode)
-        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
-          throw (new Error('Error: Token not supported or invalid contract address'))
-        }
-      }
     } else {
       currencyCode = 'XRP'
     }
     edgeSpendInfo.currencyCode = currencyCode
 
-    // ******************************
-    // Get the fee amount
-
-    let xrpParams: RippleParams
-
     let publicAddress = ''
+
     if (typeof edgeSpendInfo.spendTargets[0].publicAddress === 'string') {
       publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     } else {
       throw new Error('No valid spendTarget')
-    }
-
-    if (currencyCode === PRIMARY_CURRENCY) {
-      xrpParams = {
-        publicAddress
-      }
-    } else {
-      let contractAddress = ''
-      if (typeof tokenInfo.contractAddress === 'string') {
-        contractAddress = tokenInfo.contractAddress
-      } else {
-        throw new Error('makeSpend: Invalid contract address')
-      }
-      xrpParams = {
-        publicAddress,
-        contractAddress
-      }
     }
 
     let nativeAmount = '0'
@@ -772,43 +747,59 @@ class RippleEngine {
       throw (new Error('Error: no amount specified'))
     }
 
+    if (bns.eq(nativeAmount, '0')) {
+      throw (new Error('ErrorNoAmountSpecified'))
+    }
+
     const InsufficientFundsError = new Error('Insufficient funds')
     InsufficientFundsError.name = 'ErrorInsufficientFunds'
     const InsufficientFundsXrpError = new Error('Insufficient XRP for transaction fee')
     InsufficientFundsXrpError.name = 'ErrorInsufficientFundsMoreEth'
 
-    const balanceXrp = this.walletLocalData.totalBalances.XRP
-    let nativeNetworkFee = '' // Todo: get fee
-    let totalTxAmount = '0'
-    let parentNetworkFee = null
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    const nativeNetworkFee = bns.mul(this.walletLocalData.recommendedFee, '1000000')
 
     if (currencyCode === PRIMARY_CURRENCY) {
-      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      if (bns.gt(totalTxAmount, balanceXrp)) {
+      const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+      if (bns.gt(totalTxAmount, nativeBalance)) {
         throw (InsufficientFundsError)
       }
-      nativeAmount = bns.mul(totalTxAmount, '-1')
-    } else {
-      parentNetworkFee = nativeNetworkFee
-
-      if (bns.gt(nativeNetworkFee, balanceXrp)) {
-        throw (InsufficientFundsXrpError)
-      }
-
-      nativeNetworkFee = '0' // Do not show a fee for token transations.
-      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-      if (bns.gt(nativeAmount, balanceToken)) {
-        throw (InsufficientFundsError)
-      }
-      nativeAmount = bns.mul(nativeAmount, '-1')
     }
 
-    // const negativeOneBN = new BN('-1', 10)
-    // nativeAmountBN.imul(negativeOneBN)
-    // nativeAmount = nativeAmountBN.toString(10)
+    const exchangeAmount = bns.div(nativeAmount, '1000000', 6)
+    const payment = {
+      source: {
+        address: this.walletLocalData.rippleAddress,
+        maxAmount: {
+          value: exchangeAmount,
+          currency: currencyCode
+        }
+      },
+      destination: {
+        address: publicAddress,
+        amount: {
+          value: exchangeAmount,
+          currency: currencyCode
+        }
+      }
+    }
 
-    // **********************************
-    // Create the unsigned EdgeTransaction
+    let preparedTx = {}
+    try {
+      preparedTx = await this.rippleApi.preparePayment(
+        this.walletLocalData.rippleAddress,
+        payment,
+        { maxLedgerVersionOffset: 5 }
+      )
+    } catch (err) {
+      throw new Error('Error in preparePayment')
+    }
+
+    const otherParams: RippleParams = {
+      preparedTx
+    }
+
+    nativeAmount = '-' + nativeAmount
 
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
@@ -819,35 +810,24 @@ class RippleEngine {
       networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
-      otherParams: xrpParams // otherParams
+      otherParams
     }
 
-    if (parentNetworkFee) {
-      edgeTransaction.parentNetworkFee = parentNetworkFee
-    }
-
+    console.log('Payment transaction prepared...')
     return edgeTransaction
   }
 
   // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
+    const txJson = edgeTransaction.otherParams.preparedTx.txJSON
+    const privateKey = this.walletInfo.keys.rippleKey
 
-    let nativeAmountHex
+    const { signedTransaction, id } = this.rippleApi.sign(txJson, privateKey)
+    console.log('Payment transaction signed...')
 
-    // let nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
-    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-      // Remove the networkFee from the nativeAmount
-      const nativeAmount = bns.add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
-      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
-    } else {
-      nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
-    }
-    console.log(nativeAmountHex)
-    // Todo: increment nonce and sign transaction
-
-    edgeTransaction.signedTx = ''
-    edgeTransaction.txid = ''
+    edgeTransaction.signedTx = signedTransaction
+    edgeTransaction.txid = id.toLowerCase()
     edgeTransaction.date = Date.now() / 1000
 
     return edgeTransaction
@@ -855,7 +835,7 @@ class RippleEngine {
 
   // asynchronous
   async broadcastTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Todo: broadcast
+    await this.rippleApi.submit(edgeTransaction.signedTx)
     return edgeTransaction
   }
 

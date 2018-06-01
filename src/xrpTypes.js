@@ -42,6 +42,7 @@ export type XrpGetTransactions = Array<XrpGetTransaction>
 
 export class WalletLocalData {
   blockHeight: number
+  recommendedFee: string // Floating point value in full XRP value
   lastAddressQueryHeight: number
   nextNonce: string
   rippleAddress: string
@@ -55,6 +56,7 @@ export class WalletLocalData {
     this.totalBalances = totalBalances
     this.nextNonce = '0'
     this.lastAddressQueryHeight = 0
+    this.recommendedFee = '1'
 
     // Dumb extra local var needed to make Flow happy
     const transactionsObj:{[currencyCode: string]: Array<EdgeTransaction>} = {}
@@ -71,6 +73,7 @@ export class WalletLocalData {
       if (typeof data.rippleAddress === 'string') this.rippleAddress = data.rippleAddress
       if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
       if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
+      if (typeof data.recommendedFee !== 'undefined') this.recommendedFee = data.recommendedFee
       if (typeof data.transactionsObj !== 'undefined') this.transactionsObj = data.transactionsObj
     }
   }
