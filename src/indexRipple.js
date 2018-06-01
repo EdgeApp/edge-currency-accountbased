@@ -2,9 +2,9 @@
  * Created by paul on 8/8/17.
  */
 // @flow
-import { currencyInfo } from './currencyInfoETH.js'
-import { EthereumEngine } from './currencyEngineETH.js'
-import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './ethTypes.js'
+import { currencyInfo } from './currencyInfoXRP.js'
+import { RippleEngine } from './currencyEngineXRP.js'
+import { DATA_STORE_FILE, DATA_STORE_FOLDER, WalletLocalData } from './xrpTypes.js'
 import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -16,34 +16,17 @@ import type {
 } from 'edge-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
-import { BN } from 'bn.js'
-// import { CurrencyInfoScheme } from './ethSchema.js'
+import { RippleAPI } from 'ripple-lib'
+import keypairs from 'ripple-keypairs'
 
-export { calcMiningFee } from './miningFees.js'
-
-const Buffer = require('buffer/').Buffer
-const ethWallet = require('../lib/export-fixes-bundle.js').Wallet
-const EthereumUtil = require('../lib/export-fixes-bundle.js').Util
+// import { CurrencyInfoScheme } from './xrpSchema.js'
 
 let io
-
-const randomBuffer = (size) => {
-  const array = io.random(size)
-  return Buffer.from(array)
-}
 
 function getDenomInfo (denom: string) {
   return currencyInfo.denominations.find(element => {
     return element.name === denom
   })
-}
-
-function hexToBuf (hex: string) {
-  const noHexPrefix = hex.replace('0x', '')
-  const noHexPrefixBN = new BN(noHexPrefix, 16)
-  const array = noHexPrefixBN.toArray()
-  const buf = Buffer.from(array)
-  return buf
 }
 
 function getParameterByName (param, url) {
@@ -55,54 +38,34 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
-// async function checkUpdateCurrencyInfo () {
-//   while (this.engineOn) {
-//     try {
-//       const url = sprintf('%s/v1/currencyInfo/ETH', INFO_SERVERS[0])
-//       const jsonObj = await this.fetchGet(url)
-//       const valid = validateObject(jsonObj, CurrencyInfoScheme)
-//
-//       if (valid) {
-//         console.log('Fetched valid currencyInfo')
-//         console.log(jsonObj)
-//       } else {
-//         console.log('Error: Fetched invalid currencyInfo')
-//       }
-//     } catch (err) {
-//       console.log('Error fetching currencyInfo: ' + err)
-//     }
-//     try {
-//       await snooze(BLOCKHEIGHT_POLL_MILLISECONDS)
-//     } catch (err) {
-//       console.log(err)
-//     }
-//   }
-// }
-
-export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
+export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
   async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
     io = opts.io
 
-    console.log(`Creating Currency Plugin for ethereum`)
-    const ethereumPlugin:EdgeCurrencyPlugin = {
-      pluginName: 'ethereum',
+    const rippleApi = new RippleAPI({
+      server: currencyInfo.defaultSettings.otherSettings.rippledServers[0] // Public rippled server
+    })
+
+    console.log(`Creating Currency Plugin for ripple`)
+    const ripplePlugin:EdgeCurrencyPlugin = {
+      pluginName: 'ripple',
       currencyInfo,
 
       createPrivateKey: (walletType: string) => {
         const type = walletType.replace('wallet:', '')
 
-        if (type === 'ethereum') {
-          const cryptoObj = {
-            randomBytes: randomBuffer
-          }
-          ethWallet.overrideCrypto(cryptoObj)
+        if (type === 'ripple' || type === 'ripple-secp256k1') {
+          const algorithm = type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
+          const entropy = Array.from(io.random(32))
+          const address = rippleApi.generateAddress({
+            algorithm,
+            entropy
+          })
 
-          const wallet = ethWallet.generate(false)
-          const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
-          return { ethereumKey }
+          return { rippleKey: address.secret }
         } else {
           throw new Error('InvalidWalletType')
         }
@@ -110,67 +73,44 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
 
       derivePublicKey: (walletInfo: EdgeWalletInfo) => {
         const type = walletInfo.type.replace('wallet:', '')
-        if (type === 'ethereum') {
-          const privKey = hexToBuf(walletInfo.keys.ethereumKey)
-          const wallet = ethWallet.fromPrivateKey(privKey)
-
-          const ethereumAddress = wallet.getAddressString()
-          // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-          // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
-          return { ethereumAddress }
+        if (type === 'ripple' || type === 'ripple-secp256k1') {
+          const keypair = keypairs.deriveKeypair(walletInfo.keys.rippleKey)
+          const rippleAddress = keypairs.deriveAddress(keypair.publicKey)
+          return { rippleAddress }
         } else {
           throw new Error('InvalidWalletType')
         }
       },
 
-      // XXX Deprecated. To be removed once Core supports createPrivateKey and derivePublicKey -paulvp
-      createMasterKeys: (walletType: string) => {
-        if (walletType === 'ethereum') {
-          const cryptoObj = {
-            randomBytes: randomBuffer
-          }
-          ethWallet.overrideCrypto(cryptoObj)
-
-          const wallet = ethWallet.generate(false)
-          const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
-          const ethereumPublicAddress = wallet.getAddressString()
-          // const ethereumKey = '0x389b07b3466eed587d6bdae09a3613611de9add2635432d6cd1521af7bbc3757'
-          // const ethereumPublicAddress = '0x9fa817e5A48DD1adcA7BEc59aa6E3B1F5C4BeA9a'
-          return {ethereumKey, ethereumPublicAddress}
-        } else {
-          return null
-        }
-      },
-
       async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
-        const ethereumEngine = new EthereumEngine(io, walletInfo, opts)
+        const rippleEngine = new RippleEngine(this, io, walletInfo, rippleApi, opts)
         try {
           const result =
-            await ethereumEngine.walletLocalFolder
+            await rippleEngine.walletLocalFolder
               .folder(DATA_STORE_FOLDER)
               .file(DATA_STORE_FILE)
               .getText(DATA_STORE_FOLDER, 'walletLocalData')
 
-          ethereumEngine.walletLocalData = new WalletLocalData(result)
-          ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
+          rippleEngine.walletLocalData = new WalletLocalData(result)
+          rippleEngine.walletLocalData.rippleAddress = rippleEngine.walletInfo.keys.rippleAddress
         } catch (err) {
           try {
             console.log(err)
             console.log('No walletLocalData setup yet: Failure is ok')
-            ethereumEngine.walletLocalData = new WalletLocalData(null)
-            ethereumEngine.walletLocalData.ethereumAddress = ethereumEngine.walletInfo.keys.ethereumAddress
-            await ethereumEngine.walletLocalFolder
+            rippleEngine.walletLocalData = new WalletLocalData(null)
+            rippleEngine.walletLocalData.rippleAddress = rippleEngine.walletInfo.keys.rippleAddress
+            await rippleEngine.walletLocalFolder
               .folder(DATA_STORE_FOLDER)
               .file(DATA_STORE_FILE)
-              .setText(JSON.stringify(ethereumEngine.walletLocalData))
+              .setText(JSON.stringify(rippleEngine.walletLocalData))
           } catch (e) {
             console.log('Error writing to localDataStore. Engine not started:' + err)
           }
         }
-        for (const token of ethereumEngine.walletLocalData.enabledTokens) {
-          ethereumEngine.tokenCheckStatus[token] = 0
+        for (const token of rippleEngine.walletLocalData.enabledTokens) {
+          rippleEngine.tokenCheckStatus[token] = 0
         }
-        return ethereumEngine
+        return rippleEngine
       },
 
       parseUri: (uri: string) => {
@@ -181,7 +121,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
 
         if (
           typeof parsedUri.scheme !== 'undefined' &&
-          parsedUri.scheme !== 'ethereum' &&
+          parsedUri.scheme !== 'ripple' &&
           parsedUri.scheme !== 'ether'
         ) {
           throw new Error('InvalidUriError') // possibly scanning wrong crypto type
@@ -201,7 +141,9 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           prefix = 'pay' // The default prefix according to EIP-681 is "pay"
         }
         address = contractAddress
-        const valid: boolean = EthereumUtil.isValidAddress(address)
+
+        // Todo: check if valid address
+        const valid: boolean = true
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
         }
@@ -239,13 +181,13 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         }
         const amountStr = getParameterByName('amount', uri)
         if (amountStr && typeof amountStr === 'string') {
-          const denom = getDenomInfo('ETH')
+          const denom = getDenomInfo('XRP')
           if (!denom) {
             throw new Error('InternalErrorInvalidCurrencyCode')
           }
           nativeAmount = bns.mul(amountStr, denom.multiplier)
           nativeAmount = bns.toFixed(nativeAmount, 0, 0)
-          currencyCode = 'ETH'
+          currencyCode = 'XRP'
         }
         const label = getParameterByName('label', uri)
         const message = getParameterByName('message', uri)
@@ -276,7 +218,8 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         if (!obj.publicAddress) {
           throw new Error('InvalidPublicAddressError')
         }
-        const valid: boolean = EthereumUtil.isValidAddress(obj.publicAddress)
+        // Todo: check if valid
+        const valid: boolean = true
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
         }
@@ -286,7 +229,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           let queryString: string = ''
 
           if (typeof obj.nativeAmount === 'string') {
-            let currencyCode: string = 'ETH'
+            let currencyCode: string = 'XRP'
             const nativeAmount:string = obj.nativeAmount
             if (typeof obj.currencyCode === 'string') {
               currencyCode = obj.currencyCode
@@ -310,7 +253,7 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           queryString = queryString.substr(0, queryString.length - 1)
 
           const serializeObj = {
-            scheme: 'ethereum',
+            scheme: 'ripple',
             path: obj.publicAddress,
             query: queryString
           }
@@ -322,13 +265,13 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
 
     if (global.OS && global.OS === 'ios') {
       const metaTokens = []
-      for (const metaToken of ethereumPlugin.currencyInfo.metaTokens) {
+      for (const metaToken of ripplePlugin.currencyInfo.metaTokens) {
         const currencyCode = metaToken.currencyCode
-        if (ethereumPlugin.currencyInfo.defaultSettings.otherSettings.iosAllowedTokens[currencyCode] === true) {
+        if (ripplePlugin.currencyInfo.defaultSettings.otherSettings.iosAllowedTokens[currencyCode] === true) {
           metaTokens.push(metaToken)
         }
       }
-      ethereumPlugin.currencyInfo.metaTokens = metaTokens
+      ripplePlugin.currencyInfo.metaTokens = metaTokens
     }
 
     async function initPlugin (opts: any) {
@@ -342,16 +285,13 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
       //       .getText(DATA_STORE_FOLDER, 'walletLocalData')
       //
       //   this.walletLocalData = new WalletLocalData(result)
-      //   this.walletLocalData.ethereumAddress = this.walletInfo.keys.ethereumAddress
+      //   this.walletLocalData.rippleAddress = this.walletInfo.keys.rippleAddress
       // }
 
       // Spin off network query to get updated currencyInfo and save that to disk for future bootups
 
-      return ethereumPlugin
+      return ripplePlugin
     }
     return initPlugin(opts)
   }
 }
-
-// Capitalizing the name was a mistake, but we keep it around for now:
-export { ethereumCurrencyPluginFactory as EthereumCurrencyPluginFactory }

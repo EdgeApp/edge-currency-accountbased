@@ -13,7 +13,7 @@ import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
 import request from 'request'
 
-import * as Factories from '../../src/indexEthereum.js'
+import * as Factories from '../../src/indexRipple.js'
 import fixtures from './fixtures.json'
 
 // const DATA_STORE_FOLDER = 'txEngineFolderBTC'
@@ -86,26 +86,6 @@ for (const fixture of fixtures) {
   })
 
   describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
-    // before('Create local cache file', function (done) {
-    //   walletLocalFolder
-    //     .folder(DATA_STORE_FOLDER)
-    //     .file('addresses.json')
-    //     .setText(JSON.stringify(dummyAddressData))
-    //     .then(() =>
-    //       walletLocalFolder
-    //         .folder(DATA_STORE_FOLDER)
-    //         .file('txs.json')
-    //         .setText(JSON.stringify(dummyTransactionsData))
-    //     )
-    //     .then(() =>
-    //       walletLocalFolder
-    //         .folder(DATA_STORE_FOLDER)
-    //         .file('headers.json')
-    //         .setText(JSON.stringify(dummyHeadersData))
-    //     )
-    //     .then(done)
-    // })
-
     it('Make Engine', function () {
       const info: EdgeWalletInfo = {
         id: '1',
@@ -118,7 +98,6 @@ for (const fixture of fixtures) {
           engine = e
           assert.equal(typeof engine.startEngine, 'function', 'startEngine')
           assert.equal(typeof engine.killEngine, 'function', 'killEngine')
-          // assert.equal(typeof engine.enableTokens, 'function', 'enableTokens')
           assert.equal(
             typeof engine.getBlockHeight,
             'function',
