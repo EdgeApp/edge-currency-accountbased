@@ -25,8 +25,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://etherscan.io/address/%s',
-  transactionExplorer: 'https://etherscan.io/tx/%s',
+  addressExplorer: 'https://ripple.com/build/ripple-info-tool/?%s',
+  transactionExplorer: 'https://ripple.com/build/ripple-info-tool/?%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency

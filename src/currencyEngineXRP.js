@@ -767,6 +767,18 @@ class RippleEngine {
     }
 
     const exchangeAmount = bns.div(nativeAmount, '1000000', 6)
+    let tag
+
+    if (
+      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams.destinationTag
+    ) {
+      if (typeof edgeSpendInfo.spendTargets[0].otherParams.destinationTag === 'number') {
+        tag = edgeSpendInfo.spendTargets[0].otherParams.destinationTag
+      } else {
+        throw new Error('Error invalid destinationtag')
+      }
+    }
     const payment = {
       source: {
         address: this.walletLocalData.rippleAddress,
@@ -780,7 +792,8 @@ class RippleEngine {
         amount: {
           value: exchangeAmount,
           currency: currencyCode
-        }
+        },
+        tag
       }
     }
 
@@ -789,7 +802,7 @@ class RippleEngine {
       preparedTx = await this.rippleApi.preparePayment(
         this.walletLocalData.rippleAddress,
         payment,
-        { maxLedgerVersionOffset: 5 }
+        { maxLedgerVersionOffset: 300 }
       )
     } catch (err) {
       throw new Error('Error in preparePayment')
