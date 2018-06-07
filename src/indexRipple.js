@@ -196,8 +196,7 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         if (!obj.publicAddress) {
           throw new Error('InvalidPublicAddressError')
         }
-        // Todo: check if valid
-        const valid: boolean = true
+        const valid = checkAddress(obj.publicAddress)
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
         }
