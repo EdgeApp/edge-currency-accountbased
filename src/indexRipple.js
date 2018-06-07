@@ -38,6 +38,20 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
+function checkAddress (address: string) {
+  // Ripple doesn't have a simple checkAddress routine so we'll validate by
+  let valid: boolean
+  if (address.slice(0, 1) !== 'r') {
+    valid = false
+  } else if (address.length !== 34) {
+    valid = false
+  } else {
+    // Check that the address only contains characters in the ripple base58 alphabet
+    valid = /^[rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz]+$/.test(address)
+  }
+  return valid
+}
+
 export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
@@ -134,50 +148,10 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           throw new Error('InvalidUriError')
         }
         address = address.replace('/', '') // Remove any slashes
-        let [prefix, contractAddress] = address.split('-') // Split the address to get the prefix according to EIP-681
-        // If contractAddress is null or undefined it means there is no prefix
-        if (!contractAddress) {
-          contractAddress = prefix // Set the contractAddress to be the prefix when the prefix is missing.
-          prefix = 'pay' // The default prefix according to EIP-681 is "pay"
-        }
-        address = contractAddress
 
-        // Todo: check if valid address
-        const valid: boolean = true
+        const valid = checkAddress(address)
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
-        }
-        // If the address has a "token-" prefix, it means it's an "Add Token" URI and not a payment one.
-        if (prefix === 'token' || prefix === 'token_info') {
-          const currencyCode = getParameterByName('symbol', uri) || 'SYM'
-          if (currencyCode.length < 2 || currencyCode.length > 5) {
-            throw new Error('Wrong Token symbol')
-          }
-          const currencyName = getParameterByName('name', uri) || currencyCode
-          const decimalsInput = getParameterByName('decimals', uri) || '18'
-          let multiplier = '1000000000000000000'
-          try {
-            const decimals = parseInt(decimalsInput)
-            if (decimals < 0 || decimals > 18) {
-              throw new Error('Wrong number of decimals')
-            }
-            multiplier = '1' + '0'.repeat(decimals)
-          } catch (e) {
-            throw e
-          }
-
-          const type = getParameterByName('type', uri) || 'ERC20'
-
-          const edgeParsedUri: EdgeParsedUri = {
-            token: {
-              currencyCode,
-              contractAddress,
-              currencyName,
-              multiplier,
-              type: type.toUpperCase()
-            }
-          }
-          return edgeParsedUri
         }
         const amountStr = getParameterByName('amount', uri)
         if (amountStr && typeof amountStr === 'string') {

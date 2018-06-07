@@ -11,7 +11,6 @@ import type {
 import { assert } from 'chai'
 import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
-import request from 'request'
 
 import * as Factories from '../../src/indexRipple.js'
 import fixtures from './fixtures.json'
@@ -224,21 +223,21 @@ for (const fixture of fixtures) {
   describe('Start engine', function () {
     it('Get BlockHeight', function (done) {
       this.timeout(10000)
-      request.get(
-        'https://api.etherscan.io/api?module=proxy&action=eth_blockNumber',
-        (err, res, body) => {
-          assert(!err, 'getting block height from a second source')
-          emitter.once('onBlockHeightChange', height => {
-            const thirdPartyHeight = parseInt(JSON.parse(body).result, 16)
-            assert(height >= thirdPartyHeight, 'Block height')
-            assert(engine.getBlockHeight() >= thirdPartyHeight, 'Block height')
-            done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
-          })
-          engine.startEngine().catch(e => {
-            console.log('startEngine error', e, e.message)
-          })
-        }
-      )
+      // request.get(
+      //   'https://api.etherscan.io/api?module=proxy&action=eth_blockNumber',
+      //   (err, res, body) => {
+      // assert(!err, 'getting block height from a second source')
+      emitter.once('onBlockHeightChange', height => {
+        const thirdPartyHeight = 1578127
+        assert(height >= thirdPartyHeight, 'Block height')
+        assert(engine.getBlockHeight() >= thirdPartyHeight, 'Block height')
+        done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
+      })
+      engine.startEngine().catch(e => {
+        console.log('startEngine error', e, e.message)
+      })
+      //   }
+      // )
     })
   })
 

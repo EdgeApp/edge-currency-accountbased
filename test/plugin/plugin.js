@@ -123,6 +123,21 @@ for (const fixture of fixtures) {
       assert.equal(parsedUri.nativeAmount, undefined)
       assert.equal(parsedUri.currencyCode, undefined)
     })
+    it('invalid address', function () {
+      assert.throws(() => {
+        plugin.parseUri(fixture['parseUri']['invalid address'][0])
+      })
+    })
+    it('invalid address', function () {
+      assert.throws(() => {
+        plugin.parseUri(fixture['parseUri']['invalid address'][1])
+      })
+    })
+    it('invalid address', function () {
+      assert.throws(() => {
+        plugin.parseUri(fixture['parseUri']['invalid address'][2])
+      })
+    })
     it('uri address', function () {
       const parsedUri = plugin.parseUri(fixture['parseUri']['uri address'][0])
       assert.equal(
