@@ -16,8 +16,8 @@ import type {
 } from 'edge-core-js'
 import { parse, serialize } from 'uri-js'
 import { bns } from 'biggystring'
-import { RippleAPI } from 'ripple-lib'
-import keypairs from 'ripple-keypairs'
+import { RippleAPI } from 'edge-ripple-lib'
+import keypairs from 'edge-ripple-keypairs'
 
 // import { CurrencyInfoScheme } from './xrpSchema.js'
 

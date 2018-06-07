@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-ripple",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Edge Ripple currency plugin",
   "homepage": "https://edge.app/",
   "license": "SEE LICENSE IN LICENSE",
@@ -40,7 +40,7 @@
   "dependencies": {
     "biggystring": "^3.0.0",
     "jsonschema": "^1.1.1",
-    "ripple-lib": "git://github.com/Airbitz/ripple-lib.git#56f65364",
+    "edge-ripple-lib": "^1.0.0-beta.1",
     "sprintf-js": "^1.1.1",
     "uri-js": "^3.0.2"
   },
@@ -69,7 +69,6 @@
     "prettier-eslint-cli": "^4.4.0",
     "request": "^2.83.0",
     "rimraf": "^2.6.1",
-    "ripple-keypairs": "^0.10.1",
     "rollup": "0.48.0",
     "rollup-plugin-alias": "^1.4.0",
     "rollup-plugin-babel": "^3.0.2",

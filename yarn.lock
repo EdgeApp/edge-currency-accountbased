@@ -1115,6 +1115,34 @@ edge-core-js@^0.9.0-beta.1:
     utf8 "^3.0.0"
     ws "^5.1.1"
 
+edge-ripple-keypairs@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/edge-ripple-keypairs/-/edge-ripple-keypairs-0.0.1.tgz#734f39733132a11098a70b93c58f27740e15740c"
+  dependencies:
+    babel-runtime "^5.8.20"
+    bn.js "^3.1.1"
+    brorand "^1.0.5"
+    elliptic "^6.4.0"
+    hash.js "^1.0.3"
+    ripple-address-codec "^2.0.1"
+
+edge-ripple-lib@^1.0.0-beta.1:
+  version "1.0.0-beta.1"
+  resolved "https://registry.yarnpkg.com/edge-ripple-lib/-/edge-ripple-lib-1.0.0-beta.1.tgz#1b381396175b6bea079998372f4445ff316f0bb8"
+  dependencies:
+    "@types/lodash" "^4.14.85"
+    "@types/ws" "^3.2.0"
+    bignumber.js "^4.1.0"
+    edge-ripple-keypairs "^0.0.1"
+    https-proxy-agent "2.2.1"
+    jsonschema "1.2.2"
+    lodash "^4.17.4"
+    ripple-address-codec "^2.0.1"
+    ripple-binary-codec "^0.1.13"
+    ripple-hashes "^0.3.1"
+    ripple-lib-transactionparser "^0.6.2"
+    ws "^3.3.1"
+
 elliptic@^6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-6.4.0.tgz#cac9af8762c85836187003c8dfe193e5e2eae5df"
@@ -3631,7 +3659,7 @@ ripple-hashes@^0.3.1:
     ripple-address-codec "^2.0.1"
     ripple-binary-codec "^0.1.0"
 
-ripple-keypairs@^0.10.1, "ripple-keypairs@git://github.com/Airbitz/ripple-keypairs.git#59ed87d":
+ripple-keypairs@^0.10.1:
   version "0.10.1"
   resolved "git://github.com/Airbitz/ripple-keypairs.git#59ed87dad7061681dd01ff88a928cc39d3f0852b"
   dependencies:
@@ -3648,23 +3676,6 @@ ripple-lib-transactionparser@^0.6.2:
   dependencies:
     bignumber.js "^4.1.0"
     lodash "^4.17.4"
-
-"ripple-lib@git://github.com/Airbitz/ripple-lib.git#56f65364":
-  version "1.0.0-beta.1"
-  resolved "git://github.com/Airbitz/ripple-lib.git#56f65364252e49c896523238c1f6dfe593f2a12b"
-  dependencies:
-    "@types/lodash" "^4.14.85"
-    "@types/ws" "^3.2.0"
-    bignumber.js "^4.1.0"
-    https-proxy-agent "2.2.1"
-    jsonschema "1.2.2"
-    lodash "^4.17.4"
-    ripple-address-codec "^2.0.1"
-    ripple-binary-codec "^0.1.13"
-    ripple-hashes "^0.3.1"
-    ripple-keypairs "git://github.com/Airbitz/ripple-keypairs.git#59ed87d"
-    ripple-lib-transactionparser "^0.6.2"
-    ws "^3.3.1"
 
 rollup-plugin-alias@^1.4.0:
   version "1.4.0"
