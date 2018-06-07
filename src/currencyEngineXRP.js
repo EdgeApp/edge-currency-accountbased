@@ -767,14 +767,13 @@ class RippleEngine {
     }
 
     const exchangeAmount = bns.div(nativeAmount, '1000000', 6)
-    let tag
-
+    let uniqueIdentifier
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&
-      edgeSpendInfo.spendTargets[0].otherParams.destinationTag
+      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
-      if (typeof edgeSpendInfo.spendTargets[0].otherParams.destinationTag === 'number') {
-        tag = edgeSpendInfo.spendTargets[0].otherParams.destinationTag
+      if (typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier === 'string') {
+        uniqueIdentifier = parseInt(edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier)
       } else {
         throw new Error('Error invalid destinationtag')
       }
@@ -793,7 +792,7 @@ class RippleEngine {
           value: exchangeAmount,
           currency: currencyCode
         },
-        tag
+        tag: uniqueIdentifier
       }
     }
 
@@ -805,6 +804,7 @@ class RippleEngine {
         { maxLedgerVersionOffset: 300 }
       )
     } catch (err) {
+      console.log(err)
       throw new Error('Error in preparePayment')
     }
 

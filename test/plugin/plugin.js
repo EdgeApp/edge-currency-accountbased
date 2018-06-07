@@ -164,6 +164,19 @@ for (const fixture of fixtures) {
         fixture['parseUri']['uri address with amount'][3]
       )
     })
+    it('uri address with unique identifier', function () {
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['uri address with unique identifier'][0]
+      )
+      assert.equal(
+        parsedUri.publicAddress,
+        fixture['parseUri']['uri address with unique identifier'][1]
+      )
+      assert.equal(
+        parsedUri.uniqueIdentifier,
+        fixture['parseUri']['uri address with unique identifier'][2]
+      )
+    })
     it('uri address with amount & label', function () {
       const parsedUri = plugin.parseUri(
         fixture['parseUri']['uri address with amount & label'][0]

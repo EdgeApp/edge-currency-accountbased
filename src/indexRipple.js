@@ -163,6 +163,7 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           nativeAmount = bns.toFixed(nativeAmount, 0, 0)
           currencyCode = 'XRP'
         }
+        const uniqueIdentifier = getParameterByName('tag', uri)
         const label = getParameterByName('label', uri)
         const message = getParameterByName('message', uri)
 
@@ -174,6 +175,9 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
         }
         if (currencyCode) {
           edgeParsedUri.currencyCode = currencyCode
+        }
+        if (uniqueIdentifier) {
+          edgeParsedUri.uniqueIdentifier = uniqueIdentifier
         }
         if (label || message) {
           edgeParsedUri.metadata = {}
