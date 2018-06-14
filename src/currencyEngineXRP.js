@@ -19,6 +19,7 @@ import type {
   EdgeCurrencyPlugin,
   EdgeIo
 } from 'edge-core-js'
+import { error } from 'edge-core-js'
 import { sprintf } from 'sprintf-js'
 import { bns } from 'biggystring'
 import {
@@ -751,18 +752,14 @@ class RippleEngine {
       throw (new Error('ErrorNoAmountSpecified'))
     }
 
-    const InsufficientFundsError = new Error('Insufficient funds')
-    InsufficientFundsError.name = 'ErrorInsufficientFunds'
-    const InsufficientFundsXrpError = new Error('Insufficient XRP for transaction fee')
-    InsufficientFundsXrpError.name = 'ErrorInsufficientFundsMoreEth'
-
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     const nativeNetworkFee = bns.mul(this.walletLocalData.recommendedFee, '1000000')
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      if (bns.gt(totalTxAmount, nativeBalance)) {
-        throw (InsufficientFundsError)
+      const virtualTxAmount = bns.add(totalTxAmount, '20000000')
+      if (bns.gt(virtualTxAmount, nativeBalance)) {
+        throw new error.InsufficientFundsError()
       }
     }
 
