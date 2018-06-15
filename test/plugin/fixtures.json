@@ -25,6 +25,7 @@
     },
     "encodeUri": {
       "address only": [{"publicAddress": "rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn"}, "rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn"],
+      "weird address": [{"publicAddress": "rmUSRn9LEnaHztzm13ZGAeAvy48A4r7u9"}, "rmUSRn9LEnaHztzm13ZGAeAvy48A4r7u9"],
       "invalid address": [{"publicAddress": "rf1GeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn"}, {"publicAddress": "sf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn"}, {"publicAddress": "rf1BiGeXwwQol8Z2ueFYTEXSwuJYfV2Jpn"}],
       "address & amount": [{
         "publicAddress": "rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn",

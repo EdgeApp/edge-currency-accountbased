@@ -256,6 +256,12 @@ for (const fixture of fixtures) {
       )
       assert.equal(encodedUri, fixture['encodeUri']['address only'][1])
     })
+    it('weird address', function () {
+      const encodedUri = plugin.encodeUri(
+        fixture['encodeUri']['weird address'][0]
+      )
+      assert.equal(encodedUri, fixture['encodeUri']['weird address'][1])
+    })
     it('invalid address 0', function () {
       assert.throws(() => {
         plugin.encodeUri(fixture['encodeUri']['invalid address'][0])
