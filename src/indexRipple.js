@@ -15,11 +15,16 @@ import type {
   EdgeWalletInfo
 } from 'edge-core-js'
 import { parse, serialize } from 'uri-js'
+import baseX from 'base-x'
 import { bns } from 'biggystring'
 import { RippleAPI } from 'edge-ripple-lib'
 import keypairs from 'edge-ripple-keypairs'
 
 // import { CurrencyInfoScheme } from './xrpSchema.js'
+
+const base58Codec = baseX(
+  '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+)
 
 let io
 
@@ -38,18 +43,15 @@ function getParameterByName (param, url) {
   return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
-function checkAddress (address: string) {
-  // Ripple doesn't have a simple checkAddress routine so we'll validate by
-  let valid: boolean
-  if (address.slice(0, 1) !== 'r') {
-    valid = false
-  } else if (address.length !== 34) {
-    valid = false
-  } else {
-    // Check that the address only contains characters in the ripple base58 alphabet
-    valid = /^[rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz]+$/.test(address)
+function checkAddress (address: string): boolean {
+  let data: Uint8Array
+  try {
+    data = base58Codec.decode(address)
+  } catch (e) {
+    return false
   }
-  return valid
+
+  return data.length === 25 && address.charAt(0) === 'r'
 }
 
 export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
