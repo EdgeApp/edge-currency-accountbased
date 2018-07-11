@@ -1,5 +1,10 @@
 # edge-currency-ripple
 
+## 0.0.7
+
+* Change name of currency to XRP
+* Change blockexplorer to xrpcharts.ripple.com
+
 ## 0.0.6
 
 * Fix address validator
