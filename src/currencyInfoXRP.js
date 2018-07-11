@@ -17,7 +17,7 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'XRP',
-  currencyName: 'Ripple',
+  currencyName: 'XRP',
   pluginName: 'ripple',
   walletTypes: [
     'wallet:ripple'
@@ -25,8 +25,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://ripple.com/build/ripple-info-tool/?%s',
-  transactionExplorer: 'https://ripple.com/build/ripple-info-tool/?%s',
+  addressExplorer: 'https://xrpcharts.ripple.com/#/transactions/%s',
+  transactionExplorer: 'https://xrpcharts.ripple.com/#/transactions/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
