@@ -40,10 +40,11 @@
   "dependencies": {
     "base-x": "^1.0.4",
     "biggystring": "^3.0.0",
-    "jsonschema": "^1.1.1",
     "edge-ripple-lib": "^1.0.0-beta.1",
+    "jsonschema": "^1.1.1",
     "sprintf-js": "^1.1.1",
-    "uri-js": "^3.0.2"
+    "uri-js": "^3.0.2",
+    "url-parse": "^1.4.1"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

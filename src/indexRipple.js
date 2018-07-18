@@ -14,7 +14,8 @@ import type {
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { parse, serialize } from 'uri-js'
+import { serialize } from 'uri-js'
+import parse from 'url-parse'
 import baseX from 'base-x'
 import { bns } from 'biggystring'
 import { RippleAPI } from 'edge-ripple-lib'
@@ -32,15 +33,6 @@ function getDenomInfo (denom: string) {
   return currencyInfo.denominations.find(element => {
     return element.name === denom
   })
-}
-
-function getParameterByName (param, url) {
-  const name = param.replace(/[[\]]/g, '\\$&')
-  const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)')
-  const results = regex.exec(url)
-  if (!results) return null
-  if (!results[2]) return ''
-  return decodeURIComponent(results[2].replace(/\+/g, ' '))
 }
 
 function checkAddress (address: string): boolean {
@@ -130,32 +122,53 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
       },
 
       parseUri: (uri: string) => {
-        const parsedUri = parse(uri)
+        const parsedUri = parse(uri, {}, true)
         let address: string
         let nativeAmount: string | null = null
         let currencyCode: string | null = null
 
         if (
-          typeof parsedUri.scheme !== 'undefined' &&
-          parsedUri.scheme !== 'ripple' &&
-          parsedUri.scheme !== 'ether'
+          parsedUri.protocol &&
+          parsedUri.protocol !== 'ripple:' &&
+          parsedUri.protocol !== 'https:'
         ) {
           throw new Error('InvalidUriError') // possibly scanning wrong crypto type
         }
-        if (typeof parsedUri.host !== 'undefined') {
-          address = parsedUri.host
-        } else if (typeof parsedUri.path !== 'undefined') {
-          address = parsedUri.path
+
+        if (
+          parsedUri.protocol === 'https:' &&
+          parsedUri.host === 'ripple.com' &&
+          parsedUri.pathname === '//send') {
+          // Parse "https://ripple.com//send?to=" format URI
+          const toStr = parsedUri.query.to
+          if (toStr) {
+            address = toStr
+          } else {
+            throw new Error('InvalidUriError')
+          }
+        } else if (
+          parsedUri.protocol === 'ripple:' ||
+          typeof parsedUri.scheme === 'undefined'
+        ) {
+          // Parse "ripple:" format URI
+          if (parsedUri.host) {
+            address = parsedUri.host
+          } else if (parsedUri.pathname) {
+            address = parsedUri.pathname
+          } else {
+            throw new Error('InvalidUriError')
+          }
         } else {
           throw new Error('InvalidUriError')
         }
+
         address = address.replace('/', '') // Remove any slashes
 
         const valid = checkAddress(address)
         if (!valid) {
           throw new Error('InvalidPublicAddressError')
         }
-        const amountStr = getParameterByName('amount', uri)
+        const amountStr = parsedUri.query.amount
         if (amountStr && typeof amountStr === 'string') {
           const denom = getDenomInfo('XRP')
           if (!denom) {
@@ -165,9 +178,9 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
           nativeAmount = bns.toFixed(nativeAmount, 0, 0)
           currencyCode = 'XRP'
         }
-        const uniqueIdentifier = getParameterByName('tag', uri)
-        const label = getParameterByName('label', uri)
-        const message = getParameterByName('message', uri)
+        const uniqueIdentifier = parsedUri.query.tag
+        const label = parsedUri.query.label
+        const message = parsedUri.query.message
 
         const edgeParsedUri:EdgeParsedUri = {
           publicAddress: address
