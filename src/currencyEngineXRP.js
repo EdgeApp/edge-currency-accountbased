@@ -749,7 +749,7 @@ class RippleEngine {
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw (new Error('ErrorNoAmountSpecified'))
+      throw (new error.NoAmountSpecifiedError())
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
