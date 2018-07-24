@@ -1,5 +1,9 @@
 # edge-currency-ripple
 
+## 0.0.8
+
+* Addition of `NoAmountSpecifiedError` to be caught by the GUI (and ignored)
+
 ## 0.0.7
 
 * Change name of currency to XRP
