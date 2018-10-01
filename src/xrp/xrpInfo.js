@@ -1,10 +1,10 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo } from 'edge-core-js'
-import type { RippleSettings } from './xrpTypes'
+import { type EdgeCurrencyInfo } from 'edge-core-js'
+import { type XrpSettings } from './xrpTypes.js'
 
-const otherSettings: RippleSettings = {
+const otherSettings: XrpSettings = {
   rippledServers: [
     'wss://s2.ripple.com'
   ]
