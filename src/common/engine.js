@@ -114,14 +114,14 @@ class CurrencyEngine {
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
-        console.log(err)
-        console.log('No walletLocalData setup yet: Failure is ok')
+        this.log(err)
+        this.log('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(null, this.currencyInfo.currencyCode)
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
         await folder.file(DATA_STORE_FILE)
           .setText(JSON.stringify(this.walletLocalData))
       } catch (e) {
-        console.log('Error writing to localDataStore. Engine not started:' + err)
+        this.log('Error writing to localDataStore. Engine not started:' + err)
         throw e
       }
     }
@@ -129,7 +129,7 @@ class CurrencyEngine {
       const result = await folder.file(TXID_LIST_FILE).getText()
       this.txIdList = JSON.parse(result)
     } catch (e) {
-      console.log('Could not load txidList file. Failure is ok on new device')
+      this.log('Could not load txidList file. Failure is ok on new device')
       await folder.file(TXID_LIST_FILE)
         .setText(JSON.stringify(this.txIdList))
     }
@@ -137,7 +137,7 @@ class CurrencyEngine {
       const result = await folder.file(TXID_MAP_FILE).getText()
       this.txIdMap = JSON.parse(result)
     } catch (e) {
-      console.log('Could not load txidMap file. Failure is ok on new device')
+      this.log('Could not load txidMap file. Failure is ok on new device')
       await folder.file(TXID_MAP_FILE)
         .setText(JSON.stringify(this.txIdMap))
     }
@@ -150,8 +150,8 @@ class CurrencyEngine {
         this.doInitialTransactionsCallback()
       }, 5000)
     }).catch(e => {
-      console.log(e)
-      console.log('Failed to load transactionList store file. Failure is ok on new device')
+      this.log(e)
+      this.log('Failed to load transactionList store file. Failure is ok on new device')
     })
 
     for (const token of this.walletLocalData.enabledTokens) {
@@ -321,7 +321,7 @@ class CurrencyEngine {
   }
 
   log (...text: Array<any>) {
-    text[0] = `${this.walletId}${text[0]}`
+    text[0] = `${this.walletId.slice(0, 5)}: ${text[0].toString()}`
     console.log(...text)
   }
 

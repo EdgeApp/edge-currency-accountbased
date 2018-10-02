@@ -104,22 +104,22 @@ export class EosEngine extends CurrencyEngine {
     const date = Date.parse(action.block_time) / 1000
     const blockHeight = action.block_num
     if (!action.action_trace) {
-      console.log('Invalid EOS transaction data. No action_trace')
+      this.log('Invalid EOS transaction data. No action_trace')
       return
     }
     const txid = action.action_trace.trx_id
 
     if (!action.action_trace.act) {
-      console.log('Invalid EOS transaction data. No action_trace.act')
+      this.log('Invalid EOS transaction data. No action_trace.act')
       return
     }
     const name = action.action_trace.act.name
-    // console.log('------------------------------------------------')
-    // console.log(`Txid: ${txid}`)
-    // console.log(`Action type: ${name}`)
+    // this.log('------------------------------------------------')
+    // this.log(`Txid: ${txid}`)
+    // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
       if (!action.action_trace.act.data) {
-        console.log('Invalid EOS transaction data. No action_trace.act.data')
+        this.log('Invalid EOS transaction data. No action_trace.act.data')
         return
       }
       const { from, to, memo, quantity } = action.action_trace.act.data
@@ -153,11 +153,11 @@ export class EosEngine extends CurrencyEngine {
 
       this.addTransaction(currencyCode, edgeTransaction)
 
-      // console.log(`From: ${from}`)
-      // console.log(`To: ${to}`)
-      // console.log(`Memo: ${memo}`)
-      // console.log(`Amount: ${exchangeAmount}`)
-      // console.log(`currencyCode: ${currencyCode}`)
+      // this.log(`From: ${from}`)
+      // this.log(`To: ${to}`)
+      // this.log(`Memo: ${memo}`)
+      // this.log(`Amount: ${exchangeAmount}`)
+      // this.log(`currencyCode: ${currencyCode}`)
     }
 
     // const ourReceiveAddresses:Array<string> = []
@@ -244,7 +244,7 @@ export class EosEngine extends CurrencyEngine {
       this.transactionsChecked = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      console.log(e)
+      this.log(e)
     }
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -278,10 +278,10 @@ export class EosEngine extends CurrencyEngine {
     //     this.updateOnAddressesChecked()
     //   }
     // } catch (e) {
-    //   console.log(e.code)
-    //   console.log(e.message)
-    //   console.log(e)
-    //   console.log(`Error fetching transactions: ${JSON.stringify(e)}`)
+    //   this.log(e.code)
+    //   this.log(e.message)
+    //   this.log(e)
+    //   this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
     //   this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
     // }
   }
@@ -330,7 +330,7 @@ export class EosEngine extends CurrencyEngine {
                 if (denom && denom.multiplier) {
                   nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
                 } else {
-                  console.log(`Received balance for unsupported currencyCode: ${currencyCode}`)
+                  this.log(`Received balance for unsupported currencyCode: ${currencyCode}`)
                 }
 
                 if (!this.walletLocalData.totalBalances[currencyCode]) this.walletLocalData.totalBalances[currencyCode] = '0'
@@ -444,7 +444,7 @@ export class EosEngine extends CurrencyEngine {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
         } else {
-          console.log(e)
+          this.log(e)
           throw e
         }
       }
@@ -520,8 +520,8 @@ export class EosEngine extends CurrencyEngine {
     // this.pendingTransactionsMap = {}
     // this.pendingTransactionsMap[idInternal] = transaction
 
-    console.log('EOS transaction prepared')
-    console.log(`${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`)
+    this.log('EOS transaction prepared')
+    this.log(`${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`)
     return edgeTransaction
   }
 
@@ -577,7 +577,7 @@ export class EosEngine extends CurrencyEngine {
   //     otherParams: {}
   //   }
 
-  //   console.log('Payment transaction prepared...')
+  //   this.log('Payment transaction prepared...')
   //   return edgeTransaction
   // }
 

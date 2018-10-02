@@ -87,7 +87,7 @@ export class StellarEngine extends CurrencyEngine {
       rawTx = await tx.transaction()
       networkFee = rawTx.fee_paid.toString()
     } catch (e) {
-      console.log(e)
+      this.log(e)
       throw e
     }
 
@@ -122,7 +122,7 @@ export class StellarEngine extends CurrencyEngine {
   // async checkTransactionsInnerLoop () {
   //   const address = this.walletLocalData.publicKey
   //   const txHandler = (tx) => {
-  //     console.log('Got something:')
+  //     this.log('Got something:')
   //     this.processTransaction(tx)
   //   }
   //   let close
@@ -207,7 +207,7 @@ export class StellarEngine extends CurrencyEngine {
         let currencyCode
         if (bal.asset_type === 'native') {
           currencyCode = this.currencyInfo.currencyCode
-          console.log('--Got balances--')
+          this.log('--Got balances--')
         } else {
           currencyCode = bal.asset_type
         }
@@ -240,7 +240,7 @@ export class StellarEngine extends CurrencyEngine {
         this.currencyEngineCallbacks.onBlockHeightChanged(this.walletLocalData.blockHeight)
       }
     }).catch(e => {
-      console.log(e)
+      this.log(e)
     })
   }
 
@@ -398,9 +398,9 @@ export class StellarEngine extends CurrencyEngine {
     this.pendingTransactionsMap = {}
     this.pendingTransactionsMap[idInternal] = transaction
 
-    console.log('Stellar transaction prepared')
-    console.log(`idInternal: ${idInternal}`)
-    console.log(`${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`)
+    this.log('Stellar transaction prepared')
+    this.log(`idInternal: ${idInternal}`)
+    this.log(`${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`)
     return edgeTransaction
   }
 
@@ -413,11 +413,11 @@ export class StellarEngine extends CurrencyEngine {
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
-      console.log('Signing...')
+      this.log('Signing...')
       const keypair = this.stellarApi.Keypair.fromSecret(this.walletInfo.keys.stellarKey)
       await transaction.sign(keypair)
     } catch (e) {
-      console.log(e)
+      this.log(e)
       throw e
     }
     return edgeTransaction
@@ -431,7 +431,7 @@ export class StellarEngine extends CurrencyEngine {
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
-      console.log('Broadcasting...')
+      this.log('Broadcasting...')
       const result = await this.stellarServer.submitTransaction(transaction)
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
@@ -439,7 +439,7 @@ export class StellarEngine extends CurrencyEngine {
       this.otherData.accountSequence++
       this.walletLocalDataDirty = true
     } catch (e) {
-      console.log(e)
+      this.log(e)
       throw e
     }
     return edgeTransaction

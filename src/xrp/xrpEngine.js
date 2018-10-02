@@ -68,6 +68,8 @@ export class XrpEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onBlockHeightChanged(this.walletLocalData.blockHeight)
         }
+      } else {
+        this.log('Invalid data returned from rippleApi.getServerInfo')
       }
     } catch (err) {
       this.log(`Error fetching height: ${JSON.stringify(err)}`)
@@ -133,7 +135,7 @@ export class XrpEngine extends CurrencyEngine {
       const transactions: XrpGetTransactions = await this.xrpPlugin.rippleApi.getTransactions(address, options)
       const valid = validateObject(transactions, XrpGetTransactionsSchema)
       if (valid) {
-        this.log('Fetched transactions count: ' + transactions.length)
+        this.log(`Fetched transactions count: ${transactions.length} startBlock:${startBlock}`)
 
         // Get transactions
         // Iterate over transactions in address
@@ -148,12 +150,13 @@ export class XrpEngine extends CurrencyEngine {
           this.transactionsChangedArray = []
         }
         this.updateOnAddressesChecked()
+      } else {
+        this.log('Invalid data returned from rippleApi.getTransactions')
       }
     } catch (e) {
-      console.log(e.code)
-      console.log(e.message)
-      console.log(e)
-      console.log(`Error fetching transactions: ${JSON.stringify(e)}`)
+      this.log(e.code)
+      this.log(e.message)
+      this.log(e)
       this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
     }
   }
@@ -192,6 +195,8 @@ export class XrpEngine extends CurrencyEngine {
             this.currencyEngineCallbacks.onBalanceChanged(currencyCode, nativeAmount)
           }
         }
+      } else {
+        this.log('Invalid data returned from rippleApi.getBalances')
       }
     } catch (e) {
       this.log(`Error fetching address info: ${JSON.stringify(e)}`)
@@ -348,7 +353,7 @@ export class XrpEngine extends CurrencyEngine {
         { maxLedgerVersionOffset: 300 }
       )
     } catch (err) {
-      console.log(err)
+      this.log(err)
       throw new Error('Error in preparePayment')
     }
 
@@ -370,7 +375,7 @@ export class XrpEngine extends CurrencyEngine {
       otherParams
     }
 
-    console.log('Payment transaction prepared...')
+    this.log('Payment transaction prepared...')
     return edgeTransaction
   }
 
@@ -381,7 +386,7 @@ export class XrpEngine extends CurrencyEngine {
     const privateKey = this.walletInfo.keys.rippleKey
 
     const { signedTransaction, id } = this.xrpPlugin.rippleApi.sign(txJson, privateKey)
-    console.log('Payment transaction signed...')
+    this.log('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
     edgeTransaction.txid = id.toLowerCase()
