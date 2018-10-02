@@ -105,24 +105,7 @@ export class XrpPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(uri, networks)
-
-    let nativeAmount: string | null = null
-    let currencyCode: string | null = null
-
-    const amountStr = parsedUri.query.amount
-    if (amountStr && typeof amountStr === 'string') {
-      const denom = getDenomInfo(currencyInfo, 'XRP')
-      if (!denom) {
-        throw new Error('InternalErrorInvalidCurrencyCode')
-      }
-      nativeAmount = bns.mul(amountStr, denom.multiplier)
-      nativeAmount = bns.toFixed(nativeAmount, 0, 0)
-      currencyCode = 'XRP'
-
-      edgeParsedUri.nativeAmount = nativeAmount || undefined
-      edgeParsedUri.currencyCode = currencyCode || undefined
-    }
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, networks)
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')

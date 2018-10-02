@@ -11,8 +11,10 @@ import type {
   EdgeCurrencyEngine,
   EdgeCurrencyInfo
 } from 'edge-core-js'
+import { getDenomInfo } from '../common/utils.js'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
+import { bns } from 'biggystring'
 
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {
@@ -44,7 +46,7 @@ export class CurrencyPlugin {
     throw new Error('Must implement encodeUri')
   }
 
-  parseUriCommon (uri: string, networks: {[network: string]: boolean}) {
+  parseUriCommon (currencyInfo: EdgeCurrencyInfo, uri: string, networks: {[network: string]: boolean}) {
     const parsedUri = parse(uri, {}, true)
     let address: string
 
@@ -73,6 +75,7 @@ export class CurrencyPlugin {
     const label = parsedUri.query.label
     const message = parsedUri.query.message
     const category = parsedUri.query.category
+    let currencyCode = parsedUri.query.currencyCode
 
     const edgeParsedUri: EdgeParsedUri = {
       publicAddress: address
@@ -82,6 +85,22 @@ export class CurrencyPlugin {
       edgeParsedUri.metadata.name = label || undefined
       edgeParsedUri.metadata.message = message || undefined
       edgeParsedUri.metadata.category = category || undefined
+    }
+
+    const amountStr = parsedUri.query.amount
+    if (amountStr && typeof amountStr === 'string') {
+      if (!currencyCode) {
+        currencyCode = currencyInfo.currencyCode
+      }
+      const denom = getDenomInfo(currencyInfo, currencyCode)
+      if (!denom) {
+        throw new Error('InternalErrorInvalidCurrencyCode')
+      }
+      let nativeAmount = bns.mul(amountStr, denom.multiplier)
+      nativeAmount = bns.toFixed(nativeAmount, 0, 0)
+
+      edgeParsedUri.nativeAmount = nativeAmount || undefined
+      edgeParsedUri.currencyCode = currencyCode || undefined
     }
 
     return { edgeParsedUri, parsedUri }

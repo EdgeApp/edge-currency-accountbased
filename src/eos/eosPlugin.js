@@ -98,31 +98,14 @@ class EosPlugin extends CurrencyPlugin {
   }
 
   parseUri (uri: string) {
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(uri, {
+    const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
       'eos': true
     })
-    let nativeAmount: string | null = null
-    let currencyCode: string | null = null
 
-    const amountStr = parsedUri.query.amount
-    if (amountStr && typeof amountStr === 'string') {
-      const denom = getDenomInfo(currencyInfo, 'EOS')
-      if (!denom) {
-        throw new Error('InternalErrorInvalidCurrencyCode')
-      }
-      nativeAmount = bns.mul(amountStr, denom.multiplier)
-      nativeAmount = bns.toFixed(nativeAmount, 0, 0)
-      currencyCode = 'EOS'
-
-      edgeParsedUri.nativeAmount = nativeAmount || undefined
-      edgeParsedUri.currencyCode = currencyCode || undefined
-    }
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
-
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.tag || undefined
     return edgeParsedUri
   }
 

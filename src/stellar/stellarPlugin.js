@@ -83,7 +83,6 @@ class StellarPlugin extends CurrencyPlugin {
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
 
-    // Handle special case of https://ripple.com//send?to= URIs
     if (uri.includes(STELLAR_SEP007_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
       const addr = parsedUri.query.destination
@@ -92,24 +91,8 @@ class StellarPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(uri, networks)
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, networks)
 
-    let nativeAmount: string | null = null
-    let currencyCode: string | null = null
-
-    const amountStr = parsedUri.query.amount
-    if (amountStr && typeof amountStr === 'string') {
-      const denom = getDenomInfo(currencyInfo, 'XLM')
-      if (!denom) {
-        throw new Error('InternalErrorInvalidCurrencyCode')
-      }
-      nativeAmount = bns.mul(amountStr, denom.multiplier)
-      nativeAmount = bns.toFixed(nativeAmount, 0, 0)
-      currencyCode = 'XLM'
-
-      edgeParsedUri.nativeAmount = nativeAmount || undefined
-      edgeParsedUri.currencyCode = currencyCode || undefined
-    }
     const valid = this.checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
