@@ -29,6 +29,27 @@ export const XrpGetBalancesSchema = {
   }
 }
 
+export const XrpOnTransactionSchema = {
+  type: 'object',
+  properties: {
+    Data: {
+      type: 'object',
+      properties: {
+        transaction: {
+          type: 'object',
+          properties: {
+            Account: { type: 'string' },
+            Destination: { type: 'string' }
+          },
+          required: [ 'Account', 'Destination' ]
+        }
+      },
+      required: [ 'transaction' ]
+    }
+  },
+  required: [ 'Data' ]
+}
+
 export const XrpGetTransactionsSchema = {
   type: 'array',
   items: {

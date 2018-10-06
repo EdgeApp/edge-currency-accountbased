@@ -16,6 +16,7 @@ import { bns } from 'biggystring'
 import {
   XrpGetServerInfoSchema,
   XrpGetBalancesSchema,
+  // XrpOnTransactionSchema,
   XrpGetTransactionsSchema
 } from './xrpSchema.js'
 import {
@@ -27,7 +28,7 @@ import { XrpPlugin } from './xrpPlugin.js'
 import {
   CurrencyEngine
 } from '../common/engine.js'
-import { validateObject } from '../common/utils.js'
+import { validateObject, promiseAny, asyncWaterfall } from '../common/utils.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -41,24 +42,64 @@ type XrpParams = {
   // publicAddress?: string,
   // contractAddress?: string
 }
+
+type XrpFunction = 'getFee' | 'getServerInfo' | 'getTransactions' | 'getBalances' | 'connect' | 'disconnect' | 'preparePayment' | 'sign' | 'submit'
 export class XrpEngine extends CurrencyEngine {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
+  // callbacksSetup: boolean
 
   constructor (currencyPlugin: XrpPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
     super(currencyPlugin, io_, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
+    // this.callbacksSetup = false
+  }
+
+  async multicastServers (func: XrpFunction, ...params: any): Promise<any> {
+    let out = { result: '' }
+    switch (func) {
+      // Functions that should waterfall from top to low priority servers
+      case 'getFee':
+      case 'getServerInfo':
+      case 'getBalances':
+      case 'getTransactions':
+        const funcs = this.xrpPlugin.rippleApis.map(api => async () => {
+          const result = await api[func](...params)
+          return { server: api.serverName, result }
+        })
+        out = await asyncWaterfall(funcs)
+        this.log(`XRP multicastServers ${func} ${out.server} won`)
+        break
+
+      // Functions that should multicast to all servers
+      case 'connect':
+      case 'disconnect':
+      case 'submit':
+        out = await promiseAny(this.xrpPlugin.rippleApis.map(async (api) => {
+          const result = await api[func](...params)
+          return { server: api.serverName, result }
+        }))
+        this.log(`XRP multicastServers ${func} ${out.server} won`)
+        break
+
+      // Client-side functions that should just pick one server since they don't actually connect
+      case 'preparePayment':
+      case 'sign':
+        out.result = await this.xrpPlugin.rippleApis[0][func](...params)
+        break
+    }
+    return out.result
   }
 
   // Poll on the blockheight
   async checkServerInfoInnerLoop () {
     try {
-      const fee = await this.xrpPlugin.rippleApi.getFee()
+      const fee = await this.multicastServers('getFee')
       if (typeof fee === 'string') {
         this.otherData.recommendedFee = fee
         this.walletLocalDataDirty = true
       }
-      const jsonObj = await this.xrpPlugin.rippleApi.getServerInfo()
+      const jsonObj = await this.multicastServers('getServerInfo')
       const valid = validateObject(jsonObj, XrpGetServerInfoSchema)
       if (valid) {
         const blockHeight: number = jsonObj.validatedLedger.ledgerVersion
@@ -132,7 +173,7 @@ export class XrpEngine extends CurrencyEngine {
       if (startBlock > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
         options = { minLedgerVersion: startBlock }
       }
-      const transactions: XrpGetTransactions = await this.xrpPlugin.rippleApi.getTransactions(address, options)
+      const transactions: XrpGetTransactions = await this.multicastServers('getTransactions', address, options)
       const valid = validateObject(transactions, XrpGetTransactionsSchema)
       if (valid) {
         this.log(`Fetched transactions count: ${transactions.length} startBlock:${startBlock}`)
@@ -178,7 +219,7 @@ export class XrpEngine extends CurrencyEngine {
   async checkAccountInnerLoop () {
     const address = this.walletLocalData.publicKey
     try {
-      const jsonObj = await this.xrpPlugin.rippleApi.getBalances(address)
+      const jsonObj = await this.multicastServers('getBalances', address)
       const valid = validateObject(jsonObj, XrpGetBalancesSchema)
       if (valid) {
         for (const bal of jsonObj) {
@@ -211,9 +252,67 @@ export class XrpEngine extends CurrencyEngine {
   // Public methods
   // ****************************************************************************
 
+  // setupCallbacks () {
+  //   // Callbacks are persistent so only do once
+  //   if (!this.callbacksSetup) {
+  //     this.currencyPlugin.connectionPool.on('ledger', (ledger) => {
+  //       this.log('Ledger A closed', ledger)
+  //     })
+  //     this.currencyPlugin.connectionPool.on('transaction', (tx) => {
+  //       const valid = validateObject(tx, XrpOnTransactionSchema)
+  //       if (valid) {
+  //         if (
+  //           tx.Data.transaction.Account.toLowerCase() === this.walletLocalData.publicKey.toLowerCase() ||
+  //           tx.Data.transaction.Destination.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+  //         ) {
+  //           this.checkTransactionsInnerLoop()
+  //         }
+  //       } else {
+  //         this.log('Invalid data from connectionPool on Transaction')
+  //       }
+  //     })
+  //     this.callbacksSetup = true
+  //   }
+  // }
+
+  // joinPool () {
+  //   this.setupCallbacks()
+  //   this.currencyPlugin.connectionPool.subscribeAccount(this.walletLocalData.publicKey)
+  //   if (isEmpty(this.currencyPlugin.connectionClients)) {
+  //     for (const s of this.currencyInfo.defaultSettings.otherSettings.rippledServers) {
+  //       this.currencyPlugin.connectionPool.addServer(s)
+  //     }
+  //   }
+  //   this.currencyPlugin.connectionClients[this.walletId] = true
+  // }
+
+  // leavePool () {
+  //   this.currencyPlugin.connectionPool.unsubscribeAccount(this.walletLocalData.publicKey)
+  //   const t = this.currencyPlugin.connectionPool.getRanking()
+  //   this.log(t)
+  //   delete this.currencyPlugin.connectionClients[this.walletId]
+  //   if (isEmpty(this.currencyPlugin.connectionClients)) {
+  //     for (const s of this.currencyInfo.defaultSettings.otherSettings.rippledServers) {
+  //       this.currencyPlugin.connectionPool.removeServer(s)
+  //     }
+  //   }
+  // }
   async startEngine () {
     this.engineOn = true
-    await this.xrpPlugin.rippleApi.connect()
+    // this.joinPool()
+    // try {
+    //   const result = await this.currencyPlugin.connectionPool.send({
+    //     command: 'account_info',
+    //     account: this.walletLocalData.publicKey
+    //   }, {
+    //     serverTimeout: 1500,
+    //     overallTimeout: 10000
+    //   })
+    //   console.log(result)
+    // } catch (e) {
+    //   console.log('Error', e.message)
+    // }
+    await this.multicastServers('connect')
     this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
@@ -229,7 +328,9 @@ export class XrpEngine extends CurrencyEngine {
       clearTimeout(this.timers[timer])
     }
     this.timers = {}
-    await this.xrpPlugin.rippleApi.disconnect()
+    await this.multicastServers('disconnect')
+    this.log('killEngine')
+    // this.leavePool()
   }
 
   async resyncBlockchain (): Promise<void> {
@@ -347,7 +448,7 @@ export class XrpEngine extends CurrencyEngine {
 
     let preparedTx = {}
     try {
-      preparedTx = await this.xrpPlugin.rippleApi.preparePayment(
+      preparedTx = await this.multicastServers('preparePayment',
         this.walletLocalData.publicKey,
         payment,
         { maxLedgerVersionOffset: 300 }
@@ -385,7 +486,7 @@ export class XrpEngine extends CurrencyEngine {
     const txJson = edgeTransaction.otherParams.preparedTx.txJSON
     const privateKey = this.walletInfo.keys.rippleKey
 
-    const { signedTransaction, id } = this.xrpPlugin.rippleApi.sign(txJson, privateKey)
+    const { signedTransaction, id } = await this.multicastServers('sign', txJson, privateKey)
     this.log('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
@@ -397,7 +498,7 @@ export class XrpEngine extends CurrencyEngine {
 
   // asynchronous
   async broadcastTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    await this.xrpPlugin.rippleApi.submit(edgeTransaction.signedTx)
+    await this.multicastServers('submit', edgeTransaction.signedTx)
     return edgeTransaction
   }
 

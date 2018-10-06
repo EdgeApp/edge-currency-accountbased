@@ -20,6 +20,7 @@ import parse from 'url-parse'
 import { RippleAPI } from 'edge-ripple-lib'
 import { XrpEngine } from './xrpEngine.js'
 import { CurrencyPlugin } from '../common/plugin.js'
+// import RippledWsClientPool from 'rippled-ws-client-pool'
 
 const base58Codec = baseX(
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
@@ -39,13 +40,20 @@ function checkAddress (address: string): boolean {
 }
 
 export class XrpPlugin extends CurrencyPlugin {
-  rippleApi: Object
+  rippleApis: Array<Object>
+  // connectionPool: Object
+  connectionClients: { [walletId: string]: boolean }
 
   constructor () {
     super('ripple', currencyInfo)
-    this.rippleApi = new RippleAPI({
-      server: currencyInfo.defaultSettings.otherSettings.rippledServers[0] // Public rippled server
-    })
+    this.rippleApis = []
+    for (const server of currencyInfo.defaultSettings.otherSettings.rippledServers) {
+      const api = new RippleAPI({ server })
+      api.serverName = server
+      this.rippleApis.push(api)
+    }
+    // this.connectionPool = new RippledWsClientPool()
+    this.connectionClients = {}
   }
 
   createPrivateKey (walletType: string) {
@@ -54,7 +62,7 @@ export class XrpPlugin extends CurrencyPlugin {
     if (type === 'ripple' || type === 'ripple-secp256k1') {
       const algorithm = type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
       const entropy = Array.from(io.random(32))
-      const address = this.rippleApi.generateAddress({
+      const address = this.rippleApis[0].generateAddress({
         algorithm,
         entropy
       })

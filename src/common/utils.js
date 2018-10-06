@@ -24,6 +24,15 @@ function validateObject (object: any, schema: any) {
   }
 }
 
+export function isEmpty (map: Object) {
+  for (const key in map) {
+    if (map.hasOwnProperty(key)) {
+      return false
+    }
+  }
+  return true
+}
+
 export function isHex (h: string) {
   const out = /^[0-9A-F]+$/i.test(h)
   return out

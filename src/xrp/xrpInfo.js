@@ -6,6 +6,7 @@ import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {
   rippledServers: [
+    'wss://s1.ripple.com',
     'wss://s2.ripple.com'
   ]
 }
