@@ -25,15 +25,13 @@ import {
   type XrpWalletOtherData
 } from './xrpTypes.js'
 import { XrpPlugin } from './xrpPlugin.js'
-import {
-  CurrencyEngine
-} from '../common/engine.js'
+import { CurrencyEngine } from '../common/engine.js'
 import { validateObject, promiseAny, asyncWaterfall } from '../common/utils.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = (30 * 60) // ~ one minute
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
@@ -43,13 +41,27 @@ type XrpParams = {
   // contractAddress?: string
 }
 
-type XrpFunction = 'getFee' | 'getServerInfo' | 'getTransactions' | 'getBalances' | 'connect' | 'disconnect' | 'preparePayment' | 'sign' | 'submit'
+type XrpFunction =
+  | 'getFee'
+  | 'getServerInfo'
+  | 'getTransactions'
+  | 'getBalances'
+  | 'connect'
+  | 'disconnect'
+  | 'preparePayment'
+  | 'sign'
+  | 'submit'
 export class XrpEngine extends CurrencyEngine {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
   // callbacksSetup: boolean
 
-  constructor (currencyPlugin: XrpPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
+  constructor (
+    currencyPlugin: XrpPlugin,
+    io_: any,
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ) {
     super(currencyPlugin, io_, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
     // this.callbacksSetup = false
@@ -75,10 +87,12 @@ export class XrpEngine extends CurrencyEngine {
       case 'connect':
       case 'disconnect':
       case 'submit':
-        out = await promiseAny(this.xrpPlugin.rippleApis.map(async (api) => {
-          const result = await api[func](...params)
-          return { server: api.serverName, result }
-        }))
+        out = await promiseAny(
+          this.xrpPlugin.rippleApis.map(async api => {
+            const result = await api[func](...params)
+            return { server: api.serverName, result }
+          })
+        )
         this.log(`XRP multicastServers ${func} ${out.server} won`)
         break
 
@@ -107,7 +121,9 @@ export class XrpEngine extends CurrencyEngine {
         if (this.walletLocalData.blockHeight !== blockHeight) {
           this.walletLocalData.blockHeight = blockHeight // Convert to decimal
           this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onBlockHeightChanged(this.walletLocalData.blockHeight)
+          this.currencyEngineCallbacks.onBlockHeightChanged(
+            this.walletLocalData.blockHeight
+          )
         }
       } else {
         this.log('Invalid data returned from rippleApi.getServerInfo')
@@ -118,9 +134,10 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   processRippleTransaction (tx: XrpGetTransaction) {
-    const ourReceiveAddresses:Array<string> = []
+    const ourReceiveAddresses: Array<string> = []
 
-    const balanceChanges = tx.outcome.balanceChanges[this.walletLocalData.publicKey]
+    const balanceChanges =
+      tx.outcome.balanceChanges[this.walletLocalData.publicKey]
     if (balanceChanges) {
       for (const bc of balanceChanges) {
         const currencyCode: string = bc.currency
@@ -162,10 +179,15 @@ export class XrpEngine extends CurrencyEngine {
 
   async checkTransactionsInnerLoop () {
     const address = this.walletLocalData.publicKey
-    let startBlock:number = 0
-    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+    let startBlock: number = 0
+    if (
+      this.walletLocalData.lastAddressQueryHeight >
+      ADDRESS_QUERY_LOOKBACK_BLOCKS
+    ) {
       // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-      startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+      startBlock =
+        this.walletLocalData.lastAddressQueryHeight -
+        ADDRESS_QUERY_LOOKBACK_BLOCKS
     }
 
     try {
@@ -173,10 +195,18 @@ export class XrpEngine extends CurrencyEngine {
       if (startBlock > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
         options = { minLedgerVersion: startBlock }
       }
-      const transactions: XrpGetTransactions = await this.multicastServers('getTransactions', address, options)
+      const transactions: XrpGetTransactions = await this.multicastServers(
+        'getTransactions',
+        address,
+        options
+      )
       const valid = validateObject(transactions, XrpGetTransactionsSchema)
       if (valid) {
-        this.log(`Fetched transactions count: ${transactions.length} startBlock:${startBlock}`)
+        this.log(
+          `Fetched transactions count: ${
+            transactions.length
+          } startBlock:${startBlock}`
+        )
 
         // Get transactions
         // Iterate over transactions in address
@@ -211,9 +241,7 @@ export class XrpEngine extends CurrencyEngine {
     this.currencyEngineCallbacks.onAddressesChecked(1)
   }
 
-  async checkUnconfirmedTransactionsFetch () {
-
-  }
+  async checkUnconfirmedTransactionsFetch () {}
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop () {
@@ -227,13 +255,21 @@ export class XrpEngine extends CurrencyEngine {
           const exchangeAmount = bal.value
           const nativeAmount = bns.mul(exchangeAmount, '1000000')
 
-          if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
+          if (
+            typeof this.walletLocalData.totalBalances[currencyCode] ===
+            'undefined'
+          ) {
             this.walletLocalData.totalBalances[currencyCode] = '0'
           }
 
-          if (this.walletLocalData.totalBalances[currencyCode] !== nativeAmount) {
+          if (
+            this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
+          ) {
             this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.currencyEngineCallbacks.onBalanceChanged(currencyCode, nativeAmount)
+            this.currencyEngineCallbacks.onBalanceChanged(
+              currencyCode,
+              nativeAmount
+            )
           }
         }
       } else {
@@ -343,36 +379,34 @@ export class XrpEngine extends CurrencyEngine {
   async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
     // Validate the spendInfo
     const valid = validateObject(edgeSpendInfo, {
-      'type': 'object',
-      'properties': {
-        'currencyCode': { 'type': 'string' },
-        'networkFeeOption': { 'type': 'string' },
-        'spendTargets': {
-          'type': 'array',
-          'items': {
-            'type': 'object',
-            'properties': {
-              'currencyCode': { 'type': 'string' },
-              'publicAddress': { 'type': 'string' },
-              'nativeAmount': { 'type': 'string' },
-              'destMetadata': { 'type': 'object' },
-              'destWallet': { 'type': 'object' }
+      type: 'object',
+      properties: {
+        currencyCode: { type: 'string' },
+        networkFeeOption: { type: 'string' },
+        spendTargets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              currencyCode: { type: 'string' },
+              publicAddress: { type: 'string' },
+              nativeAmount: { type: 'string' },
+              destMetadata: { type: 'object' },
+              destWallet: { type: 'object' }
             },
-            'required': [
-              'publicAddress'
-            ]
+            required: ['publicAddress']
           }
         }
       },
-      'required': [ 'spendTargets' ]
+      required: ['spendTargets']
     })
 
     if (!valid) {
-      throw (new Error('Error: invalid ABCSpendInfo'))
+      throw new Error('Error: invalid ABCSpendInfo')
     }
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
-      throw (new Error('Error: only one output allowed'))
+      throw new Error('Error: only one output allowed')
     }
 
     // let tokenInfo = {}
@@ -398,11 +432,11 @@ export class XrpEngine extends CurrencyEngine {
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     } else {
-      throw (new Error('Error: no amount specified'))
+      throw new Error('Error: no amount specified')
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw (new error.NoAmountSpecifiedError())
+      throw new error.NoAmountSpecifiedError()
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
@@ -422,8 +456,13 @@ export class XrpEngine extends CurrencyEngine {
       edgeSpendInfo.spendTargets[0].otherParams &&
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
-      if (typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier === 'string') {
-        uniqueIdentifier = parseInt(edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier)
+      if (
+        typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier ===
+        'string'
+      ) {
+        uniqueIdentifier = parseInt(
+          edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+        )
       } else {
         throw new Error('Error invalid destinationtag')
       }
@@ -448,7 +487,8 @@ export class XrpEngine extends CurrencyEngine {
 
     let preparedTx = {}
     try {
-      preparedTx = await this.multicastServers('preparePayment',
+      preparedTx = await this.multicastServers(
+        'preparePayment',
         this.walletLocalData.publicKey,
         payment,
         { maxLedgerVersionOffset: 300 }
@@ -486,7 +526,11 @@ export class XrpEngine extends CurrencyEngine {
     const txJson = edgeTransaction.otherParams.preparedTx.txJSON
     const privateKey = this.walletInfo.keys.rippleKey
 
-    const { signedTransaction, id } = await this.multicastServers('sign', txJson, privateKey)
+    const { signedTransaction, id } = await this.multicastServers(
+      'sign',
+      txJson,
+      privateKey
+    )
     this.log('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
@@ -497,7 +541,9 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   // asynchronous
-  async broadcastTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async broadcastTx (
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction> {
     await this.multicastServers('submit', edgeTransaction.signedTx)
     return edgeTransaction
   }

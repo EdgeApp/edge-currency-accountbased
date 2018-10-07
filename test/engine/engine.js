@@ -89,45 +89,39 @@ for (const fixture of fixtures) {
         type: WALLET_TYPE,
         keys
       }
-      return plugin
-        .makeEngine(info, currencyEngineOptions)
-        .then(e => {
-          engine = e
-          assert.equal(typeof engine.startEngine, 'function', 'startEngine')
-          assert.equal(typeof engine.killEngine, 'function', 'killEngine')
-          assert.equal(
-            typeof engine.getBlockHeight,
-            'function',
-            'getBlockHeight'
-          )
-          assert.equal(typeof engine.getBalance, 'function', 'getBalance')
-          assert.equal(
-            typeof engine.getNumTransactions,
-            'function',
-            'getNumTransactions'
-          )
-          assert.equal(
-            typeof engine.getTransactions,
-            'function',
-            'getTransactions'
-          )
-          assert.equal(
-            typeof engine.getFreshAddress,
-            'function',
-            'getFreshAddress'
-          )
-          assert.equal(
-            typeof engine.addGapLimitAddresses,
-            'function',
-            'addGapLimitAddresses'
-          )
-          assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
-          assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
-          assert.equal(typeof engine.signTx, 'function', 'signTx')
-          assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
-          assert.equal(typeof engine.saveTx, 'function', 'saveTx')
-          return true
-        })
+      return plugin.makeEngine(info, currencyEngineOptions).then(e => {
+        engine = e
+        assert.equal(typeof engine.startEngine, 'function', 'startEngine')
+        assert.equal(typeof engine.killEngine, 'function', 'killEngine')
+        assert.equal(typeof engine.getBlockHeight, 'function', 'getBlockHeight')
+        assert.equal(typeof engine.getBalance, 'function', 'getBalance')
+        assert.equal(
+          typeof engine.getNumTransactions,
+          'function',
+          'getNumTransactions'
+        )
+        assert.equal(
+          typeof engine.getTransactions,
+          'function',
+          'getTransactions'
+        )
+        assert.equal(
+          typeof engine.getFreshAddress,
+          'function',
+          'getFreshAddress'
+        )
+        assert.equal(
+          typeof engine.addGapLimitAddresses,
+          'function',
+          'addGapLimitAddresses'
+        )
+        assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
+        assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
+        assert.equal(typeof engine.signTx, 'function', 'signTx')
+        assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
+        assert.equal(typeof engine.saveTx, 'function', 'saveTx')
+        return true
+      })
     })
   })
 

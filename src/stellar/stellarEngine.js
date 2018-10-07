@@ -20,31 +20,41 @@ import {
   type StellarTransaction,
   type StellarWalletOtherData
 } from './stellarTypes.js'
+import { CurrencyEngine } from '../common/engine.js'
+import { StellarPlugin } from '../stellar/stellarPlugin.js'
 import {
-  CurrencyEngine
-} from '../common/engine.js'
-import {
-  StellarPlugin
-} from '../stellar/stellarPlugin.js'
-import { validateObject, getDenomInfo, asyncWaterfall, promiseAny } from '../common/utils.js'
+  validateObject,
+  getDenomInfo,
+  asyncWaterfall,
+  promiseAny
+} from '../common/utils.js'
 
 const TX_QUERY_PAGING_LIMIT = 2
 const ADDRESS_POLL_MILLISECONDS = 15000
 const BLOCKCHAIN_POLL_MILLISECONDS = 30000
 const TRANSACTION_POLL_MILLISECONDS = 5000
 
-type StellarServerFunction = 'payments' | 'loadAccount' | 'ledgers' | 'submitTransaction'
+type StellarServerFunction =
+  | 'payments'
+  | 'loadAccount'
+  | 'ledgers'
+  | 'submitTransaction'
 
 export class StellarEngine extends CurrencyEngine {
   stellarPlugin: StellarPlugin
   stellarApi: Object
   balancesChecked: number
   transactionsChecked: number
-  activatedAccountsCache: { [publicAddress: string ]: boolean }
-  pendingTransactionsMap: { [txid: string ]: Object }
+  activatedAccountsCache: { [publicAddress: string]: boolean }
+  pendingTransactionsMap: { [txid: string]: Object }
   otherData: StellarWalletOtherData
 
-  constructor (currencyPlugin: StellarPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
+  constructor (
+    currencyPlugin: StellarPlugin,
+    io_: any,
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ) {
     super(currencyPlugin, io_, walletInfo, opts)
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
@@ -54,7 +64,10 @@ export class StellarEngine extends CurrencyEngine {
     this.pendingTransactionsMap = {}
   }
 
-  async multicastServers (func: StellarServerFunction, ...params: any): Promise<any> {
+  async multicastServers (
+    func: StellarServerFunction,
+    ...params: any
+  ): Promise<any> {
     let out = { result: '', server: '' }
     let funcs
     switch (func) {
@@ -68,38 +81,50 @@ export class StellarEngine extends CurrencyEngine {
         break
 
       case 'ledgers':
-        funcs = this.stellarPlugin.stellarApiServers.map(serverApi => async () => {
-          const result = await serverApi.ledgers().order('desc').limit(1).call()
-          const blockHeight = result.records[0].sequence
-          if (
-            this.walletLocalData.blockHeight <= blockHeight &&
-            blockHeight >= this.currencyPlugin.highestTxHeight
-          ) {
-            return { server: serverApi.serverName, result }
-          } else {
-            throw new Error('Height out of date')
+        funcs = this.stellarPlugin.stellarApiServers.map(
+          serverApi => async () => {
+            const result = await serverApi
+              .ledgers()
+              .order('desc')
+              .limit(1)
+              .call()
+            const blockHeight = result.records[0].sequence
+            if (
+              this.walletLocalData.blockHeight <= blockHeight &&
+              blockHeight >= this.currencyPlugin.highestTxHeight
+            ) {
+              return { server: serverApi.serverName, result }
+            } else {
+              throw new Error('Height out of date')
+            }
           }
-        })
+        )
         out = await asyncWaterfall(funcs)
         break
 
       case 'payments':
-        funcs = this.stellarPlugin.stellarApiServers.map(serverApi => async () => {
-          const result = await serverApi.payments()
-            .limit(TX_QUERY_PAGING_LIMIT)
-            .cursor(this.otherData.lastPagingToken)
-            .forAccount(...params).call()
-          return { server: serverApi.serverName, result }
-        })
+        funcs = this.stellarPlugin.stellarApiServers.map(
+          serverApi => async () => {
+            const result = await serverApi
+              .payments()
+              .limit(TX_QUERY_PAGING_LIMIT)
+              .cursor(this.otherData.lastPagingToken)
+              .forAccount(...params)
+              .call()
+            return { server: serverApi.serverName, result }
+          }
+        )
         out = await asyncWaterfall(funcs)
         break
 
       // Functions that should multicast to all servers
       case 'submitTransaction':
-        out = await promiseAny(this.stellarPlugin.stellarApiServers.map(async (serverApi) => {
-          const result = await serverApi[func](...params)
-          return { server: serverApi.serverName, result }
-        }))
+        out = await promiseAny(
+          this.stellarPlugin.stellarApiServers.map(async serverApi => {
+            const result = await serverApi[func](...params)
+            return { server: serverApi.serverName, result }
+          })
+        )
         break
     }
     this.log(`XLM multicastServers ${func} ${out.server} won`)
@@ -107,7 +132,7 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async processTransaction (tx: StellarOperation): Promise<string> {
-    const ourReceiveAddresses:Array<string> = []
+    const ourReceiveAddresses: Array<string> = []
 
     let currencyCode = ''
     let exchangeAmount = ''
@@ -238,19 +263,21 @@ export class StellarEngine extends CurrencyEngine {
     if (this.addressesChecked === 1) {
       return
     }
-    this.addressesChecked = (this.balancesChecked + this.transactionsChecked) / 2
+    this.addressesChecked =
+      (this.balancesChecked + this.transactionsChecked) / 2
     this.currencyEngineCallbacks.onAddressesChecked(this.addressesChecked)
   }
 
-  async checkUnconfirmedTransactionsFetch () {
-
-  }
+  async checkUnconfirmedTransactionsFetch () {}
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop () {
     const address = this.walletLocalData.publicKey
     try {
-      const account: StellarAccount = await this.multicastServers('loadAccount', address)
+      const account: StellarAccount = await this.multicastServers(
+        'loadAccount',
+        address
+      )
       if (account.sequence !== this.otherData.accountSequence) {
         this.otherData.accountSequence = account.sequence
       }
@@ -265,13 +292,21 @@ export class StellarEngine extends CurrencyEngine {
         const denom = getDenomInfo(this.currencyInfo, currencyCode)
         if (denom && denom.multiplier) {
           const nativeAmount = bns.mul(bal.balance, denom.multiplier)
-          if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
+          if (
+            typeof this.walletLocalData.totalBalances[currencyCode] ===
+            'undefined'
+          ) {
             this.walletLocalData.totalBalances[currencyCode] = '0'
           }
 
-          if (this.walletLocalData.totalBalances[currencyCode] !== nativeAmount) {
+          if (
+            this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
+          ) {
             this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.currencyEngineCallbacks.onBalanceChanged(currencyCode, nativeAmount)
+            this.currencyEngineCallbacks.onBalanceChanged(
+              currencyCode,
+              nativeAmount
+            )
           }
         }
       }
@@ -283,16 +318,20 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   checkBlockchainInnerLoop () {
-    this.multicastServers('ledgers').then(r => {
-      const blockHeight = r.records[0].sequence
-      if (this.walletLocalData.blockHeight !== blockHeight) {
-        this.walletLocalData.blockHeight = blockHeight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(this.walletLocalData.blockHeight)
-      }
-    }).catch(e => {
-      this.log(e)
-    })
+    this.multicastServers('ledgers')
+      .then(r => {
+        const blockHeight = r.records[0].sequence
+        if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.walletLocalData.blockHeight = blockHeight
+          this.walletLocalDataDirty = true
+          this.currencyEngineCallbacks.onBlockHeightChanged(
+            this.walletLocalData.blockHeight
+          )
+        }
+      })
+      .catch(e => {
+        this.log(e)
+      })
   }
 
   async clearBlockchainCache (): Promise<void> {
@@ -338,11 +377,11 @@ export class StellarEngine extends CurrencyEngine {
     const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
 
     if (!valid) {
-      throw (new Error('Error: invalid EdgeSpendInfo'))
+      throw new Error('Error: invalid EdgeSpendInfo')
     }
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
-      throw (new Error('Error: only one output allowed'))
+      throw new Error('Error: only one output allowed')
     }
 
     let currencyCode: string = ''
@@ -380,11 +419,11 @@ export class StellarEngine extends CurrencyEngine {
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     } else {
-      throw (new error.NoAmountSpecifiedError())
+      throw new error.NoAmountSpecifiedError()
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw (new error.NoAmountSpecifiedError())
+      throw new error.NoAmountSpecifiedError()
     }
 
     let nativeBalance = this.walletLocalData.totalBalances[currencyCode]
@@ -394,25 +433,35 @@ export class StellarEngine extends CurrencyEngine {
     }
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 7)
 
-    const account = new this.stellarApi.Account(this.walletLocalData.publicKey, this.otherData.accountSequence)
-    let memoId:? string
-    if (edgeSpendInfo.spendTargets[0].otherParams && edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier) {
+    const account = new this.stellarApi.Account(
+      this.walletLocalData.publicKey,
+      this.otherData.accountSequence
+    )
+    let memoId: ?string
+    if (
+      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+    ) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
     const txBuilder = new this.stellarApi.TransactionBuilder(account)
     let transaction
 
     if (mustCreateAccount) {
-      transaction = txBuilder.addOperation(this.stellarApi.Operation.createAccount({
-        destination: publicAddress,
-        startingBalance: exchangeAmount
-      }))
+      transaction = txBuilder.addOperation(
+        this.stellarApi.Operation.createAccount({
+          destination: publicAddress,
+          startingBalance: exchangeAmount
+        })
+      )
     } else {
-      transaction = txBuilder.addOperation(this.stellarApi.Operation.payment({
-        destination: publicAddress,
-        asset: this.stellarApi.Asset.native(),
-        amount: exchangeAmount
-      }))
+      transaction = txBuilder.addOperation(
+        this.stellarApi.Operation.payment({
+          destination: publicAddress,
+          asset: this.stellarApi.Asset.native(),
+          amount: exchangeAmount
+        })
+      )
     }
     if (memoId) {
       const memo = this.stellarApi.Memo.id(memoId)
@@ -422,9 +471,9 @@ export class StellarEngine extends CurrencyEngine {
 
     const networkFee = transaction.fee.toString()
     nativeAmount = bns.add(networkFee, nativeAmount) // Add fee to total
-    nativeBalance = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM 
+    nativeBalance = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
     if (bns.gt(nativeAmount, nativeBalance)) {
-      throw (new error.InsufficientFundsError())
+      throw new error.InsufficientFundsError()
     }
 
     nativeAmount = `-${nativeAmount}`
@@ -449,7 +498,9 @@ export class StellarEngine extends CurrencyEngine {
 
     this.log('Stellar transaction prepared')
     this.log(`idInternal: ${idInternal}`)
-    this.log(`${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`)
+    this.log(
+      `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
+    )
     return edgeTransaction
   }
 
@@ -463,7 +514,9 @@ export class StellarEngine extends CurrencyEngine {
         throw new Error('ErrorInvalidTransaction')
       }
       this.log('Signing...')
-      const keypair = this.stellarApi.Keypair.fromSecret(this.walletInfo.keys.stellarKey)
+      const keypair = this.stellarApi.Keypair.fromSecret(
+        this.walletInfo.keys.stellarKey
+      )
       await transaction.sign(keypair)
     } catch (e) {
       this.log(e)
@@ -473,7 +526,9 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   // asynchronous
-  async broadcastTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async broadcastTx (
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction> {
     try {
       const idInternal = edgeTransaction.otherParams.idInternal
       const transaction = this.pendingTransactionsMap[idInternal]
@@ -481,7 +536,10 @@ export class StellarEngine extends CurrencyEngine {
         throw new Error('ErrorInvalidTransaction')
       }
       this.log('Broadcasting...')
-      const result = await this.multicastServers('submitTransaction', transaction)
+      const result = await this.multicastServers(
+        'submitTransaction',
+        transaction
+      )
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
       this.activatedAccountsCache[edgeTransaction.otherParams.toAddress] = true

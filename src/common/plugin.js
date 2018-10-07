@@ -36,7 +36,10 @@ export class CurrencyPlugin {
     throw new Error('Must implement derivePublicKey')
   }
 
-  async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
+  async makeEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
     throw new Error('Must implement makeEngine')
   }
 
@@ -48,7 +51,11 @@ export class CurrencyPlugin {
     throw new Error('Must implement encodeUri')
   }
 
-  parseUriCommon (currencyInfo: EdgeCurrencyInfo, uri: string, networks: {[network: string]: boolean}) {
+  parseUriCommon (
+    currencyInfo: EdgeCurrencyInfo,
+    uri: string,
+    networks: { [network: string]: boolean }
+  ) {
     const parsedUri = parse(uri, {}, true)
     let address: string
 
@@ -57,10 +64,7 @@ export class CurrencyPlugin {
       parsedUri.protocol = parsedUri.protocol.replace(':', '')
     }
 
-    if (
-      parsedUri.protocol &&
-      !networks[parsedUri.protocol]
-    ) {
+    if (parsedUri.protocol && !networks[parsedUri.protocol]) {
       throw new Error('InvalidUriError') // possibly scanning wrong crypto type
     }
 

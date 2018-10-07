@@ -3,59 +3,59 @@
  */
 
 export const CurrencyInfoSchema = {
-  'type': 'object',
-  'properties': {
-    'walletTypes': {
-      'type': 'array',
-      'items': {'type': 'string'}
+  type: 'object',
+  properties: {
+    walletTypes: {
+      type: 'array',
+      items: { type: 'string' }
     },
-    'currencyCode': { 'type': 'string' },
-    'currencyName': { 'type': 'string' },
-    'addressExplorer': { 'type': 'string' },
-    'transactionExplorer': { 'type': 'string' },
-    'defaultSettings': {
-      'type': 'object'
+    currencyCode: { type: 'string' },
+    currencyName: { type: 'string' },
+    addressExplorer: { type: 'string' },
+    transactionExplorer: { type: 'string' },
+    defaultSettings: {
+      type: 'object'
     },
-    'denominations': {
-      'type': 'array',
-      'items': {
-        'type': 'object',
-        'properties': {
-          'name': { 'type': 'string' },
-          'multiplier': { 'type': 'string' },
-          'symbol': { 'type': 'string' }
+    denominations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          multiplier: { type: 'string' },
+          symbol: { type: 'string' }
         },
-        'required': [ 'name', 'multiplier' ]
+        required: ['name', 'multiplier']
       }
     },
-    'symbolImage': { 'type': 'string' },
-    'metaTokens': {
-      'type': 'array',
-      'items': {
-        'type': 'object',
-        'properties': {
-          'currencyCode': { 'type': 'string' },
-          'currencyName': { 'type': 'string' },
-          'denominations': {
-            'type': 'array',
-            'items': {
-              'type': 'object',
-              'properties': {
-                'name': { 'type': 'string' },
-                'multiplier': { 'type': 'string' },
-                'symbol': { 'type': 'string' }
+    symbolImage: { type: 'string' },
+    metaTokens: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          currencyCode: { type: 'string' },
+          currencyName: { type: 'string' },
+          denominations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                multiplier: { type: 'string' },
+                symbol: { type: 'string' }
               },
-              'required': [ 'name', 'multiplier' ]
+              required: ['name', 'multiplier']
             }
           },
-          'contractAddress': { 'type': 'string' },
-          'symbolImage': { 'type': 'string' }
+          contractAddress: { type: 'string' },
+          symbolImage: { type: 'string' }
         },
-        'required': [ 'currencyCode', 'currencyName', 'denominations' ]
+        required: ['currencyCode', 'currencyName', 'denominations']
       }
     }
   },
-  'required': [
+  required: [
     'walletTypes',
     'currencyCode',
     'currencyName',
@@ -68,36 +68,34 @@ export const CurrencyInfoSchema = {
 }
 
 export const MakeSpendSchema = {
-  'type': 'object',
-  'properties': {
-    'currencyCode': { 'type': 'string' },
-    'networkFeeOption': { 'type': 'string' },
-    'spendTargets': {
-      'type': 'array',
-      'items': {
-        'type': 'object',
-        'properties': {
-          'currencyCode': { 'type': 'string' },
-          'publicAddress': { 'type': 'string' },
-          'nativeAmount': { 'type': 'string' },
-          'destMetadata': { 'type': 'object' }
+  type: 'object',
+  properties: {
+    currencyCode: { type: 'string' },
+    networkFeeOption: { type: 'string' },
+    spendTargets: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          currencyCode: { type: 'string' },
+          publicAddress: { type: 'string' },
+          nativeAmount: { type: 'string' },
+          destMetadata: { type: 'object' }
         },
-        'required': [
-          'publicAddress'
-        ]
+        required: ['publicAddress']
       }
     }
   },
-  'required': [ 'spendTargets' ]
+  required: ['spendTargets']
 }
 
 export const CustomTokenSchema = {
-  'type': 'object',
-  'properties': {
-    'currencyCode': {'type': 'string'},
-    'currencyName': {'type': 'string'},
-    'multiplier': {'type': 'string'},
-    'contractAddress': {'type': 'string'}
+  type: 'object',
+  properties: {
+    currencyCode: { type: 'string' },
+    currencyName: { type: 'string' },
+    multiplier: { type: 'string' },
+    contractAddress: { type: 'string' }
   },
-  'required': ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
+  required: ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
 }

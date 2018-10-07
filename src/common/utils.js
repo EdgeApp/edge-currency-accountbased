@@ -44,8 +44,10 @@ function getDenomInfo (currencyInfo: EdgeCurrencyInfo, denom: string) {
   })
 }
 
-const snoozeReject: Function = (ms: number) => new Promise((resolve: Function, reject: Function) => setTimeout(reject, ms))
-const snooze: Function = (ms: number) => new Promise((resolve: Function) => setTimeout(resolve, ms))
+const snoozeReject: Function = (ms: number) =>
+  new Promise((resolve: Function, reject: Function) => setTimeout(reject, ms))
+const snooze: Function = (ms: number) =>
+  new Promise((resolve: Function) => setTimeout(resolve, ms))
 
 function promiseAny (promises: Array<Promise<any>>): Promise<any> {
   return new Promise((resolve: Function, reject: Function) => {
@@ -56,23 +58,30 @@ function promiseAny (promises: Array<Promise<any>>): Promise<any> {
   })
 }
 
-type AsyncFunction = (void) => Promise<any>
+type AsyncFunction = void => Promise<any>
 
-async function asyncWaterfall (asyncFuncs: Array<AsyncFunction>, timeoutMs: number = 5000): Promise<any> {
+async function asyncWaterfall (
+  asyncFuncs: Array<AsyncFunction>,
+  timeoutMs: number = 5000
+): Promise<any> {
   let pending = asyncFuncs.length
   const promises: Array<Promise<any>> = []
   for (const func of asyncFuncs) {
     const index = promises.length
-    promises.push(func().catch(e => {
-      e.index = index
-      throw e
-    }))
+    promises.push(
+      func().catch(e => {
+        e.index = index
+        throw e
+      })
+    )
     if (pending > 1) {
-      promises.push(new Promise((resolve) => {
-        snooze(timeoutMs).then(() => {
-          resolve('async_waterfall_timed_out')
+      promises.push(
+        new Promise(resolve => {
+          snooze(timeoutMs).then(() => {
+            resolve('async_waterfall_timed_out')
+          })
         })
-      }))
+      )
     }
     try {
       const result = await Promise.race(promises)
@@ -94,4 +103,12 @@ async function asyncWaterfall (asyncFuncs: Array<AsyncFunction>, timeoutMs: numb
   }
 }
 
-export { normalizeAddress, validateObject, getDenomInfo, asyncWaterfall, snooze, snoozeReject, promiseAny }
+export {
+  normalizeAddress,
+  validateObject,
+  getDenomInfo,
+  asyncWaterfall,
+  snooze,
+  snoozeReject,
+  promiseAny
+}

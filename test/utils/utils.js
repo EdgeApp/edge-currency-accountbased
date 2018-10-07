@@ -9,9 +9,18 @@ describe(`Utils testing`, function () {
 
   it('Async Waterfall 1', async function () {
     const funcs = [
-      async () => { await snooze(3000); return 1 },
-      async () => { await snooze(2000); return 2 },
-      async () => { await snooze(200); return 3 }
+      async () => {
+        await snooze(3000)
+        return 1
+      },
+      async () => {
+        await snooze(2000)
+        return 2
+      },
+      async () => {
+        await snooze(200)
+        return 3
+      }
     ]
     const result = await asyncWaterfall(funcs, 250)
     assert.equal(result, 3)
@@ -19,9 +28,18 @@ describe(`Utils testing`, function () {
 
   it('Async Waterfall 2', async function () {
     const funcs = [
-      async () => { await snooze(3000); return 1 },
-      async () => { await snooze(400); return 2 },
-      async () => { await snoozeReject(1000); return 3 }
+      async () => {
+        await snooze(3000)
+        return 1
+      },
+      async () => {
+        await snooze(400)
+        return 2
+      },
+      async () => {
+        await snoozeReject(1000)
+        return 3
+      }
     ]
     const result = await asyncWaterfall(funcs, 250)
     assert.equal(result, 2)
@@ -29,9 +47,18 @@ describe(`Utils testing`, function () {
 
   it('Async Waterfall 3', async function () {
     const funcs = [
-      async () => { await snoozeReject(50); return 1 },
-      async () => { await snoozeReject(50); return 2 },
-      async () => { await snooze(200); return 3 }
+      async () => {
+        await snoozeReject(50)
+        return 1
+      },
+      async () => {
+        await snoozeReject(50)
+        return 2
+      },
+      async () => {
+        await snooze(200)
+        return 3
+      }
     ]
     const result = await asyncWaterfall(funcs, 250)
     assert.equal(result, 3)
@@ -39,9 +66,18 @@ describe(`Utils testing`, function () {
 
   it('Async Waterfall 4', async function () {
     const funcs = [
-      async () => { await snoozeReject(50); return 1 },
-      async () => { await snoozeReject(50); return 2 },
-      async () => { await snooze(500); return 3 }
+      async () => {
+        await snoozeReject(50)
+        return 1
+      },
+      async () => {
+        await snoozeReject(50)
+        return 2
+      },
+      async () => {
+        await snooze(500)
+        return 3
+      }
     ]
     const result = await asyncWaterfall(funcs, 250)
     assert.equal(result, 3)

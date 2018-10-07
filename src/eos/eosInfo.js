@@ -5,12 +5,8 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
-  eosServers: [
-    ''
-  ],
-  eosNodes: [
-    'https://api.eosnewyork.io:443'
-  ]
+  eosServers: [''],
+  eosNodes: ['https://api.eosnewyork.io:443']
 }
 
 const defaultSettings: any = {
@@ -22,9 +18,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'EOS',
   currencyName: 'EOS',
   pluginName: 'eos',
-  walletTypes: [
-    'wallet:eos'
-  ],
+  walletTypes: ['wallet:eos'],
 
   defaultSettings,
 
@@ -40,6 +34,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/eos-logo-color-64.png',
-  symbolImageDarkMono: 'https://developer.airbitz.co/content/eos-logo-grey-64.png',
+  symbolImageDarkMono:
+    'https://developer.airbitz.co/content/eos-logo-grey-64.png',
   metaTokens: []
 }

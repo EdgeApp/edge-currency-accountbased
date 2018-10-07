@@ -79,7 +79,10 @@ class EosPlugin extends CurrencyPlugin {
     }
   }
 
-  async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
+  async makeEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
     const currencyEngine = new EosEngine(this, io, walletInfo, opts)
     await currencyEngine.loadEngine(this, io, walletInfo, opts)
 
@@ -91,7 +94,9 @@ class EosPlugin extends CurrencyPlugin {
     // undefined
     // TODO: Initialize anything specific to this currency
     // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
-    if (!currencyEngine.otherData.accountName) currencyEngine.otherData.accountName = ''
+    if (!currencyEngine.otherData.accountName) {
+      currencyEngine.otherData.accountName = ''
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
@@ -99,7 +104,7 @@ class EosPlugin extends CurrencyPlugin {
 
   parseUri (uri: string) {
     const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
-      'eos': true
+      eos: true
     })
 
     const valid = checkAddress(edgeParsedUri.publicAddress || '')

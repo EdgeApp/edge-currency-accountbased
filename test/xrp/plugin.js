@@ -34,7 +34,9 @@ for (const fixture of fixtures) {
     })
     it('ripple.com invalid URIs', function () {
       assert.throws(() => {
-        plugin.parseUri(fixture['parseUri']['ripple.com invalid uri handler'][0])
+        plugin.parseUri(
+          fixture['parseUri']['ripple.com invalid uri handler'][0]
+        )
       })
       assert.throws(() => {
         plugin.parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0])
@@ -49,7 +51,9 @@ for (const fixture of fixtures) {
 
     // Ripple.com valid URIs
     it('ripple.com uri address', function () {
-      const parsedUri = plugin.parseUri(fixture['parseUri']['ripple.com uri address'][0])
+      const parsedUri = plugin.parseUri(
+        fixture['parseUri']['ripple.com uri address'][0]
+      )
       assert.equal(
         parsedUri.publicAddress,
         fixture['parseUri']['ripple.com uri address'][1]

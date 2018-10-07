@@ -17,9 +17,7 @@ import type {
   EdgeIo
 } from 'edge-core-js'
 import { bns } from 'biggystring'
-import {
-  CustomTokenSchema
-} from './schema.js'
+import { CustomTokenSchema } from './schema.js'
 import {
   DATA_STORE_FILE,
   DATA_STORE_FOLDER,
@@ -47,8 +45,8 @@ class CurrencyEngine {
   transactionsLoadingPromise: Promise<Object> | null
   transactionListDirty: boolean
   transactionList: { [currencyCode: string]: Array<EdgeTransaction> }
-  txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in 
-  txIdList: { [currencyCode: string]: Array<string> } // Map of array of txids in chronological order 
+  txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in
+  txIdList: { [currencyCode: string]: Array<string> } // Map of array of txids in chronological order
   transactionsChangedArray: Array<EdgeTransaction> // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
   allTokens: Array<EdgeMetaToken>
@@ -59,7 +57,12 @@ class CurrencyEngine {
   io: EdgeIo
   otherData: Object
 
-  constructor (currencyPlugin: CurrencyPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
+  constructor (
+    currencyPlugin: CurrencyPlugin,
+    io_: any,
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ) {
     const currencyCode = currencyPlugin.currencyInfo.currencyCode
     const { walletLocalFolder, callbacks } = opts
 
@@ -103,22 +106,38 @@ class CurrencyEngine {
         this.walletInfo.keys.publicKey = pubKeys.publicKey
       }
     }
-    this.log(`Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginName}`)
+    this.log(
+      `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${
+        this.currencyInfo.pluginName
+      }`
+    )
   }
 
-  async loadEngine (plugin: EdgeCurrencyPlugin, io: EdgeIo, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<void> {
+  async loadEngine (
+    plugin: EdgeCurrencyPlugin,
+    io: EdgeIo,
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<void> {
     const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
     try {
       const result = await folder.file(DATA_STORE_FILE).getText()
-      this.walletLocalData = new WalletLocalData(result, this.currencyInfo.currencyCode)
+      this.walletLocalData = new WalletLocalData(
+        result,
+        this.currencyInfo.currencyCode
+      )
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
         this.log(err)
         this.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(null, this.currencyInfo.currencyCode)
+        this.walletLocalData = new WalletLocalData(
+          null,
+          this.currencyInfo.currencyCode
+        )
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-        await folder.file(DATA_STORE_FILE)
+        await folder
+          .file(DATA_STORE_FILE)
           .setText(JSON.stringify(this.walletLocalData))
       } catch (e) {
         this.log('Error writing to localDataStore. Engine not started:' + err)
@@ -130,29 +149,33 @@ class CurrencyEngine {
       this.txIdList = JSON.parse(result)
     } catch (e) {
       this.log('Could not load txidList file. Failure is ok on new device')
-      await folder.file(TXID_LIST_FILE)
-        .setText(JSON.stringify(this.txIdList))
+      await folder.file(TXID_LIST_FILE).setText(JSON.stringify(this.txIdList))
     }
     try {
       const result = await folder.file(TXID_MAP_FILE).getText()
       this.txIdMap = JSON.parse(result)
     } catch (e) {
       this.log('Could not load txidMap file. Failure is ok on new device')
-      await folder.file(TXID_MAP_FILE)
-        .setText(JSON.stringify(this.txIdMap))
+      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
     }
 
     // Load transactions in the background
-    this.transactionsLoadingPromise = folder.file(TRANSACTION_STORE_FILE).getText().then(result => {
-      this.transactionList = JSON.parse(result)
-      this.transactionsLoadingPromise = null
-      setTimeout(() => {
-        this.doInitialTransactionsCallback()
-      }, 5000)
-    }).catch(e => {
-      this.log(e)
-      this.log('Failed to load transactionList store file. Failure is ok on new device')
-    })
+    this.transactionsLoadingPromise = folder
+      .file(TRANSACTION_STORE_FILE)
+      .getText()
+      .then(result => {
+        this.transactionList = JSON.parse(result)
+        this.transactionsLoadingPromise = null
+        setTimeout(() => {
+          this.doInitialTransactionsCallback()
+        }, 5000)
+      })
+      .catch(e => {
+        this.log(e)
+        this.log(
+          'Failed to load transactionList store file. Failure is ok on new device'
+        )
+      })
 
     for (const token of this.walletLocalData.enabledTokens) {
       this.tokenCheckStatus[token] = 0
@@ -195,8 +218,8 @@ class CurrencyEngine {
       this.transactionsChangedArray.push(edgeTransaction)
     } else {
       // Already have this tx in the database. See if anything changed
-      const transactionsArray = this.transactionList[ currencyCode ]
-      const edgeTx = transactionsArray[ idx ]
+      const transactionsArray = this.transactionList[currencyCode]
+      const edgeTx = transactionsArray[idx]
 
       if (
         edgeTx.blockHeight !== edgeTransaction.blockHeight ||
@@ -207,7 +230,11 @@ class CurrencyEngine {
         if (edgeTx.date !== edgeTransaction.date) {
           needsResort = true
         }
-        this.log(`Update transaction: ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`)
+        this.log(
+          `Update transaction: ${edgeTransaction.txid} height:${
+            edgeTransaction.blockHeight
+          }`
+        )
         this.updateTransaction(currencyCode, edgeTransaction, idx)
       } else {
         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
@@ -231,7 +258,11 @@ class CurrencyEngine {
     }
   }
 
-  updateTransaction (currencyCode: string, edgeTransaction: EdgeTransaction, idx: number) {
+  updateTransaction (
+    currencyCode: string,
+    edgeTransaction: EdgeTransaction,
+    idx: number
+  ) {
     // Update the transaction
     this.transactionList[currencyCode][idx] = edgeTransaction
     this.transactionListDirty = true
@@ -248,30 +279,51 @@ class CurrencyEngine {
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
       const jsonString = JSON.stringify(this.walletLocalData)
-      promises.push(folder.file(DATA_STORE_FILE).setText(jsonString).then(() => {
-        this.walletLocalDataDirty = false
-      }).catch(e => {
-        this.log('Error saving walletLocalData')
-        this.log(e)
-      }))
+      promises.push(
+        folder
+          .file(DATA_STORE_FILE)
+          .setText(jsonString)
+          .then(() => {
+            this.walletLocalDataDirty = false
+          })
+          .catch(e => {
+            this.log('Error saving walletLocalData')
+            this.log(e)
+          })
+      )
     }
     if (this.transactionListDirty) {
       this.log('transactionListDirty. Saving...')
       let jsonString = JSON.stringify(this.transactionList)
-      promises.push(folder.file(TRANSACTION_STORE_FILE).setText(jsonString).catch(e => {
-        this.log('Error saving transactionList')
-        this.log(e)
-      }))
+      promises.push(
+        folder
+          .file(TRANSACTION_STORE_FILE)
+          .setText(jsonString)
+          .catch(e => {
+            this.log('Error saving transactionList')
+            this.log(e)
+          })
+      )
       jsonString = JSON.stringify(this.txIdList)
-      promises.push(folder.file(TXID_LIST_FILE).setText(jsonString).catch(e => {
-        this.log('Error saving txIdList')
-        this.log(e)
-      }))
+      promises.push(
+        folder
+          .file(TXID_LIST_FILE)
+          .setText(jsonString)
+          .catch(e => {
+            this.log('Error saving txIdList')
+            this.log(e)
+          })
+      )
       jsonString = JSON.stringify(this.txIdMap)
-      promises.push(folder.file(TXID_MAP_FILE).setText(jsonString).catch(e => {
-        this.log('Error saving txIdMap')
-        this.log(e)
-      }))
+      promises.push(
+        folder
+          .file(TXID_MAP_FILE)
+          .setText(jsonString)
+          .catch(e => {
+            this.log('Error saving txIdMap')
+            this.log(e)
+          })
+      )
       await Promise.all(promises)
       this.transactionListDirty = false
     } else {
@@ -282,7 +334,10 @@ class CurrencyEngine {
   doInitialBalanceCallback () {
     for (const currencyCode of this.walletLocalData.enabledTokens) {
       try {
-        this.currencyEngineCallbacks.onBalanceChanged(currencyCode, this.walletLocalData.totalBalances[currencyCode])
+        this.currencyEngineCallbacks.onBalanceChanged(
+          currencyCode,
+          this.walletLocalData.totalBalances[currencyCode]
+        )
       } catch (e) {
         this.log('Error for currencyCode', currencyCode, e)
       }
@@ -345,7 +400,10 @@ class CurrencyEngine {
       enabledTokens: this.walletLocalData.enabledTokens,
       publicKey: this.walletLocalData.publicKey
     })
-    this.walletLocalData = new WalletLocalData(temp, this.currencyInfo.currencyCode)
+    this.walletLocalData = new WalletLocalData(
+      temp,
+      this.currencyInfo.currencyCode
+    )
     this.walletLocalDataDirty = true
     this.addressesChecked = 0
     this.transactionList = {}
@@ -400,7 +458,8 @@ class CurrencyEngine {
       // If token is already in currencyInfo, error as it cannot be changed
       for (const tk of this.currencyInfo.metaTokens) {
         if (
-          tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
+          tk.currencyCode.toLowerCase() ===
+            tokenObj.currencyCode.toLowerCase() ||
           tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
         ) {
           throw new Error('ErrorCannotModifyToken')
@@ -411,16 +470,27 @@ class CurrencyEngine {
       if (tokenObj.currencyCode.toUpperCase() !== tokenObj.currencyCode) {
         throw new Error('ErrorInvalidCurrencyCode')
       }
-      if (tokenObj.currencyCode.length < 2 || tokenObj.currencyCode.length > 7) {
+      if (
+        tokenObj.currencyCode.length < 2 ||
+        tokenObj.currencyCode.length > 7
+      ) {
         throw new Error('ErrorInvalidCurrencyCodeLength')
       }
-      if (tokenObj.currencyName.length < 3 || tokenObj.currencyName.length > 20) {
+      if (
+        tokenObj.currencyName.length < 3 ||
+        tokenObj.currencyName.length > 20
+      ) {
         throw new Error('ErrorInvalidCurrencyNameLength')
       }
-      if (bns.lt(tokenObj.multiplier, '1') || bns.gt(tokenObj.multiplier, '100000000000000000000000000000000')) {
+      if (
+        bns.lt(tokenObj.multiplier, '1') ||
+        bns.gt(tokenObj.multiplier, '100000000000000000000000000000000')
+      ) {
         throw new Error('ErrorInvalidMultiplier')
       }
-      let contractAddress = tokenObj.contractAddress.replace('0x', '').toLowerCase()
+      let contractAddress = tokenObj.contractAddress
+        .replace('0x', '')
+        .toLowerCase()
       if (!isHex(contractAddress) || contractAddress.length !== 40) {
         throw new Error('ErrorInvalidContractAddress')
       }
@@ -428,11 +498,14 @@ class CurrencyEngine {
 
       for (const tk of this.customTokens) {
         if (
-          tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
+          tk.currencyCode.toLowerCase() ===
+            tokenObj.currencyCode.toLowerCase() ||
           tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
         ) {
           // Remove old token first then re-add it to incorporate any modifications
-          const idx = this.customTokens.findIndex(element => element.currencyCode === tokenObj.currencyCode)
+          const idx = this.customTokens.findIndex(
+            element => element.currencyCode === tokenObj.currencyCode
+          )
           if (idx !== -1) {
             this.customTokens.splice(idx, 1)
           }
@@ -470,9 +543,9 @@ class CurrencyEngine {
 
     if (typeof options !== 'undefined') {
       const valid = validateObject(options, {
-        'type': 'object',
-        'properties': {
-          'currencyCode': {'type': 'string'}
+        type: 'object',
+        properties: {
+          currencyCode: { type: 'string' }
         }
       })
 
@@ -481,7 +554,9 @@ class CurrencyEngine {
       }
     }
 
-    if (typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined') {
+    if (
+      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
+    ) {
       return '0'
     } else {
       const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
@@ -494,9 +569,9 @@ class CurrencyEngine {
     let currencyCode = this.currencyInfo.currencyCode
 
     const valid = validateObject(options, {
-      'type': 'object',
-      'properties': {
-        'currencyCode': {'type': 'string'}
+      type: 'object',
+      properties: {
+        currencyCode: { type: 'string' }
       }
     })
 
@@ -513,12 +588,12 @@ class CurrencyEngine {
 
   // asynchronous
   async getTransactions (options: any) {
-    let currencyCode:string = this.currencyInfo.currencyCode
+    let currencyCode: string = this.currencyInfo.currencyCode
 
-    const valid:boolean = validateObject(options, {
-      'type': 'object',
-      'properties': {
-        'currencyCode': {'type': 'string'}
+    const valid: boolean = validateObject(options, {
+      type: 'object',
+      properties: {
+        currencyCode: { type: 'string' }
       }
     })
 
@@ -534,31 +609,22 @@ class CurrencyEngine {
       return []
     }
 
-    let startIndex:number = 0
-    let numEntries:number = 0
+    let startIndex: number = 0
+    let numEntries: number = 0
     if (options === null) {
       return this.transactionList[currencyCode].slice(0)
     }
     if (options.startIndex !== null && options.startIndex > 0) {
       startIndex = options.startIndex
-      if (
-        startIndex >=
-        this.transactionList[currencyCode].length
-      ) {
-        startIndex =
-          this.transactionList[currencyCode].length - 1
+      if (startIndex >= this.transactionList[currencyCode].length) {
+        startIndex = this.transactionList[currencyCode].length - 1
       }
     }
     if (options.numEntries !== null && options.numEntries > 0) {
       numEntries = options.numEntries
-      if (
-        numEntries + startIndex >
-        this.transactionList[currencyCode].length
-      ) {
+      if (numEntries + startIndex > this.transactionList[currencyCode].length) {
         // Don't read past the end of the transactionList
-        numEntries =
-          this.transactionList[currencyCode].length -
-          startIndex
+        numEntries = this.transactionList[currencyCode].length - startIndex
       }
     }
 
@@ -571,9 +637,7 @@ class CurrencyEngine {
         numEntries + startIndex
       )
     } else {
-      returnArray = this.transactionList[currencyCode].slice(
-        startIndex
-      )
+      returnArray = this.transactionList[currencyCode].slice(startIndex)
     }
     return returnArray
   }
@@ -584,7 +648,7 @@ class CurrencyEngine {
   }
 
   // synchronous
-  addGapLimitAddresses (addresses: Array<string>, options: any) { }
+  addGapLimitAddresses (addresses: Array<string>, options: any) {}
 
   // synchronous
   isAddressUsed (address: string, options: any) {

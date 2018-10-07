@@ -37,7 +37,7 @@ export type EosGetTransaction = {
   // }
 }
 
-export type EosParams = { }
+export type EosParams = {}
 
 export type EosWalletOtherData = {
   accountName: string

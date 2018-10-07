@@ -5,10 +5,7 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type StellarSettings } from './stellarTypes.js'
 
 const otherSettings: StellarSettings = {
-  stellarServers: [
-    'https://stellar1.edge.app',
-    'https://horizon.stellar.org'
-  ]
+  stellarServers: ['https://stellar1.edge.app', 'https://horizon.stellar.org']
 }
 
 const defaultSettings: any = {
@@ -20,9 +17,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XLM',
   currencyName: 'Stellar',
   pluginName: 'stellar',
-  walletTypes: [
-    'wallet:stellar'
-  ],
+  walletTypes: ['wallet:stellar'],
 
   defaultSettings,
 
@@ -38,6 +33,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/stellar-logo-color-64.png',
-  symbolImageDarkMono: 'https://developer.airbitz.co/content/stellar-logo-grey-64.png',
+  symbolImageDarkMono:
+    'https://developer.airbitz.co/content/stellar-logo-grey-64.png',
   metaTokens: []
 }

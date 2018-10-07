@@ -47,7 +47,8 @@ export class XrpPlugin extends CurrencyPlugin {
   constructor () {
     super('ripple', currencyInfo)
     this.rippleApis = []
-    for (const server of currencyInfo.defaultSettings.otherSettings.rippledServers) {
+    for (const server of currencyInfo.defaultSettings.otherSettings
+      .rippledServers) {
       const api = new RippleAPI({ server })
       api.serverName = server
       this.rippleApis.push(api)
@@ -60,7 +61,8 @@ export class XrpPlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'ripple' || type === 'ripple-secp256k1') {
-      const algorithm = type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
+      const algorithm =
+        type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
       const entropy = Array.from(io.random(32))
       const address = this.rippleApis[0].generateAddress({
         algorithm,
@@ -84,7 +86,10 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
+  async makeEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
     const currencyEngine = new XrpEngine(this, io, walletInfo, opts)
 
     await currencyEngine.loadEngine(this, io, walletInfo, opts)
@@ -101,7 +106,7 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   parseUri (uri: string) {
-    const networks = { 'ripple': true }
+    const networks = { ripple: true }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
 
     // Handle special case of https://ripple.com//send?to= URIs
@@ -113,7 +118,11 @@ export class XrpPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, networks)
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+      currencyInfo,
+      uri,
+      networks
+    )
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')

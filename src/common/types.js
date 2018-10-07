@@ -19,34 +19,42 @@ export type CustomToken = {
   contractAddress: string
 }
 
-export type TxIdMap = {[currencyCode: string]: {[txid: string]: number}}
-export type TxIdList = {[currencyCode: string]: Array<string>}
-export type TransactionList = {[currencyCode: string]: Array<EdgeTransaction>}
+export type TxIdMap = { [currencyCode: string]: { [txid: string]: number } }
+export type TxIdList = { [currencyCode: string]: Array<string> }
+export type TransactionList = { [currencyCode: string]: Array<EdgeTransaction> }
 
 export class WalletLocalData {
   blockHeight: number
   lastAddressQueryHeight: number
   publicKey: string
-  totalBalances: {[currencyCode: string]: string}
+  totalBalances: { [currencyCode: string]: string }
   enabledTokens: Array<string>
   otherData: Object
 
   constructor (jsonString: string | null, primaryCurrency: string) {
     this.blockHeight = 0
-    const totalBalances:{[currencyCode: string]: string} = {}
+    const totalBalances: { [currencyCode: string]: string } = {}
     this.totalBalances = totalBalances
     this.lastAddressQueryHeight = 0
     this.otherData = {}
     this.publicKey = ''
-    this.enabledTokens = [ primaryCurrency ]
+    this.enabledTokens = [primaryCurrency]
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
 
-      if (typeof data.blockHeight === 'number') this.blockHeight = data.blockHeight
-      if (typeof data.lastAddressQueryHeight === 'string') this.lastAddressQueryHeight = data.lastAddressQueryHeight
+      if (typeof data.blockHeight === 'number') {
+        this.blockHeight = data.blockHeight
+      }
+      if (typeof data.lastAddressQueryHeight === 'string') {
+        this.lastAddressQueryHeight = data.lastAddressQueryHeight
+      }
       if (typeof data.publicKey === 'string') this.publicKey = data.publicKey
-      if (typeof data.totalBalances !== 'undefined') this.totalBalances = data.totalBalances
-      if (typeof data.enabledTokens !== 'undefined') this.enabledTokens = data.enabledTokens
+      if (typeof data.totalBalances !== 'undefined') {
+        this.totalBalances = data.totalBalances
+      }
+      if (typeof data.enabledTokens !== 'undefined') {
+        this.enabledTokens = data.enabledTokens
+      }
       if (typeof data.otherData !== 'undefined') this.otherData = data.otherData
     }
   }

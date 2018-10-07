@@ -30,7 +30,8 @@ export class StellarPlugin extends CurrencyPlugin {
     super('stellar', currencyInfo)
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
-    for (const server of currencyInfo.defaultSettings.otherSettings.stellarServers) {
+    for (const server of currencyInfo.defaultSettings.otherSettings
+      .stellarServers) {
       const stellarServer = new stellarApi.Server(server)
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
@@ -69,7 +70,10 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  async makeEngine (walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions): Promise<EdgeCurrencyEngine> {
+  async makeEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
     const currencyEngine = new StellarEngine(this, io, walletInfo, opts)
 
     currencyEngine.stellarApi = stellarApi
@@ -78,8 +82,12 @@ export class StellarPlugin extends CurrencyPlugin {
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    if (!currencyEngine.otherData.accountSequence) currencyEngine.otherData.accountSequence = 0
-    if (!currencyEngine.otherData.lastPagingToken) currencyEngine.otherData.lastPagingToken = '0'
+    if (!currencyEngine.otherData.accountSequence) {
+      currencyEngine.otherData.accountSequence = 0
+    }
+    if (!currencyEngine.otherData.lastPagingToken) {
+      currencyEngine.otherData.lastPagingToken = '0'
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
@@ -98,7 +106,11 @@ export class StellarPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, networks)
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+      currencyInfo,
+      uri,
+      networks
+    )
 
     const valid = this.checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {

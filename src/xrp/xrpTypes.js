@@ -33,6 +33,6 @@ export type XrpGetTransaction = {
   }
 }
 export type XrpWalletOtherData = {
-  recommendedFee: string, // Floating point value in full XRP value
+  recommendedFee: string // Floating point value in full XRP value
 }
 export type XrpGetTransactions = Array<XrpGetTransaction>
