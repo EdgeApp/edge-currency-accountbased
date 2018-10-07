@@ -24,31 +24,86 @@ import {
   CurrencyEngine
 } from '../common/engine.js'
 import {
-  CurrencyPlugin
-} from '../common/plugin.js'
-import { validateObject, getDenomInfo } from '../common/utils.js'
+  StellarPlugin
+} from '../stellar/stellarPlugin.js'
+import { validateObject, getDenomInfo, asyncWaterfall, promiseAny } from '../common/utils.js'
 
 const TX_QUERY_PAGING_LIMIT = 2
 const ADDRESS_POLL_MILLISECONDS = 15000
 const BLOCKCHAIN_POLL_MILLISECONDS = 30000
 const TRANSACTION_POLL_MILLISECONDS = 5000
 
+type StellarServerFunction = 'payments' | 'loadAccount' | 'ledgers' | 'submitTransaction'
+
 export class StellarEngine extends CurrencyEngine {
+  stellarPlugin: StellarPlugin
   stellarApi: Object
-  stellarServer: Object
   balancesChecked: number
   transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string ]: boolean }
   pendingTransactionsMap: { [txid: string ]: Object }
   otherData: StellarWalletOtherData
 
-  constructor (currencyPlugin: CurrencyPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
+  constructor (currencyPlugin: StellarPlugin, io_: any, walletInfo: EdgeWalletInfo, opts: EdgeCurrencyEngineOptions) {
     super(currencyPlugin, io_, walletInfo, opts)
+    this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
     this.balancesChecked = 0
     this.transactionsChecked = 0
     this.activatedAccountsCache = {}
     this.pendingTransactionsMap = {}
+  }
+
+  async multicastServers (func: StellarServerFunction, ...params: any): Promise<any> {
+    let out = { result: '', server: '' }
+    let funcs
+    switch (func) {
+      // Functions that should waterfall from top to low priority servers
+      case 'loadAccount':
+        funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
+          const result = await api[func](...params)
+          return { server: api.serverName, result }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'ledgers':
+        funcs = this.stellarPlugin.stellarApiServers.map(serverApi => async () => {
+          const result = await serverApi.ledgers().order('desc').limit(1).call()
+          const blockHeight = result.records[0].sequence
+          if (
+            this.walletLocalData.blockHeight <= blockHeight &&
+            blockHeight >= this.currencyPlugin.highestTxHeight
+          ) {
+            return { server: serverApi.serverName, result }
+          } else {
+            throw new Error('Height out of date')
+          }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'payments':
+        funcs = this.stellarPlugin.stellarApiServers.map(serverApi => async () => {
+          const result = await serverApi.payments()
+            .limit(TX_QUERY_PAGING_LIMIT)
+            .cursor(this.otherData.lastPagingToken)
+            .forAccount(...params).call()
+          return { server: serverApi.serverName, result }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+
+      // Functions that should multicast to all servers
+      case 'submitTransaction':
+        out = await promiseAny(this.stellarPlugin.stellarApiServers.map(async (serverApi) => {
+          const result = await serverApi[func](...params)
+          return { server: serverApi.serverName, result }
+        }))
+        break
+    }
+    this.log(`XLM multicastServers ${func} ${out.server} won`)
+    return out.result
   }
 
   async processTransaction (tx: StellarOperation): Promise<string> {
@@ -151,11 +206,7 @@ export class StellarEngine extends CurrencyEngine {
     while (1) {
       try {
         if (!page) {
-          page = await this.stellarServer
-            .payments()
-            .limit(TX_QUERY_PAGING_LIMIT)
-            .cursor(this.otherData.lastPagingToken)
-            .forAccount(address).call()
+          page = await this.multicastServers('payments', address)
         } else {
           page = await page.next()
         }
@@ -199,7 +250,7 @@ export class StellarEngine extends CurrencyEngine {
   async checkAccountInnerLoop () {
     const address = this.walletLocalData.publicKey
     try {
-      const account: StellarAccount = await this.stellarServer.loadAccount(address)
+      const account: StellarAccount = await this.multicastServers('loadAccount', address)
       if (account.sequence !== this.otherData.accountSequence) {
         this.otherData.accountSequence = account.sequence
       }
@@ -232,7 +283,7 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   checkBlockchainInnerLoop () {
-    this.stellarServer.ledgers().order('desc').limit(1).call().then(r => {
+    this.multicastServers('ledgers').then(r => {
       const blockHeight = r.records[0].sequence
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.walletLocalData.blockHeight = blockHeight
@@ -259,8 +310,6 @@ export class StellarEngine extends CurrencyEngine {
 
   async startEngine () {
     this.engineOn = true
-    this.stellarServer = new this.stellarApi.Server(this.currencyInfo.defaultSettings.otherSettings.stellarServers[0])
-
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
@@ -319,7 +368,7 @@ export class StellarEngine extends CurrencyEngine {
       mustCreateAccount = true
     } else if (activated === undefined) {
       try {
-        await this.stellarServer.loadAccount(publicAddress)
+        await this.multicastServers('loadAccount', publicAddress)
         this.activatedAccountsCache[publicAddress] = true
       } catch (e) {
         this.activatedAccountsCache[publicAddress] = false
@@ -432,7 +481,7 @@ export class StellarEngine extends CurrencyEngine {
         throw new Error('ErrorInvalidTransaction')
       }
       this.log('Broadcasting...')
-      const result = await this.stellarServer.submitTransaction(transaction)
+      const result = await this.multicastServers('submitTransaction', transaction)
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
       this.activatedAccountsCache[edgeTransaction.otherParams.toAddress] = true

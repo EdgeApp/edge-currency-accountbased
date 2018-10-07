@@ -24,9 +24,17 @@ const URI_PREFIX = 'web+stellar'
 
 let io
 
-class StellarPlugin extends CurrencyPlugin {
+export class StellarPlugin extends CurrencyPlugin {
+  stellarApiServers: Array<Object>
   constructor () {
     super('stellar', currencyInfo)
+    stellarApi.Network.usePublicNetwork()
+    this.stellarApiServers = []
+    for (const server of currencyInfo.defaultSettings.otherSettings.stellarServers) {
+      const stellarServer = new stellarApi.Server(server)
+      stellarServer.serverName = server
+      this.stellarApiServers.push(stellarServer)
+    }
   }
 
   checkAddress (address: string): boolean {
@@ -65,7 +73,6 @@ class StellarPlugin extends CurrencyPlugin {
     const currencyEngine = new StellarEngine(this, io, walletInfo, opts)
 
     currencyEngine.stellarApi = stellarApi
-    stellarApi.Network.usePublicNetwork()
 
     await currencyEngine.loadEngine(this, io, walletInfo, opts)
 

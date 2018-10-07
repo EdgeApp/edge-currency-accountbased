@@ -6,6 +6,7 @@ import { type StellarSettings } from './stellarTypes.js'
 
 const otherSettings: StellarSettings = {
   stellarServers: [
+    'https://stellar1.edge.app',
     'https://horizon.stellar.org'
   ]
 }

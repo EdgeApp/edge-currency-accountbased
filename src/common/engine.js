@@ -178,6 +178,9 @@ class CurrencyEngine {
     // Add or update tx in transactionList
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(currencyCode, txid)
+    if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
+      this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
+    }
 
     let needsResort = false
     if (idx === -1) {

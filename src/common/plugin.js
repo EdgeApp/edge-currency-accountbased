@@ -20,10 +20,12 @@ import { bns } from 'biggystring'
 export class CurrencyPlugin {
   pluginName: string
   currencyInfo: EdgeCurrencyInfo
+  highestTxHeight: number
 
   constructor (pluginName: string, currencyInfo: EdgeCurrencyInfo) {
     this.pluginName = pluginName
     this.currencyInfo = currencyInfo
+    this.highestTxHeight = 0
   }
 
   createPrivateKey (walletType: string) {
