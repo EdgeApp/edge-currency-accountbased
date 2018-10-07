@@ -40,6 +40,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/eos-logo-color-64.png',
-  symbolImageDarkMono: 'https://developer.airbitz.co/content/eos-logo-mono-64.png',
+  symbolImageDarkMono: 'https://developer.airbitz.co/content/eos-logo-grey-64.png',
   metaTokens: []
 }
