@@ -5,7 +5,7 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type StellarSettings } from './stellarTypes.js'
 
 const otherSettings: StellarSettings = {
-  stellarServers: ['https://stellar1.edge.app', 'https://horizon.stellar.org']
+  stellarServers: ['https://horizon.stellar.org']
 }
 
 const defaultSettings: any = {
