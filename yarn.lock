@@ -1445,10 +1445,10 @@ edge-ripple-keypairs@^0.0.1:
     hash.js "^1.0.3"
     ripple-address-codec "^2.0.1"
 
-edge-ripple-lib@^1.0.0-beta.1:
-  version "1.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/edge-ripple-lib/-/edge-ripple-lib-1.0.0-beta.1.tgz#1b381396175b6bea079998372f4445ff316f0bb8"
-  integrity sha512-ZoowGoAgFTORv25fP3YeG+Nq34SLohml8Ixx3ZXTZA5IOQsO3rnV3Jgq4+c4o5RMtPXc44WAwmSqP/xvY1Bp5g==
+edge-ripple-lib@^1.0.0-beta.2:
+  version "1.0.0-beta.2"
+  resolved "https://registry.yarnpkg.com/edge-ripple-lib/-/edge-ripple-lib-1.0.0-beta.2.tgz#927036dcc91048cb274bbe8a92534365e13ef89e"
+  integrity sha512-61gW94w1mR+OX+hldR4T5YTB3g009iwIBl5lIfDVTEH3OX7iDN8TdOlIlVPHp0QxGHa842wIsyciTd9q9WP5mQ==
   dependencies:
     "@types/lodash" "^4.14.85"
     "@types/ws" "^3.2.0"
