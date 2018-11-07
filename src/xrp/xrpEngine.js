@@ -440,6 +440,10 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (!nativeBalance) {
+      throw new error.InsufficientFundsError()
+    }
+
     const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
 
     if (currencyCode === PRIMARY_CURRENCY) {

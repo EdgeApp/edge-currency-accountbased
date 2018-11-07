@@ -483,6 +483,10 @@ export class EosEngine extends CurrencyEngine {
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (!nativeBalance) {
+      throw new error.InsufficientFundsError()
+    }
+
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
     if (!denom) {
       throw new Error('InternalErrorInvalidCurrencyCode')
