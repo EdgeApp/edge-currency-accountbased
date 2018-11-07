@@ -124,10 +124,22 @@ export class StellarPlugin extends CurrencyPlugin {
     }
     if (parsedUri.query.asset_code) {
       if (parsedUri.query.asset_code.toUpperCase() !== 'XLM') {
-        throw new Error('InternalErrorInvalidCurrencyCode')
+        throw new Error('ErrorInvalidCurrencyCode')
       }
     }
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
+    if (parsedUri.query.memo_type) {
+      if (parsedUri.query.memo_type !== 'MEMO_ID') {
+        throw new Error('ErrorInvalidMemoType')
+      }
+    }
+    if (parsedUri.query.memo) {
+      const m = bns.add(parsedUri.query.memo, '0')
+      // Check if the memo is an integer
+      if (m !== parsedUri.query.memo) {
+        throw new Error('ErrorInvalidMemoId')
+      }
+      edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+    }
     return edgeParsedUri
   }
 

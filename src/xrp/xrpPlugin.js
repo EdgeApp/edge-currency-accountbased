@@ -128,7 +128,7 @@ export class XrpPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.tag || undefined
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.dt || undefined
     return edgeParsedUri
   }
 
