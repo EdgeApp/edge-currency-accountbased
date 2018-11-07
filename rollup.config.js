@@ -6,7 +6,7 @@ const babelConf = {
 }
 
 export default {
-  entry: 'src/indexRipple.js',
+  entry: 'src/index.js',
   external: [
     ...Object.keys(packageJson.dependencies),
     ...Object.keys(packageJson.devDependencies)

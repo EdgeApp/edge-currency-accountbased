@@ -1,13 +1,11 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo } from 'edge-core-js'
-import type { RippleSettings } from './xrpTypes'
+import { type EdgeCurrencyInfo } from 'edge-core-js'
+import { type XrpSettings } from './xrpTypes.js'
 
-const otherSettings: RippleSettings = {
-  rippledServers: [
-    'wss://s2.ripple.com'
-  ]
+const otherSettings: XrpSettings = {
+  rippledServers: ['wss://s2.ripple.com']
 }
 
 const defaultSettings: any = {
@@ -19,9 +17,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XRP',
   currencyName: 'XRP',
   pluginName: 'ripple',
-  walletTypes: [
-    'wallet:ripple'
-  ],
+  walletTypes: ['wallet:ripple'],
 
   defaultSettings,
 
@@ -37,6 +33,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/Ripple-logo-blue-64.png',
-  symbolImageDarkMono: 'https://developer.airbitz.co/content/Ripple-logo-grey-64.png',
+  symbolImageDarkMono:
+    'https://developer.airbitz.co/content/Ripple-logo-grey-64.png',
   metaTokens: []
 }
