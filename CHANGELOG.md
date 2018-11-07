@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.10
+
+* Fix parseUri for unique identifiers of XLM and XRP
+
 ## 0.0.9-beta.2
 
 * Full spend/receive functionality for Ripple/XRP refactored from edge-currency-ripple
