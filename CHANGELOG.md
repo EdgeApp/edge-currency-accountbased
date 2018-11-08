@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.11
+
+* Fix incorrect error thrown from makeSpend due to insufficient funds
+
 ## 0.0.10
 
 * Fix parseUri for unique identifiers of XLM and XRP
