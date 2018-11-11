@@ -638,7 +638,7 @@ class CurrencyEngine {
     }
 
     let startIndex: number = 0
-    let startEntries: number = 0
+    const startEntries: number = 0
     if (options === null) {
       return this.transactionList[currencyCode].slice(0)
     }
@@ -648,13 +648,14 @@ class CurrencyEngine {
         startIndex = this.transactionList[currencyCode].length - 1
       }
     }
-    if (options.startEntries && options.startEntries > 0) {
-      startEntries = options.startEntries
-      if (startEntries + startIndex > this.transactionList[currencyCode].length) {
-        // Don't read past the end of the transactionList
-        startEntries = this.transactionList[currencyCode].length - startIndex
-      }
-    }
+    // TODO: Fix edge-core-js to not drop txs if we only do a partial query -paulvp
+    // if (options.startEntries && options.startEntries > 0) {
+    //   startEntries = options.startEntries
+    //   if (startEntries + startIndex > this.transactionList[currencyCode].length) {
+    //     // Don't read past the end of the transactionList
+    //     startEntries = this.transactionList[currencyCode].length - startIndex
+    //   }
+    // }
 
     // Copy the appropriate entries from the arrayTransactions
     let returnArray = []
