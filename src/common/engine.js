@@ -7,6 +7,7 @@ import type {
   EdgeTransaction,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
+  EdgeGetTransactionsOptions,
   EdgeWalletInfo,
   EdgeMetaToken,
   EdgeCurrencyInfo,
@@ -616,7 +617,7 @@ class CurrencyEngine {
   }
 
   // asynchronous
-  async getTransactions (options: any) {
+  async getTransactions (options: EdgeGetTransactionsOptions) {
     let currencyCode: string = this.currencyInfo.currencyCode
 
     const valid: boolean = validateObject(options, {
@@ -627,7 +628,7 @@ class CurrencyEngine {
     })
 
     if (valid) {
-      currencyCode = options.currencyCode
+      currencyCode = options.currencyCode || currencyCode
     }
 
     await this.loadTransactions()
@@ -637,31 +638,31 @@ class CurrencyEngine {
     }
 
     let startIndex: number = 0
-    let numEntries: number = 0
+    let startEntries: number = 0
     if (options === null) {
       return this.transactionList[currencyCode].slice(0)
     }
-    if (options.startIndex !== null && options.startIndex > 0) {
+    if (options.startIndex && options.startIndex > 0) {
       startIndex = options.startIndex
       if (startIndex >= this.transactionList[currencyCode].length) {
         startIndex = this.transactionList[currencyCode].length - 1
       }
     }
-    if (options.numEntries !== null && options.numEntries > 0) {
-      numEntries = options.numEntries
-      if (numEntries + startIndex > this.transactionList[currencyCode].length) {
+    if (options.startEntries && options.startEntries > 0) {
+      startEntries = options.startEntries
+      if (startEntries + startIndex > this.transactionList[currencyCode].length) {
         // Don't read past the end of the transactionList
-        numEntries = this.transactionList[currencyCode].length - startIndex
+        startEntries = this.transactionList[currencyCode].length - startIndex
       }
     }
 
     // Copy the appropriate entries from the arrayTransactions
     let returnArray = []
 
-    if (numEntries) {
+    if (startEntries) {
       returnArray = this.transactionList[currencyCode].slice(
         startIndex,
-        numEntries + startIndex
+        startEntries + startIndex
       )
     } else {
       returnArray = this.transactionList[currencyCode].slice(startIndex)
