@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.12
+
+* Do not load transactions until core asks for getTransactions or we have to save a new tx to disk
+
 ## 0.0.11
 
 * Fix incorrect error thrown from makeSpend due to insufficient funds
