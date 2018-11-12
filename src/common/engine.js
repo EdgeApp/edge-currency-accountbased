@@ -42,8 +42,8 @@ class CurrencyEngine {
   tokenCheckStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
-  transactionsLoadingPromise: Promise<Object> | null
   transactionListDirty: boolean
+  transactionsLoaded: boolean
   transactionList: { [currencyCode: string]: Array<EdgeTransaction> }
   txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in
   txIdList: { [currencyCode: string]: Array<string> } // Map of array of txids in chronological order
@@ -75,7 +75,7 @@ class CurrencyEngine {
     this.transactionsChangedArray = []
     this.transactionList = {}
     this.transactionListDirty = false
-    this.transactionsLoadingPromise = null
+    this.transactionsLoaded = false
     this.txIdMap = {}
     this.txIdList = {}
     this.walletInfo = walletInfo
@@ -113,6 +113,66 @@ class CurrencyEngine {
     )
   }
 
+  async loadTransactions () {
+    if (this.transactionsLoaded) {
+      console.log('Transactions already loaded')
+      return
+    }
+    this.transactionsLoaded = true
+
+    const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
+    let txIdList = {}
+    let txIdMap = {}
+    let transactionList = {}
+    try {
+      const result = await folder.file(TXID_LIST_FILE).getText()
+      txIdList = JSON.parse(result)
+    } catch (e) {
+      this.log('Could not load txidList file. Failure is ok on new device')
+      await folder.file(TXID_LIST_FILE).setText(JSON.stringify(this.txIdList))
+    }
+    try {
+      const result = await folder.file(TXID_MAP_FILE).getText()
+      txIdMap = JSON.parse(result)
+    } catch (e) {
+      this.log('Could not load txidMap file. Failure is ok on new device')
+      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
+    }
+
+    try {
+      const result = await folder.file(TRANSACTION_STORE_FILE).getText()
+      transactionList = JSON.parse(result)
+    } catch (e) {
+      this.log('Could not load transactionList file. Failure is ok on new device')
+      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
+    }
+
+    let isEmptyTransactions = true
+    for (const cc in this.transactionList) {
+      if (this.transactionList.hasOwnProperty(cc)) {
+        if (this.transactionList[cc] && this.transactionList[cc].length > 0) {
+          isEmptyTransactions = false
+          break
+        }
+      }
+    }
+    if (isEmptyTransactions) {
+      // Easy, just copy everything over
+      this.transactionList = transactionList
+      this.txIdList = txIdList
+      this.txIdMap = txIdMap
+    } else {
+      // Manually add transactions via addTransaction()
+      for (const cc in transactionList) {
+        if (transactionList.hasOwnProperty(cc)) {
+          for (const edgeTransaction of transactionList[cc]) {
+            this.addTransaction(cc, edgeTransaction)
+          }
+        }
+      }
+    }
+  }
+
   async loadEngine (
     plugin: EdgeCurrencyPlugin,
     io: EdgeIo,
@@ -144,38 +204,6 @@ class CurrencyEngine {
         throw e
       }
     }
-    try {
-      const result = await folder.file(TXID_LIST_FILE).getText()
-      this.txIdList = JSON.parse(result)
-    } catch (e) {
-      this.log('Could not load txidList file. Failure is ok on new device')
-      await folder.file(TXID_LIST_FILE).setText(JSON.stringify(this.txIdList))
-    }
-    try {
-      const result = await folder.file(TXID_MAP_FILE).getText()
-      this.txIdMap = JSON.parse(result)
-    } catch (e) {
-      this.log('Could not load txidMap file. Failure is ok on new device')
-      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
-    }
-
-    // Load transactions in the background
-    this.transactionsLoadingPromise = folder
-      .file(TRANSACTION_STORE_FILE)
-      .getText()
-      .then(result => {
-        this.transactionList = JSON.parse(result)
-        this.transactionsLoadingPromise = null
-        setTimeout(() => {
-          this.doInitialTransactionsCallback()
-        }, 5000)
-      })
-      .catch(e => {
-        this.log(e)
-        this.log(
-          'Failed to load transactionList store file. Failure is ok on new device'
-        )
-      })
 
     for (const token of this.walletLocalData.enabledTokens) {
       this.tokenCheckStatus[token] = 0
@@ -293,6 +321,7 @@ class CurrencyEngine {
       )
     }
     if (this.transactionListDirty) {
+      await this.loadTransactions()
       this.log('transactionListDirty. Saving...')
       let jsonString = JSON.stringify(this.transactionList)
       promises.push(
@@ -601,9 +630,7 @@ class CurrencyEngine {
       currencyCode = options.currencyCode
     }
 
-    if (this.transactionsLoadingPromise) {
-      await this.transactionsLoadingPromise
-    }
+    await this.loadTransactions()
 
     if (typeof this.transactionList[currencyCode] === 'undefined') {
       return []
