@@ -3,11 +3,29 @@
  */
 // @flow
 
+import { type EdgeMetadata } from 'edge-core-js'
 export type EosSettings = {
-  eosServers: Array<string>,
+  eosSuperNodes: Array<string>,
   eosNodes: Array<string>
 }
-export type EosGetTransaction = {
+
+export type EosTransactionSuperNode = {
+  txid: string,
+  date: string,
+  currencyCode: string,
+  blockHeight: number,
+  networkFee: string,
+  parentNetworkFee: string,
+  signedTx: string,
+  otherParams: {
+    fromAddress: string,
+    toAddress: string
+  },
+  exchangeAmount: string,
+  metadata: EdgeMetadata
+}
+
+export type EosTransaction = {
   block_time: string,
   block_num: number,
   action_trace: {

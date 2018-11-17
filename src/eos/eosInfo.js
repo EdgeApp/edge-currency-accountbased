@@ -5,7 +5,7 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
-  eosServers: [''],
+  eosSuperNodes: ['http://206.189.121.218:3838'],
   eosNodes: ['https://api.eosnewyork.io:443']
 }
 
@@ -29,8 +29,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
     // An array of Objects of the possible denominations for this currency
     {
       name: 'EOS',
-      multiplier: '1000',
+      multiplier: '10000',
       symbol: 'E'
+    },
+    {
+      name: 'dEOS',
+      multiplier: '1000',
+      symbol: 'dE'
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/eos-logo-solo-64.png',

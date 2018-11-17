@@ -15,8 +15,20 @@ import type {
 import { getDenomInfo } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
 import { bns } from 'biggystring'
-const eos = require('eosjs')
-const { ecc } = eos.modules
+import eosjs from 'eosjs'
+
+const { ecc } = eosjs.modules
+
+// ----MAIN NET----
+export const eosConfig = {
+  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
+  keyProvider: [],
+  httpEndpoint: '', // main net
+  expireInSeconds: 60,
+  sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
+  broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
+  verbose: false // verbose logging such as API activity
+}
 
 let io
 
@@ -38,9 +50,32 @@ function checkAddress (address: string): boolean {
   return true
 }
 
-class EosPlugin extends CurrencyPlugin {
+export class EosPlugin extends CurrencyPlugin {
+  otherMethods: Object
+  eosServer: Object
+
   constructor () {
     super('eos', currencyInfo)
+
+    eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    this.eosServer = eosjs(eosConfig)
+    this.otherMethods = {
+      getAccountExists: async (account: string) => {
+        try {
+          const result = await this.getAccSystemStats(account)
+          if (result) {
+            return true
+          }
+        } catch (e) {
+          if (e.code === 'ErrorUnknownAccount') {
+            return false
+          } else {
+            throw e
+          }
+        }
+        return false
+      }
+    }
   }
   createPrivateKey (walletType: string) {
     const type = walletType.replace('wallet:', '')
@@ -134,6 +169,20 @@ class EosPlugin extends CurrencyPlugin {
     }
     const encodedUri = this.encodeUriCommon(obj, 'eos', amount)
     return encodedUri
+  }
+
+  async getAccSystemStats (account: string) {
+    return new Promise((resolve, reject) => {
+      this.eosServer.getAccount(account, (error, result) => {
+        if (error) {
+          if (error.message.includes('unknown key')) {
+            error.code = 'ErrorUnknownAccount'
+          }
+          reject(error)
+        }
+        resolve(result)
+      })
+    })
   }
 }
 

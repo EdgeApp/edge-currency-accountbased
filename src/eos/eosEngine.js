@@ -14,38 +14,32 @@ import { error } from 'edge-core-js'
 import { bns } from 'biggystring'
 import { MakeSpendSchema } from '../common/schema.js'
 import { CurrencyEngine } from '../common/engine.js'
-import { CurrencyPlugin } from '../common/plugin.js'
-import { validateObject, getDenomInfo } from '../common/utils.js'
-import { type EosGetTransaction, type EosWalletOtherData } from './eosTypes.js'
+import { validateObject, promiseAny, asyncWaterfall, getDenomInfo } from '../common/utils.js'
+import { type EosTransaction, type EosWalletOtherData, type EosTransactionSuperNode } from './eosTypes.js'
+import { EosTransactionSuperNodeSchema } from './eosSchema.js'
+import { eosConfig, EosPlugin } from './eosPlugin.js'
 import eosjs from 'eosjs'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = 3 * 60
 
-// ----MAIN NET----
-const config = {
-  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
-  keyProvider: [],
-  httpEndpoint: '', // main net
-  expireInSeconds: 60,
-  sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
-  broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
-  verbose: false // verbose logging such as API activity
-}
+type EosFunction = 'getActionsSuperNode' | 'getActions' | 'getCurrencyBalance' | 'transaction'
+
 export class EosEngine extends CurrencyEngine {
   // TODO: Add currency specific params
   // Store any per wallet specific data in the `currencyEngine` object. Add any params
   // to the EosEngine class definition in eosEngine.js and initialize them in the
   // constructor()
-  eosServer: Object
+  eosPlugin: EosPlugin
   balancesChecked: number
   transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData: EosWalletOtherData
 
   constructor (
-    currencyPlugin: CurrencyPlugin,
+    currencyPlugin: EosPlugin,
     io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -60,26 +54,17 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
+    this.eosPlugin = currencyPlugin
     this.balancesChecked = 0
     this.transactionsChecked = 0
     this.activatedAccountsCache = {}
-    this.eosServer = {}
-  }
-
-  async getAccSystemStats (account: string) {
-    return new Promise((resolve, reject) => {
-      this.eosServer.getAccount(account, (error, result) => {
-        if (error) reject(error)
-        resolve(result)
-      })
-    })
   }
 
   // Poll on the blockheight
   async checkBlockchainInnerLoop () {
     try {
       const result = await new Promise((resolve, reject) => {
-        this.eosServer.getInfo((error, info) => {
+        this.eosPlugin.eosServer.getInfo((error, info) => {
           if (error) reject(error)
           else resolve(info)
         })
@@ -97,7 +82,56 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  processTransaction (action: EosGetTransaction) {
+  processTransactionSuperNode (action: EosTransactionSuperNode) {
+    const result = validateObject(action, EosTransactionSuperNodeSchema)
+    if (!result) {
+      this.log('Invalid supernode tx')
+      return
+    }
+
+    const {
+      txid,
+      date,
+      currencyCode,
+      blockHeight,
+      networkFee,
+      parentNetworkFee,
+      signedTx,
+      metadata,
+      otherParams,
+      exchangeAmount
+    } = action
+    const ourReceiveAddresses = []
+    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    if (!denom) {
+      this.log(`Received unsupported currencyCode: ${currencyCode}`)
+      return
+    }
+    let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+    if (otherParams.toAddress === this.walletLocalData.otherData.accountName) {
+      ourReceiveAddresses.push(otherParams.toAddress)
+    } else {
+      nativeAmount = `-${nativeAmount}`
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid,
+      date: Date.parse(date) / 1000,
+      currencyCode,
+      blockHeight,
+      nativeAmount,
+      networkFee,
+      parentNetworkFee,
+      ourReceiveAddresses,
+      signedTx,
+      metadata,
+      otherParams
+    }
+
+    this.addTransaction(currencyCode, edgeTransaction)
+  }
+
+  processTransaction (action: EosTransaction) {
     const ourReceiveAddresses = []
     const date = Date.parse(action.block_time) / 1000
     const blockHeight = action.block_num
@@ -159,91 +193,49 @@ export class EosEngine extends CurrencyEngine {
       // this.log(`Amount: ${exchangeAmount}`)
       // this.log(`currencyCode: ${currencyCode}`)
     }
-
-    // const ourReceiveAddresses:Array<string> = []
-
-    // const balanceChanges = tx.outcome.balanceChanges[this.walletLocalData.publicKey]
-    // if (balanceChanges) {
-    //   for (const bc of balanceChanges) {
-    //     const currencyCode: string = bc.currency
-    //     const date: number = Date.parse(tx.outcome.timestamp) / 1000
-    //     const blockHeight: number = tx.outcome.ledgerVersion
-
-    //     let exchangeAmount: string = bc.value
-    //     if (exchangeAmount.slice(0, 1) === '-') {
-    //       exchangeAmount = bns.add(tx.outcome.fee, exchangeAmount)
-    //     } else {
-    //       ourReceiveAddresses.push(this.walletLocalData.publicKey)
-    //     }
-    //     const nativeAmount: string = bns.mul(exchangeAmount, '1000000')
-    //     let networkFee: string
-    //     let parentNetworkFee: string
-    //     if (currencyCode === PRIMARY_CURRENCY) {
-    //       networkFee = bns.mul(tx.outcome.fee, '1000000')
-    //     } else {
-    //       networkFee = '0'
-    //       parentNetworkFee = bns.mul(tx.outcome.fee, '1000000')
-    //     }
-
-    //     const edgeTransaction: EdgeTransaction = {
-    //       txid: tx.id.toLowerCase(),
-    //       date,
-    //       currencyCode,
-    //       blockHeight,
-    //       nativeAmount,
-    //       networkFee,
-    //       parentNetworkFee,
-    //       ourReceiveAddresses,
-    //       signedTx: 'has_been_signed',
-    //       otherParams: {}
-    //     }
-
-    //     const idx = this.findTransaction(currencyCode, edgeTransaction.txid)
-    //     if (idx === -1) {
-    //       this.log(sprintf('New transaction: %s', edgeTransaction.txid))
-
-    //       // New transaction not in database
-    //       this.addTransaction(currencyCode, edgeTransaction)
-    //     } else {
-    //       // Already have this tx in the database. See if anything changed
-    //       const transactionsArray = this.transactionList[ currencyCode ]
-    //       const edgeTx = transactionsArray[ idx ]
-
-    //       if (
-    //         edgeTx.blockHeight !== edgeTransaction.blockHeight ||
-    //         edgeTx.networkFee !== edgeTransaction.networkFee ||
-    //         edgeTx.nativeAmount !== edgeTransaction.nativeAmount
-    //       ) {
-    //         this.log(sprintf('Update transaction: %s height:%s',
-    //           edgeTransaction.txid,
-    //           edgeTransaction.blockHeight))
-    //         this.updateTransaction(currencyCode, edgeTransaction, idx)
-    //       } else {
-    //         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
-    //       }
-    //     }
-    //   }
-
-    //   if (this.transactionsChangedArray.length > 0) {
-    //     this.currencyEngineCallbacks.onTransactionsChanged(
-    //       this.transactionsChangedArray
-    //     )
-    //     this.transactionsChangedArray = []
-    //   }
-    // }
   }
 
   async checkTransactionsInnerLoop () {
     try {
-      const actions = await this.eosServer.getActions(
-        this.walletLocalData.otherData.accountName
-      )
-      if (actions.actions && actions.actions.length > 0) {
-        for (const action of actions.actions) {
-          this.processTransaction(action)
-        }
+      let startBlock: number = 0
+      if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+        // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+        startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
       }
-      this.transactionsChecked = 1
+
+      let actions
+      try {
+        // Try super nodes first
+        const url =
+          `/v1/history/get_actions/` +
+          this.walletLocalData.otherData.accountName +
+          `/transfer?pure=false&blockHeight=` + startBlock.toString()
+        const result = await this.multicastServers('getActionsSuperNode', url)
+        actions = await result.json()
+        if (actions.length) {
+          for (const action of actions) {
+            this.processTransactionSuperNode(action)
+          }
+        }
+        this.transactionsChecked = 1
+      } catch (e) {
+        // Try regular nodes
+        const actionsObject = await this.multicastServers('getActions',
+          this.walletLocalData.otherData.accountName
+        )
+        if (actionsObject.actions && actionsObject.actions.length > 0) {
+          actions = actionsObject.actions
+        } else {
+          actions = []
+        }
+        if (actions.length) {
+          for (const action of actions) {
+            this.processTransaction(action)
+          }
+        }
+        this.transactionsChecked = 1
+      }
+
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(e)
@@ -254,38 +246,6 @@ export class EosEngine extends CurrencyEngine {
       )
       this.transactionsChangedArray = []
     }
-    // const address = this.walletLocalData.publicKey
-    // let startBlock:number = 0
-    // if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-    //   // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-    //   startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
-    // }
-
-    // try {
-    //   let options
-    //   if (startBlock > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-    //     options = { minLedgerVersion: startBlock }
-    //   }
-    //   const transactions: XrpGetTransactions = await this.eosApi.getTransactions(address, options)
-    //   const valid = validateObject(transactions, GetTransactionsSchema)
-    //   if (valid) {
-    //     this.log('Fetched transactions count: ' + transactions.length)
-
-    //     // Get transactions
-    //     // Iterate over transactions in address
-    //     for (let i = 0; i < transactions.length; i++) {
-    //       const tx = transactions[i]
-    //       this.processTransaction(tx)
-    //     }
-    //     this.updateOnAddressesChecked()
-    //   }
-    // } catch (e) {
-    //   this.log(e.code)
-    //   this.log(e.message)
-    //   this.log(e)
-    //   this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
-    //   this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
-    // }
   }
 
   updateOnAddressesChecked () {
@@ -297,6 +257,38 @@ export class EosEngine extends CurrencyEngine {
     this.currencyEngineCallbacks.onAddressesChecked(this.addressesChecked)
   }
 
+  async multicastServers (func: EosFunction, ...params: any): Promise<any> {
+    let out = { result: '', server: 'no server' }
+    switch (func) {
+      case 'getActionsSuperNode':
+        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosSuperNodes.map(server => async () => {
+          const url = server + params[0]
+          const result = await this.io.fetch(url)
+          return { server, result }
+        })
+        out = await asyncWaterfall(funcs)
+        this.log(`EOS multicastServers ${func} ${out.server} won`)
+        break
+
+      case 'getActions':
+      case 'getCurrencyBalance':
+      case 'transaction':
+        out = await promiseAny(
+          this.currencyInfo.defaultSettings.otherSettings.eosNodes.map(async server => {
+            const config = Object.assign({}, eosConfig)
+            config.httpEndpoint = server
+            const eosServer = eosjs(eosConfig)
+            const result = await eosServer[func](...params)
+            return { server: server, result }
+          })
+        )
+        break
+    }
+    this.log(`EOS multicastServers ${func} ${out.server} won`)
+
+    return out.result
+  }
+
   // Check all account balance and other relevant info
   async checkAccountInnerLoop () {
     const publicKey = this.walletLocalData.publicKey
@@ -304,7 +296,7 @@ export class EosEngine extends CurrencyEngine {
       // Check if the publicKey has an account accountName
       if (!this.walletLocalData.otherData.accountName) {
         const accounts = await new Promise((resolve, reject) => {
-          this.eosServer.getKeyAccounts(publicKey, (error, result) => {
+          this.eosPlugin.eosServer.getKeyAccounts(publicKey, (error, result) => {
             if (error) reject(error)
             resolve(result)
             // array of account names, can be multiples
@@ -318,7 +310,7 @@ export class EosEngine extends CurrencyEngine {
 
       // Check balance on account
       if (this.walletLocalData.otherData.accountName) {
-        const results = await this.eosServer.getCurrencyBalance(
+        const results = await this.multicastServers('getCurrencyBalance',
           'eosio.token',
           this.walletLocalData.otherData.accountName
         )
@@ -380,9 +372,6 @@ export class EosEngine extends CurrencyEngine {
   // This routine is called once a wallet needs to start querying the network
   async startEngine () {
     this.engineOn = true
-
-    config.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
-    this.eosServer = eosjs(config)
 
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
@@ -455,10 +444,10 @@ export class EosEngine extends CurrencyEngine {
       mustCreateAccount = true
     } else if (activated === undefined) {
       try {
-        await this.getAccSystemStats(publicAddress)
+        await this.eosPlugin.getAccSystemStats(publicAddress)
         this.activatedAccountsCache[publicAddress] = true
       } catch (e) {
-        if (e.message.includes('unknown key')) {
+        if (e.code.includes('ErrorUnknownAccount')) {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
         } else {
@@ -520,7 +509,7 @@ export class EosEngine extends CurrencyEngine {
     }
 
     // Create an unsigned transaction to catch any errors
-    await this.eosServer.transaction(transactionJson, {
+    await this.multicastServers('transaction', {
       sign: false,
       broadcast: false
     })
@@ -619,7 +608,7 @@ export class EosEngine extends CurrencyEngine {
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
-    await this.eosServer.transaction(
+    await this.multicastServers('transaction',
       edgeTransaction.otherParams.transactionJson,
       {
         keyProvider,
@@ -644,7 +633,7 @@ export class EosEngine extends CurrencyEngine {
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
-    const signedTx = await this.eosServer.transaction(
+    const signedTx = await this.multicastServers('transaction',
       edgeTransaction.otherParams.transactionJson,
       {
         keyProvider,
