@@ -73,7 +73,7 @@ export class EosPlugin extends CurrencyPlugin {
       },
       validateAccount: async (account: string): Promise<Object> => {
         const valid = checkAddress(account)
-        const out = { result: '' }
+        const out = { result: '', err_msg: undefined }
         if (!valid) {
           out.result = 'ErrorInvalidAccountName'
         }
@@ -91,7 +91,7 @@ export class EosPlugin extends CurrencyPlugin {
             out.err_msg = e.message
           }
         }
-        this.log(`validateAccount: result=${out.result}`)
+        console.log(`validateAccount: result=${out.result}`)
         return out
       }
     }
@@ -175,11 +175,8 @@ export class EosPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      let currencyCode: string = 'EOS'
+      const currencyCode: string = 'EOS'
       const nativeAmount: string = obj.nativeAmount
-      if (typeof obj.currencyCode === 'string') {
-        currencyCode = obj.currencyCode
-      }
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')

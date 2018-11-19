@@ -139,11 +139,8 @@ export class XrpPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      let currencyCode: string = 'XRP'
+      const currencyCode: string = 'XRP'
       const nativeAmount: string = obj.nativeAmount
-      if (typeof obj.currencyCode === 'string') {
-        currencyCode = obj.currencyCode
-      }
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')

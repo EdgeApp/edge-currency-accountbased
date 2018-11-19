@@ -150,11 +150,8 @@ export class StellarPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      let currencyCode: string = 'XLM'
+      const currencyCode: string = 'XLM'
       const nativeAmount: string = obj.nativeAmount
-      if (typeof obj.currencyCode === 'string') {
-        currencyCode = obj.currencyCode
-      }
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')

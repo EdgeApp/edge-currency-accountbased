@@ -376,57 +376,13 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
-    // Validate the spendInfo
-    const valid = validateObject(edgeSpendInfo, {
-      type: 'object',
-      properties: {
-        currencyCode: { type: 'string' },
-        networkFeeOption: { type: 'string' },
-        spendTargets: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              currencyCode: { type: 'string' },
-              publicAddress: { type: 'string' },
-              nativeAmount: { type: 'string' },
-              destMetadata: { type: 'object' },
-              destWallet: { type: 'object' }
-            },
-            required: ['publicAddress']
-          }
-        }
-      },
-      required: ['spendTargets']
-    })
-
-    if (!valid) {
-      throw new Error('Error: invalid ABCSpendInfo')
-    }
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    // let tokenInfo = {}
-    // tokenInfo.contractAddress = ''
-    //
-    let currencyCode: string = ''
-    if (typeof edgeSpendInfo.currencyCode === 'string') {
-      currencyCode = edgeSpendInfo.currencyCode
-    } else {
-      currencyCode = 'XRP'
-    }
-    edgeSpendInfo.currencyCode = currencyCode
-
-    let publicAddress = ''
-
-    if (typeof edgeSpendInfo.spendTargets[0].publicAddress === 'string') {
-      publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    } else {
-      throw new Error('No valid spendTarget')
-    }
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
 
     let nativeAmount = '0'
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
@@ -439,11 +395,6 @@ export class XrpEngine extends CurrencyEngine {
       throw new error.NoAmountSpecifiedError()
     }
 
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!nativeBalance) {
-      throw new error.InsufficientFundsError()
-    }
-
     const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
 
     if (currencyCode === PRIMARY_CURRENCY) {
@@ -454,7 +405,7 @@ export class XrpEngine extends CurrencyEngine {
       }
     }
 
-    const exchangeAmount = bns.div(nativeAmount, '1000000', 6)
+    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 6)
     let uniqueIdentifier
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&

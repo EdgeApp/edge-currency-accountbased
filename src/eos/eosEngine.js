@@ -12,7 +12,6 @@ import type {
 } from 'edge-core-js'
 import { error } from 'edge-core-js'
 import { bns } from 'biggystring'
-import { MakeSpendSchema } from '../common/schema.js'
 import { CurrencyEngine } from '../common/engine.js'
 import { validateObject, promiseAny, asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { type EosTransaction, type EosWalletOtherData, type EosTransactionSuperNode } from './eosTypes.js'
@@ -426,33 +425,13 @@ export class EosEngine extends CurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
-    // Validate the spendInfo
-    const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
-
-    if (!valid) {
-      throw new Error('Error: invalid EdgeSpendInfo')
-    }
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    let currencyCode: string = ''
-    if (typeof edgeSpendInfo.currencyCode === 'string') {
-      currencyCode = edgeSpendInfo.currencyCode
-    } else {
-      currencyCode = 'EOS'
-    }
-    edgeSpendInfo.currencyCode = currencyCode
-
-    let publicAddress = ''
-
-    if (typeof edgeSpendInfo.spendTargets[0].publicAddress === 'string') {
-      publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    } else {
-      throw new Error('No valid spendTarget')
-    }
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
 
     // Check if destination address is activated
     let mustCreateAccount = false
@@ -488,15 +467,6 @@ export class EosEngine extends CurrencyEngine {
       throw new error.NoAmountSpecifiedError()
     }
 
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!nativeBalance) {
-      throw new error.InsufficientFundsError()
-    }
-
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
-    if (!denom) {
-      throw new Error('InternalErrorInvalidCurrencyCode')
-    }
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 4)
     const networkFee = '0'
     if (bns.gt(nativeAmount, nativeBalance)) {

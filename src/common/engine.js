@@ -3,22 +3,24 @@
  */
 // @flow
 
-import type {
-  EdgeTransaction,
-  EdgeCurrencyEngineCallbacks,
-  EdgeCurrencyEngineOptions,
-  EdgeGetTransactionsOptions,
-  EdgeWalletInfo,
-  EdgeMetaToken,
-  EdgeCurrencyInfo,
-  EdgeDenomination,
-  EdgeFreshAddress,
-  EdgeDataDump,
-  EdgeCurrencyPlugin,
-  EdgeIo
+import {
+  error,
+  type EdgeTransaction,
+  type EdgeCurrencyEngineCallbacks,
+  type EdgeCurrencyEngineOptions,
+  type EdgeGetTransactionsOptions,
+  type EdgeWalletInfo,
+  type EdgeSpendInfo,
+  type EdgeMetaToken,
+  type EdgeCurrencyInfo,
+  type EdgeDenomination,
+  type EdgeFreshAddress,
+  type EdgeDataDump,
+  type EdgeCurrencyPlugin,
+  type EdgeIo
 } from 'edge-core-js'
 import { bns } from 'biggystring'
-import { CustomTokenSchema } from './schema.js'
+import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
 import {
   DATA_STORE_FILE,
   DATA_STORE_FOLDER,
@@ -28,7 +30,7 @@ import {
   WalletLocalData,
   type CustomToken
 } from './types.js'
-import { isHex, normalizeAddress, validateObject } from './utils.js'
+import { isHex, normalizeAddress, validateObject, getDenomInfo } from './utils.js'
 import { CurrencyPlugin } from './plugin.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
@@ -696,7 +698,39 @@ class CurrencyEngine {
     return dataDump
   }
 
-  // asynchronous
+  makeSpend (edgeSpendInfo: EdgeSpendInfo): Object {
+    const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
+
+    if (!valid) {
+      throw new Error('Error: Invalid EdgeSpendInfo')
+    }
+
+    for (const st of edgeSpendInfo.spendTargets) {
+      if (st.publicAddress === this.walletLocalData.publicKey) {
+        throw new error.SpendToSelfError()
+      }
+    }
+
+    let currencyCode: string = ''
+    if (typeof edgeSpendInfo.currencyCode === 'string') {
+      currencyCode = edgeSpendInfo.currencyCode
+    } else {
+      currencyCode = this.currencyInfo.currencyCode
+    }
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (!nativeBalance || bns.eq(nativeBalance, '0')) {
+      throw new error.InsufficientFundsError()
+    }
+
+    edgeSpendInfo.currencyCode = currencyCode
+    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    if (!denom) {
+      throw new Error('InternalErrorInvalidCurrencyCode')
+    }
+
+    return { edgeSpendInfo, nativeBalance, currencyCode, denom }
+  }
+
   async saveTx (edgeTransaction: EdgeTransaction) {
     this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)
     this.currencyEngineCallbacks.onTransactionsChanged([edgeTransaction])
