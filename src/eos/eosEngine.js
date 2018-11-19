@@ -37,6 +37,7 @@ export class EosEngine extends CurrencyEngine {
   transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData: EosWalletOtherData
+  otherMethods: Object
 
   constructor (
     currencyPlugin: EosPlugin,
@@ -58,6 +59,22 @@ export class EosEngine extends CurrencyEngine {
     this.balancesChecked = 0
     this.transactionsChecked = 0
     this.activatedAccountsCache = {}
+    this.otherMethods = {
+      getAccountActivationQuote: async (params: Object): Promise<Object> => {
+        const { paymentCurrencyCode, accountName } = params
+        if (!paymentCurrencyCode || !accountName) {
+          return {}
+        }
+        // Call payment server to get quote
+        const out = {
+          paymentAddress: 'someFakeAddress',
+          exchangeAmount: '.00123',
+          nativeAmount: '123000',
+          expirationDate: 1542490933
+        }
+        return out
+      }
+    }
   }
 
   // Poll on the blockheight

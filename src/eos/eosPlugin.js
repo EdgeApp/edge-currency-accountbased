@@ -60,20 +60,39 @@ export class EosPlugin extends CurrencyPlugin {
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     this.eosServer = eosjs(eosConfig)
     this.otherMethods = {
-      getAccountExists: async (account: string) => {
+      getActivationSupportedCurrencies: async (): Promise<Object> => {
+        return {
+          'BTC': true,
+          'BCH': true,
+          'DASH': true,
+          'LTC': true
+        }
+      },
+      getActivationCost: async (): Promise<string> => {
+        return '0.1000' // this is an exchangeAmount in units of full EOS
+      },
+      validateAccount: async (account: string): Promise<Object> => {
+        const valid = checkAddress(account)
+        const out = { result: '' }
+        if (!valid) {
+          out.result = 'ErrorInvalidAccountName'
+        }
         try {
           const result = await this.getAccSystemStats(account)
           if (result) {
-            return true
+            out.result = 'ErrorAccountUnavailable'
           }
+          out.result = 'ErrorUnknownError'
         } catch (e) {
           if (e.code === 'ErrorUnknownAccount') {
-            return false
+            out.result = 'AccountAvailable'
           } else {
-            throw e
+            out.result = 'ErrorUnknownError'
+            out.err_msg = e.message
           }
         }
-        return false
+        this.log(`validateAccount: result=${out.result}`)
+        return out
       }
     }
   }
