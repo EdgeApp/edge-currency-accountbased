@@ -301,10 +301,5 @@ for (const fixture of fixtures) {
         fixture['encodeUri']['address, amount, label, & message'][1]
       )
     })
-    it('invalid currencyCode', function () {
-      assert.throws(() => {
-        plugin.encodeUri(fixture['encodeUri']['invalid currencyCode'][0])
-      })
-    })
   })
 }
