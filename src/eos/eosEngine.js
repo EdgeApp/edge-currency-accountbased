@@ -126,6 +126,10 @@ export class EosEngine extends CurrencyEngine {
     let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
     if (otherParams.toAddress === this.walletLocalData.otherData.accountName) {
       ourReceiveAddresses.push(otherParams.toAddress)
+      if (otherParams.fromAddress === this.walletLocalData.otherData.accountName) {
+        // This is a spend to self. Make amount 0
+        nativeAmount = '0'
+      }
     } else {
       nativeAmount = `-${nativeAmount}`
     }
@@ -181,6 +185,10 @@ export class EosEngine extends CurrencyEngine {
       let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
       if (to === this.walletLocalData.otherData.accountName) {
         ourReceiveAddresses.push(to)
+        if (from === this.walletLocalData.otherData.accountName) {
+          // This is a spend to self. Make amount 0
+          nativeAmount = '0'
+        }
       } else {
         nativeAmount = `-${nativeAmount}`
       }

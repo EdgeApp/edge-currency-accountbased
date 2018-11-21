@@ -171,6 +171,10 @@ export class StellarEngine extends CurrencyEngine {
 
     if (toAddress === this.walletLocalData.publicKey) {
       ourReceiveAddresses.push(fromAddress)
+      if (fromAddress === this.walletLocalData.publicKey) {
+        // This is a spend to self. Make fee the only amount
+        nativeAmount = '-' + networkFee
+      }
     } else {
       // This is a spend. Include fee in amount and make amount negative
       nativeAmount = bns.add(nativeAmount, networkFee)
