@@ -34,7 +34,7 @@ let io
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
-function checkAddress (address: string): boolean {
+export function checkAddress (address: string): boolean {
   // TODO: Check for a valid address format. The passed in
   // address would be a use visible displayed address such as what would
   // go into a QR code
@@ -61,34 +61,42 @@ export class EosPlugin extends CurrencyPlugin {
     this.eosServer = eosjs(eosConfig)
     this.otherMethods = {
       getActivationSupportedCurrencies: async (): Promise<Object> => {
-        return {
-          'BTC': true,
-          'BCH': true,
-          'DASH': true,
-          'LTC': true
-        }
+        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
+        const response = await io.fetch(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
+        const out = await response.json()
+        return out
       },
       getActivationCost: async (): Promise<string> => {
-        return '0.1000' // this is an exchangeAmount in units of full EOS
+        try {
+          const result = await io.fetch('https://info1.edgesecure.co:8444/v1/eosPrices')
+          const prices = await result.json()
+          const totalEos = (Number(prices.ram) * 8) + (Number(prices.net) * 2) + (Number(prices.cpu) * 10)
+          return totalEos.toString()
+        } catch (e) {
+          throw new Error('ErrorUnableToGetCost')
+        }
       },
-      validateAccount: async (account: string): Promise<Object> => {
+      validateAccount: async (account: string): Promise<boolean> => {
         const valid = checkAddress(account)
-        const out = { result: '', err_msg: undefined }
+        const out = {result: ''}
         if (!valid) {
-          out.result = 'ErrorInvalidAccountName'
+          const e = new Error('ErrorInvalidAccountName')
+          e.name = 'ErrorInvalidAccountName'
+          throw e
         }
         try {
           const result = await this.getAccSystemStats(account)
           if (result) {
-            out.result = 'ErrorAccountUnavailable'
+            const e = new Error('ErrorAccountUnavailable')
+            e.name = 'ErrorAccountUnavailable'
+            throw e
           }
-          out.result = 'ErrorUnknownError'
+          throw new Error('ErrorUnknownError')
         } catch (e) {
           if (e.code === 'ErrorUnknownAccount') {
             out.result = 'AccountAvailable'
           } else {
-            out.result = 'ErrorUnknownError'
-            out.err_msg = e.message
+            throw e
           }
         }
         console.log(`validateAccount: result=${out.result}`)

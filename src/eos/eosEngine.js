@@ -16,7 +16,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import { validateObject, promiseAny, asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { type EosTransaction, type EosWalletOtherData, type EosTransactionSuperNode } from './eosTypes.js'
 import { EosTransactionSuperNodeSchema } from './eosSchema.js'
-import { eosConfig, EosPlugin } from './eosPlugin.js'
+import { eosConfig, EosPlugin, checkAddress } from './eosPlugin.js'
 import eosjs from 'eosjs'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -24,7 +24,7 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 3 * 60
 
-type EosFunction = 'getActionsSuperNode' | 'getActions' | 'getCurrencyBalance' | 'transaction'
+type EosFunction = 'getActionsSuperNode' | 'getActions' | 'getCurrencyBalance' | 'transaction' | 'actionsPaymentServer'
 
 export class EosEngine extends CurrencyEngine {
   // TODO: Add currency specific params
@@ -60,18 +60,36 @@ export class EosEngine extends CurrencyEngine {
     this.activatedAccountsCache = {}
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
-        const { paymentCurrencyCode, accountName } = params
-        if (!paymentCurrencyCode || !accountName) {
-          return {}
+        const { requestedAccountName, currencyCode, ownerPublicKey, activePublicKey } = params
+        if (!currencyCode || !requestedAccountName) {
+          throw new Error('ErrorInvalidParams')
         }
-        // Call payment server to get quote
-        const out = {
-          paymentAddress: 'someFakeAddress',
-          exchangeAmount: '.00123',
-          nativeAmount: '123000',
-          expirationDate: 1542490933
+        if (!ownerPublicKey && !activePublicKey) {
+          throw new Error('ErrorInvalidParams')
         }
-        return out
+        if (!checkAddress(requestedAccountName)) {
+          const e = new Error('ErrorInvalidAccountName')
+          e.name = 'ErrorInvalidAccountName'
+          throw e
+        }
+
+        const options = {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ requestedAccountName, currencyCode, ownerPublicKey, activePublicKey })
+        }
+        try {
+          const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
+          const url = `${eosPaymentServer}/api/v1/activateAccount`
+          const result = await this.io.fetch(url, options)
+          const out = await result.json()
+          return out
+        } catch (e) {
+          throw e
+        }
       }
     }
   }

@@ -6,6 +6,7 @@ import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
   eosSuperNodes: ['http://206.189.121.218:3838'],
+  eosActivationServers: ['https://eos-name-api.cryptoambassador.work'],
   eosNodes: ['https://api.eosnewyork.io:443']
 }
 
