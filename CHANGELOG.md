@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.13
+
+* Fix saving read back of lastAddressQueryHeight to prevent always querying from block 0
+
 ## 0.0.12
 
 * Do not load transactions until core asks for getTransactions or we have to save a new tx to disk
