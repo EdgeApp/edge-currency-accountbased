@@ -45,7 +45,7 @@ export class WalletLocalData {
       if (typeof data.blockHeight === 'number') {
         this.blockHeight = data.blockHeight
       }
-      if (typeof data.lastAddressQueryHeight === 'string') {
+      if (typeof data.lastAddressQueryHeight === 'number') {
         this.lastAddressQueryHeight = data.lastAddressQueryHeight
       }
       if (typeof data.publicKey === 'string') this.publicKey = data.publicKey
