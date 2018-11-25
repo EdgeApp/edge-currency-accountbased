@@ -102,12 +102,7 @@ class CurrencyEngine {
     this.walletLocalFolder = walletLocalFolder
 
     if (typeof this.walletInfo.keys.publicKey !== 'string') {
-      if (walletInfo.keys.publicKey) {
-        this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
-      } else {
-        const pubKeys = currencyPlugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.publicKey = pubKeys.publicKey
-      }
+      this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${
@@ -182,6 +177,11 @@ class CurrencyEngine {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
+    if (!this.walletInfo.keys.publicKey) {
+      const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
+      this.walletInfo.keys.publicKey = pubKeys.publicKey
+    }
+
     const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
     try {
       const result = await folder.file(DATA_STORE_FILE).getText()

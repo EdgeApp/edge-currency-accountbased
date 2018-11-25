@@ -77,13 +77,15 @@ for (const fixture of fixtures) {
         fixture['Test Currency code']
       )
       plugin = currencyPlugin
-      keys = plugin.createPrivateKey(WALLET_TYPE)
+      keys = await plugin.createPrivateKey(WALLET_TYPE)
       const info: EdgeWalletInfo = {
         id: '1',
         type: WALLET_TYPE,
         keys
       }
-      keys = plugin.derivePublicKey(info)
+      const keys2 = await plugin.derivePublicKey(info)
+      keys = Object.assign(keys, keys2)
+      console.log('')
       // })
     })
   })
@@ -127,6 +129,9 @@ for (const fixture of fixtures) {
         assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
         assert.equal(typeof engine.saveTx, 'function', 'saveTx')
         return true
+      }).catch(e => {
+        console.log(e)
+        assert.equal(0, 1)
       })
     })
   })

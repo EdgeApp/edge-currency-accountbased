@@ -4,6 +4,8 @@
 // @flow
 
 import type {
+  EdgeCurrencyPlugin,
+  EdgeIo,
   EdgeTransaction,
   EdgeSpendInfo,
   EdgeWalletInfo,
@@ -47,14 +49,6 @@ export class EosEngine extends CurrencyEngine {
     opts: EdgeCurrencyEngineOptions
   ) {
     super(currencyPlugin, io_, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      if (walletInfo.keys.ownerPublicKey) {
-        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
-      } else {
-        const pubKeys = currencyPlugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
-      }
-    }
 
     this.eosPlugin = currencyPlugin
     this.balancesChecked = 0
@@ -96,6 +90,22 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
+  async loadEngine (
+    plugin: EdgeCurrencyPlugin,
+    io: EdgeIo,
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<void> {
+    await super.loadEngine(plugin, io, walletInfo, opts)
+    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
+      if (walletInfo.keys.ownerPublicKey) {
+        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
+      } else {
+        const pubKeys = await plugin.derivePublicKey(this.walletInfo)
+        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
+      }
+    }
+  }
   // Poll on the blockheight
   async checkBlockchainInnerLoop () {
     try {

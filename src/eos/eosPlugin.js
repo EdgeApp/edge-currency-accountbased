@@ -8,6 +8,7 @@ import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
@@ -104,7 +105,7 @@ export class EosPlugin extends CurrencyPlugin {
       }
     }
   }
-  createPrivateKey (walletType: string) {
+  async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'eos') {
@@ -122,7 +123,7 @@ export class EosPlugin extends CurrencyPlugin {
     }
   }
 
-  derivePublicKey (walletInfo: EdgeWalletInfo) {
+  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'eos') {
       // TODO: User currency library to derive the public keys/addresses from the private key.
@@ -170,7 +171,7 @@ export class EosPlugin extends CurrencyPlugin {
     return out
   }
 
-  parseUri (uri: string) {
+  async parseUri (uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
       eos: true
     })
@@ -182,7 +183,7 @@ export class EosPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  encodeUri (obj: EdgeEncodeUri) {
+  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
