@@ -5,6 +5,8 @@
 
 import { validate } from 'jsonschema'
 import { type EdgeCurrencyInfo } from 'edge-core-js'
+import { BN } from 'bn.js'
+const Buffer = require('buffer/').Buffer
 
 function normalizeAddress (address: string) {
   return address.toLowerCase().replace('0x', '')
@@ -36,6 +38,14 @@ export function isEmpty (map: Object) {
 export function isHex (h: string) {
   const out = /^[0-9A-F]+$/i.test(h)
   return out
+}
+
+export function hexToBuf (hex: string) {
+  const noHexPrefix = hex.replace('0x', '')
+  const noHexPrefixBN = new BN(noHexPrefix, 16)
+  const array = noHexPrefixBN.toArray()
+  const buf = Buffer.from(array)
+  return buf
 }
 
 function getDenomInfo (currencyInfo: EdgeCurrencyInfo, denom: string) {

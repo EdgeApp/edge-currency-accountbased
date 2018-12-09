@@ -32,7 +32,7 @@
     "prepare": "npm run build",
     "rollup": "rollup -c",
     "pretest": "npm run build:test && npm run lint",
-    "test": "nyc mocha --require source-map-support/register build/tests.cjs.js",
+    "test": "nyc mocha --require source-map-support/register build/lib/tests.cjs.js",
     "posttest": "nyc report --reporter=html",
     "updot": "updot",
     "webpack": "webpack"
