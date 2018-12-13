@@ -32,8 +32,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'X'
     }
   ],
-  symbolImage: 'https://developer.airbitz.co/content/Ripple-logo-blue-64.png',
+  symbolImage: 'https://developer.airbitz.co/content/ripple-logo-solo-64.png',
   symbolImageDarkMono:
-    'https://developer.airbitz.co/content/Ripple-logo-grey-64.png',
+    'https://developer.airbitz.co/content/ripple-logo-solo-64.png',
   metaTokens: []
 }
