@@ -32,8 +32,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: '*'
     }
   ],
-  symbolImage: 'https://developer.airbitz.co/content/stellar-logo-color-64.png',
+  symbolImage: 'https://developer.airbitz.co/content/stellar-logo-solo-64.png',
   symbolImageDarkMono:
-    'https://developer.airbitz.co/content/stellar-logo-grey-64.png',
+    'https://developer.airbitz.co/content/stellar-logo-solo-64.png',
   metaTokens: []
 }

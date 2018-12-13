@@ -33,8 +33,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'E'
     }
   ],
-  symbolImage: 'https://developer.airbitz.co/content/eos-logo-color-64.png',
+  symbolImage: 'https://developer.airbitz.co/content/eos-logo-solo-64.png',
   symbolImageDarkMono:
-    'https://developer.airbitz.co/content/eos-logo-grey-64.png',
+    'https://developer.airbitz.co/content/eos-logo-solo-64.png',
   metaTokens: []
 }
