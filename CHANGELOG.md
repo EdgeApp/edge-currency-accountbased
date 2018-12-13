@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.15
+
+* Use new colored icons
+
 ## 0.0.13
 
 * Fix saving read back of lastAddressQueryHeight to prevent always querying from block 0
