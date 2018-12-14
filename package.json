@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "license": "SEE LICENSE IN LICENSE",
@@ -20,7 +20,7 @@
     "url": "git@github.com:EdgeApp/edge-currency-accountbased.git"
   },
   "scripts": {
-    "build": "npm run rollup && npm run build:flow",
+    "build": "npm run build:clean && npm run rollup && npm run build:flow",
     "build:clean": "rimraf lib",
     "build:flow": "flow-copy-source -v -i '**/test/**' src lib",
     "build:test": "rollup -c rollup.config.test.js",

@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.16
+
+* Publish with a cleaned lib/ directory. Identical code to 0.0.15
+
 ## 0.0.15
 
 * Use new colored icons
