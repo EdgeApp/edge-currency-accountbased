@@ -159,6 +159,12 @@ export class EosPlugin extends CurrencyPlugin {
     if (!currencyEngine.otherData.accountName) {
       currencyEngine.otherData.accountName = ''
     }
+    if (!currencyEngine.otherData.lastQueryActionSeq) {
+      currencyEngine.otherData.lastQueryActionSeq = 0
+    }
+    if (!currencyEngine.otherData.highestTxHeight) {
+      currencyEngine.otherData.highestTxHeight = 0
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out

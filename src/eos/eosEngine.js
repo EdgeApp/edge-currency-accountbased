@@ -22,9 +22,11 @@ import eosjs from 'eosjs'
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = 3 * 60
+// const ADDRESS_QUERY_LOOKBACK_BLOCKS = 0
+const CHECK_TXS_CRYPTO_LIONS = true
+const CHECK_TXS_FULL_NODES = true
 
-type EosFunction = 'getActionsSuperNode' | 'getActions' | 'getCurrencyBalance' | 'transaction' | 'actionsPaymentServer'
+type EosFunction = 'doCryptoLions' | 'getActions' | 'getCurrencyBalance' | 'transaction' | 'actionsPaymentServer'
 
 export class EosEngine extends CurrencyEngine {
   // TODO: Add currency specific params
@@ -116,72 +118,77 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  processTransactionSuperNode (action: EosTransactionSuperNode) {
+  processTransactionCryptoLions (action: EosTransactionSuperNode): number {
     const result = validateObject(action, EosTransactionSuperNodeSchema)
     if (!result) {
       this.log('Invalid supernode tx')
-      return
+      return 0
     }
 
     const {
-      txid,
-      date,
-      currencyCode,
-      blockHeight,
-      networkFee,
-      parentNetworkFee,
-      signedTx,
-      metadata,
-      otherParams,
-      exchangeAmount
+      act,
+      trx_id,
+      block_num,
+      block_time
     } = action
+
+    const { from, to, quantity, memo, hex_data } = act.data
+    const [ exchangeAmount, currencyCode ] = quantity.split(' ')
     const ourReceiveAddresses = []
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
     if (!denom) {
       this.log(`Received unsupported currencyCode: ${currencyCode}`)
-      return
+      return 0
     }
     let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
-    if (otherParams.toAddress === this.walletLocalData.otherData.accountName) {
-      ourReceiveAddresses.push(otherParams.toAddress)
-      if (otherParams.fromAddress === this.walletLocalData.otherData.accountName) {
+    let name = ''
+    if (to === this.walletLocalData.otherData.accountName) {
+      name = from
+      ourReceiveAddresses.push(to)
+      if (from === this.walletLocalData.otherData.accountName) {
         // This is a spend to self. Make amount 0
         nativeAmount = '0'
       }
     } else {
+      name = to
       nativeAmount = `-${nativeAmount}`
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid,
-      date: Date.parse(date) / 1000,
+      txid: trx_id,
+      date: Date.parse(block_time) / 1000,
       currencyCode,
-      blockHeight,
+      blockHeight: block_num,
       nativeAmount,
-      networkFee,
-      parentNetworkFee,
+      networkFee: '0',
+      parentNetworkFee: '0',
       ourReceiveAddresses,
-      signedTx,
-      metadata,
-      otherParams
+      signedTx: hex_data,
+      otherParams: {},
+      metadata: {
+        name,
+        notes: memo
+      }
     }
 
     this.addTransaction(currencyCode, edgeTransaction)
+    return edgeTransaction.blockHeight
   }
 
-  processTransaction (action: EosTransaction) {
+  processTransactionFullNode (action: EosTransaction): number {
     const ourReceiveAddresses = []
     const date = Date.parse(action.block_time) / 1000
     const blockHeight = action.block_num
-    if (!action.action_trace) {
-      this.log('Invalid EOS transaction data. No action_trace')
-      return
+    if (!action.action_trace || !action.account_action_seq) {
+      this.log('Invalid EOS transaction data. No action_trace or account_action_seq')
+      return 0
     }
+    const actionSeq = action.account_action_seq
     const txid = action.action_trace.trx_id
 
     if (!action.action_trace.act) {
       this.log('Invalid EOS transaction data. No action_trace.act')
-      return
+      return 0
     }
     const name = action.action_trace.act.name
     // this.log('------------------------------------------------')
@@ -190,7 +197,7 @@ export class EosEngine extends CurrencyEngine {
     if (name === 'transfer') {
       if (!action.action_trace.act.data) {
         this.log('Invalid EOS transaction data. No action_trace.act.data')
-        return
+        return 0
       }
       const { from, to, memo, quantity } = action.action_trace.act.data
       const split = quantity.split(' ')
@@ -198,7 +205,8 @@ export class EosEngine extends CurrencyEngine {
 
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (!denom) {
-        throw new Error('ErrorInvalidCurrencyCode')
+        this.log(`Received unsupported currencyCode: ${currencyCode}`)
+        return 0
       }
       let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
       if (to === this.walletLocalData.otherData.accountName) {
@@ -228,59 +236,108 @@ export class EosEngine extends CurrencyEngine {
       }
 
       this.addTransaction(currencyCode, edgeTransaction)
-
       // this.log(`From: ${from}`)
       // this.log(`To: ${to}`)
       // this.log(`Memo: ${memo}`)
       // this.log(`Amount: ${exchangeAmount}`)
       // this.log(`currencyCode: ${currencyCode}`)
     }
+    return actionSeq
+  }
+
+  async checkTransactionsFullNode (acct: string): Promise<boolean> {
+    if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
+    const actionSeqNumber = this.walletLocalData.otherData.lastQueryActionSeq
+    let newActionSeqNumber = actionSeqNumber
+    while (1) {
+      const actionsObject = await this.multicastServers('getActions', acct, newActionSeqNumber + 1, 9)
+      let actions = []
+      if (actionsObject.actions && actionsObject.actions.length > 0) {
+        actions = actionsObject.actions
+      } else {
+        break
+      }
+      for (const action of actions) {
+        const s = this.processTransactionFullNode(action)
+        if (s > newActionSeqNumber) {
+          newActionSeqNumber = s
+        }
+      }
+    }
+    if (newActionSeqNumber > this.walletLocalData.otherData.lastQueryActionSeq) {
+      this.walletLocalData.otherData.lastQueryActionSeq = newActionSeqNumber
+      this.walletLocalDataDirty = true
+    }
+    return true
+  }
+
+  async checkTransactionsCryptoLions (acct: string): Promise<boolean> {
+    if (!CHECK_TXS_CRYPTO_LIONS) throw new Error('Dont use cryptolions API')
+
+    const highestTxHeight = this.walletLocalData.otherData.highestTxHeight
+    let newHighestTxHeight = highestTxHeight
+
+    // Try super nodes first
+    const limit = 10
+    let skip = 0
+    let finish = false
+    while (!finish) {
+      const url = `/v1/history/get_actions/${acct}/transfer?skip=${skip}&limit=${limit}`
+      const result = await this.multicastServers('doCryptoLions', url)
+      const actionsObject = await result.json()
+      const actions = actionsObject.actions
+      if (actions.length) {
+        for (let i = 0; i < actions.length; i++) {
+          const action = actions[i]
+          const blockNum = this.processTransactionCryptoLions(action)
+          if (blockNum > newHighestTxHeight) {
+            newHighestTxHeight = blockNum
+          } else if (
+            blockNum === newHighestTxHeight &&
+            i === 0 &&
+            skip === 0) {
+            // If on the first query, we get blockHeights equal to the previously cached heights
+            // then stop query as we assume we're just getting back previously queried data
+            finish = true
+            break
+          }
+        }
+      }
+      if (!actions.length || actions.length < limit) {
+        break
+      }
+      skip += 10
+    }
+    if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
+      this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
+      this.walletLocalDataDirty = true
+    }
+    return true
   }
 
   async checkTransactionsInnerLoop () {
-    try {
-      let startBlock: number = 0
-      if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-        // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-        startBlock = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
-      }
-
-      let actions
-      try {
-        // Try super nodes first
-        const url =
-          `/v1/history/get_actions/` +
-          this.walletLocalData.otherData.accountName +
-          `/transfer?pure=false&blockHeight=` + startBlock.toString()
-        const result = await this.multicastServers('getActionsSuperNode', url)
-        actions = await result.json()
-        if (actions.length) {
-          for (const action of actions) {
-            this.processTransactionSuperNode(action)
-          }
-        }
-        this.transactionsChecked = 1
-      } catch (e) {
-        // Try regular nodes
-        const actionsObject = await this.multicastServers('getActions',
-          this.walletLocalData.otherData.accountName
-        )
-        if (actionsObject.actions && actionsObject.actions.length > 0) {
-          actions = actionsObject.actions
-        } else {
-          actions = []
-        }
-        if (actions.length) {
-          for (const action of actions) {
-            this.processTransaction(action)
-          }
-        }
-        this.transactionsChecked = 1
-      }
-
+    if (
+      !this.walletLocalData.otherData ||
+      !this.walletLocalData.otherData.accountName) {
+      return
+    }
+    const acct = this.walletLocalData.otherData.accountName
+    const resultP = this.checkTransactionsCryptoLions(acct)
+      .catch(e => {
+        this.log(e)
+        // Crypto lions API failed. Fall back to full node.
+        // Note: Full nodes do not return incoming transactions although
+        // they do return correct account balances
+        return this.checkTransactionsFullNode(acct)
+      })
+      .catch(e => {
+        this.log(e)
+        return false
+      })
+    const result = await resultP
+    if (result) {
+      this.transactionsChecked = 1
       this.updateOnAddressesChecked()
-    } catch (e) {
-      this.log(e)
     }
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -302,8 +359,8 @@ export class EosEngine extends CurrencyEngine {
   async multicastServers (func: EosFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     switch (func) {
-      case 'getActionsSuperNode':
-        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosSuperNodes.map(server => async () => {
+      case 'doCryptoLions':
+        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosCryptoLionsNodes.map(server => async () => {
           const url = server + params[0]
           const result = await this.io.fetch(url)
           return { server, result }
@@ -405,6 +462,9 @@ export class EosEngine extends CurrencyEngine {
   async clearBlockchainCache (): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
+    this.walletLocalData.otherData.lastQueryActionSeq = 0
+    this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.accountName = ''
   }
 
   // ****************************************************************************

@@ -16,30 +16,31 @@
 export const EosTransactionSuperNodeSchema = {
   type: 'object',
   properties: {
-    txid: { type: 'string' },
-    date: { type: 'string' },
-    currencyCode: { type: 'string' },
-    blockHeight: { type: 'number' },
-    networkFee: { type: 'string' },
-    parentNetworkFee: { type: 'string' },
-    exchangeAmount: { type: 'string' },
-    otherParams: {
+    act: {
       type: 'object',
       properties: {
-        fromAddress: { type: 'string' },
-        toAddress: { type: 'string' }
+        data: {
+          type: 'object',
+          properties: {
+            from: { type: 'string' },
+            to: { type: 'string' },
+            quantity: { type: 'string' },
+            hex_data: { type: 'string' },
+            memo: { type: 'string' }
+          },
+          required: ['from', 'to', 'quantity']
+        }
       },
-      required: [ 'fromAddress', 'toAddress' ]
+      required: ['data']
     },
+    trx_id: { type: 'string' },
+    block_time: { type: 'string' },
+    block_num: { type: 'number' },
     required: [
-      'txid',
-      'date',
-      'currencyCode',
-      'blockHeight',
-      'networkFee',
-      'parentNetworkFee',
-      'exchangeAmount',
-      'otherParams'
+      'act',
+      'trx_id',
+      'block_time',
+      'block_num'
     ]
   }
 }
