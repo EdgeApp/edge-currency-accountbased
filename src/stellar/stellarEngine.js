@@ -41,8 +41,6 @@ type StellarServerFunction =
 export class StellarEngine extends CurrencyEngine {
   stellarPlugin: StellarPlugin
   stellarApi: Object
-  balancesChecked: number
-  transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsMap: { [txid: string]: Object }
   otherData: StellarWalletOtherData
@@ -56,8 +54,6 @@ export class StellarEngine extends CurrencyEngine {
     super(currencyPlugin, io_, walletInfo, opts)
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
-    this.balancesChecked = 0
-    this.transactionsChecked = 0
     this.activatedAccountsCache = {}
     this.pendingTransactionsMap = {}
   }
@@ -227,6 +223,8 @@ export class StellarEngine extends CurrencyEngine {
 
   // Polling version
   async checkTransactionsInnerLoop () {
+    const blockHeight = this.walletLocalData.blockHeight
+
     const address = this.walletLocalData.publicKey
     let page
     let pagingToken
@@ -257,17 +255,9 @@ export class StellarEngine extends CurrencyEngine {
       this.otherData.lastPagingToken = pagingToken
       this.walletLocalDataDirty = true
     }
-    this.transactionsChecked = 1
+    this.walletLocalData.lastAddressQueryHeight = blockHeight
+    this.tokenCheckTransactionsStatus.XLM = 1
     this.updateOnAddressesChecked()
-  }
-
-  updateOnAddressesChecked () {
-    if (this.addressesChecked === 1) {
-      return
-    }
-    this.addressesChecked =
-      (this.balancesChecked + this.transactionsChecked) / 2
-    this.currencyEngineCallbacks.onAddressesChecked(this.addressesChecked)
   }
 
   async checkUnconfirmedTransactionsFetch () {}
@@ -312,7 +302,7 @@ export class StellarEngine extends CurrencyEngine {
           }
         }
       }
-      this.balancesChecked = 1
+      this.tokenCheckBalanceStatus.XLM = 1
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching address info: ${JSON.stringify(e)}`)
@@ -337,8 +327,6 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async clearBlockchainCache (): Promise<void> {
-    this.balancesChecked = 0
-    this.transactionsChecked = 0
     this.activatedAccountsCache = {}
     this.otherData.accountSequence = 0
     this.pendingTransactionsMap = {}

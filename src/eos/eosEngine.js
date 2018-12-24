@@ -36,8 +36,6 @@ export class EosEngine extends CurrencyEngine {
   // to the EosEngine class definition in eosEngine.js and initialize them in the
   // constructor()
   eosPlugin: EosPlugin
-  balancesChecked: number
-  transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData: EosWalletOtherData
   otherMethods: Object
@@ -51,8 +49,6 @@ export class EosEngine extends CurrencyEngine {
     super(currencyPlugin, io_, walletInfo, opts)
 
     this.eosPlugin = currencyPlugin
-    this.balancesChecked = 0
-    this.transactionsChecked = 0
     this.activatedAccountsCache = {}
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
@@ -346,7 +342,7 @@ export class EosEngine extends CurrencyEngine {
       })
     const result = await resultP
     if (result) {
-      this.transactionsChecked = 1
+      this.tokenCheckTransactionsStatus.EOS = 1
       this.updateOnAddressesChecked()
     }
     if (this.transactionsChangedArray.length > 0) {
@@ -355,15 +351,6 @@ export class EosEngine extends CurrencyEngine {
       )
       this.transactionsChangedArray = []
     }
-  }
-
-  updateOnAddressesChecked () {
-    if (this.addressesChecked === 1) {
-      return
-    }
-    this.addressesChecked =
-      (this.balancesChecked + this.transactionsChecked) / 2
-    this.currencyEngineCallbacks.onAddressesChecked(this.addressesChecked)
   }
 
   async multicastServers (func: EosFunction, ...params: any): Promise<any> {
@@ -462,7 +449,7 @@ export class EosEngine extends CurrencyEngine {
           }
         }
       }
-      this.balancesChecked = 1
+      this.tokenCheckBalanceStatus.EOS = 1
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching account: ${JSON.stringify(e)}`)

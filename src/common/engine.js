@@ -41,8 +41,9 @@ class CurrencyEngine {
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalFolder: Object
   engineOn: boolean
-  addressesChecked: number // True once wallet has been fully checked on the network
-  tokenCheckStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
+  addressesChecked: boolean
+  tokenCheckBalanceStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
+  tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
   transactionListDirty: boolean
@@ -72,8 +73,9 @@ class CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.io = io_
     this.engineOn = false
-    this.addressesChecked = 0
-    this.tokenCheckStatus = {}
+    this.addressesChecked = false
+    this.tokenCheckBalanceStatus = {}
+    this.tokenCheckTransactionsStatus = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
     this.transactionList = {}
@@ -92,7 +94,7 @@ class CurrencyEngine {
     this.txIdMap[currencyCode] = {}
     this.txIdList[currencyCode] = []
 
-    if (typeof opts.optionalSettings !== 'undefined') {
+    if (opts.optionalSettings === undefined) {
       this.currentSettings = opts.optionalSettings
     } else {
       this.currentSettings = this.currencyInfo.defaultSettings
@@ -209,7 +211,8 @@ class CurrencyEngine {
     }
 
     for (const token of this.walletLocalData.enabledTokens) {
-      this.tokenCheckStatus[token] = 0
+      this.tokenCheckBalanceStatus[token] = 0
+      this.tokenCheckTransactionsStatus[token] = 0
     }
     this.doInitialBalanceCallback()
   }
@@ -410,6 +413,30 @@ class CurrencyEngine {
     })
   }
 
+  updateOnAddressesChecked () {
+    if (this.addressesChecked) {
+      return
+    }
+
+    const activeTokens = this.walletLocalData.enabledTokens
+    const perTokenSlice = 1 / activeTokens.length
+    let totalStatus = 0
+    let numComplete = 0
+    for (const token of activeTokens) {
+      const balanceStatus = this.tokenCheckBalanceStatus[token] || 0
+      const txStatus = this.tokenCheckTransactionsStatus[token] || 0
+      totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
+      if (balanceStatus === 1 && txStatus === 1) {
+        numComplete++
+      }
+    }
+    if (numComplete === activeTokens.length) {
+      totalStatus = 1
+      this.addressesChecked = true
+    }
+    this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
+  }
+
   log (...text: Array<any>) {
     text[0] = `${this.walletId.slice(0, 5)}: ${text[0].toString()}`
     console.log(...text)
@@ -437,7 +464,9 @@ class CurrencyEngine {
       this.currencyInfo.currencyCode
     )
     this.walletLocalDataDirty = true
-    this.addressesChecked = 0
+    this.addressesChecked = false
+    this.tokenCheckBalanceStatus = {}
+    this.tokenCheckTransactionsStatus = {}
     this.transactionList = {}
     this.txIdList = {}
     this.txIdMap = {}
