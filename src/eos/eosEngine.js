@@ -121,6 +121,8 @@ export class EosEngine extends CurrencyEngine {
       }
     } catch (e) {
       this.log(`Error fetching height: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
   }
 
@@ -453,6 +455,8 @@ export class EosEngine extends CurrencyEngine {
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching account: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
   }
 

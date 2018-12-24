@@ -242,7 +242,16 @@ export class StellarEngine extends CurrencyEngine {
           pagingToken = await this.processTransaction(tx)
         }
       } catch (e) {
-        pagingToken = undefined
+        if (e.response && e.response.title === 'Resource Missing') {
+          this.log('Account not found. Probably not activated w/minimum XLM')
+          this.tokenCheckTransactionsStatus.XLM = 1
+          this.updateOnAddressesChecked()
+        } else {
+          this.log(`Error fetching transaction info: ${JSON.stringify(e)}`)
+          this.log(`e.code: ${JSON.stringify(e.code)}`)
+          this.log(`e.message: ${JSON.stringify(e.message)}`)
+        }
+        return
       }
     }
     if (this.transactionsChangedArray.length > 0) {
@@ -305,7 +314,15 @@ export class StellarEngine extends CurrencyEngine {
       this.tokenCheckBalanceStatus.XLM = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+      if (e.response && e.response.title === 'Resource Missing') {
+        this.log('Account not found. Probably not activated w/minimum XLM')
+        this.tokenCheckBalanceStatus.XLM = 1
+        this.updateOnAddressesChecked()
+      } else {
+        this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+        this.log(`e.code: ${JSON.stringify(e.code)}`)
+        this.log(`e.message: ${JSON.stringify(e.message)}`)  
+      }
     }
   }
 
@@ -328,9 +345,9 @@ export class StellarEngine extends CurrencyEngine {
 
   async clearBlockchainCache (): Promise<void> {
     this.activatedAccountsCache = {}
-    this.otherData.accountSequence = 0
     this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
+    this.otherData.accountSequence = 0
   }
 
   // ****************************************************************************

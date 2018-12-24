@@ -228,10 +228,9 @@ export class XrpEngine extends CurrencyEngine {
         this.log('Invalid data returned from rippleApi.getTransactions')
       }
     } catch (e) {
-      this.log(e.code)
-      this.log(e.message)
-      this.log(e)
       this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
   }
 
@@ -272,7 +271,17 @@ export class XrpEngine extends CurrencyEngine {
         this.log('Invalid data returned from rippleApi.getBalances')
       }
     } catch (e) {
+      if (e.data) {
+        if (e.data.error === 'actNotFound' || e.data.error_code === 19) {
+          this.log('Account not found. Probably not activated w/minimum XRP')
+          this.tokenCheckBalanceStatus.XRP = 1
+          this.updateOnAddressesChecked()
+          return
+        }
+      }
       this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
   }
 
