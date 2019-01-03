@@ -103,25 +103,25 @@ describe(`EOS activation`, function () {
     }
   })
 
-  it('getAccountActivationQuote', async function () {
-    if (plugin.otherMethods) {
-      const params = {
-        requestedAccountName: 'qpalzmwo5142',
-        currencyCode: 'BTC',
-        ownerPublicKey: engine.walletInfo.keys.ownerPublicKey,
-        activePublicKey: engine.walletInfo.keys.publicKey
-      }
-      const now = Date.now() / 1000
-      const result = await engine.otherMethods.getAccountActivationQuote(params)
-      assert.equal(typeof result, 'object')
-      assert.equal(typeof result.amount, 'string')
-      assert.equal(result.currencyCode, 'BTC')
-      assert.equal(result.expireTime > now, true)
-      assert.equal(result.paymentAddress.length > 10, true)
-    } else {
-      assert.equal(0, 1)
-    }
-  })
+  // it('getAccountActivationQuote', async function () {
+  //   if (plugin.otherMethods) {
+  //     const params = {
+  //       requestedAccountName: 'qpalzmwo5142',
+  //       currencyCode: 'BTC',
+  //       ownerPublicKey: engine.walletInfo.keys.ownerPublicKey,
+  //       activePublicKey: engine.walletInfo.keys.publicKey
+  //     }
+  //     const now = Date.now() / 1000
+  //     const result = await engine.otherMethods.getAccountActivationQuote(params)
+  //     assert.equal(typeof result, 'object')
+  //     assert.equal(typeof result.amount, 'string')
+  //     assert.equal(result.currencyCode, 'BTC')
+  //     assert.equal(result.expireTime > now, true)
+  //     assert.equal(result.paymentAddress.length > 10, true)
+  //   } else {
+  //     assert.equal(0, 1)
+  //   }
+  // })
 
   describe('killEngine...', function () {
     it('Should stop the engine', function (done) {
