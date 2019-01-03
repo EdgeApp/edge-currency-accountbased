@@ -23,8 +23,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://www.fixme.com/address/%s',
-  transactionExplorer: 'https://www.fixme.com/transactions/%s',
+  addressExplorer: 'https://eospark.com/account/%s',
+  transactionExplorer: 'https://eospark.com/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
@@ -32,11 +32,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       name: 'EOS',
       multiplier: '10000',
       symbol: 'E'
-    },
-    {
-      name: 'dEOS',
-      multiplier: '1000',
-      symbol: 'dE'
     }
   ],
   symbolImage: 'https://developer.airbitz.co/content/eos-logo-solo-64.png',

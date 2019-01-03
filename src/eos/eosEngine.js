@@ -583,7 +583,7 @@ export class EosEngine extends CurrencyEngine {
     }
 
     // Create an unsigned transaction to catch any errors
-    await this.multicastServers('transaction', {
+    await this.multicastServers('transaction', transactionJson, {
       sign: false,
       broadcast: false
     })
