@@ -6,7 +6,7 @@ import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
   eosCryptoLionsNodes: ['https://history.cryptolions.io'],
-  eosActivationServers: ['https://eos-name-api.cryptoambassador.work'],
+  eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
   eosNodes: ['https://proxy.eosnode.tools']
 }
 

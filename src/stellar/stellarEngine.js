@@ -321,7 +321,7 @@ export class StellarEngine extends CurrencyEngine {
       } else {
         this.log(`Error fetching address info: ${JSON.stringify(e)}`)
         this.log(`e.code: ${JSON.stringify(e.code)}`)
-        this.log(`e.message: ${JSON.stringify(e.message)}`)  
+        this.log(`e.message: ${JSON.stringify(e.message)}`)
       }
     }
   }

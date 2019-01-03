@@ -72,7 +72,9 @@ export class EosPlugin extends CurrencyPlugin {
           const result = await io.fetch('https://info1.edgesecure.co:8444/v1/eosPrices')
           const prices = await result.json()
           const totalEos = (Number(prices.ram) * 8) + (Number(prices.net) * 2) + (Number(prices.cpu) * 10)
-          return totalEos.toString()
+          let out = totalEos.toString()
+          out = bns.toFixed(out, 0, 4)
+          return out
         } catch (e) {
           throw new Error('ErrorUnableToGetCost')
         }
