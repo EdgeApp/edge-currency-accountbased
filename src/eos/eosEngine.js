@@ -729,7 +729,7 @@ export class EosEngine extends CurrencyEngine {
   getDisplayPrivateSeed () {
     let out = ''
     if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
-      out += 'owner key:\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
+      out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
     }
     if (this.walletInfo.keys && this.walletInfo.keys.eosKey) {
       out += 'active key\n' + this.walletInfo.keys.eosKey + '\n\n'
