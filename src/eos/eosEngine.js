@@ -561,6 +561,12 @@ export class EosEngine extends CurrencyEngine {
     }
     const DecimalPad = eosjs.modules.format.DecimalPad
     const quantity = DecimalPad(exchangeAmount, 4) + ` ${currencyCode}`
+    let memo = ''
+    if (
+      edgeSpendInfo.spendTargets[0].otherParams &&
+      typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier === 'string') {
+      memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+    }
     const transactionJson = {
       actions: [
         {
@@ -576,7 +582,7 @@ export class EosEngine extends CurrencyEngine {
             from: this.walletLocalData.otherData.accountName,
             to: publicAddress,
             quantity,
-            memo: ''
+            memo
           }
         }
       ]
@@ -721,17 +727,25 @@ export class EosEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.rippleKey) {
-      return this.walletInfo.keys.eosKey
+    let out = ''
+    if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
+      out += 'owner key:\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
     }
-    return ''
+    if (this.walletInfo.keys && this.walletInfo.keys.eosKey) {
+      out += 'active key\n' + this.walletInfo.keys.eosKey + '\n\n'
+    }
+    return out
   }
 
   getDisplayPublicSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+    let out = ''
+    if (this.walletInfo.keys && this.walletInfo.keys.ownerPublicKey) {
+      out += 'owner publicKey\n' + this.walletInfo.keys.ownerPublicKey + '\n\n'
     }
-    return ''
+    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+      out += 'active publicKey\n' + this.walletInfo.keys.publicKey + '\n\n'
+    }
+    return out
   }
 }
 
