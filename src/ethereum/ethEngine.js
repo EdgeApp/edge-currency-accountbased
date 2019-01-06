@@ -9,7 +9,6 @@ import type {
   EdgeCurrencyEngineOptions,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { sprintf } from 'sprintf-js'
 import { validateObject } from '../common/utils.js'
 import { EtherscanGetBlockHeight } from './ethSchema.js'
 
@@ -45,12 +44,7 @@ export class EthereumEngine extends CurrencyEngine {
     if (global.etherscanApiKey && global.etherscanApiKey.length > 5) {
       apiKey = '&apikey=' + global.etherscanApiKey
     }
-    const url = sprintf(
-      '%s/api%s%s',
-      server,
-      cmd,
-      apiKey
-    )
+    const url = `${server}/api${cmd}${apiKey}`
     return this.fetchGet(url)
   }
 
@@ -72,12 +66,7 @@ export class EthereumEngine extends CurrencyEngine {
     if (global.blockcypherApiKey && global.blockcypherApiKey.length > 5) {
       apiKey = '&token=' + global.blockcypherApiKey
     }
-    const url = sprintf(
-      '%s/%s%s',
-      this.currentSettings.otherSettings.blockcypherApiServers[0],
-      cmd,
-      apiKey
-    )
+    const url = `${this.currentSettings.otherSettings.blockcypherApiServers[0]}/${cmd}${apiKey}`
     const response = await this.io.fetch(url, {
       headers: {
         Accept: 'application/json',
