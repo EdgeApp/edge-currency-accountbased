@@ -34,7 +34,7 @@ import { isHex, normalizeAddress, validateObject, getDenomInfo } from './utils.j
 import { CurrencyPlugin } from './plugin.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
-
+const MAX_TRANSACTIONS = 1000
 class CurrencyEngine {
   currencyPlugin: CurrencyPlugin
   walletInfo: EdgeWalletInfo
@@ -245,6 +245,8 @@ class CurrencyEngine {
       this.log('addTransaction: adding and sorting:' + edgeTransaction.txid)
       if (typeof this.transactionList[currencyCode] === 'undefined') {
         this.transactionList[currencyCode] = []
+      } else if (this.transactionList[currencyCode].length >= MAX_TRANSACTIONS) {
+        return
       }
       this.transactionList[currencyCode].push(edgeTransaction)
 
