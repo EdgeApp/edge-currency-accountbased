@@ -20,10 +20,11 @@
     "url": "git@github.com:EdgeApp/edge-currency-accountbased.git"
   },
   "scripts": {
-    "build": "npm run build:clean && npm run webpack && npm run rollup && npm run build:flow",
+    "build": "npm run build:clean && npm run webpack && npm run build:copy-webpack && npm run rollup && npm run build:flow",
+    "build:copy-webpack": "echo '/* eslint-disable */' > ./src/ethereum/export-fixes-bundle.js && cat ./lib/export-fixes-bundle.js >> ./src/ethereum/export-fixes-bundle.js",
     "build:clean": "rimraf lib",
     "build:flow": "flow-copy-source -v -i '**/test/**' src lib",
-    "build:test": "rollup -c rollup.config.test.js",
+    "build:test": "rollup -c rollup.config.test.js && cp ./src/ethereum/export-fixes-bundle.js ./build/lib/",
     "precommit": "npm run build && npm test",
     "flow": "flow status",
     "format": "prettier-eslint --write '*.js' 'src/**/*.js' 'test/**/*.js'",

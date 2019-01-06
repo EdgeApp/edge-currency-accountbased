@@ -20,8 +20,8 @@ import { CurrencyPlugin } from '../common/plugin.js'
 export { calcMiningFee } from './ethMiningFees.js'
 
 const Buffer = require('buffer/').Buffer
-const ethWallet = require('../../lib/common/export-fixes-bundle.js').Wallet
-const EthereumUtil = require('../../lib/common/export-fixes-bundle.js').Util
+const ethWallet = require('./export-fixes-bundle.js').Wallet
+const EthereumUtil = require('./export-fixes-bundle.js').Util
 
 let io
 

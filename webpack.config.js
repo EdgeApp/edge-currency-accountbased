@@ -8,7 +8,7 @@ module.exports = {
     loaders: [{ test: /\.json$/, loader: 'json-loader' }]
   },
   output: {
-    filename: './lib/common/export-fixes-bundle.js',
+    filename: './lib/export-fixes-bundle.js',
     libraryTarget: 'commonjs'
   }
 }

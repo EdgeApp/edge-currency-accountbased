@@ -10,6 +10,8 @@ import type {
   EdgeWalletInfo
 } from 'edge-core-js'
 import { sprintf } from 'sprintf-js'
+import { validateObject } from '../common/utils.js'
+import { EtherscanGetBlockHeight } from './ethSchema.js'
 
 import { EthereumPlugin } from './ethPlugin.js'
 import { CurrencyEngine } from '../common/engine.js'
@@ -88,7 +90,26 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async checkBlockchainInnerLoop () {
-
+    try {
+      const jsonObj = await this.fetchGetEtherscan(
+        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+        '?module=proxy&action=eth_blockNumber'
+      )
+      const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
+      if (valid) {
+        const blockHeight: number = parseInt(jsonObj.result, 16)
+        this.log(`Got block height ${blockHeight}`)
+        if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.walletLocalData.blockHeight = blockHeight // Convert to decimal
+          this.walletLocalDataDirty = true
+          this.currencyEngineCallbacks.onBlockHeightChanged(
+            this.walletLocalData.blockHeight
+          )
+        }
+      }
+    } catch (err) {
+      this.log('Error fetching height: ' + err)
+    }
   }
 
   async checkAccountInnerLoop () {
