@@ -10,6 +10,14 @@ export const EtherscanGetBlockHeight = {
   required: ['result']
 }
 
+export const EtherscanGetAccountBalance = {
+  type: 'object',
+  properties: {
+    result: { type: 'string' }
+  },
+  required: ['result']
+}
+
 export const NetworkFeesSchema = {
   type: 'object',
   additionalProperties: {

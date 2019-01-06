@@ -11,10 +11,13 @@ import type {
 } from 'edge-core-js'
 import { validateObject } from '../common/utils.js'
 import { EtherscanGetBlockHeight } from './ethSchema.js'
+import { bns } from 'biggystring'
 
 import { EthereumPlugin } from './ethPlugin.js'
 import { CurrencyEngine } from '../common/engine.js'
+import { currencyInfo } from './ethInfo.js'
 
+const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
@@ -101,8 +104,60 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountInnerLoop () {
+  async checkAccountTokenFetch (tk: string, url: string) {
+    let jsonObj = {}
+    let valid = false
 
+    try {
+      jsonObj = await this.fetchGetEtherscan(
+        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+        url)
+      valid = validateObject(jsonObj, EtherscanGetBlockHeight)
+      if (valid) {
+        const balance = jsonObj.result
+
+        if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+          this.walletLocalData.totalBalances[tk] = '0'
+        }
+        if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+          this.walletLocalData.totalBalances[tk] = balance
+          this.log(tk + ': token Address balance: ' + balance)
+          this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+          this.tokenCheckBalanceStatus[tk] = 1
+          this.updateOnAddressesChecked()
+        }
+      }
+    } catch (e) {
+      this.log(`Error checking token balance: ${tk}`)
+    }
+  }
+
+  async checkAccountInnerLoop () {
+    const address = this.walletLocalData.publicKey
+    try {
+      // Ethereum only has one address
+      let url = ''
+      const promiseArray = []
+
+      // ************************************
+      // Fetch token balances
+      // ************************************
+      // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
+      for (const tk of this.walletLocalData.enabledTokens) {
+        if (tk === PRIMARY_CURRENCY) {
+          url = `?module=account&action=balance&address=${address}&tag=latest`
+        } else {
+          const tokenInfo = this.getTokenInfo(tk)
+          if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+            url = `?module=account&action=tokenbalance&contractaddress=${tokenInfo.contractAddress}&address=${this.walletLocalData.publicKey}&tag=latest`
+          } else {
+            continue
+          }
+        }
+        promiseArray.push(this.checkAccountTokenFetch(tk, url))
+      }
+      await Promise.all(promiseArray)
+    } catch (e) {}
   }
 
   async checkTransactionsInnerLoop () {
