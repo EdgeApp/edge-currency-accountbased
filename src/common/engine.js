@@ -286,7 +286,7 @@ class CurrencyEngine {
         if (!this.txIdMap[currencyCode]) {
           this.txIdMap[currencyCode] = {}
         }
-        this.txIdMap[currencyCode][tx.txid] = i
+        this.txIdMap[currencyCode][normalizeAddress(tx.txid)] = i
         txIdList.push(normalizeAddress(tx.txid))
         i++
       }
