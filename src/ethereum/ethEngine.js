@@ -10,9 +10,14 @@ import type {
   EdgeWalletInfo
 } from 'edge-core-js'
 import { validateObject } from '../common/utils.js'
-import { EtherscanGetBlockHeight } from './ethSchema.js'
+import { EtherscanGetBlockHeight, EtherscanGetTransactions, EtherscanGetAccountBalance, EtherscanGetTokenTransactions } from './ethSchema.js'
 import { bns } from 'biggystring'
 
+import {
+  type EtherscanTransaction,
+  type EthereumTxOtherParams,
+  type EthereumWalletOtherData
+} from './ethTypes.js'
 import { EthereumPlugin } from './ethPlugin.js'
 import { CurrencyEngine } from '../common/engine.js'
 import { currencyInfo } from './ethInfo.js'
@@ -21,11 +26,12 @@ const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
-
-// const PRIMARY_CURRENCY = currencyInfo.currencyCode
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
+const NUM_TRANSACTIONS_TO_QUERY = 50
 
 export class EthereumEngine extends CurrencyEngine {
   ethereumPlugin: EthereumPlugin
+  otherData: EthereumWalletOtherData
 
   constructor (
     currencyPlugin: EthereumPlugin,
@@ -104,7 +110,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountTokenFetch (tk: string, url: string) {
+  async checkAccountFetch (tk: string, url: string) {
     let jsonObj = {}
     let valid = false
 
@@ -112,7 +118,7 @@ export class EthereumEngine extends CurrencyEngine {
       jsonObj = await this.fetchGetEtherscan(
         this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
         url)
-      valid = validateObject(jsonObj, EtherscanGetBlockHeight)
+      valid = validateObject(jsonObj, EtherscanGetAccountBalance)
       if (valid) {
         const balance = jsonObj.result
 
@@ -154,18 +160,164 @@ export class EthereumEngine extends CurrencyEngine {
             continue
           }
         }
-        promiseArray.push(this.checkAccountTokenFetch(tk, url))
+        promiseArray.push(this.checkAccountFetch(tk, url))
       }
       await Promise.all(promiseArray)
     } catch (e) {}
   }
 
-  async checkTransactionsInnerLoop () {
+  processEtherscanTransaction (tx: EtherscanTransaction, currencyCode: string) {
+    let netNativeAmount: string // Amount received into wallet
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
 
+    if (tx.contractAddress) {
+      nativeNetworkFee = '0'
+    } else {
+      nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
+    }
+
+    if (
+      tx.from.toLowerCase() ===
+      this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
+        // Spend to self. netNativeAmount is just the fee
+        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+      } else {
+        netNativeAmount = bns.sub('0', tx.value)
+
+        // For spends, include the network fee in the transaction amount
+        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+
+        if (bns.gte(tx.nonce, this.walletLocalData.otherData.nextNonce)) {
+          this.walletLocalData.otherData.nextNonce = bns.add(tx.nonce, '1')
+        }
+      }
+    } else {
+      // Receive transaction
+      netNativeAmount = bns.add('0', tx.value)
+      ourReceiveAddresses.push(
+        this.walletLocalData.publicKey.toLowerCase()
+      )
+    }
+
+    const otherParams: EthereumTxOtherParams = {
+      from: [tx.from],
+      to: [tx.to],
+      gas: tx.gas,
+      gasPrice: tx.gasPrice,
+      gasUsed: tx.gasUsed,
+      cumulativeGasUsed: tx.cumulativeGasUsed,
+      errorVal: parseInt(tx.isError),
+      tokenRecipientAddress: null
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.hash,
+      date: parseInt(tx.timeStamp),
+      currencyCode,
+      blockHeight: parseInt(tx.blockNumber),
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses,
+      signedTx: 'unsigned_right_now',
+      otherParams
+    }
+
+    this.addTransaction(currencyCode, edgeTransaction)
+  }
+
+  async checkTransactionsFetch (startBlock: number, currencyCode: string): Promise<boolean> {
+    const address = this.walletLocalData.publicKey
+    let checkAddressSuccess = false
+    let page = 1
+    let startUrl
+    let contractAddress = ''
+    let schema
+
+    if (currencyCode !== PRIMARY_CURRENCY) {
+      const tokenInfo = this.getTokenInfo(currencyCode)
+      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+        contractAddress = tokenInfo.contractAddress
+        startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
+        schema = EtherscanGetTokenTransactions
+      } else {
+        return false
+      }
+    } else {
+      startUrl = `?action=txlist&module=account`
+      schema = EtherscanGetTransactions
+    }
+
+    try {
+      while (1) {
+        const url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${NUM_TRANSACTIONS_TO_QUERY}`
+        const jsonObj = await this.fetchGetEtherscan(
+          this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+          url
+        )
+        const valid = validateObject(jsonObj, schema)
+        if (valid) {
+          const transactions = jsonObj.result
+          for (let i = 0; i < transactions.length; i++) {
+            const tx = transactions[i]
+            this.processEtherscanTransaction(tx, currencyCode)
+          }
+          if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
+            checkAddressSuccess = true
+            break
+          }
+          page++
+        } else {
+          break
+        }
+      }
+    } catch (e) {
+      this.log(`Error checkTransactionsFetch ETH: ${this.walletLocalData.publicKey}`, e)
+    }
+
+    if (checkAddressSuccess) {
+      this.tokenCheckTransactionsStatus[currencyCode] = 1
+      this.updateOnAddressesChecked()
+      return true
+    } else {
+      return false
+    }
+  }
+
+  async checkTransactionsInnerLoop () {
+    const blockHeight = this.walletLocalData.blockHeight
+    let startBlock: number = 0
+    const promiseArray = []
+
+    if (
+      this.walletLocalData.lastAddressQueryHeight >
+      ADDRESS_QUERY_LOOKBACK_BLOCKS
+    ) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+      startBlock =
+        this.walletLocalData.lastAddressQueryHeight -
+        ADDRESS_QUERY_LOOKBACK_BLOCKS
+    }
+
+    for (const currencyCode of this.walletLocalData.enabledTokens) {
+      promiseArray.push(this.checkTransactionsFetch(startBlock, currencyCode))
+    }
+
+    const resultArray = await Promise.all(promiseArray)
+    let successCount = 0
+    for (const r of resultArray) {
+      if (r) successCount++
+    }
+    if (successCount === promiseArray.length) {
+      this.walletLocalData.lastAddressQueryHeight = blockHeight
+    }
   }
 
   async clearBlockchainCache () {
     await super.clearBlockchainCache()
+    this.otherData.nextNonce = '0'
   }
 
   // ****************************************************************************

@@ -18,6 +18,96 @@ export const EtherscanGetAccountBalance = {
   required: ['result']
 }
 
+export const EtherscanGetTransactions = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          blockNumber: { type: 'string' },
+          timeStamp: { type: 'string' },
+          hash: { type: 'string' },
+          from: { type: 'string' },
+          to: { type: 'string' },
+          nonce: { type: 'string' },
+          value: { type: 'string' },
+          gas: { type: 'string' },
+          gasPrice: { type: 'string' },
+          cumulativeGasUsed: { type: 'string' },
+          gasUsed: { type: 'string' },
+          confirmations: { type: 'string' }
+        },
+        required: [
+          'blockNumber',
+          'timeStamp',
+          'hash',
+          'from',
+          'to',
+          'nonce',
+          'value',
+          'gas',
+          'gasPrice',
+          'cumulativeGasUsed',
+          'gasUsed',
+          'confirmations'
+        ]
+      }
+    }
+  },
+  required: ['result']
+}
+
+export const EtherscanGetTokenTransactions = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          blockNumber: { type: 'string' },
+          timeStamp: { type: 'string' },
+          hash: { type: 'string' },
+          from: { type: 'string' },
+          to: { type: 'string' },
+          nonce: { type: 'string' },
+          value: { type: 'string' },
+          gas: { type: 'string' },
+          gasPrice: { type: 'string' },
+          cumulativeGasUsed: { type: 'string' },
+          gasUsed: { type: 'string' },
+          confirmations: { type: 'string' },
+          contractAddress: { type: 'string' },
+          tokenName: { type: 'string' },
+          tokenSymbol: { type: 'string' },
+          tokenDecimal: { type: 'string' }
+        },
+        required: [
+          'blockNumber',
+          'timeStamp',
+          'hash',
+          'from',
+          'to',
+          'nonce',
+          'value',
+          'gas',
+          'gasPrice',
+          'cumulativeGasUsed',
+          'gasUsed',
+          'confirmations',
+          'contractAddress',
+          'tokenName',
+          'tokenSymbol',
+          'tokenDecimal'
+        ]
+      }
+    }
+  },
+  required: ['result']
+}
+
 export const NetworkFeesSchema = {
   type: 'object',
   additionalProperties: {

@@ -76,8 +76,8 @@ export class EthereumPlugin extends CurrencyPlugin {
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    if (!currencyEngine.otherData.recommendedFee) {
-      currencyEngine.otherData.recommendedFee = '0'
+    if (!currencyEngine.otherData.nextNonce) {
+      currencyEngine.otherData.nextNonce = '0'
     }
 
     const out: EdgeCurrencyEngine = currencyEngine

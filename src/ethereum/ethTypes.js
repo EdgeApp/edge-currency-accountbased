@@ -41,3 +41,39 @@ export type EthereumCalcedFees = {
   gasPrice: string,
   gasLimit: string
 }
+
+export type EtherscanTransaction = {
+  hash: string,
+  blockNumber: string,
+  timeStamp: string,
+  gasPrice: string,
+  gasUsed: string,
+  value: string,
+  nonce: string,
+  from: string,
+  to: string,
+  gas: string,
+  gasPrice: string,
+  gasUsed: string,
+  cumulativeGasUsed: string,
+  isError: string,
+  contractAddress?: string,
+  tokenName?: string,
+  tokenSymbol?: string,
+  tokenDecimal?: string
+}
+
+export type EthereumTxOtherParams = {
+  from: Array<string>,
+  to: Array<string>,
+  gas: string,
+  gasPrice: string,
+  gasUsed: string,
+  cumulativeGasUsed: string,
+  errorVal: number,
+  tokenRecipientAddress: string | null
+}
+
+export type EthereumWalletOtherData = {
+  nextNonce: string
+}
