@@ -713,17 +713,35 @@ export class EosEngine extends CurrencyEngine {
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
-    const signedTx = await this.multicastServers('transaction',
-      edgeTransaction.otherParams.transactionJson,
-      {
-        keyProvider,
-        sign: true,
-        broadcast: true
+    try {
+      const signedTx = await this.multicastServers('transaction',
+        edgeTransaction.otherParams.transactionJson, {
+          keyProvider,
+          sign: true,
+          broadcast: true
+        })
+      edgeTransaction.date = Date.now() / 1000
+      edgeTransaction.txid = signedTx.transaction_id
+      return edgeTransaction
+    } catch (e) {
+      let err = e
+      try {
+        err = JSON.parse(e)
+      } catch (e2) {
+        throw e
       }
-    )
-    edgeTransaction.date = Date.now() / 1000
-    edgeTransaction.txid = signedTx.transaction_id
-    return edgeTransaction
+      if (err.error && err.error.name === 'tx_net_usage_exceeded') {
+        err = new Error('Insufficient NET available to send EOS transaction')
+        err.name = 'ErrorEosInsufficientNet'
+      } else if (err.error && err.error.name === 'tx_cpu_usage_exceeded') {
+        err = new Error('Insufficient CPU available to send EOS transaction')
+        err.name = 'ErrorEosInsufficientCpu'
+      } else if (err.error && err.error.name === 'ram_usage_exceeded') {
+        err = new Error('Insufficient RAM available to send EOS transaction')
+        err.name = 'ErrorEosInsufficientRam'
+      }
+      throw err
+    }
   }
 
   getDisplayPrivateSeed () {
