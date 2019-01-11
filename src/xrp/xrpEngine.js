@@ -446,16 +446,29 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     let preparedTx = {}
-    try {
-      preparedTx = await this.multicastServers(
-        'preparePayment',
-        this.walletLocalData.publicKey,
-        payment,
-        { maxLedgerVersionOffset: 300 }
-      )
-    } catch (err) {
-      this.log(err)
-      throw new Error('Error in preparePayment')
+    let i = 6
+    while (true) {
+      i--
+      try {
+        preparedTx = await this.multicastServers(
+          'preparePayment',
+          this.walletLocalData.publicKey,
+          payment,
+          { maxLedgerVersionOffset: 300 }
+        )
+        break
+      } catch (err) {
+        if (typeof err.message === 'string' && i) {
+          if (err.message.includes('has too many decimal places')) {
+            // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
+            // Just retrying seems to resolve it. -paulvp
+            console.log('Got "too many decimal places" error. Retrying... ' + i.toString())
+            continue
+          }
+        }
+        this.log(err)
+        throw new Error('Error in preparePayment')
+      }
     }
 
     const otherParams: XrpParams = {
