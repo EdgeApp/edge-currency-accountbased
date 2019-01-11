@@ -9,8 +9,14 @@ import type {
   EdgeCurrencyEngineOptions,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { validateObject } from '../common/utils.js'
-import { EtherscanGetBlockHeight, EtherscanGetTransactions, EtherscanGetAccountBalance, EtherscanGetTokenTransactions } from './ethSchema.js'
+import { validateObject, normalizeAddress, addHexPrefix } from '../common/utils.js'
+import {
+  EtherscanGetBlockHeight,
+  EtherscanGetTransactions,
+  EtherscanGetAccountBalance,
+  EtherscanGetTokenTransactions,
+  SuperEthGetUnconfirmedTransactions
+} from './ethSchema.js'
 import { bns } from 'biggystring'
 
 import {
@@ -23,9 +29,10 @@ import { CurrencyEngine } from '../common/engine.js'
 import { currencyInfo } from './ethInfo.js'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
-const ACCOUNT_POLL_MILLISECONDS = 10000
-const BLOCKCHAIN_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = 20000
+const BLOCKCHAIN_POLL_MILLISECONDS = 20000
+const TRANSACTION_POLL_MILLISECONDS = 20000
+const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 
@@ -286,6 +293,82 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  processUnconfirmedTransaction (tx: Object) {
+    const fromAddress = '0x' + tx.inputs[0].addresses[0]
+    const toAddress = '0x' + tx.outputs[0].addresses[0]
+    const epochTime = Date.parse(tx.received) / 1000
+    const ourReceiveAddresses: Array<string> = []
+
+    let nativeAmount: string
+    if (
+      normalizeAddress(fromAddress) ===
+      normalizeAddress(this.walletLocalData.publicKey)
+    ) {
+      if (fromAddress === toAddress) {
+        // Spend to self
+        nativeAmount = bns.sub('0', tx.fees.toString(10))
+      } else {
+        nativeAmount = (0 - tx.total).toString(10)
+        nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
+      }
+    } else {
+      nativeAmount = tx.total.toString(10)
+      ourReceiveAddresses.push(this.walletLocalData.publicKey)
+    }
+
+    const otherParams: EthereumTxOtherParams = {
+      from: [fromAddress],
+      to: [toAddress],
+      gas: '',
+      gasPrice: '',
+      gasUsed: tx.fees.toString(10),
+      cumulativeGasUsed: '',
+      errorVal: 0,
+      tokenRecipientAddress: null
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: addHexPrefix(tx.hash),
+      date: epochTime,
+      currencyCode: 'ETH',
+      blockHeight: tx.block_height,
+      nativeAmount,
+      networkFee: tx.fees.toString(10),
+      ourReceiveAddresses,
+      signedTx: 'iwassignedyoucantrustme',
+      otherParams
+    }
+    this.addTransaction('ETH', edgeTransaction)
+  }
+
+  async checkUnconfirmedTransactionsInnerLoop () {
+    const address = normalizeAddress(this.walletLocalData.publicKey)
+    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
+    let jsonObj = null
+    try {
+      jsonObj = await this.fetchGet(url)
+    } catch (e) {
+      this.log(e)
+      this.log('Failed to fetch unconfirmed transactions')
+      return
+    }
+
+    const valid = validateObject(jsonObj, SuperEthGetUnconfirmedTransactions)
+    if (valid) {
+      const transactions = jsonObj
+      for (const tx of transactions) {
+        if (
+          normalizeAddress(tx.inputs[0].addresses[0]) === address ||
+          normalizeAddress(tx.outputs[0].addresses[0]) === address
+        ) {
+          this.processUnconfirmedTransaction(tx)
+        }
+      }
+    } else {
+      this.log('Invalid data for unconfirmed transactions')
+    }
+  }
+
   async checkTransactionsInnerLoop () {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
@@ -329,6 +412,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop('checkUnconfirmedTransactionsInnerLoop', UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS)
     super.startEngine()
   }
 

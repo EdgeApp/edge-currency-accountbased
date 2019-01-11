@@ -12,6 +12,14 @@ function normalizeAddress (address: string) {
   return address.toLowerCase().replace('0x', '')
 }
 
+function addHexPrefix (value: string) {
+  if (value.startsWith('0x')) {
+    return value
+  } else {
+    return '0x' + value
+  }
+}
+
 function validateObject (object: any, schema: any) {
   const result = validate(object, schema)
 
@@ -115,6 +123,7 @@ async function asyncWaterfall (
 
 export {
   normalizeAddress,
+  addHexPrefix,
   validateObject,
   getDenomInfo,
   asyncWaterfall,
