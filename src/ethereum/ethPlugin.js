@@ -30,6 +30,43 @@ const randomBuffer = size => {
   return Buffer.from(array)
 }
 
+const defaultNetworkFees = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21000',
+      tokenTransaction: '200000'
+    },
+    gasPrice: {
+      lowFee: '1000000001',
+      standardFeeLow: '40000000001',
+      standardFeeHigh: '300000000001',
+      standardFeeLowAmount: '100000000000000000',
+      standardFeeHighAmount: '10000000000000000000',
+      highFee: '40000000001'
+    }
+  },
+  '1983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    },
+    gasPrice: {
+      lowFee: '1000000002',
+      standardFeeLow: '40000000002',
+      standardFeeHigh: '300000000002',
+      standardFeeLowAmount: '200000000000000000',
+      standardFeeHighAmount: '20000000000000000000',
+      highFee: '40000000002'
+    }
+  },
+  '2983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    }
+  }
+}
+
 export class EthereumPlugin extends CurrencyPlugin {
   constructor () {
     super('ethereum', currencyInfo)
@@ -71,13 +108,18 @@ export class EthereumPlugin extends CurrencyPlugin {
   ): Promise<EdgeCurrencyEngine> {
     const currencyEngine = new EthereumEngine(this, io, walletInfo, opts)
 
+    // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(this, io, walletInfo, opts)
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // Initialize otherData defaults if they weren't on disk
     if (!currencyEngine.otherData.nextNonce) {
       currencyEngine.otherData.nextNonce = '0'
+    }
+    if (!currencyEngine.otherData.networkFees) {
+      currencyEngine.otherData.networkFees = defaultNetworkFees
     }
 
     const out: EdgeCurrencyEngine = currencyEngine

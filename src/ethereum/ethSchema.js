@@ -18,6 +18,8 @@ export const EtherscanGetAccountBalance = {
   required: ['result']
 }
 
+export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
+
 export const EtherscanGetTransactions = {
   type: 'object',
   properties: {

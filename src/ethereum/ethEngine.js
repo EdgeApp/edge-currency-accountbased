@@ -9,12 +9,23 @@ import type {
   EdgeCurrencyEngineOptions,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { validateObject, normalizeAddress, addHexPrefix } from '../common/utils.js'
+import { error } from 'edge-core-js'
+import {
+  validateObject,
+  normalizeAddress,
+  toHex,
+  bufToHex,
+  getEdgeInfoServer,
+  addHexPrefix
+} from '../common/utils.js'
 import {
   EtherscanGetBlockHeight,
   EtherscanGetTransactions,
   EtherscanGetAccountBalance,
+  EtherscanGetAccountNonce,
   EtherscanGetTokenTransactions,
+  EthGasStationSchema,
+  NetworkFeesSchema,
   SuperEthGetUnconfirmedTransactions
 } from './ethSchema.js'
 import { bns } from 'biggystring'
@@ -22,19 +33,32 @@ import { bns } from 'biggystring'
 import {
   type EtherscanTransaction,
   type EthereumTxOtherParams,
+  type EthereumFee,
+  type EthereumFeesGasPrice,
   type EthereumWalletOtherData
 } from './ethTypes.js'
 import { EthereumPlugin } from './ethPlugin.js'
 import { CurrencyEngine } from '../common/engine.js'
 import { currencyInfo } from './ethInfo.js'
+import { calcMiningFee } from './ethMiningFees.js'
+
+const abi = require('./export-fixes-bundle.js').ABI
+const ethWallet = require('./export-fixes-bundle.js').Wallet
+const EthereumTx = require('./export-fixes-bundle.js').Transaction
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 20000
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
+const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
+
+type BroadcastResults = {
+  incrementNonce: boolean,
+  decrementNonce: boolean
+}
 
 export class EthereumEngine extends CurrencyEngine {
   ethereumPlugin: EthereumPlugin
@@ -82,7 +106,9 @@ export class EthereumEngine extends CurrencyEngine {
     if (global.blockcypherApiKey && global.blockcypherApiKey.length > 5) {
       apiKey = '&token=' + global.blockcypherApiKey
     }
-    const url = `${this.currentSettings.otherSettings.blockcypherApiServers[0]}/${cmd}${apiKey}`
+    const url = `${
+      this.currencyInfo.defaultSettings.otherSettings.blockcypherApiServers[0]
+    }/${cmd}${apiKey}`
     const response = await this.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -124,7 +150,8 @@ export class EthereumEngine extends CurrencyEngine {
     try {
       jsonObj = await this.fetchGetEtherscan(
         this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
-        url)
+        url
+      )
       valid = validateObject(jsonObj, EtherscanGetAccountBalance)
       if (valid) {
         const balance = jsonObj.result
@@ -145,6 +172,24 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  async checkAccountNonceFetch (address: string) {
+    const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
+    try {
+      const jsonObj = await this.fetchGetEtherscan(
+        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+        url
+      )
+      const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
+      const nonce = bns.add('0', jsonObj.result)
+      if (valid && this.walletLocalData.otherData.nextNonce !== nonce) {
+        this.walletLocalData.otherData.nextNonce = nonce
+        this.walletLocalDataDirty = true
+      }
+    } catch (e) {
+      this.log(`Error checking account nonce`, e)
+    }
+  }
+
   async checkAccountInnerLoop () {
     const address = this.walletLocalData.publicKey
     try {
@@ -162,13 +207,16 @@ export class EthereumEngine extends CurrencyEngine {
         } else {
           const tokenInfo = this.getTokenInfo(tk)
           if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-            url = `?module=account&action=tokenbalance&contractaddress=${tokenInfo.contractAddress}&address=${this.walletLocalData.publicKey}&tag=latest`
+            url = `?module=account&action=tokenbalance&contractaddress=${
+              tokenInfo.contractAddress
+            }&address=${this.walletLocalData.publicKey}&tag=latest`
           } else {
             continue
           }
         }
         promiseArray.push(this.checkAccountFetch(tk, url))
       }
+      promiseArray.push(this.checkAccountNonceFetch(address))
       await Promise.all(promiseArray)
     } catch (e) {}
   }
@@ -196,10 +244,6 @@ export class EthereumEngine extends CurrencyEngine {
 
         // For spends, include the network fee in the transaction amount
         netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
-
-        if (bns.gte(tx.nonce, this.walletLocalData.otherData.nextNonce)) {
-          this.walletLocalData.otherData.nextNonce = bns.add(tx.nonce, '1')
-        }
       }
     } else {
       // Receive transaction
@@ -261,7 +305,8 @@ export class EthereumEngine extends CurrencyEngine {
       while (1) {
         const url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${NUM_TRANSACTIONS_TO_QUERY}`
         const jsonObj = await this.fetchGetEtherscan(
-          this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+          this.currencyInfo.defaultSettings.otherSettings
+            .etherscanApiServers[0],
           url
         )
         const valid = validateObject(jsonObj, schema)
@@ -398,6 +443,94 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  async checkUpdateNetworkFees () {
+    try {
+      const infoServer = getEdgeInfoServer()
+      const url = `${infoServer}/v1/networkFees/ETH`
+      const jsonObj = await this.fetchGet(url)
+      const valid = validateObject(jsonObj, NetworkFeesSchema)
+
+      if (valid) {
+        if (
+          JSON.stringify(this.walletLocalData.otherData.networkFees) !==
+          JSON.stringify(jsonObj)
+        ) {
+          this.walletLocalData.otherData.networkFees = jsonObj
+          this.walletLocalDataDirty = true
+        }
+      } else {
+        this.log('Error: Fetched invalid networkFees')
+      }
+    } catch (err) {
+      this.log('Error fetching networkFees from Edge info server')
+      this.log(err)
+    }
+
+    try {
+      const url = 'https://www.ethgasstation.info/json/ethgasAPI.json'
+      const jsonObj = await this.fetchGet(url)
+      const valid = validateObject(jsonObj, EthGasStationSchema)
+
+      if (valid) {
+        const fees = this.walletLocalData.otherData.networkFees
+        const ethereumFee: EthereumFee = fees['default']
+        if (!ethereumFee.gasPrice) {
+          return
+        }
+        const gasPrice: EthereumFeesGasPrice = ethereumFee.gasPrice
+
+        const safeLow = Math.floor(jsonObj.safeLow / 10)
+        let average = Math.floor(jsonObj.average / 10)
+        let fastest = Math.floor(jsonObj.fastest / 10)
+
+        // Sanity checks
+        if (safeLow < 1 || safeLow > 300) {
+          console.log('Invalid safeLow value from EthGasStation')
+          return
+        }
+        if (average < 1 || average > 300) {
+          console.log('Invalid average value from EthGasStation')
+          return
+        }
+        if (fastest < 1 || fastest > 300) {
+          console.log('Invalid fastest value from EthGasStation')
+          return
+        }
+
+        const lowFee = (safeLow * 1000000000).toString()
+
+        if (average <= safeLow) average = safeLow + 1
+        const standardFeeLow = (average * 1000000000).toString()
+
+        if (fastest <= average) fastest = average + 1
+        const highFee = (fastest * 1000000000).toString()
+
+        // We use a value that is somewhere in between average and fastest for the standardFeeHigh
+        const standardFeeHigh = (
+          Math.floor((average + fastest) * 0.75) * 1000000000
+        ).toString()
+
+        if (
+          gasPrice.lowFee !== lowFee ||
+          gasPrice.standardFeeLow !== standardFeeLow ||
+          gasPrice.highFee !== highFee ||
+          gasPrice.standardFeeHigh !== standardFeeHigh
+        ) {
+          gasPrice.lowFee = lowFee
+          gasPrice.standardFeeLow = standardFeeLow
+          gasPrice.highFee = highFee
+          gasPrice.standardFeeHigh = standardFeeHigh
+          this.walletLocalDataDirty = true
+        }
+      } else {
+        this.log('Error: Fetched invalid networkFees from EthGasStation')
+      }
+    } catch (err) {
+      this.log('Error fetching networkFees from EthGasStation')
+      this.log(err)
+    }
+  }
+
   async clearBlockchainCache () {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
@@ -411,6 +544,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     this.addToLoop('checkUnconfirmedTransactionsInnerLoop', UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS)
     super.startEngine()
@@ -435,32 +569,363 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+
+    // Ethereum can only have one output
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    let tokenInfo = {}
+    tokenInfo.contractAddress = ''
+
+    if (currencyCode !== PRIMARY_CURRENCY) {
+      tokenInfo = this.getTokenInfo(currencyCode)
+      if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+        throw new Error(
+          'Error: Token not supported or invalid contract address'
+        )
+      }
+    }
+
+    let otherParams: Object = {}
+    const { gasLimit, gasPrice } = calcMiningFee(
+      edgeSpendInfo,
+      this.walletLocalData.otherData.networkFees
+    )
+
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
+
+    if (currencyCode === PRIMARY_CURRENCY) {
+      const ethParams: EthereumTxOtherParams = {
+        from: [this.walletLocalData.publicKey],
+        to: [publicAddress],
+        gas: gasLimit,
+        gasPrice: gasPrice,
+        gasUsed: '0',
+        cumulativeGasUsed: '0',
+        errorVal: 0,
+        tokenRecipientAddress: null
+      }
+      otherParams = ethParams
+    } else {
+      let contractAddress = ''
+      if (typeof tokenInfo.contractAddress === 'string') {
+        contractAddress = tokenInfo.contractAddress
+      } else {
+        throw new Error('makeSpend: Invalid contract address')
+      }
+
+      const ethParams: EthereumTxOtherParams = {
+        from: [this.walletLocalData.publicKey],
+        to: [contractAddress],
+        gas: gasLimit,
+        gasPrice: gasPrice,
+        gasUsed: '0',
+        cumulativeGasUsed: '0',
+        errorVal: 0,
+        tokenRecipientAddress: publicAddress
+      }
+      otherParams = ethParams
+    }
+
+    const ErrorInsufficientFundsMoreEth = new Error(
+      'Insufficient ETH for transaction fee'
+    )
+    ErrorInsufficientFundsMoreEth.name = 'ErrorInsufficientFundsMoreEth'
+
+    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
+    const balanceEth = this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+    let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+    let totalTxAmount = '0'
+    let parentNetworkFee = null
+
+    if (currencyCode === PRIMARY_CURRENCY) {
+      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+      if (bns.gt(totalTxAmount, balanceEth)) {
+        throw new error.InsufficientFundsError()
+      }
+      nativeAmount = bns.mul(totalTxAmount, '-1')
+    } else {
+      parentNetworkFee = nativeNetworkFee
+
+      if (bns.gt(nativeNetworkFee, balanceEth)) {
+        throw ErrorInsufficientFundsMoreEth
+      }
+
+      nativeNetworkFee = '0' // Do not show a fee for token transactions.
+      nativeAmount = bns.mul(nativeAmount, '-1')
+    }
+    // **********************************
+    // Create the unsigned EdgeTransaction
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
-      currencyCode: '', // currencyCode
+      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: '', // nativeAmount
-      networkFee: '', // networkFee
+      nativeAmount, // nativeAmount
+      networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
-      otherParams: {}
+      otherParams // otherParams
     }
 
-    this.log('Payment transaction prepared...')
+    if (parentNetworkFee) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
+    }
+
     return edgeTransaction
   }
 
   // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    // Do signing
+
+    const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
+    const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
+    let nativeAmountHex
+
+    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+      // Remove the networkFee from the nativeAmount
+      const nativeAmount = bns.add(
+        edgeTransaction.nativeAmount,
+        edgeTransaction.networkFee
+      )
+      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
+    } else {
+      nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
+    }
+
+    const nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
+
+    let data
+    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+      data = ''
+    } else {
+      const dataArray = abi.simpleEncode(
+        'transfer(address,uint256):(uint256)',
+        edgeTransaction.otherParams.tokenRecipientAddress,
+        nativeAmountHex
+      )
+      data = '0x' + Buffer.from(dataArray).toString('hex')
+      nativeAmountHex = '0x00'
+    }
+
+    const txParams = {
+      nonce: nonceHex,
+      gasPrice: gasPriceHex,
+      gasLimit: gasLimitHex,
+      to: edgeTransaction.otherParams.to[0],
+      value: nativeAmountHex,
+      data: data,
+      // EIP 155 chainId - mainnet: 1, ropsten: 3
+      chainId: 1
+    }
+
+    const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
+    const wallet = ethWallet.fromPrivateKey(privKey)
+
+    this.log(wallet.getAddressString())
+
+    const tx = new EthereumTx(txParams)
+    tx.sign(privKey)
+
+    edgeTransaction.signedTx = bufToHex(tx.serialize())
+    edgeTransaction.txid = bufToHex(tx.hash())
+    edgeTransaction.date = Date.now() / 1000
+
     return edgeTransaction
   }
 
-  // asynchronous
+  async broadcastEtherscan (
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const result: BroadcastResults = {
+      incrementNonce: false,
+      decrementNonce: false
+    }
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+    this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
+    const url = `?module=proxy&action=eth_sendRawTransaction&hex=${
+      edgeTransaction.signedTx
+    }`
+    const jsonObj = await this.fetchGetEtherscan(
+      this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+      url
+    )
+
+    this.log('broadcastEtherscan jsonObj:', jsonObj)
+
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('EtherScan: Error sending transaction')
+      if (
+        jsonObj.error.code === -32000 ||
+        jsonObj.error.message.includes('nonce is too low') ||
+        jsonObj.error.message.includes('nonce too low') ||
+        jsonObj.error.message.includes('incrementing the nonce') ||
+        jsonObj.error.message.includes('replacement transaction underpriced')
+      ) {
+        result.incrementNonce = true
+      } else {
+        throw jsonObj.error
+      }
+      return result
+    } else if (typeof jsonObj.result === 'string') {
+      // Success!!
+      return result
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
+  async broadcastBlockCypher (
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const result: BroadcastResults = {
+      incrementNonce: false,
+      decrementNonce: false
+    }
+
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+    this.log(
+      `Blockcypher: sending transaction to network:\n${transactionParsed}\n`
+    )
+
+    const url = 'v1/eth/main/txs/push'
+    const hexTx = edgeTransaction.signedTx.replace('0x', '')
+    const jsonObj = await this.fetchPostBlockcypher(url, { tx: hexTx })
+
+    this.log('broadcastBlockCypher jsonObj:', jsonObj)
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('BlockCypher: Error sending transaction')
+      if (
+        typeof jsonObj.error === 'string' &&
+        jsonObj.error.includes('Account nonce ') &&
+        jsonObj.error.includes('higher than transaction')
+      ) {
+        result.incrementNonce = true
+      } else if (
+        typeof jsonObj.error === 'string' &&
+        jsonObj.error.includes('Error validating transaction') &&
+        jsonObj.error.includes('orphaned, missing reference')
+      ) {
+        result.decrementNonce = true
+      } else {
+        throw jsonObj.error
+      }
+      return result
+    } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
+      this.log(`Blockcypher success sending txid ${jsonObj.tx.hash}`)
+      // Success!!
+      return result
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
+    const results: Array<BroadcastResults | null> = [null, null]
+    const errors: Array<Error | null> = [null, null]
+
+    // Because etherscan will allow use of a nonce that's too high, only use it if Blockcypher fails
+    // If we can fix this or replace etherscan, then we can use an array of promises instead of await
+    // on each broadcast type
+    try {
+      results[0] = await this.broadcastBlockCypher(edgeTransaction)
+    } catch (e) {
+      errors[0] = e
+    }
+
+    if (errors[0]) {
+      try {
+        results[1] = await this.broadcastEtherscan(edgeTransaction)
+      } catch (e) {
+        errors[1] = e
+      }
+    }
+
+    // Use code below once we actually use a Promise array and simultaneously broadcast with a Promise.all()
+    //
+    // for (let i = 0; i < results.length; i++) {
+    //   results[i] = null
+    //   errors[i] = null
+    //   try {
+    //     results[i] = await results[i]
+    //   } catch (e) {
+    //     errors[i] = e
+    //   }
+    // }
+
+    let allErrored = true
+
+    for (const e of errors) {
+      if (!e) {
+        allErrored = false
+        break
+      }
+    }
+
+    let anyResultIncNonce = false
+    let anyResultDecrementNonce = false
+
+    for (const r: BroadcastResults | null of results) {
+      if (r && r.incrementNonce) {
+        anyResultIncNonce = true
+      }
+      if (r && r.decrementNonce) {
+        anyResultDecrementNonce = true
+      }
+    }
+
+    this.log('broadcastTx errors:', errors)
+    this.log('broadcastTx results:', results)
+
+    if (allErrored) {
+      throw errors[0] // Can only throw one error so throw the first one
+    }
+
+    if (anyResultDecrementNonce) {
+      this.walletLocalData.otherData.nextNonce = bns.add(
+        this.walletLocalData.otherData.nextNonce,
+        '-1'
+      )
+      this.log(
+        'nextNonce too high. Decrementing to ' +
+          this.walletLocalData.otherData.nextNonce.toString()
+      )
+      // Nonce error. Increment nonce and try again
+      const edgeTx = await this.signTx(edgeTransaction)
+      const out = await this.broadcastTx(edgeTx)
+      return out
+    }
+
+    if (anyResultIncNonce) {
+      // All servers returned a nonce-too-low. Increment and retry sign and broadcast
+      this.walletLocalData.otherData.nextNonce = bns.add(
+        this.walletLocalData.otherData.nextNonce,
+        '1'
+      )
+      this.log(
+        'nextNonce too low. Incrementing to ' +
+          this.walletLocalData.otherData.nextNonce.toString()
+      )
+      // Nonce error. Increment nonce and try again
+      const edgeTx = await this.signTx(edgeTransaction)
+      const out = await this.broadcastTx(edgeTx)
+      return out
+    }
+    // Success
+    this.walletLocalData.otherData.nextNonce = bns.add(
+      this.walletLocalData.otherData.nextNonce,
+      '1'
+    )
+    this.walletLocalDataDirty = true
+
     return edgeTransaction
   }
 
