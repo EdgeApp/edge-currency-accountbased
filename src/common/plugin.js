@@ -89,7 +89,7 @@ export class CurrencyPlugin {
     if (label || message || category) {
       edgeParsedUri.metadata = {}
       edgeParsedUri.metadata.name = label || undefined
-      edgeParsedUri.metadata.message = message || undefined
+      edgeParsedUri.metadata.notes = message || undefined
       edgeParsedUri.metadata.category = category || undefined
     }
 
