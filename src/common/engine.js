@@ -487,7 +487,6 @@ class CurrencyEngine {
     await this.saveWalletLoop()
   }
 
-  // synchronous
   getBlockHeight (): number {
     return parseInt(this.walletLocalData.blockHeight)
   }
@@ -500,7 +499,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async enableTokens (tokens: Array<string>) {
     this.enableTokensSync(tokens)
   }
@@ -514,7 +512,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async disableTokens (tokens: Array<string>) {
     this.disableTokensSync(tokens)
   }
@@ -605,12 +602,10 @@ class CurrencyEngine {
     }
   }
 
-  // synchronous
   getTokenStatus (token: string) {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  // synchronous
   getBalance (options: any): string {
     let currencyCode = this.currencyInfo.currencyCode
 
@@ -637,7 +632,6 @@ class CurrencyEngine {
     }
   }
 
-  // synchronous
   getNumTransactions (options: any): number {
     let currencyCode = this.currencyInfo.currencyCode
 
@@ -659,7 +653,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async getTransactions (options: EdgeGetTransactionsOptions) {
     let currencyCode: string = this.currencyInfo.currencyCode
 
@@ -713,20 +706,16 @@ class CurrencyEngine {
     return returnArray
   }
 
-  // synchronous
   getFreshAddress (options: any): EdgeFreshAddress {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
-  // synchronous
   addGapLimitAddresses (addresses: Array<string>, options: any) {}
 
-  // synchronous
   isAddressUsed (address: string, options: any) {
     return false
   }
 
-  // synchronous
   dumpData (): EdgeDataDump {
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],

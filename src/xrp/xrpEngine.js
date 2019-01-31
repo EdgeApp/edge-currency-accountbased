@@ -371,7 +371,6 @@ export class XrpEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  // synchronous
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
@@ -484,7 +483,6 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     const txJson = edgeTransaction.otherParams.preparedTx.txJSON
@@ -504,7 +502,6 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {

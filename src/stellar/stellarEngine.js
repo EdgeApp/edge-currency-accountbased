@@ -368,7 +368,6 @@ export class StellarEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  // synchronous
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
@@ -475,7 +474,6 @@ export class StellarEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     try {
@@ -496,7 +494,6 @@ export class StellarEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {

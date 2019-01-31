@@ -556,7 +556,6 @@ export class EthereumEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  // synchronous
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
@@ -667,7 +666,6 @@ export class EthereumEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
 
