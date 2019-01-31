@@ -14,7 +14,7 @@ function normalizeAddress (address: string) {
 }
 
 function addHexPrefix (value: string) {
-  if (value.startsWith('0x')) {
+  if (value.indexOf('0x') === 0) {
     return value
   } else {
     return '0x' + value
