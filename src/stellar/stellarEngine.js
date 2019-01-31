@@ -13,7 +13,6 @@ import type {
 import { error } from 'edge-core-js'
 
 import { bns } from 'biggystring'
-import { MakeSpendSchema } from '../common/schema.js'
 import {
   type StellarAccount,
   type StellarOperation,
@@ -23,7 +22,6 @@ import {
 import { CurrencyEngine } from '../common/engine.js'
 import { StellarPlugin } from '../stellar/stellarPlugin.js'
 import {
-  validateObject,
   getDenomInfo,
   asyncWaterfall,
   promiseAny
@@ -43,8 +41,6 @@ type StellarServerFunction =
 export class StellarEngine extends CurrencyEngine {
   stellarPlugin: StellarPlugin
   stellarApi: Object
-  balancesChecked: number
-  transactionsChecked: number
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsMap: { [txid: string]: Object }
   otherData: StellarWalletOtherData
@@ -58,8 +54,6 @@ export class StellarEngine extends CurrencyEngine {
     super(currencyPlugin, io_, walletInfo, opts)
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
-    this.balancesChecked = 0
-    this.transactionsChecked = 0
     this.activatedAccountsCache = {}
     this.pendingTransactionsMap = {}
   }
@@ -173,6 +167,10 @@ export class StellarEngine extends CurrencyEngine {
 
     if (toAddress === this.walletLocalData.publicKey) {
       ourReceiveAddresses.push(fromAddress)
+      if (fromAddress === this.walletLocalData.publicKey) {
+        // This is a spend to self. Make fee the only amount
+        nativeAmount = '-' + networkFee
+      }
     } else {
       // This is a spend. Include fee in amount and make amount negative
       nativeAmount = bns.add(nativeAmount, networkFee)
@@ -225,6 +223,8 @@ export class StellarEngine extends CurrencyEngine {
 
   // Polling version
   async checkTransactionsInnerLoop () {
+    const blockHeight = this.walletLocalData.blockHeight
+
     const address = this.walletLocalData.publicKey
     let page
     let pagingToken
@@ -242,7 +242,16 @@ export class StellarEngine extends CurrencyEngine {
           pagingToken = await this.processTransaction(tx)
         }
       } catch (e) {
-        pagingToken = undefined
+        if (e.response && e.response.title === 'Resource Missing') {
+          this.log('Account not found. Probably not activated w/minimum XLM')
+          this.tokenCheckTransactionsStatus.XLM = 1
+          this.updateOnAddressesChecked()
+        } else {
+          this.log(`Error fetching transaction info: ${JSON.stringify(e)}`)
+          this.log(`e.code: ${JSON.stringify(e.code)}`)
+          this.log(`e.message: ${JSON.stringify(e.message)}`)
+        }
+        return
       }
     }
     if (this.transactionsChangedArray.length > 0) {
@@ -255,17 +264,9 @@ export class StellarEngine extends CurrencyEngine {
       this.otherData.lastPagingToken = pagingToken
       this.walletLocalDataDirty = true
     }
-    this.transactionsChecked = 1
+    this.walletLocalData.lastAddressQueryHeight = blockHeight
+    this.tokenCheckTransactionsStatus.XLM = 1
     this.updateOnAddressesChecked()
-  }
-
-  updateOnAddressesChecked () {
-    if (this.addressesChecked === 1) {
-      return
-    }
-    this.addressesChecked =
-      (this.balancesChecked + this.transactionsChecked) / 2
-    this.currencyEngineCallbacks.onAddressesChecked(this.addressesChecked)
   }
 
   async checkUnconfirmedTransactionsFetch () {}
@@ -310,10 +311,18 @@ export class StellarEngine extends CurrencyEngine {
           }
         }
       }
-      this.balancesChecked = 1
+      this.tokenCheckBalanceStatus.XLM = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+      if (e.response && e.response.title === 'Resource Missing') {
+        this.log('Account not found. Probably not activated w/minimum XLM')
+        this.tokenCheckBalanceStatus.XLM = 1
+        this.updateOnAddressesChecked()
+      } else {
+        this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+        this.log(`e.code: ${JSON.stringify(e.code)}`)
+        this.log(`e.message: ${JSON.stringify(e.message)}`)
+      }
     }
   }
 
@@ -335,12 +344,10 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async clearBlockchainCache (): Promise<void> {
-    this.balancesChecked = 0
-    this.transactionsChecked = 0
     this.activatedAccountsCache = {}
-    this.otherData.accountSequence = 0
     this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
+    this.otherData.accountSequence = 0
   }
 
   // ****************************************************************************
@@ -372,34 +379,13 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
-    // Validate the spendInfo
-    const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
-
-    if (!valid) {
-      throw new Error('Error: invalid EdgeSpendInfo')
-    }
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    let currencyCode: string = ''
-    if (typeof edgeSpendInfo.currencyCode === 'string') {
-      currencyCode = edgeSpendInfo.currencyCode
-    } else {
-      currencyCode = 'XLM'
-    }
-    edgeSpendInfo.currencyCode = currencyCode
-
-    let publicAddress = ''
-
-    if (typeof edgeSpendInfo.spendTargets[0].publicAddress === 'string') {
-      publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    } else {
-      throw new Error('No valid spendTarget')
-    }
-
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     // Check if destination address is activated
     let mustCreateAccount = false
     const activated = this.activatedAccountsCache[publicAddress]
@@ -426,15 +412,6 @@ export class StellarEngine extends CurrencyEngine {
       throw new error.NoAmountSpecifiedError()
     }
 
-    let nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!nativeBalance) {
-      throw new error.InsufficientFundsError()
-    }
-
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
-    if (!denom) {
-      throw new Error('InternalErrorInvalidCurrencyCode')
-    }
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 7)
 
     const account = new this.stellarApi.Account(
@@ -475,8 +452,8 @@ export class StellarEngine extends CurrencyEngine {
 
     const networkFee = transaction.fee.toString()
     nativeAmount = bns.add(networkFee, nativeAmount) // Add fee to total
-    nativeBalance = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
-    if (bns.gt(nativeAmount, nativeBalance)) {
+    const nativeBalance2 = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
+    if (bns.gt(nativeAmount, nativeBalance2)) {
       throw new error.InsufficientFundsError()
     }
 
@@ -485,7 +462,7 @@ export class StellarEngine extends CurrencyEngine {
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
-      currencyCode: 'XLM', // currencyCode
+      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
       networkFee, // networkFee

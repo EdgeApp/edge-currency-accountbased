@@ -8,6 +8,7 @@ import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
@@ -15,14 +16,26 @@ import type {
 import { getDenomInfo } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
 import { bns } from 'biggystring'
-const eos = require('eosjs')
-const { ecc } = eos.modules
+import eosjs from 'eosjs'
+
+const { ecc } = eosjs.modules
+
+// ----MAIN NET----
+export const eosConfig = {
+  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
+  keyProvider: [],
+  httpEndpoint: '', // main net
+  expireInSeconds: 60,
+  sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
+  broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
+  verbose: false // verbose logging such as API activity
+}
 
 let io
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
-function checkAddress (address: string): boolean {
+export function checkAddress (address: string): boolean {
   // TODO: Check for a valid address format. The passed in
   // address would be a use visible displayed address such as what would
   // go into a QR code
@@ -38,11 +51,63 @@ function checkAddress (address: string): boolean {
   return true
 }
 
-class EosPlugin extends CurrencyPlugin {
+export class EosPlugin extends CurrencyPlugin {
+  otherMethods: Object
+  eosServer: Object
+
   constructor () {
     super('eos', currencyInfo)
+
+    eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    this.eosServer = eosjs(eosConfig)
+    this.otherMethods = {
+      getActivationSupportedCurrencies: async (): Promise<Object> => {
+        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
+        const response = await io.fetch(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
+        const out = await response.json()
+        return out
+      },
+      getActivationCost: async (): Promise<string> => {
+        try {
+          const result = await io.fetch('https://info1.edgesecure.co:8444/v1/eosPrices')
+          const prices = await result.json()
+          const totalEos = (Number(prices.ram) * 8) + (Number(prices.net) * 2) + (Number(prices.cpu) * 10)
+          let out = totalEos.toString()
+          out = bns.toFixed(out, 0, 4)
+          return out
+        } catch (e) {
+          throw new Error('ErrorUnableToGetCost')
+        }
+      },
+      validateAccount: async (account: string): Promise<boolean> => {
+        const valid = checkAddress(account)
+        const out = {result: ''}
+        if (!valid) {
+          const e = new Error('ErrorInvalidAccountName')
+          e.name = 'ErrorInvalidAccountName'
+          throw e
+        }
+        try {
+          const result = await this.getAccSystemStats(account)
+          if (result) {
+            const e = new Error('ErrorAccountUnavailable')
+            e.name = 'ErrorAccountUnavailable'
+            throw e
+          }
+          throw new Error('ErrorUnknownError')
+        } catch (e) {
+          if (e.code === 'ErrorUnknownAccount') {
+            out.result = 'AccountAvailable'
+          } else {
+            throw e
+          }
+        }
+        console.log(`validateAccount: result=${out.result}`)
+        return out
+      }
+    }
   }
-  createPrivateKey (walletType: string) {
+  async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'eos') {
@@ -60,7 +125,7 @@ class EosPlugin extends CurrencyPlugin {
     }
   }
 
-  derivePublicKey (walletInfo: EdgeWalletInfo) {
+  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'eos') {
       // TODO: User currency library to derive the public keys/addresses from the private key.
@@ -97,12 +162,18 @@ class EosPlugin extends CurrencyPlugin {
     if (!currencyEngine.otherData.accountName) {
       currencyEngine.otherData.accountName = ''
     }
+    if (!currencyEngine.otherData.lastQueryActionSeq) {
+      currencyEngine.otherData.lastQueryActionSeq = 0
+    }
+    if (!currencyEngine.otherData.highestTxHeight) {
+      currencyEngine.otherData.highestTxHeight = 0
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }
 
-  parseUri (uri: string) {
+  async parseUri (uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
       eos: true
     })
@@ -114,18 +185,15 @@ class EosPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  encodeUri (obj: EdgeEncodeUri) {
+  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      let currencyCode: string = 'EOS'
+      const currencyCode: string = 'EOS'
       const nativeAmount: string = obj.nativeAmount
-      if (typeof obj.currencyCode === 'string') {
-        currencyCode = obj.currencyCode
-      }
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')
@@ -134,6 +202,20 @@ class EosPlugin extends CurrencyPlugin {
     }
     const encodedUri = this.encodeUriCommon(obj, 'eos', amount)
     return encodedUri
+  }
+
+  async getAccSystemStats (account: string) {
+    return new Promise((resolve, reject) => {
+      this.eosServer.getAccount(account, (error, result) => {
+        if (error) {
+          if (error.message.includes('unknown key')) {
+            error.code = 'ErrorUnknownAccount'
+          }
+          reject(error)
+        }
+        resolve(result)
+      })
+    })
   }
 }
 

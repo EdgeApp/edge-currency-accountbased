@@ -44,14 +44,7 @@
         "currencyCode": "XLM",
         "label": "Johnny Ripple",
         "message": "Hello World, I miss you !"
-      }, "web+stellar:pay?destination=GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD&amount=0.000123&label=Johnny%20Ripple&msg=Hello%20World,%20I%20miss%20you%20!"],
-      "invalid currencyCode": [{
-        "publicAddress": "GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD",
-        "nativeAmount": "123",
-        "currencyCode": "INVALID",
-        "label": "Johnny Ripple",
-        "message": "Hello World, I miss you !"
-      }]
+      }, "web+stellar:pay?destination=GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD&amount=0.000123&label=Johnny%20Ripple&msg=Hello%20World,%20I%20miss%20you%20!"]
     }
   },
   {
@@ -99,14 +92,7 @@
         "currencyCode": "XRP",
         "label": "Johnny Ripple",
         "message": "Hello World, I miss you !"
-      }, "ripple:rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn?amount=0.000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!"],
-      "invalid currencyCode": [{
-        "publicAddress": "rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn",
-        "nativeAmount": "123",
-        "currencyCode": "INVALID",
-        "label": "Johnny Ripple",
-        "message": "Hello World, I miss you !"
-      }]
+      }, "ripple:rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn?amount=0.000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!"]
     }
   }
 ]

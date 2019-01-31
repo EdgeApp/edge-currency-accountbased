@@ -4,12 +4,29 @@
 // @flow
 
 export type EosSettings = {
-  eosServers: Array<string>,
+  eosCryptoLionsNodes: Array<string>,
   eosNodes: Array<string>
 }
-export type EosGetTransaction = {
+
+export type EosTransactionSuperNode = {
+  act: {
+    data: {
+      from: string,
+      to: string,
+      quantity: string,
+      hex_data: string,
+      memo?: string
+    }
+  },
+  trx_id: string,
+  block_time: string,
+  block_num: number
+}
+
+export type EosTransaction = {
   block_time: string,
   block_num: number,
+  account_action_seq: number,
   action_trace: {
     trx_id: string,
     act: {
@@ -40,5 +57,7 @@ export type EosGetTransaction = {
 export type EosParams = {}
 
 export type EosWalletOtherData = {
-  accountName: string
+  accountName: string,
+  lastQueryActionSeq: number,
+  highestTxHeight: number
 }

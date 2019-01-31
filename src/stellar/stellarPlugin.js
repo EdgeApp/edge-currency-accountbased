@@ -8,6 +8,7 @@ import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
@@ -48,7 +49,7 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  createPrivateKey (walletType: string) {
+  async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'stellar') {
@@ -60,7 +61,7 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  derivePublicKey (walletInfo: EdgeWalletInfo) {
+  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'stellar') {
       const keypair = stellarApi.Keypair.fromSecret(walletInfo.keys.stellarKey)
@@ -93,7 +94,7 @@ export class StellarPlugin extends CurrencyPlugin {
     return out
   }
 
-  parseUri (uri: string) {
+  async parseUri (uri: string): Promise<EdgeParsedUri> {
     const networks = {}
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
@@ -143,18 +144,15 @@ export class StellarPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  encodeUri (obj: EdgeEncodeUri) {
+  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
     const valid = this.checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      let currencyCode: string = 'XLM'
+      const currencyCode: string = 'XLM'
       const nativeAmount: string = obj.nativeAmount
-      if (typeof obj.currencyCode === 'string') {
-        currencyCode = obj.currencyCode
-      }
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')

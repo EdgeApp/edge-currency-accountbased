@@ -3,22 +3,24 @@
  */
 // @flow
 
-import type {
-  EdgeTransaction,
-  EdgeCurrencyEngineCallbacks,
-  EdgeCurrencyEngineOptions,
-  EdgeGetTransactionsOptions,
-  EdgeWalletInfo,
-  EdgeMetaToken,
-  EdgeCurrencyInfo,
-  EdgeDenomination,
-  EdgeFreshAddress,
-  EdgeDataDump,
-  EdgeCurrencyPlugin,
-  EdgeIo
+import {
+  error,
+  type EdgeTransaction,
+  type EdgeCurrencyEngineCallbacks,
+  type EdgeCurrencyEngineOptions,
+  type EdgeGetTransactionsOptions,
+  type EdgeWalletInfo,
+  type EdgeSpendInfo,
+  type EdgeMetaToken,
+  type EdgeCurrencyInfo,
+  type EdgeDenomination,
+  type EdgeFreshAddress,
+  type EdgeDataDump,
+  type EdgeCurrencyPlugin,
+  type EdgeIo
 } from 'edge-core-js'
 import { bns } from 'biggystring'
-import { CustomTokenSchema } from './schema.js'
+import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
 import {
   DATA_STORE_FILE,
   DATA_STORE_FOLDER,
@@ -28,19 +30,20 @@ import {
   WalletLocalData,
   type CustomToken
 } from './types.js'
-import { isHex, normalizeAddress, validateObject } from './utils.js'
+import { isHex, normalizeAddress, validateObject, getDenomInfo } from './utils.js'
 import { CurrencyPlugin } from './plugin.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
-
+const MAX_TRANSACTIONS = 1000
 class CurrencyEngine {
   currencyPlugin: CurrencyPlugin
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalFolder: Object
   engineOn: boolean
-  addressesChecked: number // True once wallet has been fully checked on the network
-  tokenCheckStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
+  addressesChecked: boolean
+  tokenCheckBalanceStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
+  tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
   transactionListDirty: boolean
@@ -70,8 +73,9 @@ class CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.io = io_
     this.engineOn = false
-    this.addressesChecked = 0
-    this.tokenCheckStatus = {}
+    this.addressesChecked = false
+    this.tokenCheckBalanceStatus = {}
+    this.tokenCheckTransactionsStatus = {}
     this.walletLocalDataDirty = false
     this.transactionsChangedArray = []
     this.transactionList = {}
@@ -90,7 +94,7 @@ class CurrencyEngine {
     this.txIdMap[currencyCode] = {}
     this.txIdList[currencyCode] = []
 
-    if (typeof opts.optionalSettings !== 'undefined') {
+    if (opts.optionalSettings === undefined) {
       this.currentSettings = opts.optionalSettings
     } else {
       this.currentSettings = this.currencyInfo.defaultSettings
@@ -100,12 +104,7 @@ class CurrencyEngine {
     this.walletLocalFolder = walletLocalFolder
 
     if (typeof this.walletInfo.keys.publicKey !== 'string') {
-      if (walletInfo.keys.publicKey) {
-        this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
-      } else {
-        const pubKeys = currencyPlugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.publicKey = pubKeys.publicKey
-      }
+      this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${
@@ -180,6 +179,11 @@ class CurrencyEngine {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
+    if (!this.walletInfo.keys.publicKey) {
+      const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
+      this.walletInfo.keys.publicKey = pubKeys.publicKey
+    }
+
     const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
     try {
       const result = await folder.file(DATA_STORE_FILE).getText()
@@ -207,7 +211,8 @@ class CurrencyEngine {
     }
 
     for (const token of this.walletLocalData.enabledTokens) {
-      this.tokenCheckStatus[token] = 0
+      this.tokenCheckBalanceStatus[token] = 0
+      this.tokenCheckTransactionsStatus[token] = 0
     }
     this.doInitialBalanceCallback()
   }
@@ -240,6 +245,8 @@ class CurrencyEngine {
       this.log('addTransaction: adding and sorting:' + edgeTransaction.txid)
       if (typeof this.transactionList[currencyCode] === 'undefined') {
         this.transactionList[currencyCode] = []
+      } else if (this.transactionList[currencyCode].length >= MAX_TRANSACTIONS) {
+        return
       }
       this.transactionList[currencyCode].push(edgeTransaction)
 
@@ -279,7 +286,7 @@ class CurrencyEngine {
         if (!this.txIdMap[currencyCode]) {
           this.txIdMap[currencyCode] = {}
         }
-        this.txIdMap[currencyCode][tx.txid] = i
+        this.txIdMap[currencyCode][normalizeAddress(tx.txid)] = i
         txIdList.push(normalizeAddress(tx.txid))
         i++
       }
@@ -408,6 +415,30 @@ class CurrencyEngine {
     })
   }
 
+  updateOnAddressesChecked () {
+    if (this.addressesChecked) {
+      return
+    }
+
+    const activeTokens = this.walletLocalData.enabledTokens
+    const perTokenSlice = 1 / activeTokens.length
+    let totalStatus = 0
+    let numComplete = 0
+    for (const token of activeTokens) {
+      const balanceStatus = this.tokenCheckBalanceStatus[token] || 0
+      const txStatus = this.tokenCheckTransactionsStatus[token] || 0
+      totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
+      if (balanceStatus === 1 && txStatus === 1) {
+        numComplete++
+      }
+    }
+    if (numComplete === activeTokens.length) {
+      totalStatus = 1
+      this.addressesChecked = true
+    }
+    this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
+  }
+
   log (...text: Array<any>) {
     text[0] = `${this.walletId.slice(0, 5)}: ${text[0].toString()}`
     console.log(...text)
@@ -435,7 +466,9 @@ class CurrencyEngine {
       this.currencyInfo.currencyCode
     )
     this.walletLocalDataDirty = true
-    this.addressesChecked = 0
+    this.addressesChecked = false
+    this.tokenCheckBalanceStatus = {}
+    this.tokenCheckTransactionsStatus = {}
     this.transactionList = {}
     this.txIdList = {}
     this.txIdMap = {}
@@ -638,7 +671,7 @@ class CurrencyEngine {
     }
 
     let startIndex: number = 0
-    const startEntries: number = 0
+    let startEntries: number = 0
     if (options === null) {
       return this.transactionList[currencyCode].slice(0)
     }
@@ -648,14 +681,13 @@ class CurrencyEngine {
         startIndex = this.transactionList[currencyCode].length - 1
       }
     }
-    // TODO: Fix edge-core-js to not drop txs if we only do a partial query -paulvp
-    // if (options.startEntries && options.startEntries > 0) {
-    //   startEntries = options.startEntries
-    //   if (startEntries + startIndex > this.transactionList[currencyCode].length) {
-    //     // Don't read past the end of the transactionList
-    //     startEntries = this.transactionList[currencyCode].length - startIndex
-    //   }
-    // }
+    if (options.startEntries && options.startEntries > 0) {
+      startEntries = options.startEntries
+      if (startEntries + startIndex > this.transactionList[currencyCode].length) {
+        // Don't read past the end of the transactionList
+        startEntries = this.transactionList[currencyCode].length - startIndex
+      }
+    }
 
     // Copy the appropriate entries from the arrayTransactions
     let returnArray = []
@@ -697,7 +729,39 @@ class CurrencyEngine {
     return dataDump
   }
 
-  // asynchronous
+  makeSpend (edgeSpendInfo: EdgeSpendInfo): Object {
+    const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
+
+    if (!valid) {
+      throw new Error('Error: Invalid EdgeSpendInfo')
+    }
+
+    for (const st of edgeSpendInfo.spendTargets) {
+      if (st.publicAddress === this.walletLocalData.publicKey) {
+        throw new error.SpendToSelfError()
+      }
+    }
+
+    let currencyCode: string = ''
+    if (typeof edgeSpendInfo.currencyCode === 'string') {
+      currencyCode = edgeSpendInfo.currencyCode
+    } else {
+      currencyCode = this.currencyInfo.currencyCode
+    }
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (!nativeBalance || bns.eq(nativeBalance, '0')) {
+      throw new error.InsufficientFundsError()
+    }
+
+    edgeSpendInfo.currencyCode = currencyCode
+    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    if (!denom) {
+      throw new Error('InternalErrorInvalidCurrencyCode')
+    }
+
+    return { edgeSpendInfo, nativeBalance, currencyCode, denom }
+  }
+
   async saveTx (edgeTransaction: EdgeTransaction) {
     this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)
     this.currencyEngineCallbacks.onTransactionsChanged([edgeTransaction])

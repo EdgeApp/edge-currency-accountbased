@@ -1,7 +1,7 @@
 // @flow
 import EventEmitter from 'events'
 
-import { makeFakeIos, makeContext, destroyAllContexts } from 'edge-core-js'
+import { makeFakeIos, destroyAllContexts } from 'edge-core-js'
 import type {
   // EdgeSpendInfo,
   EdgeWalletInfo,
@@ -27,11 +27,16 @@ for (const fixture of fixtures) {
     throw new Error('Missing fakeio.folder')
   }
   const walletLocalFolder = fakeIo.folder
-  const plugins = [CurrencyPluginFactory]
   // $FlowFixMe
   fakeIo.fetch = fetch
+  const myIo = {
+    random: size => fixture['key']
+  }
+  const opts = {
+    io: Object.assign({}, fakeIo, myIo)
+  }
 
-  const context = makeContext({ io: fakeIo, plugins })
+  // const context = makeEdgeContext({ io: fakeIo, plugins })
 
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
@@ -63,22 +68,25 @@ for (const fixture of fixtures) {
   }
 
   describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function () {
-    it('Plugin', function () {
-      return context.getCurrencyPlugins().then(currencyPlugins => {
-        const currencyPlugin = currencyPlugins[0]
-        assert.equal(
-          currencyPlugin.currencyInfo.currencyCode,
-          fixture['Test Currency code']
-        )
-        plugin = currencyPlugin
-        keys = plugin.createPrivateKey(WALLET_TYPE)
-        const info: EdgeWalletInfo = {
-          id: '1',
-          type: WALLET_TYPE,
-          keys
-        }
-        keys = plugin.derivePublicKey(info)
-      })
+    it('Plugin', async function () {
+      const currencyPlugin = await CurrencyPluginFactory.makePlugin(opts)
+      // return context.getCurrencyPlugins().then(currencyPlugins => {
+      // const currencyPlugin = currencyPlugins[0]
+      assert.equal(
+        currencyPlugin.currencyInfo.currencyCode,
+        fixture['Test Currency code']
+      )
+      plugin = currencyPlugin
+      keys = await plugin.createPrivateKey(WALLET_TYPE)
+      const info: EdgeWalletInfo = {
+        id: '1',
+        type: WALLET_TYPE,
+        keys
+      }
+      const keys2 = await plugin.derivePublicKey(info)
+      keys = Object.assign(keys, keys2)
+      console.log('')
+      // })
     })
   })
 
@@ -121,6 +129,9 @@ for (const fixture of fixtures) {
         assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
         assert.equal(typeof engine.saveTx, 'function', 'saveTx')
         return true
+      }).catch(e => {
+        console.log(e)
+        assert.equal(0, 1)
       })
     })
   })

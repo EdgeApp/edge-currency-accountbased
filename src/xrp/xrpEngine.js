@@ -178,6 +178,7 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async checkTransactionsInnerLoop () {
+    const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
     let startBlock: number = 0
     if (
@@ -220,25 +221,17 @@ export class XrpEngine extends CurrencyEngine {
           )
           this.transactionsChangedArray = []
         }
+        this.walletLocalData.lastAddressQueryHeight = blockHeight
+        this.tokenCheckTransactionsStatus.XRP = 1
         this.updateOnAddressesChecked()
       } else {
         this.log('Invalid data returned from rippleApi.getTransactions')
       }
     } catch (e) {
-      this.log(e.code)
-      this.log(e.message)
-      this.log(e)
       this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
-  }
-
-  updateOnAddressesChecked () {
-    if (this.addressesChecked) {
-      return
-    }
-    this.addressesChecked = 1
-    this.walletLocalData.lastAddressQueryHeight = this.walletLocalData.blockHeight
-    this.currencyEngineCallbacks.onAddressesChecked(1)
   }
 
   async checkUnconfirmedTransactionsFetch () {}
@@ -272,11 +265,23 @@ export class XrpEngine extends CurrencyEngine {
             )
           }
         }
+        this.tokenCheckBalanceStatus.XRP = 1
+        this.updateOnAddressesChecked()
       } else {
         this.log('Invalid data returned from rippleApi.getBalances')
       }
     } catch (e) {
+      if (e.data) {
+        if (e.data.error === 'actNotFound' || e.data.error_code === 19) {
+          this.log('Account not found. Probably not activated w/minimum XRP')
+          this.tokenCheckBalanceStatus.XRP = 1
+          this.updateOnAddressesChecked()
+          return
+        }
+      }
       this.log(`Error fetching address info: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
     }
   }
 
@@ -376,57 +381,13 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   // synchronous
-  async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
-    // Validate the spendInfo
-    const valid = validateObject(edgeSpendInfo, {
-      type: 'object',
-      properties: {
-        currencyCode: { type: 'string' },
-        networkFeeOption: { type: 'string' },
-        spendTargets: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              currencyCode: { type: 'string' },
-              publicAddress: { type: 'string' },
-              nativeAmount: { type: 'string' },
-              destMetadata: { type: 'object' },
-              destWallet: { type: 'object' }
-            },
-            required: ['publicAddress']
-          }
-        }
-      },
-      required: ['spendTargets']
-    })
-
-    if (!valid) {
-      throw new Error('Error: invalid ABCSpendInfo')
-    }
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    // let tokenInfo = {}
-    // tokenInfo.contractAddress = ''
-    //
-    let currencyCode: string = ''
-    if (typeof edgeSpendInfo.currencyCode === 'string') {
-      currencyCode = edgeSpendInfo.currencyCode
-    } else {
-      currencyCode = 'XRP'
-    }
-    edgeSpendInfo.currencyCode = currencyCode
-
-    let publicAddress = ''
-
-    if (typeof edgeSpendInfo.spendTargets[0].publicAddress === 'string') {
-      publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    } else {
-      throw new Error('No valid spendTarget')
-    }
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
 
     let nativeAmount = '0'
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
@@ -439,11 +400,6 @@ export class XrpEngine extends CurrencyEngine {
       throw new error.NoAmountSpecifiedError()
     }
 
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!nativeBalance) {
-      throw new error.InsufficientFundsError()
-    }
-
     const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
 
     if (currencyCode === PRIMARY_CURRENCY) {
@@ -454,7 +410,7 @@ export class XrpEngine extends CurrencyEngine {
       }
     }
 
-    const exchangeAmount = bns.div(nativeAmount, '1000000', 6)
+    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 6)
     let uniqueIdentifier
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&
@@ -490,16 +446,29 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     let preparedTx = {}
-    try {
-      preparedTx = await this.multicastServers(
-        'preparePayment',
-        this.walletLocalData.publicKey,
-        payment,
-        { maxLedgerVersionOffset: 300 }
-      )
-    } catch (err) {
-      this.log(err)
-      throw new Error('Error in preparePayment')
+    let i = 6
+    while (true) {
+      i--
+      try {
+        preparedTx = await this.multicastServers(
+          'preparePayment',
+          this.walletLocalData.publicKey,
+          payment,
+          { maxLedgerVersionOffset: 300 }
+        )
+        break
+      } catch (err) {
+        if (typeof err.message === 'string' && i) {
+          if (err.message.includes('has too many decimal places')) {
+            // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
+            // Just retrying seems to resolve it. -paulvp
+            console.log('Got "too many decimal places" error. Retrying... ' + i.toString())
+            continue
+          }
+        }
+        this.log(err)
+        throw new Error('Error in preparePayment')
+      }
     }
 
     const otherParams: XrpParams = {

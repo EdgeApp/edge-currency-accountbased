@@ -32,26 +32,45 @@ for (const fixture of fixtures) {
         done()
       })
     })
-    it('ripple.com invalid URIs', function () {
-      assert.throws(() => {
-        plugin.parseUri(
-          fixture['parseUri']['ripple.com invalid uri handler'][0]
-        )
+    it('ripple.com invalid URI handler', function (done) {
+      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri handler'][0]).then(() => {
+        assert.equal(0, 1)
+        done()
+      }).catch(e => {
+        done()
       })
-      assert.throws(() => {
-        plugin.parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0])
+    })
+
+    it('ripple.com invalid URI domain', function (done) {
+      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0]).then(() => {
+        assert.equal(0, 1)
+        done()
+      }).catch(e => {
+        done()
       })
-      assert.throws(() => {
-        plugin.parseUri(fixture['parseUri']['ripple.com invalid uri path'][0])
+    })
+
+    it('ripple.com invalid URI path', function (done) {
+      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri path'][0]).then(() => {
+        assert.equal(0, 1)
+        done()
+      }).catch(e => {
+        done()
       })
-      assert.throws(() => {
-        plugin.parseUri(fixture['parseUri']['ripple.com invalid uri param'][0])
+    })
+
+    it('ripple.com invalid URI param', function (done) {
+      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri param'][0]).then(() => {
+        assert.equal(0, 1)
+        done()
+      }).catch(e => {
+        done()
       })
     })
 
     // Ripple.com valid URIs
-    it('ripple.com uri address', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address'][0]
       )
       assert.equal(
@@ -61,8 +80,8 @@ for (const fixture of fixtures) {
       assert.equal(parsedUri.nativeAmount, undefined)
       assert.equal(parsedUri.currencyCode, undefined)
     })
-    it('ripple.com uri address with amount', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address with amount', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address with amount'][0]
       )
       assert.equal(
@@ -78,8 +97,8 @@ for (const fixture of fixtures) {
         fixture['parseUri']['ripple.com uri address with amount'][3]
       )
     })
-    it('ripple.com uri address with unique identifier', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address with unique identifier', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address with unique identifier'][0]
       )
       assert.equal(
@@ -91,8 +110,8 @@ for (const fixture of fixtures) {
         fixture['parseUri']['ripple.com uri address with unique identifier'][2]
       )
     })
-    it('ripple.com uri address with amount & label', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address with amount & label', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address with amount & label'][0]
       )
       assert.equal(
@@ -112,8 +131,8 @@ for (const fixture of fixtures) {
         fixture['parseUri']['ripple.com uri address with amount & label'][4]
       )
     })
-    it('ripple.com uri address with amount, label & message', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address with amount, label & message', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address with amount & label'][0]
       )
       assert.equal(
@@ -137,8 +156,8 @@ for (const fixture of fixtures) {
         fixture['parseUri']['ripple.com uri address with amount & label'][5]
       )
     })
-    it('ripple.com uri address with unsupported param', function () {
-      const parsedUri = plugin.parseUri(
+    it('ripple.com uri address with unsupported param', async function () {
+      const parsedUri = await plugin.parseUri(
         fixture['parseUri']['ripple.com uri address with amount & label'][0]
       )
       assert.equal(

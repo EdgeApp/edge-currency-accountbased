@@ -5,8 +5,9 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
-  eosServers: [''],
-  eosNodes: ['https://api.eosnewyork.io:443']
+  eosCryptoLionsNodes: ['https://history.cryptolions.io'],
+  eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
+  eosNodes: ['https://proxy.eosnode.tools']
 }
 
 const defaultSettings: any = {
@@ -22,14 +23,14 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://www.fixme.com/address/%s',
-  transactionExplorer: 'https://www.fixme.com/transactions/%s',
+  addressExplorer: 'https://eospark.com/account/%s',
+  transactionExplorer: 'https://eospark.com/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
     {
       name: 'EOS',
-      multiplier: '1000',
+      multiplier: '10000',
       symbol: 'E'
     }
   ],
