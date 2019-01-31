@@ -452,6 +452,16 @@ class CurrencyEngine {
   // Public methods
   // *************************************
 
+  async killEngine () {
+    // Set status flag to false
+    this.engineOn = false
+    // Clear Inner loops timers
+    for (const timer in this.timers) {
+      clearTimeout(this.timers[timer])
+    }
+    this.timers = {}
+  }
+
   updateSettings (settings: any) {
     this.currentSettings = settings
   }

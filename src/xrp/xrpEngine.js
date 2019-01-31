@@ -361,17 +361,8 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async killEngine () {
-    // Set status flag to false
-    this.engineOn = false
-    // Clear Inner loops timers
-    // TODO: make common
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
-    }
-    this.timers = {}
+    await super.killEngine()
     await this.multicastServers('disconnect')
-    this.log('killEngine')
-    // this.leavePool()
   }
 
   async resyncBlockchain (): Promise<void> {

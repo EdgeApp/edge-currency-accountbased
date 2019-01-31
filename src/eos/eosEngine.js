@@ -482,16 +482,6 @@ export class EosEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async killEngine () {
-    // Set status flag to false
-    this.engineOn = false
-    // Clear Inner loops timers
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
-    }
-    this.timers = {}
-  }
-
   async resyncBlockchain (): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
