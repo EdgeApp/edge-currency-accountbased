@@ -69,7 +69,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x6251583e7d997df3604bc73b9779196e94a090ce',
-      symbolImage: `${imageServerUrl}/hur-logo-solo-64.png`
+      symbolImage: `${imageServerUrl}/herc-logo-solo-64.png`
     },
     {
       currencyCode: 'DAI',
