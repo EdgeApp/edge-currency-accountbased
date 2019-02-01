@@ -361,17 +361,8 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async killEngine () {
-    // Set status flag to false
-    this.engineOn = false
-    // Clear Inner loops timers
-    // TODO: make common
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
-    }
-    this.timers = {}
+    await super.killEngine()
     await this.multicastServers('disconnect')
-    this.log('killEngine')
-    // this.leavePool()
   }
 
   async resyncBlockchain (): Promise<void> {
@@ -380,7 +371,6 @@ export class XrpEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  // synchronous
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
@@ -493,7 +483,6 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     const txJson = edgeTransaction.otherParams.preparedTx.txJSON
@@ -513,7 +502,6 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {

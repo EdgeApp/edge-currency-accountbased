@@ -5,3 +5,4 @@
 /intermediate
 /node_modules
 /build
+/src/ethereum/export-fixes-bundle.js

@@ -12,7 +12,7 @@ const babelOptions = {
 export default {
   external: config.external,
   input: './test/**/*.js',
-  output: [{ file: 'build/tests.cjs.js', format: 'cjs' }],
+  output: [{ file: 'build/lib/tests.cjs.js', format: 'cjs' }],
   plugins: [
     multiEntry(),
     json(),

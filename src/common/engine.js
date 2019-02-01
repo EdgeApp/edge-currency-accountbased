@@ -121,9 +121,9 @@ class CurrencyEngine {
     this.transactionsLoaded = true
 
     const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
-    let txIdList = {}
-    let txIdMap = {}
-    let transactionList = {}
+    let txIdList
+    let txIdMap
+    let transactionList
     try {
       const result = await folder.file(TXID_LIST_FILE).getText()
       txIdList = JSON.parse(result)
@@ -158,9 +158,9 @@ class CurrencyEngine {
     }
     if (isEmptyTransactions) {
       // Easy, just copy everything over
-      this.transactionList = transactionList
-      this.txIdList = txIdList
-      this.txIdMap = txIdMap
+      this.transactionList = transactionList || this.transactionList
+      this.txIdList = txIdList || this.txIdList
+      this.txIdMap = txIdMap || this.txIdMap
     } else {
       // Manually add transactions via addTransaction()
       for (const cc in transactionList) {
@@ -452,6 +452,16 @@ class CurrencyEngine {
   // Public methods
   // *************************************
 
+  async killEngine () {
+    // Set status flag to false
+    this.engineOn = false
+    // Clear Inner loops timers
+    for (const timer in this.timers) {
+      clearTimeout(this.timers[timer])
+    }
+    this.timers = {}
+  }
+
   updateSettings (settings: any) {
     this.currentSettings = settings
   }
@@ -477,7 +487,6 @@ class CurrencyEngine {
     await this.saveWalletLoop()
   }
 
-  // synchronous
   getBlockHeight (): number {
     return parseInt(this.walletLocalData.blockHeight)
   }
@@ -490,7 +499,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async enableTokens (tokens: Array<string>) {
     this.enableTokensSync(tokens)
   }
@@ -504,7 +512,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async disableTokens (tokens: Array<string>) {
     this.disableTokensSync(tokens)
   }
@@ -595,12 +602,10 @@ class CurrencyEngine {
     }
   }
 
-  // synchronous
   getTokenStatus (token: string) {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  // synchronous
   getBalance (options: any): string {
     let currencyCode = this.currencyInfo.currencyCode
 
@@ -627,7 +632,6 @@ class CurrencyEngine {
     }
   }
 
-  // synchronous
   getNumTransactions (options: any): number {
     let currencyCode = this.currencyInfo.currencyCode
 
@@ -649,7 +653,6 @@ class CurrencyEngine {
     }
   }
 
-  // asynchronous
   async getTransactions (options: EdgeGetTransactionsOptions) {
     let currencyCode: string = this.currencyInfo.currencyCode
 
@@ -703,20 +706,16 @@ class CurrencyEngine {
     return returnArray
   }
 
-  // synchronous
   getFreshAddress (options: any): EdgeFreshAddress {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
-  // synchronous
   addGapLimitAddresses (addresses: Array<string>, options: any) {}
 
-  // synchronous
   isAddressUsed (address: string, options: any) {
     return false
   }
 
-  // synchronous
   dumpData (): EdgeDataDump {
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],
@@ -745,16 +744,20 @@ class CurrencyEngine {
     let currencyCode: string = ''
     if (typeof edgeSpendInfo.currencyCode === 'string') {
       currencyCode = edgeSpendInfo.currencyCode
+      if (!this.getTokenStatus(currencyCode)) {
+        throw new Error('Error: Token not supported or enabled')
+      }
     } else {
       currencyCode = this.currencyInfo.currencyCode
     }
+
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     if (!nativeBalance || bns.eq(nativeBalance, '0')) {
       throw new error.InsufficientFundsError()
     }
 
     edgeSpendInfo.currencyCode = currencyCode
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    const denom = getDenomInfo(this.currencyInfo, currencyCode, this.customTokens)
     if (!denom) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }

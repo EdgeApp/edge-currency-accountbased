@@ -13,7 +13,7 @@ import type {
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { getDenomInfo } from '../common/utils.js'
+import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
 import { bns } from 'biggystring'
 import eosjs from 'eosjs'
@@ -69,7 +69,8 @@ export class EosPlugin extends CurrencyPlugin {
       },
       getActivationCost: async (): Promise<string> => {
         try {
-          const result = await io.fetch('https://info1.edgesecure.co:8444/v1/eosPrices')
+          const infoServer = getEdgeInfoServer()
+          const result = await io.fetch(`${infoServer}/v1/eosPrices`)
           const prices = await result.json()
           const totalEos = (Number(prices.ram) * 8) + (Number(prices.net) * 2) + (Number(prices.cpu) * 10)
           let out = totalEos.toString()

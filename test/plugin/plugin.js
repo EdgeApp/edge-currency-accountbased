@@ -7,6 +7,7 @@ import fixtures from './fixtures.json'
 for (const fixture of fixtures) {
   const CurrencyPluginFactory = Factories[fixture['factory']]
   const WALLET_TYPE = fixture['WALLET_TYPE']
+  // if (WALLET_TYPE !== 'wallet:ethereum') continue
   const keyName = WALLET_TYPE.split('wallet:')[1].split('-')[0] + 'Key'
   const address = 'publicKey'
 
@@ -22,7 +23,7 @@ for (const fixture of fixtures) {
   }
 
   describe(`Info for Wallet type ${WALLET_TYPE}`, function () {
-    let plugin
+    let plugin = {}
 
     before('Plugin', function (done) {
       CurrencyPluginFactory.makePlugin(opts).then(currencyPlugin => {
@@ -188,7 +189,7 @@ for (const fixture of fixtures) {
       )
       assert.equal(
         parsedUri.uniqueIdentifier,
-        fixture['parseUri']['uri address with unique identifier'][2]
+        fixture['parseUri']['uri address with unique identifier'][3]
       )
     })
     it('uri address with amount & label', async function () {

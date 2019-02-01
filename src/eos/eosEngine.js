@@ -482,16 +482,6 @@ export class EosEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async killEngine () {
-    // Set status flag to false
-    this.engineOn = false
-    // Clear Inner loops timers
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
-    }
-    this.timers = {}
-  }
-
   async resyncBlockchain (): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
@@ -511,7 +501,6 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  // synchronous
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
 
@@ -620,7 +609,6 @@ export class EosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // // synchronous
   // async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
   //   // // Validate the spendInfo
   //   const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
@@ -676,7 +664,6 @@ export class EosEngine extends CurrencyEngine {
   //   return edgeTransaction
   // }
 
-  // asynchronous
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
@@ -701,7 +688,6 @@ export class EosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // asynchronous
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {

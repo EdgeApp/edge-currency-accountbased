@@ -4,10 +4,21 @@
  */
 
 import { validate } from 'jsonschema'
-import { type EdgeCurrencyInfo } from 'edge-core-js'
+import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js'
+import { BN } from 'bn.js'
+import { bns } from 'biggystring'
+const Buffer = require('buffer/').Buffer
 
 function normalizeAddress (address: string) {
   return address.toLowerCase().replace('0x', '')
+}
+
+function addHexPrefix (value: string) {
+  if (value.indexOf('0x') === 0) {
+    return value
+  } else {
+    return '0x' + value
+  }
 }
 
 function validateObject (object: any, schema: any) {
@@ -38,10 +49,58 @@ export function isHex (h: string) {
   return out
 }
 
-function getDenomInfo (currencyInfo: EdgeCurrencyInfo, denom: string) {
-  return currencyInfo.denominations.find(element => {
+export function toHex (num: string) {
+  return bns.add(num, '0', 16)
+}
+
+export function hexToBuf (hex: string) {
+  const noHexPrefix = hex.replace('0x', '')
+  const noHexPrefixBN = new BN(noHexPrefix, 16)
+  const array = noHexPrefixBN.toArray()
+  const buf = Buffer.from(array)
+  return buf
+}
+
+export function bufToHex (buf: any) {
+  const signedTxBuf = Buffer.from(buf)
+  const hex = '0x' + signedTxBuf.toString('hex')
+  return hex
+}
+
+function getDenomInfo (
+  currencyInfo: EdgeCurrencyInfo,
+  denom: string,
+  customTokens?: Array<EdgeMetaToken>
+) {
+  // Look in the primary currency denoms
+  let edgeDenomination = currencyInfo.denominations.find(element => {
     return element.name === denom
   })
+
+  // Look in the currencyInfo tokens
+  if (!edgeDenomination) {
+    for (const metaToken of currencyInfo.metaTokens) {
+      edgeDenomination = metaToken.denominations.find(element => {
+        return element.name === denom
+      })
+      if (edgeDenomination) {
+        break
+      }
+    }
+  }
+
+  // Look in custom tokens
+  if (!edgeDenomination && customTokens) {
+    for (const metaToken of customTokens) {
+      edgeDenomination = metaToken.denominations.find(element => {
+        return element.name === denom
+      })
+      if (edgeDenomination) {
+        break
+      }
+    }
+  }
+  return edgeDenomination
 }
 
 const snoozeReject: Function = (ms: number) =>
@@ -103,12 +162,18 @@ async function asyncWaterfall (
   }
 }
 
+function getEdgeInfoServer () {
+  return 'https://info1.edgesecure.co:8444'
+}
+
 export {
   normalizeAddress,
+  addHexPrefix,
   validateObject,
   getDenomInfo,
   asyncWaterfall,
   snooze,
   snoozeReject,
+  getEdgeInfoServer,
   promiseAny
 }
