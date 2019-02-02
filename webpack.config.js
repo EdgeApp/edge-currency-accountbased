@@ -1,14 +1,38 @@
-/**
- * Created by paul on 7/7/17.
- */
+const path = require('path')
+
+const webpack = require('webpack')
+
+const packageJson = require('./package.json')
+
+const externals = [
+  'base-x',
+  'biggystring',
+  'edge-core-js',
+  'jsonschema',
+  'uri-js',
+  'url-parse'
+]
 
 module.exports = {
-  entry: './src/common/export-fixes.js',
+  devtool: 'source-map',
+  entry: './src/index.js',
+  externals,
+  mode: 'development',
   module: {
-    loaders: [{ test: /\.json$/, loader: 'json-loader' }]
+    rules: [
+      {
+        test: /\.js$/,
+        use: {
+          loader: '@sucrase/webpack-loader',
+          options: { transforms: ['flow'] }
+        }
+      }
+    ]
   },
   output: {
-    filename: './lib/export-fixes-bundle.js',
-    libraryTarget: 'commonjs'
-  }
+    filename: packageJson['react-native'],
+    libraryTarget: 'commonjs',
+    path: path.resolve(__dirname)
+  },
+  plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)]
 }

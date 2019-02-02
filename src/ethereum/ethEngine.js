@@ -11,6 +11,9 @@ import type {
   EdgeWalletInfo
 } from 'edge-core-js'
 import { error } from 'edge-core-js'
+import abi from 'ethereumjs-abi'
+import EthereumTx from 'ethereumjs-tx'
+import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -42,10 +45,6 @@ import {
   type EthereumWalletOtherData,
   type EtherscanTransaction
 } from './ethTypes.js'
-
-const abi = require('./export-fixes-bundle.js').ABI
-const ethWallet = require('./export-fixes-bundle.js').Wallet
-const EthereumTx = require('./export-fixes-bundle.js').Transaction
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000

@@ -3,6 +3,8 @@
  */
 // @flow
 
+import { Buffer } from 'buffer'
+
 import { bns } from 'biggystring'
 import type {
   EdgeCurrencyEngine,
@@ -13,6 +15,8 @@ import type {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js'
+import EthereumUtil from 'ethereumjs-util'
+import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, hexToBuf } from '../common/utils.js'
@@ -20,10 +24,6 @@ import { EthereumEngine } from './ethEngine.js'
 import { currencyInfo } from './ethInfo.js'
 
 export { calcMiningFee } from './ethMiningFees.js'
-
-const Buffer = require('buffer/').Buffer
-const ethWallet = require('./export-fixes-bundle.js').Wallet
-const EthereumUtil = require('./export-fixes-bundle.js').Util
 
 let io
 
