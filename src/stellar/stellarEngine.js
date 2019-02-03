@@ -45,11 +45,10 @@ export class StellarEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: StellarPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
     this.activatedAccountsCache = {}

@@ -8,7 +8,6 @@ import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeFreshAddress,
-  type EdgeIo,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -58,11 +57,10 @@ export class EosEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: EosPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
 
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
@@ -115,11 +113,10 @@ export class EosEngine extends CurrencyEngine {
 
   async loadEngine (
     plugin: EdgeCurrencyPlugin,
-    io: EdgeIo,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
-    await super.loadEngine(plugin, io, walletInfo, opts)
+    await super.loadEngine(plugin, walletInfo, opts)
     if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
       if (walletInfo.keys.ownerPublicKey) {
         this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey

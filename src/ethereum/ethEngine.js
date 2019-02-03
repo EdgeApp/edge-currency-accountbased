@@ -77,11 +77,10 @@ export class EthereumEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: EthereumPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
     if (typeof this.walletInfo.keys.ethereumKey !== 'string') {
       if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumKey) {
         this.walletInfo.keys.ethereumKey = walletInfo.keys.keys.ethereumKey

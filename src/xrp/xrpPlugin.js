@@ -6,11 +6,13 @@
 import baseX from 'base-x'
 import { bns } from 'biggystring'
 import {
+  type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
+  type EdgeIo,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -29,8 +31,6 @@ const base58Codec = baseX(
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 )
 
-let io
-
 function checkAddress (address: string): boolean {
   let data: Uint8Array
   try {
@@ -48,8 +48,8 @@ export class XrpPlugin extends CurrencyPlugin {
   // connectionPool: Object
   connectionClients: { [walletId: string]: boolean }
 
-  constructor () {
-    super('ripple', currencyInfo)
+  constructor (io: EdgeIo) {
+    super(io, 'ripple', currencyInfo)
     // this.connectionPool = new RippledWsClientPool()
     this.connectionClients = {}
     this.rippleApi = {}
@@ -89,7 +89,7 @@ export class XrpPlugin extends CurrencyPlugin {
     if (type === 'ripple' || type === 'ripple-secp256k1') {
       const algorithm =
         type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
-      const entropy = Array.from(io.random(32))
+      const entropy = Array.from(this.io.random(32))
       const server = this.currencyInfo.defaultSettings.otherSettings
         .rippledServers[0]
       const api = new RippleAPI({ server })
@@ -119,9 +119,9 @@ export class XrpPlugin extends CurrencyPlugin {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new XrpEngine(this, io, walletInfo, opts)
+    const currencyEngine = new XrpEngine(this, walletInfo, opts)
 
-    await currencyEngine.loadEngine(this, io, walletInfo, opts)
+    await currencyEngine.loadEngine(this, walletInfo, opts)
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -185,10 +185,8 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
-    io = opts.io
-
-    const plugin: EdgeCurrencyPlugin = new XrpPlugin()
+  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
+    const plugin: EdgeCurrencyPlugin = new XrpPlugin(opts.io)
     return plugin
   }
 }

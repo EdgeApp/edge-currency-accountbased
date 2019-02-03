@@ -5,11 +5,13 @@
 
 import { bns } from 'biggystring'
 import {
+  type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
+  type EdgeIo,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -33,8 +35,6 @@ export const eosConfig = {
   verbose: false // verbose logging such as API activity
 }
 
-let io
-
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
 export function checkAddress (address: string): boolean {
@@ -57,8 +57,8 @@ export class EosPlugin extends CurrencyPlugin {
   otherMethods: Object
   eosServer: Object
 
-  constructor () {
-    super('eos', currencyInfo)
+  constructor (io: EdgeIo) {
+    super(io, 'eos', currencyInfo)
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     this.eosServer = eosjs(eosConfig)
@@ -75,7 +75,7 @@ export class EosPlugin extends CurrencyPlugin {
       getActivationCost: async (): Promise<string> => {
         try {
           const infoServer = getEdgeInfoServer()
-          const result = await io.fetch(`${infoServer}/v1/eosPrices`)
+          const result = await this.io.fetch(`${infoServer}/v1/eosPrices`)
           const prices = await result.json()
           const totalEos =
             Number(prices.ram) * 8 +
@@ -124,9 +124,9 @@ export class EosPlugin extends CurrencyPlugin {
       // Use io.random() for random number generation
       // Multiple keys can be created and stored here. ie. If there is both a mnemonic and key format,
       // Generate and store them here by returning an arbitrary object with them.
-      let entropy = Buffer.from(io.random(32)).toString('hex')
+      let entropy = Buffer.from(this.io.random(32)).toString('hex')
       const eosOwnerKey = ecc.seedPrivate(entropy)
-      entropy = Buffer.from(io.random(32)).toString('hex')
+      entropy = Buffer.from(this.io.random(32)).toString('hex')
       const eosKey = ecc.seedPrivate(entropy)
       return { eosOwnerKey, eosKey }
     } else {
@@ -157,8 +157,8 @@ export class EosPlugin extends CurrencyPlugin {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new EosEngine(this, io, walletInfo, opts)
-    await currencyEngine.loadEngine(this, io, walletInfo, opts)
+    const currencyEngine = new EosEngine(this, walletInfo, opts)
+    await currencyEngine.loadEngine(this, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
     // currencyEngine.otherData is an opaque utility object for use for currency
@@ -232,14 +232,12 @@ export const eosCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
-    io = opts.io
-
+  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
     // TODO: Initialize currency library if needed
     // Add any parameters to the Plugin object which would be global for all wallets (engines).
     // Common parameters would be an SDK/API object for this currency from an external library
 
-    const plugin: CurrencyPlugin = new EosPlugin()
+    const plugin: CurrencyPlugin = new EosPlugin(opts.io)
     return plugin
   }
 }

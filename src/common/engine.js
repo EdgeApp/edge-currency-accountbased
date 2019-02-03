@@ -70,7 +70,6 @@ class CurrencyEngine {
 
   constructor (
     currencyPlugin: CurrencyPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
@@ -78,7 +77,7 @@ class CurrencyEngine {
     const { walletLocalFolder, callbacks } = opts
 
     this.currencyPlugin = currencyPlugin
-    this.io = io_
+    this.io = currencyPlugin.io
     this.engineOn = false
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}
@@ -184,7 +183,6 @@ class CurrencyEngine {
 
   async loadEngine (
     plugin: EdgeCurrencyPlugin,
-    io: EdgeIo,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {

@@ -58,11 +58,10 @@ export class XrpEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: XrpPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
     // this.callbacksSetup = false
   }

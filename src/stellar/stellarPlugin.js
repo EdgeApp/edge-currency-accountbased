@@ -5,11 +5,13 @@
 
 import { bns } from 'biggystring'
 import {
+  type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
+  type EdgeIo,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -24,12 +26,10 @@ import { currencyInfo } from './stellarInfo.js'
 
 const URI_PREFIX = 'web+stellar'
 
-let io
-
 export class StellarPlugin extends CurrencyPlugin {
   stellarApiServers: Array<Object>
-  constructor () {
-    super('stellar', currencyInfo)
+  constructor (io: EdgeIo) {
+    super(io, 'stellar', currencyInfo)
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
     for (const server of currencyInfo.defaultSettings.otherSettings
@@ -54,7 +54,7 @@ export class StellarPlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'stellar') {
-      const entropy = Array.from(io.random(32))
+      const entropy = Array.from(this.io.random(32))
       const keypair = stellarApi.Keypair.fromRawEd25519Seed(entropy)
       return { stellarKey: keypair.secret() }
     } else {
@@ -76,11 +76,11 @@ export class StellarPlugin extends CurrencyPlugin {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new StellarEngine(this, io, walletInfo, opts)
+    const currencyEngine = new StellarEngine(this, walletInfo, opts)
 
     currencyEngine.stellarApi = stellarApi
 
-    await currencyEngine.loadEngine(this, io, walletInfo, opts)
+    await currencyEngine.loadEngine(this, walletInfo, opts)
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -192,10 +192,8 @@ export const stellarCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
-    io = opts.io
-
-    const plugin: EdgeCurrencyPlugin = new StellarPlugin()
+  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
+    const plugin: EdgeCurrencyPlugin = new StellarPlugin(opts.io)
     return plugin
   }
 }
