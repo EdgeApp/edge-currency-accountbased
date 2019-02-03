@@ -3,7 +3,6 @@
 import EventEmitter from 'events'
 
 import { assert } from 'chai'
-import { downgradeDisklet } from 'disklet'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -11,22 +10,26 @@ import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeWalletInfo,
-  destroyAllContexts,
-  makeFakeIos
+  closeEdge,
+  makeFakeIo
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import * as Factories from '../../src/index.js'
+import edgeCorePlugins from '../../src/index.js'
 
 describe(`EOS activation`, function () {
   let engine: EdgeCurrencyEngine
-  let plugin: EdgeCurrencyPlugin
 
-  const [fakeIo] = makeFakeIos(1)
+  const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
-    io: { ...fakeIo, fetch, random: size => new Uint8Array(size) }
+    initOptions: {},
+    io: { ...fakeIo, fetch, random: size => new Uint8Array(size) },
+    nativeIo: {},
+    pluginDisklet: fakeIo.disklet
   }
+  const factory = edgeCorePlugins['eos']
+  const plugin: EdgeCurrencyPlugin = factory(opts)
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
@@ -53,13 +56,11 @@ describe(`EOS activation`, function () {
   }
 
   const walletLocalDisklet = fakeIo.disklet
-  const walletLocalFolder = downgradeDisklet(walletLocalDisklet)
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
+    userSettings: void 0,
     walletLocalDisklet,
-    walletLocalEncryptedDisklet: walletLocalDisklet,
-    walletLocalEncryptedFolder: walletLocalFolder,
-    walletLocalFolder
+    walletLocalEncryptedDisklet: walletLocalDisklet
   }
 
   const info: EdgeWalletInfo = {
@@ -73,15 +74,12 @@ describe(`EOS activation`, function () {
     }
   }
 
-  before('Plugin', function (done) {
-    Factories.eosCurrencyPluginFactory.makePlugin(opts).then(currencyPlugin => {
-      assert.equal(currencyPlugin.currencyInfo.currencyCode, 'EOS')
-      plugin = currencyPlugin
-      plugin.makeEngine(info, currencyEngineOptions).then(result => {
+  before('Engine', function () {
+    return plugin
+      .makeCurrencyEngine(info, currencyEngineOptions)
+      .then(result => {
         engine = result
-        done()
       })
-    })
   })
 
   it('getSupportedCurrencies', async function () {
@@ -127,7 +125,7 @@ describe(`EOS activation`, function () {
   describe('killEngine...', function () {
     it('Should stop the engine', function (done) {
       engine.killEngine().then(() => {
-        destroyAllContexts()
+        closeEdge()
         done()
       })
     })

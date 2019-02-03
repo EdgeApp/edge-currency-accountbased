@@ -20,9 +20,9 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'XRP',
-  currencyName: 'XRP',
+  displayName: 'XRP',
   pluginName: 'ripple',
-  walletTypes: ['wallet:ripple'],
+  walletType: 'wallet:ripple',
 
   defaultSettings,
 

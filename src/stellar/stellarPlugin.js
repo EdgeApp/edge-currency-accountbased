@@ -9,7 +9,6 @@ import {
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
-  type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
@@ -70,29 +69,6 @@ export class StellarPlugin extends CurrencyPlugin {
     } else {
       throw new Error('InvalidWalletType')
     }
-  }
-
-  async makeEngine (
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new StellarEngine(this, walletInfo, opts)
-
-    currencyEngine.stellarApi = stellarApi
-
-    await currencyEngine.loadEngine(this, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow type checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    if (!currencyEngine.otherData.accountSequence) {
-      currencyEngine.otherData.accountSequence = 0
-    }
-    if (!currencyEngine.otherData.lastPagingToken) {
-      currencyEngine.otherData.lastPagingToken = '0'
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
   }
 
   async parseUri (uri: string): Promise<EdgeParsedUri> {
@@ -188,12 +164,45 @@ export class StellarPlugin extends CurrencyPlugin {
   }
 }
 
-export const stellarCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
-  pluginType: 'currency',
-  pluginName: currencyInfo.pluginName,
+export function makeStellarPlugin (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin {
+  const { io } = opts
 
-  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
-    const plugin: EdgeCurrencyPlugin = new StellarPlugin(opts.io)
-    return plugin
+  let toolsPromise: Promise<StellarPlugin>
+  function makeCurrencyTools (): Promise<StellarPlugin> {
+    if (toolsPromise != null) return toolsPromise
+    toolsPromise = Promise.resolve(new StellarPlugin(io))
+    return toolsPromise
+  }
+
+  async function makeCurrencyEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
+    const tools = await makeCurrencyTools()
+    const currencyEngine = new StellarEngine(tools, walletInfo, opts)
+
+    currencyEngine.stellarApi = stellarApi
+
+    await currencyEngine.loadEngine(tools, walletInfo, opts)
+
+    // This is just to make sure otherData is Flow type checked
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+    if (!currencyEngine.otherData.accountSequence) {
+      currencyEngine.otherData.accountSequence = 0
+    }
+    if (!currencyEngine.otherData.lastPagingToken) {
+      currencyEngine.otherData.lastPagingToken = '0'
+    }
+
+    const out: EdgeCurrencyEngine = currencyEngine
+    return out
+  }
+
+  return {
+    currencyInfo,
+    makeCurrencyEngine,
+    makeCurrencyTools
   }
 }

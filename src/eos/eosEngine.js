@@ -6,7 +6,7 @@
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
-  type EdgeCurrencyPlugin,
+  type EdgeCurrencyTools,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
   type EdgeTransaction,
@@ -112,7 +112,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async loadEngine (
-    plugin: EdgeCurrencyPlugin,
+    plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {

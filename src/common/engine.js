@@ -9,7 +9,7 @@ import {
   type EdgeCurrencyEngineCallbacks,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
-  type EdgeCurrencyPlugin,
+  type EdgeCurrencyTools,
   type EdgeDataDump,
   type EdgeDenomination,
   type EdgeFreshAddress,
@@ -100,8 +100,8 @@ class CurrencyEngine {
     this.txIdMap[currencyCode] = {}
     this.txIdList[currencyCode] = []
 
-    if (opts.optionalSettings === undefined) {
-      this.currentSettings = opts.optionalSettings
+    if (opts.userSettings != null) {
+      this.currentSettings = opts.userSettings
     } else {
       this.currentSettings = this.currencyInfo.defaultSettings
     }
@@ -182,7 +182,7 @@ class CurrencyEngine {
   }
 
   async loadEngine (
-    plugin: EdgeCurrencyPlugin,
+    plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
@@ -463,8 +463,8 @@ class CurrencyEngine {
     this.timers = {}
   }
 
-  updateSettings (settings: any) {
-    this.currentSettings = settings
+  async changeUserSettings (userSettings: Object) {
+    this.currentSettings = userSettings
   }
 
   async clearBlockchainCache (): Promise<void> {

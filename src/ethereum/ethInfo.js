@@ -22,9 +22,9 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'ETH',
-  currencyName: 'Ethereum',
+  displayName: 'Ethereum',
   pluginName: 'ethereum',
-  walletTypes: ['wallet:ethereum'],
+  walletType: 'wallet:ethereum',
 
   defaultSettings,
 

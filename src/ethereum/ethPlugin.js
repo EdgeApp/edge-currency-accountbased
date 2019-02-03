@@ -11,7 +11,6 @@ import {
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
-  type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
@@ -103,30 +102,6 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
   }
 
-  async makeEngine (
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new EthereumEngine(this, walletInfo, opts)
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(this, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow type checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    // Initialize otherData defaults if they weren't on disk
-    if (!currencyEngine.otherData.nextNonce) {
-      currencyEngine.otherData.nextNonce = '0'
-    }
-    if (!currencyEngine.otherData.networkFees) {
-      currencyEngine.otherData.networkFees = defaultNetworkFees
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
   async parseUri (uri: string): Promise<EdgeParsedUri> {
     const networks = { ethereum: true, ether: true }
 
@@ -207,12 +182,46 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 }
 
-export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
-  pluginType: 'currency',
-  pluginName: currencyInfo.pluginName,
+export function makeEthereumPlugin (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin {
+  const { io } = opts
 
-  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
-    const plugin: EdgeCurrencyPlugin = new EthereumPlugin(opts.io)
-    return plugin
+  let toolsPromise: Promise<EthereumPlugin>
+  function makeCurrencyTools (): Promise<EthereumPlugin> {
+    if (toolsPromise != null) return toolsPromise
+    toolsPromise = Promise.resolve(new EthereumPlugin(io))
+    return toolsPromise
+  }
+
+  async function makeCurrencyEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
+    const tools = await makeCurrencyTools()
+    const currencyEngine = new EthereumEngine(tools, walletInfo, opts)
+
+    // Do any async initialization necessary for the engine
+    await currencyEngine.loadEngine(tools, walletInfo, opts)
+
+    // This is just to make sure otherData is Flow type checked
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+
+    // Initialize otherData defaults if they weren't on disk
+    if (!currencyEngine.otherData.nextNonce) {
+      currencyEngine.otherData.nextNonce = '0'
+    }
+    if (!currencyEngine.otherData.networkFees) {
+      currencyEngine.otherData.networkFees = defaultNetworkFees
+    }
+
+    const out: EdgeCurrencyEngine = currencyEngine
+    return out
+  }
+
+  return {
+    currencyInfo,
+    makeCurrencyEngine,
+    makeCurrencyTools
   }
 }

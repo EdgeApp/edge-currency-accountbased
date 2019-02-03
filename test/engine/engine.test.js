@@ -2,37 +2,41 @@
 
 import EventEmitter from 'events'
 
-import { assert } from 'chai'
-import { downgradeDisklet } from 'disklet'
+import { assert, expect } from 'chai'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineCallbacks,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
+  type EdgeCurrencyTools,
   type EdgeWalletInfo,
-  destroyAllContexts,
-  makeFakeIos
+  closeEdge,
+  makeFakeIo
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import * as Factories from '../../src/index.js'
+import edgeCorePlugins from '../../src/index.js'
 import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
+  let tools: EdgeCurrencyTools
   let engine: EdgeCurrencyEngine
   let keys
-  let plugin: EdgeCurrencyPlugin
 
-  const CurrencyPluginFactory = Factories[fixture['factory']]
   const WALLET_TYPE = fixture['WALLET_TYPE']
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
-  const [fakeIo] = makeFakeIos(1)
+  const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
-    io: { ...fakeIo, fetch, random: size => fixture['key'] }
+    initOptions: {},
+    io: { ...fakeIo, fetch, random: size => fixture['key'] },
+    nativeIo: {},
+    pluginDisklet: fakeIo.disklet
   }
+  const factory = edgeCorePlugins[fixture['pluginName']]
+  const plugin: EdgeCurrencyPlugin = factory(opts)
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
@@ -59,31 +63,30 @@ for (const fixture of fixtures) {
   }
 
   const walletLocalDisklet = fakeIo.disklet
-  const walletLocalFolder = downgradeDisklet(walletLocalDisklet)
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
+    userSettings: void 0,
     walletLocalDisklet,
-    walletLocalEncryptedDisklet: walletLocalDisklet,
-    walletLocalEncryptedFolder: walletLocalFolder,
-    walletLocalFolder
+    walletLocalEncryptedDisklet: walletLocalDisklet
   }
 
   describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function () {
-    it('Plugin', async function () {
-      const currencyPlugin = await CurrencyPluginFactory.makePlugin(opts)
-      assert.equal(
-        currencyPlugin.currencyInfo.currencyCode,
+    it('Tools', async function () {
+      expect(plugin.currencyInfo.currencyCode).equals(
         fixture['Test Currency code']
       )
-      plugin = currencyPlugin
-      keys = await plugin.createPrivateKey(WALLET_TYPE)
-      const info: EdgeWalletInfo = {
-        id: '1',
-        type: WALLET_TYPE,
-        keys
-      }
-      const keys2 = await plugin.derivePublicKey(info)
-      keys = Object.assign(keys, keys2)
+      return plugin.makeCurrencyTools().then(async currencyTools => {
+        tools = currencyTools
+
+        keys = await tools.createPrivateKey(WALLET_TYPE)
+        const info: EdgeWalletInfo = {
+          id: '1',
+          type: WALLET_TYPE,
+          keys
+        }
+        const keys2 = await tools.derivePublicKey(info)
+        keys = Object.assign(keys, keys2)
+      })
     })
   })
 
@@ -95,7 +98,7 @@ for (const fixture of fixtures) {
         keys
       }
       if (!plugin) throw new Error('ErrorNoPlugin')
-      return plugin.makeEngine(info, currencyEngineOptions).then(e => {
+      return plugin.makeCurrencyEngine(info, currencyEngineOptions).then(e => {
         engine = e
         assert.equal(typeof engine.startEngine, 'function', 'startEngine')
         assert.equal(typeof engine.killEngine, 'function', 'killEngine')
@@ -153,7 +156,7 @@ for (const fixture of fixtures) {
     it('Should stop the engine', function (done) {
       if (!engine) throw new Error('ErrorNoEngine')
       engine.killEngine().then(() => {
-        destroyAllContexts()
+        closeEdge()
         keys = undefined
         done()
         // $FlowFixMe

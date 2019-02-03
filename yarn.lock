@@ -64,13 +64,6 @@
   dependencies:
     regenerator-runtime "^0.12.0"
 
-"@babel/runtime@^7.0.0":
-  version "7.1.5"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.1.5.tgz#4170907641cf1f61508f563ece3725150cc6fe39"
-  integrity sha512-xKnPpXG/pvK1B90JkwwxSGii90rQGKtzcMt2gI5G6+M0REXaq6rOHsGC2ay6/d0Uje7zzvSzjEzfR3ENhFlrfA==
-  dependencies:
-    regenerator-runtime "^0.12.0"
-
 "@babel/template@^7.1.0":
   version "7.2.2"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.2.2.tgz#005b3fdf0ed96e88041330379e0da9a708eb2907"
@@ -1849,12 +1842,11 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.14.0:
-  version "0.14.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.14.0.tgz#9630efbc4819e4b96b2cea6adcf7d45dcd2f678c"
-  integrity sha512-dYRkFgcnXzh6+xPhn8Wppa8yuM6LKfF7fVJeCi/JhG+zAv9o7NunD7KNqLFewbWitLsB4CZOKd40K0m/hQONvQ==
+edge-core-js@^0.15.0:
+  version "0.15.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.15.0.tgz#097d1f4a40baff5f1c5f09abf1da5858593c16bf"
+  integrity sha512-ggxvnQCdKdSi3nH7+VUPuWr1psFKfK+2VJ0UFVXZqJiYo8iDPOwGqLHUIkdxIs97RvBnrOdbCf4EZAlF8HiE4w==
   dependencies:
-    "@babel/runtime" "^7.0.0"
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
