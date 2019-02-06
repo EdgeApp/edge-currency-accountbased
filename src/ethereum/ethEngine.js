@@ -16,7 +16,8 @@ import {
   toHex,
   bufToHex,
   getEdgeInfoServer,
-  addHexPrefix
+  addHexPrefix,
+  promiseAny
 } from '../common/utils.js'
 import {
   EtherscanGetBlockHeight,
@@ -55,9 +56,19 @@ const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 
+type EthFunction = 'broadcastTx'
+
 type BroadcastResults = {
   incrementNonce: boolean,
   decrementNonce: boolean
+}
+
+async function broadcastWrapper (promise: Promise<Object>, server: string) {
+  const out = {
+    result: await promise,
+    server
+  }
+  return out
 }
 
 export class EthereumEngine extends CurrencyEngine {
@@ -531,6 +542,24 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  async multicastServers (func: EthFunction, ...params: any): Promise<any> {
+    let out = { result: '', server: 'no server' }
+    switch (func) {
+      case 'broadcastTx':
+        const promises = []
+        promises.push(broadcastWrapper(this.broadcastInfura(params[0]), 'infura'))
+        promises.push(broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan'))
+        promises.push(broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher'))
+        out = await promiseAny(promises)
+
+        this.log(`ETH multicastServers ${func} ${out.server} won`)
+        break
+    }
+    this.log(`ETH multicastServers ${func} ${out.server} won`)
+
+    return out.result
+  }
+
   async clearBlockchainCache () {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
@@ -728,10 +757,6 @@ export class EthereumEngine extends CurrencyEngine {
   async broadcastEtherscan (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    const result: BroadcastResults = {
-      incrementNonce: false,
-      decrementNonce: false
-    }
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
     this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
@@ -747,21 +772,46 @@ export class EthereumEngine extends CurrencyEngine {
 
     if (typeof jsonObj.error !== 'undefined') {
       this.log('EtherScan: Error sending transaction')
-      if (
-        jsonObj.error.code === -32000 ||
-        jsonObj.error.message.includes('nonce is too low') ||
-        jsonObj.error.message.includes('nonce too low') ||
-        jsonObj.error.message.includes('incrementing the nonce') ||
-        jsonObj.error.message.includes('replacement transaction underpriced')
-      ) {
-        result.incrementNonce = true
-      } else {
-        throw jsonObj.error
-      }
-      return result
+      throw jsonObj.error
     } else if (typeof jsonObj.result === 'string') {
       // Success!!
-      return result
+      return jsonObj
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
+  async broadcastInfura (
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+    this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
+    if (!global.infuraProjectId || global.infuraProjectId.length < 6) {
+      throw new Error('Need Infura Project ID')
+    }
+    const url = `https://mainnet.infura.io/v3/${global.infuraProjectId}`
+    const body = {
+      id: 1,
+      jsonrpc: '2.0',
+      method: 'eth_sendRawTransaction',
+      params: [edgeTransaction.signedTx]
+    }
+    const response = await this.io.fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+    const jsonObj = await response.json()
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('EtherScan: Error sending transaction')
+      throw jsonObj.error
+    } else if (typeof jsonObj.result === 'string') {
+      // Success!!
+      return jsonObj
     } else {
       throw new Error('Invalid return value on transaction send')
     }
@@ -770,11 +820,6 @@ export class EthereumEngine extends CurrencyEngine {
   async broadcastBlockCypher (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    const result: BroadcastResults = {
-      incrementNonce: false,
-      decrementNonce: false
-    }
-
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
     this.log(
       `Blockcypher: sending transaction to network:\n${transactionParsed}\n`
@@ -787,26 +832,11 @@ export class EthereumEngine extends CurrencyEngine {
     this.log('broadcastBlockCypher jsonObj:', jsonObj)
     if (typeof jsonObj.error !== 'undefined') {
       this.log('BlockCypher: Error sending transaction')
-      if (
-        typeof jsonObj.error === 'string' &&
-        jsonObj.error.includes('Account nonce ') &&
-        jsonObj.error.includes('higher than transaction')
-      ) {
-        result.incrementNonce = true
-      } else if (
-        typeof jsonObj.error === 'string' &&
-        jsonObj.error.includes('Error validating transaction') &&
-        jsonObj.error.includes('orphaned, missing reference')
-      ) {
-        result.decrementNonce = true
-      } else {
-        throw jsonObj.error
-      }
-      return result
+      throw jsonObj.error
     } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
       this.log(`Blockcypher success sending txid ${jsonObj.tx.hash}`)
       // Success!!
-      return result
+      return jsonObj
     } else {
       throw new Error('Invalid return value on transaction send')
     }
@@ -815,102 +845,10 @@ export class EthereumEngine extends CurrencyEngine {
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const results: Array<BroadcastResults | null> = [null, null]
-    const errors: Array<Error | null> = [null, null]
+    const result = await this.multicastServers('broadcastTx', edgeTransaction)
 
-    // Because etherscan will allow use of a nonce that's too high, only use it if Blockcypher fails
-    // If we can fix this or replace etherscan, then we can use an array of promises instead of await
-    // on each broadcast type
-    try {
-      results[0] = await this.broadcastBlockCypher(edgeTransaction)
-    } catch (e) {
-      errors[0] = e
-    }
-
-    if (errors[0]) {
-      try {
-        results[1] = await this.broadcastEtherscan(edgeTransaction)
-      } catch (e) {
-        errors[1] = e
-      }
-    }
-
-    // Use code below once we actually use a Promise array and simultaneously broadcast with a Promise.all()
-    //
-    // for (let i = 0; i < results.length; i++) {
-    //   results[i] = null
-    //   errors[i] = null
-    //   try {
-    //     results[i] = await results[i]
-    //   } catch (e) {
-    //     errors[i] = e
-    //   }
-    // }
-
-    let allErrored = true
-
-    for (const e of errors) {
-      if (!e) {
-        allErrored = false
-        break
-      }
-    }
-
-    let anyResultIncNonce = false
-    let anyResultDecrementNonce = false
-
-    for (const r: BroadcastResults | null of results) {
-      if (r && r.incrementNonce) {
-        anyResultIncNonce = true
-      }
-      if (r && r.decrementNonce) {
-        anyResultDecrementNonce = true
-      }
-    }
-
-    this.log('broadcastTx errors:', errors)
-    this.log('broadcastTx results:', results)
-
-    if (allErrored) {
-      throw errors[0] // Can only throw one error so throw the first one
-    }
-
-    if (anyResultDecrementNonce) {
-      this.walletLocalData.otherData.nextNonce = bns.add(
-        this.walletLocalData.otherData.nextNonce,
-        '-1'
-      )
-      this.log(
-        'nextNonce too high. Decrementing to ' +
-          this.walletLocalData.otherData.nextNonce.toString()
-      )
-      // Nonce error. Increment nonce and try again
-      const edgeTx = await this.signTx(edgeTransaction)
-      const out = await this.broadcastTx(edgeTx)
-      return out
-    }
-
-    if (anyResultIncNonce) {
-      // All servers returned a nonce-too-low. Increment and retry sign and broadcast
-      this.walletLocalData.otherData.nextNonce = bns.add(
-        this.walletLocalData.otherData.nextNonce,
-        '1'
-      )
-      this.log(
-        'nextNonce too low. Incrementing to ' +
-          this.walletLocalData.otherData.nextNonce.toString()
-      )
-      // Nonce error. Increment nonce and try again
-      const edgeTx = await this.signTx(edgeTransaction)
-      const out = await this.broadcastTx(edgeTx)
-      return out
-    }
     // Success
-    this.walletLocalData.otherData.nextNonce = bns.add(
-      this.walletLocalData.otherData.nextNonce,
-      '1'
-    )
-    this.walletLocalDataDirty = true
+    this.log(`SUCCESS broadcastTx\n${JSON.stringify(result)}`)
 
     return edgeTransaction
   }
