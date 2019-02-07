@@ -55,6 +55,7 @@ const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
+const WEI_MULTIPLIER = 100000000
 
 type EthFunction = 'broadcastTx'
 
@@ -490,36 +491,43 @@ export class EthereumEngine extends CurrencyEngine {
         }
         const gasPrice: EthereumFeesGasPrice = ethereumFee.gasPrice
 
-        const safeLow = Math.floor(jsonObj.safeLow / 10)
-        let average = Math.floor(jsonObj.average / 10)
-        let fastest = Math.floor(jsonObj.fastest / 10)
+        const safeLow = jsonObj.safeLow
+        let average = jsonObj.average
+        let fast = jsonObj.fast
+        let fastest = jsonObj.fastest
 
         // Sanity checks
-        if (safeLow < 1 || safeLow > 300) {
+        if (safeLow < 1 || safeLow > 3000) {
           console.log('Invalid safeLow value from EthGasStation')
           return
         }
-        if (average < 1 || average > 300) {
+        if (average < 1 || average > 3000) {
           console.log('Invalid average value from EthGasStation')
           return
         }
-        if (fastest < 1 || fastest > 300) {
+        if (fast < 1 || fast > 3000) {
+          console.log('Invalid fastest value from EthGasStation')
+          return
+        }
+        if (fastest < 1 || fastest > 3000) {
           console.log('Invalid fastest value from EthGasStation')
           return
         }
 
-        const lowFee = (safeLow * 1000000000).toString()
-
+        // Correct inconsistencies
         if (average <= safeLow) average = safeLow + 1
-        const standardFeeLow = (average * 1000000000).toString()
+        if (fast <= average) fast = average + 1
+        if (fastest <= fast) fastest = fast + 1
 
-        if (fastest <= average) fastest = average + 1
-        const highFee = (fastest * 1000000000).toString()
+        let lowFee = safeLow
+        let standardFeeLow = fast
+        let standardFeeHigh = (fast + fastest) * 0.75
+        let highFee = fastest
 
-        // We use a value that is somewhere in between average and fastest for the standardFeeHigh
-        const standardFeeHigh = (
-          Math.floor((average + fastest) * 0.75) * 1000000000
-        ).toString()
+        lowFee = (Math.round(lowFee) * WEI_MULTIPLIER).toString()
+        standardFeeLow = (Math.round(standardFeeLow) * WEI_MULTIPLIER).toString()
+        standardFeeHigh = (Math.round(standardFeeHigh) * WEI_MULTIPLIER).toString()
+        highFee = (Math.round(highFee) * WEI_MULTIPLIER).toString()
 
         if (
           gasPrice.lowFee !== lowFee ||
