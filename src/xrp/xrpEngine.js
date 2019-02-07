@@ -26,7 +26,7 @@ import {
 } from './xrpTypes.js'
 import { XrpPlugin } from './xrpPlugin.js'
 import { CurrencyEngine } from '../common/engine.js'
-import { validateObject, promiseAny, asyncWaterfall } from '../common/utils.js'
+import { validateObject } from '../common/utils.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -68,40 +68,24 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async multicastServers (func: XrpFunction, ...params: any): Promise<any> {
-    let out = { result: '' }
+    let out = { result: '', server: '' }
     switch (func) {
       // Functions that should waterfall from top to low priority servers
       case 'getFee':
       case 'getServerInfo':
       case 'getBalances':
       case 'getTransactions':
-        const funcs = this.xrpPlugin.rippleApis.map(api => async () => {
-          const result = await api[func](...params)
-          return { server: api.serverName, result }
-        })
-        out = await asyncWaterfall(funcs)
-        this.log(`XRP multicastServers ${func} ${out.server} won`)
-        break
-
-      // Functions that should multicast to all servers
-      case 'connect':
       case 'disconnect':
       case 'submit':
-        out = await promiseAny(
-          this.xrpPlugin.rippleApis.map(async api => {
-            const result = await api[func](...params)
-            return { server: api.serverName, result }
-          })
-        )
-        this.log(`XRP multicastServers ${func} ${out.server} won`)
-        break
-
-      // Client-side functions that should just pick one server since they don't actually connect
       case 'preparePayment':
       case 'sign':
-        out.result = await this.xrpPlugin.rippleApis[0][func](...params)
+        out = {
+          result: await this.xrpPlugin.rippleApi[func](...params),
+          server: this.xrpPlugin.rippleApi.serverName
+        }
         break
     }
+    this.log(`XRP multicastServers ${func} ${out.server} won`)
     return out.result
   }
 
@@ -353,7 +337,20 @@ export class XrpEngine extends CurrencyEngine {
     // } catch (e) {
     //   console.log('Error', e.message)
     // }
-    await this.multicastServers('connect')
+    try {
+      await this.xrpPlugin.connectApi(this.walletId)
+    } catch (e) {
+      this.log(`Error connecting to XRP server`)
+      this.log(e)
+      this.log(e.name)
+      this.log(e.message)
+      setTimeout(() => {
+        if (this.engineOn) {
+          this.startEngine()
+        }
+      }, 10000)
+      return
+    }
     this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
@@ -362,7 +359,7 @@ export class XrpEngine extends CurrencyEngine {
 
   async killEngine () {
     await super.killEngine()
-    await this.multicastServers('disconnect')
+    await this.xrpPlugin.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain (): Promise<void> {

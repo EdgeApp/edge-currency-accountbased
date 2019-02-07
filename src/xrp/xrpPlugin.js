@@ -12,7 +12,7 @@ import type {
   EdgeCurrencyPluginFactory,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { getDenomInfo } from '../common/utils.js'
+import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { bns } from 'biggystring'
 import baseX from 'base-x'
 import keypairs from 'edge-ripple-keypairs'
@@ -41,21 +41,42 @@ function checkAddress (address: string): boolean {
 }
 
 export class XrpPlugin extends CurrencyPlugin {
-  rippleApis: Array<Object>
+  rippleApi: Object
+  rippleApiSubscribers: {[walletId: string]: boolean}
   // connectionPool: Object
   connectionClients: { [walletId: string]: boolean }
 
   constructor () {
     super('ripple', currencyInfo)
-    this.rippleApis = []
-    for (const server of currencyInfo.defaultSettings.otherSettings
-      .rippledServers) {
-      const api = new RippleAPI({ server })
-      api.serverName = server
-      this.rippleApis.push(api)
-    }
     // this.connectionPool = new RippledWsClientPool()
     this.connectionClients = {}
+    this.rippleApi = {}
+    this.rippleApiSubscribers = {}
+  }
+
+  async connectApi (walletId: string): Promise<void> {
+    if (!this.rippleApi.serverName) {
+      const funcs = this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(server => async () => {
+        const api = new RippleAPI({ server })
+        api.serverName = server
+        const result = await api.connect()
+        const out = { server, result, api }
+        return out
+      })
+      const result = await asyncWaterfall(funcs)
+      if (!this.rippleApi.serverName) {
+        this.rippleApi = result.api
+      }
+    }
+    this.rippleApiSubscribers[walletId] = true
+  }
+
+  async disconnectApi (walletId: string): Promise<void> {
+    delete this.rippleApiSubscribers[walletId]
+    if (Object.keys(this.rippleApiSubscribers).length === 0) {
+      await this.rippleApi.disconnect()
+      this.rippleApi = {}
+    }
   }
 
   async createPrivateKey (walletType: string): Promise<Object> {
@@ -65,7 +86,9 @@ export class XrpPlugin extends CurrencyPlugin {
       const algorithm =
         type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
       const entropy = Array.from(io.random(32))
-      const address = this.rippleApis[0].generateAddress({
+      const server = this.currencyInfo.defaultSettings.otherSettings.rippledServers[0]
+      const api = new RippleAPI({ server })
+      const address = api.generateAddress({
         algorithm,
         entropy
       })

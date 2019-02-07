@@ -5,7 +5,11 @@ import { type EdgeCurrencyInfo } from 'edge-core-js'
 import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {
-  rippledServers: ['wss://s2.ripple.com']
+  rippledServers: [
+    'wss://s2.ripple.com',
+    'wss://rippled.xrptipbot.com',
+    'wss://s1.ripple.com'
+  ]
 }
 
 const defaultSettings: any = {
