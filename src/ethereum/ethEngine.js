@@ -869,7 +869,7 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.rippleKey) {
+    if (this.walletInfo.keys && this.walletInfo.keys.ethereumKey) {
       return this.walletInfo.keys.ethereumKey
     }
     return ''
