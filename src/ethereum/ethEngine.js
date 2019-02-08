@@ -175,9 +175,9 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalData.totalBalances[tk] = balance
           this.log(tk + ': token Address balance: ' + balance)
           this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-          this.tokenCheckBalanceStatus[tk] = 1
-          this.updateOnAddressesChecked()
         }
+        this.tokenCheckBalanceStatus[tk] = 1
+        this.updateOnAddressesChecked()
       }
     } catch (e) {
       this.log(`Error checking token balance: ${tk}`)
@@ -445,7 +445,14 @@ export class EthereumEngine extends CurrencyEngine {
       promiseArray.push(this.checkTransactionsFetch(startBlock, currencyCode))
     }
 
-    const resultArray = await Promise.all(promiseArray)
+    let resultArray = []
+    try {
+      resultArray = await Promise.all(promiseArray)
+    } catch (e) {
+      this.log('Failed to query transactions')
+      this.log(e.name)
+      this.log(e.message)
+    }
     let successCount = 0
     for (const r of resultArray) {
       if (r) successCount++
