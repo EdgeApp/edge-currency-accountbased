@@ -403,6 +403,7 @@ export class EosEngine extends CurrencyEngine {
         })
         if (accounts.account_names && accounts.account_names.length > 0) {
           this.walletLocalData.otherData.accountName = accounts.account_names[0]
+          this.walletLocalDataDirty = true
         }
       }
 
@@ -441,6 +442,7 @@ export class EosEngine extends CurrencyEngine {
                   )
                 ) {
                   this.walletLocalData.totalBalances[ currencyCode ] = nativeAmount
+                  this.walletLocalDataDirty = true
                   this.currencyEngineCallbacks.onBalanceChanged(
                     currencyCode,
                     nativeAmount
