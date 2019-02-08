@@ -144,10 +144,8 @@ export class XrpEngine extends CurrencyEngine {
         const date: number = Date.parse(tx.outcome.timestamp) / 1000
         const blockHeight: number = tx.outcome.ledgerVersion
 
-        let exchangeAmount: string = bc.value
-        if (exchangeAmount.slice(0, 1) === '-') {
-          exchangeAmount = bns.add(tx.outcome.fee, exchangeAmount)
-        } else {
+        const exchangeAmount: string = bc.value
+        if (exchangeAmount.slice(0, 1) !== '-') {
           ourReceiveAddresses.push(this.walletLocalData.publicKey)
         }
         const nativeAmount: string = bns.mul(exchangeAmount, '1000000')
@@ -465,6 +463,7 @@ export class XrpEngine extends CurrencyEngine {
       preparedTx
     }
 
+    nativeAmount = bns.add(nativeAmount, nativeNetworkFee)
     nativeAmount = '-' + nativeAmount
 
     const edgeTransaction: EdgeTransaction = {
