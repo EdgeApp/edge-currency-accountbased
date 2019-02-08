@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.0.19
+
+* Fix XRP incorrect spend amounts
+* Fix syncing of ETH wallets after network disconnect/reconnect
+* Improve syncing of XRP wallets by connecting to multiple servers
+* Improve syncing of XRP wallets by detecting connection failure and retrying 
+
 ## 0.0.18
 
 * Change ETH fee estimates for better confirmation times
