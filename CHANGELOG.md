@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.0.20
+
+* Fix EOS accounts from being detected after activation
+* Fix display of ETH private seeds
+
 ## 0.0.19
 
 * Fix XRP incorrect spend amounts
