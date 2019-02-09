@@ -424,6 +424,12 @@ export class EthereumEngine extends CurrencyEngine {
     } else {
       this.log('Invalid data for unconfirmed transactions')
     }
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
   }
 
   async checkTransactionsInnerLoop () {
@@ -459,6 +465,12 @@ export class EthereumEngine extends CurrencyEngine {
     }
     if (successCount === promiseArray.length) {
       this.walletLocalData.lastAddressQueryHeight = blockHeight
+    }
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
     }
   }
 
