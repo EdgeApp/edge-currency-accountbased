@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.21
+
+* Properly call onTransactionsChanged on new txs
+
 ## 0.0.20
 
 * Fix EOS accounts from being detected after activation
