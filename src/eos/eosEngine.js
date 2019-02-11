@@ -601,8 +601,6 @@ export class EosEngine extends CurrencyEngine {
         transactionJson
       }
     }
-    // this.pendingTransactionsMap = {}
-    // this.pendingTransactionsMap[idInternal] = transaction
 
     this.log('EOS transaction prepared')
     this.log(

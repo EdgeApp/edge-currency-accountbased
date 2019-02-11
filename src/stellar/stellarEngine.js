@@ -42,7 +42,8 @@ export class StellarEngine extends CurrencyEngine {
   stellarPlugin: StellarPlugin
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
-  pendingTransactionsMap: { [txid: string]: Object }
+  pendingTransactionsIndex: number
+  pendingTransactionsMap: { [index: number]: Object }
   otherData: StellarWalletOtherData
 
   constructor (
@@ -55,6 +56,7 @@ export class StellarEngine extends CurrencyEngine {
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
     this.activatedAccountsCache = {}
+    this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
   }
 
@@ -345,6 +347,7 @@ export class StellarEngine extends CurrencyEngine {
 
   async clearBlockchainCache (): Promise<void> {
     this.activatedAccountsCache = {}
+    this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
     await super.clearBlockchainCache()
     this.otherData.accountSequence = 0
@@ -447,7 +450,7 @@ export class StellarEngine extends CurrencyEngine {
     }
 
     nativeAmount = `-${nativeAmount}`
-    const idInternal = Buffer.from(this.io.random(32)).toString('hex')
+    const idInternal = this.pendingTransactionsIndex
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -463,8 +466,13 @@ export class StellarEngine extends CurrencyEngine {
         toAddress: publicAddress
       }
     }
-    this.pendingTransactionsMap = {}
     this.pendingTransactionsMap[idInternal] = transaction
+    this.pendingTransactionsIndex++
+
+    // Clean up old pendingTransactions
+    if (this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]) {
+      delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
+    }
 
     this.log('Stellar transaction prepared')
     this.log(`idInternal: ${idInternal}`)
