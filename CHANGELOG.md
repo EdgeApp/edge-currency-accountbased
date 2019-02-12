@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.0.22
+
+* Fix ETH blockHeight from fluttering in/out of confirmation
+* Fix XLM makeSpend if called multiple times and older edgeTransaction is used for signTx
+
 ## 0.0.21
 
 * Properly call onTransactionsChanged on new txs
