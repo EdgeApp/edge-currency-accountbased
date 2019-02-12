@@ -258,10 +258,14 @@ class CurrencyEngine {
       const edgeTx = transactionsArray[idx]
 
       if (
-        edgeTx.blockHeight !== edgeTransaction.blockHeight ||
-        edgeTx.networkFee !== edgeTransaction.networkFee ||
-        edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
-        edgeTx.date !== edgeTransaction.date
+        edgeTx.blockHeight < edgeTransaction.blockHeight ||
+        (
+          edgeTx.blockHeight === edgeTransaction.blockHeight && (
+            edgeTx.networkFee !== edgeTransaction.networkFee ||
+            edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
+            edgeTx.date !== edgeTransaction.date
+          )
+        )
       ) {
         if (edgeTx.date !== edgeTransaction.date) {
           needsResort = true
