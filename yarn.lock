@@ -1728,11 +1728,6 @@ des.js@^1.0.0:
     inherits "^2.0.1"
     minimalistic-assert "^1.0.0"
 
-detect-bundler@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/detect-bundler/-/detect-bundler-1.0.0.tgz#b1445d25baf2e71fa5cf9a61b293e0f49abd63c9"
-  integrity sha1-sURdJbry5x+lz5phspPg9Jq9Y8k=
-
 detect-file@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/detect-file/-/detect-file-1.0.0.tgz#f0d66d03672a825cb1b73bdb3fe62310c8e552b7"
@@ -1782,10 +1777,10 @@ dir-glob@2.0.0:
     arrify "^1.0.1"
     path-type "^3.0.0"
 
-disklet@^0.2.8:
-  version "0.2.10"
-  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.2.10.tgz#3dff158059c0e5a7886476232dd210bcef751929"
-  integrity sha512-twEQ0yQDvGv1ZWW7r3qzlEpmabv3VrULXPR/c6zCOezyHjubbZpgxAuZO7yNP0ThfzpB9g7WN3n/5FVTGb0v/Q==
+disklet@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.3.1.tgz#ad2a1399ac959480c47f3e3aa06f7cfdaa7e0af7"
+  integrity sha512-TkE2dRJLAot/YTxxSLo5BWqGcolDv6tuvVJOjd0LGO0Qru4R5jjp/55WrI15UOYOlFXLhqVBf54RT9nKsdQ/jQ==
   dependencies:
     rfc4648 "^0.9.1"
 
@@ -1854,19 +1849,19 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.12.18:
-  version "0.12.18"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.12.18.tgz#574c6bfb8949d6820352e65f7ad3c9607c390087"
-  integrity sha512-26bJSkWu5gJJUE19vRLKL0RmisjODbCAxwoCm8vSp1RRP1QVAxi1sx3HZB3b2LHrHdt5wv54p6MXP9owYU8XaQ==
+edge-core-js@^0.14.0:
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.14.0.tgz#9630efbc4819e4b96b2cea6adcf7d45dcd2f678c"
+  integrity sha512-dYRkFgcnXzh6+xPhn8Wppa8yuM6LKfF7fVJeCi/JhG+zAv9o7NunD7KNqLFewbWitLsB4CZOKd40K0m/hQONvQ==
   dependencies:
     "@babel/runtime" "^7.0.0"
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
     currency-codes "^1.1.2"
-    detect-bundler "^1.0.0"
-    disklet "^0.2.8"
+    disklet "^0.3.1"
     elliptic "^6.4.0"
+    esm "^3.2.4"
     ethereumjs-tx "^1.3.7"
     ethereumjs-util "^5.2.0"
     hash.js "^1.0.3"
@@ -1875,12 +1870,12 @@ edge-core-js@^0.12.18:
     node-fetch "^2.0.0"
     redux "^3.6.0"
     redux-keto "^0.3.2"
-    redux-pixies "^0.3.5"
+    redux-pixies "^0.3.6"
     rfc4648 "^1.1.0"
     scrypt-js "^2.0.3"
     utf8 "^3.0.0"
     ws "^5.1.1"
-    yaob "^0.3.1"
+    yaob "^0.3.3"
 
 edge-ripple-keypairs@^0.0.1:
   version "0.0.1"
@@ -5499,10 +5494,10 @@ redux-keto@^0.3.2:
   resolved "https://registry.yarnpkg.com/redux-keto/-/redux-keto-0.3.2.tgz#15c18d61fec5e76e3d0d3f02767a996fee4ff622"
   integrity sha512-ZSCnq/8bHW/LmXLKn0v770av4lQG2S56LMpeW8ebQHY3LwHuVyilSd0XewCwYl37ZIN11t7AxHWFj+Fso9l7NA==
 
-redux-pixies@^0.3.5:
-  version "0.3.5"
-  resolved "https://registry.yarnpkg.com/redux-pixies/-/redux-pixies-0.3.5.tgz#6ff1d83334d73925202d73d72a45e3d652ee4634"
-  integrity sha512-LbJzV7DDiL4Iyy9pjp4DjC+0zHeLfPnS6iR9M75Ikr9AU+GyJcUDHQsQG7Vz0pXCiGNuIUYCBHn32sbpduyy5g==
+redux-pixies@^0.3.6:
+  version "0.3.6"
+  resolved "https://registry.yarnpkg.com/redux-pixies/-/redux-pixies-0.3.6.tgz#b2ea20a559ba9238a020f0f329afe7e6abf18e4c"
+  integrity sha512-RXOEaCKEWa2/qTnUX3GZdziVkgCK1CgzPb739Un/fl2Tam+fJo0MOmyqhxewsz+bj0GaqzYfxIJaaNvEKGL/Yg==
 
 redux@^3.6.0:
   version "3.7.2"
@@ -7033,10 +7028,12 @@ yallist@^3.0.0, yallist@^3.0.2:
   resolved "https://registry.yarnpkg.com/yallist/-/yallist-3.0.3.tgz#b4b049e314be545e3ce802236d6cd22cd91c3de9"
   integrity sha512-S+Zk8DEWE6oKpV+vI3qWkaK+jSbIK86pCwe2IF/xwIpQ8jEuxpw9NyaGjmp9+BoJv5FV2piqCDcoCtStppiq2A==
 
-yaob@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.1.tgz#fb59c4ed7cd79877e850ca1bcf42d0e0ebff11b0"
-  integrity sha512-IAfN5KDwt30SiKfzG57TKd6FIJpq88Hqs57gywJ3OWm6zNACqZqLkr3AFYSlP87Qmvze2VnsgRsLfOW4Jibq+Q==
+yaob@^0.3.3:
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.3.tgz#39f6190d1109207f340d5cf7e9e63efedf67ccee"
+  integrity sha512-qNCO9MbgsaweqGGOJG30TFpvnlmXx7BwQacqI2LtMRQhx/WaDDqp6NzGwkWCkoYwbzfXIR1pMCAEZwX3MEnPJg==
+  dependencies:
+    rfc4648 "^1.1.0"
 
 yargs-parser@^11.1.1:
   version "11.1.1"

@@ -18,8 +18,9 @@ import {
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
-  error
-} from 'edge-core-js'
+  InsufficientFundsError,
+  SpendToSelfError
+} from 'edge-core-js/types'
 
 import { CurrencyPlugin } from './plugin.js'
 import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
@@ -751,7 +752,7 @@ class CurrencyEngine {
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (st.publicAddress === this.walletLocalData.publicKey) {
-        throw new error.SpendToSelfError()
+        throw new SpendToSelfError()
       }
     }
 
@@ -767,7 +768,7 @@ class CurrencyEngine {
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     if (!nativeBalance || bns.eq(nativeBalance, '0')) {
-      throw new error.InsufficientFundsError()
+      throw new InsufficientFundsError()
     }
 
     edgeSpendInfo.currencyCode = currencyCode

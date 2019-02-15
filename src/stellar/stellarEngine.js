@@ -5,13 +5,14 @@
 
 import { bns } from 'biggystring'
 // import { currencyInfo } from './stellarInfo.js'
-import type {
-  EdgeCurrencyEngineOptions,
-  EdgeSpendInfo,
-  EdgeTransaction,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
+import {
+  type EdgeCurrencyEngineOptions,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
+} from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, getDenomInfo, promiseAny } from '../common/utils.js'
@@ -398,11 +399,11 @@ export class StellarEngine extends CurrencyEngine {
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     } else {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 7)
@@ -447,7 +448,7 @@ export class StellarEngine extends CurrencyEngine {
     nativeAmount = bns.add(networkFee, nativeAmount) // Add fee to total
     const nativeBalance2 = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
     if (bns.gt(nativeAmount, nativeBalance2)) {
-      throw new error.InsufficientFundsError()
+      throw new InsufficientFundsError()
     }
 
     nativeAmount = `-${nativeAmount}`

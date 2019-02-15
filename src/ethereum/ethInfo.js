@@ -1,7 +1,7 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo } from 'edge-core-js'
+import { type EdgeCurrencyInfo } from 'edge-core-js'
 
 import type { EthereumSettings } from './ethTypes.js'
 

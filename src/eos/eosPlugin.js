@@ -4,15 +4,15 @@
 // @flow
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import eosjs from 'eosjs'
 
 import { CurrencyPlugin } from '../common/plugin.js'

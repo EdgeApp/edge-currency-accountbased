@@ -5,14 +5,14 @@
 
 import { bns } from 'biggystring'
 // import { currencyInfo } from './currencyInfoXRP.js'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyInfo,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyInfo,
+  type EdgeEncodeUri,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 

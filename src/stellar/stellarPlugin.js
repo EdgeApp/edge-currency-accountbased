@@ -4,15 +4,15 @@
 // @flow
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'

@@ -7,7 +7,7 @@ import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
 import { BN } from 'bn.js'
-import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js'
+import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
 function normalizeAddress (address: string) {

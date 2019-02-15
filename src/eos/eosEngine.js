@@ -4,16 +4,17 @@
 // @flow
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyPlugin,
-  EdgeFreshAddress,
-  EdgeIo,
-  EdgeSpendInfo,
-  EdgeTransaction,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
+import {
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeFreshAddress,
+  type EdgeIo,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
+} from 'edge-core-js/types'
 import eosjs from 'eosjs'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -581,17 +582,17 @@ export class EosEngine extends CurrencyEngine {
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     } else {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 4)
     const networkFee = '0'
     if (bns.gt(nativeAmount, nativeBalance)) {
-      throw new error.InsufficientFundsError()
+      throw new InsufficientFundsError()
     }
     const DecimalPad = eosjs.modules.format.DecimalPad
     const quantity = DecimalPad(exchangeAmount, 4) + ` ${currencyCode}`

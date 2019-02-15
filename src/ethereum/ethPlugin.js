@@ -6,15 +6,15 @@
 import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 

@@ -3,7 +3,7 @@
  */
 // @flow
 
-import type { EdgeTransaction } from 'edge-core-js'
+import { type EdgeTransaction } from 'edge-core-js'
 // import { currencyInfo } from '../currencyInfoXRP.js'
 export const DATA_STORE_FOLDER = 'txEngineFolder'
 export const DATA_STORE_FILE = 'walletLocalData.json'

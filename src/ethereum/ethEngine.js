@@ -4,13 +4,13 @@
 // @flow
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngineOptions,
-  EdgeSpendInfo,
-  EdgeTransaction,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
+import {
+  type EdgeCurrencyEngineOptions,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError
+} from 'edge-core-js/types'
 import abi from 'ethereumjs-abi'
 import EthereumTx from 'ethereumjs-tx'
 import ethWallet from 'ethereumjs-wallet'
@@ -706,7 +706,7 @@ export class EthereumEngine extends CurrencyEngine {
     if (currencyCode === PRIMARY_CURRENCY) {
       totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
       if (bns.gt(totalTxAmount, balanceEth)) {
-        throw new error.InsufficientFundsError()
+        throw new InsufficientFundsError()
       }
       nativeAmount = bns.mul(totalTxAmount, '-1')
     } else {

@@ -5,15 +5,15 @@
 
 import baseX from 'base-x'
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeWalletInfo
-} from 'edge-core-js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import keypairs from 'edge-ripple-keypairs'
 import { RippleAPI } from 'edge-ripple-lib'
 import parse from 'url-parse'

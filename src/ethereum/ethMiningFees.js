@@ -4,7 +4,7 @@
  */
 
 import { bns } from 'biggystring'
-import type { EdgeSpendInfo } from 'edge-core-js'
+import { type EdgeSpendInfo } from 'edge-core-js/types'
 
 import { normalizeAddress } from '../common/utils.js'
 import type {

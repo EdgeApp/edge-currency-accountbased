@@ -3,6 +3,7 @@
 import EventEmitter from 'events'
 
 import { assert } from 'chai'
+import { downgradeDisklet } from 'disklet'
 import { destroyAllContexts, makeFakeIos } from 'edge-core-js'
 import type {
   EdgeCurrencyEngineCallbacks,
@@ -19,10 +20,6 @@ describe(`EOS activation`, function () {
   let engine: any
   const emitter = new EventEmitter()
   const [fakeIo] = makeFakeIos(1)
-  if (!fakeIo.folder) {
-    throw new Error('Missing fakeio.folder')
-  }
-  const walletLocalFolder = fakeIo.folder
   // $FlowFixMe
   fakeIo.fetch = fetch
   const myIo = {
@@ -57,10 +54,14 @@ describe(`EOS activation`, function () {
     }
   }
 
+  const walletLocalDisklet = fakeIo.disklet
+  const walletLocalFolder = downgradeDisklet(walletLocalDisklet)
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    walletLocalFolder,
-    walletLocalEncryptedFolder: walletLocalFolder
+    walletLocalDisklet,
+    walletLocalEncryptedDisklet: walletLocalDisklet,
+    walletLocalEncryptedFolder: walletLocalFolder,
+    walletLocalFolder
   }
 
   const info: EdgeWalletInfo = {

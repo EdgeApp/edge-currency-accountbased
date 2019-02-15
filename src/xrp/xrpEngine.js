@@ -4,13 +4,14 @@
 // @flow
 
 import { bns } from 'biggystring'
-import type {
-  EdgeCurrencyEngineOptions,
-  EdgeSpendInfo,
-  EdgeTransaction,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
+import {
+  type EdgeCurrencyEngineOptions,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
+} from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
 import { validateObject } from '../common/utils.js'
@@ -386,7 +387,7 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
@@ -395,7 +396,7 @@ export class XrpEngine extends CurrencyEngine {
       const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
       const virtualTxAmount = bns.add(totalTxAmount, '20000000')
       if (bns.gt(virtualTxAmount, nativeBalance)) {
-        throw new error.InsufficientFundsError()
+        throw new InsufficientFundsError()
       }
     }
 
