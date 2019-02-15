@@ -4,11 +4,15 @@ import EventEmitter from 'events'
 
 import { assert } from 'chai'
 import { downgradeDisklet } from 'disklet'
-import { destroyAllContexts, makeFakeIos } from 'edge-core-js'
-import type {
-  EdgeCurrencyEngineCallbacks,
-  EdgeCurrencyEngineOptions,
-  EdgeWalletInfo
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineCallbacks,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeWalletInfo,
+  destroyAllContexts,
+  makeFakeIos
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
@@ -16,21 +20,15 @@ import fetch from 'node-fetch'
 import * as Factories from '../../src/index.js'
 
 describe(`EOS activation`, function () {
-  let plugin: any
-  let engine: any
-  const emitter = new EventEmitter()
+  let engine: EdgeCurrencyEngine
+  let plugin: EdgeCurrencyPlugin
+
   const [fakeIo] = makeFakeIos(1)
-  // $FlowFixMe
-  fakeIo.fetch = fetch
-  const myIo = {
-    random: size => [0]
-  }
-  const opts: any = {
-    io: Object.assign({}, fakeIo, myIo)
+  const opts: EdgeCorePluginOptions = {
+    io: { ...fakeIo, fetch, random: size => new Uint8Array(size) }
   }
 
-  // const context = makeEdgeContext({ io: fakeIo, plugins })
-
+  const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
       // console.log('onAddressesCheck', progressRatio)

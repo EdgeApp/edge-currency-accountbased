@@ -389,7 +389,7 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
       ],
       'invalid address': [
-        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a9' },
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122az' },
         { publicAddress: '04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
         { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8a' }
       ],

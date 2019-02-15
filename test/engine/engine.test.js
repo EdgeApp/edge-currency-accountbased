@@ -4,11 +4,15 @@ import EventEmitter from 'events'
 
 import { assert } from 'chai'
 import { downgradeDisklet } from 'disklet'
-import { destroyAllContexts, makeFakeIos } from 'edge-core-js'
-import type {
-  EdgeCurrencyEngineCallbacks,
-  EdgeCurrencyEngineOptions,
-  EdgeWalletInfo
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineCallbacks,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeWalletInfo,
+  destroyAllContexts,
+  makeFakeIos
 } from 'edge-core-js'
 import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
@@ -17,24 +21,20 @@ import * as Factories from '../../src/index.js'
 import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
+  let engine: EdgeCurrencyEngine
+  let keys
+  let plugin: EdgeCurrencyPlugin
+
   const CurrencyPluginFactory = Factories[fixture['factory']]
   const WALLET_TYPE = fixture['WALLET_TYPE']
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
-  let plugin, keys, engine
-  const emitter = new EventEmitter()
   const [fakeIo] = makeFakeIos(1)
-  // $FlowFixMe
-  fakeIo.fetch = fetch
-  const myIo = {
-    random: size => fixture['key']
-  }
-  const opts = {
-    io: Object.assign({}, fakeIo, myIo)
+  const opts: EdgeCorePluginOptions = {
+    io: { ...fakeIo, fetch, random: size => fixture['key'] }
   }
 
-  // const context = makeEdgeContext({ io: fakeIo, plugins })
-
+  const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
       // console.log('onAddressesCheck', progressRatio)
@@ -95,49 +95,39 @@ for (const fixture of fixtures) {
         keys
       }
       if (!plugin) throw new Error('ErrorNoPlugin')
-      return plugin
-        .makeEngine(info, currencyEngineOptions)
-        .then(e => {
-          engine = e
-          assert.equal(typeof engine.startEngine, 'function', 'startEngine')
-          assert.equal(typeof engine.killEngine, 'function', 'killEngine')
-          assert.equal(
-            typeof engine.getBlockHeight,
-            'function',
-            'getBlockHeight'
-          )
-          assert.equal(typeof engine.getBalance, 'function', 'getBalance')
-          assert.equal(
-            typeof engine.getNumTransactions,
-            'function',
-            'getNumTransactions'
-          )
-          assert.equal(
-            typeof engine.getTransactions,
-            'function',
-            'getTransactions'
-          )
-          assert.equal(
-            typeof engine.getFreshAddress,
-            'function',
-            'getFreshAddress'
-          )
-          assert.equal(
-            typeof engine.addGapLimitAddresses,
-            'function',
-            'addGapLimitAddresses'
-          )
-          assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
-          assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
-          assert.equal(typeof engine.signTx, 'function', 'signTx')
-          assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
-          assert.equal(typeof engine.saveTx, 'function', 'saveTx')
-          return true
-        })
-        .catch(e => {
-          console.log(e)
-          assert.equal(0, 1)
-        })
+      return plugin.makeEngine(info, currencyEngineOptions).then(e => {
+        engine = e
+        assert.equal(typeof engine.startEngine, 'function', 'startEngine')
+        assert.equal(typeof engine.killEngine, 'function', 'killEngine')
+        assert.equal(typeof engine.getBlockHeight, 'function', 'getBlockHeight')
+        assert.equal(typeof engine.getBalance, 'function', 'getBalance')
+        assert.equal(
+          typeof engine.getNumTransactions,
+          'function',
+          'getNumTransactions'
+        )
+        assert.equal(
+          typeof engine.getTransactions,
+          'function',
+          'getTransactions'
+        )
+        assert.equal(
+          typeof engine.getFreshAddress,
+          'function',
+          'getFreshAddress'
+        )
+        assert.equal(
+          typeof engine.addGapLimitAddresses,
+          'function',
+          'addGapLimitAddresses'
+        )
+        assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
+        assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
+        assert.equal(typeof engine.signTx, 'function', 'signTx')
+        assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
+        assert.equal(typeof engine.saveTx, 'function', 'saveTx')
+        return true
+      })
     })
   })
 
@@ -164,8 +154,6 @@ for (const fixture of fixtures) {
       if (!engine) throw new Error('ErrorNoEngine')
       engine.killEngine().then(() => {
         destroyAllContexts()
-        engine = undefined
-        plugin = undefined
         keys = undefined
         done()
         // $FlowFixMe
