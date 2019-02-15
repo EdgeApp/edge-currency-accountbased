@@ -1,4 +1,5 @@
 // @flow
+
 import EventEmitter from 'events'
 
 import { makeFakeIos, destroyAllContexts } from 'edge-core-js'
@@ -142,7 +143,7 @@ for (const fixture of fixtures) {
         if (!engine) throw new Error('ErrorNoEngine')
         const getHeight = engine.getBlockHeight()
         assert(getHeight >= thirdPartyHeight, 'Block height')
-        done() // Can be "done" since the promise resolves before the event fires but just be on the safe side  
+        done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
       })
       if (!engine) throw new Error('ErrorNoEngine')
       engine.startEngine().catch(e => {

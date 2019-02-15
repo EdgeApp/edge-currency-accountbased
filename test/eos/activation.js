@@ -1,4 +1,5 @@
 // @flow
+
 import EventEmitter from 'events'
 import { makeFakeIos, destroyAllContexts } from 'edge-core-js'
 import type {

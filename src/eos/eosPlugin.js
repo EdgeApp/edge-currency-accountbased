@@ -2,6 +2,7 @@
  * Created by paul on 8/8/17.
  */
 // @flow
+
 import { currencyInfo } from './eosInfo.js'
 import { CurrencyPlugin } from '../common/plugin.js'
 import type {

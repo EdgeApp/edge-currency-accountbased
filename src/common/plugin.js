@@ -2,6 +2,7 @@
  * Created by paul on 8/8/17.
  */
 // @flow
+
 // import { currencyInfo } from './currencyInfoXRP.js'
 import type {
   EdgeParsedUri,
