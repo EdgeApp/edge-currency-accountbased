@@ -3,21 +3,22 @@
  */
 // @flow
 
-import { currencyInfo } from './ethInfo.js'
+import { bns } from 'biggystring'
 import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeEncodeUri,
-  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
+  EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { getDenomInfo, hexToBuf } from '../common/utils.js'
-import { bns } from 'biggystring'
 
-import { EthereumEngine } from './ethEngine.js'
 import { CurrencyPlugin } from '../common/plugin.js'
+import { getDenomInfo, hexToBuf } from '../common/utils.js'
+import { EthereumEngine } from './ethEngine.js'
+import { currencyInfo } from './ethInfo.js'
+
 export { calcMiningFee } from './ethMiningFees.js'
 
 const Buffer = require('buffer/').Buffer

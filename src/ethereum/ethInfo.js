@@ -2,6 +2,7 @@
 // @flow
 
 import type { EdgeCurrencyInfo } from 'edge-core-js'
+
 import type { EthereumSettings } from './ethTypes.js'
 
 export const imageServerUrl = 'https://developer.airbitz.co/content'

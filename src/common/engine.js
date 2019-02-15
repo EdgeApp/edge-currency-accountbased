@@ -3,35 +3,41 @@
  */
 // @flow
 
+import { bns } from 'biggystring'
 import {
-  error,
-  type EdgeTransaction,
   type EdgeCurrencyEngineCallbacks,
   type EdgeCurrencyEngineOptions,
-  type EdgeGetTransactionsOptions,
-  type EdgeWalletInfo,
-  type EdgeSpendInfo,
-  type EdgeMetaToken,
   type EdgeCurrencyInfo,
+  type EdgeCurrencyPlugin,
+  type EdgeDataDump,
   type EdgeDenomination,
   type EdgeFreshAddress,
-  type EdgeDataDump,
-  type EdgeCurrencyPlugin,
-  type EdgeIo
+  type EdgeGetTransactionsOptions,
+  type EdgeIo,
+  type EdgeMetaToken,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  error
 } from 'edge-core-js'
-import { bns } from 'biggystring'
+
+import { CurrencyPlugin } from './plugin.js'
 import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
 import {
+  type CustomToken,
   DATA_STORE_FILE,
   DATA_STORE_FOLDER,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
   TXID_MAP_FILE,
-  WalletLocalData,
-  type CustomToken
+  WalletLocalData
 } from './types.js'
-import { isHex, normalizeAddress, validateObject, getDenomInfo } from './utils.js'
-import { CurrencyPlugin } from './plugin.js'
+import {
+  getDenomInfo,
+  isHex,
+  normalizeAddress,
+  validateObject
+} from './utils.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -143,7 +149,9 @@ class CurrencyEngine {
       const result = await folder.file(TRANSACTION_STORE_FILE).getText()
       transactionList = JSON.parse(result)
     } catch (e) {
-      this.log('Could not load transactionList file. Failure is ok on new device')
+      this.log(
+        'Could not load transactionList file. Failure is ok on new device'
+      )
       await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
     }
 
@@ -245,7 +253,9 @@ class CurrencyEngine {
       this.log('addTransaction: adding and sorting:' + edgeTransaction.txid)
       if (typeof this.transactionList[currencyCode] === 'undefined') {
         this.transactionList[currencyCode] = []
-      } else if (this.transactionList[currencyCode].length >= MAX_TRANSACTIONS) {
+      } else if (
+        this.transactionList[currencyCode].length >= MAX_TRANSACTIONS
+      ) {
         return
       }
       this.transactionList[currencyCode].push(edgeTransaction)
@@ -259,13 +269,10 @@ class CurrencyEngine {
 
       if (
         edgeTx.blockHeight < edgeTransaction.blockHeight ||
-        (
-          edgeTx.blockHeight === edgeTransaction.blockHeight && (
-            edgeTx.networkFee !== edgeTransaction.networkFee ||
+        (edgeTx.blockHeight === edgeTransaction.blockHeight &&
+          (edgeTx.networkFee !== edgeTransaction.networkFee ||
             edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
-            edgeTx.date !== edgeTransaction.date
-          )
-        )
+            edgeTx.date !== edgeTransaction.date))
       ) {
         if (edgeTx.date !== edgeTransaction.date) {
           needsResort = true
@@ -431,7 +438,7 @@ class CurrencyEngine {
     for (const token of activeTokens) {
       const balanceStatus = this.tokenCheckBalanceStatus[token] || 0
       const txStatus = this.tokenCheckTransactionsStatus[token] || 0
-      totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
+      totalStatus += (balanceStatus + txStatus) / 2 * perTokenSlice
       if (balanceStatus === 1 && txStatus === 1) {
         numComplete++
       }
@@ -690,7 +697,10 @@ class CurrencyEngine {
     }
     if (options.startEntries && options.startEntries > 0) {
       startEntries = options.startEntries
-      if (startEntries + startIndex > this.transactionList[currencyCode].length) {
+      if (
+        startEntries + startIndex >
+        this.transactionList[currencyCode].length
+      ) {
         // Don't read past the end of the transactionList
         startEntries = this.transactionList[currencyCode].length - startIndex
       }
@@ -761,7 +771,11 @@ class CurrencyEngine {
     }
 
     edgeSpendInfo.currencyCode = currencyCode
-    const denom = getDenomInfo(this.currencyInfo, currencyCode, this.customTokens)
+    const denom = getDenomInfo(
+      this.currencyInfo,
+      currencyCode,
+      this.customTokens
+    )
     if (!denom) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }

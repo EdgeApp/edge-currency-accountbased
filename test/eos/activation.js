@@ -1,17 +1,18 @@
 // @flow
 
 import EventEmitter from 'events'
-import { makeFakeIos, destroyAllContexts } from 'edge-core-js'
-import type {
-  // EdgeSpendInfo,
-  EdgeWalletInfo,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyEngineCallbacks
-} from 'edge-core-js'
-import { describe, it, before } from 'mocha'
-import * as Factories from '../../src/index.js'
+
 import { assert } from 'chai'
+import { destroyAllContexts, makeFakeIos } from 'edge-core-js'
+import type {
+  EdgeCurrencyEngineCallbacks,
+  EdgeCurrencyEngineOptions,
+  EdgeWalletInfo
+} from 'edge-core-js'
+import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
+
+import * as Factories from '../../src/index.js'
 
 describe(`EOS activation`, function () {
   let plugin: any

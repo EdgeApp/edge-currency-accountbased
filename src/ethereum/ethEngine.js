@@ -3,45 +3,45 @@
  */
 // @flow
 
+import { bns } from 'biggystring'
 import type {
-  EdgeTransaction,
-  EdgeSpendInfo,
   EdgeCurrencyEngineOptions,
+  EdgeSpendInfo,
+  EdgeTransaction,
   EdgeWalletInfo
 } from 'edge-core-js'
 import { error } from 'edge-core-js'
+
+import { CurrencyEngine } from '../common/engine.js'
 import {
-  validateObject,
-  normalizeAddress,
-  toHex,
+  addHexPrefix,
   bufToHex,
   getEdgeInfoServer,
-  addHexPrefix,
-  promiseAny
+  normalizeAddress,
+  promiseAny,
+  toHex,
+  validateObject
 } from '../common/utils.js'
+import { currencyInfo } from './ethInfo.js'
+import { calcMiningFee } from './ethMiningFees.js'
+import { EthereumPlugin } from './ethPlugin.js'
 import {
-  EtherscanGetBlockHeight,
-  EtherscanGetTransactions,
+  EthGasStationSchema,
   EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
+  EtherscanGetBlockHeight,
   EtherscanGetTokenTransactions,
-  EthGasStationSchema,
+  EtherscanGetTransactions,
   NetworkFeesSchema,
   SuperEthGetUnconfirmedTransactions
 } from './ethSchema.js'
-import { bns } from 'biggystring'
-
 import {
-  type EtherscanTransaction,
-  type EthereumTxOtherParams,
   type EthereumFee,
   type EthereumFeesGasPrice,
-  type EthereumWalletOtherData
+  type EthereumTxOtherParams,
+  type EthereumWalletOtherData,
+  type EtherscanTransaction
 } from './ethTypes.js'
-import { EthereumPlugin } from './ethPlugin.js'
-import { CurrencyEngine } from '../common/engine.js'
-import { currencyInfo } from './ethInfo.js'
-import { calcMiningFee } from './ethMiningFees.js'
 
 const abi = require('./export-fixes-bundle.js').ABI
 const ethWallet = require('./export-fixes-bundle.js').Wallet
@@ -245,8 +245,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     if (
-      tx.from.toLowerCase() ===
-      this.walletLocalData.publicKey.toLowerCase()
+      tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
       if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
         // Spend to self. netNativeAmount is just the fee
@@ -260,9 +259,7 @@ export class EthereumEngine extends CurrencyEngine {
     } else {
       // Receive transaction
       netNativeAmount = bns.add('0', tx.value)
-      ourReceiveAddresses.push(
-        this.walletLocalData.publicKey.toLowerCase()
-      )
+      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
     const otherParams: EthereumTxOtherParams = {
@@ -291,7 +288,10 @@ export class EthereumEngine extends CurrencyEngine {
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  async checkTransactionsFetch (startBlock: number, currencyCode: string): Promise<boolean> {
+  async checkTransactionsFetch (
+    startBlock: number,
+    currencyCode: string
+  ): Promise<boolean> {
     const address = this.walletLocalData.publicKey
     let checkAddressSuccess = false
     let page = 1
@@ -338,7 +338,10 @@ export class EthereumEngine extends CurrencyEngine {
         }
       }
     } catch (e) {
-      this.log(`Error checkTransactionsFetch ETH: ${this.walletLocalData.publicKey}`, e)
+      this.log(
+        `Error checkTransactionsFetch ETH: ${this.walletLocalData.publicKey}`,
+        e
+      )
     }
 
     if (checkAddressSuccess) {
@@ -400,7 +403,9 @@ export class EthereumEngine extends CurrencyEngine {
 
   async checkUnconfirmedTransactionsInnerLoop () {
     const address = normalizeAddress(this.walletLocalData.publicKey)
-    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
+    const url = `${
+      this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
+    }/v1/eth/main/txs/${address}`
     let jsonObj = null
     try {
       jsonObj = await this.fetchGet(url)
@@ -544,8 +549,12 @@ export class EthereumEngine extends CurrencyEngine {
         let highFee = fastest
 
         lowFee = (Math.round(lowFee) * WEI_MULTIPLIER).toString()
-        standardFeeLow = (Math.round(standardFeeLow) * WEI_MULTIPLIER).toString()
-        standardFeeHigh = (Math.round(standardFeeHigh) * WEI_MULTIPLIER).toString()
+        standardFeeLow = (
+          Math.round(standardFeeLow) * WEI_MULTIPLIER
+        ).toString()
+        standardFeeHigh = (
+          Math.round(standardFeeHigh) * WEI_MULTIPLIER
+        ).toString()
         highFee = (Math.round(highFee) * WEI_MULTIPLIER).toString()
 
         if (
@@ -574,9 +583,15 @@ export class EthereumEngine extends CurrencyEngine {
     switch (func) {
       case 'broadcastTx':
         const promises = []
-        promises.push(broadcastWrapper(this.broadcastInfura(params[0]), 'infura'))
-        promises.push(broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan'))
-        promises.push(broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher'))
+        promises.push(
+          broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
+        )
+        promises.push(
+          broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
+        )
+        promises.push(
+          broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher')
+        )
         out = await promiseAny(promises)
 
         this.log(`ETH multicastServers ${func} ${out.server} won`)
@@ -602,7 +617,10 @@ export class EthereumEngine extends CurrencyEngine {
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    this.addToLoop('checkUnconfirmedTransactionsInnerLoop', UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop(
+      'checkUnconfirmedTransactionsInnerLoop',
+      UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
+    )
     super.startEngine()
   }
 
@@ -679,7 +697,9 @@ export class EthereumEngine extends CurrencyEngine {
     ErrorInsufficientFundsMoreEth.name = 'ErrorInsufficientFundsMoreEth'
 
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    const balanceEth = this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+    const balanceEth = this.walletLocalData.totalBalances[
+      this.currencyInfo.currencyCode
+    ]
     let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee = null

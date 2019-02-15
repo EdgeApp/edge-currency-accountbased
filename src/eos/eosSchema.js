@@ -36,12 +36,7 @@ export const EosTransactionSuperNodeSchema = {
     trx_id: { type: 'string' },
     block_time: { type: 'string' },
     block_num: { type: 'number' },
-    required: [
-      'act',
-      'trx_id',
-      'block_time',
-      'block_num'
-    ]
+    required: ['act', 'trx_id', 'block_time', 'block_num']
   }
 }
 

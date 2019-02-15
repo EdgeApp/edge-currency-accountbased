@@ -3,21 +3,22 @@
  */
 // @flow
 
-import { currencyInfo } from './eosInfo.js'
-import { CurrencyPlugin } from '../common/plugin.js'
+import { bns } from 'biggystring'
 import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeEncodeUri,
-  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
+  EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js'
+import eosjs from 'eosjs'
+
+import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
-import { bns } from 'biggystring'
-import eosjs from 'eosjs'
+import { currencyInfo } from './eosInfo.js'
 
 const { ecc } = eosjs.modules
 
@@ -63,8 +64,11 @@ export class EosPlugin extends CurrencyPlugin {
     this.eosServer = eosjs(eosConfig)
     this.otherMethods = {
       getActivationSupportedCurrencies: async (): Promise<Object> => {
-        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-        const response = await io.fetch(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
+        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
+          .eosActivationServers[0]
+        const response = await io.fetch(
+          `${eosPaymentServer}/api/v1/getSupportedCurrencies`
+        )
         const out = await response.json()
         return out
       },
@@ -73,7 +77,10 @@ export class EosPlugin extends CurrencyPlugin {
           const infoServer = getEdgeInfoServer()
           const result = await io.fetch(`${infoServer}/v1/eosPrices`)
           const prices = await result.json()
-          const totalEos = (Number(prices.ram) * 8) + (Number(prices.net) * 2) + (Number(prices.cpu) * 10)
+          const totalEos =
+            Number(prices.ram) * 8 +
+            Number(prices.net) * 2 +
+            Number(prices.cpu) * 10
           let out = totalEos.toString()
           out = bns.toFixed(out, 0, 4)
           return out
@@ -83,7 +90,7 @@ export class EosPlugin extends CurrencyPlugin {
       },
       validateAccount: async (account: string): Promise<boolean> => {
         const valid = checkAddress(account)
-        const out = {result: ''}
+        const out = { result: '' }
         if (!valid) {
           const e = new Error('ErrorInvalidAccountName')
           e.name = 'ErrorInvalidAccountName'

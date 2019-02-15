@@ -2,6 +2,7 @@
 // @flow
 
 import { type EdgeCurrencyInfo } from 'edge-core-js'
+
 import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {

@@ -3,19 +3,20 @@
  */
 // @flow
 
+import { bns } from 'biggystring'
 // import { currencyInfo } from './currencyInfoXRP.js'
 import type {
-  EdgeParsedUri,
-  EdgeEncodeUri,
-  EdgeWalletInfo,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyEngine,
-  EdgeCurrencyInfo
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
+  EdgeEncodeUri,
+  EdgeParsedUri,
+  EdgeWalletInfo
 } from 'edge-core-js'
-import { getDenomInfo } from '../common/utils.js'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
-import { bns } from 'biggystring'
+
+import { getDenomInfo } from '../common/utils.js'
 
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {

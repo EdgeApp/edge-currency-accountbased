@@ -2,6 +2,7 @@
 // @flow
 
 import { type EdgeCurrencyInfo } from 'edge-core-js'
+
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {

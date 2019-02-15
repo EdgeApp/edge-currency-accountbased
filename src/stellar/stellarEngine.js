@@ -3,29 +3,25 @@
  */
 // @flow
 
+import { bns } from 'biggystring'
 // import { currencyInfo } from './stellarInfo.js'
 import type {
-  EdgeTransaction,
-  EdgeSpendInfo,
   EdgeCurrencyEngineOptions,
+  EdgeSpendInfo,
+  EdgeTransaction,
   EdgeWalletInfo
 } from 'edge-core-js'
 import { error } from 'edge-core-js'
 
-import { bns } from 'biggystring'
+import { CurrencyEngine } from '../common/engine.js'
+import { asyncWaterfall, getDenomInfo, promiseAny } from '../common/utils.js'
+import { StellarPlugin } from '../stellar/stellarPlugin.js'
 import {
   type StellarAccount,
   type StellarOperation,
   type StellarTransaction,
   type StellarWalletOtherData
 } from './stellarTypes.js'
-import { CurrencyEngine } from '../common/engine.js'
-import { StellarPlugin } from '../stellar/stellarPlugin.js'
-import {
-  getDenomInfo,
-  asyncWaterfall,
-  promiseAny
-} from '../common/utils.js'
 
 const TX_QUERY_PAGING_LIMIT = 2
 const ADDRESS_POLL_MILLISECONDS = 15000
@@ -372,7 +368,12 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
+    const {
+      edgeSpendInfo,
+      currencyCode,
+      nativeBalance,
+      denom
+    } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')

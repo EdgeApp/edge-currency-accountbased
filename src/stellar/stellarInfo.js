@@ -2,6 +2,7 @@
 // @flow
 
 import { type EdgeCurrencyInfo } from 'edge-core-js'
+
 import { type StellarSettings } from './stellarTypes.js'
 
 const otherSettings: StellarSettings = {

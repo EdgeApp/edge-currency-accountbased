@@ -3,24 +3,24 @@
  */
 // @flow
 
-import { currencyInfo } from './stellarInfo.js'
-import { CurrencyPlugin } from '../common/plugin.js'
+import { bns } from 'biggystring'
 import type {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeEncodeUri,
-  EdgeParsedUri,
   EdgeCurrencyPlugin,
   EdgeCurrencyPluginFactory,
+  EdgeEncodeUri,
+  EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js'
-import { bns } from 'biggystring'
+import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
-import { getDenomInfo } from '../common/utils.js'
 import parse from 'url-parse'
 
-import stellarApi from 'stellar-sdk'
+import { CurrencyPlugin } from '../common/plugin.js'
+import { getDenomInfo } from '../common/utils.js'
 import { StellarEngine } from './stellarEngine.js'
+import { currencyInfo } from './stellarInfo.js'
 
 const URI_PREFIX = 'web+stellar'
 

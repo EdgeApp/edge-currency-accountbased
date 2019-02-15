@@ -1,5 +1,6 @@
-import { describe, it, before } from 'mocha'
 import { assert } from 'chai'
+import { before, describe, it } from 'mocha'
+
 import { asyncWaterfall, snooze, snoozeReject } from '../../src/common/utils.js'
 
 describe(`Utils testing`, function () {

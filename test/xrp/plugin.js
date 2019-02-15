@@ -1,8 +1,9 @@
 // @flow
 
-import { describe, it, before } from 'mocha'
-import * as Factories from '../../src/index.js'
 import { assert } from 'chai'
+import { before, describe, it } from 'mocha'
+
+import * as Factories from '../../src/index.js'
 import fixtures from './fixtures.json'
 
 for (const fixture of fixtures) {
@@ -34,39 +35,51 @@ for (const fixture of fixtures) {
       })
     })
     it('ripple.com invalid URI handler', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri handler'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+      plugin
+        .parseUri(fixture['parseUri']['ripple.com invalid uri handler'][0])
+        .then(() => {
+          assert.equal(0, 1)
+          done()
+        })
+        .catch(e => {
+          done()
+        })
     })
 
     it('ripple.com invalid URI domain', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+      plugin
+        .parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0])
+        .then(() => {
+          assert.equal(0, 1)
+          done()
+        })
+        .catch(e => {
+          done()
+        })
     })
 
     it('ripple.com invalid URI path', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri path'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+      plugin
+        .parseUri(fixture['parseUri']['ripple.com invalid uri path'][0])
+        .then(() => {
+          assert.equal(0, 1)
+          done()
+        })
+        .catch(e => {
+          done()
+        })
     })
 
     it('ripple.com invalid URI param', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri param'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+      plugin
+        .parseUri(fixture['parseUri']['ripple.com invalid uri param'][0])
+        .then(() => {
+          assert.equal(0, 1)
+          done()
+        })
+        .catch(e => {
+          done()
+        })
     })
 
     // Ripple.com valid URIs
