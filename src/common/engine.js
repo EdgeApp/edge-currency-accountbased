@@ -665,7 +665,9 @@ class CurrencyEngine {
     }
   }
 
-  async getTransactions (options: EdgeGetTransactionsOptions) {
+  async getTransactions (
+    options: EdgeGetTransactionsOptions
+  ): Promise<Array<EdgeTransaction>> {
     let currencyCode: string = this.currencyInfo.currencyCode
 
     const valid: boolean = validateObject(options, {
