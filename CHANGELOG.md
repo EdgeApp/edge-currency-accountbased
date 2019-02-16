@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.0.23 (2019-02-15)
+
+* Upgrade to the edge-core-js v0.14.0 types
+* Modernize the build system
+
 ## 0.0.22
 
 * Fix ETH blockHeight from fluttering in/out of confirmation
