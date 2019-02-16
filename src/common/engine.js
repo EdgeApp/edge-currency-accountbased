@@ -4,6 +4,7 @@
 // @flow
 
 import { bns } from 'biggystring'
+import type { Disklet } from 'disklet'
 import {
   type EdgeCurrencyEngineCallbacks,
   type EdgeCurrencyEngineOptions,
@@ -27,7 +28,6 @@ import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
 import {
   type CustomToken,
   DATA_STORE_FILE,
-  DATA_STORE_FOLDER,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
   TXID_MAP_FILE,
@@ -46,7 +46,7 @@ class CurrencyEngine {
   currencyPlugin: CurrencyPlugin
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
-  walletLocalFolder: Object
+  walletLocalDisklet: Disklet
   engineOn: boolean
   addressesChecked: boolean
   tokenCheckBalanceStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
@@ -74,7 +74,7 @@ class CurrencyEngine {
     opts: EdgeCurrencyEngineOptions
   ) {
     const currencyCode = currencyPlugin.currencyInfo.currencyCode
-    const { walletLocalFolder, callbacks } = opts
+    const { walletLocalDisklet, callbacks } = opts
 
     this.currencyPlugin = currencyPlugin
     this.io = currencyPlugin.io
@@ -107,7 +107,7 @@ class CurrencyEngine {
     }
 
     this.currencyEngineCallbacks = callbacks
-    this.walletLocalFolder = walletLocalFolder
+    this.walletLocalDisklet = walletLocalDisklet
 
     if (typeof this.walletInfo.keys.publicKey !== 'string') {
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
@@ -126,33 +126,33 @@ class CurrencyEngine {
     }
     this.transactionsLoaded = true
 
-    const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
+    const disklet = this.walletLocalDisklet
     let txIdList
     let txIdMap
     let transactionList
     try {
-      const result = await folder.file(TXID_LIST_FILE).getText()
+      const result = await disklet.getText(TXID_LIST_FILE)
       txIdList = JSON.parse(result)
     } catch (e) {
       this.log('Could not load txidList file. Failure is ok on new device')
-      await folder.file(TXID_LIST_FILE).setText(JSON.stringify(this.txIdList))
+      await disklet.setText(TXID_LIST_FILE, JSON.stringify(this.txIdList))
     }
     try {
-      const result = await folder.file(TXID_MAP_FILE).getText()
+      const result = await disklet.getText(TXID_MAP_FILE)
       txIdMap = JSON.parse(result)
     } catch (e) {
       this.log('Could not load txidMap file. Failure is ok on new device')
-      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
+      await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
     }
 
     try {
-      const result = await folder.file(TRANSACTION_STORE_FILE).getText()
+      const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
     } catch (e) {
       this.log(
         'Could not load transactionList file. Failure is ok on new device'
       )
-      await folder.file(TXID_MAP_FILE).setText(JSON.stringify(this.txIdMap))
+      await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
     }
 
     let isEmptyTransactions = true
@@ -191,9 +191,9 @@ class CurrencyEngine {
       this.walletInfo.keys.publicKey = pubKeys.publicKey
     }
 
-    const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
+    const disklet = this.walletLocalDisklet
     try {
-      const result = await folder.file(DATA_STORE_FILE).getText()
+      const result = await disklet.getText(DATA_STORE_FILE)
       this.walletLocalData = new WalletLocalData(
         result,
         this.currencyInfo.currencyCode
@@ -208,9 +208,10 @@ class CurrencyEngine {
           this.currencyInfo.currencyCode
         )
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
-        await folder
-          .file(DATA_STORE_FILE)
-          .setText(JSON.stringify(this.walletLocalData))
+        await disklet.setText(
+          DATA_STORE_FILE,
+          JSON.stringify(this.walletLocalData)
+        )
       } catch (e) {
         this.log('Error writing to localDataStore. Engine not started:' + err)
         throw e
@@ -320,15 +321,14 @@ class CurrencyEngine {
   // Save the wallet data store
   // *************************************
   async saveWalletLoop () {
-    const folder = this.walletLocalFolder.folder(DATA_STORE_FOLDER)
+    const disklet = this.walletLocalDisklet
     const promises = []
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
       const jsonString = JSON.stringify(this.walletLocalData)
       promises.push(
-        folder
-          .file(DATA_STORE_FILE)
-          .setText(jsonString)
+        disklet
+          .setText(DATA_STORE_FILE, jsonString)
           .then(() => {
             this.walletLocalDataDirty = false
           })
@@ -343,33 +343,24 @@ class CurrencyEngine {
       this.log('transactionListDirty. Saving...')
       let jsonString = JSON.stringify(this.transactionList)
       promises.push(
-        folder
-          .file(TRANSACTION_STORE_FILE)
-          .setText(jsonString)
-          .catch(e => {
-            this.log('Error saving transactionList')
-            this.log(e)
-          })
+        disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
+          this.log('Error saving transactionList')
+          this.log(e)
+        })
       )
       jsonString = JSON.stringify(this.txIdList)
       promises.push(
-        folder
-          .file(TXID_LIST_FILE)
-          .setText(jsonString)
-          .catch(e => {
-            this.log('Error saving txIdList')
-            this.log(e)
-          })
+        disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
+          this.log('Error saving txIdList')
+          this.log(e)
+        })
       )
       jsonString = JSON.stringify(this.txIdMap)
       promises.push(
-        folder
-          .file(TXID_MAP_FILE)
-          .setText(jsonString)
-          .catch(e => {
-            this.log('Error saving txIdMap')
-            this.log(e)
-          })
+        disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
+          this.log('Error saving txIdMap')
+          this.log(e)
+        })
       )
       await Promise.all(promises)
       this.transactionListDirty = false
