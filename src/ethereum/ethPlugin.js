@@ -185,7 +185,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 export function makeEthereumPlugin (
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
-  const { io } = opts
+  const { io, initOptions } = opts
 
   let toolsPromise: Promise<EthereumPlugin>
   function makeCurrencyTools (): Promise<EthereumPlugin> {
@@ -199,7 +199,12 @@ export function makeEthereumPlugin (
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EthereumEngine(tools, walletInfo, opts)
+    const currencyEngine = new EthereumEngine(
+      tools,
+      walletInfo,
+      initOptions,
+      opts
+    )
 
     // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(tools, walletInfo, opts)

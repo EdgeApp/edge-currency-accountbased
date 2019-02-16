@@ -41,6 +41,7 @@ import {
 import {
   type EthereumFee,
   type EthereumFeesGasPrice,
+  type EthereumInitOptions,
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
   type EtherscanTransaction
@@ -74,10 +75,12 @@ async function broadcastWrapper (promise: Promise<Object>, server: string) {
 export class EthereumEngine extends CurrencyEngine {
   ethereumPlugin: EthereumPlugin
   otherData: EthereumWalletOtherData
+  initOptions: EthereumInitOptions
 
   constructor (
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
+    initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(currencyPlugin, walletInfo, opts)
@@ -87,12 +90,14 @@ export class EthereumEngine extends CurrencyEngine {
       }
     }
     this.currencyPlugin = currencyPlugin
+    this.initOptions = initOptions
   }
 
   async fetchGetEtherscan (server: string, cmd: string) {
+    const { etherscanApiKey } = this.initOptions
     let apiKey = ''
-    if (global.etherscanApiKey && global.etherscanApiKey.length > 5) {
-      apiKey = '&apikey=' + global.etherscanApiKey
+    if (etherscanApiKey && etherscanApiKey.length > 5) {
+      apiKey = '&apikey=' + etherscanApiKey
     }
     const url = `${server}/api${cmd}${apiKey}`
     return this.fetchGet(url)
@@ -103,18 +108,26 @@ export class EthereumEngine extends CurrencyEngine {
       method: 'GET'
     })
     if (!response.ok) {
-      const cleanUrl = url.replace(global.etherscanApiKey, 'private')
+      const {
+        blockcypherApiKey,
+        etherscanApiKey,
+        infuraProjectId
+      } = this.initOptions
+      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
+      if (etherscanApiKey) url = url.replace(etherscanApiKey, 'private')
+      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
       throw new Error(
-        `The server returned error code ${response.status} for ${cleanUrl}`
+        `The server returned error code ${response.status} for ${url}`
       )
     }
     return response.json()
   }
 
   async fetchPostBlockcypher (cmd: string, body: any) {
+    const { blockcypherApiKey } = this.initOptions
     let apiKey = ''
-    if (global.blockcypherApiKey && global.blockcypherApiKey.length > 5) {
-      apiKey = '&token=' + global.blockcypherApiKey
+    if (blockcypherApiKey && blockcypherApiKey.length > 5) {
+      apiKey = '&token=' + blockcypherApiKey
     }
     const url = `${
       this.currencyInfo.defaultSettings.otherSettings.blockcypherApiServers[0]
@@ -832,10 +845,11 @@ export class EthereumEngine extends CurrencyEngine {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
     this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
-    if (!global.infuraProjectId || global.infuraProjectId.length < 6) {
+    const { infuraProjectId } = this.initOptions
+    if (!infuraProjectId || infuraProjectId.length < 6) {
       throw new Error('Need Infura Project ID')
     }
-    const url = `https://mainnet.infura.io/v3/${global.infuraProjectId}`
+    const url = `https://mainnet.infura.io/v3/${infuraProjectId}`
     const body = {
       id: 1,
       jsonrpc: '2.0',
