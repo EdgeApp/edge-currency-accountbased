@@ -3,6 +3,8 @@
  */
 // @flow
 
+import 'regenerator-runtime/runtime'
+
 import { makeEosPlugin } from './eos/eosPlugin.js'
 import { makeEthereumPlugin } from './ethereum/ethPlugin.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'

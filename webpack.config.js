@@ -2,33 +2,28 @@ const path = require('path')
 
 const webpack = require('webpack')
 
-const packageJson = require('./package.json')
-
-// Only bundle ethereumjs dependencies:
-const externals = Object.keys(packageJson.dependencies).filter(
-  name => !/^ethereumjs-/.test(name)
-)
+const babelOptions = {
+  // For debugging, just remove "@babel/preset-env":
+  presets: ['@babel/preset-env', '@babel/preset-flow'],
+  plugins: [['@babel/plugin-transform-for-of', { assumeArray: true }]],
+  cacheDirectory: true
+}
 
 module.exports = {
   devtool: 'source-map',
   entry: './src/index.js',
-  externals,
   mode: 'development',
   module: {
     rules: [
       {
         test: /\.js$/,
-        use: {
-          loader: '@sucrase/webpack-loader',
-          options: { transforms: ['flow'] }
-        }
+        use: { loader: 'babel-loader', options: babelOptions }
       }
     ]
   },
   output: {
-    filename: packageJson['react-native'],
-    libraryTarget: 'commonjs',
-    path: path.resolve(__dirname)
+    filename: 'edge-currency-accountbased.js',
+    path: path.join(path.resolve(__dirname), 'lib/react-native')
   },
   plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)]
 }
