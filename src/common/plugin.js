@@ -2,27 +2,32 @@
  * Created by paul on 8/8/17.
  */
 // @flow
+
+import { bns } from 'biggystring'
 // import { currencyInfo } from './currencyInfoXRP.js'
-import type {
-  EdgeParsedUri,
-  EdgeEncodeUri,
-  EdgeWalletInfo,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyInfo
-} from 'edge-core-js'
-import { getDenomInfo } from '../common/utils.js'
+import {
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyInfo,
+  type EdgeEncodeUri,
+  type EdgeIo,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
-import { bns } from 'biggystring'
+
+import { getDenomInfo } from '../common/utils.js'
 
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {
+  io: EdgeIo
   pluginName: string
   currencyInfo: EdgeCurrencyInfo
   highestTxHeight: number
 
-  constructor (pluginName: string, currencyInfo: EdgeCurrencyInfo) {
+  constructor (io: EdgeIo, pluginName: string, currencyInfo: EdgeCurrencyInfo) {
+    this.io = io
     this.pluginName = pluginName
     this.currencyInfo = currencyInfo
     this.highestTxHeight = 0

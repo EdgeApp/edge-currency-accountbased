@@ -2,33 +2,30 @@
  * Created by paul on 8/8/17.
  */
 // @flow
-import { currencyInfo } from './ethInfo.js'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { getDenomInfo, hexToBuf } from '../common/utils.js'
+
+import { Buffer } from 'buffer'
+
 import { bns } from 'biggystring'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeIo,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
+import EthereumUtil from 'ethereumjs-util'
+import ethWallet from 'ethereumjs-wallet'
 
-import { EthereumEngine } from './ethEngine.js'
 import { CurrencyPlugin } from '../common/plugin.js'
+import { getDenomInfo, hexToBuf } from '../common/utils.js'
+import { EthereumEngine } from './ethEngine.js'
+import { currencyInfo } from './ethInfo.js'
+
 export { calcMiningFee } from './ethMiningFees.js'
-
-const Buffer = require('buffer/').Buffer
-const ethWallet = require('./export-fixes-bundle.js').Wallet
-const EthereumUtil = require('./export-fixes-bundle.js').Util
-
-let io
-
-const randomBuffer = size => {
-  const array = io.random(size)
-  return Buffer.from(array)
-}
 
 const defaultNetworkFees = {
   default: {
@@ -68,16 +65,20 @@ const defaultNetworkFees = {
 }
 
 export class EthereumPlugin extends CurrencyPlugin {
-  constructor () {
-    super('ethereum', currencyInfo)
+  constructor (io: EdgeIo) {
+    super(io, 'ethereum', currencyInfo)
   }
 
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'ethereum') {
+      const { io } = this
       const cryptoObj = {
-        randomBytes: randomBuffer
+        randomBytes: size => {
+          const array = io.random(size)
+          return Buffer.from(array)
+        }
       }
       ethWallet.overrideCrypto(cryptoObj)
 
@@ -106,10 +107,10 @@ export class EthereumPlugin extends CurrencyPlugin {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new EthereumEngine(this, io, walletInfo, opts)
+    const currencyEngine = new EthereumEngine(this, walletInfo, opts)
 
     // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(this, io, walletInfo, opts)
+    await currencyEngine.loadEngine(this, walletInfo, opts)
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -210,10 +211,8 @@ export const ethereumCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
-    io = opts.io
-
-    const plugin: EdgeCurrencyPlugin = new EthereumPlugin()
+  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
+    const plugin: EdgeCurrencyPlugin = new EthereumPlugin(opts.io)
     return plugin
   }
 }

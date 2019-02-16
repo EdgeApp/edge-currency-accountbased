@@ -3,20 +3,23 @@
  */
 // @flow
 
-import { currencyInfo } from './xrpInfo.js'
-import type {
-  EdgeTransaction,
-  EdgeSpendInfo,
-  EdgeCurrencyEngineOptions,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
-
 import { bns } from 'biggystring'
 import {
-  XrpGetServerInfoSchema,
+  type EdgeCurrencyEngineOptions,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
+} from 'edge-core-js/types'
+
+import { CurrencyEngine } from '../common/engine.js'
+import { validateObject } from '../common/utils.js'
+import { currencyInfo } from './xrpInfo.js'
+import { XrpPlugin } from './xrpPlugin.js'
+import {
   XrpGetBalancesSchema,
-  // XrpOnTransactionSchema,
+  XrpGetServerInfoSchema,
   XrpGetTransactionsSchema
 } from './xrpSchema.js'
 import {
@@ -24,9 +27,6 @@ import {
   type XrpGetTransactions,
   type XrpWalletOtherData
 } from './xrpTypes.js'
-import { XrpPlugin } from './xrpPlugin.js'
-import { CurrencyEngine } from '../common/engine.js'
-import { validateObject } from '../common/utils.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -58,11 +58,10 @@ export class XrpEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: XrpPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
     // this.callbacksSetup = false
   }
@@ -367,7 +366,12 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
+    const {
+      edgeSpendInfo,
+      currencyCode,
+      nativeBalance,
+      denom
+    } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -382,7 +386,7 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
@@ -391,7 +395,7 @@ export class XrpEngine extends CurrencyEngine {
       const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
       const virtualTxAmount = bns.add(totalTxAmount, '20000000')
       if (bns.gt(virtualTxAmount, nativeBalance)) {
-        throw new error.InsufficientFundsError()
+        throw new InsufficientFundsError()
       }
     }
 
@@ -447,7 +451,9 @@ export class XrpEngine extends CurrencyEngine {
           if (err.message.includes('has too many decimal places')) {
             // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
             // Just retrying seems to resolve it. -paulvp
-            console.log('Got "too many decimal places" error. Retrying... ' + i.toString())
+            console.log(
+              'Got "too many decimal places" error. Retrying... ' + i.toString()
+            )
             continue
           }
         }

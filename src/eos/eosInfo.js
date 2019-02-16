@@ -1,7 +1,8 @@
 /* global */
 // @flow
 
-import { type EdgeCurrencyInfo } from 'edge-core-js'
+import { type EdgeCurrencyInfo } from 'edge-core-js/types'
+
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {

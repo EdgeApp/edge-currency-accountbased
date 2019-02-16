@@ -3,11 +3,12 @@
  * @flow
  */
 
-import { validate } from 'jsonschema'
-import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js'
-import { BN } from 'bn.js'
+import { Buffer } from 'buffer'
+
 import { bns } from 'biggystring'
-const Buffer = require('buffer/').Buffer
+import { BN } from 'bn.js'
+import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
+import { validate } from 'jsonschema'
 
 function normalizeAddress (address: string) {
   return address.toLowerCase().replace('0x', '')

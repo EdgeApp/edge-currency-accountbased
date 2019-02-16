@@ -2,32 +2,34 @@
  * Created by paul on 8/8/17.
  */
 // @flow
-import { currencyInfo } from './xrpInfo.js'
-import type {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeEncodeUri,
-  EdgeParsedUri,
-  EdgeCurrencyPlugin,
-  EdgeCurrencyPluginFactory,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
-import { bns } from 'biggystring'
+
 import baseX from 'base-x'
+import { bns } from 'biggystring'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeCurrencyPluginFactory,
+  type EdgeEncodeUri,
+  type EdgeIo,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 import keypairs from 'edge-ripple-keypairs'
+import { RippleAPI } from 'edge-ripple-lib'
 import parse from 'url-parse'
 
-import { RippleAPI } from 'edge-ripple-lib'
-import { XrpEngine } from './xrpEngine.js'
 import { CurrencyPlugin } from '../common/plugin.js'
+import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
+import { XrpEngine } from './xrpEngine.js'
+import { currencyInfo } from './xrpInfo.js'
+
 // import RippledWsClientPool from 'rippled-ws-client-pool'
 
 const base58Codec = baseX(
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 )
-
-let io
 
 function checkAddress (address: string): boolean {
   let data: Uint8Array
@@ -42,12 +44,12 @@ function checkAddress (address: string): boolean {
 
 export class XrpPlugin extends CurrencyPlugin {
   rippleApi: Object
-  rippleApiSubscribers: {[walletId: string]: boolean}
+  rippleApiSubscribers: { [walletId: string]: boolean }
   // connectionPool: Object
   connectionClients: { [walletId: string]: boolean }
 
-  constructor () {
-    super('ripple', currencyInfo)
+  constructor (io: EdgeIo) {
+    super(io, 'ripple', currencyInfo)
     // this.connectionPool = new RippledWsClientPool()
     this.connectionClients = {}
     this.rippleApi = {}
@@ -56,13 +58,15 @@ export class XrpPlugin extends CurrencyPlugin {
 
   async connectApi (walletId: string): Promise<void> {
     if (!this.rippleApi.serverName) {
-      const funcs = this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(server => async () => {
-        const api = new RippleAPI({ server })
-        api.serverName = server
-        const result = await api.connect()
-        const out = { server, result, api }
-        return out
-      })
+      const funcs = this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(
+        server => async () => {
+          const api = new RippleAPI({ server })
+          api.serverName = server
+          const result = await api.connect()
+          const out = { server, result, api }
+          return out
+        }
+      )
       const result = await asyncWaterfall(funcs)
       if (!this.rippleApi.serverName) {
         this.rippleApi = result.api
@@ -85,8 +89,9 @@ export class XrpPlugin extends CurrencyPlugin {
     if (type === 'ripple' || type === 'ripple-secp256k1') {
       const algorithm =
         type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
-      const entropy = Array.from(io.random(32))
-      const server = this.currencyInfo.defaultSettings.otherSettings.rippledServers[0]
+      const entropy = Array.from(this.io.random(32))
+      const server = this.currencyInfo.defaultSettings.otherSettings
+        .rippledServers[0]
       const api = new RippleAPI({ server })
       const address = api.generateAddress({
         algorithm,
@@ -114,9 +119,9 @@ export class XrpPlugin extends CurrencyPlugin {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new XrpEngine(this, io, walletInfo, opts)
+    const currencyEngine = new XrpEngine(this, walletInfo, opts)
 
-    await currencyEngine.loadEngine(this, io, walletInfo, opts)
+    await currencyEngine.loadEngine(this, walletInfo, opts)
 
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -180,10 +185,8 @@ export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
   pluginType: 'currency',
   pluginName: currencyInfo.pluginName,
 
-  async makePlugin (opts: any): Promise<EdgeCurrencyPlugin> {
-    io = opts.io
-
-    const plugin: EdgeCurrencyPlugin = new XrpPlugin()
+  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
+    const plugin: EdgeCurrencyPlugin = new XrpPlugin(opts.io)
     return plugin
   }
 }

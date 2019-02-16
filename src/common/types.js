@@ -3,14 +3,12 @@
  */
 // @flow
 
-import type { EdgeTransaction } from 'edge-core-js'
-// import { currencyInfo } from '../currencyInfoXRP.js'
-export const DATA_STORE_FOLDER = 'txEngineFolder'
-export const DATA_STORE_FILE = 'walletLocalData.json'
-export const TXID_MAP_FILE = 'txidMap.json'
-export const TXID_LIST_FILE = 'txidList.json'
-export const TRANSACTION_STORE_FILE = 'transactionList.json'
-// export const PRIMARY_CURRENCY = currencyInfo.currencyCode
+import { type EdgeTransaction } from 'edge-core-js'
+
+export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
+export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
+export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
+export const TRANSACTION_STORE_FILE = 'txEngineFolder/transactionList.json'
 
 export type CustomToken = {
   currencyCode: string,

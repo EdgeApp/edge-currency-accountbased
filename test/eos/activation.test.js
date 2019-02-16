@@ -1,37 +1,34 @@
 // @flow
+
 import EventEmitter from 'events'
-import { makeFakeIos, destroyAllContexts } from 'edge-core-js'
-import type {
-  // EdgeSpendInfo,
-  EdgeWalletInfo,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyEngineCallbacks
-} from 'edge-core-js'
-import { describe, it, before } from 'mocha'
-import * as Factories from '../../src/index.js'
+
 import { assert } from 'chai'
+import { downgradeDisklet } from 'disklet'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineCallbacks,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeWalletInfo,
+  destroyAllContexts,
+  makeFakeIos
+} from 'edge-core-js'
+import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
+import * as Factories from '../../src/index.js'
+
 describe(`EOS activation`, function () {
-  let plugin: any
-  let engine: any
-  const emitter = new EventEmitter()
+  let engine: EdgeCurrencyEngine
+  let plugin: EdgeCurrencyPlugin
+
   const [fakeIo] = makeFakeIos(1)
-  if (!fakeIo.folder) {
-    throw new Error('Missing fakeio.folder')
-  }
-  const walletLocalFolder = fakeIo.folder
-  // $FlowFixMe
-  fakeIo.fetch = fetch
-  const myIo = {
-    random: size => [0]
-  }
-  const opts: any = {
-    io: Object.assign({}, fakeIo, myIo)
+  const opts: EdgeCorePluginOptions = {
+    io: { ...fakeIo, fetch, random: size => new Uint8Array(size) }
   }
 
-  // const context = makeEdgeContext({ io: fakeIo, plugins })
-
+  const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
     onAddressesChecked (progressRatio) {
       // console.log('onAddressesCheck', progressRatio)
@@ -55,10 +52,14 @@ describe(`EOS activation`, function () {
     }
   }
 
+  const walletLocalDisklet = fakeIo.disklet
+  const walletLocalFolder = downgradeDisklet(walletLocalDisklet)
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    walletLocalFolder,
-    walletLocalEncryptedFolder: walletLocalFolder
+    walletLocalDisklet,
+    walletLocalEncryptedDisklet: walletLocalDisklet,
+    walletLocalEncryptedFolder: walletLocalFolder,
+    walletLocalFolder
   }
 
   const info: EdgeWalletInfo = {

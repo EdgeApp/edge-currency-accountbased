@@ -3,29 +3,26 @@
  */
 // @flow
 
-// import { currencyInfo } from './stellarInfo.js'
-import type {
-  EdgeTransaction,
-  EdgeSpendInfo,
-  EdgeCurrencyEngineOptions,
-  EdgeWalletInfo
-} from 'edge-core-js'
-import { error } from 'edge-core-js'
-
 import { bns } from 'biggystring'
+// import { currencyInfo } from './stellarInfo.js'
+import {
+  type EdgeCurrencyEngineOptions,
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
+} from 'edge-core-js/types'
+
+import { CurrencyEngine } from '../common/engine.js'
+import { asyncWaterfall, getDenomInfo, promiseAny } from '../common/utils.js'
+import { StellarPlugin } from '../stellar/stellarPlugin.js'
 import {
   type StellarAccount,
   type StellarOperation,
   type StellarTransaction,
   type StellarWalletOtherData
 } from './stellarTypes.js'
-import { CurrencyEngine } from '../common/engine.js'
-import { StellarPlugin } from '../stellar/stellarPlugin.js'
-import {
-  getDenomInfo,
-  asyncWaterfall,
-  promiseAny
-} from '../common/utils.js'
 
 const TX_QUERY_PAGING_LIMIT = 2
 const ADDRESS_POLL_MILLISECONDS = 15000
@@ -48,11 +45,10 @@ export class StellarEngine extends CurrencyEngine {
 
   constructor (
     currencyPlugin: StellarPlugin,
-    io_: any,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, io_, walletInfo, opts)
+    super(currencyPlugin, walletInfo, opts)
     this.stellarPlugin = currencyPlugin
     this.stellarApi = {}
     this.activatedAccountsCache = {}
@@ -372,7 +368,12 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode, nativeBalance, denom } = super.makeSpend(edgeSpendInfoIn)
+    const {
+      edgeSpendInfo,
+      currencyCode,
+      nativeBalance,
+      denom
+    } = super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -397,11 +398,11 @@ export class StellarEngine extends CurrencyEngine {
     if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
       nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     } else {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     if (bns.eq(nativeAmount, '0')) {
-      throw new error.NoAmountSpecifiedError()
+      throw new NoAmountSpecifiedError()
     }
 
     const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 7)
@@ -446,7 +447,7 @@ export class StellarEngine extends CurrencyEngine {
     nativeAmount = bns.add(networkFee, nativeAmount) // Add fee to total
     const nativeBalance2 = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
     if (bns.gt(nativeAmount, nativeBalance2)) {
-      throw new error.InsufficientFundsError()
+      throw new InsufficientFundsError()
     }
 
     nativeAmount = `-${nativeAmount}`

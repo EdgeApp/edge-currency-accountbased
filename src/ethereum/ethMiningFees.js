@@ -3,14 +3,15 @@
  * @flow
  */
 
-import type {
-  EthereumFees,
-  EthereumFee,
-  EthereumCalcedFees
-} from './ethTypes.js'
-import type { EdgeSpendInfo } from 'edge-core-js'
-import { normalizeAddress } from '../common/utils.js'
 import { bns } from 'biggystring'
+import { type EdgeSpendInfo } from 'edge-core-js/types'
+
+import { normalizeAddress } from '../common/utils.js'
+import type {
+  EthereumCalcedFees,
+  EthereumFee,
+  EthereumFees
+} from './ethTypes.js'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'

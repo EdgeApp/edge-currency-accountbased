@@ -1,27 +1,29 @@
 // @flow
-import { describe, it, before } from 'mocha'
-import * as Factories from '../../src/index.js'
+
 import { assert } from 'chai'
-import fixtures from './fixtures.json'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyPlugin,
+  makeFakeIos
+} from 'edge-core-js'
+import { before, describe, it } from 'mocha'
+
+import * as Factories from '../../src/index.js'
+import { expectRejection } from '../expectRejection.js'
+import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
+  let plugin: EdgeCurrencyPlugin
+
   const CurrencyPluginFactory = Factories[fixture['factory']]
   const WALLET_TYPE = fixture['WALLET_TYPE']
 
-  const opts = {
-    io: {
-      random: size => fixture['key'],
-      console: {
-        info: console.log,
-        warn: console.log,
-        error: console.log
-      }
-    }
+  const [fakeIo] = makeFakeIos(1)
+  const opts: EdgeCorePluginOptions = {
+    io: { ...fakeIo, random: size => fixture['key'] }
   }
 
   describe(`parseUri for Wallet type ${WALLET_TYPE}`, function () {
-    let plugin
-
     before('Plugin', function (done) {
       CurrencyPluginFactory.makePlugin(opts).then(currencyPlugin => {
         assert.equal(
@@ -32,40 +34,42 @@ for (const fixture of fixtures) {
         done()
       })
     })
-    it('ripple.com invalid URI handler', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri handler'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+    it('ripple.com invalid URI handler', function () {
+      return expectRejection(
+        Promise.resolve(
+          plugin.parseUri(
+            fixture['parseUri']['ripple.com invalid uri handler'][0]
+          )
+        )
+      )
     })
 
-    it('ripple.com invalid URI domain', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri domain'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+    it('ripple.com invalid URI domain', function () {
+      return expectRejection(
+        Promise.resolve(
+          plugin.parseUri(
+            fixture['parseUri']['ripple.com invalid uri domain'][0]
+          )
+        )
+      )
     })
 
-    it('ripple.com invalid URI path', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri path'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+    it('ripple.com invalid URI path', function () {
+      return expectRejection(
+        Promise.resolve(
+          plugin.parseUri(fixture['parseUri']['ripple.com invalid uri path'][0])
+        )
+      )
     })
 
-    it('ripple.com invalid URI param', function (done) {
-      plugin.parseUri(fixture['parseUri']['ripple.com invalid uri param'][0]).then(() => {
-        assert.equal(0, 1)
-        done()
-      }).catch(e => {
-        done()
-      })
+    it('ripple.com invalid URI param', function () {
+      return expectRejection(
+        Promise.resolve(
+          plugin.parseUri(
+            fixture['parseUri']['ripple.com invalid uri param'][0]
+          )
+        )
+      )
     })
 
     // Ripple.com valid URIs
@@ -126,6 +130,7 @@ for (const fixture of fixtures) {
         parsedUri.currencyCode,
         fixture['parseUri']['ripple.com uri address with amount & label'][3]
       )
+      if (parsedUri.metadata == null) throw new Error('No metadata')
       assert.equal(
         parsedUri.metadata.name,
         fixture['parseUri']['ripple.com uri address with amount & label'][4]
@@ -147,13 +152,10 @@ for (const fixture of fixtures) {
         parsedUri.currencyCode,
         fixture['parseUri']['ripple.com uri address with amount & label'][3]
       )
+      if (parsedUri.metadata == null) throw new Error('No metadata')
       assert.equal(
         parsedUri.metadata.name,
         fixture['parseUri']['ripple.com uri address with amount & label'][4]
-      )
-      assert.equal(
-        parsedUri.metadata.message,
-        fixture['parseUri']['ripple.com uri address with amount & label'][5]
       )
     })
     it('ripple.com uri address with unsupported param', async function () {
