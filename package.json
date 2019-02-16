@@ -29,7 +29,7 @@
     "lint": "eslint '*.js' 'src/**/*.js' 'test/**/*.js'",
     "precommit": "lint-staged && flow && npm test && npm run build",
     "prepare": "npm run build",
-    "test": "nyc mocha -r sucrase/register './test/**/*.js'",
+    "test": "nyc mocha -r sucrase/register './test/**/*.test.js'",
     "posttest": "nyc report --reporter=html",
     "updot": "updot"
   },

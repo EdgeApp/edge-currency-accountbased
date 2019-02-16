@@ -14,7 +14,7 @@ import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import * as Factories from '../../src/index.js'
-import fixtures from './fixtures.json'
+import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
   const CurrencyPluginFactory = Factories[fixture['factory']]
