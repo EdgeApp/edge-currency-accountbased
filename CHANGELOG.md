@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.24 (2019-02-18)
+
+* Fix a crash on boot on React Native
+
 ## 0.0.23 (2019-02-15)
 
 * Upgrade to the edge-core-js v0.14.0 types
@@ -24,7 +28,7 @@
 * Fix XRP incorrect spend amounts
 * Fix syncing of ETH wallets after network disconnect/reconnect
 * Improve syncing of XRP wallets by connecting to multiple servers
-* Improve syncing of XRP wallets by detecting connection failure and retrying 
+* Improve syncing of XRP wallets by detecting connection failure and retrying
 
 ## 0.0.18
 
