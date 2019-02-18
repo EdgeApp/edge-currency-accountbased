@@ -4,14 +4,10 @@ const webpack = require('webpack')
 
 const packageJson = require('./package.json')
 
-const externals = [
-  'base-x',
-  'biggystring',
-  'edge-core-js',
-  'jsonschema',
-  'uri-js',
-  'url-parse'
-]
+// Only bundle ethereumjs dependencies:
+const externals = Object.keys(packageJson.dependencies).filter(
+  name => !/^ethereumjs-/.test(name)
+)
 
 module.exports = {
   devtool: 'source-map',
