@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.0.25 (2019-02-19)
+
+* Fix the node entry point not to crash
+
 ## 0.0.24 (2019-02-18)
 
 * Fix a crash on boot on React Native
