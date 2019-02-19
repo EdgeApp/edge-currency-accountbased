@@ -9,7 +9,6 @@ import {
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
-  type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
@@ -62,59 +61,6 @@ export class EosPlugin extends CurrencyPlugin {
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     this.eosServer = eosjs(eosConfig)
-    this.otherMethods = {
-      getActivationSupportedCurrencies: async (): Promise<Object> => {
-        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
-          .eosActivationServers[0]
-        const response = await io.fetch(
-          `${eosPaymentServer}/api/v1/getSupportedCurrencies`
-        )
-        const out = await response.json()
-        return out
-      },
-      getActivationCost: async (): Promise<string> => {
-        try {
-          const infoServer = getEdgeInfoServer()
-          const result = await this.io.fetch(`${infoServer}/v1/eosPrices`)
-          const prices = await result.json()
-          const totalEos =
-            Number(prices.ram) * 8 +
-            Number(prices.net) * 2 +
-            Number(prices.cpu) * 10
-          let out = totalEos.toString()
-          out = bns.toFixed(out, 0, 4)
-          return out
-        } catch (e) {
-          throw new Error('ErrorUnableToGetCost')
-        }
-      },
-      validateAccount: async (account: string): Promise<boolean> => {
-        const valid = checkAddress(account)
-        const out = { result: '' }
-        if (!valid) {
-          const e = new Error('ErrorInvalidAccountName')
-          e.name = 'ErrorInvalidAccountName'
-          throw e
-        }
-        try {
-          const result = await this.getAccSystemStats(account)
-          if (result) {
-            const e = new Error('ErrorAccountUnavailable')
-            e.name = 'ErrorAccountUnavailable'
-            throw e
-          }
-          throw new Error('ErrorUnknownError')
-        } catch (e) {
-          if (e.code === 'ErrorUnknownAccount') {
-            out.result = 'AccountAvailable'
-          } else {
-            throw e
-          }
-        }
-        console.log(`validateAccount: result=${out.result}`)
-        return out
-      }
-    }
   }
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
@@ -151,35 +97,6 @@ export class EosPlugin extends CurrencyPlugin {
     } else {
       throw new Error('InvalidWalletType')
     }
-  }
-
-  async makeEngine (
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new EosEngine(this, walletInfo, opts)
-    await currencyEngine.loadEngine(this, walletInfo, opts)
-
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // currencyEngine.otherData is an opaque utility object for use for currency
-    // specific data that will be persisted to disk on this one device.
-    // Commonly stored data would be last queried block height or nonce values for accounts
-    // Edit the flow type EosWalletOtherData and initialize those values here if they are
-    // undefined
-    // TODO: Initialize anything specific to this currency
-    // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
-    if (!currencyEngine.otherData.accountName) {
-      currencyEngine.otherData.accountName = ''
-    }
-    if (!currencyEngine.otherData.lastQueryActionSeq) {
-      currencyEngine.otherData.lastQueryActionSeq = 0
-    }
-    if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = 0
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
   }
 
   async parseUri (uri: string): Promise<EdgeParsedUri> {
@@ -228,16 +145,105 @@ export class EosPlugin extends CurrencyPlugin {
   }
 }
 
-export const eosCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
-  pluginType: 'currency',
-  pluginName: currencyInfo.pluginName,
+export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+  const { io } = opts
 
-  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
-    // TODO: Initialize currency library if needed
-    // Add any parameters to the Plugin object which would be global for all wallets (engines).
-    // Common parameters would be an SDK/API object for this currency from an external library
+  let toolsPromise: Promise<EosPlugin>
+  function makeCurrencyTools (): Promise<EosPlugin> {
+    if (toolsPromise != null) return toolsPromise
+    toolsPromise = Promise.resolve(new EosPlugin(io))
+    return toolsPromise
+  }
 
-    const plugin: CurrencyPlugin = new EosPlugin(opts.io)
-    return plugin
+  async function makeCurrencyEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
+    const tools = await makeCurrencyTools()
+    const currencyEngine = new EosEngine(tools, walletInfo, opts)
+    await currencyEngine.loadEngine(tools, walletInfo, opts)
+
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+    // currencyEngine.otherData is an opaque utility object for use for currency
+    // specific data that will be persisted to disk on this one device.
+    // Commonly stored data would be last queried block height or nonce values for accounts
+    // Edit the flow type EosWalletOtherData and initialize those values here if they are
+    // undefined
+    // TODO: Initialize anything specific to this currency
+    // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
+    if (!currencyEngine.otherData.accountName) {
+      currencyEngine.otherData.accountName = ''
+    }
+    if (!currencyEngine.otherData.lastQueryActionSeq) {
+      currencyEngine.otherData.lastQueryActionSeq = 0
+    }
+    if (!currencyEngine.otherData.highestTxHeight) {
+      currencyEngine.otherData.highestTxHeight = 0
+    }
+
+    const out: EdgeCurrencyEngine = currencyEngine
+    return out
+  }
+
+  const otherMethods = {
+    getActivationSupportedCurrencies: async (): Promise<Object> => {
+      const eosPaymentServer =
+        currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
+      const response = await io.fetch(
+        `${eosPaymentServer}/api/v1/getSupportedCurrencies`
+      )
+      const out = await response.json()
+      return out
+    },
+    getActivationCost: async (): Promise<string> => {
+      try {
+        const infoServer = getEdgeInfoServer()
+        const result = await io.fetch(`${infoServer}/v1/eosPrices`)
+        const prices = await result.json()
+        const totalEos =
+          Number(prices.ram) * 8 +
+          Number(prices.net) * 2 +
+          Number(prices.cpu) * 10
+        let out = totalEos.toString()
+        out = bns.toFixed(out, 0, 4)
+        return out
+      } catch (e) {
+        throw new Error('ErrorUnableToGetCost')
+      }
+    },
+    validateAccount: async (account: string): Promise<boolean> => {
+      const valid = checkAddress(account)
+      const out = { result: '' }
+      if (!valid) {
+        const e = new Error('ErrorInvalidAccountName')
+        e.name = 'ErrorInvalidAccountName'
+        throw e
+      }
+      try {
+        const tools = await makeCurrencyTools()
+        const result = await tools.getAccSystemStats(account)
+        if (result) {
+          const e = new Error('ErrorAccountUnavailable')
+          e.name = 'ErrorAccountUnavailable'
+          throw e
+        }
+        throw new Error('ErrorUnknownError')
+      } catch (e) {
+        if (e.code === 'ErrorUnknownAccount') {
+          out.result = 'AccountAvailable'
+        } else {
+          throw e
+        }
+      }
+      console.log(`validateAccount: result=${out.result}`)
+      return out
+    }
+  }
+
+  return {
+    currencyInfo,
+    makeCurrencyEngine,
+    makeCurrencyTools,
+    otherMethods
   }
 }

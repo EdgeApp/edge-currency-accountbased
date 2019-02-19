@@ -18,9 +18,9 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'EOS',
-  currencyName: 'EOS',
+  displayName: 'EOS',
   pluginName: 'eos',
-  walletTypes: ['wallet:eos'],
+  walletType: 'wallet:eos',
 
   defaultSettings,
 

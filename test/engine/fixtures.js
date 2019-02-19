@@ -1,6 +1,6 @@
 export default [
   {
-    factory: 'rippleCurrencyPluginFactory',
+    pluginName: 'ripple',
     WALLET_TYPE: 'wallet:ripple',
     'Test Currency code': 'XRP',
     key: [
@@ -39,7 +39,7 @@ export default [
     ]
   },
   {
-    factory: 'stellarCurrencyPluginFactory',
+    pluginName: 'stellar',
     WALLET_TYPE: 'wallet:stellar',
     'Test Currency code': 'XLM',
     key: [
@@ -78,7 +78,7 @@ export default [
     ]
   },
   {
-    factory: 'ethereumCurrencyPluginFactory',
+    pluginName: 'ethereum',
     WALLET_TYPE: 'wallet:ethereum',
     'Test Currency code': 'ETH',
     key: [

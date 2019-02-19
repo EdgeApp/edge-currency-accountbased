@@ -10,7 +10,6 @@ import {
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
-  type EdgeCurrencyPluginFactory,
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
@@ -115,25 +114,6 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  async makeEngine (
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const currencyEngine = new XrpEngine(this, walletInfo, opts)
-
-    await currencyEngine.loadEngine(this, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow type checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    if (!currencyEngine.otherData.recommendedFee) {
-      currencyEngine.otherData.recommendedFee = '0'
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
   async parseUri (uri: string): Promise<EdgeParsedUri> {
     const networks = { ripple: true }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
@@ -181,12 +161,41 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 }
 
-export const rippleCurrencyPluginFactory: EdgeCurrencyPluginFactory = {
-  pluginType: 'currency',
-  pluginName: currencyInfo.pluginName,
+export function makeRipplePlugin (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin {
+  const { io } = opts
 
-  async makePlugin (opts: EdgeCorePluginOptions): Promise<EdgeCurrencyPlugin> {
-    const plugin: EdgeCurrencyPlugin = new XrpPlugin(opts.io)
-    return plugin
+  let toolsPromise: Promise<XrpPlugin>
+  function makeCurrencyTools (): Promise<XrpPlugin> {
+    if (toolsPromise != null) return toolsPromise
+    toolsPromise = Promise.resolve(new XrpPlugin(io))
+    return toolsPromise
+  }
+
+  async function makeCurrencyEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
+    const tools = await makeCurrencyTools()
+    const currencyEngine = new XrpEngine(tools, walletInfo, opts)
+
+    await currencyEngine.loadEngine(tools, walletInfo, opts)
+
+    // This is just to make sure otherData is Flow type checked
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+
+    if (!currencyEngine.otherData.recommendedFee) {
+      currencyEngine.otherData.recommendedFee = '0'
+    }
+
+    const out: EdgeCurrencyEngine = currencyEngine
+    return out
+  }
+
+  return {
+    currencyInfo,
+    makeCurrencyEngine,
+    makeCurrencyTools
   }
 }

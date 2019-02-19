@@ -16,9 +16,9 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'XLM',
-  currencyName: 'Stellar',
+  displayName: 'Stellar',
   pluginName: 'stellar',
-  walletTypes: ['wallet:stellar'],
+  walletType: 'wallet:stellar',
 
   defaultSettings,
 

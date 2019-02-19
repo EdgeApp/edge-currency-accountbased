@@ -3,6 +3,12 @@
  */
 // @flow
 
+export type EthereumInitOptions = {
+  blockcypherApiKey?: string,
+  etherscanApiKey?: string,
+  infuraProjectId?: string
+}
+
 export type EthereumSettings = {
   etherscanApiServers: Array<string>,
   blockcypherApiServers: Array<string>,
