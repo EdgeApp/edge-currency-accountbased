@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.0 (2019-02-19)
+
+- Upgrade to the edge-core-js v0.15.0 and adapt to breaking changes.
+
 ## 0.0.25 (2019-02-19)
 
 * Fix the node entry point not to crash
