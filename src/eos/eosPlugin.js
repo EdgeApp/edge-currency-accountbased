@@ -18,6 +18,7 @@ import eosjs from 'eosjs'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
+import { getFetchJson } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { currencyInfo } from './eosInfo.js'
 
@@ -147,6 +148,7 @@ export class EosPlugin extends CurrencyPlugin {
 
 export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
+  const fetchJson = getFetchJson(opts)
 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools (): Promise<EosPlugin> {
@@ -160,7 +162,7 @@ export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin 
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts)
+    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetchJson)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -189,17 +191,12 @@ export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin 
     getActivationSupportedCurrencies: async (): Promise<Object> => {
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-      const response = await io.fetch(
-        `${eosPaymentServer}/api/v1/getSupportedCurrencies`
-      )
-      const out = await response.json()
-      return out
+      return fetchJson(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
     },
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
-        const result = await io.fetch(`${infoServer}/v1/eosPrices`)
-        const prices = await result.json()
+        const prices = await fetchJson(`${infoServer}/v1/eosPrices`)
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +

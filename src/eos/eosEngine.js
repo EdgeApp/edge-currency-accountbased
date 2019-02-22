@@ -58,7 +58,8 @@ export class EosEngine extends CurrencyEngine {
   constructor (
     currencyPlugin: EosPlugin,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    fetchJson: Function
   ) {
     super(currencyPlugin, walletInfo, opts)
 
@@ -101,9 +102,7 @@ export class EosEngine extends CurrencyEngine {
           const eosPaymentServer = this.currencyInfo.defaultSettings
             .otherSettings.eosActivationServers[0]
           const url = `${eosPaymentServer}/api/v1/activateAccount`
-          const result = await this.io.fetch(url, options)
-          const out = await result.json()
-          return out
+          return fetchJson(url, options)
         } catch (e) {
           throw e
         }
