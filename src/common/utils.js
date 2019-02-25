@@ -6,7 +6,6 @@
 import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
-import { BN } from 'bn.js'
 import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
@@ -56,9 +55,7 @@ export function toHex (num: string) {
 
 export function hexToBuf (hex: string) {
   const noHexPrefix = hex.replace('0x', '')
-  const noHexPrefixBN = new BN(noHexPrefix, 16)
-  const array = noHexPrefixBN.toArray()
-  const buf = Buffer.from(array)
+  const buf = Buffer.from(noHexPrefix, 'hex')
   return buf
 }
 
