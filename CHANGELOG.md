@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.1.2 (2019-02-25)
+
+- Fix incorrect Ethereum private key parsing.
+- Add popular ERC-20 tokens.
+
 # 0.1.1 (2019-02-22)
 
 - Fix CORS issues during EOS activation on react-native.
