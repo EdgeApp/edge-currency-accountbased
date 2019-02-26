@@ -249,7 +249,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x9cda8a60dd5afa156c95bd974428d91a0812e054',
+      contractAddress: '0x0000000000085d4780B73119b644AE5ecd22b376',
       symbolImage: `${imageServerUrl}/trueusd-logo-solo-64.png`
     },
     {
@@ -333,7 +333,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000'
         }
       ],
-      contractAddress: '0xf7B098298f7C69Fc14610bf71d5e02c60792894C',
+      contractAddress: '0x056fd409e1d7a124bd7017459dfea2f387b6d5cd',
       symbolImage: `${imageServerUrl}/gemini-dollar-logo-solo-64.png`
     },
     {
