@@ -59,7 +59,7 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
-type EthFunction = 'broadcastTx' | 'eth_blockNumber' | 'eth_getTransactionCount'
+type EthFunction = 'broadcastTx' | 'eth_blockNumber' | 'eth_getTransactionCount' | 'eth_getBalance' | 'getTokenBalance'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -165,29 +165,45 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountFetch (tk: string, url: string) {
+  updateBalance (tk: string, balance: string) {
+    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+      this.walletLocalData.totalBalances[tk] = '0'
+    }
+    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+      this.walletLocalData.totalBalances[tk] = balance
+      this.log(tk + ': token Address balance: ' + balance)
+      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+    }
+    this.tokenCheckBalanceStatus[tk] = 1
+    this.updateOnAddressesChecked()
+  }
+
+  async checkAccountFetch (address: string) {
     let jsonObj = {}
     let valid = false
 
     try {
-      jsonObj = await this.fetchGetEtherscan(
-        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
-        url
-      )
+      jsonObj = await this.multicastServers('eth_getBalance', address)
       valid = validateObject(jsonObj, EtherscanGetAccountBalance)
       if (valid) {
         const balance = jsonObj.result
+        this.updateBalance('ETH', balance)
+      }
+    } catch (e) {
+      this.log(`Error checking token balance: ETH`)
+    }
+  }
 
-        if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-          this.walletLocalData.totalBalances[tk] = '0'
-        }
-        if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-          this.walletLocalData.totalBalances[tk] = balance
-          this.log(tk + ': token Address balance: ' + balance)
-          this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-        }
-        this.tokenCheckBalanceStatus[tk] = 1
-        this.updateOnAddressesChecked()
+  async checkTokenBalanceFetch (address: string, contractAddress: string, tk: string) {
+    let jsonObj = {}
+    let valid = false
+
+    try {
+      jsonObj = await this.multicastServers('getTokenBalance', address, contractAddress)
+      valid = validateObject(jsonObj, EtherscanGetAccountBalance)
+      if (valid) {
+        const balance = jsonObj.result
+        this.updateBalance(tk, balance)
       }
     } catch (e) {
       this.log(`Error checking token balance: ${tk}`)
@@ -212,7 +228,6 @@ export class EthereumEngine extends CurrencyEngine {
     const address = this.walletLocalData.publicKey
     try {
       // Ethereum only has one address
-      let url = ''
       const promiseArray = []
 
       // ************************************
@@ -221,18 +236,15 @@ export class EthereumEngine extends CurrencyEngine {
       // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
       for (const tk of this.walletLocalData.enabledTokens) {
         if (tk === PRIMARY_CURRENCY) {
-          url = `?module=account&action=balance&address=${address}&tag=latest`
+          promiseArray.push(this.checkAccountFetch(address))
         } else {
           const tokenInfo = this.getTokenInfo(tk)
           if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-            url = `?module=account&action=tokenbalance&contractaddress=${
-              tokenInfo.contractAddress
-            }&address=${this.walletLocalData.publicKey}&tag=latest`
+            promiseArray.push(this.checkTokenBalanceFetch(address, tokenInfo.contractAddress, tk))
           } else {
             continue
           }
         }
-        promiseArray.push(this.checkAccountFetch(tk, url))
       }
       promiseArray.push(this.checkAccountNonceFetch(address))
       await Promise.all(promiseArray)
@@ -640,6 +652,39 @@ export class EthereumEngine extends CurrencyEngine {
           return { server: 'infura', result }
         }
         funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+      case 'eth_getBalance':
+        url = `?module=account&action=balance&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings
+          .etherscanApiServers.map(server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              throw new Error(`Invalid return value eth_getBalance in ${server}`)
+            }
+            return { server, result }
+          })
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_getBalance', [params[0], 'latest'])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+      case 'getTokenBalance':
+        url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings
+          .etherscanApiServers.map(server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              throw new Error(`Invalid return value eth_getBalance in ${server}`)
+            }
+            return { server, result }
+          })
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
