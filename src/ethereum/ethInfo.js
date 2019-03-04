@@ -8,7 +8,10 @@ import type { EthereumSettings } from './ethTypes.js'
 export const imageServerUrl = 'https://developer.airbitz.co/content'
 
 const otherSettings: EthereumSettings = {
-  etherscanApiServers: ['https://api.etherscan.io'],
+  etherscanApiServers: [
+    'https://api.etherscan.io',
+    'https://blockscout.com/eth/mainnet'
+  ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
   iosAllowedTokens: { REP: true, WINGS: true, HUR: true, IND: true, USDT: true }
