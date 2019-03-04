@@ -18,10 +18,12 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import {
   addHexPrefix,
+  asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
   normalizeAddress,
   promiseAny,
+  shuffleArray,
   toHex,
   validateObject
 } from '../common/utils.js'
@@ -57,7 +59,7 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
-type EthFunction = 'broadcastTx'
+type EthFunction = 'broadcastTx' | 'eth_blockNumber'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -96,7 +98,7 @@ export class EthereumEngine extends CurrencyEngine {
   async fetchGetEtherscan (server: string, cmd: string) {
     const { etherscanApiKey } = this.initOptions
     let apiKey = ''
-    if (etherscanApiKey && etherscanApiKey.length > 5) {
+    if (etherscanApiKey && etherscanApiKey.length > 5 && server.includes('etherscan')) {
       apiKey = '&apikey=' + etherscanApiKey
     }
     const url = `${server}/api${cmd}${apiKey}`
@@ -145,10 +147,7 @@ export class EthereumEngine extends CurrencyEngine {
 
   async checkBlockchainInnerLoop () {
     try {
-      const jsonObj = await this.fetchGetEtherscan(
-        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
-        '?module=proxy&action=eth_blockNumber'
-      )
+      const jsonObj = await this.multicastServers('eth_blockNumber')
       const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
       if (valid) {
         const blockHeight: number = parseInt(jsonObj.result, 16)
@@ -591,6 +590,7 @@ export class EthereumEngine extends CurrencyEngine {
 
   async multicastServers (func: EthFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
+    let funcs, funcs2
     switch (func) {
       case 'broadcastTx':
         const promises = []
@@ -606,6 +606,24 @@ export class EthereumEngine extends CurrencyEngine {
         out = await promiseAny(promises)
 
         this.log(`ETH multicastServers ${func} ${out.server} won`)
+        break
+      case 'eth_blockNumber':
+        funcs = this.currencyInfo.defaultSettings.otherSettings
+          .etherscanApiServers.map(server => async () => {
+            if (!server.includes('etherscan')) {
+              throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+            }
+            const result = await this.fetchGetEtherscan(server, '?module=proxy&action=eth_blockNumber')
+            return { server, result }
+          })
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_blockNumber', [])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
         break
     }
     this.log(`ETH multicastServers ${func} ${out.server} won`)
@@ -839,12 +857,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async broadcastInfura (
-    edgeTransaction: EdgeTransaction
-  ): Promise<BroadcastResults> {
-    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
-
-    this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
+  async fetchPostInfura (method: string, params: Object) {
     const { infuraProjectId } = this.initOptions
     if (!infuraProjectId || infuraProjectId.length < 6) {
       throw new Error('Need Infura Project ID')
@@ -853,8 +866,8 @@ export class EthereumEngine extends CurrencyEngine {
     const body = {
       id: 1,
       jsonrpc: '2.0',
-      method: 'eth_sendRawTransaction',
-      params: [edgeTransaction.signedTx]
+      method,
+      params
     }
     const response = await this.io.fetch(url, {
       headers: {
@@ -865,11 +878,25 @@ export class EthereumEngine extends CurrencyEngine {
       body: JSON.stringify(body)
     })
     const jsonObj = await response.json()
+    return jsonObj
+  }
+
+  async broadcastInfura (
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+    const method = 'eth_sendRawTransaction'
+    const params = [edgeTransaction.signedTx]
+
+    const jsonObj = await this.fetchPostInfura(method, params)
+
     if (typeof jsonObj.error !== 'undefined') {
       this.log('EtherScan: Error sending transaction')
       throw jsonObj.error
     } else if (typeof jsonObj.result === 'string') {
       // Success!!
+      this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
       return jsonObj
     } else {
       throw new Error('Invalid return value on transaction send')
