@@ -59,7 +59,13 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
-type EthFunction = 'broadcastTx' | 'eth_blockNumber' | 'eth_getTransactionCount' | 'eth_getBalance' | 'getTokenBalance' | 'getTransactions'
+type EthFunction =
+  | 'broadcastTx'
+  | 'eth_blockNumber'
+  | 'eth_getTransactionCount'
+  | 'eth_getBalance'
+  | 'getTokenBalance'
+  | 'getTransactions'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -98,7 +104,11 @@ export class EthereumEngine extends CurrencyEngine {
   async fetchGetEtherscan (server: string, cmd: string) {
     const { etherscanApiKey } = this.initOptions
     let apiKey = ''
-    if (etherscanApiKey && etherscanApiKey.length > 5 && server.includes('etherscan')) {
+    if (
+      etherscanApiKey &&
+      etherscanApiKey.length > 5 &&
+      server.includes('etherscan')
+    ) {
       apiKey = '&apikey=' + etherscanApiKey
     }
     const url = `${server}/api${cmd}${apiKey}`
@@ -194,12 +204,20 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkTokenBalanceFetch (address: string, contractAddress: string, tk: string) {
+  async checkTokenBalanceFetch (
+    address: string,
+    contractAddress: string,
+    tk: string
+  ) {
     let jsonObj = {}
     let valid = false
 
     try {
-      jsonObj = await this.multicastServers('getTokenBalance', address, contractAddress)
+      jsonObj = await this.multicastServers(
+        'getTokenBalance',
+        address,
+        contractAddress
+      )
       valid = validateObject(jsonObj, EtherscanGetAccountBalance)
       if (valid) {
         const balance = jsonObj.result
@@ -212,7 +230,10 @@ export class EthereumEngine extends CurrencyEngine {
 
   async checkAccountNonceFetch (address: string) {
     try {
-      const jsonObj = await this.multicastServers('eth_getTransactionCount', address)
+      const jsonObj = await this.multicastServers(
+        'eth_getTransactionCount',
+        address
+      )
       const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
       const nonce = bns.add('0', jsonObj.result)
       if (valid && this.walletLocalData.otherData.nextNonce !== nonce) {
@@ -240,7 +261,13 @@ export class EthereumEngine extends CurrencyEngine {
         } else {
           const tokenInfo = this.getTokenInfo(tk)
           if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-            promiseArray.push(this.checkTokenBalanceFetch(address, tokenInfo.contractAddress, tk))
+            promiseArray.push(
+              this.checkTokenBalanceFetch(
+                address,
+                tokenInfo.contractAddress,
+                tk
+              )
+            )
           } else {
             continue
           }
@@ -331,7 +358,14 @@ export class EthereumEngine extends CurrencyEngine {
     try {
       while (1) {
         const offset = NUM_TRANSACTIONS_TO_QUERY
-        const jsonObj = await this.multicastServers('getTransactions', { currencyCode, address, startBlock, page, offset, contractAddress })
+        const jsonObj = await this.multicastServers('getTransactions', {
+          currencyCode,
+          address,
+          startBlock,
+          page,
+          offset,
+          contractAddress
+        })
         const valid = validateObject(jsonObj, schema)
         if (valid) {
           const transactions = jsonObj.result
@@ -609,19 +643,25 @@ export class EthereumEngine extends CurrencyEngine {
         this.log(`ETH multicastServers ${func} ${out.server} won`)
         break
       case 'eth_blockNumber':
-        funcs = this.currencyInfo.defaultSettings.otherSettings
-          .etherscanApiServers.map(server => async () => {
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
             if (!server.includes('etherscan')) {
-              throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+              throw new Error(
+                `Unsupported command eth_blockNumber in ${server}`
+              )
             }
-            const result = await this.fetchGetEtherscan(server, '?module=proxy&action=eth_blockNumber')
+            const result = await this.fetchGetEtherscan(
+              server,
+              '?module=proxy&action=eth_blockNumber'
+            )
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_blockNumber in ${server}`
               this.log(msg)
               throw new Error(msg)
             }
             return { server, result }
-          })
+          }
+        )
         funcs2 = async () => {
           const result = await this.fetchPostInfura('eth_blockNumber', [])
           return { server: 'infura', result }
@@ -633,11 +673,15 @@ export class EthereumEngine extends CurrencyEngine {
         break
 
       case 'eth_getTransactionCount':
-        url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings
-          .etherscanApiServers.map(server => async () => {
+        url = `?module=proxy&action=eth_getTransactionCount&address=${
+          params[0]
+        }&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
             if (!server.includes('etherscan')) {
-              throw new Error(`Unsupported command eth_getTransactionCount in ${server}`)
+              throw new Error(
+                `Unsupported command eth_getTransactionCount in ${server}`
+              )
             }
             const result = await this.fetchGetEtherscan(server, url)
             if (typeof result.result !== 'string') {
@@ -646,9 +690,13 @@ export class EthereumEngine extends CurrencyEngine {
               throw new Error(msg)
             }
             return { server, result }
-          })
+          }
+        )
         funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getTransactionCount', [params[0], 'latest'])
+          const result = await this.fetchPostInfura('eth_getTransactionCount', [
+            params[0],
+            'latest'
+          ])
           return { server: 'infura', result }
         }
         funcs.push(funcs2)
@@ -658,8 +706,8 @@ export class EthereumEngine extends CurrencyEngine {
         break
       case 'eth_getBalance':
         url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings
-          .etherscanApiServers.map(server => async () => {
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_getBalance in ${server}`
@@ -667,9 +715,13 @@ export class EthereumEngine extends CurrencyEngine {
               throw new Error(msg)
             }
             return { server, result }
-          })
+          }
+        )
         funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getBalance', [params[0], 'latest'])
+          const result = await this.fetchPostInfura('eth_getBalance', [
+            params[0],
+            'latest'
+          ])
           return { server: 'infura', result }
         }
         funcs.push(funcs2)
@@ -678,9 +730,11 @@ export class EthereumEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
       case 'getTokenBalance':
-        url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings
-          .etherscanApiServers.map(server => async () => {
+        url = `?module=account&action=tokenbalance&contractaddress=${
+          params[1]
+        }&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value getTokenBalance in ${server}`
@@ -688,13 +742,21 @@ export class EthereumEngine extends CurrencyEngine {
               throw new Error(msg)
             }
             return { server, result }
-          })
+          }
+        )
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
       case 'getTransactions':
-        const { currencyCode, address, startBlock, page, offset, contractAddress } = params[0]
+        const {
+          currencyCode,
+          address,
+          startBlock,
+          page,
+          offset,
+          contractAddress
+        } = params[0]
         let startUrl
         if (currencyCode === 'ETH') {
           startUrl = `?action=txlist&module=account`
@@ -702,16 +764,20 @@ export class EthereumEngine extends CurrencyEngine {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
         url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-        funcs = this.currencyInfo.defaultSettings.otherSettings
-          .etherscanApiServers.map(server => async () => {
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'object' || typeof result.result.length !== 'number') {
+            if (
+              typeof result.result !== 'object' ||
+              typeof result.result.length !== 'number'
+            ) {
               const msg = `Invalid return value getTransactions in ${server}`
               this.log(msg)
               throw new Error(msg)
             }
             return { server, result }
-          })
+          }
+        )
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
