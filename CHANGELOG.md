@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.1.4 (2019-03-04)
+
+- Fix GUSD denominations.
+- Improve Ethereum token syncing using multiple servers.
+
 # 0.1.3 (2019-02-26)
 
 - Fix GUSD and TUSD contract addresses
