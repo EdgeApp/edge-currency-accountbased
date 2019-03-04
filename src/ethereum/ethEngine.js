@@ -59,7 +59,7 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
-type EthFunction = 'broadcastTx' | 'eth_blockNumber'
+type EthFunction = 'broadcastTx' | 'eth_blockNumber' | 'eth_getTransactionCount'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -195,12 +195,8 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async checkAccountNonceFetch (address: string) {
-    const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
     try {
-      const jsonObj = await this.fetchGetEtherscan(
-        this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
-        url
-      )
+      const jsonObj = await this.multicastServers('eth_getTransactionCount', address)
       const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
       const nonce = bns.add('0', jsonObj.result)
       if (valid && this.walletLocalData.otherData.nextNonce !== nonce) {
@@ -590,7 +586,7 @@ export class EthereumEngine extends CurrencyEngine {
 
   async multicastServers (func: EthFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
-    let funcs, funcs2
+    let funcs, funcs2, url
     switch (func) {
       case 'broadcastTx':
         const promises = []
@@ -618,6 +614,29 @@ export class EthereumEngine extends CurrencyEngine {
           })
         funcs2 = async () => {
           const result = await this.fetchPostInfura('eth_blockNumber', [])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'eth_getTransactionCount':
+        url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings
+          .etherscanApiServers.map(server => async () => {
+            if (!server.includes('etherscan')) {
+              throw new Error(`Unsupported command eth_getTransactionCount in ${server}`)
+            }
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              throw new Error(`Invalid return value eth_getTransactionCount in ${server}`)
+            }
+            return { server, result }
+          })
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_getTransactionCount', [params[0], 'latest'])
           return { server: 'infura', result }
         }
         funcs.push(funcs2)
