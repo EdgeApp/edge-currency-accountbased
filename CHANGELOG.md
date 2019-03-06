@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.5 (2019-03-06)
+
+- Convert Infura eth_getBalance to decimal string.
+
 # 0.1.4 (2019-03-04)
 
 - Fix GUSD denominations.
