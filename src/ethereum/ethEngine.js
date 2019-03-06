@@ -25,7 +25,8 @@ import {
   promiseAny,
   shuffleArray,
   toHex,
-  validateObject
+  validateObject,
+  isHex
 } from '../common/utils.js'
 import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
@@ -722,6 +723,12 @@ export class EthereumEngine extends CurrencyEngine {
             params[0],
             'latest'
           ])
+          // Convert hex
+          if (!isHex(result.result)) {
+            throw new Error('Infura eth_getBalance not hex')
+          }
+          // Convert to decimal
+          result.result = bns.add(result.result, '0')
           return { server: 'infura', result }
         }
         funcs.push(funcs2)
