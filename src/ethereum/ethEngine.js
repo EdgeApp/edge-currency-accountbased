@@ -21,12 +21,12 @@ import {
   asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
+  isHex,
   normalizeAddress,
   promiseAny,
   shuffleArray,
   toHex,
-  validateObject,
-  isHex
+  validateObject
 } from '../common/utils.js'
 import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
@@ -909,7 +909,10 @@ export class EthereumEngine extends CurrencyEngine {
       if (bns.gt(nativeNetworkFee, balanceEth)) {
         throw ErrorInsufficientFundsMoreEth
       }
-
+      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      if (bns.gt(nativeAmount, balanceToken)) {
+        throw new InsufficientFundsError()
+      }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = bns.mul(nativeAmount, '-1')
     }
