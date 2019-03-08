@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.7 (2019-03-07)
+
+- Get Ethereum to catch insufficient *token* balance transactions
+
 # 0.1.5 (2019-03-06)
 
 - Convert Infura eth_getBalance to decimal string.
