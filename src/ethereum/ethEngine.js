@@ -21,12 +21,12 @@ import {
   asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
+  isHex,
   normalizeAddress,
   promiseAny,
   shuffleArray,
   toHex,
-  validateObject,
-  isHex
+  validateObject
 } from '../common/utils.js'
 import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
@@ -843,13 +843,15 @@ export class EthereumEngine extends CurrencyEngine {
       }
     }
 
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const publicAddress = spendTarget.publicAddress
+    const data = spendTarget.otherParams.data
+
     let otherParams: Object = {}
     const { gasLimit, gasPrice } = calcMiningFee(
       edgeSpendInfo,
       this.walletLocalData.otherData.networkFees
     )
-
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const ethParams: EthereumTxOtherParams = {
@@ -860,15 +862,20 @@ export class EthereumEngine extends CurrencyEngine {
         gasUsed: '0',
         cumulativeGasUsed: '0',
         errorVal: 0,
-        tokenRecipientAddress: null
+        tokenRecipientAddress: null,
+        data: data
       }
       otherParams = ethParams
     } else {
       let contractAddress = ''
-      if (typeof tokenInfo.contractAddress === 'string') {
-        contractAddress = tokenInfo.contractAddress
+      if (spendTarget.otherParams.pluginName === 'totle') {
+        contractAddress = publicAddress
       } else {
-        throw new Error('makeSpend: Invalid contract address')
+        if (typeof tokenInfo.contractAddress === 'string') {
+          contractAddress = tokenInfo.contractAddress
+        } else {
+          throw new Error('makeSpend: Invalid contract address')
+        }
       }
 
       const ethParams: EthereumTxOtherParams = {
@@ -879,7 +886,8 @@ export class EthereumEngine extends CurrencyEngine {
         gasUsed: '0',
         cumulativeGasUsed: '0',
         errorVal: 0,
-        tokenRecipientAddress: publicAddress
+        tokenRecipientAddress: publicAddress,
+        data: data
       }
       otherParams = ethParams
     }
@@ -956,7 +964,9 @@ export class EthereumEngine extends CurrencyEngine {
     const nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
 
     let data
-    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+    if (edgeTransaction.otherParams.data != null) {
+      data = edgeTransaction.otherParams.data
+    } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
