@@ -128,7 +128,6 @@ export class XrpEngine extends CurrencyEngine {
         const date: number = Date.parse(tx.outcome.timestamp) / 1000
         const blockHeight: number =
           tx.outcome.ledgerVersion > 0 ? tx.outcome.ledgerVersion : 0
-
         const exchangeAmount: string = bc.value
         if (exchangeAmount.slice(0, 1) !== '-') {
           ourReceiveAddresses.push(this.walletLocalData.publicKey)
