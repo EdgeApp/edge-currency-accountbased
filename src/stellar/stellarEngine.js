@@ -178,7 +178,7 @@ export class StellarEngine extends CurrencyEngine {
       txid: tx.transaction_hash,
       date,
       currencyCode,
-      blockHeight: rawTx.ledger_attr, // API shows no ledger number ??
+      blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
       nativeAmount,
       networkFee,
       parentNetworkFee: '0',
@@ -329,6 +329,7 @@ export class StellarEngine extends CurrencyEngine {
       .then(r => {
         const blockHeight = r.records[0].sequence
         if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.checkDroppedTransactionsThrottled()
           this.walletLocalData.blockHeight = blockHeight
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onBlockHeightChanged(

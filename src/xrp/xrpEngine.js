@@ -102,6 +102,7 @@ export class XrpEngine extends CurrencyEngine {
         const blockHeight: number = jsonObj.validatedLedger.ledgerVersion
         this.log(`Got block height ${blockHeight}`)
         if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.checkDroppedTransactionsThrottled()
           this.walletLocalData.blockHeight = blockHeight // Convert to decimal
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onBlockHeightChanged(
@@ -125,7 +126,8 @@ export class XrpEngine extends CurrencyEngine {
       for (const bc of balanceChanges) {
         const currencyCode: string = bc.currency
         const date: number = Date.parse(tx.outcome.timestamp) / 1000
-        const blockHeight: number = tx.outcome.ledgerVersion
+        const blockHeight: number =
+          tx.outcome.ledgerVersion > 0 ? tx.outcome.ledgerVersion : 0
 
         const exchangeAmount: string = bc.value
         if (exchangeAmount.slice(0, 1) !== '-') {

@@ -136,6 +136,7 @@ export class EosEngine extends CurrencyEngine {
       })
       const blockHeight = result.head_block_num
       if (this.walletLocalData.blockHeight !== blockHeight) {
+        this.checkDroppedTransactionsThrottled()
         this.walletLocalData.blockHeight = blockHeight
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onBlockHeightChanged(
@@ -184,7 +185,7 @@ export class EosEngine extends CurrencyEngine {
       txid: trx_id,
       date: Date.parse(block_time) / 1000,
       currencyCode,
-      blockHeight: block_num,
+      blockHeight: block_num > 0 ? block_num : 0,
       nativeAmount,
       networkFee: '0',
       parentNetworkFee: '0',
@@ -204,7 +205,7 @@ export class EosEngine extends CurrencyEngine {
   processTransactionFullNode (action: EosTransaction): number {
     const ourReceiveAddresses = []
     const date = Date.parse(action.block_time) / 1000
-    const blockHeight = action.block_num
+    const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.action_trace || !action.account_action_seq) {
       this.log(
         'Invalid EOS transaction data. No action_trace or account_action_seq'

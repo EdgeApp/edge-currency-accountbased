@@ -42,6 +42,8 @@ import {
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
+const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
+
 class CurrencyEngine {
   currencyPlugin: CurrencyPlugin
   walletInfo: EdgeWalletInfo
@@ -239,8 +241,16 @@ class CurrencyEngine {
     return b.date - a.date
   }
 
-  addTransaction (currencyCode: string, edgeTransaction: EdgeTransaction) {
+  addTransaction (
+    currencyCode: string,
+    edgeTransaction: EdgeTransaction,
+    lastSeenTime?: number
+  ) {
     // Add or update tx in transactionList
+    if (edgeTransaction.blockHeight < 1) {
+      edgeTransaction.otherParams.lastSeenTime =
+        lastSeenTime || Math.round(Date.now() / 1000)
+    }
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(currencyCode, txid)
     if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
@@ -288,20 +298,67 @@ class CurrencyEngine {
       }
     }
     if (needsResort) {
-      // Sort
-      this.transactionList[currencyCode].sort(this.sortTxByDate)
-      // Add to txidMap
-      const txIdList: Array<string> = []
-      let i = 0
-      for (const tx of this.transactionList[currencyCode]) {
-        if (!this.txIdMap[currencyCode]) {
-          this.txIdMap[currencyCode] = {}
-        }
-        this.txIdMap[currencyCode][normalizeAddress(tx.txid)] = i
-        txIdList.push(normalizeAddress(tx.txid))
-        i++
+      this.sortTransactions(currencyCode)
+    }
+  }
+
+  sortTransactions (currencyCode: string) {
+    // Sort
+    this.transactionList[currencyCode].sort(this.sortTxByDate)
+    // Add to txidMap
+    const txIdList: Array<string> = []
+    let i = 0
+    for (const tx of this.transactionList[currencyCode]) {
+      if (!this.txIdMap[currencyCode]) {
+        this.txIdMap[currencyCode] = {}
       }
-      this.txIdList[currencyCode] = txIdList
+      this.txIdMap[currencyCode][normalizeAddress(tx.txid)] = i
+      txIdList.push(normalizeAddress(tx.txid))
+      i++
+    }
+    this.txIdList[currencyCode] = txIdList
+  }
+
+  checkDroppedTransactionsThrottled () {
+    const now = Date.now() / 1000
+    if (
+      now - this.walletLocalData.lastCheckedTxsDropped >
+      DROPPED_TX_TIME_GAP
+    ) {
+      this.checkDroppedTransactions(now)
+      this.walletLocalData.lastCheckedTxsDropped = now
+      this.walletLocalDataDirty = true
+      if (this.transactionsChangedArray.length > 0) {
+        this.currencyEngineCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      }
+    }
+  }
+
+  checkDroppedTransactions (dateNow: number) {
+    for (const currencyCode in this.transactionList) {
+      // const droppedTxIndices: Array<number> = []
+      for (let i = 0; i < this.transactionList[currencyCode].length; i++) {
+        const tx = this.transactionList[currencyCode][i]
+        const lastSeen = tx.otherParams.lastSeenTime
+        if (dateNow - lastSeen > DROPPED_TX_TIME_GAP && tx.blockHeight < 1) {
+          // droppedTxIndices.push(i)
+          tx.blockHeight = -1
+          tx.nativeAmount = '0'
+          this.transactionsChangedArray.push(tx)
+          // delete this.txIdMap[currencyCode][tx.txid]
+        }
+      }
+      // Delete transactions in reverse order
+      // for (let i = droppedTxIndices.length - 1; i >= 0; i--) {
+      //   const droppedIndex = droppedTxIndices[i]
+      //   this.transactionList[currencyCode].splice(droppedIndex, 1)
+      // }
+      // if (droppedTxIndices.length) {
+      //   this.sortTransactions(currencyCode)
+      // }
     }
   }
 

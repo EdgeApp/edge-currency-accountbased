@@ -14,10 +14,14 @@ import {
   closeEdge,
   makeFakeIo
 } from 'edge-core-js'
-import { describe, it } from 'mocha'
+import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
+import { CurrencyEngine } from '../../src/common/engine.js'
+import { CurrencyPlugin } from '../../src/common/plugin.js'
+import { currencyInfo } from '../../src/ethereum/ethInfo.js'
 import edgeCorePlugins from '../../src/index.js'
+import { engineTestTxs } from './engine.txs.js'
 import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
@@ -167,3 +171,203 @@ for (const fixture of fixtures) {
     })
   })
 }
+
+const fakeIo = makeFakeIo()
+const plugin = new CurrencyPlugin(fakeIo, 'fakePlugin', currencyInfo)
+const emitter = new EventEmitter()
+const callbacks: EdgeCurrencyEngineCallbacks = {
+  onAddressesChecked (progressRatio) {
+    // console.log('onAddressesCheck', progressRatio)
+    emitter.emit('onAddressesCheck', progressRatio)
+  },
+  onTxidsChanged (txid) {
+    // console.log('onTxidsChanged', txid)
+    emitter.emit('onTxidsChanged', txid)
+  },
+  onBalanceChanged (currencyCode, balance) {
+    // console.log('onBalanceChange:', currencyCode, balance)
+    emitter.emit('onBalanceChange', currencyCode, balance)
+  },
+  onBlockHeightChanged (height) {
+    // console.log('onBlockHeightChange:', height)
+    emitter.emit('onBlockHeightChange', height)
+  },
+  onTransactionsChanged (transactionList) {
+    // console.log('onTransactionsChanged:', transactionList)
+    emitter.emit('onTransactionsChanged', transactionList)
+  }
+}
+
+const walletLocalDisklet = fakeIo.disklet
+const currencyEngineOptions: EdgeCurrencyEngineOptions = {
+  callbacks,
+  userSettings: void 0,
+  walletLocalDisklet,
+  walletLocalEncryptedDisklet: walletLocalDisklet
+}
+const walletInfo = { id: '', type: '', keys: {} }
+
+function validateTxidListMap (engine: CurrencyEngine) {
+  const ccs = ['ETH', 'DAI']
+  for (const currencyCode of ccs) {
+    const transactionList = engine.transactionList[currencyCode]
+    const txidList = engine.txIdList[currencyCode]
+    const txidMap = engine.txIdMap[currencyCode]
+    assert(transactionList.length === txidList.length)
+    // Ensure txidlist and transactionList is in order
+    for (let i = 0; i < txidList.length; i++) {
+      assert(txidList[i] === transactionList[i].txid)
+      if (i === 0) continue
+      assert(transactionList[i].date < transactionList[i - 1].date)
+    }
+
+    // Ensure txidMap properly maps to transactionList
+    for (const txid in txidMap) {
+      const idx = txidMap[txid]
+      assert(transactionList[idx].txid === txid)
+    }
+  }
+}
+describe('Test transaction list updating', () => {
+  let engine
+  before('Add transactions', () => {
+    engine = new CurrencyEngine(plugin, walletInfo, currencyEngineOptions)
+    for (const tx of engineTestTxs.ETH) {
+      engine.addTransaction('ETH', tx, tx.date)
+    }
+    for (const tx of engineTestTxs.DAI) {
+      engine.addTransaction('DAI', tx, tx.date)
+    }
+  })
+
+  it('addTransaction', () => {
+    assert(engine.transactionList['ETH'][0].date === 1555590000)
+    assert(engine.transactionList['ETH'][1].date === 1555580000)
+    assert(engine.transactionList['ETH'][2].date === 1555570000)
+    assert(engine.transactionList['ETH'][3].date === 1555560000)
+    assert(engine.transactionList['ETH'][4].date === 1555550000)
+    assert(engine.transactionList['DAI'][0].date === 1555690000)
+    assert(engine.transactionList['DAI'][1].date === 1555680000)
+    assert(engine.transactionList['DAI'][2].date === 1555670000)
+    assert(engine.transactionList['DAI'][3].date === 1555660000)
+    assert(engine.transactionList['DAI'][4].date === 1555650000)
+    validateTxidListMap(engine)
+  })
+
+  it('Updating transaction causing re-sort', () => {
+    const updatedTx: any = {
+      txid: '003',
+      date: 1555540000,
+      blockHeight: 0,
+      otherParams: {}
+    }
+
+    engine.addTransaction('ETH', updatedTx, updatedTx.date)
+    assert(engine.transactionList['ETH'][0].txid === '005')
+    assert(engine.transactionList['ETH'][1].txid === '004')
+    assert(engine.transactionList['ETH'][2].txid === '002')
+    assert(engine.transactionList['ETH'][3].txid === '001')
+    assert(engine.transactionList['ETH'][4].txid === '003')
+    validateTxidListMap(engine)
+  })
+
+  it('Confirm transactions and check none dropped', () => {
+    const updatedTxs: Array<any> = [
+      {
+        txid: '001',
+        date: 1555550000,
+        blockHeight: 1,
+        otherParams: {}
+      },
+      {
+        txid: '003',
+        date: 1555570000,
+        blockHeight: 2,
+        otherParams: {}
+      }
+    ]
+    for (const tx of updatedTxs) {
+      engine.addTransaction('ETH', tx, tx.date)
+    }
+    engine.checkDroppedTransactions(1555590000)
+    assert(engine.transactionList['ETH'][0].txid === '005')
+    assert(engine.transactionList['ETH'][1].txid === '004')
+    assert(engine.transactionList['ETH'][2].txid === '003')
+    assert(engine.transactionList['ETH'][2].blockHeight === 2)
+    assert(engine.transactionList['ETH'][3].txid === '002')
+    assert(engine.transactionList['ETH'][4].txid === '001')
+    assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    validateTxidListMap(engine)
+  })
+
+  it('Confirm transactions and check dropped', () => {
+    const updatedTxs: Array<any> = [
+      {
+        txid: '001',
+        date: 1555550000,
+        blockHeight: 1,
+        otherParams: {}
+      },
+      {
+        txid: '003',
+        date: 1555570000,
+        blockHeight: 2,
+        otherParams: {}
+      }
+    ]
+    for (const tx of updatedTxs) {
+      engine.addTransaction('ETH', tx, tx.date)
+    }
+    engine.checkDroppedTransactions(1555656401)
+    assert(engine.transactionList['ETH'].length === 5)
+    assert(engine.transactionList['ETH'][0].txid === '005')
+    assert(engine.transactionList['ETH'][1].txid === '004')
+    assert(engine.transactionList['ETH'][2].txid === '003')
+    assert(engine.transactionList['ETH'][2].blockHeight === 2)
+    assert(engine.transactionList['ETH'][3].txid === '002')
+    assert(engine.transactionList['ETH'][3].blockHeight === -1)
+    assert(engine.transactionList['ETH'][4].txid === '001')
+    assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    validateTxidListMap(engine)
+  })
+
+  it('Confirm transactions and check dropped 2', () => {
+    const updatedTxs: Array<any> = [
+      {
+        txid: '001',
+        date: 1555550000,
+        blockHeight: 1,
+        otherParams: {}
+      },
+      {
+        txid: '003',
+        date: 1555570000,
+        blockHeight: 2,
+        otherParams: {}
+      }
+    ]
+    for (const tx of updatedTxs) {
+      engine.addTransaction('ETH', tx, 1555590000)
+    }
+    const updateTx: any = {
+      txid: '002',
+      date: 1555560000,
+      blockHeight: 0,
+      otherParams: {}
+    }
+    engine.addTransaction('ETH', updateTx, 1555666401)
+
+    engine.checkDroppedTransactions(1555666401)
+    assert(engine.transactionList['ETH'].length === 5)
+    assert(engine.transactionList['ETH'][0].txid === '005')
+    assert(engine.transactionList['ETH'][1].txid === '004')
+    assert(engine.transactionList['ETH'][1].blockHeight === -1)
+    assert(engine.transactionList['ETH'][2].txid === '003')
+    assert(engine.transactionList['ETH'][2].blockHeight === 2)
+    assert(engine.transactionList['ETH'][3].txid === '002')
+    assert(engine.transactionList['ETH'][3].blockHeight === 0)
+    assert(engine.transactionList['ETH'][4].txid === '001')
+    assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    validateTxidListMap(engine)
+  })
+})
