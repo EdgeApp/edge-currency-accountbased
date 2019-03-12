@@ -82,5 +82,6 @@ export type EthereumTxOtherParams = {
 
 export type EthereumWalletOtherData = {
   nextNonce: string,
+  unconfirmedNextNonce: string,
   networkFees: EthereumFees
 }

@@ -801,6 +801,7 @@ export class EthereumEngine extends CurrencyEngine {
   async clearBlockchainCache () {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
+    this.otherData.unconfirmedNextNonce = '0'
   }
 
   // ****************************************************************************
@@ -959,7 +960,42 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
     }
 
-    const nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
+    let nonceHex
+    // Use an unconfirmed nonce if
+    // 1. We have unconfirmed spending txs in the transaction list
+    // 2. It is greater than the confirmed nonce
+    // 3. Is no more than 5 higher than confirmed nonce
+    if (
+      this.walletLocalData.numUnconfirmedSpendTxs &&
+      bns.gt(
+        this.walletLocalData.otherData.unconfirmedNextNonce,
+        this.walletLocalData.otherData.nextNonce
+      )
+    ) {
+      const diff = bns.sub(
+        this.walletLocalData.otherData.unconfirmedNextNonce,
+        this.walletLocalData.otherData.nextNonce
+      )
+      if (bns.lte(diff, '5')) {
+        nonceHex = toHex(this.walletLocalData.otherData.unconfirmedNextNonce)
+        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+          this.walletLocalData.otherData.unconfirmedNextNonce,
+          '1'
+        )
+        this.walletLocalDataDirty = true
+      } else {
+        const e = new Error('Excessive pending spend transactions')
+        e.name = 'ErrorExcessivePendingSpends'
+        throw e
+      }
+    }
+    if (!nonceHex) {
+      nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
+      this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+        this.walletLocalData.otherData.nextNonce,
+        '1'
+      )
+    }
 
     let data
     if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
@@ -990,6 +1026,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     this.log(wallet.getAddressString())
 
+    this.log('signTx txParams', txParams)
     const tx = new EthereumTx(txParams)
     tx.sign(privKey)
 
@@ -1105,6 +1142,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     // Success
     this.log(`SUCCESS broadcastTx\n${JSON.stringify(result)}`)
+    this.log('edgeTransaction = ', edgeTransaction)
 
     return edgeTransaction
   }
