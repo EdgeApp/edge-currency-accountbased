@@ -121,6 +121,29 @@ class CurrencyEngine {
     )
   }
 
+  isSpendTx (edgeTransaction: EdgeTransaction): boolean {
+    if (edgeTransaction.nativeAmount) {
+      if (edgeTransaction.nativeAmount.slice(0, 1) === '-') {
+        return true
+      }
+      if (bns.gt(edgeTransaction.nativeAmount, '0')) {
+        return false
+      }
+    }
+    let out = true
+    if (
+      edgeTransaction.ourReceiveAddresses &&
+      edgeTransaction.ourReceiveAddresses.length
+    ) {
+      for (const addr of edgeTransaction.ourReceiveAddresses) {
+        if (addr === this.walletLocalData.publicKey) {
+          out = false
+        }
+      }
+    }
+    return out
+  }
+
   async loadTransactions () {
     if (this.transactionsLoaded) {
       console.log('Transactions already loaded')
@@ -247,6 +270,9 @@ class CurrencyEngine {
     lastSeenTime?: number
   ) {
     // Add or update tx in transactionList
+    if (!edgeTransaction.otherParams) {
+      edgeTransaction.otherParams = {}
+    }
     if (edgeTransaction.blockHeight < 1) {
       edgeTransaction.otherParams.lastSeenTime =
         lastSeenTime || Math.round(Date.now() / 1000)
@@ -259,6 +285,14 @@ class CurrencyEngine {
 
     let needsResort = false
     if (idx === -1) {
+      if (
+        this.isSpendTx(edgeTransaction) &&
+        edgeTransaction.blockHeight === 0
+      ) {
+        this.walletLocalData.numUnconfirmedSpendTxs++
+        this.walletLocalDataDirty = true
+      }
+
       needsResort = true
       this.log('addTransaction: adding and sorting:' + edgeTransaction.txid)
       if (typeof this.transactionList[currencyCode] === 'undefined') {
@@ -279,11 +313,24 @@ class CurrencyEngine {
 
       if (
         edgeTx.blockHeight < edgeTransaction.blockHeight ||
+        (edgeTx.blockHeight === 0 && edgeTransaction.blockHeight < 0) ||
         (edgeTx.blockHeight === edgeTransaction.blockHeight &&
           (edgeTx.networkFee !== edgeTransaction.networkFee ||
             edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
+            edgeTx.otherParams.lastSeenTime !==
+              edgeTransaction.otherParams.lastSeenTime ||
             edgeTx.date !== edgeTransaction.date))
       ) {
+        // If a spend transaction goes from unconfirmed to dropped or confirmed,
+        // decrement numUnconfirmedSpendTxs
+        if (
+          this.isSpendTx(edgeTransaction) &&
+          edgeTransaction.blockHeight !== 0 &&
+          edgeTx.blockHeight === 0
+        ) {
+          this.walletLocalData.numUnconfirmedSpendTxs--
+          this.walletLocalDataDirty = true
+        }
         if (edgeTx.date !== edgeTransaction.date) {
           needsResort = true
         }
@@ -338,17 +385,23 @@ class CurrencyEngine {
   }
 
   checkDroppedTransactions (dateNow: number) {
+    let numUnconfirmedSpendTxs = 0
     for (const currencyCode in this.transactionList) {
       // const droppedTxIndices: Array<number> = []
       for (let i = 0; i < this.transactionList[currencyCode].length; i++) {
         const tx = this.transactionList[currencyCode][i]
-        const lastSeen = tx.otherParams.lastSeenTime
-        if (dateNow - lastSeen > DROPPED_TX_TIME_GAP && tx.blockHeight < 1) {
-          // droppedTxIndices.push(i)
-          tx.blockHeight = -1
-          tx.nativeAmount = '0'
-          this.transactionsChangedArray.push(tx)
-          // delete this.txIdMap[currencyCode][tx.txid]
+        if (tx.blockHeight === 0) {
+          const lastSeen = tx.otherParams.lastSeenTime
+          if (dateNow - lastSeen > DROPPED_TX_TIME_GAP) {
+            // droppedTxIndices.push(i)
+            tx.blockHeight = -1
+            tx.nativeAmount = '0'
+            this.transactionsChangedArray.push(tx)
+            // delete this.txIdMap[currencyCode][tx.txid]
+          } else if (this.isSpendTx(tx)) {
+            // Still have a pending spend transaction in the tx list
+            numUnconfirmedSpendTxs++
+          }
         }
       }
       // Delete transactions in reverse order
@@ -360,6 +413,8 @@ class CurrencyEngine {
       //   this.sortTransactions(currencyCode)
       // }
     }
+    this.walletLocalData.numUnconfirmedSpendTxs = numUnconfirmedSpendTxs
+    this.walletLocalDataDirty = true
   }
 
   updateTransaction (

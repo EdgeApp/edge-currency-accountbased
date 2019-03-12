@@ -14,11 +14,12 @@ import {
   closeEdge,
   makeFakeIo
 } from 'edge-core-js'
-import { before, describe, it } from 'mocha'
+import { beforeEach, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine.js'
 import { CurrencyPlugin } from '../../src/common/plugin.js'
+import { WalletLocalData } from '../../src/common/types.js'
 import { currencyInfo } from '../../src/ethereum/ethInfo.js'
 import edgeCorePlugins from '../../src/index.js'
 import { engineTestTxs } from './engine.txs.js'
@@ -230,8 +231,13 @@ function validateTxidListMap (engine: CurrencyEngine) {
 }
 describe('Test transaction list updating', () => {
   let engine
-  before('Add transactions', () => {
+  beforeEach(() => {
     engine = new CurrencyEngine(plugin, walletInfo, currencyEngineOptions)
+    engine.walletLocalData = new WalletLocalData(
+      '{"publicKey": "0x123456"}',
+      'ETH'
+    )
+
     for (const tx of engineTestTxs.ETH) {
       engine.addTransaction('ETH', tx, tx.date)
     }
@@ -251,6 +257,7 @@ describe('Test transaction list updating', () => {
     assert(engine.transactionList['DAI'][2].date === 1555670000)
     assert(engine.transactionList['DAI'][3].date === 1555660000)
     assert(engine.transactionList['DAI'][4].date === 1555650000)
+    assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
     validateTxidListMap(engine)
   })
 
@@ -258,6 +265,8 @@ describe('Test transaction list updating', () => {
     const updatedTx: any = {
       txid: '003',
       date: 1555540000,
+      nativeAmount: '-1',
+      ourReceiveAddresses: [],
       blockHeight: 0,
       otherParams: {}
     }
@@ -268,6 +277,7 @@ describe('Test transaction list updating', () => {
     assert(engine.transactionList['ETH'][2].txid === '002')
     assert(engine.transactionList['ETH'][3].txid === '001')
     assert(engine.transactionList['ETH'][4].txid === '003')
+    assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
     validateTxidListMap(engine)
   })
 
@@ -276,12 +286,16 @@ describe('Test transaction list updating', () => {
       {
         txid: '001',
         date: 1555550000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 1,
         otherParams: {}
       },
       {
         txid: '003',
         date: 1555570000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 2,
         otherParams: {}
       }
@@ -297,6 +311,7 @@ describe('Test transaction list updating', () => {
     assert(engine.transactionList['ETH'][3].txid === '002')
     assert(engine.transactionList['ETH'][4].txid === '001')
     assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
     validateTxidListMap(engine)
   })
 
@@ -305,12 +320,24 @@ describe('Test transaction list updating', () => {
       {
         txid: '001',
         date: 1555550000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 1,
+        otherParams: {}
+      },
+      {
+        txid: '002',
+        date: 1555560000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
+        blockHeight: 0,
         otherParams: {}
       },
       {
         txid: '003',
         date: 1555570000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 2,
         otherParams: {}
       }
@@ -328,6 +355,7 @@ describe('Test transaction list updating', () => {
     assert(engine.transactionList['ETH'][3].blockHeight === -1)
     assert(engine.transactionList['ETH'][4].txid === '001')
     assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
     validateTxidListMap(engine)
   })
 
@@ -336,12 +364,16 @@ describe('Test transaction list updating', () => {
       {
         txid: '001',
         date: 1555550000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 1,
         otherParams: {}
       },
       {
         txid: '003',
         date: 1555570000,
+        nativeAmount: '-1',
+        ourReceiveAddresses: [],
         blockHeight: 2,
         otherParams: {}
       }
@@ -352,6 +384,8 @@ describe('Test transaction list updating', () => {
     const updateTx: any = {
       txid: '002',
       date: 1555560000,
+      nativeAmount: '1',
+      ourReceiveAddresses: ['0x123456'],
       blockHeight: 0,
       otherParams: {}
     }
@@ -368,6 +402,7 @@ describe('Test transaction list updating', () => {
     assert(engine.transactionList['ETH'][3].blockHeight === 0)
     assert(engine.transactionList['ETH'][4].txid === '001')
     assert(engine.transactionList['ETH'][4].blockHeight === 1)
+    assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
     validateTxidListMap(engine)
   })
 })
