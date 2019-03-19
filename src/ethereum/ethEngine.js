@@ -831,18 +831,6 @@ export class EthereumEngine extends CurrencyEngine {
       throw new Error('Error: only one output allowed')
     }
 
-    let tokenInfo = {}
-    tokenInfo.contractAddress = ''
-
-    if (currencyCode !== PRIMARY_CURRENCY) {
-      tokenInfo = this.getTokenInfo(currencyCode)
-      if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
-        throw new Error(
-          'Error: Token not supported or invalid contract address'
-        )
-      }
-    }
-
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     const data = spendTarget.otherParams.data
@@ -868,14 +856,17 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     } else {
       let contractAddress = ''
-      if (spendTarget.otherParams.pluginName === 'totle') {
+      if (data) {
         contractAddress = publicAddress
       } else {
-        if (typeof tokenInfo.contractAddress === 'string') {
-          contractAddress = tokenInfo.contractAddress
-        } else {
-          throw new Error('makeSpend: Invalid contract address')
+        const tokenInfo = this.getTokenInfo(currencyCode)
+        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+          throw new Error(
+            'Error: Token not supported or invalid contract address'
+          )
         }
+
+        contractAddress = tokenInfo.contractAddress
       }
 
       const ethParams: EthereumTxOtherParams = {
