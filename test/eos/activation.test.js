@@ -93,6 +93,7 @@ describe(`EOS activation`, function () {
   })
 
   it('getActivationCost', async function () {
+    this.timeout(10000)
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationCost()
       const cost = Number(result)
