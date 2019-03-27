@@ -164,6 +164,7 @@ export class EthereumEngine extends CurrencyEngine {
         const blockHeight: number = parseInt(jsonObj.result, 16)
         this.log(`Got block height ${blockHeight}`)
         if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.checkDroppedTransactionsThrottled()
           this.walletLocalData.blockHeight = blockHeight // Convert to decimal
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onBlockHeightChanged(
@@ -319,11 +320,13 @@ export class EthereumEngine extends CurrencyEngine {
       tokenRecipientAddress: null
     }
 
+    let blockHeight = parseInt(tx.blockNumber)
+    if (blockHeight < 0) blockHeight = 0
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash,
       date: parseInt(tx.timeStamp),
       currencyCode,
-      blockHeight: parseInt(tx.blockNumber),
+      blockHeight,
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
       ourReceiveAddresses,
@@ -437,7 +440,7 @@ export class EthereumEngine extends CurrencyEngine {
       txid: addHexPrefix(tx.hash),
       date: epochTime,
       currencyCode: 'ETH',
-      blockHeight: tx.block_height,
+      blockHeight: 0,
       nativeAmount,
       networkFee: tx.fees.toString(10),
       ourReceiveAddresses,
