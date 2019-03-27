@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.1.8 (2019-03-27)
+
+- Update Ripple block explorer link.
+- Add ability to import Ethereum private keys.
+- Add ability to detect dropped Ethereum transactions.
+
 # 0.1.7 (2019-03-07)
 
 - Get Ethereum to catch insufficient *token* balance transactions
