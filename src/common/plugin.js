@@ -13,7 +13,6 @@ import {
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
-  type EdgeTokenInfo,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import { serialize } from 'uri-js'
@@ -63,7 +62,7 @@ export class CurrencyPlugin {
     uri: string,
     networks: { [network: string]: boolean },
     currencyCode?: string,
-    customTokens?: Array<EdgeTokenInfo> | Array<EdgeMetaToken>
+    customTokens?: Array<EdgeMetaToken>
   ) {
     const parsedUri = parse(uri, {}, true)
     let address: string

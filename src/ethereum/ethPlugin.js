@@ -15,7 +15,6 @@ import {
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
-  type EdgeTokenInfo,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -116,7 +115,7 @@ export class EthereumPlugin extends CurrencyPlugin {
   async parseUri (
     uri: string,
     currencyCode?: string,
-    customTokens?: Array<EdgeMetaToken> | Array<EdgeTokenInfo>
+    customTokens?: Array<EdgeMetaToken>
   ): Promise<EdgeParsedUri> {
     const networks = { ethereum: true, ether: true }
 
@@ -172,6 +171,7 @@ export class EthereumPlugin extends CurrencyPlugin {
           contractAddress,
           currencyName,
           multiplier,
+          denominations: [{ name: currencyCode, multiplier }],
           type: type.toUpperCase()
         }
       }
@@ -182,7 +182,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async encodeUri (
     obj: EdgeEncodeUri,
-    customTokens?: Array<EdgeMetaToken> | Array<EdgeTokenInfo>
+    customTokens?: Array<EdgeMetaToken>
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = EthereumUtil.isValidAddress(publicAddress)

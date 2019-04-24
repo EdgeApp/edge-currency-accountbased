@@ -6,12 +6,7 @@
 import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
-import {
-  type EdgeCurrencyInfo,
-  type EdgeDenomination,
-  type EdgeMetaToken,
-  type EdgeTokenInfo
-} from 'edge-core-js/types'
+import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
 function normalizeAddress (address: string) {
@@ -91,44 +86,37 @@ export function bufToHex (buf: any) {
 function getDenomInfo (
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
-  customTokens?: Array<EdgeTokenInfo> | Array<EdgeMetaToken>
-): EdgeDenomination | void {
+  customTokens?: Array<EdgeMetaToken>
+) {
   // Look in the primary currency denoms
-  const edgeDenomination = currencyInfo.denominations.find(element => {
+  let edgeDenomination = currencyInfo.denominations.find(element => {
     return element.name === denom
   })
-  if (edgeDenomination != null) return edgeDenomination
 
   // Look in the currencyInfo tokens
-  for (const metaToken of currencyInfo.metaTokens) {
-    const edgeDenomination = metaToken.denominations.find(element => {
-      return element.name === denom
-    })
-    if (edgeDenomination) {
-      return edgeDenomination
+  if (!edgeDenomination) {
+    for (const metaToken of currencyInfo.metaTokens) {
+      edgeDenomination = metaToken.denominations.find(element => {
+        return element.name === denom
+      })
+      if (edgeDenomination) {
+        break
+      }
     }
   }
 
   // Look in custom tokens
-  if (customTokens) {
-    for (const token of customTokens) {
-      if (token.denominations != null) {
-        const metaToken: EdgeMetaToken = (token: any)
-        const edgeDenomination = metaToken.denominations.find(element => {
-          return element.name === denom
-        })
-        if (edgeDenomination) return edgeDenomination
-      } else {
-        const tokenInfo: EdgeTokenInfo = (token: any)
-        if (denom === token.currencyCode) {
-          return {
-            name: tokenInfo.currencyCode,
-            multiplier: tokenInfo.multiplier
-          }
-        }
+  if (!edgeDenomination && customTokens) {
+    for (const metaToken of customTokens) {
+      edgeDenomination = metaToken.denominations.find(element => {
+        return element.name === denom
+      })
+      if (edgeDenomination) {
+        break
       }
     }
   }
+  return edgeDenomination
 }
 
 const snoozeReject: Function = (ms: number) =>
