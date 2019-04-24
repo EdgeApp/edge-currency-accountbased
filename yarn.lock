@@ -2348,10 +2348,10 @@ dir-glob@2.0.0:
     arrify "^1.0.1"
     path-type "^3.0.0"
 
-disklet@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.3.1.tgz#ad2a1399ac959480c47f3e3aa06f7cfdaa7e0af7"
-  integrity sha512-TkE2dRJLAot/YTxxSLo5BWqGcolDv6tuvVJOjd0LGO0Qru4R5jjp/55WrI15UOYOlFXLhqVBf54RT9nKsdQ/jQ==
+disklet@^0.4.0:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.4.1.tgz#e98900934eedb73aef67f4b89444729b98e94f71"
+  integrity sha512-Ui7iVznycaVQwRvGra9qVsG1IwcCDiGetclSXlWfiXamEVplb05U3DK06DhsHJEL1V+fGgKQRigA+BmR+7w7pQ==
   dependencies:
     rfc4648 "^0.9.1"
 
@@ -2420,16 +2420,16 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.15.0:
-  version "0.15.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.15.0.tgz#097d1f4a40baff5f1c5f09abf1da5858593c16bf"
-  integrity sha512-ggxvnQCdKdSi3nH7+VUPuWr1psFKfK+2VJ0UFVXZqJiYo8iDPOwGqLHUIkdxIs97RvBnrOdbCf4EZAlF8HiE4w==
+edge-core-js@^0.15.11:
+  version "0.15.11"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.15.11.tgz#eb8e01cca2d4c93ee050901cc3b66cf4654a350f"
+  integrity sha512-UAjGBoNwpsWQRSeyK3tX/ubw0rGxscefKingXCboF4RiZAb0D4442MvtmLf/gQX8ZsjP+dXlLMOXxulfSfnzUA==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
     currency-codes "^1.1.2"
-    disklet "^0.3.1"
+    disklet "^0.4.0"
     elliptic "^6.4.0"
     esm "^3.2.4"
     ethereumjs-tx "^1.3.7"
