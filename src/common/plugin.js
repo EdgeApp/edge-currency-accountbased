@@ -11,6 +11,7 @@ import {
   type EdgeCurrencyInfo,
   type EdgeEncodeUri,
   type EdgeIo,
+  type EdgeMetaToken,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -59,7 +60,9 @@ export class CurrencyPlugin {
   parseUriCommon (
     currencyInfo: EdgeCurrencyInfo,
     uri: string,
-    networks: { [network: string]: boolean }
+    networks: { [network: string]: boolean },
+    currencyCode?: string,
+    customTokens?: Array<EdgeMetaToken>
   ) {
     const parsedUri = parse(uri, {}, true)
     let address: string
@@ -86,7 +89,6 @@ export class CurrencyPlugin {
     const label = parsedUri.query.label
     const message = parsedUri.query.message
     const category = parsedUri.query.category
-    let currencyCode = parsedUri.query.currencyCode
 
     const edgeParsedUri: EdgeParsedUri = {
       publicAddress: address
@@ -103,7 +105,7 @@ export class CurrencyPlugin {
       if (!currencyCode) {
         currencyCode = currencyInfo.currencyCode
       }
-      const denom = getDenomInfo(currencyInfo, currencyCode)
+      const denom = getDenomInfo(currencyInfo, currencyCode, customTokens)
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }

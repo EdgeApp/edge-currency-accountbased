@@ -13,6 +13,7 @@ import {
   type EdgeCurrencyPlugin,
   type EdgeEncodeUri,
   type EdgeIo,
+  type EdgeMetaToken,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
@@ -111,13 +112,19 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+  async parseUri (
+    uri: string,
+    currencyCode?: string,
+    customTokens?: Array<EdgeMetaToken>
+  ): Promise<EdgeParsedUri> {
     const networks = { ethereum: true, ether: true }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       currencyInfo,
       uri,
-      networks
+      networks,
+      currencyCode || 'ETH',
+      customTokens
     )
     let address = ''
     if (edgeParsedUri.publicAddress) {
@@ -164,6 +171,7 @@ export class EthereumPlugin extends CurrencyPlugin {
           contractAddress,
           currencyName,
           multiplier,
+          denominations: [{ name: currencyCode, multiplier }],
           type: type.toUpperCase()
         }
       }
@@ -172,15 +180,22 @@ export class EthereumPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
-    const valid = EthereumUtil.isValidAddress(obj.publicAddress)
+  async encodeUri (
+    obj: EdgeEncodeUri,
+    customTokens?: Array<EdgeMetaToken>
+  ): Promise<string> {
+    const { publicAddress, nativeAmount, currencyCode } = obj
+    const valid = EthereumUtil.isValidAddress(publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
     let amount
-    if (typeof obj.nativeAmount === 'string') {
-      const nativeAmount: string = obj.nativeAmount
-      const denom = getDenomInfo(currencyInfo, 'ETH')
+    if (typeof nativeAmount === 'string') {
+      const denom = getDenomInfo(
+        currencyInfo,
+        currencyCode || 'ETH',
+        customTokens
+      )
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
