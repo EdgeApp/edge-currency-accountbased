@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.1.9
+
+- Fix toke denomination issue for encodeUri and parseUri
+- Increase unit test timeout
+
 # 0.1.8 (2019-03-27)
 
 - Update Ripple block explorer link.
