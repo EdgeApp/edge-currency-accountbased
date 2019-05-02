@@ -70,7 +70,8 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey (passPhrase: string): Promise<Object> {
-    const buffer = Buffer.from(passPhrase, 'hex')
+    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
+    const buffer = Buffer.from(strippedPassPhrase, 'hex')
     if (buffer.length !== 32) throw new Error('Private key wrong length')
     const ethereumKey = buffer.toString('hex')
     return {
