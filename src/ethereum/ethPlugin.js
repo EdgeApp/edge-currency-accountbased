@@ -241,6 +241,9 @@ export function makeEthereumPlugin (
     if (!currencyEngine.otherData.nextNonce) {
       currencyEngine.otherData.nextNonce = '0'
     }
+    if (!currencyEngine.otherData.unconfirmedNextNonce) {
+      currencyEngine.otherData.unconfirmedNextNonce = '0'
+    }
     if (!currencyEngine.otherData.networkFees) {
       currencyEngine.otherData.networkFees = defaultNetworkFees
     }
