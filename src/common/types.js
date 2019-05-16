@@ -28,6 +28,7 @@ export class WalletLocalData {
   totalBalances: { [currencyCode: string]: string }
   enabledTokens: Array<string>
   lastCheckedTxsDropped: number
+  numUnconfirmedSpendTxs: number
   otherData: Object
 
   constructor (jsonString: string | null, primaryCurrency: string) {
@@ -36,6 +37,7 @@ export class WalletLocalData {
     this.totalBalances = totalBalances
     this.lastAddressQueryHeight = 0
     this.lastCheckedTxsDropped = 0
+    this.numUnconfirmedSpendTxs = 0
     this.otherData = {}
     this.publicKey = ''
     this.enabledTokens = [primaryCurrency]
@@ -47,6 +49,9 @@ export class WalletLocalData {
       }
       if (typeof data.lastCheckedTxsDropped === 'number') {
         this.lastCheckedTxsDropped = data.lastCheckedTxsDropped
+      }
+      if (typeof data.numUnconfirmedSpendTxs === 'number') {
+        this.numUnconfirmedSpendTxs = data.numUnconfirmedSpendTxs
       }
       if (typeof data.lastAddressQueryHeight === 'number') {
         this.lastAddressQueryHeight = data.lastAddressQueryHeight
