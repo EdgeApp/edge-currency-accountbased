@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.1.10 (2019-05-16)
+
+- Fix importing Ethereum private keys starting with 0x.
+- Allow multiple unconfirmed Ethereum spends at once.
+
 # 0.1.9
 
 - Fix toke denomination issue for encodeUri and parseUri
