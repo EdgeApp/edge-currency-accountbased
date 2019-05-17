@@ -3,6 +3,6 @@ sudo: false
 node_js:
   - "10.15"
 install:
-  - npm i -d
+  - yarn
 script:
-  - npm t
+  - yarn test
