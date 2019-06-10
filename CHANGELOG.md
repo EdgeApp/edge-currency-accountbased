@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.11 (2019-06-09)
+
+- Add BRZ as a native ERC20 token
+
 # 0.1.10 (2019-05-16)
 
 - Fix importing Ethereum private keys starting with 0x.
