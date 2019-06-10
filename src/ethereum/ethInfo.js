@@ -410,6 +410,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x818Fc6C2Ec5986bc6E2CBf00939d90556aB12ce5',
       symbolImage: `${imageServerUrl}/kin-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'BRZ',
+      currencyName: 'BRZ Token',
+      denominations: [
+        {
+          name: 'BRZ',
+          multiplier: '1000'
+        }
+      ],
+      contractAddress: '0x420412E765BFa6d85aaaC94b4f7b708C89be2e2B',
+      symbolImage: `${imageServerUrl}/brz-logo-solo-64.png`
     }
   ]
 }
