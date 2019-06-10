@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.12 (2019-06-10)
+
+- Fix BRZ token multiplier / denomination / decimals
+
 # 0.1.11 (2019-06-09)
 
 - Add BRZ as a native ERC20 token

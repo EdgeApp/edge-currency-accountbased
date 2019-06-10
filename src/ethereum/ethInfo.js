@@ -417,7 +417,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'BRZ',
-          multiplier: '1000'
+          multiplier: '10000'
         }
       ],
       contractAddress: '0x420412E765BFa6d85aaaC94b4f7b708C89be2e2B',
