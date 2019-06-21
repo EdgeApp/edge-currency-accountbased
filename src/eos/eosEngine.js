@@ -35,11 +35,11 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = 0
-const CHECK_TXS_CRYPTO_LIONS = true
+const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 
 type EosFunction =
-  | 'doCryptoLions'
+  | 'doHyperionNodes'
   | 'getActions'
   | 'getCurrencyBalance'
   | 'transaction'
@@ -150,17 +150,19 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  processTransactionCryptoLions (action: EosTransactionSuperNode): number {
+  processTransactionHyperion (action: EosTransactionSuperNode): number {
     const result = validateObject(action, EosTransactionSuperNodeSchema)
     if (!result) {
       this.log('Invalid supernode tx')
       return 0
     }
 
-    const { act, trx_id, block_num, block_time } = action
+    const { act, trx_id, block_num } = action
+    const block_time = action['@timestamp']
 
-    const { from, to, quantity, memo, hex_data } = act.data
-    const [exchangeAmount, currencyCode] = quantity.split(' ')
+    const { from, to, memo, symbol } = act.data
+    const exchangeAmount = act.data.amount.toString()
+    const currencyCode = symbol
     const ourReceiveAddresses = []
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
     if (!denom) {
@@ -190,7 +192,7 @@ export class EosEngine extends CurrencyEngine {
       networkFee: '0',
       parentNetworkFee: '0',
       ourReceiveAddresses,
-      signedTx: hex_data,
+      signedTx: 'n/a',
       otherParams: {},
       metadata: {
         name,
@@ -307,8 +309,8 @@ export class EosEngine extends CurrencyEngine {
     return true
   }
 
-  async checkTransactionsCryptoLions (acct: string): Promise<boolean> {
-    if (!CHECK_TXS_CRYPTO_LIONS) throw new Error('Dont use cryptolions API')
+  async checkTransactionsHyperion (acct: string): Promise<boolean> {
+    if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     const highestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let newHighestTxHeight = highestTxHeight
@@ -318,14 +320,14 @@ export class EosEngine extends CurrencyEngine {
     let skip = 0
     let finish = false
     while (!finish) {
-      const url = `/v1/history/get_actions/${acct}/transfer?skip=${skip}&limit=${limit}`
-      const result = await this.multicastServers('doCryptoLions', url)
+      const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}`
+      const result = await this.multicastServers('doHyperionNodes', url)
       const actionsObject = await result.json()
       const actions = actionsObject.actions
       if (actions.length) {
         for (let i = 0; i < actions.length; i++) {
           const action = actions[i]
-          const blockNum = this.processTransactionCryptoLions(action)
+          const blockNum = this.processTransactionHyperion(action)
           if (blockNum > newHighestTxHeight) {
             newHighestTxHeight = blockNum
           } else if (blockNum === newHighestTxHeight && i === 0 && skip === 0) {
@@ -356,7 +358,7 @@ export class EosEngine extends CurrencyEngine {
       return
     }
     const acct = this.walletLocalData.otherData.accountName
-    const resultP = this.checkTransactionsCryptoLions(acct)
+    const resultP = this.checkTransactionsHyperion(acct)
       .catch(e => {
         this.log(e)
         // Crypto lions API failed. Fall back to full node.
@@ -384,8 +386,8 @@ export class EosEngine extends CurrencyEngine {
   async multicastServers (func: EosFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     switch (func) {
-      case 'doCryptoLions':
-        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosCryptoLionsNodes.map(
+      case 'doHyperionNodes':
+        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url = server + params[0]
             const result = await this.io.fetch(url)

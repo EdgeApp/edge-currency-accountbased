@@ -6,7 +6,7 @@ import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
-  eosCryptoLionsNodes: ['https://history.cryptolions.io'],
+  eosHyperionNodes: ['https://eos.hyperion.eosrio.io'],
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
   eosNodes: ['https://proxy.eosnode.tools']
 }

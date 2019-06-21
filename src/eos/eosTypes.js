@@ -4,7 +4,7 @@
 // @flow
 
 export type EosSettings = {
-  eosCryptoLionsNodes: Array<string>,
+  eosHyperionNodes: Array<string>,
   eosNodes: Array<string>
 }
 
@@ -13,13 +13,13 @@ export type EosTransactionSuperNode = {
     data: {
       from: string,
       to: string,
-      quantity: string,
-      hex_data: string,
+      amount: string,
+      symbol: string,
       memo?: string
     }
   },
   trx_id: string,
-  block_time: string,
+  '@timestamp': string,
   block_num: number
 }
 
