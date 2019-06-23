@@ -315,7 +315,6 @@ export class EosEngine extends CurrencyEngine {
     const highestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let newHighestTxHeight = highestTxHeight
 
-    // Try super nodes first
     const limit = 10
     let skip = 0
     let finish = false
@@ -324,10 +323,13 @@ export class EosEngine extends CurrencyEngine {
       const result = await this.multicastServers('doHyperionNodes', url)
       const actionsObject = await result.json()
       const actions = actionsObject.actions
+      // sort transactions by block height (blockNum) since they can be out of order
+      actions.sort((a, b) => b.block_num - a.block_num)
       if (actions.length) {
         for (let i = 0; i < actions.length; i++) {
           const action = actions[i]
           const blockNum = this.processTransactionHyperion(action)
+          // if the block height for the transaction is greater than the previously highest block height
           if (blockNum > newHighestTxHeight) {
             newHighestTxHeight = blockNum
           } else if (blockNum === newHighestTxHeight && i === 0 && skip === 0) {
