@@ -93,6 +93,9 @@
     "webpack": "^4.29.3",
     "webpack-cli": "^3.2.3"
   },
+  "resolutions": {
+    "scrypt.js": "0.3.0"
+  },
   "importSort": {
     ".js, .es": {
       "parser": "babylon",
