@@ -319,6 +319,7 @@ export class EosEngine extends CurrencyEngine {
     let skip = 0
     let finish = false
     while (!finish) {
+      // Use hyperion API with a block producer. "transfers" essentially mean transactions
       const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}`
       const result = await this.multicastServers('doHyperionNodes', url)
       const actionsObject = await result.json()
@@ -360,19 +361,24 @@ export class EosEngine extends CurrencyEngine {
       return
     }
     const acct = this.walletLocalData.otherData.accountName
-    const resultP = this.checkTransactionsHyperion(acct)
-      .catch(e => {
-        this.log(e)
+    let result
+    try {
+      result = await this.checkTransactionsHyperion(acct)
+    } catch (e) {
+      this.log('checkTransactionsHyperion failed with error: ')
+      this.log(e)
+      try {
         // Crypto lions API failed. Fall back to full node.
         // Note: Full nodes do not return incoming transactions although
         // they do return correct account balances
         return this.checkTransactionsFullNode(acct)
-      })
-      .catch(e => {
+      } catch (e) {
+        this.log('inside second checkTransactionsInnerLoop with error: ')
         this.log(e)
         return false
-      })
-    const result = await resultP
+      }
+    }
+
     if (result) {
       this.tokenCheckTransactionsStatus.EOS = 1
       this.updateOnAddressesChecked()

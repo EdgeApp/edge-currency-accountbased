@@ -128,7 +128,14 @@ function promiseAny (promises: Array<Promise<any>>): Promise<any> {
   return new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
-      promise.then(value => resolve(value), error => --pending || reject(error))
+      promise.then(
+        value => {
+          resolve(value)
+        },
+        error => {
+          return --pending || reject(error)
+        }
+      )
     }
   })
 }
