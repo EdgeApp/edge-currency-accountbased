@@ -192,7 +192,7 @@ export class EosEngine extends CurrencyEngine {
       networkFee: '0',
       parentNetworkFee: '0',
       ourReceiveAddresses,
-      signedTx: 'n/a',
+      signedTx: 'has_been_signed',
       otherParams: {},
       metadata: {
         name,
