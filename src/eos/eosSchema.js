@@ -13,6 +13,7 @@
 //   }
 // }
 
+// note that transfers are regular EOS transactions
 export const EosTransactionSuperNodeSchema = {
   type: 'object',
   properties: {
@@ -24,19 +25,20 @@ export const EosTransactionSuperNodeSchema = {
           properties: {
             from: { type: 'string' },
             to: { type: 'string' },
-            quantity: { type: 'string' },
-            hex_data: { type: 'string' },
+            amount: { type: 'number' },
+            symbol: { type: 'string' },
             memo: { type: 'string' }
           },
-          required: ['from', 'to', 'quantity']
+          required: ['from', 'to', 'amount'],
+          authorization: { type: 'object' }
         }
       },
       required: ['data']
     },
     trx_id: { type: 'string' },
-    block_time: { type: 'string' },
+    '@timestamp': { type: 'string' },
     block_num: { type: 'number' },
-    required: ['act', 'trx_id', 'block_time', 'block_num']
+    required: ['act', 'trx_id', '@timestamp', 'block_num']
   }
 }
 
