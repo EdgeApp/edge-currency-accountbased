@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.1.13 (2019-06-27)
+
+- Fix EOS syncing issue
+- Fix node 12 compatibility
+
 # 0.1.12 (2019-06-10)
 
 - Fix BRZ token multiplier / denomination / decimals
