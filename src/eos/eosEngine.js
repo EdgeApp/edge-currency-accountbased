@@ -40,7 +40,7 @@ const CHECK_TXS_FULL_NODES = true
 
 type EosFunction =
   | 'doHyperionNodes'
-  | 'getActions'
+  | 'getTransfers'
   | 'getCurrencyBalance'
   | 'transaction'
   | 'actionsPaymentServer'
@@ -206,40 +206,42 @@ export class EosEngine extends CurrencyEngine {
 
   processTransactionFullNode (action: EosTransaction): number {
     const ourReceiveAddresses = []
-    const date = Date.parse(action.block_time) / 1000
+    const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
-    if (!action.action_trace || !action.account_action_seq) {
+    if (!action.block_num || !action.global_sequence) {
       this.log(
-        'Invalid EOS transaction data. No action_trace or account_action_seq'
+        'Invalid EOS transaction data. No tx block_num or global_sequence'
       )
       return 0
     }
-    const actionSeq = action.account_action_seq
-    const txid = action.action_trace.trx_id
+    const actionSeq = action.global_sequence
+    const txid = action.trx_id
 
-    if (!action.action_trace.act) {
-      this.log('Invalid EOS transaction data. No action_trace.act')
+    if (!action.act) {
+      this.log('Invalid EOS transaction data. No action.act')
       return 0
     }
-    const name = action.action_trace.act.name
+    const name = action.act.name
     // this.log('------------------------------------------------')
     // this.log(`Txid: ${txid}`)
     // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
-      if (!action.action_trace.act.data) {
-        this.log('Invalid EOS transaction data. No action_trace.act.data')
+      if (!action.act.data) {
+        this.log('Invalid EOS transaction data. No action.act.data')
         return 0
       }
-      const { from, to, memo, quantity } = action.action_trace.act.data
-      const split = quantity.split(' ')
-      const [exchangeAmount, currencyCode] = split
+      const { from, to, memo, amount, symbol } = action.act.data
+      const exchangeAmount = amount.toString()
+      const currencyCode = symbol
 
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
+      // if invalid currencyCode then don't count as valid transaction
       if (!denom) {
         this.log(`Received unsupported currencyCode: ${currencyCode}`)
         return 0
       }
       let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+      // if sending to one's self
       if (to === this.walletLocalData.otherData.accountName) {
         ourReceiveAddresses.push(to)
         if (from === this.walletLocalData.otherData.accountName) {
@@ -278,16 +280,20 @@ export class EosEngine extends CurrencyEngine {
 
   async checkTransactionsFullNode (acct: string): Promise<boolean> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
+    const limit = 9
     const actionSeqNumber = this.walletLocalData.otherData.lastQueryActionSeq
     let newActionSeqNumber = actionSeqNumber
+    const url = `/v2/history/get_transfers?from=${acct}&symbol=EOS&skip=${newActionSeqNumber}&limit=${limit}`
+
     while (1) {
-      const actionsObject = await this.multicastServers(
-        'getActions',
-        acct,
-        newActionSeqNumber + 1,
-        9
-      )
+      // query the server / node
+      const response = await this.multicastServers('getTransfers', url)
+      const actionsObject = await response.json()
       let actions = []
+      // sort transactions by block height (blockNum) since they can be out of order
+      actions.sort((a, b) => b.block_num - a.block_num)
+
+      // if the actions array is not empty, then set the actions variable
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
@@ -295,11 +301,13 @@ export class EosEngine extends CurrencyEngine {
       }
       for (const action of actions) {
         const s = this.processTransactionFullNode(action)
+        // if there were valid actions then increase the action sequence number
         if (s > newActionSeqNumber) {
           newActionSeqNumber = s
         }
       }
     }
+    // if there have been new valid actions then increase the last sequence number
     if (
       newActionSeqNumber > this.walletLocalData.otherData.lastQueryActionSeq
     ) {
@@ -361,25 +369,17 @@ export class EosEngine extends CurrencyEngine {
       return
     }
     const acct = this.walletLocalData.otherData.accountName
-    let result
+    let incomingResult, outgoingResult
     try {
-      result = await this.checkTransactionsHyperion(acct)
+      incomingResult = await this.checkTransactionsHyperion(acct)
+      outgoingResult = await this.checkTransactionsFullNode(acct)
     } catch (e) {
-      this.log('checkTransactionsHyperion failed with error: ')
+      this.log('checkTransactionsInnerLoop fetches failed with error: ')
       this.log(e)
-      try {
-        // Crypto lions API failed. Fall back to full node.
-        // Note: Full nodes do not return incoming transactions although
-        // they do return correct account balances
-        return this.checkTransactionsFullNode(acct)
-      } catch (e) {
-        this.log('inside second checkTransactionsInnerLoop with error: ')
-        this.log(e)
-        return false
-      }
+      return false
     }
 
-    if (result) {
+    if (incomingResult && outgoingResult) {
       this.tokenCheckTransactionsStatus.EOS = 1
       this.updateOnAddressesChecked()
     }
@@ -406,7 +406,17 @@ export class EosEngine extends CurrencyEngine {
         this.log(`EOS multicastServers ${func} ${out.server} won`)
         break
 
-      case 'getActions':
+      case 'getTransfers':
+        const fetch = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+          server => async () => {
+            const url = server + params[0]
+            const result = await this.io.fetch(url)
+            return { server, result }
+          }
+        )
+        out = await asyncWaterfall(fetch)
+        this.log(`EOS multicastServers ${func} ${out.server} won`)
+        break
       case 'getCurrencyBalance':
       case 'transaction':
         out = await promiseAny(
