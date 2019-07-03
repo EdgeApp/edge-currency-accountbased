@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.14 (2019-07-02)
+
+- Fix Outgoing EOS transaction issue
+
 # 0.1.13 (2019-06-27)
 
 - Fix EOS syncing issue
