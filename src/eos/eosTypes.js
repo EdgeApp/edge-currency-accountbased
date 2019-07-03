@@ -49,6 +49,28 @@ export type EosTransaction = {
   notified: Array<string>
 }
 
+export type EosAction = {
+  act: {
+    authorization: any,
+    data: {
+      from: string,
+      to: string,
+      memo: string,
+      amount: number,
+      symbol: string
+    },
+    account: string,
+    name: string
+  },
+  '@timestamp': string,
+  block_num: number,
+  producer: string,
+  trx_id: string,
+  parent: number,
+  global_sequence: number,
+  notified: Array<string>
+}
+
 export type EosParams = {}
 
 export type EosWalletOtherData = {

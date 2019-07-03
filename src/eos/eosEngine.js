@@ -39,8 +39,8 @@ const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 
 type EosFunction =
-  | 'doHyperionNodes'
-  | 'getTransfers'
+  | 'getIncomingTransactions'
+  | 'getOutgoingTransactions'
   | 'getCurrencyBalance'
   | 'transaction'
   | 'actionsPaymentServer'
@@ -150,7 +150,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  processTransactionHyperion (action: EosTransactionSuperNode): number {
+  processIncomingTransaction (action: EosTransactionSuperNode): number {
     const result = validateObject(action, EosTransactionSuperNodeSchema)
     if (!result) {
       this.log('Invalid supernode tx')
@@ -204,17 +204,14 @@ export class EosEngine extends CurrencyEngine {
     return edgeTransaction.blockHeight
   }
 
-  processTransactionFullNode (action: EosTransaction): number {
+  processOutgoingTransaction (action: EosTransaction): number {
     const ourReceiveAddresses = []
     const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
-    if (!action.block_num || !action.global_sequence) {
-      this.log(
-        'Invalid EOS transaction data. No tx block_num or global_sequence'
-      )
+    if (!action.block_num) {
+      this.log('Invalid EOS transaction data. No tx block_num')
       return 0
     }
-    const actionSeq = action.global_sequence
     const txid = action.trx_id
 
     if (!action.act) {
@@ -275,49 +272,60 @@ export class EosEngine extends CurrencyEngine {
       // this.log(`Amount: ${exchangeAmount}`)
       // this.log(`currencyCode: ${currencyCode}`)
     }
-    return actionSeq
+    return blockHeight
   }
 
-  async checkTransactionsFullNode (acct: string): Promise<boolean> {
+  async checkOutgoingTransactions (acct: string): Promise<boolean> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
-    const limit = 9
-    const actionSeqNumber = this.walletLocalData.otherData.lastQueryActionSeq
-    let newActionSeqNumber = actionSeqNumber
-    const url = `/v2/history/get_transfers?from=${acct}&symbol=EOS&skip=${newActionSeqNumber}&limit=${limit}`
+    const limit = 10
+    let skip = 0
+    let finish = false
+    const highestTxHeight = this.walletLocalData.otherData.lastQueryActionSeq
+    let newHighestTxHeight = highestTxHeight
+    const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
 
-    while (1) {
-      // query the server / node
-      const response = await this.multicastServers('getTransfers', url)
-      const actionsObject = await response.json()
-      let actions = []
-      // sort transactions by block height (blockNum) since they can be out of order
-      actions.sort((a, b) => b.block_num - a.block_num)
+    // query the server / node
+    const response = await this.multicastServers('getOutgoingTransactions', url)
+    const actionsObject = await response.json()
+    let actions = []
 
+    while (!finish) {
       // if the actions array is not empty, then set the actions variable
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
         break
       }
-      for (const action of actions) {
-        const s = this.processTransactionFullNode(action)
-        // if there were valid actions then increase the action sequence number
-        if (s > newActionSeqNumber) {
-          newActionSeqNumber = s
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i]
+        const blockNum = this.processOutgoingTransaction(action)
+        // if the block height for the transaction is greater than the previously highest block height
+        if (blockNum > newHighestTxHeight) {
+          newHighestTxHeight = blockNum
+        } else if (blockNum === newHighestTxHeight && i === 0 && skip === 0) {
+          // If on the first query, we get blockHeights equal to the previously cached heights
+          // then stop query as we assume we're just getting back previously queried data
+          finish = true
+          break
         }
       }
+      if (!actions.length || actions.length < limit) {
+        break
+      }
+      skip += 10
     }
     // if there have been new valid actions then increase the last sequence number
     if (
-      newActionSeqNumber > this.walletLocalData.otherData.lastQueryActionSeq
+      newHighestTxHeight > this.walletLocalData.otherData.lastQueryActionSeq
     ) {
-      this.walletLocalData.otherData.lastQueryActionSeq = newActionSeqNumber
+      this.walletLocalData.otherData.lastQueryActionSeq = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
   }
 
-  async checkTransactionsHyperion (acct: string): Promise<boolean> {
+  // similar to checkOutgoingTransactions, possible to refactor
+  async checkIncomingTransactions (acct: string): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     const highestTxHeight = this.walletLocalData.otherData.highestTxHeight
@@ -326,18 +334,20 @@ export class EosEngine extends CurrencyEngine {
     const limit = 10
     let skip = 0
     let finish = false
+
+    // Use hyperion API with a block producer. "transfers" essentially mean transactions
+    // may want to move to get_actions at the request of block producer
+    const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
+    const result = await this.multicastServers('getIncomingTransactions', url)
+    const actionsObject = await result.json()
+    const actions = actionsObject.actions
+    // sort transactions by block height (blockNum) since they can be out of order
+    actions.sort((a, b) => b.block_num - a.block_num)
     while (!finish) {
-      // Use hyperion API with a block producer. "transfers" essentially mean transactions
-      const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}`
-      const result = await this.multicastServers('doHyperionNodes', url)
-      const actionsObject = await result.json()
-      const actions = actionsObject.actions
-      // sort transactions by block height (blockNum) since they can be out of order
-      actions.sort((a, b) => b.block_num - a.block_num)
       if (actions.length) {
         for (let i = 0; i < actions.length; i++) {
           const action = actions[i]
-          const blockNum = this.processTransactionHyperion(action)
+          const blockNum = this.processIncomingTransaction(action)
           // if the block height for the transaction is greater than the previously highest block height
           if (blockNum > newHighestTxHeight) {
             newHighestTxHeight = blockNum
@@ -371,8 +381,8 @@ export class EosEngine extends CurrencyEngine {
     const acct = this.walletLocalData.otherData.accountName
     let incomingResult, outgoingResult
     try {
-      incomingResult = await this.checkTransactionsHyperion(acct)
-      outgoingResult = await this.checkTransactionsFullNode(acct)
+      incomingResult = await this.checkIncomingTransactions(acct)
+      outgoingResult = await this.checkOutgoingTransactions(acct)
     } catch (e) {
       this.log('checkTransactionsInnerLoop fetches failed with error: ')
       this.log(e)
@@ -394,7 +404,7 @@ export class EosEngine extends CurrencyEngine {
   async multicastServers (func: EosFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     switch (func) {
-      case 'doHyperionNodes':
+      case 'getIncomingTransactions':
         const funcs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url = server + params[0]
@@ -406,7 +416,7 @@ export class EosEngine extends CurrencyEngine {
         this.log(`EOS multicastServers ${func} ${out.server} won`)
         break
 
-      case 'getTransfers':
+      case 'getOutgoingTransactions':
         const fetch = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url = server + params[0]
