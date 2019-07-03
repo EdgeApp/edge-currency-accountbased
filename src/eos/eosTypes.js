@@ -27,31 +27,48 @@ export type EosTransaction = {
   block_time: string,
   block_num: number,
   account_action_seq: number,
-  action_trace: {
-    trx_id: string,
-    act: {
-      name: string,
-      data: {
-        from: string,
-        to: string,
-        memo: string,
-        quantity: string
-      }
-    }
-  }
+  trx_id: string,
+  act: {
+    authorization: any,
+    data: {
+      from: string,
+      to: string,
+      memo: string,
+      amount: number,
+      symbol: string
+    },
+    account: string,
+    name: string
+  },
+  '@timestamp': string,
+  block_num: number,
+  producer: string,
+  trx_id: string,
+  parent: number,
+  global_sequence: number,
+  notified: Array<string>
+}
 
-  // type: string,
-  // address: string,
-  // id: string,
-  // outcome: {
-  //   result: string,
-  //   timestamp: string,
-  //   fee: string,
-  //   ledgerVersion: number,
-  //   balanceChanges: {
-  //     [address: string]: Array<XrpBalanceChange>
-  //   }
-  // }
+export type EosAction = {
+  act: {
+    authorization: any,
+    data: {
+      from: string,
+      to: string,
+      memo: string,
+      amount: number,
+      symbol: string
+    },
+    account: string,
+    name: string
+  },
+  '@timestamp': string,
+  block_num: number,
+  producer: string,
+  trx_id: string,
+  parent: number,
+  global_sequence: number,
+  notified: Array<string>
 }
 
 export type EosParams = {}
