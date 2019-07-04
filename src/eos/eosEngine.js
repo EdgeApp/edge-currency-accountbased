@@ -280,16 +280,20 @@ export class EosEngine extends CurrencyEngine {
     const limit = 10
     let skip = 0
     let finish = false
-    const highestTxHeight = this.walletLocalData.otherData.lastQueryActionSeq
-    let newHighestTxHeight = highestTxHeight
-    const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
 
-    // query the server / node
-    const response = await this.multicastServers('getOutgoingTransactions', url)
-    const actionsObject = await response.json()
-    let actions = []
+    let newHighestTxHeight = this.walletLocalData.otherData.lastQueryActionSeq
 
     while (!finish) {
+      this.log('looping through checkOutgoingTransactions')
+      const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
+
+      // query the server / node
+      const response = await this.multicastServers(
+        'getOutgoingTransactions',
+        url
+      )
+      const actionsObject = await response.json()
+      let actions = []
       // if the actions array is not empty, then set the actions variable
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
@@ -309,6 +313,7 @@ export class EosEngine extends CurrencyEngine {
           break
         }
       }
+      // if there are no actions or it's less than the limit (we're at the end)
       if (!actions.length || actions.length < limit) {
         break
       }
@@ -328,37 +333,45 @@ export class EosEngine extends CurrencyEngine {
   async checkIncomingTransactions (acct: string): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
-    const highestTxHeight = this.walletLocalData.otherData.highestTxHeight
-    let newHighestTxHeight = highestTxHeight
+    let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
 
     const limit = 10
     let skip = 0
     let finish = false
 
-    // Use hyperion API with a block producer. "transfers" essentially mean transactions
-    // may want to move to get_actions at the request of block producer
-    const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
-    const result = await this.multicastServers('getIncomingTransactions', url)
-    const actionsObject = await result.json()
-    const actions = actionsObject.actions
-    // sort transactions by block height (blockNum) since they can be out of order
-    actions.sort((a, b) => b.block_num - a.block_num)
     while (!finish) {
-      if (actions.length) {
-        for (let i = 0; i < actions.length; i++) {
-          const action = actions[i]
-          const blockNum = this.processIncomingTransaction(action)
-          // if the block height for the transaction is greater than the previously highest block height
-          if (blockNum > newHighestTxHeight) {
-            newHighestTxHeight = blockNum
-          } else if (blockNum === newHighestTxHeight && i === 0 && skip === 0) {
-            // If on the first query, we get blockHeights equal to the previously cached heights
-            // then stop query as we assume we're just getting back previously queried data
-            finish = true
-            break
-          }
+      this.log('looping through checkIncomingTransactions')
+      // Use hyperion API with a block producer. "transfers" essentially mean transactions
+      // may want to move to get_actions at the request of block producer
+      const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
+      const result = await this.multicastServers('getIncomingTransactions', url)
+      const actionsObject = await result.json()
+      let actions = []
+      // sort transactions by block height (blockNum) since they can be out of order
+      actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
+
+      // if there are no actions
+      if (actionsObject.actions && actionsObject.actions.length > 0) {
+        actions = actionsObject.actions
+      } else {
+        break
+      }
+
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i]
+        const blockNum = this.processIncomingTransaction(action)
+        // if the block height for the transaction is greater than the previously highest block height
+        // then set new highest block height
+        if (blockNum > newHighestTxHeight) {
+          newHighestTxHeight = blockNum
+        } else if (blockNum === newHighestTxHeight && i === 0 && skip === 0) {
+          // If on the first query, we get blockHeights equal to the previously cached heights
+          // then stop query as we assume we're just getting back previously queried data
+          finish = true
+          break
         }
       }
+
       if (!actions.length || actions.length < limit) {
         break
       }
