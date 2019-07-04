@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.15 (2019-07-03)
+
+- Fix EOS infinite loop issue
+
 # 0.1.14 (2019-07-02)
 
 - Fix Outgoing EOS transaction issue
