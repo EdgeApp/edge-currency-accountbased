@@ -713,7 +713,7 @@ export class EthereumEngine extends CurrencyEngine {
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'string') {
+            if (!result.result || typeof result.result !== 'string') {
               const msg = `Invalid return value eth_getBalance in ${server}`
               this.log(msg)
               throw new Error(msg)
@@ -746,7 +746,7 @@ export class EthereumEngine extends CurrencyEngine {
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'string') {
+            if (!result.result || typeof result.result !== 'string') {
               const msg = `Invalid return value getTokenBalance in ${server}`
               this.log(msg)
               throw new Error(msg)
