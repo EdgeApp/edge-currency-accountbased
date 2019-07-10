@@ -18,7 +18,7 @@ for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
 
   const WALLET_TYPE = fixture['WALLET_TYPE']
-  // if (WALLET_TYPE !== 'wallet:ethereum') continue
+  // if (WALLET_TYPE !== 'wallet:ethereum' && WALLET_TYPE !== 'wallet:rsk') continue
   const keyName = WALLET_TYPE.split('wallet:')[1].split('-')[0] + 'Key'
   const address = 'publicKey'
 
