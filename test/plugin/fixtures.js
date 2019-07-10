@@ -420,5 +420,142 @@ export default [
         'ethereum:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=0.000123&label=Johnny%20Ether&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
+  },
+  {
+    pluginName: 'rsk',
+    WALLET_TYPE: 'wallet:rsk',
+    'Test Currency code': 'RBTC',
+    key: [
+      39,
+      190,
+      34,
+      129,
+      208,
+      32,
+      145,
+      88,
+      191,
+      217,
+      226,
+      98,
+      183,
+      16,
+      52,
+      150,
+      52,
+      53,
+      31,
+      137,
+      164,
+      40,
+      236,
+      146,
+      128,
+      107,
+      129,
+      59,
+      192,
+      240,
+      40,
+      238
+    ],
+    xpub: '0x466d506cd7fbcd29a06015da03f0de814df050ee',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:rsk',
+      keys: { rskKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'shitcoin',
+      keys: { rskKey: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+      ],
+      'invalid address': [
+        '0x466d506cd7fbcd29a06015da03f0de814df050ez',
+        '0466d506cd7fbcd29a06015da03f0de814df050ee',
+        '0x466d506cd7fbcd29a06015da03f0de814df050ee1'
+      ],
+      'uri address': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+      ],
+      'uri address with amount': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=12345.6789',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '12345678900000000000000',
+        'RBTC'
+      ],
+      'uri address with unique identifier': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?dt=123456789',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        'RBTC'
+      ],
+      'uri address with amount & label': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=1234.56789&label=Johnny%20Ripple',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '1234567890000000000000',
+        'RBTC',
+        'Johnny Ripple'
+      ],
+      'uri address with amount, label & message': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=1234.56789&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '1234567890000000000000',
+        'RBTC',
+        'Johnny Ripple',
+        'Hello World, I miss you !'
+      ],
+      'uri address with unsupported param': [
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?unsupported=helloworld&amount=12345.6789',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        '12345678900000000000000',
+        'RBTC'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+      ],
+      'weird address': [
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+      ],
+      'invalid address': [
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122az' },
+        { publicAddress: '04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8a' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+          nativeAmount: '123456780000'
+        },
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=0.00000012345678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+          nativeAmount: '123000000000000',
+          currencyCode: 'RBTC',
+          label: 'Johnny Rootstock'
+        },
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=0.000123&label=Johnny%20Rootstock'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+          nativeAmount: '123000000000000',
+          currencyCode: 'RBTC',
+          label: 'Johnny Rootstock',
+          message: 'Hello World, I miss you !'
+        },
+        'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=0.000123&label=Johnny%20Rootstock&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
   }
 ]

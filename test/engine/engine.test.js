@@ -144,10 +144,17 @@ for (const fixture of fixtures) {
       this.timeout(10000)
       emitter.once('onBlockHeightChange', height => {
         const thirdPartyHeight = 1578127
-        assert(height >= thirdPartyHeight, 'Block height')
+        // this validation is not OK for RSK
+        if (WALLET_TYPE === 'wallet:eth') {
+          assert(height >= thirdPartyHeight, 'Block height')
+        }
         if (!engine) throw new Error('ErrorNoEngine')
         const getHeight = engine.getBlockHeight()
-        assert(getHeight >= thirdPartyHeight, 'Block height')
+        // this validation is not OK for RSK
+        if (WALLET_TYPE === 'wallet:eth') {
+          assert(getHeight >= thirdPartyHeight, 'Block height')
+        }
+        assert(getHeight > 0)
         done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
       })
       if (!engine) throw new Error('ErrorNoEngine')
