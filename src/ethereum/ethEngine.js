@@ -835,25 +835,15 @@ export class EthereumEngine extends CurrencyEngine {
       throw new Error('Error: only one output allowed')
     }
 
-    let tokenInfo = {}
-    tokenInfo.contractAddress = ''
-
-    if (currencyCode !== PRIMARY_CURRENCY) {
-      tokenInfo = this.getTokenInfo(currencyCode)
-      if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
-        throw new Error(
-          'Error: Token not supported or invalid contract address'
-        )
-      }
-    }
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const publicAddress = spendTarget.publicAddress
+    const data = spendTarget.otherParams.data
 
     let otherParams: Object = {}
     const { gasLimit, gasPrice } = calcMiningFee(
       edgeSpendInfo,
       this.walletLocalData.otherData.networkFees
     )
-
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const ethParams: EthereumTxOtherParams = {
@@ -864,15 +854,23 @@ export class EthereumEngine extends CurrencyEngine {
         gasUsed: '0',
         cumulativeGasUsed: '0',
         errorVal: 0,
-        tokenRecipientAddress: null
+        tokenRecipientAddress: null,
+        data: data
       }
       otherParams = ethParams
     } else {
       let contractAddress = ''
-      if (typeof tokenInfo.contractAddress === 'string') {
-        contractAddress = tokenInfo.contractAddress
+      if (data) {
+        contractAddress = publicAddress
       } else {
-        throw new Error('makeSpend: Invalid contract address')
+        const tokenInfo = this.getTokenInfo(currencyCode)
+        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+          throw new Error(
+            'Error: Token not supported or invalid contract address'
+          )
+        }
+
+        contractAddress = tokenInfo.contractAddress
       }
 
       const ethParams: EthereumTxOtherParams = {
@@ -883,7 +881,8 @@ export class EthereumEngine extends CurrencyEngine {
         gasUsed: '0',
         cumulativeGasUsed: '0',
         errorVal: 0,
-        tokenRecipientAddress: publicAddress
+        tokenRecipientAddress: publicAddress,
+        data: data
       }
       otherParams = ethParams
     }
@@ -998,7 +997,9 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     let data
-    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+    if (edgeTransaction.otherParams.data != null) {
+      data = edgeTransaction.otherParams.data
+    } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
