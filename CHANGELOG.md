@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.16 (2019-07-10)
+
+- Implement Totle transactions (extra proxy allowance transaction)
+
 # 0.1.15 (2019-07-03)
 
 - Fix EOS infinite loop issue
