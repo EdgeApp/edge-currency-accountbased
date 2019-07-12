@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.17 (2019-07-12)
+
+- Fix `edgeTransaction.otherParams.data` issue throwing error when `otherParams` does not exist
+
 # 0.1.16 (2019-07-10)
 
 - Implement Totle transactions (extra proxy allowance transaction)
