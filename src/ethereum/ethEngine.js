@@ -837,7 +837,8 @@ export class EthereumEngine extends CurrencyEngine {
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
-    const data = spendTarget.otherParams.data
+    const data =
+      spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
 
     let otherParams: Object = {}
     const { gasLimit, gasPrice } = calcMiningFee(
