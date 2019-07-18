@@ -88,9 +88,9 @@ export class RskEngine extends CurrencyEngine {
     opts: EdgeCurrencyEngineOptions
   ) {
     super(currencyPlugin, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ethereumKey !== 'string') {
-      if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumKey) {
-        this.walletInfo.keys.ethereumKey = walletInfo.keys.keys.ethereumKey
+    if (typeof this.walletInfo.keys.rskKey !== 'string') {
+      if (walletInfo.keys.keys && walletInfo.keys.keys.rskKey) {
+        this.walletInfo.keys.rskKey = walletInfo.keys.keys.rskKey
       }
     }
     this.currencyPlugin = currencyPlugin
@@ -885,7 +885,7 @@ export class RskEngine extends CurrencyEngine {
       chainId: 30
     }
 
-    const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
+    const privKey = Buffer.from(this.walletInfo.keys.rskKey, 'hex')
     const wallet = ethWallet.fromPrivateKey(privKey)
 
     this.log(wallet.getAddressString())
@@ -956,8 +956,8 @@ export class RskEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.ethereumKey) {
-      return this.walletInfo.keys.ethereumKey
+    if (this.walletInfo.keys && this.walletInfo.keys.rskKey) {
+      return this.walletInfo.keys.rskKey
     }
     return ''
   }

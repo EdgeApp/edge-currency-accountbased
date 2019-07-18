@@ -53,9 +53,9 @@ export class RskPlugin extends CurrencyPlugin {
     const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
     const buffer = Buffer.from(strippedPassPhrase, 'hex')
     if (buffer.length !== 32) throw new Error('Private key wrong length')
-    const ethereumKey = buffer.toString('hex')
+    const rskKey = buffer.toString('hex')
     return {
-      ethereumKey
+      rskKey
     }
   }
 
