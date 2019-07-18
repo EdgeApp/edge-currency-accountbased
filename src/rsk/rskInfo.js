@@ -36,7 +36,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'RBTC',
       multiplier: '1000000000000000000',
-      symbol: 'RBC'
+      symbol: 'RBTC'
     }
   ],
   symbolImage: `${imageServerUrl}/rsk-logo-solo-64.png`, // TODO: add logo
