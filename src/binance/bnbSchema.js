@@ -2,18 +2,37 @@
  * Created by paul on 8/27/17.
  */
 
-export const EtherscanGetBlockHeight = {
+export const DexBinanceOrgNodeInfo = {
   type: 'object',
   properties: {
-    result: { type: 'string' }
+    node_info: { type: 'string' },
+    sync_info: {
+      type: 'object',
+      properties: {
+        latest_block_hash: 'string',
+        latest_app_hash: 'string',
+        latest_block_height: 'number',
+        latest_block_time: 'string',
+        catching_up: 'boolean'
+      }
+    }
   },
-  required: ['result']
+  required: ['sync_info']
 }
 
-export const EtherscanGetAccountBalance = {
+export const DexBinanceOrgGetAccount = {
   type: 'object',
   properties: {
-    result: { type: 'string' }
+    address: { type: 'string' },
+    balances: {
+      type: 'array',
+      items: {
+        free: { type: 'string' },
+        frozen: { type: 'string' },
+        locked: { type: 'string' },
+        symbol: { type: 'string' }
+      }
+    }
   },
   required: ['result']
 }

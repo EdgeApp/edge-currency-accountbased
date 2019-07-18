@@ -3,36 +3,36 @@
  */
 // @flow
 
-// import { bns } from 'biggystring'
+import { bns } from 'biggystring'
 import { type EdgeTransaction, type EdgeWalletInfo } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-// import {
+import {
 //   addHexPrefix,
 //   asyncWaterfall,
 //   bufToHex,
 //   getEdgeInfoServer,
 //   isHex,
 //   normalizeAddress,
-//   promiseAny,
-//   shuffleArray,
-//   toHex,
-//   validateObject
-// } from '../common/utils.js'
+  promiseAny,
+  // shuffleArray,
+  // toHex,
+  validateObject
+} from '../common/utils.js'
 // import { currencyInfo } from './bnbInfo.js'
 // import { calcMiningFee } from './ethMiningFees.js'
 import { BinancePlugin } from './bnbPlugin.js'
 
-// import {
+import {
 //   EthGasStationSchema,
-//   EtherscanGetAccountBalance,
-//   EtherscanGetAccountNonce,
-//   EtherscanGetBlockHeight,
+  DexBinanceOrgGetAccount,
+  //   EtherscanGetAccountNonce,
+  DexBinanceOrgNodeInfo
 //   EtherscanGetTokenTransactions,
 //   EtherscanGetTransactions,
 //   NetworkFeesSchema,
 //   SuperEthGetUnconfirmedTransactions
-// } from './ethSchema.js'
+} from './bnbSchema.js'
 // import {
 //   type EthereumFee,
 //   type EthereumFeesGasPrice,
@@ -60,13 +60,13 @@ import { BinancePlugin } from './bnbPlugin.js'
 //   | 'getTokenBalance'
 //   | 'getTransactions'
 
-// async function broadcastWrapper (promise: Promise<Object>, server: string) {
-//   const out = {
-//     result: await promise,
-//     server
-//   }
-//   return out
-// }
+async function broadcastWrapper (promise: Promise<Object>, server: string) {
+  const out = {
+    result: await promise,
+    server
+  }
+  return out
+}
 
 const dummyTransaction: EdgeTransaction = {
   txid: '', // txid
@@ -155,55 +155,56 @@ export class BinanceEngine extends CurrencyEngine {
   //   return response.json()
   // }
 
-  // async checkBlockchainInnerLoop () {
-  //   try {
-  //     const jsonObj = await this.multicastServers('eth_blockNumber')
-  //     const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
-  //     if (valid) {
-  //       const blockHeight: number = parseInt(jsonObj.result, 16)
-  //       this.log(`Got block height ${blockHeight}`)
-  //       if (this.walletLocalData.blockHeight !== blockHeight) {
-  //         this.checkDroppedTransactionsThrottled()
-  //         this.walletLocalData.blockHeight = blockHeight // Convert to decimal
-  //         this.walletLocalDataDirty = true
-  //         this.currencyEngineCallbacks.onBlockHeightChanged(
-  //           this.walletLocalData.blockHeight
-  //         )
-  //       }
-  //     }
-  //   } catch (err) {
-  //     this.log('Error fetching height: ' + err)
-  //   }
-  // }
+  async checkBlockchainInnerLoop () {
+    try {
+      const jsonObj = await this.multicastServers('bnb_blockNumber')
+      const valid = validateObject(jsonObj, DexBinanceOrgNodeInfo)
+      if (valid) {
+        const blockHeight: number = jsonObj.sync_info.latest_block_height
+        this.log(`Got block height ${blockHeight}`)
+        if (this.walletLocalData.blockHeight !== blockHeight) {
+          this.checkDroppedTransactionsThrottled()
+          this.walletLocalData.blockHeight = blockHeight // Convert to decimal
+          this.walletLocalDataDirty = true
+          this.currencyEngineCallbacks.onBlockHeightChanged(
+            this.walletLocalData.blockHeight
+          )
+        }
+      }
+    } catch (err) {
+      this.log('Error fetching height: ' + err)
+    }
+  }
 
-  // updateBalance (tk: string, balance: string) {
-  //   if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-  //     this.walletLocalData.totalBalances[tk] = '0'
-  //   }
-  //   if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-  //     this.walletLocalData.totalBalances[tk] = balance
-  //     this.log(tk + ': token Address balance: ' + balance)
-  //     this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-  //   }
-  //   this.tokenCheckBalanceStatus[tk] = 1
-  //   this.updateOnAddressesChecked()
-  // }
+  updateBalance (tk: string, balance: string) {
+    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+      this.walletLocalData.totalBalances[tk] = '0'
+    }
+    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+      this.walletLocalData.totalBalances[tk] = balance
+      this.log(tk + ': token Address balance: ' + balance)
+      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+    }
+    this.tokenCheckBalanceStatus[tk] = 1
+    this.updateOnAddressesChecked()
+  }
 
-  // async checkAccountFetch (address: string) {
-  //   let jsonObj = {}
-  //   let valid = false
+  async checkAccountFetch (address: string) {
+    let jsonObj = {}
+    let valid = false
 
-  //   try {
-  //     jsonObj = await this.multicastServers('eth_getBalance', address)
-  //     valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-  //     if (valid) {
-  //       const balance = jsonObj.result
-  //       this.updateBalance('ETH', balance)
-  //     }
-  //   } catch (e) {
-  //     this.log(`Error checking token balance: ETH`)
-  //   }
-  // }
+    try {
+      jsonObj = await this.multicastServers('bnb_getBalance', address)
+      valid = validateObject(jsonObj, DexBinanceOrgGetAccount)
+      if (valid) {
+        const balances = jsonObj.balances
+        const balanceInfo = balances.find(balance => balance.symbol === 'BNB')
+        this.updateBalance('BNB', balanceInfo.free)
+      }
+    } catch (e) {
+      this.log(`Error checking token balance: BNB`)
+    }
+  }
 
   // async checkTokenBalanceFetch (
   //   address: string,
@@ -626,176 +627,170 @@ export class BinanceEngine extends CurrencyEngine {
   //   }
   // }
 
-  // async multicastServers (func: EthFunction, ...params: any): Promise<any> {
-  //   let out = { result: '', server: 'no server' }
-  //   let funcs, funcs2, url
-  //   switch (func) {
-  //     case 'broadcastTx':
-  //       const promises = []
-  //       promises.push(
-  //         broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
-  //       )
-  //       promises.push(
-  //         broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
-  //       )
-  //       promises.push(
-  //         broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher')
-  //       )
-  //       out = await promiseAny(promises)
+  async multicastServers (func: EthFunction, ...params: any): Promise<any> {
+    let out = { result: '', server: 'no server' }
+    let funcs, funcs2, url
+    switch (func) {
+      case 'broadcastTx':
+        const promises = []
+        promises.push(
+          broadcastWrapper(this.broadcastDexBinanceOrg(params[0]), 'dex-binance-org')
+        )
+        out = await promiseAny(promises)
 
-  //       this.log(`ETH multicastServers ${func} ${out.server} won`)
-  //       break
-  //     case 'eth_blockNumber':
-  //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-  //         server => async () => {
-  //           if (!server.includes('etherscan')) {
-  //             throw new Error(
-  //               `Unsupported command eth_blockNumber in ${server}`
-  //             )
-  //           }
-  //           const result = await this.fetchGetEtherscan(
-  //             server,
-  //             '?module=proxy&action=eth_blockNumber'
-  //           )
-  //           if (typeof result.result !== 'string') {
-  //             const msg = `Invalid return value eth_blockNumber in ${server}`
-  //             this.log(msg)
-  //             throw new Error(msg)
-  //           }
-  //           return { server, result }
-  //         }
-  //       )
-  //       funcs2 = async () => {
-  //         const result = await this.fetchPostInfura('eth_blockNumber', [])
-  //         return { server: 'infura', result }
-  //       }
-  //       funcs.push(funcs2)
-  //       // Randomize array
-  //       funcs = shuffleArray(funcs)
-  //       out = await asyncWaterfall(funcs)
-  //       break
+        this.log(`ETH multicastServers ${func} ${out.server} won`)
+        break
+      case 'eth_blockNumber':
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
+            if (!server.includes('etherscan')) {
+              throw new Error(
+                `Unsupported command eth_blockNumber in ${server}`
+              )
+            }
+            const result = await this.fetchGetEtherscan(
+              server,
+              '?module=proxy&action=eth_blockNumber'
+            )
+            if (typeof result.result !== 'string') {
+              const msg = `Invalid return value eth_blockNumber in ${server}`
+              this.log(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          }
+        )
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_blockNumber', [])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
 
-  //     case 'eth_getTransactionCount':
-  //       url = `?module=proxy&action=eth_getTransactionCount&address=${
-  //         params[0]
-  //       }&tag=latest`
-  //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-  //         server => async () => {
-  //           if (!server.includes('etherscan')) {
-  //             throw new Error(
-  //               `Unsupported command eth_getTransactionCount in ${server}`
-  //             )
-  //           }
-  //           const result = await this.fetchGetEtherscan(server, url)
-  //           if (typeof result.result !== 'string') {
-  //             const msg = `Invalid return value eth_getTransactionCount in ${server}`
-  //             this.log(msg)
-  //             throw new Error(msg)
-  //           }
-  //           return { server, result }
-  //         }
-  //       )
-  //       funcs2 = async () => {
-  //         const result = await this.fetchPostInfura('eth_getTransactionCount', [
-  //           params[0],
-  //           'latest'
-  //         ])
-  //         return { server: 'infura', result }
-  //       }
-  //       funcs.push(funcs2)
-  //       // Randomize array
-  //       funcs = shuffleArray(funcs)
-  //       out = await asyncWaterfall(funcs)
-  //       break
-  //     case 'eth_getBalance':
-  //       url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-  //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-  //         server => async () => {
-  //           const result = await this.fetchGetEtherscan(server, url)
-  //           if (typeof result.result !== 'string') {
-  //             const msg = `Invalid return value eth_getBalance in ${server}`
-  //             this.log(msg)
-  //             throw new Error(msg)
-  //           }
-  //           return { server, result }
-  //         }
-  //       )
-  //       funcs2 = async () => {
-  //         const result = await this.fetchPostInfura('eth_getBalance', [
-  //           params[0],
-  //           'latest'
-  //         ])
-  //         // Convert hex
-  //         if (!isHex(result.result)) {
-  //           throw new Error('Infura eth_getBalance not hex')
-  //         }
-  //         // Convert to decimal
-  //         result.result = bns.add(result.result, '0')
-  //         return { server: 'infura', result }
-  //       }
-  //       funcs.push(funcs2)
-  //       // Randomize array
-  //       funcs = shuffleArray(funcs)
-  //       out = await asyncWaterfall(funcs)
-  //       break
-  //     case 'getTokenBalance':
-  //       url = `?module=account&action=tokenbalance&contractaddress=${
-  //         params[1]
-  //       }&address=${params[0]}&tag=latest`
-  //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-  //         server => async () => {
-  //           const result = await this.fetchGetEtherscan(server, url)
-  //           if (typeof result.result !== 'string') {
-  //             const msg = `Invalid return value getTokenBalance in ${server}`
-  //             this.log(msg)
-  //             throw new Error(msg)
-  //           }
-  //           return { server, result }
-  //         }
-  //       )
-  //       // Randomize array
-  //       funcs = shuffleArray(funcs)
-  //       out = await asyncWaterfall(funcs)
-  //       break
-  //     case 'getTransactions':
-  //       const {
-  //         currencyCode,
-  //         address,
-  //         startBlock,
-  //         page,
-  //         offset,
-  //         contractAddress
-  //       } = params[0]
-  //       let startUrl
-  //       if (currencyCode === 'ETH') {
-  //         startUrl = `?action=txlist&module=account`
-  //       } else {
-  //         startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
-  //       }
-  //       url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-  //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-  //         server => async () => {
-  //           const result = await this.fetchGetEtherscan(server, url)
-  //           if (
-  //             typeof result.result !== 'object' ||
-  //             typeof result.result.length !== 'number'
-  //           ) {
-  //             const msg = `Invalid return value getTransactions in ${server}`
-  //             this.log(msg)
-  //             throw new Error(msg)
-  //           }
-  //           return { server, result }
-  //         }
-  //       )
-  //       // Randomize array
-  //       funcs = shuffleArray(funcs)
-  //       out = await asyncWaterfall(funcs)
-  //       break
-  //   }
-  //   this.log(`ETH multicastServers ${func} ${out.server} won`)
+      case 'eth_getTransactionCount':
+        url = `?module=proxy&action=eth_getTransactionCount&address=${
+          params[0]
+        }&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
+            if (!server.includes('etherscan')) {
+              throw new Error(
+                `Unsupported command eth_getTransactionCount in ${server}`
+              )
+            }
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              const msg = `Invalid return value eth_getTransactionCount in ${server}`
+              this.log(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          }
+        )
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_getTransactionCount', [
+            params[0],
+            'latest'
+          ])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+      case 'eth_getBalance':
+        url = `?module=account&action=balance&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              const msg = `Invalid return value eth_getBalance in ${server}`
+              this.log(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          }
+        )
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_getBalance', [
+            params[0],
+            'latest'
+          ])
+          // Convert hex
+          if (!isHex(result.result)) {
+            throw new Error('Infura eth_getBalance not hex')
+          }
+          // Convert to decimal
+          result.result = bns.add(result.result, '0')
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+      case 'getTokenBalance':
+        url = `?module=account&action=tokenbalance&contractaddress=${
+          params[1]
+        }&address=${params[0]}&tag=latest`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string') {
+              const msg = `Invalid return value getTokenBalance in ${server}`
+              this.log(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          }
+        )
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+      case 'getTransactions':
+        const {
+          currencyCode,
+          address,
+          startBlock,
+          page,
+          offset,
+          contractAddress
+        } = params[0]
+        let startUrl
+        if (currencyCode === 'ETH') {
+          startUrl = `?action=txlist&module=account`
+        } else {
+          startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
+        }
+        url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
+        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+          server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (
+              typeof result.result !== 'object' ||
+              typeof result.result.length !== 'number'
+            ) {
+              const msg = `Invalid return value getTransactions in ${server}`
+              this.log(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          }
+        )
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+    }
+    this.log(`ETH multicastServers ${func} ${out.server} won`)
 
-  //   return out.result
-  // }
+    return out.result
+  }
 
   // async clearBlockchainCache () {
   //   await super.clearBlockchainCache()
@@ -1093,27 +1088,27 @@ export class BinanceEngine extends CurrencyEngine {
   //   return jsonObj
   // }
 
-  // async broadcastInfura (
-  //   edgeTransaction: EdgeTransaction
-  // ): Promise<BroadcastResults> {
-  //   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+  async broadcastDexBinanceOrg (
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
-  //   const method = 'eth_sendRawTransaction'
-  //   const params = [edgeTransaction.signedTx]
+    const method = 'eth_sendRawTransaction'
+    const params = [edgeTransaction.signedTx]
 
-  //   const jsonObj = await this.fetchPostInfura(method, params)
+    const jsonObj = await this.fetchPostInfura(method, params)
 
-  //   if (typeof jsonObj.error !== 'undefined') {
-  //     this.log('EtherScan: Error sending transaction')
-  //     throw jsonObj.error
-  //   } else if (typeof jsonObj.result === 'string') {
-  //     // Success!!
-  //     this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
-  //     return jsonObj
-  //   } else {
-  //     throw new Error('Invalid return value on transaction send')
-  //   }
-  // }
+    if (typeof jsonObj.error !== 'undefined') {
+      this.log('EtherScan: Error sending transaction')
+      throw jsonObj.error
+    } else if (typeof jsonObj.result === 'string') {
+      // Success!!
+      this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
+      return jsonObj
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
 
   // async broadcastBlockCypher (
   //   edgeTransaction: EdgeTransaction
