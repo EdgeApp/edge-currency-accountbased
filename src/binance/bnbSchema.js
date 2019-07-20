@@ -2,12 +2,21 @@
  * Created by paul on 8/27/17.
  */
 
-export const EtherscanGetBlockHeight = {
+export const BinanceApiNodeInfo = {
   type: 'object',
   properties: {
-    result: { type: 'string' }
+    sync_info: {
+      type: 'object',
+      properties: {
+        latest_block_hash: { type: 'string' },
+        latest_app_hash: { type: 'string' },
+        latest_block_height: { type: 'number' },
+        latest_block_time: { type: 'string' },
+        catching_up: { type: 'boolean' }
+      }
+    }
   },
-  required: ['result']
+  required: ['sync_info']
 }
 
 export const EtherscanGetAccountBalance = {
@@ -18,7 +27,7 @@ export const EtherscanGetAccountBalance = {
   required: ['result']
 }
 
-export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
+// export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
 
 export const EtherscanGetTransactions = {
   type: 'object',
