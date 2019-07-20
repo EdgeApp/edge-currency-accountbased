@@ -3,19 +3,20 @@
  */
 // @flow
 
-// import { bns } from 'biggystring'
+import { bns } from 'biggystring'
 import { type EdgeTransaction, type EdgeWalletInfo } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
+  getDenomInfo,
   shuffleArray,
   validateObject
 } from '../common/utils.js'
 // import { currencyInfo } from './bnbInfo.js'
 // import { calcMiningFee } from './ethMiningFees.js'
 import { BinancePlugin } from './bnbPlugin.js'
-import { BinanceApiNodeInfo } from './bnbSchema.js'
+import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema.js'
 
 // import {
 //   type EthereumFee,
@@ -27,7 +28,7 @@ import { BinanceApiNodeInfo } from './bnbSchema.js'
 // } from './bnbTypes.js'
 
 // const PRIMARY_CURRENCY = currencyInfo.currencyCode
-// const ACCOUNT_POLL_MILLISECONDS = 20000
+const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 // const TRANSACTION_POLL_MILLISECONDS = 20000
 // const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
@@ -38,9 +39,9 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 
 type BnbFunction =
   // | 'broadcastTx'
-  'bnb_blockNumber'
+  'bnb_blockNumber' | 'bnb_getBalance'
 // | 'eth_getTransactionCount'
-// | 'eth_getBalance'
+// | 'bnb_getBalance'
 // | 'getTokenBalance'
 // | 'getTransactions'
 
@@ -141,58 +142,47 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  // updateBalance (tk: string, balance: string) {
-  //   if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-  //     this.walletLocalData.totalBalances[tk] = '0'
-  //   }
-  //   if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-  //     this.walletLocalData.totalBalances[tk] = balance
-  //     this.log(tk + ': token Address balance: ' + balance)
-  //     this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-  //   }
-  //   this.tokenCheckBalanceStatus[tk] = 1
-  //   this.updateOnAddressesChecked()
-  // }
+  updateBalance (tk: string, balance: string) {
+    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+      this.walletLocalData.totalBalances[tk] = '0'
+    }
+    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+      this.walletLocalData.totalBalances[tk] = balance
+      this.log(tk + ': token Address balance: ' + balance)
+      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+    }
+    this.tokenCheckBalanceStatus[tk] = 1
+    this.updateOnAddressesChecked()
+  }
 
-  // async checkAccountFetch (address: string) {
-  //   let jsonObj = {}
-  //   let valid = false
+  async checkAccountInnerLoop () {
+    const address = this.walletLocalData.publicKey
 
-  //   try {
-  //     jsonObj = await this.multicastServers('eth_getBalance', address)
-  //     valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-  //     if (valid) {
-  //       const balance = jsonObj.result
-  //       this.updateBalance('ETH', balance)
-  //     }
-  //   } catch (e) {
-  //     this.log(`Error checking token balance: ETH`)
-  //   }
-  // }
-
-  // async checkTokenBalanceFetch (
-  //   address: string,
-  //   contractAddress: string,
-  //   tk: string
-  // ) {
-  //   let jsonObj = {}
-  //   let valid = false
-
-  //   try {
-  //     jsonObj = await this.multicastServers(
-  //       'getTokenBalance',
-  //       address,
-  //       contractAddress
-  //     )
-  //     valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-  //     if (valid) {
-  //       const balance = jsonObj.result
-  //       this.updateBalance(tk, balance)
-  //     }
-  //   } catch (e) {
-  //     this.log(`Error checking token balance: ${tk}`)
-  //   }
-  // }
+    try {
+      const jsonObj = await this.multicastServers(
+        'bnb_getBalance',
+        `/api/v1/account/${address}`
+      )
+      const valid = validateObject(jsonObj, BinanceApiAccountBalance)
+      if (valid) {
+        for (const tk of this.walletLocalData.enabledTokens) {
+          for (const balance of jsonObj.balances) {
+            if (balance.symbol === tk) {
+              const denom = getDenomInfo(this.currencyInfo, tk)
+              if (!denom) {
+                this.log(`Received unsupported currencyCode: ${tk}`)
+                break
+              }
+              const nativeAmount = bns.mul(balance.free, denom.multiplier)
+              this.updateBalance(tk, nativeAmount)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      this.log(`Error checking BNB address balance`)
+    }
+  }
 
   // async checkAccountNonceFetch (address: string) {
   //   try {
@@ -209,39 +199,6 @@ export class BinanceEngine extends CurrencyEngine {
   //   } catch (e) {
   //     this.log(`Error checking account nonce`, e)
   //   }
-  // }
-
-  // async checkAccountInnerLoop () {
-  //   const address = this.walletLocalData.publicKey
-  //   try {
-  //     // Ethereum only has one address
-  //     const promiseArray = []
-
-  //     // ************************************
-  //     // Fetch token balances
-  //     // ************************************
-  //     // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
-  //     for (const tk of this.walletLocalData.enabledTokens) {
-  //       if (tk === PRIMARY_CURRENCY) {
-  //         promiseArray.push(this.checkAccountFetch(address))
-  //       } else {
-  //         const tokenInfo = this.getTokenInfo(tk)
-  //         if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-  //           promiseArray.push(
-  //             this.checkTokenBalanceFetch(
-  //               address,
-  //               tokenInfo.contractAddress,
-  //               tk
-  //             )
-  //           )
-  //         } else {
-  //           continue
-  //         }
-  //       }
-  //     }
-  //     promiseArray.push(this.checkAccountNonceFetch(address))
-  //     await Promise.all(promiseArray)
-  //   } catch (e) {}
   // }
 
   // processEtherscanTransaction (tx: EtherscanTransaction, currencyCode: string) {
@@ -611,6 +568,7 @@ export class BinanceEngine extends CurrencyEngine {
       //       this.log(`ETH multicastServers ${func} ${out.server} won`)
       //       break
       case 'bnb_blockNumber':
+      case 'bnb_getBalance':
         funcs = this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
           server => async () => {
             const result = await this.fetchGet(server + params[0])
@@ -659,37 +617,7 @@ export class BinanceEngine extends CurrencyEngine {
       //       funcs = shuffleArray(funcs)
       //       out = await asyncWaterfall(funcs)
       //       break
-      //     case 'eth_getBalance':
-      //       url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-      //       funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-      //         server => async () => {
-      //           const result = await this.fetchGetEtherscan(server, url)
-      //           if (typeof result.result !== 'string') {
-      //             const msg = `Invalid return value eth_getBalance in ${server}`
-      //             this.log(msg)
-      //             throw new Error(msg)
-      //           }
-      //           return { server, result }
-      //         }
-      //       )
-      //       funcs2 = async () => {
-      //         const result = await this.fetchPostInfura('eth_getBalance', [
-      //           params[0],
-      //           'latest'
-      //         ])
-      //         // Convert hex
-      //         if (!isHex(result.result)) {
-      //           throw new Error('Infura eth_getBalance not hex')
-      //         }
-      //         // Convert to decimal
-      //         result.result = bns.add(result.result, '0')
-      //         return { server: 'infura', result }
-      //       }
-      //       funcs.push(funcs2)
-      //       // Randomize array
-      //       funcs = shuffleArray(funcs)
-      //       out = await asyncWaterfall(funcs)
-      //       break
+
       //     case 'getTokenBalance':
       //       url = `?module=account&action=tokenbalance&contractaddress=${
       //         params[1]
@@ -762,7 +690,7 @@ export class BinanceEngine extends CurrencyEngine {
   async startEngine () {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    // this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     // this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     // this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     // this.addToLoop(
