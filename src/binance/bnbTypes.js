@@ -3,11 +3,9 @@
  */
 // @flow
 
-// export type EthereumInitOptions = {
-//   blockcypherApiKey?: string,
-//   etherscanApiKey?: string,
-//   infuraProjectId?: string
-// }
+export type BinanceInitOptions = {
+
+}
 
 export type BinanceSettings = {
   binanceApiServers: Array<string>

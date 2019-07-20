@@ -9,13 +9,13 @@ import { type EdgeTransaction, type EdgeWalletInfo } from 'edge-core-js/types'
 import { CurrencyEngine } from '../common/engine.js'
 import {
 //   addHexPrefix,
-//   asyncWaterfall,
-//   bufToHex,
-//   getEdgeInfoServer,
-//   isHex,
-//   normalizeAddress,
-  promiseAny,
-  // shuffleArray,
+  asyncWaterfall,
+  //   bufToHex,
+  //   getEdgeInfoServer,
+  //   isHex,
+  //   normalizeAddress,
+  // promiseAny,
+  shuffleArray,
   // toHex,
   validateObject
 } from '../common/utils.js'
@@ -33,14 +33,14 @@ import {
 //   NetworkFeesSchema,
 //   SuperEthGetUnconfirmedTransactions
 } from './bnbSchema.js'
-// import {
-//   type EthereumFee,
-//   type EthereumFeesGasPrice,
-//   type EthereumInitOptions,
-//   type EthereumTxOtherParams,
-//   type EthereumWalletOtherData,
-//   type EtherscanTransaction
-// } from './bnbTypes.js'
+import {
+  // type EthereumFee,
+  // type EthereumFeesGasPrice,
+  type BinanceInitOptions
+  // type EthereumTxOtherParams,
+  // type EthereumWalletOtherData,
+  // type EtherscanTransaction
+} from './bnbTypes.js'
 
 // const PRIMARY_CURRENCY = currencyInfo.currencyCode
 // const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -52,21 +52,21 @@ import {
 // const NUM_TRANSACTIONS_TO_QUERY = 50
 // const WEI_MULTIPLIER = 100000000
 
-// type EthFunction =
-//   | 'broadcastTx'
-//   | 'eth_blockNumber'
-//   | 'eth_getTransactionCount'
-//   | 'eth_getBalance'
-//   | 'getTokenBalance'
-//   | 'getTransactions'
+type EthFunction =
+  | 'broadcastTx'
+  | 'bnb_blockNumber'
+  | 'bnb_getTransactionCount'
+  | 'bnb_getBalance'
+  | 'getTokenBalance'
+  | 'getTransactions'
 
-async function broadcastWrapper (promise: Promise<Object>, server: string) {
-  const out = {
-    result: await promise,
-    server
-  }
-  return out
-}
+// async function broadcastWrapper (promise: Promise<Object>, server: string) {
+//   const out = {
+//     result: await promise,
+//     server
+//   }
+//   return out
+// }
 
 const dummyTransaction: EdgeTransaction = {
   txid: '', // txid
@@ -83,7 +83,7 @@ const dummyTransaction: EdgeTransaction = {
 export class BinanceEngine extends CurrencyEngine {
   binancePlugin: BinancePlugin
   // otherData: BinanceWalletOtherData
-  // initOptions: BinanceInitOptions
+  initOptions: BinanceInitOptions
 
   constructor (
     currencyPlugin: BinancePlugin,
@@ -101,39 +101,39 @@ export class BinanceEngine extends CurrencyEngine {
     // this.initOptions = initOptions
   }
 
-  // async fetchGetEtherscan (server: string, cmd: string) {
-  //   const { etherscanApiKey } = this.initOptions
-  //   let apiKey = ''
-  //   if (
-  //     etherscanApiKey &&
-  //     etherscanApiKey.length > 5 &&
-  //     server.includes('etherscan')
-  //   ) {
-  //     apiKey = '&apikey=' + etherscanApiKey
-  //   }
-  //   const url = `${server}/api${cmd}${apiKey}`
-  //   return this.fetchGet(url)
-  // }
+  async fetchGetDexBinanceOrg (server: string, cmd: string) {
+    // const { etherscanApiKey } = this.initOptions
+    // let apiKey = ''
+    // if (
+    //   etherscanApiKey &&
+    //   etherscanApiKey.length > 5 &&
+    //   server.includes('etherscan')
+    // ) {
+    //   apiKey = '&apikey=' + etherscanApiKey
+    // }
+    const url = `${server}/api/v1/${cmd}`
+    return this.fetchGet(url)
+  }
 
-  // async fetchGet (url: string) {
-  //   const response = await this.io.fetch(url, {
-  //     method: 'GET'
-  //   })
-  //   if (!response.ok) {
-  //     const {
-  //       blockcypherApiKey,
-  //       etherscanApiKey,
-  //       infuraProjectId
-  //     } = this.initOptions
-  //     if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
-  //     if (etherscanApiKey) url = url.replace(etherscanApiKey, 'private')
-  //     if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
-  //     throw new Error(
-  //       `The server returned error code ${response.status} for ${url}`
-  //     )
-  //   }
-  //   return response.json()
-  // }
+  async fetchGet (url: string) {
+    const response = await this.io.fetch(url, {
+      method: 'GET'
+    })
+    if (!response.ok) {
+      // const {
+      //   blockcypherApiKey,
+      //   etherscanApiKey,
+      //   infuraProjectId
+      // } = this.initOptions
+      // if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
+      // if (etherscanApiKey) url = url.replace(etherscanApiKey, 'private')
+      // if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
+      throw new Error(
+        `The server returned error code ${response.status} for ${url}`
+      )
+    }
+    return response.json()
+  }
 
   // async fetchPostBlockcypher (cmd: string, body: any) {
   //   const { blockcypherApiKey } = this.initOptions
@@ -631,57 +631,58 @@ export class BinanceEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
-      case 'broadcastTx':
-        const promises = []
-        promises.push(
-          broadcastWrapper(this.broadcastDexBinanceOrg(params[0]), 'dex-binance-org')
-        )
-        out = await promiseAny(promises)
+      // case 'broadcastTx':
+      //   const promises = []
+      //   promises.push(
+      //     broadcastWrapper(this.broadcastDexBinanceOrg(params[0]), 'dex-binance-org')
+      //   )
+      //   out = await promiseAny(promises)
 
-        this.log(`ETH multicastServers ${func} ${out.server} won`)
-        break
-      case 'eth_blockNumber':
-        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+      //   this.log(`ETH multicastServers ${func} ${out.server} won`)
+      //   break
+      case 'bnb_blockNumber':
+        funcs = this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
           server => async () => {
-            if (!server.includes('etherscan')) {
-              throw new Error(
-                `Unsupported command eth_blockNumber in ${server}`
-              )
-            }
-            const result = await this.fetchGetEtherscan(
+            // if (!server.includes('etherscan')) {
+            //   throw new Error(
+            //     `Unsupported command eth_blockNumber in ${server}`
+            //   )
+            // }
+            const result = await this.fetchGetDexBinanceOrg(
               server,
-              '?module=proxy&action=eth_blockNumber'
+              '/node-info'
             )
-            if (typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_blockNumber in ${server}`
+            const valid = validateObject(result, DexBinanceOrgNodeInfo)
+            if (!valid) {
+              const msg = `Invalid return value bnb_blockNumber in ${server}`
               this.log(msg)
               throw new Error(msg)
             }
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_blockNumber', [])
-          return { server: 'infura', result }
-        }
-        funcs.push(funcs2)
+        // funcs2 = async () => {
+        //   const result = await this.fetchPostInfura('eth_blockNumber', [])
+        //   return { server: 'infura', result }
+        // }
+        // funcs.push(funcs2)
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
 
-      case 'eth_getTransactionCount':
+      case 'bnb_getTransactionCount':
         url = `?module=proxy&action=eth_getTransactionCount&address=${
           params[0]
         }&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
+        funcs = this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
           server => async () => {
             if (!server.includes('etherscan')) {
               throw new Error(
                 `Unsupported command eth_getTransactionCount in ${server}`
               )
             }
-            const result = await this.fetchGetEtherscan(server, url)
+            const result = await this.fetchGetDexBinanceOrg(server, url)
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_getTransactionCount in ${server}`
               this.log(msg)
@@ -690,23 +691,23 @@ export class BinanceEngine extends CurrencyEngine {
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getTransactionCount', [
-            params[0],
-            'latest'
-          ])
-          return { server: 'infura', result }
-        }
+        // funcs2 = async () => {
+        //   const result = await this.fetchPostInfura('eth_getTransactionCount', [
+        //     params[0],
+        //     'latest'
+        //   ])
+        //   return { server: 'infura', result }
+        // }
         funcs.push(funcs2)
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
-      case 'eth_getBalance':
+      case 'bnb_getBalance':
         url = `?module=account&action=balance&address=${params[0]}&tag=latest`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
+            const result = await this.fetchGetDexBinanceOrg(server, url)
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_getBalance in ${server}`
               this.log(msg)
@@ -715,20 +716,20 @@ export class BinanceEngine extends CurrencyEngine {
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getBalance', [
-            params[0],
-            'latest'
-          ])
-          // Convert hex
-          if (!isHex(result.result)) {
-            throw new Error('Infura eth_getBalance not hex')
-          }
-          // Convert to decimal
-          result.result = bns.add(result.result, '0')
-          return { server: 'infura', result }
-        }
-        funcs.push(funcs2)
+        // funcs2 = async () => {
+        //   const result = await this.fetchPostInfura('eth_getBalance', [
+        //     params[0],
+        //     'latest'
+        //   ])
+        //   // Convert hex
+        //   if (!isHex(result.result)) {
+        //     throw new Error('Infura eth_getBalance not hex')
+        //   }
+        //   // Convert to decimal
+        //   result.result = bns.add(result.result, '0')
+        //   return { server: 'infura', result }
+        // }
+        // funcs.push(funcs2)
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -739,7 +740,7 @@ export class BinanceEngine extends CurrencyEngine {
         }&address=${params[0]}&tag=latest`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
+            const result = await this.fetchGetDexBinanceOrg(server, url)
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value getTokenBalance in ${server}`
               this.log(msg)
@@ -770,7 +771,7 @@ export class BinanceEngine extends CurrencyEngine {
         url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
+            const result = await this.fetchGetDexBinanceOrg(server, url)
             if (
               typeof result.result !== 'object' ||
               typeof result.result.length !== 'number'
@@ -1046,7 +1047,7 @@ export class BinanceEngine extends CurrencyEngine {
   //   const url = `?module=proxy&action=eth_sendRawTransaction&hex=${
   //     edgeTransaction.signedTx
   //   }`
-  //   const jsonObj = await this.fetchGetEtherscan(
+  //   const jsonObj = await this.fetchGetDexBinanceOrg(
   //     this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
   //     url
   //   )
@@ -1088,27 +1089,27 @@ export class BinanceEngine extends CurrencyEngine {
   //   return jsonObj
   // }
 
-  async broadcastDexBinanceOrg (
-    edgeTransaction: EdgeTransaction
-  ): Promise<BroadcastResults> {
-    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+  // async broadcastDexBinanceOrg (
+  //   edgeTransaction: EdgeTransaction
+  // ): Promise<BroadcastResults> {
+  //   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
-    const method = 'eth_sendRawTransaction'
-    const params = [edgeTransaction.signedTx]
+  //   const method = 'eth_sendRawTransaction'
+  //   const params = [edgeTransaction.signedTx]
 
-    const jsonObj = await this.fetchPostInfura(method, params)
+  //   const jsonObj = await this.fetchPostInfura(method, params)
 
-    if (typeof jsonObj.error !== 'undefined') {
-      this.log('EtherScan: Error sending transaction')
-      throw jsonObj.error
-    } else if (typeof jsonObj.result === 'string') {
-      // Success!!
-      this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
-      return jsonObj
-    } else {
-      throw new Error('Invalid return value on transaction send')
-    }
-  }
+  //   if (typeof jsonObj.error !== 'undefined') {
+  //     this.log('EtherScan: Error sending transaction')
+  //     throw jsonObj.error
+  //   } else if (typeof jsonObj.result === 'string') {
+  //     // Success!!
+  //     this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
+  //     return jsonObj
+  //   } else {
+  //     throw new Error('Invalid return value on transaction send')
+  //   }
+  // }
 
   // async broadcastBlockCypher (
   //   edgeTransaction: EdgeTransaction

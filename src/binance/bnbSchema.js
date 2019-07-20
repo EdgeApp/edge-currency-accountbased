@@ -37,7 +37,7 @@ export const DexBinanceOrgGetAccount = {
   required: ['result']
 }
 
-export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
+// export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
 
 export const EtherscanGetTransactions = {
   type: 'object',
