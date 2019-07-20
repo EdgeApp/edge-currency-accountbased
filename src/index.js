@@ -5,6 +5,7 @@
 
 import 'regenerator-runtime/runtime'
 
+import { makeBinancePlugin } from './binance/bnbPlugin.js'
 import { makeEosPlugin } from './eos/eosPlugin.js'
 import { makeEthereumPlugin } from './ethereum/ethPlugin.js'
 import { makeFioPlugin } from './fio/fioPlugin'
@@ -21,7 +22,8 @@ const plugins = {
   ripple: makeRipplePlugin,
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
-  rsk: makeRskPlugin
+  rsk: makeRskPlugin,
+  binance: makeBinancePlugin
 }
 
 if (
