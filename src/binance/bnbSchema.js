@@ -19,12 +19,21 @@ export const BinanceApiNodeInfo = {
   required: ['sync_info']
 }
 
-export const EtherscanGetAccountBalance = {
+export const BinanceApiAccountBalance = {
   type: 'object',
   properties: {
-    result: { type: 'string' }
+    address: { type: 'string' },
+    balances: {
+      type: 'array',
+      items: {
+        free: { type: 'string' },
+        frozen: { type: 'string' },
+        locked: { type: 'string' },
+        symbol: { type: 'string' }
+      }
+    }
   },
-  required: ['result']
+  required: ['balances', 'address']
 }
 
 // export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
