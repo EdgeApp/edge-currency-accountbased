@@ -21,15 +21,7 @@ import {
   BinanceApiGetTransactions,
   BinanceApiNodeInfo
 } from './bnbSchema.js'
-
-// import {
-//   type EthereumFee,
-//   type EthereumFeesGasPrice,
-//   type EthereumInitOptions,
-//   type EthereumTxOtherParams,
-//   type EthereumWalletOtherData,
-//   type EtherscanTransaction
-// } from './bnbTypes.js'
+import { type BinanceApiTransaction } from './bnbTypes.js'
 
 // const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -40,7 +32,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1554076800000 // 2019-04-01, BNB launched on 2019-04-18
-// const WEI_MULTIPLIER = 100000000
+const NATIVE_UNIT_MULTIPLIER = '100000000'
 
 type BnbFunction =
   // | 'broadcastTx'
@@ -203,62 +195,55 @@ export class BinanceEngine extends CurrencyEngine {
   //   }
   // }
 
-  // processEtherscanTransaction (tx: EtherscanTransaction, currencyCode: string) {
-  //   let netNativeAmount: string // Amount received into wallet
-  //   const ourReceiveAddresses: Array<string> = []
-  //   let nativeNetworkFee: string
+  processBinanceApiTransaction (
+    tx: BinanceApiTransaction,
+    currencyCode: string
+  ) {
+    let netNativeAmount: string // Amount received into wallet
+    const ourReceiveAddresses: Array<string> = []
+    const nativeNetworkFee: string = tx.txFee // always denominated in BNB
 
-  //   if (tx.contractAddress) {
-  //     nativeNetworkFee = '0'
-  //   } else {
-  //     nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
-  //   }
+    if (
+      tx.fromAddr.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // if it's a send to one's self
+      if (tx.fromAddr.toLowerCase() === tx.toAddr.toLowerCase()) {
+        // Spend to self. netNativeAmount is just the fee
+        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+      } else {
+        netNativeAmount = bns.sub('0', tx.value)
 
-  //   if (
-  //     tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
-  //   ) {
-  //     if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-  //       // Spend to self. netNativeAmount is just the fee
-  //       netNativeAmount = bns.mul(nativeNetworkFee, '-1')
-  //     } else {
-  //       netNativeAmount = bns.sub('0', tx.value)
+        // For spends, include the network fee in the transaction amount
+        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+      }
+    } else {
+      // Receive transaction
+      netNativeAmount = bns.add('0', tx.value)
+      // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+    }
 
-  //       // For spends, include the network fee in the transaction amount
-  //       netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
-  //     }
-  //   } else {
-  //     // Receive transaction
-  //     netNativeAmount = bns.add('0', tx.value)
-  //     ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
-  //   }
+    const otherParams: Object = {
+      code: tx.code,
+      orderId: tx.orderId
+    }
 
-  //   const otherParams: EthereumTxOtherParams = {
-  //     from: [tx.from],
-  //     to: [tx.to],
-  //     gas: tx.gas,
-  //     gasPrice: tx.gasPrice,
-  //     gasUsed: tx.gasUsed,
-  //     cumulativeGasUsed: tx.cumulativeGasUsed,
-  //     errorVal: parseInt(tx.isError),
-  //     tokenRecipientAddress: null
-  //   }
+    let blockHeight = tx.blockHeight
+    if (blockHeight < 0) blockHeight = 0
+    const unixTimestamp = new Date(tx.timeStamp)
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.txHash,
+      date: unixTimestamp.getTime(),
+      currencyCode,
+      blockHeight,
+      nativeAmount: bns.mul(netNativeAmount, NATIVE_UNIT_MULTIPLIER),
+      networkFee: bns.mul(tx.txFee, NATIVE_UNIT_MULTIPLIER),
+      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      signedTx: 'unsigned_right_now',
+      otherParams
+    }
 
-  //   let blockHeight = parseInt(tx.blockNumber)
-  //   if (blockHeight < 0) blockHeight = 0
-  //   const edgeTransaction: EdgeTransaction = {
-  //     txid: tx.hash,
-  //     date: parseInt(tx.timeStamp),
-  //     currencyCode,
-  //     blockHeight,
-  //     nativeAmount: netNativeAmount,
-  //     networkFee: nativeNetworkFee,
-  //     ourReceiveAddresses,
-  //     signedTx: 'unsigned_right_now',
-  //     otherParams
-  //   }
-
-  //   this.addTransaction(currencyCode, edgeTransaction)
-  // }
+    this.addTransaction(currencyCode, edgeTransaction)
+  }
 
   async checkTransactionsFetch (
     startTime: number,
@@ -289,17 +274,22 @@ export class BinanceEngine extends CurrencyEngine {
             BinanceApiGetTransactions
           )
           if (valid) {
-            // for (const transaction of transactionsResults.tx) {
-            //   this.processBinanceApiTransaction(transaction)
-            this.log(
-              `checkTransactionsFetch inner loop start = ${start}, end = ${end}, offset = ${offset}`
-            )
-            this.log(
-              `checkTransactionsFetch inner loop for ${currencyCode}, length = ${
-                transactionsResults.tx.length
-              }`
-            )
-            // }
+            for (const transaction of transactionsResults.tx) {
+              // shuold we process extra transaction for native BNB fees?
+              this.processBinanceApiTransaction(transaction, currencyCode)
+              this.log(
+                `checkTransactionsFetch inner loop start = ${start} (${new Date(
+                  start
+                ).toLocaleDateString()}), end = ${new Date(
+                  end
+                ).toLocaleDateString()}, offset = ${offset}`
+              )
+              this.log(
+                `checkTransactionsFetch inner loop for ${currencyCode}, length = ${
+                  transactionsResults.tx.length
+                }`
+              )
+            }
             if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
               break
             }
