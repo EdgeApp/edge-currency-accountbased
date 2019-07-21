@@ -16,7 +16,11 @@ import {
 // import { currencyInfo } from './bnbInfo.js'
 // import { calcMiningFee } from './ethMiningFees.js'
 import { BinancePlugin } from './bnbPlugin.js'
-import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema.js'
+import {
+  BinanceApiAccountBalance,
+  BinanceApiGetTransactions,
+  BinanceApiNodeInfo
+} from './bnbSchema.js'
 
 // import {
 //   type EthereumFee,
@@ -30,20 +34,18 @@ import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema.js'
 // const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-// const TRANSACTION_POLL_MILLISECONDS = 20000
+const TRANSACTION_POLL_MILLISECONDS = 3000
 // const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 // const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-// const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
-// const NUM_TRANSACTIONS_TO_QUERY = 50
+const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 * 7 // ~ one week
+const NUM_TRANSACTIONS_TO_QUERY = 50
+const TIMESTAMP_BEFORE_BNB_LAUNCH = 1554076800000 // 2019-04-01, BNB launched on 2019-04-18
 // const WEI_MULTIPLIER = 100000000
 
 type BnbFunction =
   // | 'broadcastTx'
-  'bnb_blockNumber' | 'bnb_getBalance'
+  'bnb_blockNumber' | 'bnb_getBalance' | 'bnb_getTransactions'
 // | 'eth_getTransactionCount'
-// | 'bnb_getBalance'
-// | 'getTokenBalance'
-// | 'getTransactions'
 
 // async function broadcastWrapper (promise: Promise<Object>, server: string) {
 //   const out = {
@@ -258,70 +260,73 @@ export class BinanceEngine extends CurrencyEngine {
   //   this.addTransaction(currencyCode, edgeTransaction)
   // }
 
-  // async checkTransactionsFetch (
-  //   startBlock: number,
-  //   currencyCode: string
-  // ): Promise<boolean> {
-  //   const address = this.walletLocalData.publicKey
-  //   let checkAddressSuccess = false
-  //   let page = 1
-  //   let contractAddress = ''
-  //   let schema
+  async checkTransactionsFetch (
+    startTime: number,
+    currencyCode: string
+  ): Promise<boolean> {
+    const address = this.walletLocalData.publicKey
+    let checkAddressSuccess = true
+    let start = startTime
+    let end = 0
+    const now = Date.now()
+    try {
+      while (end !== now && checkAddressSuccess) {
+        // loop from startTime to current time by 3-month increments
+        end = start + 86400 * 1000 * 28 * 3
+        if (end > now) end = now
+        for (let offset = 0; ; offset += NUM_TRANSACTIONS_TO_QUERY) {
+          // loop by 50-tx increments
+          const baseUrl = `/api/v1/transactions?address=${address}&txType=TRANSFER&limit=${NUM_TRANSACTIONS_TO_QUERY}`
+          const finalUrl =
+            baseUrl +
+            `&offset=${offset}&startTime=${start}&endTime=${end}&txAsset=${currencyCode}`
+          const transactionsResults = await this.multicastServers(
+            'bnb_getTransactions',
+            finalUrl
+          )
+          const valid = validateObject(
+            transactionsResults,
+            BinanceApiGetTransactions
+          )
+          if (valid) {
+            // for (const transaction of transactionsResults.tx) {
+            //   this.processBinanceApiTransaction(transaction)
+            this.log(
+              `checkTransactionsFetch inner loop start = ${start}, end = ${end}, offset = ${offset}`
+            )
+            this.log(
+              `checkTransactionsFetch inner loop for ${currencyCode}, length = ${
+                transactionsResults.tx.length
+              }`
+            )
+            // }
+            if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
+              break
+            }
+          } else {
+            checkAddressSuccess = false
+            break
+          }
+        }
+        start = end
+      }
+    } catch (e) {
+      this.log(
+        `Error checkTransactionsFetch ${currencyCode}: ${
+          this.walletLocalData.publicKey
+        }`,
+        e
+      )
+    }
 
-  //   if (currencyCode !== PRIMARY_CURRENCY) {
-  //     const tokenInfo = this.getTokenInfo(currencyCode)
-  //     if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-  //       contractAddress = tokenInfo.contractAddress
-  //       schema = EtherscanGetTokenTransactions
-  //     } else {
-  //       return false
-  //     }
-  //   } else {
-  //     schema = EtherscanGetTransactions
-  //   }
-
-  //   try {
-  //     while (1) {
-  //       const offset = NUM_TRANSACTIONS_TO_QUERY
-  //       const jsonObj = await this.multicastServers('getTransactions', {
-  //         currencyCode,
-  //         address,
-  //         startBlock,
-  //         page,
-  //         offset,
-  //         contractAddress
-  //       })
-  //       const valid = validateObject(jsonObj, schema)
-  //       if (valid) {
-  //         const transactions = jsonObj.result
-  //         for (let i = 0; i < transactions.length; i++) {
-  //           const tx = transactions[i]
-  //           this.processEtherscanTransaction(tx, currencyCode)
-  //         }
-  //         if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
-  //           checkAddressSuccess = true
-  //           break
-  //         }
-  //         page++
-  //       } else {
-  //         break
-  //       }
-  //     }
-  //   } catch (e) {
-  //     this.log(
-  //       `Error checkTransactionsFetch ETH: ${this.walletLocalData.publicKey}`,
-  //       e
-  //     )
-  //   }
-
-  //   if (checkAddressSuccess) {
-  //     this.tokenCheckTransactionsStatus[currencyCode] = 1
-  //     this.updateOnAddressesChecked()
-  //     return true
-  //   } else {
-  //     return false
-  //   }
-  // }
+    if (checkAddressSuccess) {
+      this.tokenCheckTransactionsStatus[currencyCode] = 1
+      // this.updateOnAddressesChecked()
+      return true
+    } else {
+      return false
+    }
+  }
 
   // processUnconfirmedTransaction (tx: Object) {
   //   const fromAddress = '0x' + tx.inputs[0].addresses[0]
@@ -407,47 +412,47 @@ export class BinanceEngine extends CurrencyEngine {
   //   }
   // }
 
-  // async checkTransactionsInnerLoop () {
-  //   const blockHeight = this.walletLocalData.blockHeight
-  //   let startBlock: number = 0
-  //   const promiseArray = []
+  async checkTransactionsInnerLoop () {
+    const blockHeight = this.walletLocalData.blockHeight
+    let startTime: number = TIMESTAMP_BEFORE_BNB_LAUNCH
+    const promiseArray = []
 
-  //   if (
-  //     this.walletLocalData.lastAddressQueryHeight >
-  //     ADDRESS_QUERY_LOOKBACK_BLOCKS
-  //   ) {
-  //     // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-  //     startBlock =
-  //       this.walletLocalData.lastAddressQueryHeight -
-  //       ADDRESS_QUERY_LOOKBACK_BLOCKS
-  //   }
+    if (
+      this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_TIME
+    ) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_TIME from the last time we queried transactions
+      startTime =
+        this.walletLocalData.lastAddressQueryHeight -
+        ADDRESS_QUERY_LOOKBACK_TIME
+    }
 
-  //   for (const currencyCode of this.walletLocalData.enabledTokens) {
-  //     promiseArray.push(this.checkTransactionsFetch(startBlock, currencyCode))
-  //   }
+    for (const currencyCode of this.walletLocalData.enabledTokens) {
+      promiseArray.push(this.checkTransactionsFetch(startTime, currencyCode))
+    }
 
-  //   let resultArray = []
-  //   try {
-  //     resultArray = await Promise.all(promiseArray)
-  //   } catch (e) {
-  //     this.log('Failed to query transactions')
-  //     this.log(e.name)
-  //     this.log(e.message)
-  //   }
-  //   let successCount = 0
-  //   for (const r of resultArray) {
-  //     if (r) successCount++
-  //   }
-  //   if (successCount === promiseArray.length) {
-  //     this.walletLocalData.lastAddressQueryHeight = blockHeight
-  //   }
-  //   if (this.transactionsChangedArray.length > 0) {
-  //     this.currencyEngineCallbacks.onTransactionsChanged(
-  //       this.transactionsChangedArray
-  //     )
-  //     this.transactionsChangedArray = []
-  //   }
-  // }
+    let resultArray = []
+    try {
+      resultArray = await Promise.all(promiseArray)
+    } catch (e) {
+      this.log('Failed to query transactions')
+      this.log(e.name)
+      this.log(e.message)
+    }
+    let successCount = 0
+    for (const r of resultArray) {
+      if (r) successCount++
+    }
+    if (successCount === promiseArray.length) {
+      // should be time
+      this.walletLocalData.lastAddressQueryHeight = blockHeight
+    }
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
+  }
 
   // async checkUpdateNetworkFees () {
   //   try {
@@ -569,6 +574,7 @@ export class BinanceEngine extends CurrencyEngine {
       //       break
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
+      case 'bnb_getTransactions':
         funcs = this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
           server => async () => {
             const result = await this.fetchGet(server + params[0])
@@ -692,7 +698,7 @@ export class BinanceEngine extends CurrencyEngine {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     // this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    // this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     // this.addToLoop(
     //   'checkUnconfirmedTransactionsInnerLoop',
     //   UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS

@@ -38,45 +38,39 @@ export const BinanceApiAccountBalance = {
 
 // export const EtherscanGetAccountNonce = EtherscanGetAccountBalance
 
-export const EtherscanGetTransactions = {
+export const BinanceApiGetTransactions = {
   type: 'object',
   properties: {
-    result: {
+    tx: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          blockNumber: { type: 'string' },
+          blockHeight: { type: 'number' },
           timeStamp: { type: 'string' },
-          hash: { type: 'string' },
-          from: { type: 'string' },
-          to: { type: 'string' },
-          nonce: { type: 'string' },
+          txHash: { type: 'string' },
+          fromAddr: { type: 'string' },
+          toAddr: { type: 'string' },
           value: { type: 'string' },
-          gas: { type: 'string' },
-          gasPrice: { type: 'string' },
-          cumulativeGasUsed: { type: 'string' },
-          gasUsed: { type: 'string' },
-          confirmations: { type: 'string' }
+          txFee: { type: 'string' },
+          txAsset: { type: 'string' },
+          memo: { type: 'string' }
         },
         required: [
-          'blockNumber',
+          'blockHeight',
           'timeStamp',
-          'hash',
-          'from',
-          'to',
-          'nonce',
+          'txHash',
+          'fromAddr',
+          'toAddr',
           'value',
-          'gas',
-          'gasPrice',
-          'cumulativeGasUsed',
-          'gasUsed',
-          'confirmations'
+          'txFee',
+          'txAsset',
+          'memo'
         ]
       }
     }
   },
-  required: ['result']
+  required: ['tx']
 }
 
 export const EtherscanGetTokenTransactions = {
