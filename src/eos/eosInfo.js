@@ -3,6 +3,7 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { imageServerUrl } from '../common/utils'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
@@ -35,8 +36,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'E'
     }
   ],
-  symbolImage: 'https://developer.airbitz.co/content/eos-logo-solo-64.png',
-  symbolImageDarkMono:
-    'https://developer.airbitz.co/content/eos-logo-solo-64.png',
+  symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
   metaTokens: []
 }

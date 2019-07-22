@@ -189,6 +189,8 @@ function getEdgeInfoServer () {
   return 'https://info1.edgesecure.co:8444'
 }
 
+const imageServerUrl = 'https://developer.airbitz.co/content'
+
 export {
   normalizeAddress,
   addHexPrefix,
@@ -199,5 +201,6 @@ export {
   shuffleArray,
   snoozeReject,
   getEdgeInfoServer,
-  promiseAny
+  promiseAny,
+  imageServerUrl
 }

@@ -3,6 +3,7 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { imageServerUrl } from '../common/utils'
 import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {
@@ -37,8 +38,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'X'
     }
   ],
-  symbolImage: 'https://developer.airbitz.co/content/ripple-logo-solo-64.png',
-  symbolImageDarkMono:
-    'https://developer.airbitz.co/content/ripple-logo-solo-64.png',
+  symbolImage: `${imageServerUrl}/ripple-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/ripple-logo-solo-64.png`,
   metaTokens: []
 }
