@@ -25,5 +25,8 @@ module.exports = {
     filename: 'edge-currency-accountbased.js',
     path: path.join(path.resolve(__dirname), 'lib/react-native')
   },
-  plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)]
+  plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)],
+  node: {
+    fs: 'empty'
+  }
 }

@@ -8,6 +8,7 @@ import 'regenerator-runtime/runtime'
 import { makeEosPlugin } from './eos/eosPlugin.js'
 import { makeEthereumPlugin } from './ethereum/ethPlugin.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
+import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
 
 const plugins = {
@@ -15,7 +16,8 @@ const plugins = {
   ethereum: makeEthereumPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
-  stellar: makeStellarPlugin
+  stellar: makeStellarPlugin,
+  tezos: makeTezosPlugin
 }
 
 if (
