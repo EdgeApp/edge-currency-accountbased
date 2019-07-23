@@ -1,3 +1,5 @@
+import { FIOSDK } from '@dapix/react-native-fio'
+import { bns } from 'biggystring'
 /**
  * Created by paul on 8/8/17.
  */
@@ -12,18 +14,17 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import { bns } from 'biggystring'
+
+import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
+import { getFetchJson } from '../react-native-io.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
-import { CurrencyPlugin } from '../common/plugin.js'
-import { getFetchJson } from '../react-native-io.js'
-import { FIOSDK } from '@dapix/react-native-fio'
 
 export function checkAddress (address: string): boolean {
   const start = address.startsWith('FIO')
   const lenght = address.length === 53
-  return (start && lenght)
+  return start && lenght
 }
 
 export class FioPlugin extends CurrencyPlugin {
@@ -54,9 +55,14 @@ export class FioPlugin extends CurrencyPlugin {
   }
 
   async parseUri (uri: string): Promise<EdgeParsedUri> {
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
-      fio: true
-    }, 'FIO')
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+      currencyInfo,
+      uri,
+      {
+        fio: true
+      },
+      'FIO'
+    )
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -152,8 +158,7 @@ export function makeFioPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin 
   }
 
   const otherMethods = {
-    isAddressAvailable: async (fioAddress: string): Promise<any> => {
-    },
+    isAddressAvailable: async (fioAddress: string): Promise<any> => {},
     getActivationSupportedCurrencies: async (): Promise<Object> => {
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]

@@ -1,5 +1,6 @@
 export default [
-  { pluginName: 'ripple',
+  {
+    pluginName: 'ripple',
     WALLET_TYPE: 'wallet:ripple',
     'Test Currency code': 'XRP',
     key: [
@@ -114,7 +115,9 @@ export default [
       40,
       238
     ]
-  }, { pluginName: 'fio',
+  },
+  {
+    pluginName: 'fio',
     WALLET_TYPE: 'wallet:fio',
     'Test Currency code': 'FIO',
     key: [

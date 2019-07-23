@@ -3,13 +3,15 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
+const defaultSettings: any = {}
+
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'FIO',
   displayName: 'FIO',
   pluginName: 'fio',
   walletType: 'wallet:fio',
-
+  defaultSettings,
   addressExplorer: 'https://eospark.com/account/%s',
   transactionExplorer: 'https://eospark.com/tx/%s',
 
@@ -21,7 +23,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'ᵮ'
     }
   ],
-  symbolImage: 'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
-  symbolImageDarkMono: 'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
+  symbolImage:
+    'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
+  symbolImageDarkMono:
+    'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
   metaTokens: []
 }

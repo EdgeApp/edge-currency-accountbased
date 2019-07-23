@@ -420,7 +420,8 @@ export default [
         'ethereum:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=0.000123&label=Johnny%20Ether&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
-  }, {
+  },
+  {
     pluginName: 'fio',
     WALLET_TYPE: 'wallet:fio',
     'Test Currency code': 'FIO',
@@ -462,8 +463,11 @@ export default [
     key_length: 51,
     'invalid key name': {
       type: 'wallet:fio',
-      keys: { fioKeyz: '5KG4yxR4j1S1UFk4mGraAfGrWh7TS5uiJmhtkG4vPunFWg84wuP',
-        mnemonic: 'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot' }
+      keys: {
+        fioKeyz: '5KG4yxR4j1S1UFk4mGraAfGrWh7TS5uiJmhtkG4vPunFWg84wuP',
+        mnemonic:
+          'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot'
+      }
     },
     'invalid wallet type': {
       type: 'wallet:fiox',
@@ -520,15 +524,13 @@ export default [
     encodeUri: {
       'address only': [
         {
-          publicAddress:
-            'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
+          publicAddress: 'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
         },
         'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
       ],
       'weird address': [
         {
-          publicAddress:
-            'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
+          publicAddress: 'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
         },
         'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z'
       ],
