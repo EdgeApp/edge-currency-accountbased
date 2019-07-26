@@ -29,10 +29,11 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 // const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 // const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 * 7 // ~ one week
+const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1554076800000 // 2019-04-01, BNB launched on 2019-04-18
 const NATIVE_UNIT_MULTIPLIER = '100000000'
+const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
 
 type BnbFunction =
   // | 'broadcastTx'
@@ -255,11 +256,14 @@ export class BinanceEngine extends CurrencyEngine {
     let end = 0
     const now = Date.now()
     try {
+      // this.log('checkTransactionsFetch start of while loop')
       while (end !== now && checkAddressSuccess) {
         // loop from startTime to current time by 3-month increments
-        end = start + 86400 * 1000 * 28 * 3
+        end = start + TRANSACTION_QUERY_TIME_WINDOW
         if (end > now) end = now
+        // this.log('checkTransactionsFetch outer loop: ', start, ' and end: ', end)
         for (let offset = 0; ; offset += NUM_TRANSACTIONS_TO_QUERY) {
+          // this.log('checkTransactionsFetch inner loop, offset is: ', offset)
           // loop by 50-tx increments
           const baseUrl = `/api/v1/transactions?address=${address}&txType=TRANSFER&limit=${NUM_TRANSACTIONS_TO_QUERY}`
           const finalUrl =
@@ -277,24 +281,25 @@ export class BinanceEngine extends CurrencyEngine {
             for (const transaction of transactionsResults.tx) {
               // shuold we process extra transaction for native BNB fees?
               this.processBinanceApiTransaction(transaction, currencyCode)
-              this.log(
-                `checkTransactionsFetch inner loop start = ${start} (${new Date(
-                  start
-                ).toLocaleDateString()}), end = ${new Date(
-                  end
-                ).toLocaleDateString()}, offset = ${offset}`
-              )
-              this.log(
-                `checkTransactionsFetch inner loop for ${currencyCode}, length = ${
-                  transactionsResults.tx.length
-                }`
-              )
+              // this.log(
+              //   `checkTransactionsFetch inner loop start = ${start} (${new Date(
+              //     start
+              //   ).toLocaleDateString()}), end = ${new Date(
+              //     end
+              //   ).toLocaleDateString()}, offset = ${offset}`
+              // )
+              // this.log(
+              //   `checkTransactionsFetch inner loop for ${currencyCode}, length = ${
+              //     transactionsResults.tx.length
+              //   }`
+              // )
             }
             if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
               break
             }
           } else {
             checkAddressSuccess = false
+            this.log('checkTransactionsFetch inner loop invalid query results')
             break
           }
         }
@@ -403,7 +408,7 @@ export class BinanceEngine extends CurrencyEngine {
   // }
 
   async checkTransactionsInnerLoop () {
-    const blockHeight = this.walletLocalData.blockHeight
+    const blockHeight = Date.now()
     let startTime: number = TIMESTAMP_BEFORE_BNB_LAUNCH
     const promiseArray = []
 
