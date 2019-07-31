@@ -264,28 +264,43 @@ class CurrencyEngine {
     return b.date - a.date
   }
 
+  // Add or update tx in transactionList
   addTransaction (
     currencyCode: string,
     edgeTransaction: EdgeTransaction,
     lastSeenTime?: number
   ) {
-    // Add or update tx in transactionList
+    this.log('executing addTransaction: ', edgeTransaction)
+    // remove SPAM and proxy allowance transactions (ie DEX extra transaction)
+    // this should reduce confusion for users
+    if (
+      edgeTransaction.nativeAmount === '0' &&
+      edgeTransaction.networkFee === '0'
+    ) {
+      return
+    }
+    // set otherParams if not already set
     if (!edgeTransaction.otherParams) {
       edgeTransaction.otherParams = {}
     }
+
     if (edgeTransaction.blockHeight < 1) {
       edgeTransaction.otherParams.lastSeenTime =
         lastSeenTime || Math.round(Date.now() / 1000)
     }
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(currencyCode, txid)
+    // if blockHeight of transaction is higher than known blockHeight
+    // then set transaction's blockHeight as the highest known blockHeight
     if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
       this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
     }
 
-    let needsResort = false
+    let needsReSort = false
+    // if transaction doesn't exist in database
     if (idx === -1) {
       if (
+        // if unconfirmed spend then increment # uncofirmed spend TX's
         this.isSpendTx(edgeTransaction) &&
         edgeTransaction.blockHeight === 0
       ) {
@@ -293,8 +308,8 @@ class CurrencyEngine {
         this.walletLocalDataDirty = true
       }
 
-      needsResort = true
-      this.log('addTransaction: adding and sorting:' + edgeTransaction.txid)
+      needsReSort = true
+      // if currency's transactionList is uninitialized then initialize
       if (typeof this.transactionList[currencyCode] === 'undefined') {
         this.transactionList[currencyCode] = []
       } else if (
@@ -302,6 +317,7 @@ class CurrencyEngine {
       ) {
         return
       }
+      // add transaction to list of tx's, and array of changed transactions
       this.transactionList[currencyCode].push(edgeTransaction)
 
       this.transactionListDirty = true
@@ -312,6 +328,7 @@ class CurrencyEngine {
       const edgeTx = transactionsArray[idx]
 
       if (
+        // if something in the transaction has changed?
         edgeTx.blockHeight < edgeTransaction.blockHeight ||
         (edgeTx.blockHeight === 0 && edgeTransaction.blockHeight < 0) ||
         (edgeTx.blockHeight === edgeTransaction.blockHeight &&
@@ -332,7 +349,7 @@ class CurrencyEngine {
           this.walletLocalDataDirty = true
         }
         if (edgeTx.date !== edgeTransaction.date) {
-          needsResort = true
+          needsReSort = true
         }
         this.log(
           `Update transaction: ${edgeTransaction.txid} height:${
@@ -344,7 +361,7 @@ class CurrencyEngine {
         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
       }
     }
-    if (needsResort) {
+    if (needsReSort) {
       this.sortTransactions(currencyCode)
     }
   }
@@ -889,9 +906,19 @@ class CurrencyEngine {
     return { edgeSpendInfo, nativeBalance, currencyCode, denom }
   }
 
+  // called by GUI after sliding to confirm
   async saveTx (edgeTransaction: EdgeTransaction) {
+    // add the transaction to disk and fire off callback (alert in GUI)
     this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)
-    this.currencyEngineCallbacks.onTransactionsChanged([edgeTransaction])
+    this.log(
+      'executing back in saveTx and this.transactionsChangedArray is: ',
+      this.transactionsChangedArray
+    )
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+    }
   }
 }
 
