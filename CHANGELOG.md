@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.1.19 (2019-07-31)
+
+- Implement ignoring of zero-amount transactions (ie proxy allowance)
+
 # 0.1.18 (2019-07-12)
 
 - Fix `edgeTransaction.otherParams.data` issue throwing error when `otherParams` does not exist
