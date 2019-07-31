@@ -61,6 +61,12 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
+  importPrivateKey (privateKey: string): Promise<{ stellarKey: string }> {
+    privateKey.replace(/ /g, '')
+    if (privateKey.length !== 56) throw new Error('Private key wrong length')
+    return Promise.resolve({ stellarKey: privateKey })
+  }
+
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'stellar') {
