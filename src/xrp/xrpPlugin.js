@@ -87,6 +87,8 @@ export class XrpPlugin extends CurrencyPlugin {
     if (privateKey.length !== 29 && privateKey.length !== 31) {
       throw new Error('Private key wrong length')
     }
+    const keypair = keypairs.deriveKeypair(privateKey)
+    keypairs.deriveAddress(keypair.publicKey)
     return Promise.resolve({ rippleKey: privateKey })
   }
 
