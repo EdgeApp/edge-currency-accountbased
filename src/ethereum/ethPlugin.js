@@ -74,8 +74,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     const buffer = Buffer.from(strippedPassPhrase, 'hex')
     if (buffer.length !== 32) throw new Error('Private key wrong length')
     const ethereumKey = buffer.toString('hex')
-    const privKey = hexToBuf(ethereumKey)
-    const wallet = ethWallet.fromPrivateKey(privKey)
+    const wallet = ethWallet.fromPrivateKey(buffer)
     wallet.getAddressString()
     return {
       ethereumKey
