@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.2.0 (2019-08-01)
+
+- Allow importing of XLM and XRP private keys
+
 # 0.1.19 (2019-07-31)
 
 - Implement ignoring of zero-amount transactions (ie proxy allowance)
