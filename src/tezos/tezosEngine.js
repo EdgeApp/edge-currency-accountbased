@@ -8,7 +8,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { eztz } from 'eztz'
+import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, promiseAny, validateObject } from '../common/utils.js'
