@@ -4,7 +4,7 @@
 // @flow
 
 import { bns } from 'biggystring'
-import { type EdgeTransaction, type EdgeWalletInfo } from 'edge-core-js/types'
+import { type EdgeTransaction, type EdgeWalletInfo, type EdgeSpendInfo, InsufficientFundsError } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -13,7 +13,7 @@ import {
   shuffleArray,
   validateObject
 } from '../common/utils.js'
-// import { currencyInfo } from './bnbInfo.js'
+import { currencyInfo } from './bnbInfo.js'
 // import { calcMiningFee } from './ethMiningFees.js'
 import { BinancePlugin } from './bnbPlugin.js'
 import {
@@ -21,9 +21,9 @@ import {
   BinanceApiGetTransactions,
   BinanceApiNodeInfo
 } from './bnbSchema.js'
-import { type BinanceApiTransaction } from './bnbTypes.js'
+import { type BinanceApiTransaction, type BinanceTxOtherParams } from './bnbTypes.js'
 
-// const PRIMARY_CURRENCY = currencyInfo.currencyCode
+const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
@@ -36,7 +36,7 @@ const NATIVE_UNIT_MULTIPLIER = '100000000'
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
 
 type BnbFunction =
-  // | 'broadcastTx'
+  'broadcastTx' |
   'bnb_blockNumber' | 'bnb_getBalance' | 'bnb_getTransactions'
 // | 'eth_getTransactionCount'
 
@@ -707,221 +707,146 @@ export class BinanceEngine extends CurrencyEngine {
     // await this.startEngine()
   }
 
-  // async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
-  //   const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
-  //   // Ethereum can only have one output
-  //   if (edgeSpendInfo.spendTargets.length !== 1) {
-  //     throw new Error('Error: only one output allowed')
-  //   }
+    // Ethereum can only have one output
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
 
-  //   const spendTarget = edgeSpendInfo.spendTargets[0]
-  //   const publicAddress = spendTarget.publicAddress
-  //   const data =
-  //     spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const publicAddress = spendTarget.publicAddress
+    const data =
+      spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
 
-  //   let otherParams: Object = {}
-  //   const { gasLimit, gasPrice } = calcMiningFee(
-  //     edgeSpendInfo,
-  //     this.walletLocalData.otherData.networkFees
-  //   )
+    let otherParams: Object = {}
 
-  //   if (currencyCode === PRIMARY_CURRENCY) {
-  //     const ethParams: EthereumTxOtherParams = {
-  //       from: [this.walletLocalData.publicKey],
-  //       to: [publicAddress],
-  //       gas: gasLimit,
-  //       gasPrice: gasPrice,
-  //       gasUsed: '0',
-  //       cumulativeGasUsed: '0',
-  //       errorVal: 0,
-  //       tokenRecipientAddress: null,
-  //       data: data
-  //     }
-  //     otherParams = ethParams
-  //   } else {
-  //     let contractAddress = ''
-  //     if (data) {
-  //       contractAddress = publicAddress
-  //     } else {
-  //       const tokenInfo = this.getTokenInfo(currencyCode)
-  //       if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
-  //         throw new Error(
-  //           'Error: Token not supported or invalid contract address'
-  //         )
-  //       }
+    if (currencyCode === PRIMARY_CURRENCY) {
+      const bnbParams: BinanceTxOtherParams = {
+        from: [this.walletLocalData.publicKey],
+        to: [publicAddress],
+        errorVal: 0,
+        tokenRecipientAddress: null,
+        data: data
+      }
+      otherParams = bnbParams
+    } else {
+      let contractAddress = ''
+      if (data) {
+        contractAddress = publicAddress
+      } else {
+        const tokenInfo = this.getTokenInfo(currencyCode)
+        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+          throw new Error(
+            'Error: Token not supported or invalid contract address'
+          )
+        }
 
-  //       contractAddress = tokenInfo.contractAddress
-  //     }
+        contractAddress = tokenInfo.contractAddress
+      }
 
-  //     const ethParams: EthereumTxOtherParams = {
-  //       from: [this.walletLocalData.publicKey],
-  //       to: [contractAddress],
-  //       gas: gasLimit,
-  //       gasPrice: gasPrice,
-  //       gasUsed: '0',
-  //       cumulativeGasUsed: '0',
-  //       errorVal: 0,
-  //       tokenRecipientAddress: publicAddress,
-  //       data: data
-  //     }
-  //     otherParams = ethParams
-  //   }
+      const bnbParams: BinanceTxOtherParams = {
+        from: [this.walletLocalData.publicKey],
+        to: [contractAddress],
+        // gas: gasLimit,
+        // gasPrice: gasPrice,
+        // gasUsed: '0',
+        // cumulativeGasUsed: '0',
+        errorVal: 0,
+        tokenRecipientAddress: publicAddress,
+        data: data
+      }
+      otherParams = bnbParams
+    }
 
-  //   const ErrorInsufficientFundsMoreEth = new Error(
-  //     'Insufficient ETH for transaction fee'
-  //   )
-  //   ErrorInsufficientFundsMoreEth.name = 'ErrorInsufficientFundsMoreEth'
+    const ErrorInsufficientFundsMoreBnb = new Error(
+      'Insufficient BNB for transaction fee'
+    )
+    ErrorInsufficientFundsMoreBnb.name = 'ErrorInsufficientFundsMoreBnb'
 
-  //   let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-  //   const balanceEth = this.walletLocalData.totalBalances[
-  //     this.currencyInfo.currencyCode
-  //   ]
-  //   let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
-  //   let totalTxAmount = '0'
-  //   let parentNetworkFee = null
+    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
+    const balanceEth = this.walletLocalData.totalBalances[
+      this.currencyInfo.currencyCode
+    ]
+    // let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+    let totalTxAmount = '0'
+    // let parentNetworkFee = null
 
-  //   if (currencyCode === PRIMARY_CURRENCY) {
-  //     totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-  //     if (bns.gt(totalTxAmount, balanceEth)) {
-  //       throw new InsufficientFundsError()
-  //     }
-  //     nativeAmount = bns.mul(totalTxAmount, '-1')
-  //   } else {
-  //     parentNetworkFee = nativeNetworkFee
+    totalTxAmount = nativeAmount
+    if (bns.gt(totalTxAmount, balanceEth)) {
+      throw new InsufficientFundsError()
+    }
+    nativeAmount = bns.mul(totalTxAmount, '-1')
 
-  //     if (bns.gt(nativeNetworkFee, balanceEth)) {
-  //       throw ErrorInsufficientFundsMoreEth
-  //     }
-  //     const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-  //     if (bns.gt(nativeAmount, balanceToken)) {
-  //       throw new InsufficientFundsError()
-  //     }
-  //     nativeNetworkFee = '0' // Do not show a fee for token transactions.
-  //     nativeAmount = bns.mul(nativeAmount, '-1')
-  //   }
-  //   // **********************************
-  //   // Create the unsigned EdgeTransaction
+    // **********************************
+    // Create the unsigned EdgeTransaction
 
-  //   const edgeTransaction: EdgeTransaction = {
-  //     txid: '', // txid
-  //     date: 0, // date
-  //     currencyCode, // currencyCode
-  //     blockHeight: 0, // blockHeight
-  //     nativeAmount, // nativeAmount
-  //     networkFee: nativeNetworkFee, // networkFee
-  //     ourReceiveAddresses: [], // ourReceiveAddresses
-  //     signedTx: '0', // signedTx
-  //     otherParams // otherParams
-  //   }
+    const edgeTransaction: EdgeTransaction = {
+      txid: '', // txid
+      date: 0, // date
+      currencyCode, // currencyCode
+      blockHeight: 0, // blockHeight
+      nativeAmount, // nativeAmount
+      networkFee: 'replaceme', // networkFee
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '0', // signedTx
+      otherParams // otherParams
+    }
 
-  //   if (parentNetworkFee) {
-  //     edgeTransaction.parentNetworkFee = parentNetworkFee
-  //   }
-
-  //   return edgeTransaction
-  // }
-
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    return dummyTransaction
+    return edgeTransaction
   }
 
-  // async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-  //   // Do signing
+  // sign then broadcast then save
+  // takes unsigned transaction then signs it
+  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    // Do signing
+    const asset = 'BNB' // asset string
+    const amount = edgeTransaction.nativeAmount // amount float
+    const addressTo = edgeTransaction.otherParams.to[0]
 
-  //   const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
-  //   const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
-  //   let nativeAmountHex
+    // const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
+    // const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
 
-  //   if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-  //     // Remove the networkFee from the nativeAmount
-  //     const nativeAmount = bns.add(
-  //       edgeTransaction.nativeAmount,
-  //       edgeTransaction.networkFee
-  //     )
-  //     nativeAmountHex = bns.mul('-1', nativeAmount, 16)
-  //   } else {
-  //     nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
-  //   }
+    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+      // Remove the networkFee from the nativeAmount
+      const nativeAmount = bns.add(
+        edgeTransaction.nativeAmount,
+        edgeTransaction.networkFee
+      )
+      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
+    } else {
+      nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
+    }
 
-  //   let nonceHex
-  //   // Use an unconfirmed nonce if
-  //   // 1. We have unconfirmed spending txs in the transaction list
-  //   // 2. It is greater than the confirmed nonce
-  //   // 3. Is no more than 5 higher than confirmed nonce
-  //   if (
-  //     this.walletLocalData.numUnconfirmedSpendTxs &&
-  //     bns.gt(
-  //       this.walletLocalData.otherData.unconfirmedNextNonce,
-  //       this.walletLocalData.otherData.nextNonce
-  //     )
-  //   ) {
-  //     const diff = bns.sub(
-  //       this.walletLocalData.otherData.unconfirmedNextNonce,
-  //       this.walletLocalData.otherData.nextNonce
-  //     )
-  //     if (bns.lte(diff, '5')) {
-  //       nonceHex = toHex(this.walletLocalData.otherData.unconfirmedNextNonce)
-  //       this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
-  //         this.walletLocalData.otherData.unconfirmedNextNonce,
-  //         '1'
-  //       )
-  //       this.walletLocalDataDirty = true
-  //     } else {
-  //       const e = new Error('Excessive pending spend transactions')
-  //       e.name = 'ErrorExcessivePendingSpends'
-  //       throw e
-  //     }
-  //   }
-  //   if (!nonceHex) {
-  //     nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
-  //     this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
-  //       this.walletLocalData.otherData.nextNonce,
-  //       '1'
-  //     )
-  //   }
+    let data
+    if (edgeTransaction.otherParams.data != null) {
+      data = edgeTransaction.otherParams.data
+    } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+      data = '' // irrelevant until tokens enabled
+    }
 
-  //   let data
-  //   if (edgeTransaction.otherParams.data != null) {
-  //     data = edgeTransaction.otherParams.data
-  //   } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-  //     data = ''
-  //   } else {
-  //     const dataArray = abi.simpleEncode(
-  //       'transfer(address,uint256):(uint256)',
-  //       edgeTransaction.otherParams.tokenRecipientAddress,
-  //       nativeAmountHex
-  //     )
-  //     data = '0x' + Buffer.from(dataArray).toString('hex')
-  //     nativeAmountHex = '0x00'
-  //   }
+    const txParams = {
+      to,
+      value: nativeAmountHex,
+      data: data
+    }
 
-  //   const txParams = {
-  //     nonce: nonceHex,
-  //     gasPrice: gasPriceHex,
-  //     gasLimit: gasLimitHex,
-  //     to: edgeTransaction.otherParams.to[0],
-  //     value: nativeAmountHex,
-  //     data: data,
-  //     // EIP 155 chainId - mainnet: 1, ropsten: 3
-  //     chainId: 1
-  //   }
+    const privKey = Buffer.from(this.walletInfo.keys.binanceKey, 'hex')
+    const wallet = ethWallet.fromPrivateKey(privKey)
 
-  //   const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
-  //   const wallet = ethWallet.fromPrivateKey(privKey)
+    this.log(wallet.getAddressString())
 
-  //   this.log(wallet.getAddressString())
+    this.log('signTx txParams', txParams)
+    const tx = new BinanceTx(txParams)
+    tx.sign(privKey)
 
-  //   this.log('signTx txParams', txParams)
-  //   const tx = new EthereumTx(txParams)
-  //   tx.sign(privKey)
+    edgeTransaction.signedTx = bufToHex(tx.serialize())
+    edgeTransaction.txid = bufToHex(tx.hash())
+    edgeTransaction.date = Date.now() / 1000
 
-  //   edgeTransaction.signedTx = bufToHex(tx.serialize())
-  //   edgeTransaction.txid = bufToHex(tx.hash())
-  //   edgeTransaction.date = Date.now() / 1000
-
-  //   return edgeTransaction
-  // }
+    return edgeTransaction
+  }
 
   // async broadcastEtherscan (
   //   edgeTransaction: EdgeTransaction

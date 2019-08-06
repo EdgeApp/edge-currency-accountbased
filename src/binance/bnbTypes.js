@@ -87,13 +87,13 @@ export type EtherscanTransaction = {
   tokenDecimal?: string
 }
 
-export type EthereumTxOtherParams = {
+export type BinanceTxOtherParams = {
   from: Array<string>,
   to: Array<string>,
-  gas: string,
-  gasPrice: string,
-  gasUsed: string,
-  cumulativeGasUsed: string,
+  // gas: string,
+  // gasPrice: string,
+  // gasUsed: string,
+  // cumulativeGasUsed: string,
   errorVal: number,
   tokenRecipientAddress: string | null,
   data?: string | null
