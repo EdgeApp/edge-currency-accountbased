@@ -295,10 +295,12 @@ export class EthereumEngine extends CurrencyEngine {
     if (
       tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
+      // is a spend
       if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
       } else {
+        // spend to someone else
         netNativeAmount = bns.sub('0', tx.value)
 
         // For spends, include the network fee in the transaction amount
