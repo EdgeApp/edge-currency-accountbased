@@ -62,7 +62,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'XTZ',
       multiplier: '1000000',
-      symbol: 'ꜩ'
+      symbol: 'tz'
     }
   ],
   symbolImage: `${imageServerUrl}/tezos-logo-solo-64.png`,
