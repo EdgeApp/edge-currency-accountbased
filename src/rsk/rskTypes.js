@@ -3,8 +3,7 @@
  */
 // @flow
 
-export type RskInitOptions = {
-}
+export type RskInitOptions = {}
 
 export type RskSettings = {
   etherscanApiServers: Array<string>,

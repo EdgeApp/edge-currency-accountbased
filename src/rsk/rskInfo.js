@@ -8,9 +8,7 @@ import type { RskSettings } from './rskTypes.js'
 export const imageServerUrl = 'https://developer.airbitz.co/content'
 
 const otherSettings: RskSettings = {
-  etherscanApiServers: [
-    'https://blockscout.com/rsk/mainnet'
-  ],
+  etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
   iosAllowedTokens: { RIF: true }
 }
 

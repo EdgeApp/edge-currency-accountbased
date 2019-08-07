@@ -487,18 +487,33 @@ export class RskEngine extends CurrencyEngine {
   }
 
   async checkUpdateNetworkFees () {
-    const actualGasPrice = parseInt(this.walletLocalData.otherData.networkFees['default'].gasPrice.standardFeeLow)
+    const actualGasPrice = parseInt(
+      this.walletLocalData.otherData.networkFees['default'].gasPrice
+        .standardFeeLow
+    )
     try {
       const jsonObj = await this.fetchPostPublicNode('eth_gasPrice', [])
       const newGasPrice = parseInt(jsonObj.result, 16)
 
       if (newGasPrice !== actualGasPrice) {
         // check first if changed
-        this.walletLocalData.otherData.networkFees['default'].gasPrice.standardFeeLow = newGasPrice.toString()
-        this.walletLocalData.otherData.networkFees['default'].gasPrice.standardFeeHigh = Math.round(newGasPrice * 1.25).toString()
-        this.walletLocalData.otherData.networkFees['default'].gasPrice.standardFeeLowAmount = newGasPrice.toString()
-        this.walletLocalData.otherData.networkFees['default'].gasPrice.standardFeeHighAmount = Math.round(newGasPrice * 1.25).toString()
-        this.walletLocalData.otherData.networkFees['default'].gasPrice.highFee = Math.round(newGasPrice * 1.5).toString()
+        this.walletLocalData.otherData.networkFees[
+          'default'
+        ].gasPrice.standardFeeLow = newGasPrice.toString()
+        this.walletLocalData.otherData.networkFees[
+          'default'
+        ].gasPrice.standardFeeHigh = Math.round(newGasPrice * 1.25).toString()
+        this.walletLocalData.otherData.networkFees[
+          'default'
+        ].gasPrice.standardFeeLowAmount = newGasPrice.toString()
+        this.walletLocalData.otherData.networkFees[
+          'default'
+        ].gasPrice.standardFeeHighAmount = Math.round(
+          newGasPrice * 1.25
+        ).toString()
+        this.walletLocalData.otherData.networkFees[
+          'default'
+        ].gasPrice.highFee = Math.round(newGasPrice * 1.5).toString()
         this.walletLocalDataDirty = true
       }
     } catch (err) {
@@ -561,10 +576,10 @@ export class RskEngine extends CurrencyEngine {
           }
         )
         funcs2 = async () => {
-          const result = await this.fetchPostPublicNode('eth_getTransactionCount', [
-            params[0],
-            'latest'
-          ])
+          const result = await this.fetchPostPublicNode(
+            'eth_getTransactionCount',
+            [params[0], 'latest']
+          )
           return { server: 'public-node', result }
         }
         funcs.push(funcs2)
@@ -936,7 +951,9 @@ export class RskEngine extends CurrencyEngine {
       throw jsonObj.error
     } else if (typeof jsonObj.result === 'string') {
       // Success!!
-      this.log(`Public Node: sent transaction to network:\n${transactionParsed}\n`)
+      this.log(
+        `Public Node: sent transaction to network:\n${transactionParsed}\n`
+      )
       return jsonObj
     } else {
       throw new Error('Invalid return value on transaction send')

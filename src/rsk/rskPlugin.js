@@ -189,9 +189,7 @@ export class RskPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeRskPlugin (
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
+export function makeRskPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<RskPlugin>
@@ -206,12 +204,7 @@ export function makeRskPlugin (
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new RskEngine(
-      tools,
-      walletInfo,
-      initOptions,
-      opts
-    )
+    const currencyEngine = new RskEngine(tools, walletInfo, initOptions, opts)
 
     // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(tools, walletInfo, opts)
