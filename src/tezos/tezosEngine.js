@@ -357,14 +357,29 @@ export class TezosEngine extends CurrencyEngine {
       pkh: this.walletInfo.keys.publicKey,
       sk: false
     }
-    const ops: OperationsContainer = await this.multicastServers(
-      'createTransaction',
-      keys.pkh,
-      keys,
-      publicAddress,
-      bns.div(nativeAmount, denom.multiplier, 6),
-      this.currencyInfo.defaultSettings.fee.transaction
+    let ops: OperationsContainer | typeof undefined
+    let resendCounter = 0
+    let error
+    do {
+      try {
+        ops = await this.multicastServers(
+          'createTransaction',
+          keys.pkh,
+          keys,
+          publicAddress,
+          bns.div(nativeAmount, denom.multiplier, 6),
+          this.currencyInfo.defaultSettings.fee.transaction
+        )
+      } catch (e) {
+        error = e
+      }
+    } while (
+      (typeof ops === 'undefined' || ops.opOb.contents.length > 2) &&
+      resendCounter++ < 5
     )
+    if (typeof ops === 'undefined') {
+      throw error
+    }
     let networkFee = '0'
     for (const operation of ops.opOb.contents) {
       networkFee = bns.add(networkFee, operation.fee)
