@@ -330,7 +330,7 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
       ourReceiveAddresses,
-      signedTx: 'unsigned_right_now',
+      signedTx: '',
       otherParams
     }
 
@@ -444,7 +444,7 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmount,
       networkFee: tx.fees.toString(10),
       ourReceiveAddresses,
-      signedTx: 'iwassignedyoucantrustme',
+      signedTx: '',
       otherParams
     }
     this.addTransaction('ETH', edgeTransaction)
@@ -931,7 +931,7 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '0', // signedTx
+      signedTx: '', // signedTx
       otherParams // otherParams
     }
 

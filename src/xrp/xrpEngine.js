@@ -151,7 +151,7 @@ export class XrpEngine extends CurrencyEngine {
           networkFee,
           parentNetworkFee,
           ourReceiveAddresses,
-          signedTx: 'has_been_signed',
+          signedTx: '',
           otherParams: {}
         }
         this.addTransaction(currencyCode, edgeTransaction)
@@ -478,7 +478,7 @@ export class XrpEngine extends CurrencyEngine {
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '0', // signedTx
+      signedTx: '', // signedTx
       otherParams
     }
 

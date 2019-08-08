@@ -131,7 +131,7 @@ describe(`Tezos engine`, function () {
       nativeAmount: '-3002650',
       networkFee: '2650',
       ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
-      signedTx: '0',
+      signedTx: '',
       otherParams: {
         idInternal: 0,
         fromAddress: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',

@@ -225,7 +225,7 @@ export class TezosEngine extends CurrencyEngine {
       nativeAmount,
       networkFee,
       ourReceiveAddresses,
-      signedTx: 'has_been_signed',
+      signedTx: '',
       otherParams: {}
     }
     if (!failedOperation) {
@@ -390,7 +390,7 @@ export class TezosEngine extends CurrencyEngine {
       nativeAmount,
       networkFee,
       ourReceiveAddresses: [publicAddress],
-      signedTx: '0',
+      signedTx: '',
       otherParams: {
         idInternal: 0,
         fromAddress: this.walletLocalData.publicKey,
@@ -402,7 +402,7 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    if (edgeTransaction.signedTx === '0') {
+    if (edgeTransaction.signedTx === '') {
       const sk = eztz.crypto.generateKeys(this.walletInfo.keys.mnemonic, '').sk
       const signed = eztz.crypto.sign(
         edgeTransaction.otherParams.fullOp.opbytes,
