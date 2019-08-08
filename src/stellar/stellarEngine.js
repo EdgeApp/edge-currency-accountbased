@@ -183,7 +183,7 @@ export class StellarEngine extends CurrencyEngine {
       networkFee,
       parentNetworkFee: '0',
       ourReceiveAddresses,
-      signedTx: 'has_been_signed',
+      signedTx: '',
       otherParams: {
         fromAddress,
         toAddress
@@ -461,7 +461,7 @@ export class StellarEngine extends CurrencyEngine {
       nativeAmount, // nativeAmount
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '0', // signedTx
+      signedTx: '', // signedTx
       otherParams: {
         idInternal,
         fromAddress: this.walletLocalData.publicKey,

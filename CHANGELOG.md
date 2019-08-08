@@ -1,10 +1,5 @@
 # edge-currency-accountbased
 
-# 0.2.2 (@019-08-06)
-
-- Integration of RSK / RBTC
-- Integration of Tezos
-
 # 0.2.0 (2019-08-01)
 
 - Allow importing of XLM and XRP private keys

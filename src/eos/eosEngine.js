@@ -192,7 +192,7 @@ export class EosEngine extends CurrencyEngine {
       networkFee: '0',
       parentNetworkFee: '0',
       ourReceiveAddresses,
-      signedTx: 'has_been_signed',
+      signedTx: '',
       otherParams: {},
       metadata: {
         name,
@@ -258,7 +258,7 @@ export class EosEngine extends CurrencyEngine {
         networkFee: '0',
         parentNetworkFee: '0',
         ourReceiveAddresses,
-        signedTx: 'has_been_signed',
+        signedTx: '',
         metadata: {
           notes: memo
         },
@@ -682,7 +682,7 @@ export class EosEngine extends CurrencyEngine {
       nativeAmount, // nativeAmount
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '0', // signedTx
+      signedTx: '', // signedTx
       otherParams: {
         transactionJson
       }
@@ -742,7 +742,7 @@ export class EosEngine extends CurrencyEngine {
   //     nativeAmount: '', // nativeAmount
   //     networkFee: '', // networkFee
   //     ourReceiveAddresses: [], // ourReceiveAddresses
-  //     signedTx: '0', // signedTx
+  //     signedTx: '', // signedTx
   //     otherParams: {}
   //   }
 
