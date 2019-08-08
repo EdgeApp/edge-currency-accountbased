@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.3.1 (2019-08-08)
+
+- Set default `signedTx` property on EdgeTransactions to empty string
+
 # 0.3.0 (2019-08-06)
 
 - Integration of RSK / RBTC
