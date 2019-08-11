@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.3.2 (2019-08-11)
+
+- Change Tezos signedTx property from string to hex
+- Change Tezos currency symbol to 't' due to font issue with official symbol
+
 # 0.3.1 (2019-08-08)
 
 - Set default `signedTx` property on EdgeTransactions to empty string
