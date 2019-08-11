@@ -173,7 +173,7 @@ describe(`Tezos engine`, function () {
     this.timeout(10000)
     if (engine) {
       edgeTransaction = await engine.signTx(edgeTransaction)
-      assert.equal(edgeTransaction.signedTx === '1', true)
+      assert.equal(edgeTransaction.signedTx === signedOpBytes, true)
       assert.equal(edgeTransaction.otherParams.fullOp.opbytes, signedOpBytes)
     } else {
       assert.equal(0, 1)

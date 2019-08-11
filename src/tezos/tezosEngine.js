@@ -426,7 +426,7 @@ export class TezosEngine extends CurrencyEngine {
       )
       edgeTransaction.otherParams.fullOp.opbytes = signed.sbytes
       edgeTransaction.otherParams.fullOp.opOb.signature = signed.edsig
-      edgeTransaction.signedTx = '1'
+      edgeTransaction.signedTx = signed.sbytes
     }
     return edgeTransaction
   }
