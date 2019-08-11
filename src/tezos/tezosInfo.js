@@ -17,9 +17,9 @@ const otherSettings: TezosSettings = {
   ] */
   /* Mainnet */
   tezosRpcNodes: [
+    'https://rpc.tulip.tools/mainnet',
     'https://mainnet.tezrpc.me',
-    'https://mainnet-node.tzscan.io',
-    'https://tezos-rpc.nodes.polychainlabs.com'
+    'https://mainnet-node.tzscan.io'
   ],
   tezosApiServers: [
     'https://api6.tzscan.io',
