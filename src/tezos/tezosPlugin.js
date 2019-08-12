@@ -106,7 +106,7 @@ export class TezosPlugin extends CurrencyPlugin {
       amount,
       destination: obj.publicAddress
     }
-    const uri = encodeMainnet([{ content: content }])
+    const uri = encodeMainnet([{ content }])
     return uri
   }
 }
