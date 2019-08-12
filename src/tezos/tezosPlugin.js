@@ -128,7 +128,7 @@ export function makeTezosPlugin (
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
     if (!currencyEngine.otherData.numberTransactions) {
-      currencyEngine.otherData.numberTransaction = 0
+      currencyEngine.otherData.numberTransactions = -1
     }
     const out: TezosEngine = currencyEngine
     return out

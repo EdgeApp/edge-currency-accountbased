@@ -35,15 +35,27 @@ const otherSettings: TezosSettings = {
 
 const defaultSettings: any = {
   otherSettings,
-  fee: {
-    transaction: '1350',
-    reveal: '1300',
-    burn: '257000'
+  reveal: {
+    defaultFee: '1269',
+    gasLimit: '10000',
+    storageLimit: '0'
   },
-  limit: {
-    gas: '10600',
-    storage: '277'
-  }
+  transaction: {
+    defaultFee: '1350',
+    gasLimit: '10600',
+    storageLimit: '277'
+  },
+  origination: {
+    defaultFee: '1300',
+    gasLimit: '10100',
+    storageLimit: '277'
+  },
+  delegation: {
+    defaultFee: '1300',
+    gasLimit: '10100',
+    storageLimit: '0'
+  },
+  burnFee: '257000'
 }
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
@@ -51,6 +63,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Tezos',
   pluginName: 'tezos',
   walletType: 'wallet:tezos',
+  supportsStaking: true,
 
   defaultSettings,
 

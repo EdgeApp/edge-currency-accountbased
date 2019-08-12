@@ -3,7 +3,7 @@ export type TezosSettings = {
   tezosRpcNodes: Array<string>
 }
 
-export type XtzGetTransaction = {
+export type XtzGetOperation = {
   block_hash: string,
   hash: string,
   network_hash: string,
@@ -14,6 +14,23 @@ export type XtzGetTransaction = {
       tz: string
     }
   }
+}
+
+export type EdgeStakingSettings =
+  | { stakingEnabled: false }
+  | {
+      stakingEnabled: true,
+      delegateAddress: string
+    }
+
+export type TezosWalletOtherData = {
+  numberTransactions: number
+}
+
+export type TezosKeyPair = {
+  pk: string,
+  pkh: string,
+  sk: string | false
 }
 
 export type UriTransaction = {
@@ -38,7 +55,6 @@ export type HeadInfo = {
   proof_of_work_nonce: string,
   signature: string
 }
-
 export type TezosReveal = {
   kind: 'reveal',
   source: string,
@@ -72,7 +88,7 @@ export type TezosOrigination = {
   balance: string | number,
   spendable: true,
   delegatable: true,
-  delegate?: string
+  delegate: string
 }
 
 export type TezosDelegation = {
@@ -82,7 +98,7 @@ export type TezosDelegation = {
   counter: string | number,
   gas_limit: string | number,
   storage_limit: string | number,
-  delegate?: string
+  delegate: string
 }
 
 export type TezosOperation =
