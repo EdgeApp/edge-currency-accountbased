@@ -18,10 +18,11 @@ import {
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
-import ethWallet from 'ethereumjs-wallet'
+import hdKey from 'ethereumjs-wallet/hdkey'
+import { generateMnemonic, mnemonicToSeedSync } from 'bip39'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo, hexToBuf } from '../common/utils.js'
+import { getDenomInfo } from '../common/utils.js'
 import { RskEngine } from './rskEngine.js'
 import { currencyInfo } from './rskInfo.js'
 
@@ -62,18 +63,12 @@ export class RskPlugin extends CurrencyPlugin {
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'rsk') {
-      const { io } = this
-      const cryptoObj = {
-        randomBytes: size => {
-          const array = io.random(size)
-          return Buffer.from(array)
-        }
-      }
-      ethWallet.overrideCrypto(cryptoObj)
-
-      const wallet = ethWallet.generate(false)
-      const rskKey = wallet.getPrivateKeyString().replace('0x', '')
-      return { rskKey }
+      const rskMnemonic = generateMnemonic(128).split(',').join(' ')
+      const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(rskMnemonic))
+      const walletHdpath = 'm/44\'/137\'/0\'/0/'
+      const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
+      const rskKey = wallet.getPrivateKey().toString('hex')
+      return { rskMnemonic, rskKey }
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -82,10 +77,10 @@ export class RskPlugin extends CurrencyPlugin {
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'rsk') {
-      const privKey = hexToBuf(walletInfo.keys.rskKey)
-      const wallet = ethWallet.fromPrivateKey(privKey)
-
-      const publicKey = wallet.getAddressString()
+      const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(walletInfo.keys.rskMnemonic))
+      const walletHdpath = 'm/44\'/137\'/0\'/0/'
+      const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
+      const publicKey = '0x' + wallet.getAddress().toString('hex')
       return { publicKey }
     } else {
       throw new Error('InvalidWalletType')

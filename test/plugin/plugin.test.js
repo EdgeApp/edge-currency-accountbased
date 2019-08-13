@@ -20,6 +20,7 @@ for (const fixture of fixtures) {
   const WALLET_TYPE = fixture['WALLET_TYPE']
   // if (WALLET_TYPE !== 'wallet:ethereum' && WALLET_TYPE !== 'wallet:rsk') continue
   const keyName = WALLET_TYPE.split('wallet:')[1].split('-')[0] + 'Key'
+  const mnemonicName = WALLET_TYPE.split('wallet:')[1].split('-')[0] + 'Mnemonic'
   const address = 'publicKey'
 
   const fakeIo = makeFakeIo()
@@ -75,7 +76,7 @@ for (const fixture of fixtures) {
     it('Valid private key', async function () {
       keys = await tools.derivePublicKey({
         id: 'id',
-        keys: { [keyName]: keys[keyName] },
+        keys: { [keyName]: keys[keyName], [mnemonicName]: fixture['mnemonic'] },
         type: WALLET_TYPE
       })
       assert.equal(keys[address], fixture['xpub'])
