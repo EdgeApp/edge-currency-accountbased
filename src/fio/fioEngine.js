@@ -16,7 +16,6 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { SymbolDisplayPartKind } from 'typescript'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -66,7 +65,27 @@ export class FioEngine extends CurrencyEngine {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
+
+    this.otherData = this.walletLocalData.otherData
+
+    // currencyEngine.otherData is an opaque utility object for use for currency
+    // specific data that will be persisted to disk on this one device.
+    // Commonly stored data would be last queried block height or nonce values for accounts
+    // Edit the flow type EosWalletOtherData and initialize those values here if they are
+    // undefined
+    // TODO: Initialize anything specific to this currency
+    // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
+    if (!this.otherData.accountName) {
+      this.otherData.accountName = ''
+    }
+    if (!this.otherData.lastQueryActionSeq) {
+      this.otherData.lastQueryActionSeq = 0
+    }
+    if (!this.otherData.highestTxHeight) {
+      this.otherData.highestTxHeight = 0
+    }
   }
+
   // Poll on the blockheight
   async checkBlockchainInnerLoop () {
     const blockHeight = 1578128
@@ -198,7 +217,7 @@ export class FioEngine extends CurrencyEngine {
         'active key\n' +
         this.walletInfo.keys.fioKey +
         '\n\n' +
-        this.walletInfo.keys.mnemonics
+        this.walletInfo.keys.mnemonic
     }
     return out
   }

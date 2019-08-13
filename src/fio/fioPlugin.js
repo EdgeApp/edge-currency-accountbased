@@ -16,7 +16,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
+import { getDenomInfo } from '../common/utils.js'
 import { getFetchJson } from '../react-native-io.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
@@ -29,7 +29,6 @@ export function checkAddress (address: string): boolean {
 
 export class FioPlugin extends CurrencyPlugin {
   otherMethods: Object
-  eosServer: Object
 
   constructor (io: EdgeIo) {
     super(io, 'fio', currencyInfo)
@@ -100,20 +99,6 @@ export class FioPlugin extends CurrencyPlugin {
     const encodedUri = this.encodeUriCommon(obj, 'fio', amount)
     return encodedUri
   }
-
-  async getAccSystemStats (account: string) {
-    return new Promise((resolve, reject) => {
-      this.eosServer.getAccount(account, (error, result) => {
-        if (error) {
-          if (error.message.includes('unknown key')) {
-            error.code = 'ErrorUnknownAccount'
-          }
-          reject(error)
-        }
-        resolve(result)
-      })
-    })
-  }
 }
 
 export function makeFioPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
@@ -135,83 +120,13 @@ export function makeFioPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin 
     const currencyEngine = new FioEngine(tools, walletInfo, opts, fetchJson)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // currencyEngine.otherData is an opaque utility object for use for currency
-    // specific data that will be persisted to disk on this one device.
-    // Commonly stored data would be last queried block height or nonce values for accounts
-    // Edit the flow type EosWalletOtherData and initialize those values here if they are
-    // undefined
-    // TODO: Initialize anything specific to this currency
-    // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
-    if (!currencyEngine.otherData.accountName) {
-      currencyEngine.otherData.accountName = ''
-    }
-    if (!currencyEngine.otherData.lastQueryActionSeq) {
-      currencyEngine.otherData.lastQueryActionSeq = 0
-    }
-    if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = 0
-    }
-
     const out: EdgeCurrencyEngine = currencyEngine
     return out
-  }
-
-  const otherMethods = {
-    isAddressAvailable: async (fioAddress: string): Promise<any> => {},
-    getActivationSupportedCurrencies: async (): Promise<Object> => {
-      const eosPaymentServer =
-        currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-      return fetchJson(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
-    },
-    getActivationCost: async (): Promise<string> => {
-      try {
-        const infoServer = getEdgeInfoServer()
-        const prices = await fetchJson(`${infoServer}/v1/eosPrices`)
-        const totalEos =
-          Number(prices.ram) * 8 +
-          Number(prices.net) * 2 +
-          Number(prices.cpu) * 10
-        let out = totalEos.toString()
-        out = bns.toFixed(out, 0, 4)
-        return out
-      } catch (e) {
-        throw new Error('ErrorUnableToGetCost')
-      }
-    },
-    validateAccount: async (account: string): Promise<boolean> => {
-      const valid = checkAddress(account)
-      const out = { result: '' }
-      if (!valid) {
-        const e = new Error('ErrorInvalidAccountName')
-        e.name = 'ErrorInvalidAccountName'
-        throw e
-      }
-      try {
-        const tools = await makeCurrencyTools()
-        const result = await tools.getAccSystemStats(account)
-        if (result) {
-          const e = new Error('ErrorAccountUnavailable')
-          e.name = 'ErrorAccountUnavailable'
-          throw e
-        }
-        throw new Error('ErrorUnknownError')
-      } catch (e) {
-        if (e.code === 'ErrorUnknownAccount') {
-          out.result = 'AccountAvailable'
-        } else {
-          throw e
-        }
-      }
-      console.log(`validateAccount: result=${out.result}`)
-      return out
-    }
   }
 
   return {
     currencyInfo,
     makeCurrencyEngine,
-    makeCurrencyTools,
-    otherMethods
+    makeCurrencyTools
   }
 }
