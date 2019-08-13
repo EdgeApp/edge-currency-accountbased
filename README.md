@@ -46,6 +46,12 @@ To use the local cloned version of this repo, `cd edge-react-gui` and run
     
 This will copy the necessary files from `edge-currency-accountbased` into the `edge-react-gui/node_modules/edge-currency-accountbased` replacing the npm installed version. This needs to be done after any modifications to `edge-currency-accountbased`
 
+## Adding a New Blockchain / Currency
+
+Please note that our team considers (but does not guarantee) PR's to add new currencies / blockchains to this repo's master branch (included into production version of Edge Wallet). Among other requirements the code must satisfy the following guidelines:
+- Rebase of your branch upon this repo's `master` branch. For more info:
+https://github.com/edx/edx-platform/wiki/How-to-Rebase-a-Pull-Request
+
 ## License
 BSD 3
 
