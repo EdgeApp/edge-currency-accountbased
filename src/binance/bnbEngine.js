@@ -3,6 +3,7 @@
  */
 // @flow
 
+import BnbApiClient from '@binance-chain/javascript-sdk'
 import { bns } from 'biggystring'
 import {
   type EdgeSpendInfo,
@@ -58,17 +59,17 @@ type BnbFunction =
 //   return out
 // }
 
-const dummyTransaction: EdgeTransaction = {
-  txid: '', // txid
-  date: 0, // date
-  currencyCode: 'BNB', // currencyCode
-  blockHeight: 0, // blockHeight
-  nativeAmount: '0', // nativeAmount
-  networkFee: '0', // networkFee
-  ourReceiveAddresses: [], // ourReceiveAddresses
-  signedTx: '0', // signedTx
-  otherParams: {} // otherParams
-}
+// const dummyTransaction: EdgeTransaction = {
+//   txid: '', // txid
+//   date: 0, // date
+//   currencyCode: 'BNB', // currencyCode
+//   blockHeight: 0, // blockHeight
+//   nativeAmount: '0', // nativeAmount
+//   networkFee: '0', // networkFee
+//   ourReceiveAddresses: [], // ourReceiveAddresses
+//   signedTx: '0', // signedTx
+//   otherParams: {} // otherParams
+// }
 
 export class BinanceEngine extends CurrencyEngine {
   binancePlugin: BinancePlugin
@@ -809,54 +810,9 @@ export class BinanceEngine extends CurrencyEngine {
 
   // sign then broadcast then save
   // takes unsigned transaction then signs it
-  // async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-  //   // Do signing
-  //   const asset = 'BNB' // asset string
-  //   const amount = edgeTransaction.nativeAmount // amount float
-  //   const addressTo = edgeTransaction.otherParams.to[0]
-
-  //   // const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
-  //   // const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
-
-  //   if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-  //     // Remove the networkFee from the nativeAmount
-  //     const nativeAmount = bns.add(
-  //       edgeTransaction.nativeAmount,
-  //       edgeTransaction.networkFee
-  //     )
-  //     nativeAmountHex = bns.mul('-1', nativeAmount, 16)
-  //   } else {
-  //     nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
-  //   }
-
-  //   let data
-  //   if (edgeTransaction.otherParams.data != null) {
-  //     data = edgeTransaction.otherParams.data
-  //   } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-  //     data = '' // irrelevant until tokens enabled
-  //   }
-
-  //   const txParams = {
-  //     to,
-  //     value: nativeAmountHex,
-  //     data: data
-  //   }
-
-  //   const privKey = Buffer.from(this.walletInfo.keys.binanceKey, 'hex')
-  //   const wallet = ethWallet.fromPrivateKey(privKey)
-
-  //   this.log(wallet.getAddressString())
-
-  //   this.log('signTx txParams', txParams)
-  //   const tx = new BinanceTx(txParams)
-  //   tx.sign(privKey)
-
-  //   edgeTransaction.signedTx = bufToHex(tx.serialize())
-  //   edgeTransaction.txid = bufToHex(tx.hash())
-  //   edgeTransaction.date = Date.now() / 1000
-
-  //   return edgeTransaction
-  // }
+  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    return edgeTransaction
+  }
 
   // async broadcastEtherscan (
   //   edgeTransaction: EdgeTransaction
@@ -959,7 +915,30 @@ export class BinanceEngine extends CurrencyEngine {
   async broadcastTx (
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    return dummyTransaction
+    const bnbClient = new BnbApiClient(
+      currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
+    )
+    bnbClient.chooseNetwork('mainnet')
+    const privKey = this.walletInfo.keys.binanceKey
+    bnbClient.setPrivateKey(privKey)
+    bnbClient.initChain()
+    const currencyCode = edgeTransaction.currencyCode
+    const amount = edgeTransaction.nativeAmount.replace('-', '')
+    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    if (!denom) {
+      this.log(`Received unsupported currencyCode: ${currencyCode}`)
+      throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
+    }
+    const nativeAmountString = parseInt(amount) / parseInt(denom.multiplier)
+    const nativeAmount = parseFloat(nativeAmountString)
+    const result = await bnbClient.transfer(
+      edgeTransaction.otherParams.from[0],
+      edgeTransaction.otherParams.to[0],
+      nativeAmount,
+      currencyCode
+    )
+    this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(result)}`)
+    return edgeTransaction
   }
 
   // async broadcastTx (
