@@ -4,7 +4,12 @@
 // @flow
 
 import { bns } from 'biggystring'
-import { type EdgeTransaction, type EdgeWalletInfo, type EdgeSpendInfo, InsufficientFundsError } from 'edge-core-js/types'
+import {
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError
+} from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -21,7 +26,10 @@ import {
   BinanceApiGetTransactions,
   BinanceApiNodeInfo
 } from './bnbSchema.js'
-import { type BinanceApiTransaction, type BinanceTxOtherParams } from './bnbTypes.js'
+import {
+  type BinanceApiTransaction,
+  type BinanceTxOtherParams
+} from './bnbTypes.js'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -36,8 +44,10 @@ const NATIVE_UNIT_MULTIPLIER = '100000000'
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
 
 type BnbFunction =
-  'broadcastTx' |
-  'bnb_blockNumber' | 'bnb_getBalance' | 'bnb_getTransactions'
+  | 'broadcastTx'
+  | 'bnb_blockNumber'
+  | 'bnb_getBalance'
+  | 'bnb_getTransactions'
 // | 'eth_getTransactionCount'
 
 // async function broadcastWrapper (promise: Promise<Object>, server: string) {
@@ -766,7 +776,7 @@ export class BinanceEngine extends CurrencyEngine {
     ErrorInsufficientFundsMoreBnb.name = 'ErrorInsufficientFundsMoreBnb'
 
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    const balanceEth = this.walletLocalData.totalBalances[
+    const balanceBnb = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
     // let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
@@ -774,7 +784,7 @@ export class BinanceEngine extends CurrencyEngine {
     // let parentNetworkFee = null
 
     totalTxAmount = nativeAmount
-    if (bns.gt(totalTxAmount, balanceEth)) {
+    if (bns.gt(totalTxAmount, balanceBnb)) {
       throw new InsufficientFundsError()
     }
     nativeAmount = bns.mul(totalTxAmount, '-1')
@@ -788,7 +798,7 @@ export class BinanceEngine extends CurrencyEngine {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: 'replaceme', // networkFee
+      networkFee: '0', // networkFee, may need modification
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
       otherParams // otherParams
@@ -799,54 +809,54 @@ export class BinanceEngine extends CurrencyEngine {
 
   // sign then broadcast then save
   // takes unsigned transaction then signs it
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Do signing
-    const asset = 'BNB' // asset string
-    const amount = edgeTransaction.nativeAmount // amount float
-    const addressTo = edgeTransaction.otherParams.to[0]
+  // async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  //   // Do signing
+  //   const asset = 'BNB' // asset string
+  //   const amount = edgeTransaction.nativeAmount // amount float
+  //   const addressTo = edgeTransaction.otherParams.to[0]
 
-    // const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
-    // const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
+  //   // const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
+  //   // const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
 
-    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-      // Remove the networkFee from the nativeAmount
-      const nativeAmount = bns.add(
-        edgeTransaction.nativeAmount,
-        edgeTransaction.networkFee
-      )
-      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
-    } else {
-      nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
-    }
+  //   if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+  //     // Remove the networkFee from the nativeAmount
+  //     const nativeAmount = bns.add(
+  //       edgeTransaction.nativeAmount,
+  //       edgeTransaction.networkFee
+  //     )
+  //     nativeAmountHex = bns.mul('-1', nativeAmount, 16)
+  //   } else {
+  //     nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
+  //   }
 
-    let data
-    if (edgeTransaction.otherParams.data != null) {
-      data = edgeTransaction.otherParams.data
-    } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
-      data = '' // irrelevant until tokens enabled
-    }
+  //   let data
+  //   if (edgeTransaction.otherParams.data != null) {
+  //     data = edgeTransaction.otherParams.data
+  //   } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+  //     data = '' // irrelevant until tokens enabled
+  //   }
 
-    const txParams = {
-      to,
-      value: nativeAmountHex,
-      data: data
-    }
+  //   const txParams = {
+  //     to,
+  //     value: nativeAmountHex,
+  //     data: data
+  //   }
 
-    const privKey = Buffer.from(this.walletInfo.keys.binanceKey, 'hex')
-    const wallet = ethWallet.fromPrivateKey(privKey)
+  //   const privKey = Buffer.from(this.walletInfo.keys.binanceKey, 'hex')
+  //   const wallet = ethWallet.fromPrivateKey(privKey)
 
-    this.log(wallet.getAddressString())
+  //   this.log(wallet.getAddressString())
 
-    this.log('signTx txParams', txParams)
-    const tx = new BinanceTx(txParams)
-    tx.sign(privKey)
+  //   this.log('signTx txParams', txParams)
+  //   const tx = new BinanceTx(txParams)
+  //   tx.sign(privKey)
 
-    edgeTransaction.signedTx = bufToHex(tx.serialize())
-    edgeTransaction.txid = bufToHex(tx.hash())
-    edgeTransaction.date = Date.now() / 1000
+  //   edgeTransaction.signedTx = bufToHex(tx.serialize())
+  //   edgeTransaction.txid = bufToHex(tx.hash())
+  //   edgeTransaction.date = Date.now() / 1000
 
-    return edgeTransaction
-  }
+  //   return edgeTransaction
+  // }
 
   // async broadcastEtherscan (
   //   edgeTransaction: EdgeTransaction
