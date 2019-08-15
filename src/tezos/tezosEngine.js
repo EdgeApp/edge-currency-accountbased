@@ -418,7 +418,7 @@ export class TezosEngine extends CurrencyEngine {
 
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx === '') {
-      const sk = eztz.crypto.generateKeys(this.walletInfo.keys.mnemonic, '').sk
+      const sk = this.walletInfo.keys.privateKey
       const signed = eztz.crypto.sign(
         edgeTransaction.otherParams.fullOp.opbytes,
         sk,

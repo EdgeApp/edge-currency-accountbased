@@ -49,7 +49,8 @@ export class TezosPlugin extends CurrencyPlugin {
       // Use 256 bits entropy
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
       const mnemonic = eztz.library.bip39.entropyToMnemonic(entropy)
-      return { mnemonic }
+      const privateKey = eztz.crypto.generateKeys(mnemonic, '').sk
+      return { mnemonic, privateKey }
     } else {
       throw new Error('InvalidWalletType')
     }
