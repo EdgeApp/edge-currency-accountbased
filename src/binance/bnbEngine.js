@@ -721,11 +721,6 @@ export class BinanceEngine extends CurrencyEngine {
   async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
-    // Ethereum can only have one output
-    if (edgeSpendInfo.spendTargets.length !== 1) {
-      throw new Error('Error: only one output allowed')
-    }
-
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     const data =
@@ -760,10 +755,6 @@ export class BinanceEngine extends CurrencyEngine {
       const bnbParams: BinanceTxOtherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
-        // gas: gasLimit,
-        // gasPrice: gasPrice,
-        // gasUsed: '0',
-        // cumulativeGasUsed: '0',
         errorVal: 0,
         tokenRecipientAddress: publicAddress,
         data: data
@@ -920,8 +911,8 @@ export class BinanceEngine extends CurrencyEngine {
     )
     bnbClient.chooseNetwork('mainnet')
     const privKey = this.walletInfo.keys.binanceKey
-    bnbClient.setPrivateKey(privKey)
-    bnbClient.initChain()
+    await bnbClient.setPrivateKey(privKey)
+    await bnbClient.initChain()
     const currencyCode = edgeTransaction.currencyCode
     const amount = edgeTransaction.nativeAmount.replace('-', '')
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
