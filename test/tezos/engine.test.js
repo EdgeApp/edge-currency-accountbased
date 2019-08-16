@@ -66,7 +66,9 @@ describe(`Tezos engine`, function () {
       mnemonic:
         'canal head puzzle gravity keep response bulb diagram time oak mesh faith match quit hole sand laptop cycle group crunch say nose border later',
       publicKey: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',
-      publicKeyEd: 'edpku2JAJHC6k68KpUjzL6FsekWczHKDopgCBgxtkViof3iFYiFJN1'
+      publicKeyEd: 'edpku2JAJHC6k68KpUjzL6FsekWczHKDopgCBgxtkViof3iFYiFJN1',
+      privateKey:
+        'edskSAdy4abu2a7rzfnhmpWxU3oXDT6bP4J1yXywd5NHNSsgBrnhuWjsFpVuqQP8Ce4Je3f5kcVjUuQVN69PWH5fYztc7xcYjJ'
     }
   }
 
