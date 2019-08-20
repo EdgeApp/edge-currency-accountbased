@@ -68,11 +68,16 @@ export class TezosPlugin extends CurrencyPlugin {
   async parseUri (uri: string): Promise<EdgeParsedUri> {
     let address
     let operation
+    let content
     if (this.checkAddress(uri)) {
       address = uri
     } else if (uri.slice(0, 10) === 'web+tezos:') {
       operation = decodeMainnet(uri)
-      address = operation.destination
+      if (!operation[0] || !operation[0].content) {
+        throw new Error('InvalidUriError')
+      }
+      content = operation[0].content
+      address = content.destination
       if (!this.checkAddress(address)) {
         throw new Error('InvalidPublicAddressError')
       }
@@ -83,7 +88,7 @@ export class TezosPlugin extends CurrencyPlugin {
       publicAddress: address
     }
     edgeParsedUri.nativeAmount =
-      operation && operation.amount !== '0' ? operation.amount : undefined
+      content && content.amount !== '0' ? content.amount : undefined
     edgeParsedUri.currencyCode = 'XTZ'
     return edgeParsedUri
   }
@@ -97,12 +102,12 @@ export class TezosPlugin extends CurrencyPlugin {
       throw new Error('InvalidCurrencyCodeError')
     }
     const amount = typeof obj.nativeAmount === 'string' ? obj.nativeAmount : '0'
-    const operation: UriTransaction = {
+    const content: UriTransaction = {
       kind: 'transaction',
       amount,
       destination: obj.publicAddress
     }
-    const uri = encodeMainnet([{ content: operation }])
+    const uri = encodeMainnet([{ content }])
     return uri
   }
 }
