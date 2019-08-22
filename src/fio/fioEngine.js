@@ -127,6 +127,8 @@ export class FioEngine extends CurrencyEngine {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     super.startEngine()
+    // Simulate a 100% complete sync:
+    this.currencyEngineCallbacks.onAddressesChecked(1)
   }
 
   async resyncBlockchain (): Promise<void> {
