@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.3.3 (2019-08-22)
+
+- Add support for RSK & Tezos mnemonic keys.
+- Fix Tezos URI generation.
+- Add basic FIO key generation shims.
+
 # 0.3.2 (2019-08-11)
 
 - Change Tezos signedTx property from string to hex
@@ -26,7 +32,7 @@
 
 - Fix `edgeTransaction.otherParams.data` issue throwing error when `otherParams` does not exist
 
-# 0.1.17 (2019-07-12) *Deprecated*
+# 0.1.17 (2019-07-12) _Deprecated_
 
 # 0.1.16 (2019-07-10)
 
@@ -71,7 +77,7 @@
 
 # 0.1.7 (2019-03-07)
 
-- Get Ethereum to catch insufficient *token* balance transactions
+- Get Ethereum to catch insufficient _token_ balance transactions
 
 # 0.1.5 (2019-03-06)
 
@@ -101,78 +107,78 @@
 
 ## 0.0.25 (2019-02-19)
 
-* Fix the node entry point not to crash
+- Fix the node entry point not to crash
 
 ## 0.0.24 (2019-02-18)
 
-* Fix a crash on boot on React Native
+- Fix a crash on boot on React Native
 
 ## 0.0.23 (2019-02-15)
 
-* Upgrade to the edge-core-js v0.14.0 types
-* Modernize the build system
+- Upgrade to the edge-core-js v0.14.0 types
+- Modernize the build system
 
 ## 0.0.22
 
-* Fix ETH blockHeight from fluttering in/out of confirmation
-* Fix XLM makeSpend if called multiple times and older edgeTransaction is used for signTx
+- Fix ETH blockHeight from fluttering in/out of confirmation
+- Fix XLM makeSpend if called multiple times and older edgeTransaction is used for signTx
 
 ## 0.0.21
 
-* Properly call onTransactionsChanged on new txs
+- Properly call onTransactionsChanged on new txs
 
 ## 0.0.20
 
-* Fix EOS accounts from being detected after activation
-* Fix display of ETH private seeds
+- Fix EOS accounts from being detected after activation
+- Fix display of ETH private seeds
 
 ## 0.0.19
 
-* Fix XRP incorrect spend amounts
-* Fix syncing of ETH wallets after network disconnect/reconnect
-* Improve syncing of XRP wallets by connecting to multiple servers
-* Improve syncing of XRP wallets by detecting connection failure and retrying
+- Fix XRP incorrect spend amounts
+- Fix syncing of ETH wallets after network disconnect/reconnect
+- Improve syncing of XRP wallets by connecting to multiple servers
+- Improve syncing of XRP wallets by detecting connection failure and retrying
 
 ## 0.0.18
 
-* Change ETH fee estimates for better confirmation times
-* Change broadcastTx to broadcast to all APIs at the same time
-* Add Infura to broadcast APIs
+- Change ETH fee estimates for better confirmation times
+- Change broadcastTx to broadcast to all APIs at the same time
+- Add Infura to broadcast APIs
 
 ## 0.0.17 (2019-02-01)
 
-* Add EOS support
-* Add Ethereum support
-* Retry failed XRP broadcasts
+- Add EOS support
+- Add Ethereum support
+- Retry failed XRP broadcasts
 
 ## 0.0.16
 
-* Publish with a cleaned lib/ directory. Identical code to 0.0.15
+- Publish with a cleaned lib/ directory. Identical code to 0.0.15
 
 ## 0.0.15
 
-* Use new colored icons
+- Use new colored icons
 
 ## 0.0.13
 
-* Fix saving read back of lastAddressQueryHeight to prevent always querying from block 0
+- Fix saving read back of lastAddressQueryHeight to prevent always querying from block 0
 
 ## 0.0.12
 
-* Do not load transactions until core asks for getTransactions or we have to save a new tx to disk
+- Do not load transactions until core asks for getTransactions or we have to save a new tx to disk
 
 ## 0.0.11
 
-* Fix incorrect error thrown from makeSpend due to insufficient funds
+- Fix incorrect error thrown from makeSpend due to insufficient funds
 
 ## 0.0.10
 
-* Fix parseUri for unique identifiers of XLM and XRP
+- Fix parseUri for unique identifiers of XLM and XRP
 
 ## 0.0.9-beta.2
 
-* Full spend/receive functionality for Ripple/XRP refactored from edge-currency-ripple
-* Full spend/receive functionality for Stellar with memo.id support
-* EOS support for send/receive
-* EOS support for showing outgoing transactions only
-* EOS missing ability to activate account
+- Full spend/receive functionality for Ripple/XRP refactored from edge-currency-ripple
+- Full spend/receive functionality for Stellar with memo.id support
+- EOS support for send/receive
+- EOS support for showing outgoing transactions only
+- EOS missing ability to activate account
