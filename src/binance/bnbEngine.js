@@ -16,6 +16,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getDenomInfo,
+  promiseAny,
   shuffleArray,
   validateObject
 } from '../common/utils.js'
@@ -45,7 +46,7 @@ const NATIVE_UNIT_MULTIPLIER = '100000000'
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
 
 type BnbFunction =
-  | 'broadcastTx'
+  | 'bnb_broadcastTx'
   | 'bnb_blockNumber'
   | 'bnb_getBalance'
   | 'bnb_getTransactions'
@@ -213,8 +214,8 @@ export class BinanceEngine extends CurrencyEngine {
   ) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: Array<string> = []
-    const nativeNetworkFee: string = tx.txFee // always denominated in BNB
-
+    const nativeNetworkFee: string = bns.mul(tx.txFee, NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
+    const nativeValue = bns.mul(tx.value, NATIVE_UNIT_MULTIPLIER)
     if (
       tx.fromAddr.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
@@ -223,14 +224,14 @@ export class BinanceEngine extends CurrencyEngine {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
       } else {
-        netNativeAmount = bns.sub('0', tx.value)
+        netNativeAmount = bns.sub('0', nativeValue)
 
         // For spends, include the network fee in the transaction amount
         netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
       }
     } else {
       // Receive transaction
-      netNativeAmount = bns.add('0', tx.value)
+      netNativeAmount = bns.add('0', nativeValue)
       // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
@@ -247,8 +248,8 @@ export class BinanceEngine extends CurrencyEngine {
       date: unixTimestamp.getTime(),
       currencyCode,
       blockHeight,
-      nativeAmount: bns.mul(netNativeAmount, NATIVE_UNIT_MULTIPLIER),
-      networkFee: bns.mul(tx.txFee, NATIVE_UNIT_MULTIPLIER),
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: 'unsigned_right_now',
       otherParams
@@ -333,90 +334,6 @@ export class BinanceEngine extends CurrencyEngine {
       return false
     }
   }
-
-  // processUnconfirmedTransaction (tx: Object) {
-  //   const fromAddress = '0x' + tx.inputs[0].addresses[0]
-  //   const toAddress = '0x' + tx.outputs[0].addresses[0]
-  //   const epochTime = Date.parse(tx.received) / 1000
-  //   const ourReceiveAddresses: Array<string> = []
-
-  //   let nativeAmount: string
-  //   if (
-  //     normalizeAddress(fromAddress) ===
-  //     normalizeAddress(this.walletLocalData.publicKey)
-  //   ) {
-  //     if (fromAddress === toAddress) {
-  //       // Spend to self
-  //       nativeAmount = bns.sub('0', tx.fees.toString(10))
-  //     } else {
-  //       nativeAmount = (0 - tx.total).toString(10)
-  //       nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
-  //     }
-  //   } else {
-  //     nativeAmount = tx.total.toString(10)
-  //     ourReceiveAddresses.push(this.walletLocalData.publicKey)
-  //   }
-
-  //   const otherParams: EthereumTxOtherParams = {
-  //     from: [fromAddress],
-  //     to: [toAddress],
-  //     gas: '',
-  //     gasPrice: '',
-  //     gasUsed: tx.fees.toString(10),
-  //     cumulativeGasUsed: '',
-  //     errorVal: 0,
-  //     tokenRecipientAddress: null
-  //   }
-
-  //   const edgeTransaction: EdgeTransaction = {
-  //     txid: addHexPrefix(tx.hash),
-  //     date: epochTime,
-  //     currencyCode: 'ETH',
-  //     blockHeight: 0,
-  //     nativeAmount,
-  //     networkFee: tx.fees.toString(10),
-  //     ourReceiveAddresses,
-  //     signedTx: 'iwassignedyoucantrustme',
-  //     otherParams
-  //   }
-  //   this.addTransaction('ETH', edgeTransaction)
-  // }
-
-  // async checkUnconfirmedTransactionsInnerLoop () {
-  //   const address = normalizeAddress(this.walletLocalData.publicKey)
-  //   const url = `${
-  //     this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
-  //   }/v1/eth/main/txs/${address}`
-  //   let jsonObj = null
-  //   try {
-  //     jsonObj = await this.fetchGet(url)
-  //   } catch (e) {
-  //     this.log(e)
-  //     this.log('Failed to fetch unconfirmed transactions')
-  //     return
-  //   }
-
-  //   const valid = validateObject(jsonObj, SuperEthGetUnconfirmedTransactions)
-  //   if (valid) {
-  //     const transactions = jsonObj
-  //     for (const tx of transactions) {
-  //       if (
-  //         normalizeAddress(tx.inputs[0].addresses[0]) === address ||
-  //         normalizeAddress(tx.outputs[0].addresses[0]) === address
-  //       ) {
-  //         this.processUnconfirmedTransaction(tx)
-  //       }
-  //     }
-  //   } else {
-  //     this.log('Invalid data for unconfirmed transactions')
-  //   }
-  //   if (this.transactionsChangedArray.length > 0) {
-  //     this.currencyEngineCallbacks.onTransactionsChanged(
-  //       this.transactionsChangedArray
-  //     )
-  //     this.transactionsChangedArray = []
-  //   }
-  // }
 
   async checkTransactionsInnerLoop () {
     const blockHeight = Date.now()
@@ -563,21 +480,29 @@ export class BinanceEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     let funcs
     switch (func) {
-      //     case 'broadcastTx':
-      //       const promises = []
-      //       promises.push(
-      //         broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
-      //       )
-      //       promises.push(
-      //         broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
-      //       )
-      //       promises.push(
-      //         broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher')
-      //       )
-      //       out = await promiseAny(promises)
-
-      //       this.log(`ETH multicastServers ${func} ${out.server} won`)
-      //       break
+      case 'bnb_broadcastTx':
+        const promises = []
+        const broadcastServers = this.currencyInfo.defaultSettings.otherSettings
+          .binanceApiServers
+        for (const bnbServer of broadcastServers) {
+          const endpoint = `${bnbServer}/api/v1/broadcast?sync=true`
+          promises.push(
+            this.io.fetch(endpoint, {
+              method: 'POST',
+              body: params[0],
+              headers: {
+                'content-type': 'text/plain'
+              }
+            })
+          )
+        }
+        const response = await promiseAny(promises)
+        const result = await response.json()
+        this.log(`BNB multicastServers ${func} ${JSON.stringify(out)} won`)
+        return {
+          result,
+          server: 'irrelevant'
+        }
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
       case 'bnb_getTransactions':
@@ -790,7 +715,7 @@ export class BinanceEngine extends CurrencyEngine {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: '0', // networkFee, may need modification
+      networkFee: '37500', // networkFee, supposedly fixed
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
       otherParams // otherParams
@@ -799,113 +724,7 @@ export class BinanceEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  // sign then broadcast then save
-  // takes unsigned transaction then signs it
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    return edgeTransaction
-  }
-
-  // async broadcastEtherscan (
-  //   edgeTransaction: EdgeTransaction
-  // ): Promise<BroadcastResults> {
-  //   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
-
-  //   this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
-  //   const url = `?module=proxy&action=eth_sendRawTransaction&hex=${
-  //     edgeTransaction.signedTx
-  //   }`
-  //   const jsonObj = await this.fetchGetEtherscan(
-  //     this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
-  //     url
-  //   )
-
-  //   this.log('broadcastEtherscan jsonObj:', jsonObj)
-
-  //   if (typeof jsonObj.error !== 'undefined') {
-  //     this.log('EtherScan: Error sending transaction')
-  //     throw jsonObj.error
-  //   } else if (typeof jsonObj.result === 'string') {
-  //     // Success!!
-  //     return jsonObj
-  //   } else {
-  //     throw new Error('Invalid return value on transaction send')
-  //   }
-  // }
-
-  // async fetchPostInfura (method: string, params: Object) {
-  //   const { infuraProjectId } = this.initOptions
-  //   if (!infuraProjectId || infuraProjectId.length < 6) {
-  //     throw new Error('Need Infura Project ID')
-  //   }
-  //   const url = `https://mainnet.infura.io/v3/${infuraProjectId}`
-  //   const body = {
-  //     id: 1,
-  //     jsonrpc: '2.0',
-  //     method,
-  //     params
-  //   }
-  //   const response = await this.io.fetch(url, {
-  //     headers: {
-  //       Accept: 'application/json',
-  //       'Content-Type': 'application/json'
-  //     },
-  //     method: 'POST',
-  //     body: JSON.stringify(body)
-  //   })
-  //   const jsonObj = await response.json()
-  //   return jsonObj
-  // }
-
-  // async broadcastInfura (
-  //   edgeTransaction: EdgeTransaction
-  // ): Promise<BroadcastResults> {
-  //   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
-
-  //   const method = 'eth_sendRawTransaction'
-  //   const params = [edgeTransaction.signedTx]
-
-  //   const jsonObj = await this.fetchPostInfura(method, params)
-
-  //   if (typeof jsonObj.error !== 'undefined') {
-  //     this.log('EtherScan: Error sending transaction')
-  //     throw jsonObj.error
-  //   } else if (typeof jsonObj.result === 'string') {
-  //     // Success!!
-  //     this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
-  //     return jsonObj
-  //   } else {
-  //     throw new Error('Invalid return value on transaction send')
-  //   }
-  // }
-
-  // async broadcastBlockCypher (
-  //   edgeTransaction: EdgeTransaction
-  // ): Promise<BroadcastResults> {
-  //   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
-  //   this.log(
-  //     `Blockcypher: sending transaction to network:\n${transactionParsed}\n`
-  //   )
-
-  //   const url = 'v1/eth/main/txs/push'
-  //   const hexTx = edgeTransaction.signedTx.replace('0x', '')
-  //   const jsonObj = await this.fetchPostBlockcypher(url, { tx: hexTx })
-
-  //   this.log('broadcastBlockCypher jsonObj:', jsonObj)
-  //   if (typeof jsonObj.error !== 'undefined') {
-  //     this.log('BlockCypher: Error sending transaction')
-  //     throw jsonObj.error
-  //   } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
-  //     this.log(`Blockcypher success sending txid ${jsonObj.tx.hash}`)
-  //     // Success!!
-  //     return jsonObj
-  //   } else {
-  //     throw new Error('Invalid return value on transaction send')
-  //   }
-  // }
-
-  async broadcastTx (
-    edgeTransaction: EdgeTransaction
-  ): Promise<EdgeTransaction> {
     const bnbClient = new BnbApiClient(
       currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
     )
@@ -922,27 +741,39 @@ export class BinanceEngine extends CurrencyEngine {
     }
     const nativeAmountString = parseInt(amount) / parseInt(denom.multiplier)
     const nativeAmount = parseFloat(nativeAmountString)
-    const result = await bnbClient.transfer(
+    // identity function, overriding library's version
+    bnbClient._broadcastDelegate = x => {
+      return x
+    }
+    // WILL NOT ACTUALLY TRANSFER! That will be done in this.broadcastTx
+    const signedTx = await bnbClient.transfer(
       edgeTransaction.otherParams.from[0],
       edgeTransaction.otherParams.to[0],
       nativeAmount,
       currencyCode
     )
-    this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(result)}`)
+    this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(signedTx)}`)
+    // signedTx is now a prepared transaction
+    edgeTransaction.signedTx = signedTx
+    edgeTransaction.otherParams.serializedTx = signedTx.serialize()
     return edgeTransaction
   }
 
-  // async broadcastTx (
-  //   edgeTransaction: EdgeTransaction
-  // ): Promise<EdgeTransaction> {
-  //   const result = await this.multicastServers('broadcastTx', edgeTransaction)
-
-  //   // Success
-  //   this.log(`SUCCESS broadcastTx\n${JSON.stringify(result)}`)
-  //   this.log('edgeTransaction = ', edgeTransaction)
-
-  //   return edgeTransaction
-  // }
+  async broadcastTx (
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction> {
+    const bnbSignedTransaction = edgeTransaction.otherParams.serializedTx
+    const response = await this.multicastServers(
+      'bnb_broadcastTx',
+      bnbSignedTransaction
+    )
+    if (response.result[0] && response.result[0].ok) {
+      this.log(`SUCCESS broadcastTx\n${JSON.stringify(response.result[0])}`)
+      edgeTransaction.txid = response.result[0].hash
+    }
+    this.log('edgeTransaction = ', edgeTransaction)
+    return edgeTransaction
+  }
 
   getDisplayPrivateSeed () {
     if (this.walletInfo.keys && this.walletInfo.keys.binanceMnemonic) {
@@ -960,3 +791,197 @@ export class BinanceEngine extends CurrencyEngine {
 }
 
 export { CurrencyEngine }
+
+// async broadcastEtherscan (
+//   edgeTransaction: EdgeTransaction
+// ): Promise<BroadcastResults> {
+//   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+//   this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
+//   const url = `?module=proxy&action=eth_sendRawTransaction&hex=${
+//     edgeTransaction.signedTx
+//   }`
+//   const jsonObj = await this.fetchGetEtherscan(
+//     this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
+//     url
+//   )
+
+//   this.log('broadcastEtherscan jsonObj:', jsonObj)
+
+//   if (typeof jsonObj.error !== 'undefined') {
+//     this.log('EtherScan: Error sending transaction')
+//     throw jsonObj.error
+//   } else if (typeof jsonObj.result === 'string') {
+//     // Success!!
+//     return jsonObj
+//   } else {
+//     throw new Error('Invalid return value on transaction send')
+//   }
+// }
+
+// async fetchPostInfura (method: string, params: Object) {
+//   const { infuraProjectId } = this.initOptions
+//   if (!infuraProjectId || infuraProjectId.length < 6) {
+//     throw new Error('Need Infura Project ID')
+//   }
+//   const url = `https://mainnet.infura.io/v3/${infuraProjectId}`
+//   const body = {
+//     id: 1,
+//     jsonrpc: '2.0',
+//     method,
+//     params
+//   }
+//   const response = await this.io.fetch(url, {
+//     headers: {
+//       Accept: 'application/json',
+//       'Content-Type': 'application/json'
+//     },
+//     method: 'POST',
+//     body: JSON.stringify(body)
+//   })
+//   const jsonObj = await response.json()
+//   return jsonObj
+// }
+
+// async broadcastInfura (
+//   edgeTransaction: EdgeTransaction
+// ): Promise<BroadcastResults> {
+//   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+//   const method = 'eth_sendRawTransaction'
+//   const params = [edgeTransaction.signedTx]
+
+//   const jsonObj = await this.fetchPostInfura(method, params)
+
+//   if (typeof jsonObj.error !== 'undefined') {
+//     this.log('EtherScan: Error sending transaction')
+//     throw jsonObj.error
+//   } else if (typeof jsonObj.result === 'string') {
+//     // Success!!
+//     this.log(`Infura: sent transaction to network:\n${transactionParsed}\n`)
+//     return jsonObj
+//   } else {
+//     throw new Error('Invalid return value on transaction send')
+//   }
+// }
+
+// async broadcastBlockCypher (
+//   edgeTransaction: EdgeTransaction
+// ): Promise<BroadcastResults> {
+//   const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+//   this.log(
+//     `Blockcypher: sending transaction to network:\n${transactionParsed}\n`
+//   )
+
+//   const url = 'v1/eth/main/txs/push'
+//   const hexTx = edgeTransaction.signedTx.replace('0x', '')
+//   const jsonObj = await this.fetchPostBlockcypher(url, { tx: hexTx })
+
+//   this.log('broadcastBlockCypher jsonObj:', jsonObj)
+//   if (typeof jsonObj.error !== 'undefined') {
+//     this.log('BlockCypher: Error sending transaction')
+//     throw jsonObj.error
+//   } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
+//     this.log(`Blockcypher success sending txid ${jsonObj.tx.hash}`)
+//     // Success!!
+//     return jsonObj
+//   } else {
+//     throw new Error('Invalid return value on transaction send')
+//   }
+// }
+
+// async broadcastTx (
+//   edgeTransaction: EdgeTransaction
+// ): Promise<EdgeTransaction> {
+//   const result = await this.multicastServers('broadcastTx', edgeTransaction)
+
+//   // Success
+//   this.log(`SUCCESS broadcastTx\n${JSON.stringify(result)}`)
+//   this.log('edgeTransaction = ', edgeTransaction)
+
+//   return edgeTransaction
+// }
+
+// processUnconfirmedTransaction (tx: Object) {
+//   const fromAddress = '0x' + tx.inputs[0].addresses[0]
+//   const toAddress = '0x' + tx.outputs[0].addresses[0]
+//   const epochTime = Date.parse(tx.received) / 1000
+//   const ourReceiveAddresses: Array<string> = []
+
+//   let nativeAmount: string
+//   if (
+//     normalizeAddress(fromAddress) ===
+//     normalizeAddress(this.walletLocalData.publicKey)
+//   ) {
+//     if (fromAddress === toAddress) {
+//       // Spend to self
+//       nativeAmount = bns.sub('0', tx.fees.toString(10))
+//     } else {
+//       nativeAmount = (0 - tx.total).toString(10)
+//       nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
+//     }
+//   } else {
+//     nativeAmount = tx.total.toString(10)
+//     ourReceiveAddresses.push(this.walletLocalData.publicKey)
+//   }
+
+//   const otherParams: EthereumTxOtherParams = {
+//     from: [fromAddress],
+//     to: [toAddress],
+//     gas: '',
+//     gasPrice: '',
+//     gasUsed: tx.fees.toString(10),
+//     cumulativeGasUsed: '',
+//     errorVal: 0,
+//     tokenRecipientAddress: null
+//   }
+
+//   const edgeTransaction: EdgeTransaction = {
+//     txid: addHexPrefix(tx.hash),
+//     date: epochTime,
+//     currencyCode: 'ETH',
+//     blockHeight: 0,
+//     nativeAmount,
+//     networkFee: tx.fees.toString(10),
+//     ourReceiveAddresses,
+//     signedTx: 'iwassignedyoucantrustme',
+//     otherParams
+//   }
+//   this.addTransaction('ETH', edgeTransaction)
+// }
+
+// async checkUnconfirmedTransactionsInnerLoop () {
+//   const address = normalizeAddress(this.walletLocalData.publicKey)
+//   const url = `${
+//     this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
+//   }/v1/eth/main/txs/${address}`
+//   let jsonObj = null
+//   try {
+//     jsonObj = await this.fetchGet(url)
+//   } catch (e) {
+//     this.log(e)
+//     this.log('Failed to fetch unconfirmed transactions')
+//     return
+//   }
+
+//   const valid = validateObject(jsonObj, SuperEthGetUnconfirmedTransactions)
+//   if (valid) {
+//     const transactions = jsonObj
+//     for (const tx of transactions) {
+//       if (
+//         normalizeAddress(tx.inputs[0].addresses[0]) === address ||
+//         normalizeAddress(tx.outputs[0].addresses[0]) === address
+//       ) {
+//         this.processUnconfirmedTransaction(tx)
+//       }
+//     }
+//   } else {
+//     this.log('Invalid data for unconfirmed transactions')
+//   }
+//   if (this.transactionsChangedArray.length > 0) {
+//     this.currencyEngineCallbacks.onTransactionsChanged(
+//       this.transactionsChangedArray
+//     )
+//     this.transactionsChangedArray = []
+//   }
+// }
