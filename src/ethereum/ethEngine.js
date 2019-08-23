@@ -13,6 +13,7 @@ import {
 } from 'edge-core-js/types'
 import abi from 'ethereumjs-abi'
 import EthereumTx from 'ethereumjs-tx'
+import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -837,6 +838,10 @@ export class EthereumEngine extends CurrencyEngine {
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
+    if (!EthereumUtil.isValidAddress(publicAddress)) {
+      throw new TypeError('Invalid Ethereum address')
+    }
+
     const data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
 
