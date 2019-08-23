@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.3.4 (2019-08-22)
+
+- Validate Ethereum addresses prior to sending.
+
 # 0.3.3 (2019-08-22)
 
 - Add support for RSK & Tezos mnemonic keys.
