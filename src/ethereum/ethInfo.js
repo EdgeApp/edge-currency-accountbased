@@ -13,7 +13,14 @@ const otherSettings: EthereumSettings = {
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
-  iosAllowedTokens: { REP: true, WINGS: true, HUR: true, IND: true, USDT: true }
+  iosAllowedTokens: {
+    REP: true,
+    WINGS: true,
+    HUR: true,
+    IND: true,
+    USDT: true,
+    AGLD: true
+  }
 }
 
 const defaultSettings: any = {
@@ -73,6 +80,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x6251583e7d997df3604bc73b9779196e94a090ce',
       symbolImage: `${imageServerUrl}/herc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'AGLD',
+      currencyName: 'Anthem Gold',
+      denominations: [
+        {
+          name: 'AGLD',
+          multiplier: '1000000000'
+        }
+      ],
+      contractAddress: '0xd668dab892f1b702a6b9ee01342508b14d4e62c5',
+      symbolImage: `${imageServerUrl}/agld-logo-solo-64.png`
     },
     {
       currencyCode: 'DAI',
