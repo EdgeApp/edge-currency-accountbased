@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.3.5
+
+- Add AGLD to list of known tokens
+
 # 0.3.4 (2019-08-22)
 
 - Validate Ethereum addresses prior to sending.
