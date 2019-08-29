@@ -54,7 +54,10 @@ export class TezosEngine extends CurrencyEngine {
     switch (func) {
       // Functions that should waterfall from top to low priority servers
       case 'getHead':
-        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+        // relevant nodes, disabling first node due to caching / polling issue
+        // need to re-enable once that nodes issue is fixed
+        const nonCachedNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
+        funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             .fetch(server + '/chains/main/blocks/head/header')
             .then(function (response) {
