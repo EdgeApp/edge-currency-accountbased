@@ -50,7 +50,8 @@
     "base-x": "^1.0.4",
     "biggystring": "^3.0.0",
     "bip39": "^3.0.2",
-    "edge-ripple-lib": "^1.0.0-beta.2",
+    "ripple-lib": "^1.0.0",
+    "ripple-keypairs": "^0.10.0",
     "eosjs": "^16.0.9",
     "esm": "^3.2.4",
     "ethereumjs-abi": "^0.6.4",
@@ -98,7 +99,8 @@
     "webpack-cli": "^3.2.3"
   },
   "resolutions": {
-    "scrypt.js": "0.3.0"
+    "scrypt.js": "0.3.0",
+    "ripple-binary-codec": "0.2.3"
   },
   "importSort": {
     ".js, .es": {
