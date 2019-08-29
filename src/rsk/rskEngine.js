@@ -767,11 +767,6 @@ export class RskEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
-    const ErrorInsufficientFundsMoreEth = new Error(
-      'Insufficient RBTC for transaction fee'
-    )
-    ErrorInsufficientFundsMoreEth.name = 'ErrorInsufficientFundsMoreEth'
-
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     const balanceEth = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
@@ -790,7 +785,9 @@ export class RskEngine extends CurrencyEngine {
       parentNetworkFee = nativeNetworkFee
 
       if (bns.gt(nativeNetworkFee, balanceEth)) {
-        throw ErrorInsufficientFundsMoreEth
+        throw new InsufficientFundsError(
+          'Insufficient RBTC for transaction fee'
+        )
       }
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
