@@ -459,7 +459,8 @@ export default [
       25,
       135
     ],
-    mnemonic: 'latin seat grit casual fold cluster soon buyer turn school human exhibit',
+    mnemonic:
+      'latin seat grit casual fold cluster soon buyer turn school human exhibit',
     xpub: '0xe38884ff92c9834dc3255d33b8662b80154a06dd',
     key_length: 64,
     'invalid key name': {

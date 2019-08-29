@@ -6,6 +6,7 @@
 import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
+import { generateMnemonic, mnemonicToSeedSync } from 'bip39'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -19,7 +20,6 @@ import {
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
-import { generateMnemonic, mnemonicToSeedSync } from 'bip39'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
@@ -63,9 +63,11 @@ export class RskPlugin extends CurrencyPlugin {
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'rsk') {
-      const rskMnemonic = generateMnemonic(128).split(',').join(' ')
+      const rskMnemonic = generateMnemonic(128)
+        .split(',')
+        .join(' ')
       const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(rskMnemonic))
-      const walletHdpath = 'm/44\'/137\'/0\'/0/'
+      const walletHdpath = "m/44'/137'/0'/0/"
       const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
       const rskKey = wallet.getPrivateKey().toString('hex')
       return { rskMnemonic, rskKey }
@@ -77,8 +79,10 @@ export class RskPlugin extends CurrencyPlugin {
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'rsk') {
-      const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(walletInfo.keys.rskMnemonic))
-      const walletHdpath = 'm/44\'/137\'/0\'/0/'
+      const hdwallet = hdKey.fromMasterSeed(
+        mnemonicToSeedSync(walletInfo.keys.rskMnemonic)
+      )
+      const walletHdpath = "m/44'/137'/0'/0/"
       const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
       const publicKey = '0x' + wallet.getAddress().toString('hex')
       return { publicKey }
