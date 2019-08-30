@@ -8,6 +8,10 @@
 
 - Validate Ethereum addresses prior to sending.
 
+# 0.3.7
+
+- Remove unnecessary code for ETH errors
+
 # 0.3.6 (2019-08-29)
 
 - Skip one XTZ node for `getHead` loop to fix engine block height
