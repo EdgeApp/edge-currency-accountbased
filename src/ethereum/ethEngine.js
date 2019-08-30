@@ -893,11 +893,6 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
-    const ErrorInsufficientFundsMoreEth = new Error(
-      'Insufficient ETH for transaction fee'
-    )
-    ErrorInsufficientFundsMoreEth.name = 'ErrorInsufficientFundsMoreEth'
-
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     const balanceEth = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
@@ -916,7 +911,7 @@ export class EthereumEngine extends CurrencyEngine {
       parentNetworkFee = nativeNetworkFee
 
       if (bns.gt(nativeNetworkFee, balanceEth)) {
-        throw ErrorInsufficientFundsMoreEth
+        throw new InsufficientFundsError('Insufficient ETH for transaction fee')
       }
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
