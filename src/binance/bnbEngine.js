@@ -499,10 +499,14 @@ export class BinanceEngine extends CurrencyEngine {
         }
         const response = await promiseAny(promises)
         const result = await response.json()
-        this.log(`BNB multicastServers ${func} ${JSON.stringify(out)} won`)
-        return {
-          result,
-          server: 'irrelevant'
+        if (result[0] && result[0].ok && result[0].code === 0) {
+          this.log(`BNB multicastServers ${func} ${JSON.stringify(out)} won`)
+          return {
+            result,
+            server: 'irrelevant'
+          }
+        } else {
+          throw new Error('BNB send fail with error: ' + result.message)
         }
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
