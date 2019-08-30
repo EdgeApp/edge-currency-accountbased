@@ -8,6 +8,10 @@
 
 - Validate Ethereum addresses prior to sending.
 
+# 0.3.6 (2019-08-29)
+
+- Skip one XTZ node for `getHead` loop to fix engine block height
+
 # 0.3.3 (2019-08-22)
 
 - Add support for RSK & Tezos mnemonic keys.
