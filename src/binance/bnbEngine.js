@@ -173,6 +173,9 @@ export class BinanceEngine extends CurrencyEngine {
       )
       const valid = validateObject(jsonObj, BinanceApiAccountBalance)
       if (valid) {
+        if (jsonObj.balances.length === 0) {
+          this.updateBalance('BNB', '0')
+        }
         for (const tk of this.walletLocalData.enabledTokens) {
           for (const balance of jsonObj.balances) {
             if (balance.symbol === tk) {
