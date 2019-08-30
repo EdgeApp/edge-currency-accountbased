@@ -44,6 +44,7 @@ const NUM_TRANSACTIONS_TO_QUERY = 50
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1554076800000 // 2019-04-01, BNB launched on 2019-04-18
 const NATIVE_UNIT_MULTIPLIER = '100000000'
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
+const NETWORK_FEE_NATIVE_AMOUNT = '37500' // fixed amount for BNB
 
 type BnbFunction =
   | 'bnb_broadcastTx'
@@ -686,7 +687,7 @@ export class BinanceEngine extends CurrencyEngine {
       }
       otherParams = bnbParams
     }
-
+    const nativeNetworkFee = NETWORK_FEE_NATIVE_AMOUNT
     const ErrorInsufficientFundsMoreBnb = new Error(
       'Insufficient BNB for transaction fee'
     )
@@ -696,11 +697,9 @@ export class BinanceEngine extends CurrencyEngine {
     const balanceBnb = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
-    // let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
-    let totalTxAmount = '0'
-    // let parentNetworkFee = null
 
-    totalTxAmount = nativeAmount
+    let totalTxAmount = '0'
+    totalTxAmount = bns.add(nativeAmount, nativeNetworkFee)
     if (bns.gt(totalTxAmount, balanceBnb)) {
       throw new InsufficientFundsError()
     }
@@ -715,7 +714,7 @@ export class BinanceEngine extends CurrencyEngine {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: '37500', // networkFee, supposedly fixed
+      networkFee: nativeNetworkFee, // networkFee, supposedly fixed
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
       otherParams // otherParams
@@ -733,7 +732,11 @@ export class BinanceEngine extends CurrencyEngine {
     await bnbClient.setPrivateKey(privKey)
     await bnbClient.initChain()
     const currencyCode = edgeTransaction.currencyCode
-    const amount = edgeTransaction.nativeAmount.replace('-', '')
+    const spendAmount = bns.add(
+      edgeTransaction.nativeAmount,
+      NETWORK_FEE_NATIVE_AMOUNT
+    )
+    const amount = spendAmount.replace('-', '')
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
     if (!denom) {
       this.log(`Received unsupported currencyCode: ${currencyCode}`)
