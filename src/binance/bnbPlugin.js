@@ -71,15 +71,14 @@ export class BinancePlugin extends CurrencyPlugin {
     super(io, 'binance', currencyInfo)
   }
 
-  // async importPrivateKey (passPhrase: string): Promise<Object> {
-  //   const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
-  //   const buffer = Buffer.from(strippedPassPhrase, 'hex')
-  //   if (buffer.length !== 32) throw new Error('Private key wrong length')
-  //   const ethereumKey = buffer.toString('hex')
-  //   return {
-  //     ethereumKey
-  //   }
-  // }
+  // will actually use MNEMONIC version of private key
+  async importPrivateKey (mnemonic: string): Promise<Object> {
+    const isValid = bnbCrypto.validateMnemonic(mnemonic)
+    if (!isValid) throw new Error('Invalid BNB mnemonic')
+    const binanceKey = bnbCrypto.getPrivateKeyFromMnemonic(mnemonic)
+
+    return { binanceMnemonic: mnemonic, binanceKey }
+  }
 
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
