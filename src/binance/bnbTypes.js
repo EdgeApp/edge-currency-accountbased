@@ -43,5 +43,6 @@ export type BinanceTxOtherParams = {
   // cumulativeGasUsed: string,
   errorVal: number,
   tokenRecipientAddress: string | null,
-  data?: string | null
+  data?: string | null,
+  memo?: string
 }
