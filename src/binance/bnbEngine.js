@@ -694,6 +694,14 @@ export class BinanceEngine extends CurrencyEngine {
       }
       otherParams = bnbParams
     }
+    if (
+      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+    ) {
+      otherParams.memo =
+        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+    }
+
     const nativeNetworkFee = NETWORK_FEE_NATIVE_AMOUNT
     const ErrorInsufficientFundsMoreBnb = new Error(
       'Insufficient BNB for transaction fee'
@@ -760,7 +768,8 @@ export class BinanceEngine extends CurrencyEngine {
       edgeTransaction.otherParams.from[0],
       edgeTransaction.otherParams.to[0],
       nativeAmount,
-      currencyCode
+      currencyCode,
+      edgeTransaction.otherParams.memo
     )
     this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(signedTx)}`)
     // signedTx is now a prepared transaction
