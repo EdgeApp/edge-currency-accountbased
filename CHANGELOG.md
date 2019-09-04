@@ -8,7 +8,11 @@
 
 - Validate Ethereum addresses prior to sending.
 
-# 0.3.8
+# 0.4.0 (2019-09-04)
+
+- Implementation of Binance Chain (BNB)
+
+# 0.3.8 (2019-09-04)
 
 - Remove cached RPC node from being used for XTZ getBalance
 
