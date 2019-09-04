@@ -8,6 +8,10 @@
 
 - Validate Ethereum addresses prior to sending.
 
+# 0.3.8
+
+- Remove cached RPC node from being used for XTZ getBalance
+
 # 0.3.7
 
 - Remove unnecessary code for ETH errors
