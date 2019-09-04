@@ -3,17 +3,8 @@
  */
 // @flow
 
-// export type EthereumInitOptions = {
-//   blockcypherApiKey?: string,
-//   etherscanApiKey?: string,
-//   infuraProjectId?: string
-// }
-
 export type BinanceSettings = {
   binanceApiServers: Array<string>
-  // blockcypherApiServers: Array<string>,
-  // superethServers: Array<string>,
-  // iosAllowedTokens: { [currencyCode: string]: boolean }
 }
 
 export type BinanceApiTransaction = {

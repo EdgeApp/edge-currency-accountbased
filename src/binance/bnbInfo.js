@@ -12,7 +12,6 @@ const otherSettings: BinanceSettings = {
 }
 
 const defaultSettings: any = {
-  // customFeeSettings: ['gasLimit', 'gasPrice'],
   otherSettings
 }
 
