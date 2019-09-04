@@ -71,7 +71,8 @@ export class TezosEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
       case 'getBalance':
-        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+        const usableNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
+        funcs = usableNodes.map(server => async () => {
           eztz.node.setProvider(server)
           const result = await eztz.rpc.getBalance(params[0])
           return { server, result }
