@@ -1,5 +1,147 @@
 export default [
   {
+    pluginName: 'binance',
+    WALLET_TYPE: 'wallet:binance',
+    'Test Currency code': 'BNB',
+    key: [
+      39,
+      190,
+      34,
+      129,
+      208,
+      32,
+      145,
+      88,
+      191,
+      217,
+      226,
+      98,
+      183,
+      16,
+      52,
+      150,
+      52,
+      53,
+      31,
+      137,
+      164,
+      40,
+      236,
+      146,
+      128,
+      107,
+      129,
+      59,
+      192,
+      240,
+      40,
+      238
+    ],
+    xpub: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:binance',
+      keys: { stellarKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'wallet:stellarz',
+      keys: { stellarKeyz: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+      ],
+      'invalid address': [
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv1',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695lu',
+        'tnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+      ],
+      'uri address': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+      ],
+      'uri address with amount': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        '1234567000',
+        'BNB'
+      ],
+      'uri address with unique identifier': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?memo=123456700',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        'BNB',
+        '123456700'
+      ],
+      'uri address with amount & label': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567&label=Johnny%20Binance',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        '1234567000',
+        'BNB',
+        'Johnny Binance'
+      ],
+      'uri address with amount, label & message': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567&label=Johnny%20Binance&message=Hellow%20Binance%20World',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        '1234567000',
+        'BNB',
+        'Johnny Binance',
+        'Hello Binance World'
+      ],
+      'uri address with unsupported param': [
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567&unsupported=I%20am%20unsupported',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        '1234567000',
+        'BNB'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+        },
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+      ],
+      'weird address': [
+        {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+        },
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'
+      ],
+      'invalid address': [
+        { publicAddress: 'bnt1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv' },
+        { publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695lu' },
+        { publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luvw' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+          nativeAmount: '12345678000000'
+        },
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=123456.78'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+          nativeAmount: '12300',
+          currencyCode: 'BNB',
+          label: 'Johnny Ripple'
+        },
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=0.000123&label=Johnny%20Ripple'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+          nativeAmount: '12300',
+          currencyCode: 'BNB',
+          label: 'Johnny Ripple',
+          message: 'Hello World, I miss you !'
+        },
+        'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=0.000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
+  },
+  {
     pluginName: 'stellar',
     WALLET_TYPE: 'wallet:stellar',
     'Test Currency code': 'XLM',

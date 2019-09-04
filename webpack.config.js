@@ -4,7 +4,7 @@ const webpack = require('webpack')
 
 const babelOptions = {
   // For debugging, just remove "@babel/preset-env":
-  presets: ['@babel/preset-env', '@babel/preset-flow'],
+  presets: ['@babel/preset-flow'],
   plugins: [['@babel/plugin-transform-for-of', { assumeArray: true }]],
   cacheDirectory: true
 }
