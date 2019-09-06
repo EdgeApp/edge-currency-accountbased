@@ -322,18 +322,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/numeraire-logo-solo-64.png`
     },
     {
-      currencyCode: 'BNB',
-      currencyName: 'Binance Coin',
-      denominations: [
-        {
-          name: 'BNB',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0xb8c77482e45f1f44de1745f52c74426c631bdd52',
-      symbolImage: `${imageServerUrl}/binance-coin-logo-solo-64.png`
-    },
-    {
       currencyCode: 'MKR',
       currencyName: 'Maker',
       denominations: [
