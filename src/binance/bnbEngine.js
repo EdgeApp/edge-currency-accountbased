@@ -171,6 +171,13 @@ export class BinanceEngine extends CurrencyEngine {
         }
       }
     } catch (e) {
+      // fetching of account balances for uninitiate accounts returns 404 (throws error)
+      if (
+        this.tokenCheckTransactionsStatus.BNB === 1 &&
+        this.transactionList.BNB.length === 0
+      ) {
+        this.updateBalance('BNB', '0')
+      }
       this.log(`Error checking BNB address balance`)
     }
   }
