@@ -218,7 +218,7 @@ export class BinanceEngine extends CurrencyEngine {
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
-      signedTx: 'unsigned_right_now',
+      signedTx: '',
       otherParams
     }
 
@@ -496,7 +496,7 @@ export class BinanceEngine extends CurrencyEngine {
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
       ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '0', // signedTx
+      signedTx: '', // signedTx
       otherParams // otherParams
     }
 
@@ -537,8 +537,6 @@ export class BinanceEngine extends CurrencyEngine {
       edgeTransaction.otherParams.memo
     )
     this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(signedTx)}`)
-    // signedTx is now a prepared transaction
-    edgeTransaction.signedTx = signedTx
     edgeTransaction.otherParams.serializedTx = signedTx.serialize()
     return edgeTransaction
   }
