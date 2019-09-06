@@ -8,6 +8,12 @@
 
 - Validate Ethereum addresses prior to sending.
 
+# 0.4.1 (2019-09-05)
+
+- Fix BNB balance stuck loading on new accounts
+- Remove BNB as possible ERC20 token
+- Removed `signedTx` data from BNB transactions
+
 # 0.4.0 (2019-09-04)
 
 - Implementation of Binance Chain (BNB)
