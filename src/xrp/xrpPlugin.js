@@ -15,8 +15,8 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import keypairs from 'edge-ripple-keypairs'
-import { RippleAPI } from 'edge-ripple-lib'
+import keypairs from 'ripple-keypairs'
+import { RippleAPI } from 'ripple-lib'
 import parse from 'url-parse'
 
 import { CurrencyPlugin } from '../common/plugin.js'
