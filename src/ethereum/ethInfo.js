@@ -418,6 +418,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/kin-logo-solo-64.png`
     },
     {
+      currencyCode: 'LINK',
+      currencyName: 'Chainlink',
+      denominations: [
+        {
+          name: 'LINK',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x514910771af9ca656af840dff83e8264ecf986ca',
+      symbolImage: `${imageServerUrl}/chainlink-logo-solo-64.png`
+    },
+    {
       currencyCode: 'BRZ',
       currencyName: 'BRZ Token',
       denominations: [
