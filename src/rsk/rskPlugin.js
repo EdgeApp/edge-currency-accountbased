@@ -50,13 +50,23 @@ export class RskPlugin extends CurrencyPlugin {
     super(io, 'rsk', currencyInfo)
   }
 
-  async importPrivateKey (passPhrase: string): Promise<Object> {
-    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
-    const buffer = Buffer.from(strippedPassPhrase, 'hex')
-    if (buffer.length !== 32) throw new Error('Private key wrong length')
-    const rskKey = buffer.toString('hex')
-    return {
-      rskKey
+  async importPrivateKey (userInput: string): Promise<Object> {
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      // it looks like a private key!
+      const rskKey = this.hexPrivKeyToBuffer(userInput)
+        .toString('hex')
+        .replace('0x', '')
+      return {
+        rskKey
+      }
+    } else {
+      // it looks like a mnemonic!
+      const rskKey = await this.mnemonicToRskKey(userInput)
+      const rskKeyCleaned = rskKey.replace('0x', '')
+      return {
+        rskMnemonic: userInput,
+        rskKey: rskKeyCleaned
+      }
     }
   }
 
@@ -66,11 +76,12 @@ export class RskPlugin extends CurrencyPlugin {
       const rskMnemonic = generateMnemonic(128)
         .split(',')
         .join(' ')
-      const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(rskMnemonic))
-      const walletHdpath = "m/44'/137'/0'/0/"
-      const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
-      const rskKey = wallet.getPrivateKey().toString('hex')
-      return { rskMnemonic, rskKey }
+      const rskKey = await this.mnemonicToRskKey(rskMnemonic)
+      const rskKeyCleaned = rskKey.replace('0x', '')
+      return {
+        rskMnemonic,
+        rskKey: rskKeyCleaned
+      }
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -79,16 +90,46 @@ export class RskPlugin extends CurrencyPlugin {
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'rsk') {
-      const hdwallet = hdKey.fromMasterSeed(
-        mnemonicToSeedSync(walletInfo.keys.rskMnemonic)
-      )
+      let hdwallet
+      if (walletInfo.keys.rskMnemonic != null) {
+        hdwallet = hdKey.fromMasterSeed(
+          mnemonicToSeedSync(walletInfo.keys.rskMnemonic)
+        )
+      } else {
+        hdwallet = hdKey.fromMasterSeed(walletInfo.keys.rskKey)
+      }
       const walletHdpath = "m/44'/137'/0'/0/"
-      const wallet = hdwallet.derivePath(walletHdpath + 0).getWallet()
-      const publicKey = '0x' + wallet.getAddress().toString('hex')
-      return { publicKey }
+      const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+      const wallet = walletPathDerivation.getWallet()
+      const publicKey = wallet.getPublicKey()
+      const address = `0x${EthereumUtil.pubToAddress(publicKey).toString(
+        'hex'
+      )}`
+      if (!EthereumUtil.isValidAddress(address)) {
+        throw new Error('Invalid address')
+      }
+      return { publicKey: address }
     } else {
       throw new Error('InvalidWalletType')
     }
+  }
+
+  async mnemonicToRskKey (mnemonic: string): Promise<Buffer> {
+    const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
+    const walletHdpath = "m/44'/137'/0'/0/"
+    const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+    const wallet = walletPathDerivation.getWallet()
+    const rskKey = wallet.getPrivateKeyString()
+    return rskKey
+  }
+
+  hexPrivKeyToBuffer (passPhrase: string): Buffer {
+    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
+    const buffer = Buffer.from(strippedPassPhrase, 'hex')
+    if (buffer.length !== 32) throw new Error('Private key wrong length')
+    // TODO: Try deriving an address and see if it blows up
+    // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+    return buffer
   }
 
   async parseUri (
