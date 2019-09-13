@@ -970,17 +970,14 @@ export class RskEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.rskKey) {
-      return this.walletInfo.keys.rskKey
-    }
+    const { rskKey, rskMnemonic } = this.walletInfo.keys
+    if (rskMnemonic != null) return rskMnemonic
+    if (rskKey != null) return '0x' + rskKey.replace(/^0x/, '')
     return ''
   }
 
   getDisplayPublicSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+    return this.walletInfo.keys.publicKey || ''
   }
 }
 
