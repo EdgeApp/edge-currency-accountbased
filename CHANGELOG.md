@@ -1,12 +1,10 @@
 # edge-currency-accountbased
 
-# 0.3.5
+# 0.4.2 (2019-09-13)
 
-- Add AGLD to list of known tokens
-
-# 0.3.4 (2019-08-22)
-
-- Validate Ethereum addresses prior to sending.
+- Upgrade Ripple network libraries
+- Add Chainlink token
+- Fix RSK key management
 
 # 0.4.1 (2019-09-05)
 
@@ -29,6 +27,14 @@
 # 0.3.6 (2019-08-29)
 
 - Skip one XTZ node for `getHead` loop to fix engine block height
+
+# 0.3.5
+
+- Add AGLD to list of known tokens
+
+# 0.3.4 (2019-08-22)
+
+- Validate Ethereum addresses prior to sending.
 
 # 0.3.3 (2019-08-22)
 
