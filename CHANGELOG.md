@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.4.3 (2019-09-13)
+
+- Display mnemonic seeds for RSK when available.
+
 # 0.4.2 (2019-09-13)
 
 - Upgrade Ripple network libraries
