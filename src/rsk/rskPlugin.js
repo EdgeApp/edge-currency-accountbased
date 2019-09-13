@@ -6,7 +6,7 @@
 import { Buffer } from 'buffer'
 
 import { bns } from 'biggystring'
-import { generateMnemonic, mnemonicToSeedSync } from 'bip39'
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -52,15 +52,31 @@ export class RskPlugin extends CurrencyPlugin {
 
   async importPrivateKey (userInput: string): Promise<Object> {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      const rskKeyBuffer = Buffer.from(userInput, 'hex')
+      const isValid = EthereumUtil.isValidPrivate(rskKeyBuffer)
+      if (!isValid) {
+        throw new Error('Invalid private key')
+      }
       // it looks like a private key!
-      const rskKey = this.hexPrivKeyToBuffer(userInput)
-        .toString('hex')
-        .replace('0x', '')
+      const strippedInput = userInput.replace('0x', '').replace(/ /g, '')
+      const buffer = Buffer.from(strippedInput, 'hex')
+      if (buffer.length !== 32) throw new Error('Private key wrong length')
+      const rskKey = buffer.toString('hex').replace('0x', '')
+      this.derivePublicKey({
+        type: 'wallet:rsk',
+        id: 'fake',
+        keys: { rskKey }
+      })
       return {
         rskKey
       }
     } else {
       // it looks like a mnemonic!
+      if (!validateMnemonic(userInput)) {
+        // "input" instead of "mnemonic" in case private key
+        // was just the wrong length
+        throw new Error('Invalid input')
+      }
       const rskKey = await this.mnemonicToRskKey(userInput)
       const rskKeyCleaned = rskKey.replace('0x', '')
       return {
@@ -90,21 +106,25 @@ export class RskPlugin extends CurrencyPlugin {
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'rsk') {
-      let hdwallet
+      let address
       if (walletInfo.keys.rskMnemonic != null) {
-        hdwallet = hdKey.fromMasterSeed(
-          mnemonicToSeedSync(walletInfo.keys.rskMnemonic)
-        )
+        const rskSeedBuffer = mnemonicToSeedSync(walletInfo.keys.rskMnemonic)
+        const hdwallet = hdKey.fromMasterSeed(rskSeedBuffer)
+        const walletHdpath = "m/44'/137'/0'/0/"
+        const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+        const wallet = walletPathDerivation.getWallet()
+        const publicKey = wallet.getPublicKey()
+        address = `0x${EthereumUtil.pubToAddress(publicKey).toString('hex')}`
       } else {
-        hdwallet = hdKey.fromMasterSeed(walletInfo.keys.rskKey)
+        const rskKeyBuffer = Buffer.from(walletInfo.keys.rskKey, 'hex')
+        const isValid = EthereumUtil.isValidPrivate(rskKeyBuffer)
+        if (!isValid) {
+          throw new Error('Invalid private key')
+        }
+        address = `0x${EthereumUtil.privateToAddress(rskKeyBuffer).toString(
+          'hex'
+        )}`
       }
-      const walletHdpath = "m/44'/137'/0'/0/"
-      const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
-      const wallet = walletPathDerivation.getWallet()
-      const publicKey = wallet.getPublicKey()
-      const address = `0x${EthereumUtil.pubToAddress(publicKey).toString(
-        'hex'
-      )}`
       if (!EthereumUtil.isValidAddress(address)) {
         throw new Error('Invalid address')
       }
@@ -114,22 +134,13 @@ export class RskPlugin extends CurrencyPlugin {
     }
   }
 
-  async mnemonicToRskKey (mnemonic: string): Promise<Buffer> {
+  async mnemonicToRskKey (mnemonic: string): Promise<string> {
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
     const walletHdpath = "m/44'/137'/0'/0/"
     const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
     const wallet = walletPathDerivation.getWallet()
     const rskKey = wallet.getPrivateKeyString()
     return rskKey
-  }
-
-  hexPrivKeyToBuffer (passPhrase: string): Buffer {
-    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
-    const buffer = Buffer.from(strippedPassPhrase, 'hex')
-    if (buffer.length !== 32) throw new Error('Private key wrong length')
-    // TODO: Try deriving an address and see if it blows up
-    // 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-    return buffer
   }
 
   async parseUri (
