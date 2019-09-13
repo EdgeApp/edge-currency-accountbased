@@ -47,11 +47,10 @@
   },
   "dependencies": {
     "@binance-chain/javascript-sdk": "^2.14.4",
+    "@dapix/react-native-fio": "0.1.0",
     "base-x": "^1.0.4",
     "biggystring": "^3.0.0",
     "bip39": "^3.0.2",
-    "ripple-lib": "^1.0.0",
-    "ripple-keypairs": "^0.10.0",
     "eosjs": "^16.0.9",
     "esm": "^3.2.4",
     "ethereumjs-abi": "^0.6.4",
@@ -60,11 +59,12 @@
     "ethereumjs-wallet": "git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
     "eztz.js": "git://github.com/TezTech/eztz.git#0c6b93ffdd774f7ed3c528058f854deb0649a61c",
     "jsonschema": "^1.1.1",
+    "ripple-keypairs": "^0.10.0",
+    "ripple-lib": "^1.0.0",
     "stellar-sdk": "^0.11.0",
     "tezos-uri": "^1.0.3",
     "uri-js": "^3.0.2",
-    "url-parse": "^1.4.1",
-    "@dapix/react-native-fio": "0.1.0"
+    "url-parse": "^1.4.1"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",
@@ -99,8 +99,9 @@
     "webpack-cli": "^3.2.3"
   },
   "resolutions": {
-    "scrypt.js": "0.3.0",
-    "ripple-binary-codec": "0.2.3"
+    "codecov": "3.5.0",
+    "ripple-binary-codec": "0.2.3",
+    "scrypt.js": "0.3.0"
   },
   "importSort": {
     ".js, .es": {
