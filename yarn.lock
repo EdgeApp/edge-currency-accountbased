@@ -1273,14 +1273,6 @@ atob@^2.0.0:
   resolved "https://registry.yarnpkg.com/atob/-/atob-2.1.2.tgz#6d9517eb9e030d2436666651e86bd9f6f13533c9"
   integrity sha512-Wm6ukoaOGJi/73p/cl2GvLjTI5JM1k/O14isD73YML8StrH/7/lRFgmg8nICZgD3bZZvjwCGxtMOD3wWNAu8cg==
 
-axios@^0.18.0:
-  version "0.18.1"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.1.tgz#ff3f0de2e7b5d180e757ad98000f1081b87bcea3"
-  integrity sha512-0BfJq4NSfQXd+SkFdrvFbG7addhYSBA2mQwISr46pD6E5iqkWg02RAs8vyTT/j0RTnoYmeXauBuSv1qKwR179g==
-  dependencies:
-    follow-redirects "1.5.10"
-    is-buffer "^2.0.2"
-
 axios@^0.19.0:
   version "0.19.0"
   resolved "https://registry.yarnpkg.com/axios/-/axios-0.19.0.tgz#8e09bff3d9122e133f7b8101c8fbdd00ed3d2ab8"
@@ -7351,12 +7343,11 @@ stellar-base@^0.9.0:
   optionalDependencies:
     ed25519 "0.0.4"
 
-stellar-sdk@^0.11.0:
+"stellar-sdk@git://github.com/EdgeApp/js-stellar-sdk#d2a6bc632ed4316e33ec8413d71ef40bbf4f94e7":
   version "0.11.0"
-  resolved "https://registry.yarnpkg.com/stellar-sdk/-/stellar-sdk-0.11.0.tgz#d5415b1c535df188dbd3ab173f93bb24d18266d5"
-  integrity sha512-VNiJBea4eqZsuuNoqJu2WfBq0xhfaKex4soowJFQzYbLY0xVUe4qigetMO8dwlJrRevL4c/EDUd4ouKbT1lqAQ==
+  resolved "git://github.com/EdgeApp/js-stellar-sdk#d2a6bc632ed4316e33ec8413d71ef40bbf4f94e7"
   dependencies:
-    axios "^0.18.0"
+    axios "^0.19.0"
     es6-promise "^4.2.4"
     event-source-polyfill "0.0.12"
     eventsource "^1.0.5"

@@ -61,7 +61,7 @@
     "jsonschema": "^1.1.1",
     "ripple-keypairs": "^0.10.0",
     "ripple-lib": "^1.0.0",
-    "stellar-sdk": "^0.11.0",
+    "stellar-sdk": "git://github.com/EdgeApp/js-stellar-sdk#d2a6bc632ed4316e33ec8413d71ef40bbf4f94e7",
     "tezos-uri": "^1.0.3",
     "uri-js": "^3.0.2",
     "url-parse": "^1.4.1"
