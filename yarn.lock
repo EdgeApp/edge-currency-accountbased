@@ -1341,13 +1341,6 @@ babel-runtime@6.26.0, babel-runtime@^6.22.0, babel-runtime@^6.23.0, babel-runtim
     core-js "^2.4.0"
     regenerator-runtime "^0.11.0"
 
-babel-runtime@^5.8.20:
-  version "5.8.38"
-  resolved "https://registry.yarnpkg.com/babel-runtime/-/babel-runtime-5.8.38.tgz#1c0b02eb63312f5f087ff20450827b425c9d4c19"
-  integrity sha1-HAsC62MxL18If/IEUIJ7QlydTBk=
-  dependencies:
-    core-js "^1.0.0"
-
 babel-template@^6.16.0:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/babel-template/-/babel-template-6.26.0.tgz#de03e2d16396b069f46dd9fff8521fb1a0e35e02"
@@ -1394,17 +1387,17 @@ balanced-match@^1.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.0.tgz#89b4d199ab2bee49de164ea02b89ce462d71b767"
   integrity sha1-ibTRmasr7kneFk6gK4nORi1xt2c=
 
-base-x@^1.0.1, base-x@^1.0.4, base-x@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/base-x/-/base-x-1.1.0.tgz#42d3d717474f9ea02207f6d1aa1f426913eeb7ac"
-  integrity sha1-QtPXF0dPnqAiB/bRqh9CaRPut6w=
-
-base-x@^3.0.2:
+base-x@3.0.4, base-x@^3.0.2:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/base-x/-/base-x-3.0.4.tgz#94c1788736da065edb1d68808869e357c977fa77"
   integrity sha512-UYOadoSIkEI/VrRGSG6qp93rp2WdokiAiNYDfGW5qURAY8GiAQkvMbwNNSDYiVJopqv4gCna7xqf4rrNGp+5AA==
   dependencies:
     safe-buffer "^5.0.1"
+
+base-x@^1.0.1, base-x@^1.0.4, base-x@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/base-x/-/base-x-1.1.0.tgz#42d3d717474f9ea02207f6d1aa1f426913eeb7ac"
+  integrity sha1-QtPXF0dPnqAiB/bRqh9CaRPut6w=
 
 base32.js@~0.1.0:
   version "0.1.0"
@@ -2241,11 +2234,6 @@ copy-descriptor@^0.1.0:
   resolved "https://registry.yarnpkg.com/copy-descriptor/-/copy-descriptor-0.1.1.tgz#676f6eb3c39997c2ee1ac3a924fd6124748f578d"
   integrity sha1-Z29us8OZl8LuGsOpJP1hJHSPV40=
 
-core-js@^1.0.0:
-  version "1.2.7"
-  resolved "https://registry.yarnpkg.com/core-js/-/core-js-1.2.7.tgz#652294c14651db28fa93bd2d5ff2983a4f08c636"
-  integrity sha1-ZSKUwUZR2yj6k70tX/KYOk8IxjY=
-
 core-js@^2.4.0:
   version "2.5.3"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.5.3.tgz#8acc38345824f16d8365b7c9b4259168e8ed603e"
@@ -2696,16 +2684,6 @@ elegant-spinner@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/elegant-spinner/-/elegant-spinner-1.0.1.tgz#db043521c95d7e303fd8f345bedc3349cfb0729e"
   integrity sha1-2wQ1IcldfjA/2PNFvtwzSc+wcp4=
-
-elliptic@^5.1.0:
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-5.2.1.tgz#fa294b6563c6ddbc9ba3dc8594687ae840858f10"
-  integrity sha1-+ilLZWPG3bybo9yFlGh66ECFjxA=
-  dependencies:
-    bn.js "^3.1.1"
-    brorand "^1.0.1"
-    hash.js "^1.0.0"
-    inherits "^2.0.1"
 
 elliptic@^6.0.0, elliptic@^6.2.3:
   version "6.4.1"
@@ -3342,7 +3320,7 @@ extglob@^2.0.2, extglob@^2.0.4:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-"eztz.js@git://github.com/sfncook/eztz.git#1fab813b27ffeffd665bf7be22b044d2750695d9":
+"eztz.js@git://github.com/sfncook/eztz.git#upgradeNpmPkgs":
   version "0.0.1"
   resolved "git://github.com/sfncook/eztz.git#1fab813b27ffeffd665bf7be22b044d2750695d9"
   dependencies:
@@ -6814,7 +6792,15 @@ ripple-address-codec@^2.0.1:
     hash.js "^1.0.3"
     x-address-codec "^0.7.0"
 
-ripple-binary-codec@0.2.1, ripple-binary-codec@0.2.2, ripple-binary-codec@0.2.3:
+ripple-address-codec@^3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/ripple-address-codec/-/ripple-address-codec-3.0.4.tgz#a7a8bb040df41cb082330fd828f09b9e6478c7fd"
+  integrity sha512-GFk1BgavW+9oy5Z1Cp6YAGMfB51QdbeuhOo0Zir+s+S40F5vHtVZYu6zZE1eOAX92A5kygPuBRX4APH2v8Yhmg==
+  dependencies:
+    base-x "3.0.4"
+    create-hash "^1.1.2"
+
+ripple-binary-codec@0.2.3, ripple-binary-codec@^0.2.4:
   version "0.2.3"
   resolved "https://registry.yarnpkg.com/ripple-binary-codec/-/ripple-binary-codec-0.2.3.tgz#ca16ba39bb8f32fce693b63947eb8b3e1dd8ca2c"
   integrity sha512-1HptJcjcEvmD35dO3DaKhXxYoZYMu4k+D2khmuSctQ8ATUoktKRoBpe1x/+zK5bCHKu7Ep2iAzCaDmjJM9zr1g==
@@ -6827,25 +6813,24 @@ ripple-binary-codec@0.2.1, ripple-binary-codec@0.2.2, ripple-binary-codec@0.2.3:
     lodash "^4.17.15"
     ripple-address-codec "^2.0.1"
 
-ripple-hashes@0.3.2:
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/ripple-hashes/-/ripple-hashes-0.3.2.tgz#f3ac3b1832cec6d0bac07e82acc10a0a6a1cc84e"
-  integrity sha512-1Emm/raLNChNR5nVoQPJ7NWQpHr8jJjIZDoug4ukw4RZ3+eehO5nyx86a+MaQKAeAc1nJRFwVjBvh9SeYpelYw==
+ripple-hashes@^0.3.4:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/ripple-hashes/-/ripple-hashes-0.3.4.tgz#d06f78fc39dde27749b33ad2461b39ba873c94ec"
+  integrity sha512-u2kgg9Yu9D44HWnC9R2lNg+amVLllJkMQmXZEEM2DAMFXigr4+ph1O8LLxLv+k0fbdjAjos4aUyWwcw6cxzYMw==
   dependencies:
     bignumber.js "^4.1.0"
     create-hash "^1.1.2"
-    ripple-address-codec "^2.0.1"
-    ripple-binary-codec "0.2.1"
+    ripple-address-codec "^3.0.4"
+    ripple-binary-codec "^0.2.4"
 
-ripple-keypairs@^0.10.0, ripple-keypairs@^0.10.1:
+"ripple-keypairs@git://github.com/sfncook/ripple-keypairs#upgradeNpmPkgs":
   version "0.10.2"
-  resolved "https://registry.yarnpkg.com/ripple-keypairs/-/ripple-keypairs-0.10.2.tgz#b3a1d1e2fca85a11c5224b2a7e6da506c19720d0"
-  integrity sha512-NvY+jCrhtpy7ox2unZTIfOfSrUWqVTq+tfCTqgDD8XZ957JGwHBlL5osYAypkTWed/JglH5hggxw14NTKEZzGA==
+  resolved "git://github.com/sfncook/ripple-keypairs#1f904b6d2be5e3b0c89e77b2350c0489b75d1104"
   dependencies:
-    babel-runtime "^5.8.20"
+    babel-runtime "^6.26.0"
     bn.js "^3.1.1"
     brorand "^1.0.5"
-    elliptic "^5.1.0"
+    elliptic "^6.4.0"
     hash.js "^1.0.3"
     ripple-address-codec "^2.0.1"
 
@@ -6857,10 +6842,9 @@ ripple-lib-transactionparser@0.7.1:
     bignumber.js "^4.1.0"
     lodash "^4.17.4"
 
-ripple-lib@^1.0.0:
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/ripple-lib/-/ripple-lib-1.3.1.tgz#39c74a3957c9eccc048d913be4219172cced209e"
-  integrity sha512-zc727pvbVHw+XtOtIJQBR4cT5XeNyVxtJO8S5JoPcdqtC/SVeUlr9hJCwOtGq1opipxntIn1Phr0iJxtyDxVIw==
+"ripple-lib@git://github.com/sfncook/ripple-lib#upgradeNpmPkgs":
+  version "1.3.3"
+  resolved "git://github.com/sfncook/ripple-lib#14100194a567bcb37c57ae193717655c341e412b"
   dependencies:
     "@types/lodash" "^4.14.136"
     "@types/ws" "^3.2.0"
@@ -6868,10 +6852,10 @@ ripple-lib@^1.0.0:
     https-proxy-agent "2.2.1"
     jsonschema "1.2.2"
     lodash "^4.17.4"
-    ripple-address-codec "^2.0.1"
-    ripple-binary-codec "0.2.2"
-    ripple-hashes "0.3.2"
-    ripple-keypairs "^0.10.1"
+    ripple-address-codec "^3.0.4"
+    ripple-binary-codec "^0.2.4"
+    ripple-hashes "^0.3.4"
+    ripple-keypairs "git://github.com/sfncook/ripple-keypairs#upgradeNpmPkgs"
     ripple-lib-transactionparser "0.7.1"
     ws "^3.3.1"
 
@@ -7332,7 +7316,7 @@ stellar-base@^0.9.0:
   optionalDependencies:
     ed25519 "0.0.4"
 
-"stellar-sdk@git://github.com/EdgeApp/js-stellar-sdk#d2a6bc632ed4316e33ec8413d71ef40bbf4f94e7":
+"stellar-sdk@git://github.com/EdgeApp/js-stellar-sdk#upgradeNpmPkgs":
   version "0.11.0"
   resolved "git://github.com/EdgeApp/js-stellar-sdk#d2a6bc632ed4316e33ec8413d71ef40bbf4f94e7"
   dependencies:
