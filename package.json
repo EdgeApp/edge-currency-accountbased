@@ -57,7 +57,7 @@
     "ethereumjs-tx": "^1.3.3",
     "ethereumjs-util": "^5.1.2",
     "ethereumjs-wallet": "git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
-    "eztz.js": "git://github.com/TezTech/eztz.git#0c6b93ffdd774f7ed3c528058f854deb0649a61c",
+    "eztz.js": "git://github.com/sfncook/eztz.git#1fab813b27ffeffd665bf7be22b044d2750695d9",
     "jsonschema": "^1.1.1",
     "ripple-keypairs": "^0.10.0",
     "ripple-lib": "^1.0.0",
