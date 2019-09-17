@@ -43,6 +43,23 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
+  async importPrivateKey (userInput: string): Promise<Object> {
+    try {
+      const keys = eztz.crypto.generateKeys(userInput, '')
+      this.derivePublicKey({
+        type: 'wallet:tezos',
+        id: 'fake',
+        keys
+      })
+      return {
+        mnemonic: keys.mnemonic,
+        privateKey: keys.sk
+      }
+    } catch (e) {
+      throw new Error('Invalid input')
+    }
+  }
+
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'tezos') {
