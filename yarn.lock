@@ -3138,14 +3138,14 @@ ethereumjs-util@^5.0.0, ethereumjs-util@^5.1.2, ethereumjs-util@^5.2.0:
     safe-buffer "^5.1.1"
     secp256k1 "^3.0.1"
 
-"ethereumjs-wallet@git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef":
+"ethereumjs-wallet@git://github.com/sfncook/ethereumjs-wallet.git#upgradeNpmPkgs":
   version "0.6.0"
-  resolved "git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef"
+  resolved "git://github.com/sfncook/ethereumjs-wallet.git#a355036695e5837463279cf14a78d4cf82c53d80"
   dependencies:
     aes-js "^0.2.3"
     bs58check "^1.0.8"
     ethereumjs-util "^4.4.0"
-    hdkey "^0.7.0"
+    hdkey "^1.1.1"
     scrypt.js "^0.2.0"
     utf8 "^2.1.1"
     uuid "^2.0.1"
@@ -3956,14 +3956,6 @@ hash.js@^1.0.0, hash.js@^1.0.3:
   dependencies:
     inherits "^2.0.3"
     minimalistic-assert "^1.0.0"
-
-hdkey@^0.7.0:
-  version "0.7.1"
-  resolved "https://registry.yarnpkg.com/hdkey/-/hdkey-0.7.1.tgz#caee4be81aa77921e909b8d228dd0f29acaee632"
-  integrity sha1-yu5L6BqneSHpCbjSKN0PKayu5jI=
-  dependencies:
-    coinstring "^2.0.0"
-    secp256k1 "^3.0.1"
 
 hdkey@^1.1.1:
   version "1.1.1"

@@ -56,7 +56,7 @@
     "ethereumjs-abi": "^0.6.4",
     "ethereumjs-tx": "^1.3.3",
     "ethereumjs-util": "^5.1.2",
-    "ethereumjs-wallet": "git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
+    "ethereumjs-wallet": "git://github.com/sfncook/ethereumjs-wallet.git#upgradeNpmPkgs",
     "eztz.js": "git://github.com/sfncook/eztz.git#upgradeNpmPkgs",
     "jsonschema": "^1.1.1",
     "ripple-keypairs": "git://github.com/sfncook/ripple-keypairs#upgradeNpmPkgs",
