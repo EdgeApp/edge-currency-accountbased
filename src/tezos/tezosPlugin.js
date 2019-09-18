@@ -44,28 +44,24 @@ export class TezosPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey (userInput: string): Promise<Object> {
-    try {
-      // check for existence of numbers
-      if (/\d/.test(userInput)) {
-        throw new Error('Input must be mnemonic phrase')
-      }
-      const wordList = userInput.split(' ')
-      const wordCount = wordList.length
-      if (wordCount !== 24) {
-        throw new Error('Mnemonic phrase must be 24 words long')
-      }
-      const keys = eztz.crypto.generateKeys(userInput, '')
-      this.derivePublicKey({
-        type: 'wallet:tezos',
-        id: 'fake',
-        keys
-      })
-      return {
-        mnemonic: keys.mnemonic,
-        privateKey: keys.sk
-      }
-    } catch (e) {
-      throw new Error(e)
+    // check for existence of numbers
+    if (/\d/.test(userInput)) {
+      throw new Error('Input must be mnemonic phrase')
+    }
+    const wordList = userInput.split(' ')
+    const wordCount = wordList.length
+    if (wordCount !== 24) {
+      throw new Error('Mnemonic phrase must be 24 words long')
+    }
+    const keys = eztz.crypto.generateKeys(userInput, '')
+    this.derivePublicKey({
+      type: 'wallet:tezos',
+      id: 'fake',
+      keys
+    })
+    return {
+      mnemonic: keys.mnemonic,
+      privateKey: keys.sk
     }
   }
 
@@ -85,12 +81,8 @@ export class TezosPlugin extends CurrencyPlugin {
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'tezos') {
-      try {
-        const keypair = eztz.crypto.generateKeys(walletInfo.keys.mnemonic, '')
-        return { publicKey: keypair.pkh, publicKeyEd: keypair.pk }
-      } catch (e) {
-        throw new Error('Invalid key or mnemonic')
-      }
+      const keypair = eztz.crypto.generateKeys(walletInfo.keys.mnemonic, '')
+      return { publicKey: keypair.pkh, publicKeyEd: keypair.pk }
     } else {
       throw new Error('InvalidWalletType')
     }
