@@ -43,6 +43,28 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
+  async importPrivateKey (userInput: string): Promise<Object> {
+    // check for existence of numbers
+    if (/\d/.test(userInput)) {
+      throw new Error('Input must be mnemonic phrase')
+    }
+    const wordList = userInput.split(' ')
+    const wordCount = wordList.length
+    if (wordCount !== 24) {
+      throw new Error('Mnemonic phrase must be 24 words long')
+    }
+    const keys = eztz.crypto.generateKeys(userInput, '')
+    this.derivePublicKey({
+      type: 'wallet:tezos',
+      id: 'fake',
+      keys
+    })
+    return {
+      mnemonic: keys.mnemonic,
+      privateKey: keys.sk
+    }
+  }
+
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'tezos') {
