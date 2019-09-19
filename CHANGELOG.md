@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.4.4 (2019-09-19)
+
+- Allow XTZ mnemonic import
+- Adjustments to dependencies
+
 # 0.4.3 (2019-09-13)
 
 - Display mnemonic seeds for RSK when available.
