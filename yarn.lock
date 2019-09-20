@@ -1490,7 +1490,7 @@ bip32@^1:
     typeforce "^1.11.5"
     wif "^2.0.6"
 
-bip39@3.0.2, bip39@^2.5.0, bip39@^3.0.2:
+bip39@3.0.2, bip39@^3.0.2:
   version "3.0.2"
   resolved "https://registry.yarnpkg.com/bip39/-/bip39-3.0.2.tgz#2baf42ff3071fc9ddd5103de92e8f80d9257ee32"
   integrity sha512-J4E1r2N0tUylTKt07ibXvhpT2c5pyAFgvuA5q1H9uDy6dEGpjV8jmymh3MTYJDLCNbIVClSB9FbND49I6N24MQ==
@@ -3244,12 +3244,12 @@ extglob@^2.0.2, extglob@^2.0.4:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-"eztz.js@git://github.com/TezTech/eztz.git#0c6b93ffdd774f7ed3c528058f854deb0649a61c":
+"eztz.js@git://github.com/EdgeApp/eztz.git#cd43dab8b6f02":
   version "0.0.1"
-  resolved "git://github.com/TezTech/eztz.git#0c6b93ffdd774f7ed3c528058f854deb0649a61c"
+  resolved "git://github.com/EdgeApp/eztz.git#cd43dab8b6f0271be01e2a4ebfb5838d067e4d01"
   dependencies:
     bignumber.js "^7.2.1"
-    bip39 "^2.5.0"
+    bip39 "^3.0.2"
     bs58check "^2.1.1"
     buffer "^5.1.0"
     codecov "^2.3.1"

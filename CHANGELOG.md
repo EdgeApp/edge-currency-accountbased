@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.4.5 (2019-09-20)
+
+- Fix XTZ seed issue (`mnemonicToSeedSync` to `mnemonicToSeedSync`)
+
 # 0.4.4 (2019-09-19)
 
 - Allow XTZ mnemonic import

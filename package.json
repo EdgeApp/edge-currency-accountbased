@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
@@ -57,7 +57,7 @@
     "ethereumjs-tx": "^1.3.3",
     "ethereumjs-util": "^5.1.2",
     "ethereumjs-wallet": "git://github.com/EdgeApp/ethereumjs-wallet.git#6157e11ea10a734fbe55f4c7ea542780975b60ef",
-    "eztz.js": "git://github.com/TezTech/eztz.git#0c6b93ffdd774f7ed3c528058f854deb0649a61c",
+    "eztz.js": "git://github.com/EdgeApp/eztz.git#cd43dab8b6f02",
     "jsonschema": "^1.1.1",
     "ripple-keypairs": "^0.10.0",
     "ripple-lib": "^1.0.0",
