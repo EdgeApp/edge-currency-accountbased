@@ -8,8 +8,8 @@ import type { EthereumSettings } from './ethTypes.js'
 
 const otherSettings: EthereumSettings = {
   etherscanApiServers: [
-    'https://api.etherscan.io',
-    'https://blockscout.com/eth/mainnet'
+    'https://api.etherscan.io'
+    // 'https://blockscout.com/eth/mainnet' // not reliable enough...
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
