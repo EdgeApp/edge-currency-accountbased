@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.4.7 (2019-10-01)
+
+- Remove BlockScout due to delayed / cached results
+
 # 0.4.5 (2019-09-20)
 
 - Fix XTZ seed issue (`mnemonicToSeedSync` to `mnemonicToSeedSync`)
