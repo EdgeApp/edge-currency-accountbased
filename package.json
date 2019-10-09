@@ -120,7 +120,6 @@
     "regenerator-runtime": "0.13.2",
     "ripemd160": "2.0.2",
     "ripple-binary-codec": "0.2.3",
-    "rxjs": "6.5.2",
     "safe-buffer": "5.1.2",
     "scrypt.js": "0.3.0",
     "sha.js": "2.4.11",
