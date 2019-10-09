@@ -20,7 +20,6 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getDenomInfo,
-  promiseAny,
   validateObject
 } from '../common/utils.js'
 import { EosPlugin, checkAddress, eosConfig } from './eosPlugin.js'
@@ -39,11 +38,12 @@ const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 
 type EosFunction =
-  | 'getIncomingTransactions'
-  | 'getOutgoingTransactions'
   | 'getCurrencyBalance'
+  | 'getIncomingTransactions'
+  | 'getInfo'
+  | 'getKeyAccounts'
+  | 'getOutgoingTransactions'
   | 'transaction'
-  | 'actionsPaymentServer'
 
 export class EosEngine extends CurrencyEngine {
   // TODO: Add currency specific params
@@ -128,12 +128,7 @@ export class EosEngine extends CurrencyEngine {
   // Poll on the blockheight
   async checkBlockchainInnerLoop () {
     try {
-      const result = await new Promise((resolve, reject) => {
-        this.eosPlugin.eosServer.getInfo((error, info) => {
-          if (error) reject(error)
-          else resolve(info)
-        })
-      })
+      const result = await this.multicastServers('getInfo')
       const blockHeight = result.head_block_num
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
@@ -421,7 +416,7 @@ export class EosEngine extends CurrencyEngine {
         const funcs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url = server + params[0]
-            const result = await this.io.fetch(url)
+            const result = await eosConfig.fetch(url)
             return { server, result }
           }
         )
@@ -433,7 +428,7 @@ export class EosEngine extends CurrencyEngine {
         const fetch = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url = server + params[0]
-            const result = await this.io.fetch(url)
+            const result = await eosConfig.fetch(url)
             return { server, result }
           }
         )
@@ -441,13 +436,13 @@ export class EosEngine extends CurrencyEngine {
         this.log(`EOS multicastServers ${func} ${out.server} won`)
         break
       case 'getCurrencyBalance':
+      case 'getInfo':
+      case 'getKeyAccounts':
       case 'transaction':
-        out = await promiseAny(
+        out = await asyncWaterfall(
           this.currencyInfo.defaultSettings.otherSettings.eosNodes.map(
-            async server => {
-              const config = Object.assign({}, eosConfig)
-              config.httpEndpoint = server
-              const eosServer = eosjs(eosConfig)
+            server => async () => {
+              const eosServer = eosjs({ ...eosConfig, httpEndpoint: server })
               const result = await eosServer[func](...params)
               return { server: server, result }
             }
@@ -466,17 +461,10 @@ export class EosEngine extends CurrencyEngine {
     try {
       // Check if the publicKey has an account accountName
       if (!this.walletLocalData.otherData.accountName) {
-        const accounts = await new Promise((resolve, reject) => {
-          this.eosPlugin.eosServer.getKeyAccounts(
-            publicKey,
-            (error, result) => {
-              if (error) reject(error)
-              resolve(result)
-              // array of account names, can be multiples
-              // output example: { account_names: [ 'itamnetwork1', ... ] }
-            }
-          )
-        })
+        const accounts = await this.multicastServers(
+          'getKeyAccounts',
+          publicKey
+        )
         if (accounts.account_names && accounts.account_names.length > 0) {
           this.walletLocalData.otherData.accountName = accounts.account_names[0]
           this.walletLocalDataDirty = true
