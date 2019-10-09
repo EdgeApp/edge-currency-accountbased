@@ -16,29 +16,36 @@ import { TezosPlugin } from '../tezos/tezosPlugin.js'
 import { currencyInfo } from './tezosInfo.js'
 import { XtzTransactionSchema } from './tezosSchema.js'
 import {
+  type EdgeStakingSettings,
   type HeadInfo,
   type OperationsContainer,
+  type TezosKeyPair,
   type TezosOperation,
-  type XtzGetTransaction
+  type TezosWalletOtherData,
+  type XtzGetOperation
 } from './tezosTypes.js'
 
-const ADDRESS_POLL_MILLISECONDS = 15000
+const ADDRESS_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 30000
-const TRANSACTION_POLL_MILLISECONDS = 5000
-
+const TRANSACTION_POLL_MILLISECONDS = 15000
+const DELEGATE_POLL_MILLISECONDS = 30000
+const PAGE_SIZE = 50
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 type TezosFunction =
   | 'getHead'
   | 'getBalance'
   | 'getNumberOfOperations'
-  | 'getTransactions'
+  | 'getOperations'
+  | 'getDelegate'
   | 'createTransaction'
+  | 'createOrigination'
+  | 'createDelegation'
   | 'injectOperation'
   | 'silentInjection'
-
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
-
+  otherData: TezosWalletOtherData
+  stakingSettings: EdgeStakingSettings
   constructor (
     currencyPlugin: TezosPlugin,
     walletInfo: EdgeWalletInfo,
@@ -46,6 +53,10 @@ export class TezosEngine extends CurrencyEngine {
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.tezosPlugin = currencyPlugin
+    this.stakingSettings = { stakingEnabled: false }
+  }
+  setStakingSettings (delegate: string) {
+    this.stakingSettings = { stakingEnabled: true, delegateAddress: delegate }
   }
 
   async multicastServers (func: TezosFunction, ...params: any): Promise<any> {
@@ -93,20 +104,31 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
-      case 'getTransactions':
+      case 'getOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
-          const result: XtzGetTransaction = await this.io
+          const result: XtzGetOperation = await this.io
             .fetch(
               server +
                 '/v3/operations/' +
                 params[0] +
-                '?type=Transaction&p=' +
+                '?type=' +
                 params[1] +
-                '&number=50'
+                '&p=' +
+                params[2] +
+                '&number=' +
+                PAGE_SIZE
             )
             .then(function (response) {
               return response.json()
             })
+          return { server, result }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+      case 'getDelegate':
+        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+          eztz.node.setProvider(server)
+          const result = await eztz.rpc.getDelegate(params[0])
           return { server, result }
         })
         out = await asyncWaterfall(funcs)
@@ -122,9 +144,49 @@ export class TezosEngine extends CurrencyEngine {
               params[3],
               params[4],
               null,
-              this.currencyInfo.defaultSettings.limit.gas,
-              this.currencyInfo.defaultSettings.limit.storage,
-              this.currencyInfo.defaultSettings.fee.reveal
+              this.currencyInfo.defaultSettings.transaction.gasLimit,
+              this.currencyInfo.defaultSettings.transaction.storageLimit,
+              this.currencyInfo.defaultSettings.reveal.defaultFee
+            )
+            .then(function (response) {
+              return response
+            })
+          return { server, result }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+      case 'createOrigination':
+        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+          eztz.node.setProvider(server)
+          const result = await eztz.rpc
+            .account(
+              params[0],
+              params[1],
+              true,
+              true,
+              params[2],
+              params[3],
+              this.currencyInfo.defaultSettings.origination.gasLimit,
+              this.currencyInfo.defaultSettings.origination.storageLimit
+            )
+            .then(function (response) {
+              return response
+            })
+          return { server, result }
+        })
+        out = await asyncWaterfall(funcs)
+        break
+      case 'createDelegation':
+        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+          eztz.node.setProvider(server)
+          const result = await eztz.rpc
+            .setDelegate(
+              params[0],
+              params[1],
+              params[2],
+              params[3],
+              this.currencyInfo.defaultSettings.delegation.gasLimit,
+              this.currencyInfo.defaultSettings.delegation.storageLimit
             )
             .then(function (response) {
               return response
@@ -199,23 +261,39 @@ export class TezosEngine extends CurrencyEngine {
     } catch (e) {}
     return ''
   }
-  processTezosTransaction (tx: XtzGetTransaction) {
+  async processTezosOperation (tx: XtzGetOperation) {
     const valid = validateObject(tx, XtzTransactionSchema)
     if (!valid) {
       this.log('Invalid transaction!')
       throw new Error('InvalidTransactionError')
     }
-    const pkh = this.walletLocalData.publicKey
+    const kind = tx.type.operations[0].kind
+    const address = this.walletLocalData.publicKey
     const ourReceiveAddresses: Array<string> = []
     const currencyCode = PRIMARY_CURRENCY
     const date = new Date(tx.type.operations[0].timestamp).getTime() / 1000
     const blockHeight = tx.type.operations[0].op_level
-    let nativeAmount = tx.type.operations[0].amount.toString()
-    const networkFee = tx.type.operations[0].fee.toString()
+    let nativeAmount: string
+    let networkFee = '0'
+    let destination: string
+    if (kind === 'transaction') {
+      nativeAmount = tx.type.operations[0].amount.toString()
+      destination = tx.type.operations[0].destination.tz
+    } else if (kind === 'origination') {
+      nativeAmount = tx.type.operations[0].balance.toString()
+      networkFee = this.currencyInfo.defaultSettings.burnFee
+      destination = tx.type.operations[0].tz1.tz
+    } else if (kind === 'delegation') {
+      nativeAmount = '0'
+      destination = tx.type.operations[0].delegate.tz
+    } else {
+      throw new Error('Error: Invalid operation kind')
+    }
+    networkFee = bns.add(networkFee, tx.type.operations[0].fee.toString())
     const failedOperation = tx.type.operations[0].failed
-    if (pkh === tx.type.operations[0].destination.tz) {
-      ourReceiveAddresses.push(pkh)
-      if (tx.type.source.tz === pkh) {
+    if (address === destination) {
+      ourReceiveAddresses.push(address)
+      if (tx.type.source.tz === address) {
         nativeAmount = '-' + networkFee
       }
     } else {
@@ -230,34 +308,93 @@ export class TezosEngine extends CurrencyEngine {
       networkFee,
       ourReceiveAddresses,
       signedTx: '',
-      otherParams: {}
+      otherParams: { delegateAddress: null }
+    }
+    if (kind === 'origination' || kind === 'delegation') {
+      edgeTransaction.otherParams.delegateAddress =
+        tx.type.operations[0].delegate.tz
     }
     if (!failedOperation) {
-      this.addTransaction(currencyCode, edgeTransaction)
+      if (kind === 'origination' && address !== destination) {
+        await this.loadStakingAccount(tx)
+      } else {
+        this.addTransaction(currencyCode, edgeTransaction)
+      }
     }
   }
 
-  async checkTransactionsInnerLoop () {
-    const pkh = this.walletLocalData.publicKey
-    if (!this.otherData.numberTransactions) {
-      this.otherData.numberTransactions = 0
+  async loadStakingAccount (tx: any) {
+    const op = tx.type.operations[0]
+    if (this.stakingSettings.stakingEnabled) {
+      this.log('Staking already enabled')
+      return
     }
-    const num = await this.multicastServers('getNumberOfOperations', pkh)
+    if (
+      op.managerPubkey.tz &&
+      op.managerPubkey.tz !== this.walletLocalData.publicKey
+    ) {
+      this.log('Error: Invalid manager')
+      return
+    }
+    if (op.src.tz && op.src.tz !== this.walletLocalData.publicKey) {
+      this.log('Error: Invalid source')
+      return
+    }
+    if (
+      !op.delegate.tz ||
+      !this.tezosPlugin.checkAddress(op.delegate.tz) ||
+      op.delegate.tz.slice(0, 2) !== 'tz'
+    ) {
+      throw new Error('Error: Invalid delegate address')
+    }
+    if (
+      !op.tz1.tz ||
+      !this.tezosPlugin.checkAddress(op.tz1.tz) ||
+      op.tz1.tz.slice(0, 2) !== 'KT'
+    ) {
+      throw new Error('Error: Invalid contract address')
+    }
+    const delegate = op.delegate.tz
+    const ktAddress: string = op.tz1.tz
+    this.walletLocalData.publicKey = ktAddress
+    this.setStakingSettings(delegate)
+    this.checkAccountInnerLoop()
+    this.checkDelegateInnerLoop()
+    await this.clearBlockchainCache()
+    this.transactionsChangedArray = []
+    await this.processTezosOperation(tx)
+  }
+
+  async checkTransactionsInnerLoop () {
+    this.log('Starting transaction loop')
+    this.tokenCheckTransactionsStatus.XTZ = 0
+    let address = this.walletLocalData.publicKey
+    if (!this.otherData.numberTransactions) {
+      this.otherData.numberTransactions = -1
+    }
+    const num = await this.multicastServers('getNumberOfOperations', address)
     if (num !== this.otherData.numberTransactions) {
-      let txs: Array<XtzGetTransaction> = []
-      let page = 0
-      let transactions
-      this.tokenCheckTransactionsStatus.XTZ = 0.5
-      do {
-        transactions = await this.multicastServers(
-          'getTransactions',
-          pkh,
-          page++
-        )
-        txs = txs.concat(transactions)
-      } while (transactions.length > 0 && page < 10)
-      for (const tx of txs) {
-        this.processTezosTransaction(tx)
+      this.tokenCheckTransactionsStatus.XTZ = 0.2
+      const operationType = ['Origination', 'Transaction', 'Delegation']
+      for (let i = 0; i < operationType.length; i++) {
+        address = this.walletLocalData.publicKey
+        let page = 0
+        let operations
+        let txs: Array<XtzGetOperation> = []
+        do {
+          this.log('address: ' + address)
+          operations = await this.multicastServers(
+            'getOperations',
+            address,
+            operationType[i],
+            page++
+          )
+          txs = txs.concat(operations)
+        } while (operations.length === PAGE_SIZE && page < 10)
+        for (const tx of txs) {
+          await this.processTezosOperation(tx)
+        }
+        this.tokenCheckTransactionsStatus.XTZ += 0.2
       }
       if (this.transactionsChangedArray.length > 0) {
         this.currencyEngineCallbacks.onTransactionsChanged(
@@ -278,19 +415,34 @@ export class TezosEngine extends CurrencyEngine {
   async checkAccountInnerLoop () {
     this.tokenCheckBalanceStatus.XTZ = 0
     const currencyCode = PRIMARY_CURRENCY
-    const pkh = this.walletLocalData.publicKey
+    const address = this.walletLocalData.publicKey
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
     ) {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
-    const balance = await this.multicastServers('getBalance', pkh)
+    const balance = await this.multicastServers('getBalance', address)
     if (this.walletLocalData.totalBalances[currencyCode] !== balance) {
       this.walletLocalData.totalBalances[currencyCode] = balance
       this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
     this.tokenCheckBalanceStatus.XTZ = 1
+    this.updateOnAddressesChecked()
   }
+
+  async checkDelegateInnerLoop () {
+    if (!this.stakingSettings.stakingEnabled) {
+      return
+    }
+    const address = this.walletLocalData.publicKey
+    if (address && address.slice(0, 2) !== 'KT') {
+      this.log('No contract address')
+      return
+    }
+    const delegate = await this.multicastServers('getDelegate', address)
+    this.setStakingSettings(delegate)
+  }
+
   async checkBlockchainInnerLoop () {
     const head: HeadInfo = await this.multicastServers('getHead')
     const blockHeight = head.level
@@ -324,9 +476,11 @@ export class TezosEngine extends CurrencyEngine {
 
   async startEngine () {
     this.engineOn = true
+    this.otherData.numberTransactions = -1
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop('checkDelegateInnerLoop', DELEGATE_POLL_MILLISECONDS)
     super.startEngine()
   }
 
@@ -356,9 +510,10 @@ export class TezosEngine extends CurrencyEngine {
     if (bns.eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
-    const keys = {
+    const pkh = this.walletLocalData.publicKey
+    const keys: TezosKeyPair = {
       pk: this.walletInfo.keys.publicKeyEd,
-      pkh: this.walletInfo.keys.publicKey,
+      pkh: pkh,
       sk: false
     }
     let ops: OperationsContainer | typeof undefined
@@ -372,7 +527,7 @@ export class TezosEngine extends CurrencyEngine {
           keys,
           publicAddress,
           bns.div(nativeAmount, denom.multiplier, 6),
-          this.currencyInfo.defaultSettings.fee.transaction
+          this.currencyInfo.defaultSettings.transaction.defaultFee
         )
       } catch (e) {
         error = e
@@ -391,7 +546,7 @@ export class TezosEngine extends CurrencyEngine {
       if (burn) {
         networkFee = bns.add(
           networkFee,
-          this.currencyInfo.defaultSettings.fee.burn
+          this.currencyInfo.defaultSettings.burnFee
         )
       }
     }
@@ -420,6 +575,109 @@ export class TezosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
+  async changeStakingSettings (stakingSettings: EdgeStakingSettings) {
+    if (!stakingSettings.stakingEnabled) {
+      throw new Error('Error: Invalid staking settings')
+    }
+    const delegateAddress = stakingSettings.delegateAddress
+    const newStakingContract: boolean = !this.stakingSettings.stakingEnabled
+    const currencyCode: string = PRIMARY_CURRENCY
+    let fee: string
+    let networkFee: string = '0'
+    const fromAddress: string = this.walletLocalData.publicKey
+    let nativeAmount: string = '0'
+    if (
+      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined' ||
+      typeof this.walletLocalData.totalBalances[currencyCode] !== 'string'
+    ) {
+      throw new Error('Error: Invalid balance')
+    }
+    if (
+      delegateAddress.slice(0, 2) !== 'tz' ||
+      !this.tezosPlugin.checkAddress(delegateAddress)
+    ) {
+      throw new Error('Error: Invalid delegate address')
+    }
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    const keys: TezosKeyPair = {
+      pk: this.walletInfo.keys.publicKeyEd,
+      pkh: this.walletInfo.keys.publicKey,
+      sk: false
+    }
+    let ops: OperationsContainer
+    let toAddress: string
+    if (newStakingContract) {
+      fee = this.currencyInfo.defaultSettings.origination.defaultFee
+      networkFee = bns.add(this.currencyInfo.defaultSettings.burnFee, fee)
+      nativeAmount = bns.sub(nativeBalance, bns.add(networkFee, '1'))
+      ops = await this.multicastServers(
+        'createOrigination',
+        keys,
+        bns.div(nativeAmount, '1000000', 6),
+        delegateAddress,
+        fee
+      )
+      let fees = '0'
+      for (const op of ops.opOb.contents) {
+        fees = bns.add(fees, op.fee)
+      }
+      if (bns.gt(fees, fee)) {
+        networkFee = bns.add(this.currencyInfo.defaultSettings.burnFee, fees)
+        nativeAmount = bns.sub(nativeBalance, bns.add(networkFee, '1'))
+        ops = await this.multicastServers(
+          'createOrigination',
+          keys,
+          bns.div(nativeAmount, '1000000', 6),
+          delegateAddress,
+          fee
+        )
+      }
+      nativeAmount = bns.add(
+        nativeAmount,
+        this.currencyInfo.defaultSettings.burnFee
+      )
+      toAddress = 'KT'
+    } else {
+      fee = this.currencyInfo.defaultSettings.delegation.defaultFee
+      ops = await this.multicastServers(
+        'createDelegation',
+        fromAddress,
+        keys,
+        delegateAddress,
+        fee
+      )
+      for (const op of ops.opOb.contents) {
+        nativeAmount = networkFee = bns.add(networkFee, op.fee)
+      }
+      toAddress = delegateAddress
+    }
+    if (bns.gt(nativeAmount, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
+    nativeAmount = '-' + nativeAmount
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode,
+      blockHeight: 0,
+      nativeAmount,
+      networkFee,
+      ourReceiveAddresses: [toAddress],
+      signedTx: '',
+      otherParams: {
+        idInternal: 0,
+        fromAddress,
+        toAddress,
+        delegateAddress,
+        fullOp: ops
+      }
+    }
+    if (newStakingContract) {
+      edgeTransaction.otherParams.newStakingContract = true
+    }
+    return edgeTransaction
+  }
+
   async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx === '') {
       const sk = this.walletInfo.keys.privateKey
@@ -442,6 +700,14 @@ export class TezosEngine extends CurrencyEngine {
     const opOb = edgeTransaction.otherParams.fullOp.opOb
     const result = await this.multicastServers('injectOperation', opOb, opBytes)
     edgeTransaction.txid = result.hash
+    if (edgeTransaction.otherParams.toAddress === 'KT') {
+      edgeTransaction.ourReceiveAddresses = [
+        result.operations[result.operations.length - 1].metadata
+          .operation_result.originated_contracts[0]
+      ]
+      edgeTransaction.otherParams.toAddress =
+        edgeTransaction.ourReceiveAddresses[0]
+    }
     edgeTransaction.date = Date.now() / 1000
     return edgeTransaction
   }
@@ -454,10 +720,20 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   getDisplayPublicSeed () {
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+    if (
+      this.walletInfo.keys &&
+      this.walletInfo.keys.publicKey &&
+      !this.stakingSettings.stakingEnabled
+    ) {
       return this.walletInfo.keys.publicKey
+    } else if (
+      this.stakingSettings.stakingEnabled &&
+      this.walletLocalData.publicKey
+    ) {
+      return this.walletLocalData.publicKey
+    } else {
+      throw new Error('Error: No address found')
     }
-    return ''
   }
 }
 
