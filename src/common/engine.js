@@ -574,6 +574,7 @@ class CurrencyEngine {
   log (...text: Array<any>) {
     text[0] = `${this.walletId.slice(0, 5)}: ${text[0].toString()}`
     console.log(...text)
+    this.io.console.info(...text)
   }
 
   async startEngine () {

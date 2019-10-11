@@ -9,7 +9,11 @@ import { type EosSettings } from './eosTypes.js'
 const otherSettings: EosSettings = {
   eosHyperionNodes: ['https://eos.hyperion.eosrio.io'],
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
-  eosNodes: ['https://proxy.eosnode.tools']
+  eosNodes: [
+    'https://eos.eoscafeblock.com',
+    'https://api.eoscleaner.com',
+    'https://eos.greymass.com'
+  ]
 }
 
 const defaultSettings: any = {

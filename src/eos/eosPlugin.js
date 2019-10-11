@@ -1,6 +1,7 @@
 /**
  * Created by paul on 8/8/17.
  */
+/* global fetch */
 // @flow
 
 import { bns } from 'biggystring'
@@ -18,7 +19,7 @@ import eosjs from 'eosjs'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
-import { getFetchJson } from '../react-native-io.js'
+import { getFetchCors, getFetchJson } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { currencyInfo } from './eosInfo.js'
 
@@ -29,6 +30,7 @@ export const eosConfig = {
   chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
   keyProvider: [],
   httpEndpoint: '', // main net
+  fetch: fetch,
   expireInSeconds: 60,
   sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
   broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
@@ -57,10 +59,12 @@ export class EosPlugin extends CurrencyPlugin {
   otherMethods: Object
   eosServer: Object
 
-  constructor (io: EdgeIo) {
+  constructor (io: EdgeIo, fetchCors: Function) {
     super(io, 'eos', currencyInfo)
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    eosConfig.fetch = fetchCors
+
     this.eosServer = eosjs(eosConfig)
   }
   async createPrivateKey (walletType: string): Promise<Object> {
@@ -153,7 +157,7 @@ export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools (): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new EosPlugin(io))
+    toolsPromise = Promise.resolve(new EosPlugin(io, getFetchCors(opts)))
     return toolsPromise
   }
 
