@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.4.8 (2019-10-11)
+
+- Replace ripplecharts with bithomp.
+- Directly connect to EOS producers (with fallback).
+
 # 0.4.7 (2019-10-01)
 
 - Remove BlockScout due to delayed / cached results
