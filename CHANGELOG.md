@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.4.9 (2019-10-14)
+
+- Connect to multiple EOS Hyperion nodes (with fallback).
+
 # 0.4.8 (2019-10-11)
 
 - Replace ripplecharts with bithomp.
