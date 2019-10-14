@@ -32,7 +32,7 @@ import {
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const TRANSACTION_POLL_MILLISECONDS = 10000
 // const ADDRESS_QUERY_LOOKBACK_BLOCKS = 0
 const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
@@ -413,28 +413,18 @@ export class EosEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
-        const funcs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-          server => async () => {
-            const url = server + params[0]
-            const result = await eosConfig.fetch(url)
-            return { server, result }
-          }
+      case 'getOutgoingTransactions':
+        out = await asyncWaterfall(
+          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+            server => async () => {
+              const url = server + params[0]
+              const result = await eosConfig.fetch(url)
+              return { server, result }
+            }
+          )
         )
-        out = await asyncWaterfall(funcs)
-        this.log(`EOS multicastServers ${func} ${out.server} won`)
         break
 
-      case 'getOutgoingTransactions':
-        const fetch = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-          server => async () => {
-            const url = server + params[0]
-            const result = await eosConfig.fetch(url)
-            return { server, result }
-          }
-        )
-        out = await asyncWaterfall(fetch)
-        this.log(`EOS multicastServers ${func} ${out.server} won`)
-        break
       case 'getCurrencyBalance':
       case 'getInfo':
       case 'getKeyAccounts':
@@ -444,14 +434,14 @@ export class EosEngine extends CurrencyEngine {
             server => async () => {
               const eosServer = eosjs({ ...eosConfig, httpEndpoint: server })
               const result = await eosServer[func](...params)
-              return { server: server, result }
+              return { server, result }
             }
           )
         )
         break
     }
-    this.log(`EOS multicastServers ${func} ${out.server} won`)
 
+    this.log(`EOS multicastServers ${func} ${out.server} won`)
     return out.result
   }
 

@@ -7,8 +7,12 @@ import { imageServerUrl } from '../common/utils'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
-  eosHyperionNodes: ['https://eos.hyperion.eosrio.io'],
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
+  eosHyperionNodes: [
+    'https://mainnet.eosn.io',
+    'https://api.eossweden.org',
+    'https://mainnet.eosn.io'
+  ],
   eosNodes: [
     'https://eos.eoscafeblock.com',
     'https://api.eoscleaner.com',
