@@ -37,8 +37,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://blockchair.com/ethereum/address/%s',
-  transactionExplorer: 'https://blockchair.com/ethereum/transaction/%s',
+  addressExplorer: 'https://etherscan.io/address/%s',
+  transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
