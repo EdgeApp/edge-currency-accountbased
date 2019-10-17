@@ -2681,7 +2681,7 @@ enhanced-resolve@^4.1.0:
 
 eosjs-api@7.0.4, "eosjs-api@git://github.com/EdgeApp/eosjs-api.git#prepare-script":
   version "7.0.4"
-  resolved "git://github.com/EdgeApp/eosjs-api.git#15a289ed12c96357059cbd0c0013a3692fafa086"
+  resolved "git://github.com/EdgeApp/eosjs-api.git#3676348b6a7443389b28d21c98067760c51e02fb"
   dependencies:
     camel-case "^3.0.0"
     isomorphic-fetch "^2.2.1"
