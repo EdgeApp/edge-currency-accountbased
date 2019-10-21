@@ -440,6 +440,90 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x420412E765BFa6d85aaaC94b4f7b708C89be2e2B',
       symbolImage: `${imageServerUrl}/brz-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CREP',
+      currencyName: 'Compound Augur',
+      denominations: [
+        {
+          name: 'CREP',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x158079ee67fce2f58472a96584a73c7ab9ac95c1',
+      symbolImage: `${imageServerUrl}/crep-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CUSDC',
+      currencyName: 'Compound USDC',
+      denominations: [
+        {
+          name: 'CUSDC',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x39aa39c021dfbae8fac545936693ac917d5e7563',
+      symbolImage: `${imageServerUrl}/cusdc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CETH',
+      currencyName: 'Compound ETH',
+      denominations: [
+        {
+          name: 'CETH',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5',
+      symbolImage: `${imageServerUrl}/ceth-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CBAT',
+      currencyName: 'Compound BAT',
+      denominations: [
+        {
+          name: 'CBAT',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e',
+      symbolImage: `${imageServerUrl}/cbat-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CZRX',
+      currencyName: 'Compound ZRX',
+      denominations: [
+        {
+          name: 'CZRX',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407',
+      symbolImage: `${imageServerUrl}/czrx-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CWBTC',
+      currencyName: 'Compound WBTC',
+      denominations: [
+        {
+          name: 'CWBTC',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0xc11b1268c1a384e55c48c2391d8d480264a3a7f4',
+      symbolImage: `${imageServerUrl}/cwbtc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CDAI',
+      currencyName: 'Compound DAI',
+      denominations: [
+        {
+          name: 'CDAI',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0xf5dce57282a584d2746faf1593d3121fcac444dc',
+      symbolImage: `${imageServerUrl}/cdai-logo-solo-64.png`
     }
   ]
 }
