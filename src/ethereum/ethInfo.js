@@ -447,7 +447,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CREP',
-          multiplier: '1000000000000000000'
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0x158079ee67fce2f58472a96584a73c7ab9ac95c1',
@@ -459,7 +459,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CUSDC',
-          multiplier: '1000000'
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0x39aa39c021dfbae8fac545936693ac917d5e7563',
@@ -471,7 +471,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CETH',
-          multiplier: '1000000000000000000',
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5',
@@ -483,7 +483,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CBAT',
-          multiplier: '1000000000000000000'
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0x6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e',
@@ -495,7 +495,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CZRX',
-          multiplier: '1000000000000000000'
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407',
@@ -519,7 +519,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       denominations: [
         {
           name: 'CDAI',
-          multiplier: '1000000000000000000'
+          multiplier: '100000000'
         }
       ],
       contractAddress: '0xf5dce57282a584d2746faf1593d3121fcac444dc',
