@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.0 (2019-10-22)
+
+- Include compound tokens info
+
 # 0.4.9 (2019-10-14)
 
 - Connect to multiple EOS Hyperion nodes (with fallback).
