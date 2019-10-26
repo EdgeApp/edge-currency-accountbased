@@ -27,37 +27,37 @@ export class CurrencyPlugin {
   currencyInfo: EdgeCurrencyInfo
   highestTxHeight: number
 
-  constructor (io: EdgeIo, pluginName: string, currencyInfo: EdgeCurrencyInfo) {
+  constructor(io: EdgeIo, pluginName: string, currencyInfo: EdgeCurrencyInfo) {
     this.io = io
     this.pluginName = pluginName
     this.currencyInfo = currencyInfo
     this.highestTxHeight = 0
   }
 
-  async createPrivateKey (walletType: string) {
+  async createPrivateKey(walletType: string) {
     throw new Error('Must implement createPrivateKey')
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo) {
+  async derivePublicKey(walletInfo: EdgeWalletInfo) {
     throw new Error('Must implement derivePublicKey')
   }
 
-  async makeEngine (
+  async makeEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     throw new Error('Must implement makeEngine')
   }
 
-  async parseUri (uri: string) {
+  async parseUri(uri: string) {
     throw new Error('Must implement parseUri')
   }
 
-  async encodeUri (obj: EdgeEncodeUri) {
+  async encodeUri(obj: EdgeEncodeUri) {
     throw new Error('Must implement encodeUri')
   }
 
-  parseUriCommon (
+  parseUriCommon(
     currencyInfo: EdgeCurrencyInfo,
     uri: string,
     networks: { [network: string]: boolean },
@@ -119,7 +119,7 @@ export class CurrencyPlugin {
     return { edgeParsedUri, parsedUri }
   }
 
-  encodeUriCommon (obj: EdgeEncodeUri, network: string, amount?: string) {
+  encodeUriCommon(obj: EdgeEncodeUri, network: string, amount?: string) {
     if (!obj.publicAddress) {
       throw new Error('InvalidPublicAddressError')
     }

@@ -33,12 +33,12 @@ import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumPlugin } from './ethPlugin.js'
 import {
-  EthGasStationSchema,
   EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
   EtherscanGetBlockHeight,
   EtherscanGetTokenTransactions,
   EtherscanGetTransactions,
+  EthGasStationSchema,
   NetworkFeesSchema,
   SuperEthGetUnconfirmedTransactions
 } from './ethSchema.js'
@@ -74,7 +74,7 @@ type BroadcastResults = {
   decrementNonce: boolean
 }
 
-async function broadcastWrapper (promise: Promise<Object>, server: string) {
+async function broadcastWrapper(promise: Promise<Object>, server: string) {
   const out = {
     result: await promise,
     server
@@ -87,7 +87,7 @@ export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
 
-  constructor (
+  constructor(
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
@@ -103,7 +103,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.initOptions = initOptions
   }
 
-  async fetchGetEtherscan (server: string, cmd: string) {
+  async fetchGetEtherscan(server: string, cmd: string) {
     const { etherscanApiKey } = this.initOptions
     let apiKey = ''
     if (
@@ -117,7 +117,7 @@ export class EthereumEngine extends CurrencyEngine {
     return this.fetchGet(url)
   }
 
-  async fetchGet (url: string) {
+  async fetchGet(url: string) {
     const response = await this.io.fetch(url, {
       method: 'GET'
     })
@@ -137,7 +137,7 @@ export class EthereumEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async fetchPostBlockcypher (cmd: string, body: any) {
+  async fetchPostBlockcypher(cmd: string, body: any) {
     const { blockcypherApiKey } = this.initOptions
     let apiKey = ''
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
@@ -157,7 +157,7 @@ export class EthereumEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async checkBlockchainInnerLoop () {
+  async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers('eth_blockNumber')
       const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
@@ -178,7 +178,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance (tk: string, balance: string) {
+  updateBalance(tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
     }
@@ -191,7 +191,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkAccountFetch (address: string) {
+  async checkAccountFetch(address: string) {
     let jsonObj = {}
     let valid = false
 
@@ -207,7 +207,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkTokenBalanceFetch (
+  async checkTokenBalanceFetch(
     address: string,
     contractAddress: string,
     tk: string
@@ -231,7 +231,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountNonceFetch (address: string) {
+  async checkAccountNonceFetch(address: string) {
     try {
       const jsonObj = await this.multicastServers(
         'eth_getTransactionCount',
@@ -248,7 +248,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
       // Ethereum only has one address
@@ -281,7 +281,7 @@ export class EthereumEngine extends CurrencyEngine {
     } catch (e) {}
   }
 
-  processEtherscanTransaction (tx: EtherscanTransaction, currencyCode: string) {
+  processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: Array<string> = []
     let nativeNetworkFee: string
@@ -340,7 +340,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  async checkTransactionsFetch (
+  async checkTransactionsFetch(
     startBlock: number,
     currencyCode: string
   ): Promise<boolean> {
@@ -405,7 +405,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  processUnconfirmedTransaction (tx: Object) {
+  processUnconfirmedTransaction(tx: Object) {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
@@ -453,7 +453,7 @@ export class EthereumEngine extends CurrencyEngine {
     this.addTransaction('ETH', edgeTransaction)
   }
 
-  async checkUnconfirmedTransactionsInnerLoop () {
+  async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
     const url = `${
       this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
@@ -489,7 +489,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
     const promiseArray = []
@@ -531,7 +531,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async checkUpdateNetworkFees () {
+  async checkUpdateNetworkFees() {
     try {
       const infoServer = getEdgeInfoServer()
       const url = `${infoServer}/v1/networkFees/ETH`
@@ -561,7 +561,7 @@ export class EthereumEngine extends CurrencyEngine {
 
       if (valid) {
         const fees = this.walletLocalData.otherData.networkFees
-        const ethereumFee: EthereumFee = fees['default']
+        const ethereumFee: EthereumFee = fees.default
         if (!ethereumFee.gasPrice) {
           return
         }
@@ -630,7 +630,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers (func: EthFunction, ...params: any): Promise<any> {
+  async multicastServers(func: EthFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
@@ -801,7 +801,7 @@ export class EthereumEngine extends CurrencyEngine {
     return out.result
   }
 
-  async clearBlockchainCache () {
+  async clearBlockchainCache() {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
     this.otherData.unconfirmedNextNonce = '0'
@@ -811,7 +811,7 @@ export class EthereumEngine extends CurrencyEngine {
   // Public methods
   // ****************************************************************************
 
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
@@ -824,13 +824,13 @@ export class EthereumEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     // Ethereum can only have one output
@@ -944,7 +944,7 @@ export class EthereumEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
 
     const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
@@ -1041,15 +1041,13 @@ export class EthereumEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastEtherscan (
+  async broadcastEtherscan(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
     this.log(`Etherscan: sent transaction to network:\n${transactionParsed}\n`)
-    const url = `?module=proxy&action=eth_sendRawTransaction&hex=${
-      edgeTransaction.signedTx
-    }`
+    const url = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
     const jsonObj = await this.fetchGetEtherscan(
       this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers[0],
       url
@@ -1068,7 +1066,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async fetchPostInfura (method: string, params: Object) {
+  async fetchPostInfura(method: string, params: Object) {
     const { infuraProjectId } = this.initOptions
     if (!infuraProjectId || infuraProjectId.length < 6) {
       throw new Error('Need Infura Project ID')
@@ -1092,7 +1090,7 @@ export class EthereumEngine extends CurrencyEngine {
     return jsonObj
   }
 
-  async broadcastInfura (
+  async broadcastInfura(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
@@ -1114,7 +1112,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async broadcastBlockCypher (
+  async broadcastBlockCypher(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
@@ -1139,7 +1137,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const result = await this.multicastServers('broadcastTx', edgeTransaction)
@@ -1151,14 +1149,14 @@ export class EthereumEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.ethereumKey) {
       return this.walletInfo.keys.ethereumKey
     }
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

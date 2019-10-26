@@ -14,7 +14,7 @@ export const ES_FEE_STANDARD = 'standard'
 export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
-export function calcMiningFee (
+export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: RskFees
 ): RskCalcedFees {
@@ -39,8 +39,8 @@ export function calcMiningFee (
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
     )
-    let networkFeeForGasPrice: RskFee = networkFees['default']
-    let networkFeeForGasLimit: RskFee = networkFees['default']
+    let networkFeeForGasPrice: RskFee = networkFees.default
+    let networkFeeForGasLimit: RskFee = networkFees.default
 
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]

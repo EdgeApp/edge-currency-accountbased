@@ -20,7 +20,7 @@ import { type UriTransaction } from './tezosTypes.js'
 export class TezosPlugin extends CurrencyPlugin {
   tezosRpcNodes: Array<Object>
   tezosApiServers: Array<Object>
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'tezos', currencyInfo)
     this.tezosRpcNodes = []
     for (const rpcNode of currencyInfo.defaultSettings.otherSettings
@@ -34,7 +34,7 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
-  checkAddress (address: string): boolean {
+  checkAddress(address: string): boolean {
     try {
       const valid = eztz.crypto.checkAddress(address)
       return valid
@@ -43,7 +43,7 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
-  async importPrivateKey (userInput: string): Promise<Object> {
+  async importPrivateKey(userInput: string): Promise<Object> {
     // check for existence of numbers
     if (/\d/.test(userInput)) {
       throw new Error('Input must be mnemonic phrase')
@@ -65,7 +65,7 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'tezos') {
       // Use 256 bits entropy
@@ -78,7 +78,7 @@ export class TezosPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'tezos') {
       const keypair = eztz.crypto.generateKeys(walletInfo.keys.mnemonic, '')
@@ -87,7 +87,8 @@ export class TezosPlugin extends CurrencyPlugin {
       throw new Error('InvalidWalletType')
     }
   }
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+
+  async parseUri(uri: string): Promise<EdgeParsedUri> {
     let address
     let operation
     let content
@@ -115,7 +116,7 @@ export class TezosPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
     const valid = this.checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -133,18 +134,18 @@ export class TezosPlugin extends CurrencyPlugin {
     return uri
   }
 }
-export function makeTezosPlugin (
+export function makeTezosPlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
   let toolsPromise: Promise<TezosPlugin>
-  function makeCurrencyTools (): Promise<TezosPlugin> {
+  function makeCurrencyTools(): Promise<TezosPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new TezosPlugin(io))
     return toolsPromise
   }
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

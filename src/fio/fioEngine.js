@@ -24,7 +24,7 @@ import {
   promiseAny,
   validateObject
 } from '../common/utils.js'
-import { FioPlugin, checkAddress } from './fioPlugin.js'
+import { checkAddress, FioPlugin } from './fioPlugin.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
@@ -38,7 +38,7 @@ export class FioEngine extends CurrencyEngine {
   fioSDK: FIOSDK
   fetchJson: Function
 
-  constructor (
+  constructor(
     currencyPlugin: FioPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
@@ -51,7 +51,7 @@ export class FioEngine extends CurrencyEngine {
     this.otherMethods = {}
   }
 
-  async loadEngine (
+  async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -87,7 +87,7 @@ export class FioEngine extends CurrencyEngine {
   }
 
   // Poll on the blockheight
-  async checkBlockchainInnerLoop () {
+  async checkBlockchainInnerLoop() {
     const blockHeight = 1578128
     if (this.walletLocalData.blockHeight !== blockHeight) {
       this.walletLocalData.blockHeight = blockHeight
@@ -98,19 +98,19 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
-  getBalance (options: any): string {
+  getBalance(options: any): string {
     const bla = super.getBalance(options)
     return super.getBalance(options)
   }
 
-  updateBalance (tk: string, balance: string) {}
+  updateBalance(tk: string, balance: string) {}
 
-  async checkTransactionsInnerLoop () {}
+  async checkTransactionsInnerLoop() {}
 
   // Check all account balance and other relevant info
-  async checkAccountInnerLoop () {}
+  async checkAccountInnerLoop() {}
 
-  async clearBlockchainCache (): Promise<void> {
+  async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.lastQueryActionSeq = 0
@@ -123,7 +123,7 @@ export class FioEngine extends CurrencyEngine {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     super.startEngine()
@@ -131,13 +131,13 @@ export class FioEngine extends CurrencyEngine {
     this.currencyEngineCallbacks.onAddressesChecked(1)
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  getFreshAddress (options: any): EdgeFreshAddress {
+  getFreshAddress(options: any): EdgeFreshAddress {
     if (this.walletLocalData.otherData.accountName) {
       return { publicAddress: this.walletLocalData.otherData.accountName }
     } else {
@@ -150,7 +150,7 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
@@ -201,18 +201,18 @@ export class FioEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do nothing
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     let out = ''
     if (this.walletInfo.keys && this.walletInfo.keys.fioKey) {
       out +=
@@ -224,7 +224,7 @@ export class FioEngine extends CurrencyEngine {
     return out
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     let out = ''
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       out += 'active publicKey\n' + this.walletInfo.keys.publicKey + '\n\n'

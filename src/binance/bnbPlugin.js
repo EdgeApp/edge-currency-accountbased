@@ -3,11 +3,10 @@
  */
 // @flow
 
-import { Buffer } from 'buffer'
-
 import BnbApiClient from '@binance-chain/javascript-sdk'
 import { bns } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'
+import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -28,12 +27,12 @@ import { currencyInfo } from './bnbInfo.js'
 const bnbCrypto = BnbApiClient.crypto
 
 export class BinancePlugin extends CurrencyPlugin {
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'binance', currencyInfo)
   }
 
   // will actually use MNEMONIC version of private key
-  async importPrivateKey (mnemonic: string): Promise<Object> {
+  async importPrivateKey(mnemonic: string): Promise<Object> {
     const isValid = bnbCrypto.validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid BNB mnemonic')
     const binanceKey = bnbCrypto.getPrivateKeyFromMnemonic(mnemonic)
@@ -41,7 +40,7 @@ export class BinancePlugin extends CurrencyPlugin {
     return { binanceMnemonic: mnemonic, binanceKey }
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'binance') {
@@ -55,7 +54,7 @@ export class BinancePlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'binance') {
       let publicKey = ''
@@ -72,7 +71,7 @@ export class BinancePlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (
+  async parseUri(
     uri: string,
     currencyCode?: string,
     customTokens?: Array<EdgeMetaToken>
@@ -100,7 +99,7 @@ export class BinancePlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (
+  async encodeUri(
     obj: EdgeEncodeUri,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<string> {
@@ -126,19 +125,19 @@ export class BinancePlugin extends CurrencyPlugin {
   }
 }
 
-export function makeBinancePlugin (
+export function makeBinancePlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<BinancePlugin>
-  function makeCurrencyTools (): Promise<BinancePlugin> {
+  function makeCurrencyTools(): Promise<BinancePlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new BinancePlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

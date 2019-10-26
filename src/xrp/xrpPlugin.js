@@ -30,7 +30,7 @@ const base58Codec = baseX(
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 )
 
-function checkAddress (address: string): boolean {
+function checkAddress(address: string): boolean {
   let data: Uint8Array
   try {
     data = base58Codec.decode(address)
@@ -47,7 +47,7 @@ export class XrpPlugin extends CurrencyPlugin {
   // connectionPool: Object
   connectionClients: { [walletId: string]: boolean }
 
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'ripple', currencyInfo)
     // this.connectionPool = new RippledWsClientPool()
     this.connectionClients = {}
@@ -55,7 +55,7 @@ export class XrpPlugin extends CurrencyPlugin {
     this.rippleApiSubscribers = {}
   }
 
-  async connectApi (walletId: string): Promise<void> {
+  async connectApi(walletId: string): Promise<void> {
     if (!this.rippleApi.serverName) {
       const funcs = this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(
         server => async () => {
@@ -74,7 +74,7 @@ export class XrpPlugin extends CurrencyPlugin {
     this.rippleApiSubscribers[walletId] = true
   }
 
-  async disconnectApi (walletId: string): Promise<void> {
+  async disconnectApi(walletId: string): Promise<void> {
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
       await this.rippleApi.disconnect()
@@ -82,7 +82,7 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  importPrivateKey (privateKey: string): Promise<{ rippleKey: string }> {
+  importPrivateKey(privateKey: string): Promise<{ rippleKey: string }> {
     privateKey.replace(/ /g, '')
     if (privateKey.length !== 29 && privateKey.length !== 31) {
       throw new Error('Private key wrong length')
@@ -92,7 +92,7 @@ export class XrpPlugin extends CurrencyPlugin {
     return Promise.resolve({ rippleKey: privateKey })
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'ripple' || type === 'ripple-secp256k1') {
@@ -113,7 +113,7 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'ripple' || type === 'ripple-secp256k1') {
       const keypair = keypairs.deriveKeypair(walletInfo.keys.rippleKey)
@@ -124,7 +124,7 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+  async parseUri(uri: string): Promise<EdgeParsedUri> {
     const networks = { ripple: true }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
 
@@ -151,7 +151,7 @@ export class XrpPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -171,19 +171,19 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeRipplePlugin (
+export function makeRipplePlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
   let toolsPromise: Promise<XrpPlugin>
-  function makeCurrencyTools (): Promise<XrpPlugin> {
+  function makeCurrencyTools(): Promise<XrpPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new XrpPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
