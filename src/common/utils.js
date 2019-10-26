@@ -53,12 +53,7 @@ function validateObject(object: any, schema: any) {
 }
 
 export function isEmpty(map: Object) {
-  for (const key in map) {
-    if (map.hasOwnProperty(key)) {
-      return false
-    }
-  }
-  return true
+  return Object.keys(map).length !== 0
 }
 
 export function isHex(h: string) {

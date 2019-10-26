@@ -634,7 +634,7 @@ export class EthereumEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
-      case 'broadcastTx':
+      case 'broadcastTx': {
         const promises = []
         promises.push(
           broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
@@ -649,6 +649,8 @@ export class EthereumEngine extends CurrencyEngine {
 
         this.log(`ETH multicastServers ${func} ${out.server} won`)
         break
+      }
+
       case 'eth_blockNumber':
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
@@ -761,7 +763,7 @@ export class EthereumEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
-      case 'getTransactions':
+      case 'getTransactions': {
         const {
           currencyCode,
           address,
@@ -795,6 +797,7 @@ export class EthereumEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+      }
     }
     this.log(`ETH multicastServers ${func} ${out.server} won`)
 
@@ -845,7 +848,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     const data =
-      spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
+      spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
     const { gasLimit, gasPrice } = calcMiningFee(

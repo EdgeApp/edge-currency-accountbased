@@ -519,7 +519,7 @@ export class RskEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
-      case 'broadcastTx':
+      case 'broadcastTx': {
         const promises = []
         promises.push(
           broadcastWrapper(this.broadcastPublicNode(params[0]), 'public-node')
@@ -528,6 +528,8 @@ export class RskEngine extends CurrencyEngine {
 
         this.log(`RSK multicastServers ${func} ${out.server} won`)
         break
+      }
+
       case 'eth_blockNumber':
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
@@ -630,7 +632,8 @@ export class RskEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
-      case 'getTransactions':
+
+      case 'getTransactions': {
         const {
           currencyCode,
           address,
@@ -664,6 +667,7 @@ export class RskEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+      }
     }
     this.log(`RSK multicastServers ${func} ${out.server} won`)
 

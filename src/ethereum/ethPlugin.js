@@ -155,15 +155,11 @@ export class EthereumPlugin extends CurrencyPlugin {
       const currencyName = parsedUri.query.name || currencyCode
       const decimalsInput = parsedUri.query.decimals || '18'
       let multiplier = '1000000000000000000'
-      try {
-        const decimals = parseInt(decimalsInput)
-        if (decimals < 0 || decimals > 18) {
-          throw new Error('Wrong number of decimals')
-        }
-        multiplier = '1' + '0'.repeat(decimals)
-      } catch (e) {
-        throw e
+      const decimals = parseInt(decimalsInput)
+      if (decimals < 0 || decimals > 18) {
+        throw new Error('Wrong number of decimals')
       }
+      multiplier = '1' + '0'.repeat(decimals)
 
       const type = parsedUri.query.type || 'ERC20'
 

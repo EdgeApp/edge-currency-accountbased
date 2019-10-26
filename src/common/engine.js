@@ -179,12 +179,10 @@ class CurrencyEngine {
     }
 
     let isEmptyTransactions = true
-    for (const cc in this.transactionList) {
-      if (this.transactionList.hasOwnProperty(cc)) {
-        if (this.transactionList[cc] && this.transactionList[cc].length > 0) {
-          isEmptyTransactions = false
-          break
-        }
+    for (const cc of Object.keys(this.transactionList)) {
+      if (this.transactionList[cc] && this.transactionList[cc].length > 0) {
+        isEmptyTransactions = false
+        break
       }
     }
     if (isEmptyTransactions) {
@@ -192,13 +190,11 @@ class CurrencyEngine {
       this.transactionList = transactionList || this.transactionList
       this.txIdList = txIdList || this.txIdList
       this.txIdMap = txIdMap || this.txIdMap
-    } else {
+    } else if (transactionList != null) {
       // Manually add transactions via addTransaction()
-      for (const cc in transactionList) {
-        if (transactionList.hasOwnProperty(cc)) {
-          for (const edgeTransaction of transactionList[cc]) {
-            this.addTransaction(cc, edgeTransaction)
-          }
+      for (const cc of Object.keys(transactionList)) {
+        for (const edgeTransaction of transactionList[cc]) {
+          this.addTransaction(cc, edgeTransaction)
         }
       }
     }

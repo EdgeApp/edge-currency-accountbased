@@ -1,7 +1,5 @@
-/**
- * Created by paul on 7/7/17.
- */
 // @flow
+/* eslint-disable camelcase */
 
 import { bns } from 'biggystring'
 import {
@@ -98,14 +96,10 @@ export class EosEngine extends CurrencyEngine {
             activePublicKey
           })
         }
-        try {
-          const eosPaymentServer = this.currencyInfo.defaultSettings
-            .otherSettings.eosActivationServers[0]
-          const url = `${eosPaymentServer}/api/v1/activateAccount`
-          return fetchJson(url, options)
-        } catch (e) {
-          throw e
-        }
+        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
+          .eosActivationServers[0]
+        const url = `${eosPaymentServer}/api/v1/activateAccount`
+        return fetchJson(url, options)
       }
     }
   }

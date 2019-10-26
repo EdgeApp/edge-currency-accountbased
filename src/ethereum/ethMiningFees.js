@@ -81,7 +81,7 @@ export function calcMiningFee(
       case ES_FEE_LOW:
         gasPrice = gasPriceObj.lowFee
         break
-      case ES_FEE_STANDARD:
+      case ES_FEE_STANDARD: {
         if (
           bns.gte(
             nativeAmount,
@@ -120,6 +120,8 @@ export function calcMiningFee(
         const addFeeToLow = bns.div(temp1, lowHighAmountDiff)
         gasPrice = bns.add(gasPriceObj.standardFeeLow, addFeeToLow)
         break
+      }
+
       case ES_FEE_HIGH:
         gasPrice = networkFeeForGasPrice.gasPrice.highFee
         break

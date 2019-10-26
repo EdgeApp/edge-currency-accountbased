@@ -53,7 +53,7 @@ export class TezosEngine extends CurrencyEngine {
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
-      case 'getHead':
+      case 'getHead': {
         // relevant nodes, disabling first node due to caching / polling issue
         // need to re-enable once that nodes issue is fixed
         const nonCachedNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
@@ -70,7 +70,9 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
-      case 'getBalance':
+      }
+
+      case 'getBalance': {
         const usableNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
         funcs = usableNodes.map(server => async () => {
           eztz.node.setProvider(server)
@@ -79,6 +81,8 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
+      }
+
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
           const result = await this.io
@@ -133,8 +137,9 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
+
       // Functions that should multicast to all servers
-      case 'injectOperation':
+      case 'injectOperation': {
         let preApplyError = ''
         funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
           eztz.node.setProvider(server)
@@ -161,7 +166,9 @@ export class TezosEngine extends CurrencyEngine {
           }
         })
         break
-      case 'silentInjection':
+      }
+
+      case 'silentInjection': {
         const index = this.tezosPlugin.tezosRpcNodes.indexOf(params[0])
         const remainingRpcNodes = this.tezosPlugin.tezosRpcNodes.slice(
           index + 1
@@ -175,6 +182,7 @@ export class TezosEngine extends CurrencyEngine {
           })
         )
         break
+      }
     }
     this.log(
       `XTZ multicastServers ${func} ${out.server} won with result ${out.result}`

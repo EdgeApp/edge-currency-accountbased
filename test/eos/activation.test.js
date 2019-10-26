@@ -57,7 +57,7 @@ describe(`EOS activation`, function() {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    userSettings: void 0,
+    userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
   }

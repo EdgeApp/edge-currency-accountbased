@@ -341,7 +341,7 @@ export class BinanceEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     let funcs
     switch (func) {
-      case 'bnb_broadcastTx':
+      case 'bnb_broadcastTx': {
         const promises = []
         const broadcastServers = this.currencyInfo.defaultSettings.otherSettings
           .binanceApiServers
@@ -368,6 +368,8 @@ export class BinanceEngine extends CurrencyEngine {
         } else {
           throw new Error('BNB send fail with error: ' + result.message)
         }
+      }
+
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
       case 'bnb_getTransactions':
@@ -427,7 +429,7 @@ export class BinanceEngine extends CurrencyEngine {
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     const data =
-      spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
+      spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
 

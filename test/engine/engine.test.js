@@ -69,7 +69,7 @@ for (const fixture of fixtures) {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    userSettings: void 0,
+    userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
   }
@@ -208,7 +208,7 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
 const walletLocalDisklet = fakeIo.disklet
 const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   callbacks,
-  userSettings: void 0,
+  userSettings: undefined,
   walletLocalDisklet,
   walletLocalEncryptedDisklet: walletLocalDisklet
 }
