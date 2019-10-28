@@ -78,7 +78,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x6251583e7d997df3604bc73b9779196e94a090ce',
+      contractAddress: '0x2e91E3e54C5788e9FdD6A181497FDcEa1De1bcc1',
+',
       symbolImage: `${imageServerUrl}/herc-logo-solo-64.png`
     },
     {
