@@ -79,7 +79,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x2e91E3e54C5788e9FdD6A181497FDcEa1De1bcc1',
-',
       symbolImage: `${imageServerUrl}/herc-logo-solo-64.png`
     },
     {
