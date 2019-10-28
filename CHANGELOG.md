@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.1 (2019-10-28)
+
+- Update HERC contract address.
+
 # 0.5.0 (2019-10-22)
 
 - Include compound tokens info
