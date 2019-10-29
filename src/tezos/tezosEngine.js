@@ -86,7 +86,9 @@ export class TezosEngine extends CurrencyEngine {
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
           const result = await this.io
-            .fetch(server + '/v3/number_operations/' + params[0])
+            .fetch(
+              `${server}/v3/number_operations/${params[0]}?type=Transaction`
+            )
             .then(function(response) {
               return response.json()
             })
@@ -97,16 +99,16 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
+
       case 'getTransactions':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
+          const pagination = /mystique/.test(server)
+            ? ''
+            : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.io
             .fetch(
-              server +
-                '/v3/operations/' +
-                params[0] +
-                '?type=Transaction&p=' +
-                params[1] +
-                '&number=50'
+              `${server}/v3/operations/${params[0]}?type=Transaction` +
+                pagination
             )
             .then(function(response) {
               return response.json()
@@ -115,6 +117,7 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
+
       case 'createTransaction':
         funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
           eztz.node.setProvider(server)
