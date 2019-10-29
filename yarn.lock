@@ -1942,7 +1942,7 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
   integrity sha1-DQcLTQQ6W+ozovGkDi7bPZpMz3c=
 
-codecov@3.5.0, codecov@^2.3.1:
+codecov@3.5.0:
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/codecov/-/codecov-3.5.0.tgz#3d0748932f9cb41e1ad7f21fa346ef1b2b1bed47"
   integrity sha512-/OsWOfIHaQIr7aeZ4pY0UC1PZT6kimoKFOFYFNb6wxo3iw12nRrh+mNGH72rnXxNsq6SGfesVPizm/6Q3XqcFQ==
@@ -3072,15 +3072,14 @@ extglob@^2.0.4:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
-"eztz.js@git://github.com/EdgeApp/eztz.git#cd43dab8b6f02":
+"eztz.js@git://github.com/EdgeApp/eztz.git#edge-fixes":
   version "0.0.1"
-  resolved "git://github.com/EdgeApp/eztz.git#cd43dab8b6f0271be01e2a4ebfb5838d067e4d01"
+  resolved "git://github.com/EdgeApp/eztz.git#6937ce236912dae8da8409838518023a88eacf6c"
   dependencies:
     bignumber.js "^7.2.1"
     bip39 "^3.0.2"
     bs58check "^2.1.1"
     buffer "^5.1.0"
-    codecov "^2.3.1"
     libsodium-wrappers "^0.5.4"
     pbkdf2 "^3.0.14"
     xhr2 "^0.1.4"
