@@ -43,7 +43,7 @@ export class StellarEngine extends CurrencyEngine {
   pendingTransactionsMap: { [index: number]: Object }
   otherData: StellarWalletOtherData
 
-  constructor (
+  constructor(
     currencyPlugin: StellarPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -56,7 +56,7 @@ export class StellarEngine extends CurrencyEngine {
     this.pendingTransactionsMap = {}
   }
 
-  async multicastServers (
+  async multicastServers(
     func: StellarServerFunction,
     ...params: any
   ): Promise<any> {
@@ -123,7 +123,7 @@ export class StellarEngine extends CurrencyEngine {
     return out.result
   }
 
-  async processTransaction (tx: StellarOperation): Promise<string> {
+  async processTransaction(tx: StellarOperation): Promise<string> {
     const ourReceiveAddresses: Array<string> = []
 
     let currencyCode = ''
@@ -220,7 +220,7 @@ export class StellarEngine extends CurrencyEngine {
   // }
 
   // Polling version
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
 
     const address = this.walletLocalData.publicKey
@@ -267,10 +267,10 @@ export class StellarEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkUnconfirmedTransactionsFetch () {}
+  async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
       const account: StellarAccount = await this.multicastServers(
@@ -324,7 +324,7 @@ export class StellarEngine extends CurrencyEngine {
     }
   }
 
-  checkBlockchainInnerLoop () {
+  checkBlockchainInnerLoop() {
     this.multicastServers('ledgers')
       .then(r => {
         const blockHeight = r.records[0].sequence
@@ -342,7 +342,7 @@ export class StellarEngine extends CurrencyEngine {
       })
   }
 
-  async clearBlockchainCache (): Promise<void> {
+  async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
@@ -354,7 +354,7 @@ export class StellarEngine extends CurrencyEngine {
   // Public methods
   // ****************************************************************************
 
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
@@ -362,13 +362,13 @@ export class StellarEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
@@ -484,7 +484,7 @@ export class StellarEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     try {
       const idInternal = edgeTransaction.otherParams.idInternal
@@ -504,7 +504,7 @@ export class StellarEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     try {
@@ -530,14 +530,14 @@ export class StellarEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.stellarKey) {
       return this.walletInfo.keys.stellarKey
     }
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

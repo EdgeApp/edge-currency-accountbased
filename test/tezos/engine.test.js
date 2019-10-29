@@ -1,7 +1,5 @@
 // @flow
 
-import EventEmitter from 'events'
-
 import { bns } from 'biggystring'
 import { assert } from 'chai'
 import {
@@ -14,13 +12,14 @@ import {
   closeEdge,
   makeFakeIo
 } from 'edge-core-js'
+import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index.js'
 import { TezosEngine } from '../../src/tezos/tezosEngine.js'
 
-describe(`Tezos engine`, function () {
+describe(`Tezos engine`, function() {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
@@ -28,24 +27,24 @@ describe(`Tezos engine`, function () {
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
-  const factory = edgeCorePlugins['tezos']
+  const factory = edgeCorePlugins.tezos
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
-    onAddressesChecked (progressRatio) {
+    onAddressesChecked(progressRatio) {
       emitter.emit('onAddressesCheck', progressRatio)
     },
-    onTxidsChanged (txid) {
+    onTxidsChanged(txid) {
       emitter.emit('onTxidsChanged', txid)
     },
-    onBalanceChanged (currencyCode, balance) {
+    onBalanceChanged(currencyCode, balance) {
       emitter.emit('onBalanceChange', currencyCode, balance)
     },
-    onBlockHeightChanged (height) {
+    onBlockHeightChanged(height) {
       emitter.emit('onBlockHeightChange', height)
     },
-    onTransactionsChanged (transactionList) {
+    onTransactionsChanged(transactionList) {
       emitter.emit('onTransactionsChanged', transactionList)
     }
   }
@@ -54,7 +53,7 @@ describe(`Tezos engine`, function () {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    userSettings: void 0,
+    userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
   }
@@ -72,14 +71,14 @@ describe(`Tezos engine`, function () {
     }
   }
 
-  before('Engine', function () {
+  before('Engine', function() {
     return plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
         engine = result
       })
   })
-  it('should get a block height', async function () {
+  it('should get a block height', async function() {
     this.timeout(10000)
     if (engine) {
       await engine.checkBlockchainInnerLoop()
@@ -88,14 +87,11 @@ describe(`Tezos engine`, function () {
       assert.equal(0, 1)
     }
   })
-  it('should get a balance', async function () {
+  it('should get a balance', async function() {
     this.timeout(10000)
     if (engine) {
       await engine.checkAccountInnerLoop()
-      assert.equal(
-        bns.gte(engine.walletLocalData.totalBalances['XTZ'], '0'),
-        true
-      )
+      assert.equal(bns.gte(engine.walletLocalData.totalBalances.XTZ, '0'), true)
     } else {
       assert.equal(0, 1)
     }
@@ -110,8 +106,8 @@ describe(`Tezos engine`, function () {
     ]
   }
   let edgeTransaction
-  it('should create a transaction', async function () {
-    engine.walletLocalData.totalBalances['XTZ'] = '4000000'
+  it('should create a transaction', async function() {
+    engine.walletLocalData.totalBalances.XTZ = '4000000'
     this.timeout(10000)
     if (engine) {
       edgeTransaction = await engine.makeSpend(edgeSpendInfo)
@@ -124,7 +120,7 @@ describe(`Tezos engine`, function () {
       assert.equal(0, 1)
     }
   })
-  it('should sign a transaction', async function () {
+  it('should sign a transaction', async function() {
     edgeTransaction = {
       txid: '',
       date: 0,
@@ -181,8 +177,8 @@ describe(`Tezos engine`, function () {
       assert.equal(0, 1)
     }
   })
-  describe('killEngine...', function () {
-    it('Should stop the engine', function (done) {
+  describe('killEngine...', function() {
+    it('Should stop the engine', function(done) {
       engine.killEngine().then(() => {
         closeEdge()
         done()

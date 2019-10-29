@@ -27,7 +27,7 @@ const URI_PREFIX = 'web+stellar'
 
 export class StellarPlugin extends CurrencyPlugin {
   stellarApiServers: Array<Object>
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'stellar', currencyInfo)
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
@@ -39,7 +39,7 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  checkAddress (address: string): boolean {
+  checkAddress(address: string): boolean {
     // TODO: check address
     try {
       stellarApi.Keypair.fromPublicKey(address)
@@ -49,7 +49,7 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'stellar') {
@@ -61,14 +61,14 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  importPrivateKey (privateKey: string): Promise<{ stellarKey: string }> {
+  importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
     privateKey.replace(/ /g, '')
     stellarApi.Keypair.fromSecret(privateKey)
     if (privateKey.length !== 56) throw new Error('Private key wrong length')
     return Promise.resolve({ stellarKey: privateKey })
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'stellar') {
       const keypair = stellarApi.Keypair.fromSecret(walletInfo.keys.stellarKey)
@@ -78,7 +78,7 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+  async parseUri(uri: string): Promise<EdgeParsedUri> {
     const networks = {}
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
@@ -128,7 +128,7 @@ export class StellarPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
     const valid = this.checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -171,19 +171,19 @@ export class StellarPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeStellarPlugin (
+export function makeStellarPlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
   let toolsPromise: Promise<StellarPlugin>
-  function makeCurrencyTools (): Promise<StellarPlugin> {
+  function makeCurrencyTools(): Promise<StellarPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new StellarPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

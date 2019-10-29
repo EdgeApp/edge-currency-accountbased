@@ -78,7 +78,7 @@ export class BinanceEngine extends CurrencyEngine {
   // otherData: BinanceWalletOtherData
   // initOptions: BinanceInitOptions
 
-  constructor (
+  constructor(
     currencyPlugin: BinancePlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: any, // BinanceInitOptions,
@@ -94,7 +94,7 @@ export class BinanceEngine extends CurrencyEngine {
     // this.initOptions = initOptions
   }
 
-  async fetchGet (url: string) {
+  async fetchGet(url: string) {
     const response = await this.io.fetch(url, {
       method: 'GET'
     })
@@ -106,7 +106,7 @@ export class BinanceEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async checkBlockchainInnerLoop () {
+  async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers(
         'bnb_blockNumber',
@@ -130,7 +130,7 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance (tk: string, balance: string) {
+  updateBalance(tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
     }
@@ -143,7 +143,7 @@ export class BinanceEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
 
     try {
@@ -182,7 +182,7 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  processBinanceApiTransaction (
+  processBinanceApiTransaction(
     tx: BinanceApiTransaction,
     currencyCode: string
   ) {
@@ -232,7 +232,7 @@ export class BinanceEngine extends CurrencyEngine {
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  async checkTransactionsFetch (
+  async checkTransactionsFetch(
     startTime: number,
     currencyCode: string
   ): Promise<boolean> {
@@ -281,9 +281,7 @@ export class BinanceEngine extends CurrencyEngine {
       }
     } catch (e) {
       this.log(
-        `Error checkTransactionsFetch ${currencyCode}: ${
-          this.walletLocalData.publicKey
-        }`,
+        `Error checkTransactionsFetch ${currencyCode}: ${this.walletLocalData.publicKey}`,
         e
       )
     }
@@ -297,7 +295,7 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const blockHeight = Date.now()
     let startTime: number = TIMESTAMP_BEFORE_BNB_LAUNCH
     const promiseArray = []
@@ -339,11 +337,11 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers (func: BnbFunction, ...params: any): Promise<any> {
+  async multicastServers(func: BnbFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs
     switch (func) {
-      case 'bnb_broadcastTx':
+      case 'bnb_broadcastTx': {
         const promises = []
         const broadcastServers = this.currencyInfo.defaultSettings.otherSettings
           .binanceApiServers
@@ -370,6 +368,8 @@ export class BinanceEngine extends CurrencyEngine {
         } else {
           throw new Error('BNB send fail with error: ' + result.message)
         }
+      }
+
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
       case 'bnb_getTransactions':
@@ -404,7 +404,7 @@ export class BinanceEngine extends CurrencyEngine {
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
@@ -417,19 +417,19 @@ export class BinanceEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     // await this.killEngine()
     // await this.clearBlockchainCache()
     // await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     const data =
-      spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
+      spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
 
@@ -510,7 +510,7 @@ export class BinanceEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const bnbClient = new BnbApiClient(
       currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
     )
@@ -548,7 +548,7 @@ export class BinanceEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const bnbSignedTransaction = edgeTransaction.otherParams.serializedTx
@@ -564,14 +564,14 @@ export class BinanceEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.binanceMnemonic) {
       return this.walletInfo.keys.binanceMnemonic
     }
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

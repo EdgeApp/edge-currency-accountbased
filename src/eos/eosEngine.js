@@ -1,7 +1,5 @@
-/**
- * Created by paul on 7/7/17.
- */
 // @flow
+/* eslint-disable camelcase */
 
 import { bns } from 'biggystring'
 import {
@@ -22,7 +20,7 @@ import {
   getDenomInfo,
   validateObject
 } from '../common/utils.js'
-import { EosPlugin, checkAddress, eosConfig } from './eosPlugin.js'
+import { checkAddress, eosConfig, EosPlugin } from './eosPlugin.js'
 import { EosTransactionSuperNodeSchema } from './eosSchema.js'
 import {
   type EosTransaction,
@@ -55,7 +53,7 @@ export class EosEngine extends CurrencyEngine {
   otherData: EosWalletOtherData
   otherMethods: Object
 
-  constructor (
+  constructor(
     currencyPlugin: EosPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
@@ -98,19 +96,15 @@ export class EosEngine extends CurrencyEngine {
             activePublicKey
           })
         }
-        try {
-          const eosPaymentServer = this.currencyInfo.defaultSettings
-            .otherSettings.eosActivationServers[0]
-          const url = `${eosPaymentServer}/api/v1/activateAccount`
-          return fetchJson(url, options)
-        } catch (e) {
-          throw e
-        }
+        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
+          .eosActivationServers[0]
+        const url = `${eosPaymentServer}/api/v1/activateAccount`
+        return fetchJson(url, options)
       }
     }
   }
 
-  async loadEngine (
+  async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -125,8 +119,9 @@ export class EosEngine extends CurrencyEngine {
       }
     }
   }
+
   // Poll on the blockheight
-  async checkBlockchainInnerLoop () {
+  async checkBlockchainInnerLoop() {
     try {
       const result = await this.multicastServers('getInfo')
       const blockHeight = result.head_block_num
@@ -145,7 +140,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  processIncomingTransaction (action: EosTransactionSuperNode): number {
+  processIncomingTransaction(action: EosTransactionSuperNode): number {
     const result = validateObject(action, EosTransactionSuperNodeSchema)
     if (!result) {
       this.log('Invalid supernode tx')
@@ -199,7 +194,7 @@ export class EosEngine extends CurrencyEngine {
     return edgeTransaction.blockHeight
   }
 
-  processOutgoingTransaction (action: EosTransaction): number {
+  processOutgoingTransaction(action: EosTransaction): number {
     const ourReceiveAddresses = []
     const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
@@ -270,7 +265,7 @@ export class EosEngine extends CurrencyEngine {
     return blockHeight
   }
 
-  async checkOutgoingTransactions (acct: string): Promise<boolean> {
+  async checkOutgoingTransactions(acct: string): Promise<boolean> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
     const limit = 10
     let skip = 0
@@ -325,7 +320,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   // similar to checkOutgoingTransactions, possible to refactor
-  async checkIncomingTransactions (acct: string): Promise<boolean> {
+  async checkIncomingTransactions(acct: string): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
@@ -379,7 +374,7 @@ export class EosEngine extends CurrencyEngine {
     return true
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     if (
       !this.walletLocalData.otherData ||
       !this.walletLocalData.otherData.accountName
@@ -409,7 +404,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers (func: EosFunction, ...params: any): Promise<any> {
+  async multicastServers(func: EosFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
@@ -446,7 +441,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   // Check all account balance and other relevant info
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const publicKey = this.walletLocalData.publicKey
     try {
       // Check if the publicKey has an account accountName
@@ -519,7 +514,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  async clearBlockchainCache (): Promise<void> {
+  async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.lastQueryActionSeq = 0
@@ -532,7 +527,7 @@ export class EosEngine extends CurrencyEngine {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
 
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
@@ -541,13 +536,13 @@ export class EosEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  getFreshAddress (options: any): EdgeFreshAddress {
+  getFreshAddress(options: any): EdgeFreshAddress {
     if (this.walletLocalData.otherData.accountName) {
       return { publicAddress: this.walletLocalData.otherData.accountName }
     } else {
@@ -560,7 +555,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
@@ -728,7 +723,7 @@ export class EosEngine extends CurrencyEngine {
   //   return edgeTransaction
   // }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
     // const privateKey = this.walletInfo.keys.eosKey
@@ -753,7 +748,7 @@ export class EosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     // Broadcast transaction and add date
@@ -798,7 +793,7 @@ export class EosEngine extends CurrencyEngine {
     }
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     let out = ''
     if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
       out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
@@ -809,7 +804,7 @@ export class EosEngine extends CurrencyEngine {
     return out
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     let out = ''
     if (this.walletInfo.keys && this.walletInfo.keys.ownerPublicKey) {
       out += 'owner publicKey\n' + this.walletInfo.keys.ownerPublicKey + '\n\n'

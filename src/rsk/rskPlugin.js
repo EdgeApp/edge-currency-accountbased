@@ -3,10 +3,9 @@
  */
 // @flow
 
-import { Buffer } from 'buffer'
-
 import { bns } from 'biggystring'
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
+import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -46,11 +45,11 @@ const defaultNetworkFees = {
 }
 
 export class RskPlugin extends CurrencyPlugin {
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'rsk', currencyInfo)
   }
 
-  async importPrivateKey (userInput: string): Promise<Object> {
+  async importPrivateKey(userInput: string): Promise<Object> {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const rskKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -82,7 +81,7 @@ export class RskPlugin extends CurrencyPlugin {
     }
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     if (walletType !== 'wallet:rsk') {
       throw new Error('Invalid wallet type')
     }
@@ -96,7 +95,7 @@ export class RskPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     if (walletInfo.type !== 'wallet:rsk') {
       throw new Error('Invalid wallet type')
     }
@@ -130,7 +129,7 @@ export class RskPlugin extends CurrencyPlugin {
     return { publicKey: address }
   }
 
-  async _mnemonicToRskKey (mnemonic: string): Promise<string> {
+  async _mnemonicToRskKey(mnemonic: string): Promise<string> {
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
     const walletHdpath = "m/44'/137'/0'/0/"
     const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
@@ -139,7 +138,7 @@ export class RskPlugin extends CurrencyPlugin {
     return rskKey
   }
 
-  async parseUri (
+  async parseUri(
     uri: string,
     currencyCode?: string,
     customTokens?: Array<EdgeMetaToken>
@@ -182,15 +181,11 @@ export class RskPlugin extends CurrencyPlugin {
       const currencyName = parsedUri.query.name || currencyCode
       const decimalsInput = parsedUri.query.decimals || '18'
       let multiplier = '1000000000000000000'
-      try {
-        const decimals = parseInt(decimalsInput)
-        if (decimals < 0 || decimals > 18) {
-          throw new Error('Wrong number of decimals')
-        }
-        multiplier = '1' + '0'.repeat(decimals)
-      } catch (e) {
-        throw e
+      const decimals = parseInt(decimalsInput)
+      if (decimals < 0 || decimals > 18) {
+        throw new Error('Wrong number of decimals')
       }
+      multiplier = '1' + '0'.repeat(decimals)
 
       const type = parsedUri.query.type || 'RRC20'
 
@@ -209,7 +204,7 @@ export class RskPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (
+  async encodeUri(
     obj: EdgeEncodeUri,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<string> {
@@ -236,17 +231,17 @@ export class RskPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeRskPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+export function makeRskPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<RskPlugin>
-  function makeCurrencyTools (): Promise<RskPlugin> {
+  function makeCurrencyTools(): Promise<RskPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new RskPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

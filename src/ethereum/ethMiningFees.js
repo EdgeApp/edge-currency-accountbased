@@ -18,7 +18,7 @@ export const ES_FEE_STANDARD = 'standard'
 export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
-export function calcMiningFee (
+export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees
 ): EthereumCalcedFees {
@@ -43,8 +43,8 @@ export function calcMiningFee (
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
     )
-    let networkFeeForGasPrice: EthereumFee = networkFees['default']
-    let networkFeeForGasLimit: EthereumFee = networkFees['default']
+    let networkFeeForGasPrice: EthereumFee = networkFees.default
+    let networkFeeForGasLimit: EthereumFee = networkFees.default
 
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]
@@ -81,7 +81,7 @@ export function calcMiningFee (
       case ES_FEE_LOW:
         gasPrice = gasPriceObj.lowFee
         break
-      case ES_FEE_STANDARD:
+      case ES_FEE_STANDARD: {
         if (
           bns.gte(
             nativeAmount,
@@ -120,6 +120,8 @@ export function calcMiningFee (
         const addFeeToLow = bns.div(temp1, lowHighAmountDiff)
         gasPrice = bns.add(gasPriceObj.standardFeeLow, addFeeToLow)
         break
+      }
+
       case ES_FEE_HIGH:
         gasPrice = networkFeeForGasPrice.gasPrice.highFee
         break

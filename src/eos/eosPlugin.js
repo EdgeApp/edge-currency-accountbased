@@ -39,7 +39,7 @@ export const eosConfig = {
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
-export function checkAddress (address: string): boolean {
+export function checkAddress(address: string): boolean {
   // TODO: Check for a valid address format. The passed in
   // address would be a use visible displayed address such as what would
   // go into a QR code
@@ -59,7 +59,7 @@ export class EosPlugin extends CurrencyPlugin {
   otherMethods: Object
   eosServer: Object
 
-  constructor (io: EdgeIo, fetchCors: Function) {
+  constructor(io: EdgeIo, fetchCors: Function) {
     super(io, 'eos', currencyInfo)
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
@@ -67,7 +67,8 @@ export class EosPlugin extends CurrencyPlugin {
 
     this.eosServer = eosjs(eosConfig)
   }
-  async createPrivateKey (walletType: string): Promise<Object> {
+
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'eos') {
@@ -85,7 +86,7 @@ export class EosPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'eos') {
       // TODO: User currency library to derive the public keys/addresses from the private key.
@@ -104,7 +105,7 @@ export class EosPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+  async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
       eos: true
     })
@@ -116,7 +117,7 @@ export class EosPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -135,7 +136,7 @@ export class EosPlugin extends CurrencyPlugin {
     return encodedUri
   }
 
-  async getAccSystemStats (account: string) {
+  async getAccSystemStats(account: string) {
     return new Promise((resolve, reject) => {
       this.eosServer.getAccount(account, (error, result) => {
         if (error) {
@@ -150,18 +151,18 @@ export class EosPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeEosPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
   const fetchJson = getFetchJson(opts)
 
   let toolsPromise: Promise<EosPlugin>
-  function makeCurrencyTools (): Promise<EosPlugin> {
+  function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new EosPlugin(io, getFetchCors(opts)))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

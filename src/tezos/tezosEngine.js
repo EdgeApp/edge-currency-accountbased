@@ -39,7 +39,7 @@ type TezosFunction =
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
 
-  constructor (
+  constructor(
     currencyPlugin: TezosPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -48,29 +48,31 @@ export class TezosEngine extends CurrencyEngine {
     this.tezosPlugin = currencyPlugin
   }
 
-  async multicastServers (func: TezosFunction, ...params: any): Promise<any> {
+  async multicastServers(func: TezosFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
-      case 'getHead':
+      case 'getHead': {
         // relevant nodes, disabling first node due to caching / polling issue
         // need to re-enable once that nodes issue is fixed
         const nonCachedNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             .fetch(server + '/chains/main/blocks/head/header')
-            .then(function (response) {
+            .then(function(response) {
               return response.json()
             })
-            .then(function (json) {
+            .then(function(json) {
               return json
             })
           return { server, result }
         })
         out = await asyncWaterfall(funcs)
         break
-      case 'getBalance':
+      }
+
+      case 'getBalance': {
         const usableNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
         funcs = usableNodes.map(server => async () => {
           eztz.node.setProvider(server)
@@ -79,14 +81,16 @@ export class TezosEngine extends CurrencyEngine {
         })
         out = await asyncWaterfall(funcs)
         break
+      }
+
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
           const result = await this.io
             .fetch(server + '/v3/number_operations/' + params[0])
-            .then(function (response) {
+            .then(function(response) {
               return response.json()
             })
-            .then(function (json) {
+            .then(function(json) {
               return json[0]
             })
           return { server, result }
@@ -104,7 +108,7 @@ export class TezosEngine extends CurrencyEngine {
                 params[1] +
                 '&number=50'
             )
-            .then(function (response) {
+            .then(function(response) {
               return response.json()
             })
           return { server, result }
@@ -126,15 +130,16 @@ export class TezosEngine extends CurrencyEngine {
               this.currencyInfo.defaultSettings.limit.storage,
               this.currencyInfo.defaultSettings.fee.reveal
             )
-            .then(function (response) {
+            .then(function(response) {
               return response
             })
           return { server, result }
         })
         out = await asyncWaterfall(funcs)
         break
+
       // Functions that should multicast to all servers
-      case 'injectOperation':
+      case 'injectOperation': {
         let preApplyError = ''
         funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
           eztz.node.setProvider(server)
@@ -161,7 +166,9 @@ export class TezosEngine extends CurrencyEngine {
           }
         })
         break
-      case 'silentInjection':
+      }
+
+      case 'silentInjection': {
         const index = this.tezosPlugin.tezosRpcNodes.indexOf(params[0])
         const remainingRpcNodes = this.tezosPlugin.tezosRpcNodes.slice(
           index + 1
@@ -175,13 +182,15 @@ export class TezosEngine extends CurrencyEngine {
           })
         )
         break
+      }
     }
     this.log(
       `XTZ multicastServers ${func} ${out.server} won with result ${out.result}`
     )
     return out.result
   }
-  formatError (e: any): string {
+
+  formatError(e: any): string {
     if (typeof e === 'string') {
       return e
     }
@@ -199,7 +208,8 @@ export class TezosEngine extends CurrencyEngine {
     } catch (e) {}
     return ''
   }
-  processTezosTransaction (tx: XtzGetTransaction) {
+
+  processTezosTransaction(tx: XtzGetTransaction) {
     const valid = validateObject(tx, XtzTransactionSchema)
     if (!valid) {
       this.log('Invalid transaction!')
@@ -237,7 +247,7 @@ export class TezosEngine extends CurrencyEngine {
     }
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const pkh = this.walletLocalData.publicKey
     if (!this.otherData.numberTransactions) {
       this.otherData.numberTransactions = 0
@@ -272,10 +282,10 @@ export class TezosEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkUnconfirmedTransactionsFetch () {}
+  async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     this.tokenCheckBalanceStatus.XTZ = 0
     const currencyCode = PRIMARY_CURRENCY
     const pkh = this.walletLocalData.publicKey
@@ -291,7 +301,8 @@ export class TezosEngine extends CurrencyEngine {
     }
     this.tokenCheckBalanceStatus.XTZ = 1
   }
-  async checkBlockchainInnerLoop () {
+
+  async checkBlockchainInnerLoop() {
     const head: HeadInfo = await this.multicastServers('getHead')
     const blockHeight = head.level
     if (this.walletLocalData.blockHeight !== blockHeight) {
@@ -303,10 +314,11 @@ export class TezosEngine extends CurrencyEngine {
     }
   }
 
-  async clearBlockchainCache (): Promise<void> {
+  async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
   }
-  async isBurn (op: TezosOperation): Promise<boolean> {
+
+  async isBurn(op: TezosOperation): Promise<boolean> {
     if (op.kind === 'origination') {
       return true
     }
@@ -322,7 +334,7 @@ export class TezosEngine extends CurrencyEngine {
   // Public methods
   // ****************************************************************************
 
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
@@ -330,13 +342,13 @@ export class TezosEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
@@ -420,7 +432,7 @@ export class TezosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx === '') {
       const sk = this.walletInfo.keys.privateKey
       const signed = eztz.crypto.sign(
@@ -435,7 +447,7 @@ export class TezosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const opBytes = edgeTransaction.otherParams.fullOp.opbytes
@@ -446,14 +458,14 @@ export class TezosEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.mnemonic) {
       return this.walletInfo.keys.mnemonic
     }
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

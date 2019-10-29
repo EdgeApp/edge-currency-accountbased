@@ -3,12 +3,12 @@ import { before, describe, it } from 'mocha'
 
 import { asyncWaterfall, snooze, snoozeReject } from '../../src/common/utils.js'
 
-describe(`Utils testing`, function () {
-  before('', function (done) {
+describe(`Utils testing`, function() {
+  before('', function(done) {
     done()
   })
 
-  it('Async Waterfall 1', async function () {
+  it('Async Waterfall 1', async function() {
     const funcs = [
       async () => {
         await snooze(3000)
@@ -27,7 +27,7 @@ describe(`Utils testing`, function () {
     assert.equal(result, 3)
   })
 
-  it('Async Waterfall 2', async function () {
+  it('Async Waterfall 2', async function() {
     const funcs = [
       async () => {
         await snooze(3000)
@@ -46,7 +46,7 @@ describe(`Utils testing`, function () {
     assert.equal(result, 2)
   })
 
-  it('Async Waterfall 3', async function () {
+  it('Async Waterfall 3', async function() {
     const funcs = [
       async () => {
         await snoozeReject(50)
@@ -65,7 +65,7 @@ describe(`Utils testing`, function () {
     assert.equal(result, 3)
   })
 
-  it('Async Waterfall 4', async function () {
+  it('Async Waterfall 4', async function() {
     const funcs = [
       async () => {
         await snoozeReject(50)

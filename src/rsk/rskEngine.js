@@ -68,7 +68,7 @@ type BroadcastResults = {
   decrementNonce: boolean
 }
 
-async function broadcastWrapper (promise: Promise<Object>, server: string) {
+async function broadcastWrapper(promise: Promise<Object>, server: string) {
   const out = {
     result: await promise,
     server
@@ -81,7 +81,7 @@ export class RskEngine extends CurrencyEngine {
   otherData: RskWalletOtherData
   initOptions: RskInitOptions
 
-  constructor (
+  constructor(
     currencyPlugin: RskPlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: RskInitOptions,
@@ -97,12 +97,12 @@ export class RskEngine extends CurrencyEngine {
     this.initOptions = initOptions
   }
 
-  async fetchGetBlockScout (server: string, cmd: string) {
+  async fetchGetBlockScout(server: string, cmd: string) {
     const url = `${server}/api?${cmd}`
     return this.fetchGet(url)
   }
 
-  async fetchGet (url: string) {
+  async fetchGet(url: string) {
     const response = await this.io.fetch(url, {
       method: 'GET'
     })
@@ -114,7 +114,7 @@ export class RskEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async checkBlockchainInnerLoop () {
+  async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers('eth_blockNumber')
       const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
@@ -135,7 +135,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance (tk: string, balance: string) {
+  updateBalance(tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
     }
@@ -148,7 +148,7 @@ export class RskEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkAccountFetch (address: string) {
+  async checkAccountFetch(address: string) {
     let jsonObj = {}
     let valid = false
 
@@ -164,7 +164,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async checkTokenBalanceFetch (
+  async checkTokenBalanceFetch(
     address: string,
     contractAddress: string,
     tk: string
@@ -188,7 +188,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountNonceFetch (address: string) {
+  async checkAccountNonceFetch(address: string) {
     try {
       const jsonObj = await this.multicastServers(
         'eth_getTransactionCount',
@@ -205,7 +205,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
       // Ethereum only has one address
@@ -238,7 +238,7 @@ export class RskEngine extends CurrencyEngine {
     } catch (e) {}
   }
 
-  processEtherscanTransaction (tx: EtherscanTransaction, currencyCode: string) {
+  processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: Array<string> = []
     let nativeNetworkFee: string
@@ -295,7 +295,7 @@ export class RskEngine extends CurrencyEngine {
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  async checkTransactionsFetch (
+  async checkTransactionsFetch(
     startBlock: number,
     currencyCode: string
   ): Promise<boolean> {
@@ -360,7 +360,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  processUnconfirmedTransaction (tx: Object) {
+  processUnconfirmedTransaction(tx: Object) {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
@@ -408,7 +408,7 @@ export class RskEngine extends CurrencyEngine {
     this.addTransaction('RBTC', edgeTransaction)
   }
 
-  async checkUnconfirmedTransactionsInnerLoop () {
+  async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
     const url = `${
       this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
@@ -444,7 +444,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
     const promiseArray = []
@@ -486,10 +486,9 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async checkUpdateNetworkFees () {
+  async checkUpdateNetworkFees() {
     const actualGasPrice = parseInt(
-      this.walletLocalData.otherData.networkFees['default'].gasPrice
-        .standardFeeLow
+      this.walletLocalData.otherData.networkFees.default.gasPrice.standardFeeLow
     )
     try {
       const jsonObj = await this.fetchPostPublicNode('eth_gasPrice', [])
@@ -497,23 +496,17 @@ export class RskEngine extends CurrencyEngine {
 
       if (newGasPrice !== actualGasPrice) {
         // check first if changed
-        this.walletLocalData.otherData.networkFees[
-          'default'
-        ].gasPrice.standardFeeLow = newGasPrice.toString()
-        this.walletLocalData.otherData.networkFees[
-          'default'
-        ].gasPrice.standardFeeHigh = Math.round(newGasPrice * 1.25).toString()
-        this.walletLocalData.otherData.networkFees[
-          'default'
-        ].gasPrice.standardFeeLowAmount = newGasPrice.toString()
-        this.walletLocalData.otherData.networkFees[
-          'default'
-        ].gasPrice.standardFeeHighAmount = Math.round(
+        this.walletLocalData.otherData.networkFees.default.gasPrice.standardFeeLow = newGasPrice.toString()
+        this.walletLocalData.otherData.networkFees.default.gasPrice.standardFeeHigh = Math.round(
           newGasPrice * 1.25
         ).toString()
-        this.walletLocalData.otherData.networkFees[
-          'default'
-        ].gasPrice.highFee = Math.round(newGasPrice * 1.5).toString()
+        this.walletLocalData.otherData.networkFees.default.gasPrice.standardFeeLowAmount = newGasPrice.toString()
+        this.walletLocalData.otherData.networkFees.default.gasPrice.standardFeeHighAmount = Math.round(
+          newGasPrice * 1.25
+        ).toString()
+        this.walletLocalData.otherData.networkFees.default.gasPrice.highFee = Math.round(
+          newGasPrice * 1.5
+        ).toString()
         this.walletLocalDataDirty = true
       }
     } catch (err) {
@@ -522,11 +515,11 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers (func: EthFunction, ...params: any): Promise<any> {
+  async multicastServers(func: EthFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
-      case 'broadcastTx':
+      case 'broadcastTx': {
         const promises = []
         promises.push(
           broadcastWrapper(this.broadcastPublicNode(params[0]), 'public-node')
@@ -535,6 +528,8 @@ export class RskEngine extends CurrencyEngine {
 
         this.log(`RSK multicastServers ${func} ${out.server} won`)
         break
+      }
+
       case 'eth_blockNumber':
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
@@ -637,7 +632,8 @@ export class RskEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
-      case 'getTransactions':
+
+      case 'getTransactions': {
         const {
           currencyCode,
           address,
@@ -671,13 +667,14 @@ export class RskEngine extends CurrencyEngine {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+      }
     }
     this.log(`RSK multicastServers ${func} ${out.server} won`)
 
     return out.result
   }
 
-  async clearBlockchainCache () {
+  async clearBlockchainCache() {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
     this.otherData.unconfirmedNextNonce = '0'
@@ -687,7 +684,7 @@ export class RskEngine extends CurrencyEngine {
   // Public methods
   // ****************************************************************************
 
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
@@ -700,13 +697,13 @@ export class RskEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     // Ethereum can only have one output
@@ -818,7 +815,7 @@ export class RskEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
 
     const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
@@ -913,7 +910,7 @@ export class RskEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async fetchPostPublicNode (method: string, params: Object) {
+  async fetchPostPublicNode(method: string, params: Object) {
     const url = `https://public-node.rsk.co`
     const body = {
       id: 1,
@@ -933,7 +930,7 @@ export class RskEngine extends CurrencyEngine {
     return jsonObj
   }
 
-  async broadcastPublicNode (
+  async broadcastPublicNode(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
@@ -957,7 +954,7 @@ export class RskEngine extends CurrencyEngine {
     }
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const result = await this.multicastServers('broadcastTx', edgeTransaction)
@@ -969,14 +966,14 @@ export class RskEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     const { rskKey, rskMnemonic } = this.walletInfo.keys
     if (rskMnemonic != null) return rskMnemonic
     if (rskKey != null) return '0x' + rskKey.replace(/^0x/, '')
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     return this.walletInfo.keys.publicKey || ''
   }
 }

@@ -3,9 +3,8 @@
  */
 // @flow
 
-import { Buffer } from 'buffer'
-
 import { bns } from 'biggystring'
+import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -65,11 +64,11 @@ const defaultNetworkFees = {
 }
 
 export class EthereumPlugin extends CurrencyPlugin {
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'ethereum', currencyInfo)
   }
 
-  async importPrivateKey (passPhrase: string): Promise<Object> {
+  async importPrivateKey(passPhrase: string): Promise<Object> {
     const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
     const buffer = Buffer.from(strippedPassPhrase, 'hex')
     if (buffer.length !== 32) throw new Error('Private key wrong length')
@@ -81,7 +80,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'ethereum') {
@@ -102,7 +101,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'ethereum') {
       const privKey = hexToBuf(walletInfo.keys.ethereumKey)
@@ -115,7 +114,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (
+  async parseUri(
     uri: string,
     currencyCode?: string,
     customTokens?: Array<EdgeMetaToken>
@@ -156,15 +155,11 @@ export class EthereumPlugin extends CurrencyPlugin {
       const currencyName = parsedUri.query.name || currencyCode
       const decimalsInput = parsedUri.query.decimals || '18'
       let multiplier = '1000000000000000000'
-      try {
-        const decimals = parseInt(decimalsInput)
-        if (decimals < 0 || decimals > 18) {
-          throw new Error('Wrong number of decimals')
-        }
-        multiplier = '1' + '0'.repeat(decimals)
-      } catch (e) {
-        throw e
+      const decimals = parseInt(decimalsInput)
+      if (decimals < 0 || decimals > 18) {
+        throw new Error('Wrong number of decimals')
       }
+      multiplier = '1' + '0'.repeat(decimals)
 
       const type = parsedUri.query.type || 'ERC20'
 
@@ -183,7 +178,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (
+  async encodeUri(
     obj: EdgeEncodeUri,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<string> {
@@ -209,19 +204,19 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeEthereumPlugin (
+export function makeEthereumPlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<EthereumPlugin>
-  function makeCurrencyTools (): Promise<EthereumPlugin> {
+  function makeCurrencyTools(): Promise<EthereumPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new EthereumPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

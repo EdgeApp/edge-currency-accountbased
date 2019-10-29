@@ -56,7 +56,7 @@ export class XrpEngine extends CurrencyEngine {
   otherData: XrpWalletOtherData
   // callbacksSetup: boolean
 
-  constructor (
+  constructor(
     currencyPlugin: XrpPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -66,7 +66,7 @@ export class XrpEngine extends CurrencyEngine {
     // this.callbacksSetup = false
   }
 
-  async multicastServers (func: XrpFunction, ...params: any): Promise<any> {
+  async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
     let out = { result: '', server: '' }
     switch (func) {
       // Functions that should waterfall from top to low priority servers
@@ -89,7 +89,7 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   // Poll on the blockheight
-  async checkServerInfoInnerLoop () {
+  async checkServerInfoInnerLoop() {
     try {
       const fee = await this.multicastServers('getFee')
       if (typeof fee === 'string') {
@@ -117,7 +117,7 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  processRippleTransaction (tx: XrpGetTransaction) {
+  processRippleTransaction(tx: XrpGetTransaction) {
     const ourReceiveAddresses: Array<string> = []
 
     const balanceChanges =
@@ -159,7 +159,7 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  async checkTransactionsInnerLoop () {
+  async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
     let startBlock: number = 0
@@ -186,9 +186,7 @@ export class XrpEngine extends CurrencyEngine {
       const valid = validateObject(transactions, XrpGetTransactionsSchema)
       if (valid) {
         this.log(
-          `Fetched transactions count: ${
-            transactions.length
-          } startBlock:${startBlock}`
+          `Fetched transactions count: ${transactions.length} startBlock:${startBlock}`
         )
 
         // Get transactions
@@ -216,10 +214,10 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  async checkUnconfirmedTransactionsFetch () {}
+  async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
-  async checkAccountInnerLoop () {
+  async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
       const jsonObj = await this.multicastServers('getBalances', address)
@@ -267,7 +265,7 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  async clearBlockchainCache () {
+  async clearBlockchainCache() {
     await super.clearBlockchainCache()
   }
 
@@ -320,7 +318,7 @@ export class XrpEngine extends CurrencyEngine {
   //     }
   //   }
   // }
-  async startEngine () {
+  async startEngine() {
     this.engineOn = true
     // this.joinPool()
     // try {
@@ -355,18 +353,18 @@ export class XrpEngine extends CurrencyEngine {
     super.startEngine()
   }
 
-  async killEngine () {
+  async killEngine() {
     await super.killEngine()
     await this.xrpPlugin.disconnectApi(this.walletId)
   }
 
-  async resyncBlockchain (): Promise<void> {
+  async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
@@ -486,7 +484,7 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     // Do signing
     const txJson = edgeTransaction.otherParams.preparedTx.txJSON
     const privateKey = this.walletInfo.keys.rippleKey
@@ -505,21 +503,21 @@ export class XrpEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (
+  async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     await this.multicastServers('submit', edgeTransaction.signedTx)
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed () {
+  getDisplayPrivateSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.rippleKey) {
       return this.walletInfo.keys.rippleKey
     }
     return ''
   }
 
-  getDisplayPublicSeed () {
+  getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

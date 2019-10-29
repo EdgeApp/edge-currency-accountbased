@@ -1,13 +1,14 @@
 {
-  "extends": ["plugin:flowtype/recommended", "standard"],
-  "parser": "babel-eslint",
-  "plugins": ["flowtype", "standard"],
+  "extends": [
+    "standard-kit/prettier",
+    "standard-kit/prettier/node",
+    "standard-kit/prettier/flow"
+  ],
+  "plugins": [
+    "simple-import-sort"
+  ],
   "rules": {
-    "camelcase": "warn",
-    "flowtype/generic-spacing": "off",
-    "no-throw-literal": "error",
     "no-var": "error",
-    "prefer-const": "error",
-    "standard/computed-property-even-spacing": "off"
+    "simple-import-sort/sort": "error"
   }
 }

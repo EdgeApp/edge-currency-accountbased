@@ -1,7 +1,5 @@
 // @flow
 
-import EventEmitter from 'events'
-
 import { assert } from 'chai'
 import {
   type EdgeCorePluginOptions,
@@ -13,12 +11,13 @@ import {
   closeEdge,
   makeFakeIo
 } from 'edge-core-js'
+import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index.js'
 
-describe(`EOS activation`, function () {
+describe(`EOS activation`, function() {
   let engine: EdgeCurrencyEngine
 
   const fakeIo = makeFakeIo()
@@ -28,28 +27,28 @@ describe(`EOS activation`, function () {
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
-  const factory = edgeCorePlugins['eos']
+  const factory = edgeCorePlugins.eos
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
   const emitter = new EventEmitter()
   const callbacks: EdgeCurrencyEngineCallbacks = {
-    onAddressesChecked (progressRatio) {
+    onAddressesChecked(progressRatio) {
       // console.log('onAddressesCheck', progressRatio)
       emitter.emit('onAddressesCheck', progressRatio)
     },
-    onTxidsChanged (txid) {
+    onTxidsChanged(txid) {
       // console.log('onTxidsChanged', txid)
       emitter.emit('onTxidsChanged', txid)
     },
-    onBalanceChanged (currencyCode, balance) {
+    onBalanceChanged(currencyCode, balance) {
       // console.log('onBalanceChange:', currencyCode, balance)
       emitter.emit('onBalanceChange', currencyCode, balance)
     },
-    onBlockHeightChanged (height) {
+    onBlockHeightChanged(height) {
       // console.log('onBlockHeightChange:', height)
       emitter.emit('onBlockHeightChange', height)
     },
-    onTransactionsChanged (transactionList) {
+    onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)
     }
@@ -58,7 +57,7 @@ describe(`EOS activation`, function () {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
-    userSettings: void 0,
+    userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
   }
@@ -74,7 +73,7 @@ describe(`EOS activation`, function () {
     }
   }
 
-  before('Engine', function () {
+  before('Engine', function() {
     return plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
@@ -82,7 +81,7 @@ describe(`EOS activation`, function () {
       })
   })
 
-  it('getSupportedCurrencies', async function () {
+  it('getSupportedCurrencies', async function() {
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationSupportedCurrencies()
       assert.equal(result.BTC, true)
@@ -92,7 +91,7 @@ describe(`EOS activation`, function () {
     }
   })
 
-  it('getActivationCost', async function () {
+  it('getActivationCost', async function() {
     this.timeout(10000)
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationCost()
@@ -123,8 +122,8 @@ describe(`EOS activation`, function () {
   //   }
   // })
 
-  describe('killEngine...', function () {
-    it('Should stop the engine', function (done) {
+  describe('killEngine...', function() {
+    it('Should stop the engine', function(done) {
       engine.killEngine().then(() => {
         closeEdge()
         done()

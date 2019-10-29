@@ -21,7 +21,7 @@ import { getFetchJson } from '../react-native-io.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
 
-export function checkAddress (address: string): boolean {
+export function checkAddress(address: string): boolean {
   const start = address.startsWith('FIO')
   const lenght = address.length === 53
   return start && lenght
@@ -30,11 +30,11 @@ export function checkAddress (address: string): boolean {
 export class FioPlugin extends CurrencyPlugin {
   otherMethods: Object
 
-  constructor (io: EdgeIo) {
+  constructor(io: EdgeIo) {
     super(io, 'fio', currencyInfo)
   }
 
-  async createPrivateKey (walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'fio') {
       const buffer = this.io.random(32)
@@ -44,7 +44,7 @@ export class FioPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'fio') {
       return FIOSDK.derivedPublicKey(walletInfo.keys.fioKey)
@@ -53,7 +53,7 @@ export class FioPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri: string): Promise<EdgeParsedUri> {
+  async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       currencyInfo,
       uri,
@@ -81,7 +81,7 @@ export class FioPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -101,18 +101,18 @@ export class FioPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeFioPlugin (opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
   const fetchJson = getFetchJson(opts)
 
   let toolsPromise: Promise<FioPlugin>
-  function makeCurrencyTools (): Promise<FioPlugin> {
+  function makeCurrencyTools(): Promise<FioPlugin> {
     if (toolsPromise != null) return toolsPromise
     toolsPromise = Promise.resolve(new FioPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (
+  async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {

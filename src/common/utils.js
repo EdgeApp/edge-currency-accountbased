@@ -3,17 +3,16 @@
  * @flow
  */
 
-import { Buffer } from 'buffer'
-
 import { bns } from 'biggystring'
+import { Buffer } from 'buffer'
 import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
-function normalizeAddress (address: string) {
+function normalizeAddress(address: string) {
   return address.toLowerCase().replace('0x', '')
 }
 
-function addHexPrefix (value: string) {
+function addHexPrefix(value: string) {
   if (value.indexOf('0x') === 0) {
     return value
   } else {
@@ -21,7 +20,7 @@ function addHexPrefix (value: string) {
   }
 }
 
-function shuffleArray (array: Array<any>) {
+function shuffleArray(array: Array<any>) {
   let currentIndex = array.length
   let temporaryValue, randomIndex
 
@@ -39,7 +38,7 @@ function shuffleArray (array: Array<any>) {
 
   return array
 }
-function validateObject (object: any, schema: any) {
+function validateObject(object: any, schema: any) {
   const result = validate(object, schema)
 
   if (result.errors.length === 0) {
@@ -53,37 +52,32 @@ function validateObject (object: any, schema: any) {
   }
 }
 
-export function isEmpty (map: Object) {
-  for (const key in map) {
-    if (map.hasOwnProperty(key)) {
-      return false
-    }
-  }
-  return true
+export function isEmpty(map: Object) {
+  return Object.keys(map).length !== 0
 }
 
-export function isHex (h: string) {
+export function isHex(h: string) {
   const out = /^[0-9A-F]+$/i.test(h)
   return out
 }
 
-export function toHex (num: string) {
+export function toHex(num: string) {
   return bns.add(num, '0', 16)
 }
 
-export function hexToBuf (hex: string) {
+export function hexToBuf(hex: string) {
   const noHexPrefix = hex.replace('0x', '')
   const buf = Buffer.from(noHexPrefix, 'hex')
   return buf
 }
 
-export function bufToHex (buf: any) {
+export function bufToHex(buf: any) {
   const signedTxBuf = Buffer.from(buf)
   const hex = '0x' + signedTxBuf.toString('hex')
   return hex
 }
 
-function getDenomInfo (
+function getDenomInfo(
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
   customTokens?: Array<EdgeMetaToken>
@@ -124,7 +118,7 @@ const snoozeReject: Function = (ms: number) =>
 const snooze: Function = (ms: number) =>
   new Promise((resolve: Function) => setTimeout(resolve, ms))
 
-function promiseAny (promises: Array<Promise<any>>): Promise<any> {
+function promiseAny(promises: Array<Promise<any>>): Promise<any> {
   return new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
@@ -142,7 +136,7 @@ function promiseAny (promises: Array<Promise<any>>): Promise<any> {
 
 type AsyncFunction = void => Promise<any>
 
-async function asyncWaterfall (
+async function asyncWaterfall(
   asyncFuncs: Array<AsyncFunction>,
   timeoutMs: number = 5000
 ): Promise<any> {
@@ -185,7 +179,7 @@ async function asyncWaterfall (
   }
 }
 
-function getEdgeInfoServer () {
+function getEdgeInfoServer() {
   return 'https://info1.edgesecure.co:8444'
 }
 
