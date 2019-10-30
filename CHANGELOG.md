@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.2 (2019-10-30)
+
+- Fix Tezos Babylon compatibility.
+
 # 0.5.1 (2019-10-28)
 
 - Update HERC contract address.
