@@ -2386,11 +2386,11 @@ dir-glob@^3.0.1:
     path-type "^4.0.0"
 
 disklet@^0.4.0:
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.4.1.tgz#e98900934eedb73aef67f4b89444729b98e94f71"
-  integrity sha512-Ui7iVznycaVQwRvGra9qVsG1IwcCDiGetclSXlWfiXamEVplb05U3DK06DhsHJEL1V+fGgKQRigA+BmR+7w7pQ==
+  version "0.4.3"
+  resolved "https://registry.yarnpkg.com/disklet/-/disklet-0.4.3.tgz#a71fec7726220e11c36619e30ae976b3d38d4cda"
+  integrity sha512-8H64WbDbi0xhrLkVABotR2jlKZfzaUEhoxi9LGzrqUYa7IaOq68ULEqxyW58wpKa8nyEScH/TC6nby+Q7A+jvA==
   dependencies:
-    rfc4648 "^0.9.1"
+    rfc4648 "^1.3.0"
 
 doctrine@1.5.0:
   version "1.5.0"
@@ -6219,15 +6219,10 @@ reusify@^1.0.0:
   resolved "https://registry.yarnpkg.com/reusify/-/reusify-1.0.4.tgz#90da382b1e126efc02146e90845a88db12925d76"
   integrity sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==
 
-rfc4648@^0.9.1:
-  version "0.9.1"
-  resolved "https://registry.yarnpkg.com/rfc4648/-/rfc4648-0.9.1.tgz#6dff84c2ed0e63381424da2a7caa9b750fa7e477"
-  integrity sha1-bf+Ewu0OYzgUJNoqfKqbdQ+n5Hc=
-
-rfc4648@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/rfc4648/-/rfc4648-1.1.0.tgz#5e05a16b3c3fc76552f95853a10bd95b6bc0752f"
-  integrity sha512-ExPH8PFXP8Qq//GU6lk23BlHhWdIf1EYP427wJjvF+8ybn3lWTkCRB+JCPRs7vrSw2+IcoyeSqMSWqd1Z/4rIQ==
+rfc4648@^1.1.0, rfc4648@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/rfc4648/-/rfc4648-1.3.0.tgz#2a69c76f05bc0e388feab933672de9b492af95f1"
+  integrity sha512-x36K12jOflpm1V8QjPq3I+pt7Z1xzeZIjiC8J2Oxd7bE1efTrOG241DTYVJByP/SxR9jl1t7iZqYxDX864jgBQ==
 
 rimraf@2.6.3:
   version "2.6.3"
