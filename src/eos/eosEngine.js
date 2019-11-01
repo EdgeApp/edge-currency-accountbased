@@ -18,6 +18,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getDenomInfo,
+  pickRandom,
   validateObject
 } from '../common/utils.js'
 import { checkAddress, eosConfig, EosPlugin } from './eosPlugin.js'
@@ -123,7 +124,7 @@ export class EosEngine extends CurrencyEngine {
   // Poll on the blockheight
   async checkBlockchainInnerLoop() {
     try {
-      const result = await this.multicastServers('getInfo')
+      const result = await this.multicastServers('getInfo', {})
       const blockHeight = result.head_block_num
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
@@ -420,20 +421,39 @@ export class EosEngine extends CurrencyEngine {
         )
         break
 
-      case 'getCurrencyBalance':
-      case 'getInfo':
-      case 'getKeyAccounts':
-      case 'transaction':
+      case 'getKeyAccounts': {
         out = await asyncWaterfall(
-          this.currencyInfo.defaultSettings.otherSettings.eosNodes.map(
+          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
-              const eosServer = eosjs({ ...eosConfig, httpEndpoint: server })
-              const result = await eosServer[func](...params)
-              return { server, result }
+              const reply = await eosConfig.fetch(
+                `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
+              )
+              if (!reply.ok) {
+                throw new Error(
+                  `${server} get_key_accounts failed with ${reply.status}`
+                )
+              }
+              return { server, result: await reply.json() }
             }
           )
         )
         break
+      }
+
+      case 'getCurrencyBalance':
+      case 'getInfo':
+      case 'transaction': {
+        const { eosNodes } = this.currencyInfo.defaultSettings.otherSettings
+        const randomNodes = pickRandom(eosNodes, 3)
+        out = await asyncWaterfall(
+          randomNodes.map(server => async () => {
+            const eosServer = eosjs({ ...eosConfig, httpEndpoint: server })
+            const result = await eosServer[func](...params)
+            return { server, result }
+          })
+        )
+        break
+      }
     }
 
     this.log(`EOS multicastServers ${func} ${out.server} won`)

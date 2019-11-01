@@ -179,6 +179,18 @@ async function asyncWaterfall(
   }
 }
 
+export function pickRandom<T>(list: Array<T>, count: number): Array<T> {
+  if (list.length <= count) return list
+
+  // Algorithm from https://stackoverflow.com/a/48089/1836596
+  const out = []
+  for (let i = 0; i < list.length && out.length < count; ++i) {
+    const probability = (count - out.length) / (list.length - i)
+    if (Math.random() <= probability) out.push(list[i])
+  }
+  return out
+}
+
 function getEdgeInfoServer() {
   return 'https://info1.edgesecure.co:8444'
 }
