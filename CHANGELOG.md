@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.3 (2019-11-04)
+
+- Update usage of EOS API endpoints
+
 # 0.5.2 (2019-10-30)
 
 - Fix Tezos Babylon compatibility.
