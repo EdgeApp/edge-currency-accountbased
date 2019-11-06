@@ -158,7 +158,8 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new EosPlugin(io, getFetchCors(opts)))
+    const fetch = getFetchCors(opts)
+    toolsPromise = Promise.resolve(new EosPlugin(io, fetch))
     return toolsPromise
   }
 
