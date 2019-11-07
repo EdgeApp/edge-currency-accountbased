@@ -24,6 +24,7 @@ import {
   getEdgeInfoServer,
   isHex,
   normalizeAddress,
+  pickRandom,
   promiseAny,
   shuffleArray,
   toHex,
@@ -105,14 +106,14 @@ export class EthereumEngine extends CurrencyEngine {
 
   async fetchGetEtherscan(server: string, cmd: string) {
     const { etherscanApiKey } = this.initOptions
-    let apiKey = ''
-    if (
-      etherscanApiKey &&
-      etherscanApiKey.length > 5 &&
-      server.includes('etherscan')
-    ) {
-      apiKey = '&apikey=' + etherscanApiKey
-    }
+    const chosenKey = Array.isArray(etherscanApiKey)
+      ? pickRandom(etherscanApiKey, 1)[0]
+      : etherscanApiKey
+    const apiKey =
+      chosenKey && chosenKey.length > 5 && server.includes('etherscan')
+        ? '&apikey=' + chosenKey
+        : ''
+
     const url = `${server}/api${cmd}${apiKey}`
     return this.fetchGet(url)
   }
@@ -127,8 +128,14 @@ export class EthereumEngine extends CurrencyEngine {
         etherscanApiKey,
         infuraProjectId
       } = this.initOptions
+      if (typeof etherscanApiKey === 'string')
+        url = url.replace(etherscanApiKey, 'private')
+      if (Array.isArray(etherscanApiKey)) {
+        for (const key of etherscanApiKey) {
+          url = url.replace(key, 'private')
+        }
+      }
       if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
-      if (etherscanApiKey) url = url.replace(etherscanApiKey, 'private')
       if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
       throw new Error(
         `The server returned error code ${response.status} for ${url}`

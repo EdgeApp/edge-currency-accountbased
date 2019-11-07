@@ -5,7 +5,7 @@
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
-  etherscanApiKey?: string,
+  etherscanApiKey?: string | Array<string>,
   infuraProjectId?: string
 }
 
