@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.4 (2019-11-07)
+
+- Accept multiple etherscan API keys.
+
 # 0.5.3 (2019-11-04)
 
 - Update usage of EOS API endpoints
