@@ -32,6 +32,7 @@ import {
 } from '../common/utils.js'
 import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
+import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin.js'
 import {
   EtherscanGetAccountBalance,
@@ -54,7 +55,6 @@ import {
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 20000
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
@@ -87,6 +87,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethereumPlugin: EthereumPlugin
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
+  ethNetwork: EthereumNetwork
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -102,6 +103,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
+    this.ethNetwork = new EthereumNetwork(this)
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
@@ -309,7 +311,7 @@ export class EthereumEngine extends CurrencyEngine {
       } else {
         // spend to someone else
         netNativeAmount = bns.sub('0', tx.value)
-
+        // walletLocalData.blockHeight
         // For spends, include the network fee in the transaction amount
         netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
       }
@@ -344,7 +346,7 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams
     }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+    return edgeTransaction
   }
 
   async checkTransactionsFetch(
@@ -823,14 +825,14 @@ export class EthereumEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     this.addToLoop(
       'checkUnconfirmedTransactionsInnerLoop',
       UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
     )
+
+    this.ethNetwork.needsLoop()
+
     super.startEngine()
   }
 
