@@ -46,8 +46,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://tzscan.io/%s',
-  transactionExplorer: 'https://tzscan.io/%s',
+  addressExplorer: 'https://dunscan.io/%s',
+  transactionExplorer: 'https://dunscan.io/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
