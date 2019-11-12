@@ -1,8 +1,22 @@
+/* global fetch */
+// @flow
+
 import { Buffer } from 'buffer'
 import { bns } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'
 import ethWallet from 'ethereumjs-wallet'
 import TronWeb from 'tronweb'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyEngine,
+  type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyPlugin,
+  type EdgeEncodeUri,
+  type EdgeIo,
+  type EdgeMetaToken,
+  type EdgeParsedUri,
+  type EdgeWalletInfo
+} from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
@@ -13,7 +27,7 @@ import { currencyInfo } from './tronInfo.js'
 const tronWeb = new TronWeb({ fullHost: 'https://api.trongrid.io' })
 
 export class TronPlugin extends CurrencyPlugin {
-  constructor (io) {
+  constructor (io: EdgeIo) {
     super(io, 'tron', currencyInfo)
   }
 
@@ -30,7 +44,7 @@ export class TronPlugin extends CurrencyPlugin {
     }
   }
 
-  async createPrivateKey (walletType) {
+  async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'tron') {
@@ -51,7 +65,7 @@ export class TronPlugin extends CurrencyPlugin {
     }
   }
 
-  async derivePublicKey (walletInfo) {
+  async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'tron') {
       const publicKey = tronWeb.address.fromPrivateKey(walletInfo.keys.tronKey)
@@ -61,7 +75,11 @@ export class TronPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri (uri, currencyCode, customTokens) {
+  async parseUri (
+    uri: string,
+    currencyCode?: string,
+    customTokens?: Array<EdgeMetaToken>
+  ): Promise<EdgeParsedUri> {
     const networks = { tron: true }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
@@ -85,7 +103,10 @@ export class TronPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri (obj, customTokens) {
+  async encodeUri (
+    obj: EdgeEncodeUri,
+    customTokens?: Array<EdgeMetaToken>
+  ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = tronWeb.isAddress(publicAddress || '')
     if (!valid) {
@@ -108,18 +129,23 @@ export class TronPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeTronPlugin (opts) {
+export function makeTronPlugin (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise
-  function makeCurrencyTools () {
+  let toolsPromise: Promise<TronPlugin>
+  function makeCurrencyTools (): Promise<TronPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new TronPlugin(io, getFetchCors(opts)))
+    toolsPromise = Promise.resolve(new TronPlugin(io))
     return toolsPromise
   }
 
-  async function makeCurrencyEngine (walletInfo, opts) {
+  async function makeCurrencyEngine (
+    walletInfo: EdgeWalletInfo,
+    opts: EdgeCurrencyEngineOptions
+  ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
     const currencyEngine = new TronEngine(
       tools,
@@ -135,7 +161,7 @@ export function makeTronPlugin (opts) {
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    const out = currencyEngine
+    const out: EdgeCurrencyEngine = currencyEngine
 
     return out
   }

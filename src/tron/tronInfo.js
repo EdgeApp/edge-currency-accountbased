@@ -1,15 +1,22 @@
+/* global */
+// @flow
+
+import type { EdgeCurrencyInfo } from 'edge-core-js/types'
+
+import type { TronSettings } from './tronTypes.js'
+
 export const imageServerUrl = 'https://developer.airbitz.co/content'
 
-const otherSettings = {
-  tronApiServers: ['https://api.trongrid.io'],
-  tronTestNetServers: ['https://api.shasta.trongrid.io']
+const otherSettings: TronSettings = {
+  tronApiServers: ['https://api.trongrid.io']
+  // tronApiServers: ['https://api.shasta.trongrid.io']
 }
 
-const defaultSettings = {
+const defaultSettings: any = {
   otherSettings
 }
 
-export const currencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'TRX',
   displayName: 'Tron',

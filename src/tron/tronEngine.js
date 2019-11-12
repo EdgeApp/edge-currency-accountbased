@@ -1,5 +1,12 @@
+// @flow
+
 import { bns } from 'biggystring'
-import { InsufficientFundsError } from 'edge-core-js/types'
+import {
+  type EdgeSpendInfo,
+  type EdgeTransaction,
+  type EdgeWalletInfo,
+  InsufficientFundsError
+} from 'edge-core-js/types'
 import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -17,6 +24,7 @@ import {
   TronApiNodeInfo,
   TxInfoSchema
 } from './tronSchema.js'
+import type { TronApiTransaction, TronTxOtherParams } from './tronTypes.js'
 
 const tronWeb = new TronWeb({
   fullHost: 'https://api.trongrid.io'
@@ -32,19 +40,25 @@ const TIMESTAMP_BEFORE_TRX_LAUNCH = 1529920269000 // 2019-04-01, TRX launched on
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 3 * 28 // 3 months
 // const NATIVE_UNIT_MULTIPLIER = '1000000'
 
+type TronFunction =
+  | 'trx_txBlockNumber'
+  | 'trx_blockNumber'
+  | 'trx_getBalance'
+  | 'trx_getTransactions'
+
 export class TronEngine extends CurrencyEngine {
   constructor (
-    currencyPlugin,
-    walletInfo,
-    initOptions,
-    opts, // EdgeCurrencyEngineOptions
-    fetchCors
+    currencyPlugin: TronPlugin,
+    walletInfo: EdgeWalletInfo,
+    initOptions: any,
+    opts: any, // EdgeCurrencyEngineOptions
+    fetchCors: Function
   ) {
     super(currencyPlugin, walletInfo, opts, fetchCors)
     this.fetchCors = fetchCors
   }
 
-  async fetchGet (url) {
+  async fetchGet (url: string) {
     const options = { method: 'GET' }
     const response = await this.fetchCors(url, options)
     if (!response.ok) {
@@ -55,7 +69,7 @@ export class TronEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async fetchPost (url, params = {}) {
+  async fetchPost (url: string, params: Object = {}) {
     const options = {
       method: 'POST',
       headers: {
@@ -68,7 +82,7 @@ export class TronEngine extends CurrencyEngine {
     if (!response.ok) {
       this.log(`The server returned error code ${response.status} for ${url}`)
       throw new Error(
-        `6 The server returned error code ${response.status} for ${url}`
+        `The server returned error code ${response.status} for ${url}`
       )
     }
     return response.json()
@@ -80,9 +94,9 @@ export class TronEngine extends CurrencyEngine {
         'trx_blockNumber',
         '/wallet/getnowblock'
       )
-      const valid = validateObject(jsonObj, TronApiNodeInfo, this.log)
+      const valid = validateObject(jsonObj, TronApiNodeInfo)
       if (valid) {
-        const blockHeight = jsonObj.block_header.raw_data.number // timestamp
+        const blockHeight: number = jsonObj.block_header.raw_data.number // timestamp
         // this.log(`Got block height ${blockHeight}`)
         if (this.walletLocalData.blockHeight !== blockHeight) {
           this.checkDroppedTransactionsThrottled()
@@ -98,7 +112,7 @@ export class TronEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance (tk, balance) {
+  updateBalance (tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
     }
@@ -117,7 +131,8 @@ export class TronEngine extends CurrencyEngine {
     const finalUrl = `${url}${tronWeb.address.toHex(address)}`
     try {
       const jsonObj = await this.multicastServers('trx_getBalance', finalUrl)
-      const valid = validateObject(jsonObj, TronApiAccountBalance, this.log)
+      const valid = validateObject(jsonObj, TronApiAccountBalance)
+      // this.log('checkAccountInnerLoop acc balance jsonObj: ', jsonObj)
       // if (valid) {
       //   this.updateBalance('TRX', jsonObj.data[0].balance.toString())
       //   for (const tk of this.walletLocalData.enabledTokens) {
@@ -147,24 +162,21 @@ export class TronEngine extends CurrencyEngine {
     }
   }
 
-  processTronApiTransaction (tx, currencyCode) {
-    const publicKey = this.walletLocalData.publicKey.toLowerCase()
-    let netNativeAmount // Amount received into wallet
-    const ourReceiveAddresses = []
-    const nativeNetworkFee = '0'
-    const {
-      amount,
-      owner_address,
-      to_address
-    } = tx.raw_data.contract[0].parameter.value
-    const nativeValue = amount.toString()
-    const fromAddr = tronWeb.address.fromHex(owner_address).toLowerCase()
-    const toAddr = tronWeb.address.fromHex(to_address).toLowerCase()
+  processTronApiTransaction (tx: TronApiTransaction, currencyCode: string) {
+    const publicKey: string = this.walletLocalData.publicKey.toLowerCase()
+    let netNativeAmount: string // Amount received into wallet
+    const ourReceiveAddresses: Array<string> = []
+    const nativeNetworkFee: string = '0'
+    const nativeValue: string = tx.amount.toString()
+    const fromAddr: string = tronWeb.address
+      .fromHex(tx.owner_address)
+      .toLowerCase()
+    const toAddr: string = tronWeb.address.fromHex(tx.to_address).toLowerCase()
 
     // isSpend Tx
     if (fromAddr === publicKey) {
       // if it's a send to one's self
-      if (tx.fromAddr === toAddr) {
+      if (tx.owner_address === toAddr) {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
       } else {
@@ -177,12 +189,12 @@ export class TronEngine extends CurrencyEngine {
       // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
-    const otherParams = {}
+    const otherParams: Object = {}
 
     let blockHeight = tx.blockNumber
     if (blockHeight < 0) blockHeight = 0
     const unixTimestamp = new Date(tx.block_timestamp)
-    const edgeTransaction = {
+    const edgeTransaction: EdgeTransaction = {
       txid: tx.txID,
       date: unixTimestamp.getTime(),
       currencyCode,
@@ -197,11 +209,14 @@ export class TronEngine extends CurrencyEngine {
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  async checkTransactionsFetch (startTime, currencyCode) {
-    const publicKey = this.walletLocalData.publicKey
-    let checkAddressSuccess = true
-    let start = startTime
-    let end = 0
+  async checkTransactionsFetch (
+    startTime: number,
+    currencyCode: string
+  ): Promise<boolean> {
+    const publicKey: string = this.walletLocalData.publicKey
+    let checkAddressSuccess: boolean = true
+    let start: number = startTime
+    let end: number = 0
     const now = Date.now()
     try {
       // this.log('checkTransactionsFetch start of while loop')
@@ -236,20 +251,34 @@ export class TronEngine extends CurrencyEngine {
                 this.log('is NOT TransferContract')
                 break
               }
+              const {
+                amount,
+                owner_address,
+                to_address
+              } = transaction.raw_data.contract[0].parameter.value
 
-              // getting blocknumber
+              const tronTx = {
+                amount,
+                owner_address,
+                to_address,
+                blockNumber: 0,
+                txID: transaction.txID,
+                block_timestamp: 0
+              }
+
+              // getting blocknumber and blockTimeStamp
               const jsonObj = await this.multicastServers(
                 'trx_txBlockNumber',
                 '/wallet/gettransactioninfobyid',
                 { value: transaction.txID }
               )
-
               const valid = validateObject(jsonObj, TxInfoSchema)
               if (valid) {
-                transaction.blockNumber = jsonObj.blockNumber
+                tronTx.blockNumber = jsonObj.blockNumber
+                tronTx.block_timestamp = jsonObj.blockTimeStamp
               }
 
-              this.processTronApiTransaction(transaction, currencyCode)
+              this.processTronApiTransaction(tronTx, currencyCode)
             }
             if (transactionsResults.data.length < NUM_TRANSACTIONS_TO_QUERY) {
               break
@@ -323,7 +352,7 @@ export class TronEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers (func, ...params) {
+  async multicastServers (func: TronFunction, ...params: any): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs
 
@@ -362,7 +391,7 @@ export class TronEngine extends CurrencyEngine {
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
-        this.log(func, ': return value:', out.result)
+        // this.log(func, ': return value:', out.result)
         break
     }
     this.log(`TRX multicastServers ${func} ${out.server} won`)
@@ -395,11 +424,9 @@ export class TronEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  async makeSpend (edgeSpendInfoIn) {
+  async makeSpend (edgeSpendInfoIn: EdgeSpendInfo) {
     try {
-      this.log('makeSpend edgeSpendInfoIn: ', edgeSpendInfoIn)
       const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
-      this.log('edgeSpendInfo, currencyCode', edgeSpendInfo, currencyCode)
       const networkFee = '0'
       const nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
       const balanceTrx = this.walletLocalData.totalBalances[
@@ -417,21 +444,18 @@ export class TronEngine extends CurrencyEngine {
 
       const spendTarget = edgeSpendInfo.spendTargets[0]
       const publicAddress = spendTarget.publicAddress
-      // TODO: for tokens. otherParams is used for contract addresses etc
       const data =
         spendTarget.otherParams != null ? spendTarget.otherParams.data : void 0
 
-      let otherParams = {}
-
+      let otherParams: Object = {}
       // if TRON
       if (currencyCode === PRIMARY_CURRENCY) {
         // builds tx, but does NOT send it
-        const trxParams = await tronWeb.transactionBuilder.sendTrx(
+        const trxParams: TronTxOtherParams = await tronWeb.transactionBuilder.sendTrx(
           publicAddress,
           nativeAmount,
           this.walletLocalData.publicKey
         )
-
         otherParams = trxParams
         // if Token
       } else {
@@ -451,7 +475,7 @@ export class TronEngine extends CurrencyEngine {
 
         // for Tokens:
         // builds tx, but does NOT send it
-        const trxParams = await tronWeb.transactionBuilder.sendToken(
+        const trxParams: TronTxOtherParams = await tronWeb.transactionBuilder.sendToken(
           publicAddress,
           nativeAmount,
           contractAddress,
@@ -464,7 +488,7 @@ export class TronEngine extends CurrencyEngine {
       // **********************************
       // Create the unsigned EdgeTransaction
 
-      const edgeTransaction = {
+      const edgeTransaction: EdgeTransaction = {
         txid: '', // txid
         date: 0, // date
         currencyCode, // currencyCode
@@ -475,14 +499,13 @@ export class TronEngine extends CurrencyEngine {
         signedTx: '', // signedTx
         otherParams // otherParams
       }
-
       return edgeTransaction
     } catch (e) {
       this.log('makeSpend error: ', e)
     }
   }
 
-  async signTx (edgeTransaction) {
+  async signTx (edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const privKey = this.walletInfo.keys.tronKey
 
     const signedTx = await tronWeb.trx.sign(
@@ -494,7 +517,9 @@ export class TronEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async broadcastTx (edgeTransaction) {
+  async broadcastTx (
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction> {
     const trxSignedTransaction = edgeTransaction.signedTx
     const response = await tronWeb.trx.sendRawTransaction(trxSignedTransaction)
 
