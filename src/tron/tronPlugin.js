@@ -3,8 +3,9 @@
 
 import { Buffer } from 'buffer'
 import { bns } from 'biggystring'
-import { entropyToMnemonic } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeed } from 'bip39'
 import ethWallet from 'ethereumjs-wallet'
+import hdkey from 'ethereumjs-wallet/hdkey'
 import TronWeb from 'tronweb'
 import {
   type EdgeCorePluginOptions,
@@ -46,20 +47,15 @@ export class TronPlugin extends CurrencyPlugin {
 
   async createPrivateKey (walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
-
     if (type === 'tron') {
-      const { io } = this
-      const cryptoObj = {
-        randomBytes: size => {
-          const array = io.random(size)
-          return Buffer.from(array)
-        }
-      }
-      ethWallet.overrideCrypto(cryptoObj)
-
-      const wallet = ethWallet.generate(false)
+      const entropy = Buffer.from(this.io.random(32)).toString('hex')
+      const tronMnemonic = entropyToMnemonic(entropy)
+      const myMnemonicToSeed = mnemonicToSeed(tronMnemonic).toString('hex')
+      const hdwallet = hdkey.fromMasterSeed(myMnemonicToSeed)
+      const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
+      const wallet = hdwallet.derivePath(walletHDpath).getWallet()
       const tronKey = wallet.getPrivateKeyString().replace('0x', '')
-      return { tronKey }
+      return { tronMnemonic, tronKey }
     } else {
       throw new Error('InvalidWalletType')
     }
