@@ -24,6 +24,7 @@ export type TransactionList = { [currencyCode: string]: Array<EdgeTransaction> }
 export class WalletLocalData {
   blockHeight: number
   lastAddressQueryHeight: number
+  lastTransactionQueryHeight: { [currencyCode: string]: number }
   publicKey: string
   totalBalances: { [currencyCode: string]: string }
   enabledTokens: Array<string>
@@ -36,6 +37,7 @@ export class WalletLocalData {
     const totalBalances: { [currencyCode: string]: string } = {}
     this.totalBalances = totalBalances
     this.lastAddressQueryHeight = 0
+    this.lastTransactionQueryHeight = {}
     this.lastCheckedTxsDropped = 0
     this.numUnconfirmedSpendTxs = 0
     this.otherData = {}

@@ -177,14 +177,20 @@ export class EthereumNetwork {
       )
     }
 
-    const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
-      blockHeight: startBlock,
-      edgeTransactions: allTransactions
-    }
-    if (currencyCode !== PRIMARY_CURRENCY) {
-      return { tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple } }
+    if (allTransactions.length > 0) {
+      const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
+        blockHeight: startBlock,
+        edgeTransactions: allTransactions
+      }
+      if (currencyCode !== PRIMARY_CURRENCY) {
+        return {
+          tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple }
+        }
+      } else {
+        return { ethTxs: edgeTransactionsBlockHeightTuple }
+      }
     } else {
-      return { ethTxs: edgeTransactionsBlockHeightTuple }
+      return {}
     }
   }
 
@@ -212,7 +218,7 @@ export class EthereumNetwork {
   }
 
   async checkAndUpdate(
-    lastChecked: number,
+    lastChecked: number = 0,
     pollMillisec: number,
     checkFunc: () => EthereumNetworkUpdate
   ) {
@@ -223,25 +229,17 @@ export class EthereumNetwork {
     }
   }
 
-  async needsLoop(): Promise<void> {
-    // Init token times
-    for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
-      this.ethNeeds.tokenBalLastChecked[tk] = 0
-      this.ethNeeds.tokenTxsLastChecked[tk] = 0
+  getQueryHeightWithLookback(queryHeight: number): number {
+    if (queryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+      return queryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+    } else {
+      return 0
     }
+  }
+
+  async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
-      let startBlock: number = 0
-
-      if (
-        this.ethEngine.walletLocalData.lastAddressQueryHeight >
-        ADDRESS_QUERY_LOOKBACK_BLOCKS
-      ) {
-        // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-        startBlock =
-          this.ethEngine.walletLocalData.lastAddressQueryHeight -
-          ADDRESS_QUERY_LOOKBACK_BLOCKS
-      }
-
       await this.checkAndUpdate(
         this.ethNeeds.blockHeightLastChecked,
         BLOCKHEIGHT_POLL_MILLISECONDS,
@@ -263,7 +261,13 @@ export class EthereumNetwork {
       await this.checkAndUpdate(
         this.ethNeeds.ethTxsLastChecked,
         TXS_POLL_MILLISECONDS,
-        async () => this.checkTxs(startBlock, 'ETH')
+        async () =>
+          this.checkTxs(
+            this.getQueryHeightWithLookback(
+              this.ethEngine.walletLocalData.lastTransactionQueryHeight.ETH
+            ),
+            'ETH'
+          )
       )
 
       for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
@@ -277,7 +281,13 @@ export class EthereumNetwork {
           await this.checkAndUpdate(
             this.ethNeeds.tokenTxsLastChecked[tk],
             TXS_POLL_MILLISECONDS,
-            async () => this.checkTxs(startBlock, tk)
+            async () =>
+              this.checkTxs(
+                this.getQueryHeightWithLookback(
+                  this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
+                ),
+                tk
+              )
           )
         }
       }
@@ -320,10 +330,12 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.ethTxs) {
       this.ethNeeds.ethTxsLastChecked = now
       this.ethEngine.tokenCheckTransactionsStatus.ETH = 1
-      for (const tuple: EdgeTransactionsBlockHeightTuple of ethereumNetworkUpdate.ethTxs) {
-        if (tuple.edgeTransactions) {
-          this.ethEngine.addTransaction('ETH', tuple.edgeTransactions)
+      if (ethereumNetworkUpdate.ethTxs.edgeTransactions) {
+        for (const tx: EdgeTransaction of ethereumNetworkUpdate.ethTxs
+          .edgeTransactions) {
+          this.ethEngine.addTransaction('ETH', tx)
         }
+        this.ethEngine.walletLocalData.lastTransactionQueryHeight.ETH = preUpdateBlockHeight
       }
       this.ethEngine.updateOnAddressesChecked()
     }
@@ -339,34 +351,20 @@ export class EthereumNetwork {
       for (const tk of Object.keys(ethereumNetworkUpdate.tokenTxs)) {
         this.ethNeeds.tokenTxsLastChecked[tk] = now
         this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
-        for (const tuple: EdgeTransactionsBlockHeightTuple of ethereumNetworkUpdate
-          .tokenTxs[tk]) {
-          if (tuple.edgeTransactions) {
-            this.ethEngine.addTransaction(tk, tuple.edgeTransactions)
+        const tuple: EdgeTransactionsBlockHeightTuple =
+          ethereumNetworkUpdate.tokenTxs[tk]
+        if (tuple.edgeTransactions) {
+          for (const tx: EdgeTransaction of tuple.edgeTransactions) {
+            this.ethEngine.addTransaction(tk, tx)
           }
+          this.ethEngine.walletLocalData.lastTransactionQueryHeight[
+            tk
+          ] = preUpdateBlockHeight
         }
       }
       this.ethEngine.updateOnAddressesChecked()
     }
 
-    let successCount = 0
-    for (const currencyCode of this.ethEngine.walletLocalData.enabledTokens) {
-      if (currencyCode !== PRIMARY_CURRENCY) {
-        if (this.ethNeeds.ethTxsLastChecked < TXS_POLL_MILLISECONDS) {
-          successCount++
-        }
-      } else {
-        if (
-          this.ethNeeds.tokenTxsLastChecked[currencyCode] <
-          TXS_POLL_MILLISECONDS
-        ) {
-          successCount++
-        }
-      }
-    }
-    if (successCount === this.ethEngine.walletLocalData.enabledTokens.length) {
-      this.ethEngine.walletLocalData.lastAddressQueryHeight = preUpdateBlockHeight
-    }
     if (this.ethEngine.transactionsChangedArray.length > 0) {
       this.ethEngine.currencyEngineCallbacks.onTransactionsChanged(
         this.ethEngine.transactionsChangedArray

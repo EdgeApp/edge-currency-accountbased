@@ -241,6 +241,15 @@ class CurrencyEngine {
       this.tokenCheckBalanceStatus[token] = 0
       this.tokenCheckTransactionsStatus[token] = 0
     }
+
+    // Initialize walletLocalData.lastTransactionQueryHeight for
+    //  backwards-compatibility
+    if (!this.walletLocalData.lastTransactionQueryHeight) {
+      for (const token of this.walletLocalData.enabledTokens) {
+        this.walletLocalData.lastTransactionQueryHeight[token] =
+          this.walletLocalData.lastAddressQueryHeight || 0
+      }
+    }
     this.doInitialBalanceCallback()
   }
 
