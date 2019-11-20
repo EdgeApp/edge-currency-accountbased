@@ -32,11 +32,9 @@ import {
 } from '../common/utils.js'
 import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
+import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin.js'
 import {
-  EtherscanGetAccountBalance,
-  EtherscanGetAccountNonce,
-  EtherscanGetBlockHeight,
   EtherscanGetTokenTransactions,
   EtherscanGetTransactions,
   EthGasStationSchema,
@@ -53,12 +51,8 @@ import {
 } from './ethTypes.js'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 20000
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
@@ -84,9 +78,9 @@ async function broadcastWrapper(promise: Promise<Object>, server: string) {
 }
 
 export class EthereumEngine extends CurrencyEngine {
-  ethereumPlugin: EthereumPlugin
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
+  ethNetwork: EthereumNetwork
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -102,6 +96,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
+    this.ethNetwork = new EthereumNetwork(this)
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
@@ -164,27 +159,6 @@ export class EthereumEngine extends CurrencyEngine {
     return response.json()
   }
 
-  async checkBlockchainInnerLoop() {
-    try {
-      const jsonObj = await this.multicastServers('eth_blockNumber')
-      const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
-      if (valid) {
-        const blockHeight: number = parseInt(jsonObj.result, 16)
-        this.log(`Got block height ${blockHeight}`)
-        if (this.walletLocalData.blockHeight !== blockHeight) {
-          this.checkDroppedTransactionsThrottled()
-          this.walletLocalData.blockHeight = blockHeight // Convert to decimal
-          this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onBlockHeightChanged(
-            this.walletLocalData.blockHeight
-          )
-        }
-      }
-    } catch (err) {
-      this.log('Error fetching height: ' + err)
-    }
-  }
-
   updateBalance(tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
@@ -196,96 +170,6 @@ export class EthereumEngine extends CurrencyEngine {
     }
     this.tokenCheckBalanceStatus[tk] = 1
     this.updateOnAddressesChecked()
-  }
-
-  async checkAccountFetch(address: string) {
-    let jsonObj = {}
-    let valid = false
-
-    try {
-      jsonObj = await this.multicastServers('eth_getBalance', address)
-      valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-      if (valid) {
-        const balance = jsonObj.result
-        this.updateBalance('ETH', balance)
-      }
-    } catch (e) {
-      this.log(`Error checking token balance: ETH`)
-    }
-  }
-
-  async checkTokenBalanceFetch(
-    address: string,
-    contractAddress: string,
-    tk: string
-  ) {
-    let jsonObj = {}
-    let valid = false
-
-    try {
-      jsonObj = await this.multicastServers(
-        'getTokenBalance',
-        address,
-        contractAddress
-      )
-      valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-      if (valid) {
-        const balance = jsonObj.result
-        this.updateBalance(tk, balance)
-      }
-    } catch (e) {
-      this.log(`Error checking token balance: ${tk}`)
-    }
-  }
-
-  async checkAccountNonceFetch(address: string) {
-    try {
-      const jsonObj = await this.multicastServers(
-        'eth_getTransactionCount',
-        address
-      )
-      const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
-      const nonce = bns.add('0', jsonObj.result)
-      if (valid && this.walletLocalData.otherData.nextNonce !== nonce) {
-        this.walletLocalData.otherData.nextNonce = nonce
-        this.walletLocalDataDirty = true
-      }
-    } catch (e) {
-      this.log(`Error checking account nonce`, e)
-    }
-  }
-
-  async checkAccountInnerLoop() {
-    const address = this.walletLocalData.publicKey
-    try {
-      // Ethereum only has one address
-      const promiseArray = []
-
-      // ************************************
-      // Fetch token balances
-      // ************************************
-      // https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=0x57d90b64a1a57749b0f932f1a3395792e12e7055&address=0xe04f27eb70e025b78871a2ad7eabe85e61212761&tag=latest&apikey=YourApiKeyToken
-      for (const tk of this.walletLocalData.enabledTokens) {
-        if (tk === PRIMARY_CURRENCY) {
-          promiseArray.push(this.checkAccountFetch(address))
-        } else {
-          const tokenInfo = this.getTokenInfo(tk)
-          if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-            promiseArray.push(
-              this.checkTokenBalanceFetch(
-                address,
-                tokenInfo.contractAddress,
-                tk
-              )
-            )
-          } else {
-            continue
-          }
-        }
-      }
-      promiseArray.push(this.checkAccountNonceFetch(address))
-      await Promise.all(promiseArray)
-    } catch (e) {}
   }
 
   processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
@@ -344,7 +228,7 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams
     }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+    return edgeTransaction
   }
 
   async checkTransactionsFetch(
@@ -487,48 +371,6 @@ export class EthereumEngine extends CurrencyEngine {
       }
     } else {
       this.log('Invalid data for unconfirmed transactions')
-    }
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
-    }
-  }
-
-  async checkTransactionsInnerLoop() {
-    const blockHeight = this.walletLocalData.blockHeight
-    let startBlock: number = 0
-    const promiseArray = []
-
-    if (
-      this.walletLocalData.lastAddressQueryHeight >
-      ADDRESS_QUERY_LOOKBACK_BLOCKS
-    ) {
-      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-      startBlock =
-        this.walletLocalData.lastAddressQueryHeight -
-        ADDRESS_QUERY_LOOKBACK_BLOCKS
-    }
-
-    for (const currencyCode of this.walletLocalData.enabledTokens) {
-      promiseArray.push(this.checkTransactionsFetch(startBlock, currencyCode))
-    }
-
-    let resultArray = []
-    try {
-      resultArray = await Promise.all(promiseArray)
-    } catch (e) {
-      this.log('Failed to query transactions')
-      this.log(e.name)
-      this.log(e.message)
-    }
-    let successCount = 0
-    for (const r of resultArray) {
-      if (r) successCount++
-    }
-    if (successCount === promiseArray.length) {
-      this.walletLocalData.lastAddressQueryHeight = blockHeight
     }
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -823,14 +665,14 @@ export class EthereumEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     this.addToLoop(
       'checkUnconfirmedTransactionsInnerLoop',
       UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
     )
+
+    this.ethNetwork.needsLoop()
+
     super.startEngine()
   }
 
