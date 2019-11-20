@@ -73,6 +73,7 @@ export class EthereumNetwork {
     } catch (err) {
       this.ethEngine.log('Error fetching height: ' + err)
     }
+    return {}
   }
 
   async checkNonce(): Promise<EthereumNetworkUpdate> {
@@ -90,6 +91,7 @@ export class EthereumNetwork {
     } catch (err) {
       this.ethEngine.log('Error fetching height: ' + err)
     }
+    return {}
   }
 
   async checkTxs(
@@ -109,7 +111,7 @@ export class EthereumNetwork {
         contractAddress = tokenInfo.contractAddress
         schema = EtherscanGetTokenTransactions
       } else {
-        return false
+        return {}
       }
     }
 
@@ -161,9 +163,8 @@ export class EthereumNetwork {
       return {
         tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple }
       }
-    } else {
-      return {}
     }
+    return {}
   }
 
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
@@ -194,6 +195,7 @@ export class EthereumNetwork {
     } catch (e) {
       this.ethEngine.log(`Error checking token balance: ${tk}`)
     }
+    return {}
   }
 
   async checkAndUpdate(
@@ -266,6 +268,7 @@ export class EthereumNetwork {
     ethereumNetworkUpdate: EthereumNetworkUpdate,
     preUpdateBlockHeight: number
   ) {
+    if (!ethereumNetworkUpdate) return
     if (ethereumNetworkUpdate.blockHeight) {
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight}`)
