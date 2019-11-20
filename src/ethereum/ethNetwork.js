@@ -24,8 +24,6 @@ const PRIMARY_CURRENCY = currencyInfo.currencyCode
 type EthereumNeeds = {
   blockHeightLastChecked: number,
   nonceLastChecked: number,
-  ethBalLastChecked: number,
-  ethTxsLastChecked: number,
   tokenBalLastChecked: { [currencyCode: string]: number },
   tokenTxsLastChecked: { [currencyCode: string]: number }
 }
@@ -38,8 +36,6 @@ type EdgeTransactionsBlockHeightTuple = {
 type EthereumNetworkUpdate = {
   blockHeight?: number,
   nonce?: number,
-  ethBal?: string,
-  ethTxs?: EdgeTransactionsBlockHeightTuple,
   tokenBal?: { [currencyCode: string]: string },
   tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple }
 }
@@ -51,15 +47,12 @@ export class EthereumNetwork {
     this.ethNeeds = {
       blockHeightLastChecked: 0,
       nonceLastChecked: 0,
-      ethBalLastChecked: 0,
-      ethTxsLastChecked: 0,
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
 
     this.checkBlockHeight = this.checkBlockHeight.bind(this)
     this.checkNonce = this.checkNonce.bind(this)
-    this.checkEthBal = this.checkEthBal.bind(this)
     this.checkTxs = this.checkTxs.bind(this)
     this.checkTokenBal = this.checkTokenBal.bind(this)
     this.checkAndUpdate = this.checkAndUpdate.bind(this)
@@ -99,23 +92,6 @@ export class EthereumNetwork {
     }
   }
 
-  async checkEthBal(): Promise<EthereumNetworkUpdate> {
-    const address = this.ethEngine.walletLocalData.publicKey
-    try {
-      const jsonObj = await this.ethEngine.multicastServers(
-        'eth_getBalance',
-        address
-      )
-      const valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-      if (valid) {
-        const balance = jsonObj.result
-        return { ethBal: balance }
-      }
-    } catch (e) {
-      this.ethEngine.log(`Error checking token balance: ETH`)
-    }
-  }
-
   async checkTxs(
     startBlock: number,
     currencyCode: string
@@ -125,7 +101,9 @@ export class EthereumNetwork {
     let contractAddress = ''
     let schema
 
-    if (currencyCode !== PRIMARY_CURRENCY) {
+    if (currencyCode === PRIMARY_CURRENCY) {
+      schema = EtherscanGetTransactions
+    } else {
       const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
       if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
         contractAddress = tokenInfo.contractAddress
@@ -133,8 +111,6 @@ export class EthereumNetwork {
       } else {
         return false
       }
-    } else {
-      schema = EtherscanGetTransactions
     }
 
     const allTransactions = []
@@ -182,12 +158,8 @@ export class EthereumNetwork {
         blockHeight: startBlock,
         edgeTransactions: allTransactions
       }
-      if (currencyCode !== PRIMARY_CURRENCY) {
-        return {
-          tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple }
-        }
-      } else {
-        return { ethTxs: edgeTransactionsBlockHeightTuple }
+      return {
+        tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple }
       }
     } else {
       return {}
@@ -196,17 +168,24 @@ export class EthereumNetwork {
 
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
-    const tokenInfo = this.ethEngine.getTokenInfo(tk)
-    const contractAddress = tokenInfo.contractAddress
     let jsonObj = {}
     let valid = false
 
     try {
-      jsonObj = await this.ethEngine.multicastServers(
-        'getTokenBalance',
-        address,
-        contractAddress
-      )
+      if (tk === PRIMARY_CURRENCY) {
+        jsonObj = await this.ethEngine.multicastServers(
+          'eth_getBalance',
+          address
+        )
+      } else {
+        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        const contractAddress = tokenInfo.contractAddress
+        jsonObj = await this.ethEngine.multicastServers(
+          'getTokenBalance',
+          address,
+          contractAddress
+        )
+      }
       valid = validateObject(jsonObj, EtherscanGetAccountBalance)
       if (valid) {
         const balance = jsonObj.result
@@ -252,44 +231,24 @@ export class EthereumNetwork {
         this.checkNonce
       )
 
-      await this.checkAndUpdate(
-        this.ethNeeds.ethBalLastChecked,
-        BAL_POLL_MILLISECONDS,
-        this.checkEthBal
-      )
-
-      await this.checkAndUpdate(
-        this.ethNeeds.ethTxsLastChecked,
-        TXS_POLL_MILLISECONDS,
-        async () =>
-          this.checkTxs(
-            this.getQueryHeightWithLookback(
-              this.ethEngine.walletLocalData.lastTransactionQueryHeight.ETH
-            ),
-            'ETH'
-          )
-      )
-
       for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
-        if (tk !== 'ETH') {
-          await this.checkAndUpdate(
-            this.ethNeeds.tokenBalLastChecked[tk],
-            BAL_POLL_MILLISECONDS,
-            async () => this.checkTokenBal(tk)
-          )
+        await this.checkAndUpdate(
+          this.ethNeeds.tokenBalLastChecked[tk],
+          BAL_POLL_MILLISECONDS,
+          async () => this.checkTokenBal(tk)
+        )
 
-          await this.checkAndUpdate(
-            this.ethNeeds.tokenTxsLastChecked[tk],
-            TXS_POLL_MILLISECONDS,
-            async () =>
-              this.checkTxs(
-                this.getQueryHeightWithLookback(
-                  this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
-                ),
-                tk
-              )
-          )
-        }
+        await this.checkAndUpdate(
+          this.ethNeeds.tokenTxsLastChecked[tk],
+          TXS_POLL_MILLISECONDS,
+          async () =>
+            this.checkTxs(
+              this.getQueryHeightWithLookback(
+                this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
+              ),
+              tk
+            )
+        )
       }
 
       await snooze(1000)
@@ -320,24 +279,6 @@ export class EthereumNetwork {
       this.ethEngine.walletLocalData.otherData.nextNonce =
         ethereumNetworkUpdate.nonce
       this.ethEngine.walletLocalDataDirty = true
-    }
-
-    if (ethereumNetworkUpdate.ethBal) {
-      this.ethNeeds.ethBalLastChecked = now
-      this.ethEngine.updateBalance('ETH', ethereumNetworkUpdate.ethBal)
-    }
-
-    if (ethereumNetworkUpdate.ethTxs) {
-      this.ethNeeds.ethTxsLastChecked = now
-      this.ethEngine.tokenCheckTransactionsStatus.ETH = 1
-      if (ethereumNetworkUpdate.ethTxs.edgeTransactions) {
-        for (const tx: EdgeTransaction of ethereumNetworkUpdate.ethTxs
-          .edgeTransactions) {
-          this.ethEngine.addTransaction('ETH', tx)
-        }
-        this.ethEngine.walletLocalData.lastTransactionQueryHeight.ETH = preUpdateBlockHeight
-      }
-      this.ethEngine.updateOnAddressesChecked()
     }
 
     if (ethereumNetworkUpdate.tokenBal) {
