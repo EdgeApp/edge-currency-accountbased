@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.5.5 (2019-11-20)
+
+- Refactor ETH for API flexibility (no functional change)
+
 # 0.5.4 (2019-11-07)
 
 - Accept multiple etherscan API keys.
