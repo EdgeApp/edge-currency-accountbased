@@ -199,12 +199,13 @@ export class EthereumNetwork {
   async checkAndUpdate(
     lastChecked: number = 0,
     pollMillisec: number,
+    preUpdateBlockHeight: number,
     checkFunc: () => EthereumNetworkUpdate
   ) {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
       const ethUpdate = await checkFunc()
-      this.processEthereumNetworkUpdate(now, ethUpdate)
+      this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
     }
   }
 
@@ -219,15 +220,18 @@ export class EthereumNetwork {
 
   async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
+      const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
       await this.checkAndUpdate(
         this.ethNeeds.blockHeightLastChecked,
         BLOCKHEIGHT_POLL_MILLISECONDS,
+        preUpdateBlockHeight,
         this.checkBlockHeight
       )
 
       await this.checkAndUpdate(
         this.ethNeeds.nonceLastChecked,
         NONCE_POLL_MILLISECONDS,
+        preUpdateBlockHeight,
         this.checkNonce
       )
 
@@ -235,12 +239,14 @@ export class EthereumNetwork {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalLastChecked[tk],
           BAL_POLL_MILLISECONDS,
+          preUpdateBlockHeight,
           async () => this.checkTokenBal(tk)
         )
 
         await this.checkAndUpdate(
           this.ethNeeds.tokenTxsLastChecked[tk],
           TXS_POLL_MILLISECONDS,
+          preUpdateBlockHeight,
           async () =>
             this.checkTxs(
               this.getQueryHeightWithLookback(
@@ -257,9 +263,9 @@ export class EthereumNetwork {
 
   processEthereumNetworkUpdate(
     now: number,
-    ethereumNetworkUpdate: EthereumNetworkUpdate
+    ethereumNetworkUpdate: EthereumNetworkUpdate,
+    preUpdateBlockHeight: number
   ) {
-    const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
     if (ethereumNetworkUpdate.blockHeight) {
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight}`)
