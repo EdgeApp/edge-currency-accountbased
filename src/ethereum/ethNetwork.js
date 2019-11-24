@@ -84,11 +84,6 @@ export class EthereumNetwork {
 
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     this.fetchPostInfura = this.fetchPostInfura.bind(this)
-    this.fetchPostBlockcypher = this.fetchPostBlockcypher.bind(this)
-    this.fetchGetBlockchair = this.fetchGetBlockchair.bind(this)
-    this.broadcastEtherscan = this.broadcastEtherscan.bind(this)
-    this.broadcastInfura = this.broadcastInfura.bind(this)
-    this.broadcastBlockCypher = this.broadcastBlockCypher.bind(this)
     this.multicastServers = this.multicastServers.bind(this)
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
     this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
@@ -98,11 +93,37 @@ export class EthereumNetwork {
     this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
     this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
     this.checkTokenBal = this.checkTokenBal.bind(this)
-    this.checkAndUpdate = this.checkAndUpdate.bind(this)
-    this.needsLoop = this.needsLoop.bind(this)
     this.processEthereumNetworkUpdate = this.processEthereumNetworkUpdate.bind(
       this
     )
+  }
+
+  async fetchGet(url: string) {
+    const response = await this.ethEngine.io.fetch(url, {
+      method: 'GET'
+    })
+    if (!response.ok) {
+      const {
+        blockcypherApiKey,
+        etherscanApiKey,
+        infuraProjectId,
+        blockchairApiKey
+      } = this.ethEngine.initOptions
+      if (typeof etherscanApiKey === 'string')
+        url = url.replace(etherscanApiKey, 'private')
+      if (Array.isArray(etherscanApiKey)) {
+        for (const key of etherscanApiKey) {
+          url = url.replace(key, 'private')
+        }
+      }
+      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
+      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
+      if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
+      throw new Error(
+        `The server returned error code ${response.status} for ${url}`
+      )
+    }
+    return response.json()
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
@@ -116,7 +137,7 @@ export class EthereumNetwork {
         : ''
 
     const url = `${server}/api${cmd}${apiKey}`
-    return this.ethEngine.fetchGet(url)
+    return this.fetchGet(url)
   }
 
   async fetchPostInfura(method: string, params: Object) {
@@ -131,7 +152,7 @@ export class EthereumNetwork {
       method,
       params
     }
-    const response = await this.io.fetch(url, {
+    const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -153,7 +174,7 @@ export class EthereumNetwork {
       this.ethEngine.currencyInfo.defaultSettings.otherSettings
         .blockcypherApiServers[0]
     }/${cmd}${apiKey}`
-    const response = await this.io.fetch(url, {
+    const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -174,7 +195,7 @@ export class EthereumNetwork {
       this.ethEngine.currencyInfo.defaultSettings.otherSettings
         .blockchairApiServers[0]
     }${path}${keyParam}`
-    return this.ethEngine.fetchGet(url)
+    return this.fetchGet(url)
   }
 
   async broadcastEtherscan(
@@ -531,7 +552,7 @@ export class EthereumNetwork {
       }
     } catch (e) {
       this.ethEngine.log(
-        `Error checkTransactionsFetch ETH: ${this.ethEngine.walletLocalData.publicKey}`,
+        `Error checkTxs ETH: ${this.ethEngine.walletLocalData.publicKey}`,
         e
       )
     }
