@@ -20,7 +20,8 @@ const otherSettings: EthereumSettings = {
     IND: true,
     USDT: true,
     AGLD: true
-  }
+  },
+  blockchairApiServers: ['https://api.blockchair.com']
 }
 
 const defaultSettings: any = {

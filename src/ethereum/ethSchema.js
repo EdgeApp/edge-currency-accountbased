@@ -210,3 +210,57 @@ export const CustomTokenSchema = {
   },
   required: ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
 }
+
+export const BlockChairStatsSchema = {
+  type: 'object',
+  properties: {
+    data: {
+      type: 'object',
+      properties: {
+        blocks: { type: 'number' }
+      }
+    }
+  },
+  required: ['data']
+}
+
+export const BlockChairAddressSchema = {
+  type: 'object',
+  properties: {
+    data: {
+      type: 'object',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          address: {
+            type: 'object',
+            properties: {
+              balance: { type: 'string' }
+            },
+            required: ['balance']
+          },
+          layer_2: {
+            type: 'object',
+            properties: {
+              erc_20: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    balance: { type: 'string' },
+                    token_address: { type: 'string' },
+                    token_symbol: { type: 'string' }
+                  },
+                  required: ['balance', 'token_address', 'token_symbol']
+                }
+              }
+            },
+            required: ['erc_20']
+          }
+        },
+        required: ['address', 'layer_2']
+      }
+    }
+  },
+  required: ['data']
+}
