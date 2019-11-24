@@ -103,8 +103,20 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
+      contractAddress: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
       symbolImage: `${imageServerUrl}/dai-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'SAI',
+      currencyName: 'Sai Stablecoin',
+      denominations: [
+        {
+          name: 'SAI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
+      symbolImage: `${imageServerUrl}/sai-logo-solo-64.png`
     },
     {
       currencyCode: 'WINGS',
@@ -515,16 +527,16 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/cwbtc-logo-solo-64.png`
     },
     {
-      currencyCode: 'CDAI',
-      currencyName: 'Compound DAI',
+      currencyCode: 'CSAI',
+      currencyName: 'Compound SAI',
       denominations: [
         {
-          name: 'CDAI',
+          name: 'CSAI',
           multiplier: '100000000'
         }
       ],
       contractAddress: '0xf5dce57282a584d2746faf1593d3121fcac444dc',
-      symbolImage: `${imageServerUrl}/cdai-logo-solo-64.png`
+      symbolImage: `${imageServerUrl}/csai-logo-solo-64.png`
     }
   ]
 }
