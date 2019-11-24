@@ -13,6 +13,8 @@ import {
 import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
+  BlockChairAddressSchema,
+  BlockChairStatsSchema,
   EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
   EtherscanGetBlockHeight,
@@ -83,14 +85,18 @@ export class EthereumNetwork {
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     this.fetchPostInfura = this.fetchPostInfura.bind(this)
     this.fetchPostBlockcypher = this.fetchPostBlockcypher.bind(this)
+    this.fetchGetBlockchair = this.fetchGetBlockchair.bind(this)
     this.broadcastEtherscan = this.broadcastEtherscan.bind(this)
     this.broadcastInfura = this.broadcastInfura.bind(this)
     this.broadcastBlockCypher = this.broadcastBlockCypher.bind(this)
     this.multicastServers = this.multicastServers.bind(this)
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
+    this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
     this.checkBlockHeight = this.checkBlockHeight.bind(this)
     this.checkNonce = this.checkNonce.bind(this)
     this.checkTxs = this.checkTxs.bind(this)
+    this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
+    this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
     this.checkTokenBal = this.checkTokenBal.bind(this)
     this.checkAndUpdate = this.checkAndUpdate.bind(this)
     this.needsLoop = this.needsLoop.bind(this)
@@ -156,6 +162,19 @@ export class EthereumNetwork {
       body: JSON.stringify(body)
     })
     return response.json()
+  }
+
+  async fetchGetBlockchair(path: string, includeKey: boolean = false) {
+    let keyParam = ''
+    if (includeKey) {
+      const { blockchairApiKey } = this.ethEngine.initOptions
+      keyParam = `&key=${blockchairApiKey}`
+    }
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .blockchairApiServers[0]
+    }${path}${keyParam}`
+    return this.ethEngine.fetchGet(url)
   }
 
   async broadcastEtherscan(
@@ -409,18 +428,36 @@ export class EthereumNetwork {
     return out.result
   }
 
-  async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
-    try {
-      const jsonObj = await this.multicastServers('eth_blockNumber')
-      const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
-      if (valid) {
-        const blockHeight = parseInt(jsonObj.result, 16)
-        return { blockHeight }
-      }
-    } catch (err) {
-      this.ethEngine.log('Error fetching height: ' + err)
+  async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
+    const jsonObj = await this.multicastServers('eth_blockNumber')
+    const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
+    if (valid) {
+      const blockHeight = parseInt(jsonObj.result, 16)
+      return { blockHeight }
+    } else {
+      throw new Error('Ethscan returned invalid JSON')
     }
-    return {}
+  }
+
+  async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
+    const jsonObj = await this.fetchGetBlockchair('/ethereum/stats', false)
+    const valid = validateObject(jsonObj, BlockChairStatsSchema)
+    if (valid) {
+      const blockHeight = parseInt(jsonObj.data.blocks, 10)
+      return { blockHeight }
+    } else {
+      throw new Error('Blockchair returned invalid JSON')
+    }
+  }
+
+  async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
+    return asyncWaterfall([
+      this.checkBlockHeightEthscan,
+      this.checkBlockHeightBlockchair
+    ]).catch(err => {
+      this.ethEngine.log('checkBlockHeight failed to update', err)
+      return {}
+    })
   }
 
   async checkNonce(): Promise<EthereumNetworkUpdate> {
@@ -511,32 +548,68 @@ export class EthereumNetwork {
     return {}
   }
 
-  async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
+  async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     let jsonObj = {}
-    let valid = false
 
-    try {
-      if (tk === PRIMARY_CURRENCY) {
-        jsonObj = await this.multicastServers('eth_getBalance', address)
-      } else {
-        const tokenInfo = this.ethEngine.getTokenInfo(tk)
-        const contractAddress = tokenInfo.contractAddress
-        jsonObj = await this.multicastServers(
-          'getTokenBalance',
-          address,
-          contractAddress
-        )
-      }
-      valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-      if (valid) {
-        const balance = jsonObj.result
-        return { tokenBal: { [tk]: balance } }
-      }
-    } catch (e) {
-      this.ethEngine.log(`Error checking token balance: ${tk}`)
+    if (tk === PRIMARY_CURRENCY) {
+      jsonObj = await this.multicastServers('eth_getBalance', address)
+    } else {
+      const tokenInfo = this.ethEngine.getTokenInfo(tk)
+      const contractAddress = tokenInfo.contractAddress
+      jsonObj = await this.multicastServers(
+        'getTokenBalance',
+        address,
+        contractAddress
+      )
     }
-    return {}
+    const valid = validateObject(jsonObj, EtherscanGetAccountBalance)
+    if (valid) {
+      const balance = jsonObj.result
+      return { tokenBal: { [tk]: balance } }
+    } else {
+      throw new Error('Ethscan returned invalid JSON')
+    }
+  }
+
+  async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey
+    const jsonObj = await this.fetchGetBlockchair(
+      `/ethereum/dashboards/address/${address}?erc_20=true`,
+      true
+    )
+    const valid = validateObject(jsonObj, BlockChairAddressSchema)
+    if (valid) {
+      // Note: Blockchair returns eth balance and all tokens balances
+      const response = {
+        ETH: jsonObj.data[address].address.balance
+      }
+
+      for (const tokenData of jsonObj.data[address].layer_2.erc_20) {
+        const balance = tokenData.balance
+        const tokenAddress = tokenData.token_address
+        const tokenSymbol = tokenData.token_symbol
+        const tokenInfo = this.ethEngine.getTokenInfo(tokenSymbol)
+        if (tokenInfo.contractAddress === tokenAddress) {
+          response[tokenSymbol] = balance
+        } else {
+          // Do nothing, eg: Old DAI token balance is ignored
+        }
+      }
+      return { tokenBal: response }
+    } else {
+      throw new Error('Blockchair returned invalid JSON')
+    }
+  }
+
+  async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
+    return asyncWaterfall([
+      async () => this.checkTokenBalEthscan(tk),
+      this.checkTokenBalBlockchair
+    ]).catch(err => {
+      this.ethEngine.log('checkTokenBal failed to update', err)
+      return {}
+    })
   }
 
   async checkAndUpdate(
