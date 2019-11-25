@@ -892,8 +892,10 @@ class CurrencyEngine {
     let currencyCode: string = ''
     if (typeof edgeSpendInfo.currencyCode === 'string') {
       currencyCode = edgeSpendInfo.currencyCode
-      if (!this.getTokenStatus(currencyCode)) {
-        throw new Error('Error: Token not supported or enabled')
+      if (currencyCode !== this.currencyInfo.currencyCode) {
+        if (!this.getTokenStatus(currencyCode)) {
+          throw new Error('Error: Token not supported or enabled')
+        }
       }
     } else {
       currencyCode = this.currencyInfo.currencyCode
