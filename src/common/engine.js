@@ -630,7 +630,11 @@ class CurrencyEngine {
     for (const token of tokens) {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
+        this.walletLocalDataDirty = true
       }
+    }
+    if (this.walletLocalDataDirty) {
+      this.saveWalletLoop()
     }
   }
 
@@ -643,7 +647,11 @@ class CurrencyEngine {
       const index = this.walletLocalData.enabledTokens.indexOf(token)
       if (index !== -1) {
         this.walletLocalData.enabledTokens.splice(index, 1)
+        this.walletLocalDataDirty = true
       }
+    }
+    if (this.walletLocalDataDirty) {
+      this.saveWalletLoop()
     }
   }
 
