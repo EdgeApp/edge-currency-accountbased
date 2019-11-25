@@ -30,8 +30,6 @@ import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin.js'
 import {
-  EtherscanGetTokenTransactions,
-  EtherscanGetTransactions,
   EthGasStationSchema,
   NetworkFeesSchema,
   SuperEthGetUnconfirmedTransactions
@@ -48,7 +46,6 @@ import {
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const NUM_TRANSACTIONS_TO_QUERY = 50
 const WEI_MULTIPLIER = 100000000
 
 export class EthereumEngine extends CurrencyEngine {
@@ -71,32 +68,6 @@ export class EthereumEngine extends CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
     this.ethNetwork = new EthereumNetwork(this)
-  }
-
-  async fetchGet(url: string) {
-    const response = await this.io.fetch(url, {
-      method: 'GET'
-    })
-    if (!response.ok) {
-      const {
-        blockcypherApiKey,
-        etherscanApiKey,
-        infuraProjectId
-      } = this.initOptions
-      if (typeof etherscanApiKey === 'string')
-        url = url.replace(etherscanApiKey, 'private')
-      if (Array.isArray(etherscanApiKey)) {
-        for (const key of etherscanApiKey) {
-          url = url.replace(key, 'private')
-        }
-      }
-      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
-      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
-      throw new Error(
-        `The server returned error code ${response.status} for ${url}`
-      )
-    }
-    return response.json()
   }
 
   updateBalance(tk: string, balance: string) {
@@ -171,74 +142,6 @@ export class EthereumEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  async checkTransactionsFetch(
-    startBlock: number,
-    currencyCode: string
-  ): Promise<boolean> {
-    const address = this.walletLocalData.publicKey
-    let checkAddressSuccess = false
-    let page = 1
-    let contractAddress = ''
-    let schema
-
-    if (currencyCode !== PRIMARY_CURRENCY) {
-      const tokenInfo = this.getTokenInfo(currencyCode)
-      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-        contractAddress = tokenInfo.contractAddress
-        schema = EtherscanGetTokenTransactions
-      } else {
-        return false
-      }
-    } else {
-      schema = EtherscanGetTransactions
-    }
-
-    try {
-      while (1) {
-        const offset = NUM_TRANSACTIONS_TO_QUERY
-        const jsonObj = await this.ethNetwork.multicastServers(
-          'getTransactions',
-          {
-            currencyCode,
-            address,
-            startBlock,
-            page,
-            offset,
-            contractAddress
-          }
-        )
-        const valid = validateObject(jsonObj, schema)
-        if (valid) {
-          const transactions = jsonObj.result
-          for (let i = 0; i < transactions.length; i++) {
-            const tx = transactions[i]
-            this.processEtherscanTransaction(tx, currencyCode)
-          }
-          if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
-            checkAddressSuccess = true
-            break
-          }
-          page++
-        } else {
-          break
-        }
-      }
-    } catch (e) {
-      this.log(
-        `Error checkTransactionsFetch ETH: ${this.walletLocalData.publicKey}`,
-        e
-      )
-    }
-
-    if (checkAddressSuccess) {
-      this.tokenCheckTransactionsStatus[currencyCode] = 1
-      this.updateOnAddressesChecked()
-      return true
-    } else {
-      return false
-    }
-  }
-
   processUnconfirmedTransaction(tx: Object) {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
@@ -294,7 +197,7 @@ export class EthereumEngine extends CurrencyEngine {
     }/v1/eth/main/txs/${address}`
     let jsonObj = null
     try {
-      jsonObj = await this.fetchGet(url)
+      jsonObj = await this.ethNetwork.fetchGet(url)
     } catch (e) {
       this.log(e)
       this.log('Failed to fetch unconfirmed transactions')
@@ -327,7 +230,7 @@ export class EthereumEngine extends CurrencyEngine {
     try {
       const infoServer = getEdgeInfoServer()
       const url = `${infoServer}/v1/networkFees/ETH`
-      const jsonObj = await this.fetchGet(url)
+      const jsonObj = await this.ethNetwork.fetchGet(url)
       const valid = validateObject(jsonObj, NetworkFeesSchema)
 
       if (valid) {
@@ -348,7 +251,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     try {
       const url = 'https://www.ethgasstation.info/json/ethgasAPI.json'
-      const jsonObj = await this.fetchGet(url)
+      const jsonObj = await this.ethNetwork.fetchGet(url)
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
