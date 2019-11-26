@@ -22,6 +22,7 @@ export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees
 ): EthereumCalcedFees {
+  let useDefaults = true
   if (
     spendInfo.spendTargets &&
     spendInfo.spendTargets.length &&
@@ -37,7 +38,7 @@ export function calcMiningFee(
         gasPrice &&
         bns.gt(gasPrice, '0')
       ) {
-        return { gasLimit, gasPrice: gasPriceGwei }
+        return { gasLimit, gasPrice: gasPriceGwei, useDefaults: false }
       }
     }
     const targetAddress = normalizeAddress(
@@ -48,6 +49,7 @@ export function calcMiningFee(
 
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]
+      useDefaults = false
       if (typeof networkFeeForGasLimit.gasPrice !== 'undefined') {
         networkFeeForGasPrice = networkFeeForGasLimit
       }
@@ -128,7 +130,7 @@ export function calcMiningFee(
       default:
         throw new Error(`Invalid networkFeeOption`)
     }
-    const out: EthereumCalcedFees = { gasLimit, gasPrice }
+    const out: EthereumCalcedFees = { gasLimit, gasPrice, useDefaults }
     return out
   } else {
     throw new Error('ErrorInvalidSpendInfo')

@@ -55,6 +55,7 @@ type EthFunction =
   | 'eth_blockNumber'
   | 'eth_getTransactionCount'
   | 'eth_getBalance'
+  | 'eth_estimateGas'
   | 'getTokenBalance'
   | 'getTransactions'
 
@@ -323,6 +324,18 @@ export class EthereumNetwork {
         funcs.push(funcs2)
         // Randomize array
         funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'eth_estimateGas':
+        funcs = []
+        funcs2 = async () => {
+          const result = await this.fetchPostInfura('eth_estimateGas', [
+            params[0]
+          ])
+          return { server: 'infura', result }
+        }
+        funcs.push(funcs2)
         out = await asyncWaterfall(funcs)
         break
 

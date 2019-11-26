@@ -19,6 +19,7 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import {
   addHexPrefix,
+  asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
   normalizeAddress,
@@ -372,10 +373,34 @@ export class EthereumEngine extends CurrencyEngine {
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
-    const { gasLimit, gasPrice } = calcMiningFee(
+
+    const miningFees = calcMiningFee(
       edgeSpendInfo,
       this.walletLocalData.otherData.networkFees
     )
+    const { gasPrice, useDefaults } = miningFees
+    let { gasLimit } = miningFees
+    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
+    if (currencyCode === PRIMARY_CURRENCY && useDefaults) {
+      const estimateGasParams = {
+        to: publicAddress,
+        gas: '0xffffff',
+        value: bns.add(nativeAmount, '0', 16)
+      }
+      try {
+        const funcs = []
+        funcs.push(async () => {
+          return this.ethNetwork.multicastServers(
+            'eth_estimateGas',
+            estimateGasParams
+          )
+        })
+        const result = await asyncWaterfall(funcs, 5000)
+        gasLimit = bns.add(result.result, '0')
+      } catch (err) {
+        console.log(err)
+      }
+    }
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const ethParams: EthereumTxOtherParams = {
@@ -419,10 +444,10 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
-    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     const balanceEth = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
+
     let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee = null
