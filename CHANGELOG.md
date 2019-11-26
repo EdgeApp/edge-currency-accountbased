@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.5.6 (2019-11-25)
+
+- Add Blockchair API
+- Add support for eth_estimateGas
+
 # 0.5.5 (2019-11-20)
 
 - Refactor ETH for API flexibility (no functional change)
