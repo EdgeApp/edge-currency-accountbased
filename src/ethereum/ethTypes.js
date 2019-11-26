@@ -45,7 +45,8 @@ export type EthereumFees = {
 
 export type EthereumCalcedFees = {
   gasPrice: string,
-  gasLimit: string
+  gasLimit: string,
+  useDefaults: boolean
 }
 
 export type EtherscanTransaction = {
