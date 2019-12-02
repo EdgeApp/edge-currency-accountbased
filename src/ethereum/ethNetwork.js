@@ -50,7 +50,8 @@ type EthereumNetworkUpdate = {
   blockHeight?: number,
   nonce?: number,
   tokenBal?: { [currencyCode: string]: string },
-  tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple }
+  tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple },
+  server: string
 }
 
 type EthFunction =
@@ -490,17 +491,18 @@ export class EthereumNetwork {
         break
       }
     }
-    this.ethEngine.log(`ETH multicastServers ${func} ${out.server} won`)
 
-    return out.result
+    return out
   }
 
   async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
-    const jsonObj = await this.multicastServers('eth_blockNumber')
+    const { result: jsonObj, server } = await this.multicastServers(
+      'eth_blockNumber'
+    )
     const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
     if (valid) {
       const blockHeight = parseInt(jsonObj.result, 16)
-      return { blockHeight }
+      return { blockHeight, server }
     } else {
       throw new Error('Ethscan returned invalid JSON')
     }
@@ -511,7 +513,7 @@ export class EthereumNetwork {
     const valid = validateObject(jsonObj, BlockChairStatsSchema)
     if (valid) {
       const blockHeight = parseInt(jsonObj.data.blocks, 10)
-      return { blockHeight }
+      return { blockHeight, server: 'blockchair' }
     } else {
       throw new Error('Blockchair returned invalid JSON')
     }
@@ -530,14 +532,14 @@ export class EthereumNetwork {
   async checkNonce(): Promise<EthereumNetworkUpdate> {
     try {
       const address = this.ethEngine.walletLocalData.publicKey
-      const jsonObj = await this.multicastServers(
+      const { result: jsonObj, server } = await this.multicastServers(
         'eth_getTransactionCount',
         address
       )
       const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
       if (valid) {
         const nonce = bns.add('0', jsonObj.result)
-        return { nonce }
+        return { nonce, server }
       }
     } catch (err) {
       this.ethEngine.log('Error fetching height: ' + err)
@@ -545,7 +547,7 @@ export class EthereumNetwork {
     return {}
   }
 
-  async checkTxs(
+  async checkTxsEthscan(
     startBlock: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
@@ -753,22 +755,27 @@ export class EthereumNetwork {
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     let jsonObj = {}
+    let server
 
     if (tk === PRIMARY_CURRENCY) {
-      jsonObj = await this.multicastServers('eth_getBalance', address)
+      const response = await this.multicastServers('eth_getBalance', address)
+      jsonObj = response.result
+      server = response.server
     } else {
       const tokenInfo = this.ethEngine.getTokenInfo(tk)
       const contractAddress = tokenInfo.contractAddress
-      jsonObj = await this.multicastServers(
+      const response = await this.multicastServers(
         'getTokenBalance',
         address,
         contractAddress
       )
+      jsonObj = response.result
+      server = response.server
     }
     const valid = validateObject(jsonObj, EtherscanGetAccountBalance)
     if (valid) {
       const balance = jsonObj.result
-      return { tokenBal: { [tk]: balance } }
+      return { tokenBal: { [tk]: balance }, server }
     } else {
       throw new Error('Ethscan returned invalid JSON')
     }
@@ -798,7 +805,7 @@ export class EthereumNetwork {
           // Do nothing, eg: Old DAI token balance is ignored
         }
       }
-      return { tokenBal: response }
+      return { tokenBal: response, server: 'blockchair' }
     } else {
       throw new Error('Blockchair returned invalid JSON')
     }
@@ -886,6 +893,9 @@ export class EthereumNetwork {
   ) {
     if (!ethereumNetworkUpdate) return
     if (ethereumNetworkUpdate.blockHeight) {
+      this.ethEngine.log(
+        `ETH processEthereumNetworkUpdate blockHeight ${ethereumNetworkUpdate.server} won`
+      )
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight}`)
       if (this.ethEngine.walletLocalData.blockHeight !== blockHeight) {
@@ -900,6 +910,9 @@ export class EthereumNetwork {
     }
 
     if (ethereumNetworkUpdate.nonce) {
+      this.ethEngine.log(
+        `ETH processEthereumNetworkUpdate nonce ${ethereumNetworkUpdate.server} won`
+      )
       this.ethNeeds.nonceLastChecked = now
       this.ethEngine.walletLocalData.otherData.nextNonce =
         ethereumNetworkUpdate.nonce
@@ -907,6 +920,9 @@ export class EthereumNetwork {
     }
 
     if (ethereumNetworkUpdate.tokenBal) {
+      this.ethEngine.log(
+        `ETH processEthereumNetworkUpdate tokenBal ${ethereumNetworkUpdate.server} won`
+      )
       for (const tk of Object.keys(ethereumNetworkUpdate.tokenBal)) {
         this.ethNeeds.tokenBalLastChecked[tk] = now
         this.ethEngine.updateBalance(tk, ethereumNetworkUpdate.tokenBal[tk])
@@ -914,6 +930,9 @@ export class EthereumNetwork {
     }
 
     if (ethereumNetworkUpdate.tokenTxs) {
+      this.ethEngine.log(
+        `ETH processEthereumNetworkUpdate tokenTxs ${ethereumNetworkUpdate.server} won`
+      )
       for (const tk of Object.keys(ethereumNetworkUpdate.tokenTxs)) {
         this.ethNeeds.tokenTxsLastChecked[tk] = now
         this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
