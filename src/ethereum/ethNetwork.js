@@ -23,7 +23,12 @@ import {
   EtherscanGetTokenTransactions,
   EtherscanGetTransactions
 } from './ethSchema'
-import type { AlethioTokenTransfer } from './ethTypes'
+import type {
+  AlethioTokenTransfer,
+  AlethioTransaction,
+  EthereumTxOtherParams,
+  EtherscanTransaction
+} from './ethTypes'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
 const NONCE_POLL_MILLISECONDS = 20000
@@ -101,6 +106,143 @@ export class EthereumNetwork {
     this.processEthereumNetworkUpdate = this.processEthereumNetworkUpdate.bind(
       this
     )
+  }
+
+  processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
+    let netNativeAmount: string // Amount received into wallet
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
+
+    if (tx.contractAddress) {
+      nativeNetworkFee = '0'
+    } else {
+      nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
+    }
+
+    if (
+      tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // is a spend
+      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
+        // Spend to self. netNativeAmount is just the fee
+        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+      } else {
+        // spend to someone else
+        netNativeAmount = bns.sub('0', tx.value)
+
+        // For spends, include the network fee in the transaction amount
+        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+      }
+    } else {
+      // Receive transaction
+      netNativeAmount = bns.add('0', tx.value)
+      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+    }
+
+    const otherParams: EthereumTxOtherParams = {
+      from: [tx.from],
+      to: [tx.to],
+      gas: tx.gas,
+      gasPrice: tx.gasPrice,
+      gasUsed: tx.gasUsed,
+      cumulativeGasUsed: tx.cumulativeGasUsed,
+      errorVal: parseInt(tx.isError),
+      tokenRecipientAddress: null
+    }
+
+    let blockHeight = parseInt(tx.blockNumber)
+    if (blockHeight < 0) blockHeight = 0
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.hash,
+      date: parseInt(tx.timeStamp),
+      currencyCode,
+      blockHeight,
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      otherParams
+    }
+
+    return edgeTransaction
+  }
+
+  processAlethioTransaction(
+    tokenTransfer: AlethioTokenTransfer,
+    tx: AlethioTransaction,
+    currencyCode: string
+  ): EdgeTransaction | null {
+    let netNativeAmount: string
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
+    let tokenRecipientAddress: string | null
+    let parentNetworkFee: string
+
+    const value = tx.attributes.value
+    const fee = tx.attributes.fee
+    const fromAddress = tokenTransfer.relationships.from.data.id
+    const toAddress = tokenTransfer.relationships.to.data.id
+
+    if (currencyCode === PRIMARY_CURRENCY) {
+      nativeNetworkFee = fee
+      tokenRecipientAddress = null
+      parentNetworkFee = ''
+    } else {
+      nativeNetworkFee = '0'
+      tokenRecipientAddress = toAddress
+      parentNetworkFee = fee
+    }
+
+    if (
+      fromAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // is a spend
+      if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
+        // Spend to self. netNativeAmount is just the fee
+        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+      } else {
+        // spend to someone else
+        netNativeAmount = bns.sub('0', value)
+
+        // For spends, include the network fee in the transaction amount
+        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+      }
+    } else if (
+      toAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // Receive transaction
+      netNativeAmount = value
+      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+    } else {
+      return null
+    }
+
+    const otherParams: EthereumTxOtherParams = {
+      from: [fromAddress],
+      to: [toAddress],
+      gas: tx.attributes.msgGasLimit,
+      gasPrice: tx.attributes.txGasPrice,
+      gasUsed: `${tx.attributes.txGasUsed}`,
+      errorVal: tx.attributes.msgError ? 1 : 0,
+      tokenRecipientAddress
+    }
+
+    let blockHeight = tokenTransfer.attributes.globalRank[0]
+    if (blockHeight < 0) blockHeight = 0
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.attributes.txHash,
+      date: tx.attributes.blockCreationTime,
+      currencyCode,
+      blockHeight,
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      parentNetworkFee,
+      otherParams
+    }
+
+    return edgeTransaction
   }
 
   async fetchGet(url: string, _options: Object = {}) {
@@ -586,7 +728,7 @@ export class EthereumNetwork {
       if (valid) {
         const transactions = jsonObj.result
         for (let i = 0; i < transactions.length; i++) {
-          const tx = this.ethEngine.processEtherscanTransaction(
+          const tx = this.processEtherscanTransaction(
             transactions[i],
             currencyCode
           )
@@ -682,7 +824,7 @@ export class EthereumNetwork {
               const txJsonObj = await this.fetchGetAlethio(txLink, false)
               const txValid = validateObject(txJsonObj, AlethioAccountsTxSchema)
               if (txValid) {
-                const tx = this.ethEngine.processAlethioTransaction(
+                const tx = this.processAlethioTransaction(
                   tokenTransfer,
                   txJsonObj.data,
                   this.getTokenSymbol(tokenTransfer)
