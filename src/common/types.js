@@ -66,6 +66,8 @@ export class WalletLocalData {
         this.enabledTokens = data.enabledTokens
       }
       if (typeof data.otherData !== 'undefined') this.otherData = data.otherData
+      if (typeof data.lastTransactionQueryHeight === 'object')
+        this.lastTransactionQueryHeight = data.lastTransactionQueryHeight
     }
   }
 }
