@@ -264,3 +264,141 @@ export const BlockChairAddressSchema = {
   },
   required: ['data']
 }
+
+export const AlethioAccountsTokenTransferSchema = {
+  type: 'object',
+  properties: {
+    data: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          attributes: {
+            type: 'object',
+            properties: {
+              blockCreationTime: { type: 'number' },
+              symbol: { type: 'string' },
+              globalRank: {
+                type: 'array',
+                items: { type: 'number' }
+              }
+            },
+            required: ['blockCreationTime', 'globalRank']
+          },
+          relationships: {
+            type: 'object',
+            properties: {
+              from: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' }
+                    }
+                  },
+                  links: {
+                    type: 'object',
+                    properties: {
+                      related: { type: 'string' }
+                    }
+                  }
+                }
+              },
+              to: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' }
+                    }
+                  },
+                  links: {
+                    type: 'object',
+                    properties: {
+                      related: { type: 'string' }
+                    }
+                  }
+                }
+              },
+              transaction: {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' }
+                    }
+                  },
+                  links: {
+                    type: 'object',
+                    properties: {
+                      related: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            },
+            required: ['from', 'to', 'transaction']
+          }
+        },
+        required: ['attributes', 'relationships']
+      }
+    },
+    links: {
+      type: 'object',
+      properties: {
+        next: { type: 'string' }
+      }
+    },
+    meta: {
+      type: 'object',
+      properties: {
+        page: {
+          type: 'object',
+          properties: {
+            hasNext: { type: 'boolean' }
+          },
+          required: ['hasNext']
+        }
+      },
+      required: ['page']
+    }
+  },
+  required: ['data', 'links', 'meta']
+}
+
+export const AlethioAccountsTxSchema = {
+  type: 'object',
+  properties: {
+    data: {
+      type: 'object',
+      properties: {
+        attributes: {
+          type: 'object',
+          properties: {
+            txHash: { type: 'string' },
+            value: { type: 'string' },
+            fee: { type: 'string' },
+            msgGasLimit: { type: 'string' },
+            txGasPrice: { type: 'string' },
+            txGasUsed: { type: 'number' },
+            msgError: { type: 'boolean' }
+          },
+          required: [
+            'txHash',
+            'value',
+            'fee',
+            'msgGasLimit',
+            'txGasPrice',
+            'txGasUsed',
+            'msgError'
+          ]
+        }
+      },
+      required: ['attributes']
+    }
+  },
+  required: ['data']
+}

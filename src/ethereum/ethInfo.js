@@ -21,7 +21,8 @@ const otherSettings: EthereumSettings = {
     USDT: true,
     AGLD: true
   },
-  blockchairApiServers: ['https://api.blockchair.com']
+  blockchairApiServers: ['https://api.blockchair.com'],
+  alethioApiServers: ['https://api.aleth.io/v1']
 }
 
 const defaultSettings: any = {

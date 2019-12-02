@@ -13,6 +13,8 @@ import {
 import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
+  AlethioAccountsTokenTransferSchema,
+  AlethioAccountsTxSchema,
   BlockChairAddressSchema,
   BlockChairStatsSchema,
   EtherscanGetAccountBalance,
@@ -21,13 +23,14 @@ import {
   EtherscanGetTokenTransactions,
   EtherscanGetTransactions
 } from './ethSchema'
+import type { AlethioTokenTransfer } from './ethTypes'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
 const NONCE_POLL_MILLISECONDS = 20000
 const BAL_POLL_MILLISECONDS = 20000
 const TXS_POLL_MILLISECONDS = 20000
 
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 60 * 24 * 7 // ~ one week
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
@@ -99,10 +102,10 @@ export class EthereumNetwork {
     )
   }
 
-  async fetchGet(url: string) {
-    const response = await this.ethEngine.io.fetch(url, {
-      method: 'GET'
-    })
+  async fetchGet(url: string, _options: Object = {}) {
+    const options = { ..._options }
+    options.method = 'GET'
+    const response = await this.ethEngine.io.fetch(url, options)
     if (!response.ok) {
       const {
         blockcypherApiKey,
@@ -197,6 +200,36 @@ export class EthereumNetwork {
         .blockchairApiServers[0]
     }${path}${keyParam}`
     return this.fetchGet(url)
+  }
+
+  /*
+   * @param pathOrLink: A "path" is appended to the alethioServers base URL and
+   *  a "link" is a full URL that needs no further modification
+   * @param isPath: If TRUE then the pathOrLink param is interpretted as a "path"
+   *  otherwise it is interpretted as a "link"
+   *
+   * @throws Exception when Alethio throttles with a 429 response code
+   */
+  async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
+    console.log(`fetchGetAlethio: ${pathOrLink}`)
+    const { alethioApiKey } = this.ethEngine.initOptions
+    if (alethioApiKey) {
+      const url = isPath
+        ? `${
+            this.ethEngine.currencyInfo.defaultSettings.otherSettings
+              .alethioApiServers[0]
+          }${pathOrLink}`
+        : pathOrLink
+      return this.fetchGet(url, {
+        headers: {
+          Authorization: `Bearer ${alethioApiKey}`
+        }
+      })
+    } else {
+      return Promise.reject(
+        new Error('fetchGetAlethio ERROR: alethioApiKey not set')
+      )
+    }
   }
 
   async broadcastEtherscan(
@@ -534,52 +567,187 @@ export class EthereumNetwork {
     }
 
     const allTransactions = []
-    try {
-      while (1) {
-        const offset = NUM_TRANSACTIONS_TO_QUERY
-        const jsonObj = await this.multicastServers('getTransactions', {
-          currencyCode,
-          address,
-          startBlock,
-          page,
-          offset,
-          contractAddress
-        })
-        const valid = validateObject(jsonObj, schema)
-        if (valid) {
-          const transactions = jsonObj.result
-          for (let i = 0; i < transactions.length; i++) {
-            const tx = this.ethEngine.processEtherscanTransaction(
-              transactions[i],
-              currencyCode
-            )
-            allTransactions.push(tx)
-          }
-          if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
-            break
-          }
-          page++
-        } else {
+    let server
+    while (1) {
+      const offset = NUM_TRANSACTIONS_TO_QUERY
+      const response = await this.multicastServers('getTransactions', {
+        currencyCode,
+        address,
+        startBlock,
+        page,
+        offset,
+        contractAddress
+      })
+      server = response.server
+      const jsonObj = response.result
+      const valid = validateObject(jsonObj, schema)
+      if (valid) {
+        const transactions = jsonObj.result
+        for (let i = 0; i < transactions.length; i++) {
+          const tx = this.ethEngine.processEtherscanTransaction(
+            transactions[i],
+            currencyCode
+          )
+          allTransactions.push(tx)
+        }
+        if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
           break
         }
+        page++
+      } else {
+        throw new Error(
+          `checkTxsEthscan invalid JSON data:${JSON.stringify(jsonObj)}`
+        )
       }
-    } catch (e) {
-      this.ethEngine.log(
-        `Error checkTxs ETH: ${this.ethEngine.walletLocalData.publicKey}`,
-        e
-      )
     }
 
-    if (allTransactions.length > 0) {
-      const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
-        blockHeight: startBlock,
-        edgeTransactions: allTransactions
+    const edgeTransactionsBlockHeightTuple: EdgeTransactionsBlockHeightTuple = {
+      blockHeight: startBlock,
+      edgeTransactions: allTransactions
+    }
+    return {
+      tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple },
+      server
+    }
+  }
+
+  getTokenSymbol(tokenTransfer: AlethioTokenTransfer) {
+    if (tokenTransfer.type === 'EtherTransfer') {
+      return 'ETH'
+    } else {
+      return tokenTransfer.attributes.symbol
+    }
+  }
+
+  isTokenEnabled(tokenTransfer: AlethioTokenTransfer) {
+    if (tokenTransfer.type === 'EtherTransfer') {
+      return true
+    } else {
+      const currencyCode = tokenTransfer.attributes.symbol
+      const tokenTxContractAddress = tokenTransfer.relationships.token.data.id
+      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+        if (currencyCode === tk) {
+          const tokenInfo = this.ethEngine.getTokenInfo(tk)
+          const contractAddress = tokenInfo.contractAddress
+          if (
+            contractAddress.toLowerCase() ===
+            tokenTxContractAddress.toLowerCase()
+          ) {
+            return true
+          }
+        }
       }
-      return {
-        tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple }
+      return false
+    }
+  }
+
+  async checkTxsAlethio(
+    startBlock: number,
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey
+
+    let linkNext
+    const allTransactions: Array<EdgeTransaction> = []
+    while (1) {
+      let jsonObj
+      if (linkNext) {
+        jsonObj = await this.fetchGetAlethio(linkNext, false)
+      } else {
+        if (currencyCode === PRIMARY_CURRENCY) {
+          jsonObj = await this.fetchGetAlethio(
+            `/accounts/${address}/etherTransfers`,
+            true
+          )
+        } else {
+          jsonObj = await this.fetchGetAlethio(
+            `/accounts/${address}/tokenTransfers`,
+            true
+          )
+        }
+      }
+      const valid = validateObject(jsonObj, AlethioAccountsTokenTransferSchema)
+      if (valid) {
+        const tokenTransfers: Array<AlethioTokenTransfer> = jsonObj.data
+        linkNext = jsonObj.links.next
+        let hasNext = jsonObj.meta.page.hasNext
+        for (const tokenTransfer of tokenTransfers) {
+          const txBlockheight = tokenTransfer.attributes.globalRank[0]
+          if (this.isTokenEnabled(tokenTransfer)) {
+            if (txBlockheight > startBlock) {
+              const txLink =
+                tokenTransfer.relationships.transaction.links.related
+              const txJsonObj = await this.fetchGetAlethio(txLink, false)
+              const txValid = validateObject(txJsonObj, AlethioAccountsTxSchema)
+              if (txValid) {
+                const tx = this.ethEngine.processAlethioTransaction(
+                  tokenTransfer,
+                  txJsonObj.data,
+                  this.getTokenSymbol(tokenTransfer)
+                )
+                if (tx) {
+                  allTransactions.push(tx)
+                }
+              } else {
+                throw new Error(
+                  `checkTxsAlethio ${txLink} response is invalid(1)`
+                )
+              }
+            } else {
+              hasNext = false
+              break
+            }
+          }
+        }
+        if (!hasNext) {
+          break
+        }
+      } else {
+        throw new Error(`checkTxsAlethio response is invalid(2)`)
       }
     }
-    return {}
+
+    // We init txsByCurrency with all tokens (or ETH) in order to
+    // force processEthereumNetworkUpdate to set the lastChecked
+    // timestamp.  Otherwise tokens w/out transactions won't get
+    // throttled properly. Remember that Alethio responds with
+    // txs for *all* tokens.
+    const response = { tokenTxs: {}, server: 'alethio' }
+    if (currencyCode !== PRIMARY_CURRENCY) {
+      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+        if (tk !== PRIMARY_CURRENCY) {
+          response.tokenTxs[tk] = {
+            blockHeight: startBlock,
+            edgeTransactions: []
+          }
+        }
+      }
+    } else {
+      // ETH is singled out here because it is a different (but very
+      // similar) Alethio process
+      response.tokenTxs.ETH = {
+        blockHeight: startBlock,
+        edgeTransactions: []
+      }
+    }
+
+    for (const tx: EdgeTransaction of allTransactions) {
+      response.tokenTxs[tx.currencyCode].edgeTransactions.push(tx)
+    }
+    return response
+  }
+
+  async checkTxs(
+    startBlock: number,
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> {
+    return asyncWaterfall([
+      async () => this.checkTxsAlethio(startBlock, currencyCode),
+      async () => this.checkTxsEthscan(startBlock, currencyCode)
+    ]).catch(err => {
+      this.ethEngine.log('checkTxs failed to update', err)
+      return {}
+    })
   }
 
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {

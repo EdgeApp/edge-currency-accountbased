@@ -36,6 +36,8 @@ import {
   SuperEthGetUnconfirmedTransactions
 } from './ethSchema.js'
 import {
+  type AlethioTokenTransfer,
+  type AlethioTransaction,
   type EthereumFee,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
@@ -137,6 +139,84 @@ export class EthereumEngine extends CurrencyEngine {
       networkFee: nativeNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
+      otherParams
+    }
+
+    return edgeTransaction
+  }
+
+  processAlethioTransaction(
+    tokenTransfer: AlethioTokenTransfer,
+    tx: AlethioTransaction,
+    currencyCode: string
+  ): EdgeTransaction | null {
+    let netNativeAmount: string
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
+    let tokenRecipientAddress: string | null
+    let parentNetworkFee: string
+
+    const value = tx.attributes.value
+    const fee = tx.attributes.fee
+    const fromAddress = tokenTransfer.relationships.from.data.id
+    const toAddress = tokenTransfer.relationships.to.data.id
+
+    if (currencyCode === PRIMARY_CURRENCY) {
+      nativeNetworkFee = fee
+      tokenRecipientAddress = null
+      parentNetworkFee = ''
+    } else {
+      nativeNetworkFee = '0'
+      tokenRecipientAddress = toAddress
+      parentNetworkFee = fee
+    }
+
+    if (
+      fromAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // is a spend
+      if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
+        // Spend to self. netNativeAmount is just the fee
+        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+      } else {
+        // spend to someone else
+        netNativeAmount = bns.sub('0', value)
+
+        // For spends, include the network fee in the transaction amount
+        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+      }
+    } else if (
+      toAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+    ) {
+      // Receive transaction
+      netNativeAmount = value
+      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+    } else {
+      return null
+    }
+
+    const otherParams: EthereumTxOtherParams = {
+      from: [fromAddress],
+      to: [toAddress],
+      gas: tx.attributes.msgGasLimit,
+      gasPrice: tx.attributes.txGasPrice,
+      gasUsed: `${tx.attributes.txGasUsed}`,
+      errorVal: tx.attributes.msgError ? 1 : 0,
+      tokenRecipientAddress
+    }
+
+    let blockHeight = tokenTransfer.attributes.globalRank[0]
+    if (blockHeight < 0) blockHeight = 0
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.attributes.txHash,
+      date: tx.attributes.blockCreationTime,
+      currencyCode,
+      blockHeight,
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      parentNetworkFee,
       otherParams
     }
 
