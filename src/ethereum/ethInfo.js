@@ -538,6 +538,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0xf5dce57282a584d2746faf1593d3121fcac444dc',
       symbolImage: `${imageServerUrl}/csai-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CDAI',
+      currencyName: 'Compound DAI',
+      denominations: [
+        {
+          name: 'CDAI',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
+      symbolImage: `${imageServerUrl}/cdai-logo-solo-64.png`
     }
   ]
 }
