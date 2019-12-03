@@ -40,8 +40,7 @@ import {
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumTxOtherParams,
-  type EthereumWalletOtherData,
-  type EtherscanTransaction
+  type EthereumWalletOtherData
 } from './ethTypes.js'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
@@ -82,65 +81,6 @@ export class EthereumEngine extends CurrencyEngine {
     }
     this.tokenCheckBalanceStatus[tk] = 1
     this.updateOnAddressesChecked()
-  }
-
-  processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
-    let netNativeAmount: string // Amount received into wallet
-    const ourReceiveAddresses: Array<string> = []
-    let nativeNetworkFee: string
-
-    if (tx.contractAddress) {
-      nativeNetworkFee = '0'
-    } else {
-      nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
-    }
-
-    if (
-      tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
-    ) {
-      // is a spend
-      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-        // Spend to self. netNativeAmount is just the fee
-        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
-      } else {
-        // spend to someone else
-        netNativeAmount = bns.sub('0', tx.value)
-
-        // For spends, include the network fee in the transaction amount
-        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
-      }
-    } else {
-      // Receive transaction
-      netNativeAmount = bns.add('0', tx.value)
-      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [tx.from],
-      to: [tx.to],
-      gas: tx.gas,
-      gasPrice: tx.gasPrice,
-      gasUsed: tx.gasUsed,
-      cumulativeGasUsed: tx.cumulativeGasUsed,
-      errorVal: parseInt(tx.isError),
-      tokenRecipientAddress: null
-    }
-
-    let blockHeight = parseInt(tx.blockNumber)
-    if (blockHeight < 0) blockHeight = 0
-    const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
-      date: parseInt(tx.timeStamp),
-      currencyCode,
-      blockHeight,
-      nativeAmount: netNativeAmount,
-      networkFee: nativeNetworkFee,
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams
-    }
-
-    return edgeTransaction
   }
 
   processUnconfirmedTransaction(tx: Object) {

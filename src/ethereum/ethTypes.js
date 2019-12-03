@@ -76,7 +76,7 @@ export type EthereumTxOtherParams = {
   gas: string,
   gasPrice: string,
   gasUsed: string,
-  cumulativeGasUsed: string,
+  cumulativeGasUsed?: string,
   errorVal: number,
   tokenRecipientAddress: string | null,
   data?: string | null
@@ -86,4 +86,42 @@ export type EthereumWalletOtherData = {
   nextNonce: string,
   unconfirmedNextNonce: string,
   networkFees: EthereumFees
+}
+
+export type AlethioTokenTransferAttributes = {
+  blockCreationTime: string,
+  symbol: string,
+  globalRank: Array<number>
+}
+
+export type AlethioTransactionDataObj = {
+  data: { id: string },
+  links: { related: string }
+}
+
+export type AlethioTransactionRelationships = {
+  from: AlethioTransactionDataObj,
+  to: AlethioTransactionDataObj,
+  transaction: AlethioTransactionDataObj
+}
+
+export type AlethioTokenTransfer = {
+  type: string,
+  attributes: AlethioTokenTransferAttributes,
+  relationships: AlethioTransactionRelationships
+}
+
+export type AlethioTransactionAttributes = {
+  txHash: string,
+  blockCreationTime: number,
+  value: string,
+  fee: string,
+  msgGasLimit: string,
+  txGasPrice: string,
+  txGasUsed: number,
+  msgError: boolean
+}
+
+export type AlethioTransaction = {
+  attributes: AlethioTransactionAttributes
 }
