@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.5.7 (2019-12-03)
+
+- Add CDAI
+- Add Alethio API
+
 # 0.5.6 (2019-11-25)
 
 - Add Blockchair API
