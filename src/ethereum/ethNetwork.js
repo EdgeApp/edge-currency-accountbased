@@ -120,7 +120,8 @@ export class EthereumNetwork {
     }
 
     if (
-      tx.from.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+      tx.from.toLowerCase() ===
+      this.ethEngine.walletLocalData.publicKey.toLowerCase()
     ) {
       // is a spend
       if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
@@ -136,7 +137,9 @@ export class EthereumNetwork {
     } else {
       // Receive transaction
       netNativeAmount = bns.add('0', tx.value)
-      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+      ourReceiveAddresses.push(
+        this.ethEngine.walletLocalData.publicKey.toLowerCase()
+      )
     }
 
     const otherParams: EthereumTxOtherParams = {
@@ -194,7 +197,8 @@ export class EthereumNetwork {
     }
 
     if (
-      fromAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+      fromAddress.toLowerCase() ===
+      this.ethEngine.walletLocalData.publicKey.toLowerCase()
     ) {
       // is a spend
       if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
@@ -208,11 +212,14 @@ export class EthereumNetwork {
         netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
       }
     } else if (
-      toAddress.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
+      toAddress.toLowerCase() ===
+      this.ethEngine.walletLocalData.publicKey.toLowerCase()
     ) {
       // Receive transaction
       netNativeAmount = value
-      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
+      ourReceiveAddresses.push(
+        this.ethEngine.walletLocalData.publicKey.toLowerCase()
+      )
     } else {
       return null
     }
@@ -755,33 +762,28 @@ export class EthereumNetwork {
     }
   }
 
-  getTokenSymbol(tokenTransfer: AlethioTokenTransfer) {
-    if (tokenTransfer.type === 'EtherTransfer') {
+  /*
+   * @returns The currencyCode of the token or undefined if
+   * the token is not enabled for this user.
+   */
+  getTokenCurrencyCode(txnContractAddress: string): string | undefined {
+    const address = this.ethEngine.walletLocalData.publicKey
+    if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
       return 'ETH'
     } else {
-      return tokenTransfer.attributes.symbol
-    }
-  }
-
-  isTokenEnabled(tokenTransfer: AlethioTokenTransfer) {
-    if (tokenTransfer.type === 'EtherTransfer') {
-      return true
-    } else {
-      const currencyCode = tokenTransfer.attributes.symbol
-      const tokenTxContractAddress = tokenTransfer.relationships.token.data.id
       for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
-        if (currencyCode === tk) {
-          const tokenInfo = this.ethEngine.getTokenInfo(tk)
-          const contractAddress = tokenInfo.contractAddress
+        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        if (tokenInfo) {
+          const tokenContractAddress = tokenInfo.contractAddress
           if (
-            contractAddress.toLowerCase() ===
-            tokenTxContractAddress.toLowerCase()
+            txnContractAddress &&
+            tokenContractAddress.toLowerCase() ===
+              txnContractAddress.toLowerCase()
           ) {
-            return true
+            return tk
           }
         }
       }
-      return false
     }
   }
 
@@ -817,8 +819,10 @@ export class EthereumNetwork {
         let hasNext = jsonObj.meta.page.hasNext
         for (const tokenTransfer of tokenTransfers) {
           const txBlockheight = tokenTransfer.attributes.globalRank[0]
-          if (this.isTokenEnabled(tokenTransfer)) {
-            if (txBlockheight > startBlock) {
+          if (txBlockheight > startBlock) {
+            const contractAddress = tokenTransfer.relationships.token.data.id
+            const currencyCode = this.getTokenCurrencyCode(contractAddress)
+            if (typeof currencyCode === 'string') {
               const txLink =
                 tokenTransfer.relationships.transaction.links.related
               const txJsonObj = await this.fetchGetAlethio(txLink, false)
@@ -827,7 +831,7 @@ export class EthereumNetwork {
                 const tx = this.processAlethioTransaction(
                   tokenTransfer,
                   txJsonObj.data,
-                  this.getTokenSymbol(tokenTransfer)
+                  currencyCode
                 )
                 if (tx) {
                   allTransactions.push(tx)
@@ -837,10 +841,10 @@ export class EthereumNetwork {
                   `checkTxsAlethio ${txLink} response is invalid(1)`
                 )
               }
-            } else {
-              hasNext = false
-              break
             }
+          } else {
+            hasNext = false
+            break
           }
         }
         if (!hasNext) {
