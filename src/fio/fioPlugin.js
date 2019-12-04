@@ -1,4 +1,3 @@
-import { FIOSDK } from '@dapix/react-native-fio'
 import { bns } from 'biggystring'
 /**
  * Created by paul on 8/8/17.
@@ -14,6 +13,7 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import { FIOSDK } from 'fiosdk'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
@@ -21,22 +21,25 @@ import { getFetchJson } from '../react-native-io.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
 
+const FIO_CURRENCY_CODE = 'FIO'
+const FIO_TYPE = 'fio'
+
 export function checkAddress(address: string): boolean {
-  const start = address.startsWith('FIO')
-  const lenght = address.length === 53
-  return start && lenght
+  const start = address.startsWith(FIO_CURRENCY_CODE)
+  const length = address.length === 53
+  return start && length
 }
 
 export class FioPlugin extends CurrencyPlugin {
   otherMethods: Object
 
   constructor(io: EdgeIo) {
-    super(io, 'fio', currencyInfo)
+    super(io, FIO_TYPE, currencyInfo)
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
-    if (type === 'fio') {
+    if (type === FIO_TYPE) {
       const buffer = this.io.random(32)
       return FIOSDK.createPrivateKey(buffer)
     } else {
@@ -46,7 +49,7 @@ export class FioPlugin extends CurrencyPlugin {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
-    if (type === 'fio') {
+    if (type === FIO_TYPE) {
       return FIOSDK.derivedPublicKey(walletInfo.keys.fioKey)
     } else {
       throw new Error('InvalidWalletType')
@@ -60,7 +63,7 @@ export class FioPlugin extends CurrencyPlugin {
       {
         fio: true
       },
-      'FIO'
+      FIO_CURRENCY_CODE
     )
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
@@ -88,7 +91,7 @@ export class FioPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      const currencyCode: string = 'FIO'
+      const currencyCode: string = FIO_CURRENCY_CODE
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
@@ -96,7 +99,7 @@ export class FioPlugin extends CurrencyPlugin {
       }
       amount = bns.div(nativeAmount, denom.multiplier, 16)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'fio', amount)
+    const encodedUri = this.encodeUriCommon(obj, FIO_TYPE, amount)
     return encodedUri
   }
 }

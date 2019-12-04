@@ -661,35 +661,6 @@
   optionalDependencies:
     "@ledgerhq/hw-transport-node-hid" "^4.63.2"
 
-"@dapix/fiojs@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@dapix/fiojs/-/fiojs-0.1.0.tgz#01f682aad4e41c73a836c0a9c409cf2e49edb3cd"
-  integrity sha512-scQM/tIpyLn/7AV2x1jWu7VWU9CXiWLmyVrUiTy6AwgllQOBCQvduxihLiW3OzUVvtEvSVLoeIXtmElvTjqpIA==
-  dependencies:
-    ajv "^6.10.2"
-    babel-runtime "6.26.0"
-    bigi "^1.4.2"
-    browserify-aes "^1.2.0"
-    bs58 "^4.0.1"
-    create-hash "^1.2.0"
-    create-hmac "^1.1.7"
-    ecurve "^1.0.6"
-    long "^4.0.0"
-    randombytes "^2.1.0"
-    text-encoding "0.7.0"
-
-"@dapix/react-native-fio@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@dapix/react-native-fio/-/react-native-fio-0.1.0.tgz#320c2e8bf9504526a0f7b805a43d7b3b77f2477e"
-  integrity sha512-7zgyglsE7GBYoy5He6XmY8BJIzfVuoqTrW9COqP+JYtxdxm0yr1iCFTeCrWPcV8fFWuRN/ZjVX9gJpggnFuG/w==
-  dependencies:
-    "@dapix/fiojs" "0.1.0"
-    bip39 "^3.0.2"
-    eosjs-ecc "^4.0.4"
-    hdkey "^1.1.1"
-    js-sha512 "^0.8.0"
-    wif "^2.0.6"
-
 "@glennsl/bs-json@^4.0.0":
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/@glennsl/bs-json/-/bs-json-4.0.0.tgz#f057d0d1d84d614e27d8bbb67b64e6b6727f24b2"
@@ -830,6 +801,11 @@
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@types/normalize-package-data/-/normalize-package-data-2.4.0.tgz#e486d0d97396d79beedd0a6e33f4534ff6b4973e"
   integrity sha512-f5j5b/Gf71L+dbqxIpQ4Z2WlmI/mPJ0fOkGGmFgtb6sAu97EPczzbS3/tJKxmcYDj55OX6ssqwDAWOHIYDRDGA==
+
+"@types/text-encoding@0.0.35":
+  version "0.0.35"
+  resolved "https://registry.yarnpkg.com/@types/text-encoding/-/text-encoding-0.0.35.tgz#6f14474e0b232bc70c59677aadc65dcc5a99c3a9"
+  integrity sha512-jfo/A88XIiAweUa8np+1mPbm3h2w0s425YrI8t3wk5QxhH6UI7w517MboNVnGDeMSuoFwA8Rwmklno+FicvV4g==
 
 "@types/ws@^3.2.0":
   version "3.2.1"
@@ -3255,6 +3231,34 @@ findup-sync@^2.0.0:
     micromatch "^3.0.4"
     resolve-dir "^1.0.1"
 
+"fiojs@file:../fiojs":
+  version "0.1.0"
+  dependencies:
+    ajv "^6.10.2"
+    babel-runtime "6.26.0"
+    bigi "^1.4.2"
+    browserify-aes "^1.2.0"
+    bs58 "^4.0.1"
+    create-hash "^1.2.0"
+    create-hmac "^1.1.7"
+    ecurve "^1.0.6"
+    long "^4.0.0"
+    randombytes "^2.1.0"
+    text-encoding "0.7.0"
+
+"fiosdk@file:../fiosdk_typescript":
+  version "1.0.0"
+  dependencies:
+    "@types/text-encoding" "0.0.35"
+    bip39 "^3.0.2"
+    eosjs-ecc "^4.0.4"
+    fiojs "file:../../../../../Library/Caches/Yarn/v5/npm-fiosdk-1.0.0-08560074-6423-41ec-87bd-f7400a657317-1575392015465/node_modules/fiojs"
+    hdkey "^1.1.1"
+    js-sha512 "^0.8.0"
+    livr "^2.3.0"
+    react-native-eos "^1.0.4"
+    wif "^2.0.6"
+
 first-match@~0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/first-match/-/first-match-0.0.1.tgz#a60ec642700f0f437234ebb7ec3f382476e542fd"
@@ -4504,6 +4508,11 @@ listr@^0.14.3:
     listr-verbose-renderer "^0.5.0"
     p-map "^2.0.0"
     rxjs "^6.3.3"
+
+livr@^2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/livr/-/livr-2.3.0.tgz#02bdef268eddbc32db7367df7eccb1e2ec587d50"
+  integrity sha512-napJP1sTlLwzqrQEeyj/trf//MGa6H/i3fqiWdM6eUjHhSA+no+xfEeKV5Kz7JyDbmUEPmq6L6jQwsCRwH9ndQ==
 
 load-json-file@^1.0.0:
   version "1.1.0"
@@ -5926,6 +5935,11 @@ rc@^1.2.7:
     ini "~1.3.0"
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
+
+react-native-eos@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/react-native-eos/-/react-native-eos-1.0.4.tgz#677c234df2223fd292319fbe1d1efa582184fd09"
+  integrity sha512-nE4gfLu6Y02jZkZULTVzkpn+Ck+Fadsf07WZL02VruHbgEfrCadxxg8csPaEJkvktuOHpPPCYZ8JJjxJhuia1w==
 
 read-pkg-up@^1.0.1:
   version "1.0.1"

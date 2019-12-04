@@ -11,9 +11,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'FIO',
   pluginName: 'fio',
   walletType: 'wallet:fio',
+
   defaultSettings,
-  addressExplorer: 'https://eospark.com/account/%s',
-  transactionExplorer: 'https://eospark.com/tx/%s',
+
+  // todo: Get proper urls
+  addressExplorer: 'https://monitor.testnet.fioprotocol.io/#accountInfo',
+  transactionExplorer: 'https://monitor.testnet.fioprotocol.io/',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
