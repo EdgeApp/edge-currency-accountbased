@@ -19,7 +19,7 @@ const otherSettings: TezosSettings = {
   // Mainnet:
   tezosRpcNodes: [
     'https://rpc.tzbeta.net',
-    'https://rpc.tulip.tools/mainnet',
+    //  'https://teznode.letzbake.com',
     'https://mainnet.tezrpc.me'
   ],
   tezosApiServers: ['https://mystique.tzkt.io', 'https://tzsimple.tulip.tools']
@@ -46,8 +46,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://dunscan.io/%s',
-  transactionExplorer: 'https://dunscan.io/%s',
+  addressExplorer: 'https://tzstats.com/%s',
+  transactionExplorer: 'https://tzstats.com/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
