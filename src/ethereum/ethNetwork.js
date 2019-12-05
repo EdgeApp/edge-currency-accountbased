@@ -1,3 +1,4 @@
+// @flow
 import { bns } from 'biggystring'
 import type { EdgeTransaction } from 'edge-core-js/src/types/types'
 
@@ -14,7 +15,6 @@ import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
   AlethioAccountsTokenTransferSchema,
-  AlethioAccountsTxSchema,
   BlockChairAddressSchema,
   BlockChairStatsSchema,
   EtherscanGetAccountBalance,
@@ -25,7 +25,6 @@ import {
 } from './ethSchema'
 import type {
   AlethioTokenTransfer,
-  AlethioTransaction,
   EthereumTxOtherParams,
   EtherscanTransaction
 } from './ethTypes'
@@ -56,7 +55,7 @@ type EthereumNetworkUpdate = {
   nonce?: number,
   tokenBal?: { [currencyCode: string]: string },
   tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple },
-  server: string
+  server?: string
 }
 
 type EthFunction =
@@ -83,6 +82,20 @@ async function broadcastWrapper(promise: Promise<Object>, server: string) {
 
 export class EthereumNetwork {
   ethNeeds: EthereumNeeds
+  ethEngine: EthereumEngine
+  fetchGetEtherscan: (...any) => any
+  fetchPostInfura: (...any) => any
+  multicastServers: (...any) => any
+  checkBlockHeightEthscan: (...any) => any
+  checkBlockHeightBlockchair: (...any) => any
+  checkBlockHeight: (...any) => any
+  checkNonce: (...any) => any
+  checkTxs: (...any) => any
+  checkTokenBalEthscan: (...any) => any
+  checkTokenBalBlockchair: (...any) => any
+  checkTokenBal: (...any) => any
+  processEthereumNetworkUpdate: (...any) => any
+
   constructor(ethEngine: EthereumEngine) {
     this.ethEngine = ethEngine
     this.ethNeeds = {
@@ -172,28 +185,26 @@ export class EthereumNetwork {
 
   processAlethioTransaction(
     tokenTransfer: AlethioTokenTransfer,
-    tx: AlethioTransaction,
     currencyCode: string
   ): EdgeTransaction | null {
     let netNativeAmount: string
     const ourReceiveAddresses: Array<string> = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
-    let parentNetworkFee: string
 
-    const value = tx.attributes.value
-    const fee = tx.attributes.fee
+    const value = tokenTransfer.attributes.value
+    const fee = tokenTransfer.attributes.fee
+      ? tokenTransfer.attributes.fee
+      : '0'
     const fromAddress = tokenTransfer.relationships.from.data.id
     const toAddress = tokenTransfer.relationships.to.data.id
 
     if (currencyCode === PRIMARY_CURRENCY) {
       nativeNetworkFee = fee
       tokenRecipientAddress = null
-      parentNetworkFee = ''
     } else {
       nativeNetworkFee = '0'
       tokenRecipientAddress = toAddress
-      parentNetworkFee = fee
     }
 
     if (
@@ -227,25 +238,25 @@ export class EthereumNetwork {
     const otherParams: EthereumTxOtherParams = {
       from: [fromAddress],
       to: [toAddress],
-      gas: tx.attributes.msgGasLimit,
-      gasPrice: tx.attributes.txGasPrice,
-      gasUsed: `${tx.attributes.txGasUsed}`,
-      errorVal: tx.attributes.msgError ? 1 : 0,
+      gas: '0',
+      gasPrice: '0',
+      gasUsed: '0',
+      errorVal: 0,
       tokenRecipientAddress
     }
 
     let blockHeight = tokenTransfer.attributes.globalRank[0]
     if (blockHeight < 0) blockHeight = 0
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.attributes.txHash,
-      date: tx.attributes.blockCreationTime,
+      txid: tokenTransfer.relationships.transaction.data.id,
+      date: tokenTransfer.attributes.blockCreationTime,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
-      parentNetworkFee,
+      parentNetworkFee: '',
       otherParams
     }
 
@@ -341,8 +352,8 @@ export class EthereumNetwork {
 
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     let keyParam = ''
-    if (includeKey) {
-      const { blockchairApiKey } = this.ethEngine.initOptions
+    const { blockchairApiKey } = this.ethEngine.initOptions
+    if (includeKey && blockchairApiKey) {
       keyParam = `&key=${blockchairApiKey}`
     }
     const url = `${
@@ -687,7 +698,8 @@ export class EthereumNetwork {
       )
       const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
       if (valid) {
-        const nonce = bns.add('0', jsonObj.result)
+        const nonceString = bns.add('0', jsonObj.result)
+        const nonce = parseInt(nonceString)
         return { nonce, server }
       }
     } catch (err) {
@@ -766,7 +778,7 @@ export class EthereumNetwork {
    * @returns The currencyCode of the token or undefined if
    * the token is not enabled for this user.
    */
-  getTokenCurrencyCode(txnContractAddress: string): string | undefined {
+  getTokenCurrencyCode(txnContractAddress: string): string | void {
     const address = this.ethEngine.walletLocalData.publicKey
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
       return 'ETH'
@@ -777,6 +789,7 @@ export class EthereumNetwork {
           const tokenContractAddress = tokenInfo.contractAddress
           if (
             txnContractAddress &&
+            typeof tokenContractAddress === 'string' &&
             tokenContractAddress.toLowerCase() ===
               txnContractAddress.toLowerCase()
           ) {
@@ -820,26 +833,18 @@ export class EthereumNetwork {
         for (const tokenTransfer of tokenTransfers) {
           const txBlockheight = tokenTransfer.attributes.globalRank[0]
           if (txBlockheight > startBlock) {
-            const contractAddress = tokenTransfer.relationships.token.data.id
-            const currencyCode = this.getTokenCurrencyCode(contractAddress)
-            if (typeof currencyCode === 'string') {
-              const txLink =
-                tokenTransfer.relationships.transaction.links.related
-              const txJsonObj = await this.fetchGetAlethio(txLink, false)
-              const txValid = validateObject(txJsonObj, AlethioAccountsTxSchema)
-              if (txValid) {
-                const tx = this.processAlethioTransaction(
-                  tokenTransfer,
-                  txJsonObj.data,
-                  currencyCode
-                )
-                if (tx) {
-                  allTransactions.push(tx)
-                }
-              } else {
-                throw new Error(
-                  `checkTxsAlethio ${txLink} response is invalid(1)`
-                )
+            let txCurrencyCode = PRIMARY_CURRENCY
+            if (currencyCode !== PRIMARY_CURRENCY) {
+              const contractAddress = tokenTransfer.relationships.token.data.id
+              txCurrencyCode = this.getTokenCurrencyCode(contractAddress)
+            }
+            if (typeof txCurrencyCode === 'string') {
+              const tx = this.processAlethioTransaction(
+                tokenTransfer,
+                txCurrencyCode
+              )
+              if (tx) {
+                allTransactions.push(tx)
               }
             }
           } else {
@@ -909,14 +914,16 @@ export class EthereumNetwork {
       server = response.server
     } else {
       const tokenInfo = this.ethEngine.getTokenInfo(tk)
-      const contractAddress = tokenInfo.contractAddress
-      const response = await this.multicastServers(
-        'getTokenBalance',
-        address,
-        contractAddress
-      )
-      jsonObj = response.result
-      server = response.server
+      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+        const contractAddress = tokenInfo.contractAddress
+        const response = await this.multicastServers(
+          'getTokenBalance',
+          address,
+          contractAddress
+        )
+        jsonObj = response.result
+        server = response.server
+      }
     }
     const valid = validateObject(jsonObj, EtherscanGetAccountBalance)
     if (valid) {
@@ -945,7 +952,7 @@ export class EthereumNetwork {
         const tokenAddress = tokenData.token_address
         const tokenSymbol = tokenData.token_symbol
         const tokenInfo = this.ethEngine.getTokenInfo(tokenSymbol)
-        if (tokenInfo.contractAddress === tokenAddress) {
+        if (tokenInfo && tokenInfo.contractAddress === tokenAddress) {
           response[tokenSymbol] = balance
         } else {
           // Do nothing, eg: Old DAI token balance is ignored
@@ -1040,11 +1047,15 @@ export class EthereumNetwork {
     if (!ethereumNetworkUpdate) return
     if (ethereumNetworkUpdate.blockHeight) {
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate blockHeight ${ethereumNetworkUpdate.server} won`
+        `ETH processEthereumNetworkUpdate blockHeight ${ethereumNetworkUpdate.server ||
+          'no server'} won`
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
-      this.ethEngine.log(`Got block height ${blockHeight}`)
-      if (this.ethEngine.walletLocalData.blockHeight !== blockHeight) {
+      this.ethEngine.log(`Got block height ${blockHeight || 'no blockheight'}`)
+      if (
+        typeof blockHeight === 'number' &&
+        this.ethEngine.walletLocalData.blockHeight !== blockHeight
+      ) {
         this.ethNeeds.blockHeightLastChecked = now
         this.ethEngine.checkDroppedTransactionsThrottled()
         this.ethEngine.walletLocalData.blockHeight = blockHeight // Convert to decimal
@@ -1057,7 +1068,8 @@ export class EthereumNetwork {
 
     if (ethereumNetworkUpdate.nonce) {
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate nonce ${ethereumNetworkUpdate.server} won`
+        `ETH processEthereumNetworkUpdate nonce ${ethereumNetworkUpdate.server ||
+          'no server'} won`
       )
       this.ethNeeds.nonceLastChecked = now
       this.ethEngine.walletLocalData.otherData.nextNonce =
@@ -1066,24 +1078,27 @@ export class EthereumNetwork {
     }
 
     if (ethereumNetworkUpdate.tokenBal) {
+      const tokenBal = ethereumNetworkUpdate.tokenBal
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate tokenBal ${ethereumNetworkUpdate.server} won`
+        `ETH processEthereumNetworkUpdate tokenBal ${ethereumNetworkUpdate.server ||
+          'no server'} won`
       )
-      for (const tk of Object.keys(ethereumNetworkUpdate.tokenBal)) {
+      for (const tk of Object.keys(tokenBal)) {
         this.ethNeeds.tokenBalLastChecked[tk] = now
-        this.ethEngine.updateBalance(tk, ethereumNetworkUpdate.tokenBal[tk])
+        this.ethEngine.updateBalance(tk, tokenBal[tk])
       }
     }
 
     if (ethereumNetworkUpdate.tokenTxs) {
+      const tokenTxs = ethereumNetworkUpdate.tokenTxs
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate tokenTxs ${ethereumNetworkUpdate.server} won`
+        `ETH processEthereumNetworkUpdate tokenTxs ${ethereumNetworkUpdate.server ||
+          'no server'} won`
       )
-      for (const tk of Object.keys(ethereumNetworkUpdate.tokenTxs)) {
+      for (const tk of Object.keys(tokenTxs)) {
         this.ethNeeds.tokenTxsLastChecked[tk] = now
         this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
-        const tuple: EdgeTransactionsBlockHeightTuple =
-          ethereumNetworkUpdate.tokenTxs[tk]
+        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
         if (tuple.edgeTransactions) {
           for (const tx: EdgeTransaction of tuple.edgeTransactions) {
             this.ethEngine.addTransaction(tk, tx)

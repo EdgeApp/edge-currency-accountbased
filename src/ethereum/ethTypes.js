@@ -6,7 +6,9 @@
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
   etherscanApiKey?: string | Array<string>,
-  infuraProjectId?: string
+  infuraProjectId?: string,
+  blockchairApiKey?: string,
+  alethioApiKey?: string
 }
 
 export type EthereumSettings = {
@@ -89,8 +91,10 @@ export type EthereumWalletOtherData = {
 }
 
 export type AlethioTokenTransferAttributes = {
-  blockCreationTime: string,
+  blockCreationTime: number,
   symbol: string,
+  fee: string,
+  value: string,
   globalRank: Array<number>
 }
 
@@ -102,26 +106,12 @@ export type AlethioTransactionDataObj = {
 export type AlethioTransactionRelationships = {
   from: AlethioTransactionDataObj,
   to: AlethioTransactionDataObj,
-  transaction: AlethioTransactionDataObj
+  transaction: AlethioTransactionDataObj,
+  token: AlethioTransactionDataObj
 }
 
 export type AlethioTokenTransfer = {
   type: string,
   attributes: AlethioTokenTransferAttributes,
   relationships: AlethioTransactionRelationships
-}
-
-export type AlethioTransactionAttributes = {
-  txHash: string,
-  blockCreationTime: number,
-  value: string,
-  fee: string,
-  msgGasLimit: string,
-  txGasPrice: string,
-  txGasUsed: number,
-  msgError: boolean
-}
-
-export type AlethioTransaction = {
-  attributes: AlethioTransactionAttributes
 }
