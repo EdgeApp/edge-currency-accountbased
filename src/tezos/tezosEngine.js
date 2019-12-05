@@ -56,7 +56,7 @@ export class TezosEngine extends CurrencyEngine {
       case 'getHead': {
         // relevant nodes, disabling first node due to caching / polling issue
         // need to re-enable once that nodes issue is fixed
-        const nonCachedNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
+        const nonCachedNodes = this.tezosPlugin.tezosRpcNodes
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             .fetch(server + '/chains/main/blocks/head/header')
@@ -73,7 +73,7 @@ export class TezosEngine extends CurrencyEngine {
       }
 
       case 'getBalance': {
-        const usableNodes = this.tezosPlugin.tezosRpcNodes.slice(1, 3)
+        const usableNodes = this.tezosPlugin.tezosRpcNodes
         funcs = usableNodes.map(server => async () => {
           eztz.node.setProvider(server)
           const result = await eztz.rpc.getBalance(params[0])
