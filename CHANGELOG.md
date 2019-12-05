@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.5.8 (2019-12-05)
+
+- Update Tezos explorer and RPC nodes
+- Optimize multiple API support for ETH
+
 # 0.5.7 (2019-12-03)
 
 - Add CDAI
