@@ -93,6 +93,8 @@ export type EthereumWalletOtherData = {
 export type AlethioTokenTransferAttributes = {
   blockCreationTime: number,
   symbol: string,
+  fee: string,
+  value: string,
   globalRank: Array<number>
 }
 
@@ -112,19 +114,4 @@ export type AlethioTokenTransfer = {
   type: string,
   attributes: AlethioTokenTransferAttributes,
   relationships: AlethioTransactionRelationships
-}
-
-export type AlethioTransactionAttributes = {
-  txHash: string,
-  blockCreationTime: number,
-  value: string,
-  fee: string,
-  msgGasLimit: string,
-  txGasPrice: string,
-  txGasUsed: number,
-  msgError: boolean
-}
-
-export type AlethioTransaction = {
-  attributes: AlethioTransactionAttributes
 }

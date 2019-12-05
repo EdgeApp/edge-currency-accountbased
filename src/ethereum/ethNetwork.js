@@ -15,7 +15,6 @@ import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
   AlethioAccountsTokenTransferSchema,
-  AlethioAccountsTxSchema,
   BlockChairAddressSchema,
   BlockChairStatsSchema,
   EtherscanGetAccountBalance,
@@ -26,7 +25,6 @@ import {
 } from './ethSchema'
 import type {
   AlethioTokenTransfer,
-  AlethioTransaction,
   EthereumTxOtherParams,
   EtherscanTransaction
 } from './ethTypes'
@@ -187,28 +185,26 @@ export class EthereumNetwork {
 
   processAlethioTransaction(
     tokenTransfer: AlethioTokenTransfer,
-    tx: AlethioTransaction,
     currencyCode: string
   ): EdgeTransaction | null {
     let netNativeAmount: string
     const ourReceiveAddresses: Array<string> = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
-    let parentNetworkFee: string
 
-    const value = tx.attributes.value
-    const fee = tx.attributes.fee
+    const value = tokenTransfer.attributes.value
+    const fee = tokenTransfer.attributes.fee
+      ? tokenTransfer.attributes.fee
+      : '0'
     const fromAddress = tokenTransfer.relationships.from.data.id
     const toAddress = tokenTransfer.relationships.to.data.id
 
     if (currencyCode === PRIMARY_CURRENCY) {
       nativeNetworkFee = fee
       tokenRecipientAddress = null
-      parentNetworkFee = ''
     } else {
       nativeNetworkFee = '0'
       tokenRecipientAddress = toAddress
-      parentNetworkFee = fee
     }
 
     if (
@@ -242,25 +238,25 @@ export class EthereumNetwork {
     const otherParams: EthereumTxOtherParams = {
       from: [fromAddress],
       to: [toAddress],
-      gas: tx.attributes.msgGasLimit,
-      gasPrice: tx.attributes.txGasPrice,
-      gasUsed: `${tx.attributes.txGasUsed}`,
-      errorVal: tx.attributes.msgError ? 1 : 0,
+      gas: '0',
+      gasPrice: '0',
+      gasUsed: '0',
+      errorVal: 0,
       tokenRecipientAddress
     }
 
     let blockHeight = tokenTransfer.attributes.globalRank[0]
     if (blockHeight < 0) blockHeight = 0
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.attributes.txHash,
-      date: tx.attributes.blockCreationTime,
+      txid: tokenTransfer.relationships.transaction.data.id,
+      date: tokenTransfer.attributes.blockCreationTime,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
-      parentNetworkFee,
+      parentNetworkFee: '',
       otherParams
     }
 
@@ -837,26 +833,18 @@ export class EthereumNetwork {
         for (const tokenTransfer of tokenTransfers) {
           const txBlockheight = tokenTransfer.attributes.globalRank[0]
           if (txBlockheight > startBlock) {
-            const contractAddress = tokenTransfer.relationships.token.data.id
-            const currencyCode = this.getTokenCurrencyCode(contractAddress)
-            if (typeof currencyCode === 'string') {
-              const txLink =
-                tokenTransfer.relationships.transaction.links.related
-              const txJsonObj = await this.fetchGetAlethio(txLink, false)
-              const txValid = validateObject(txJsonObj, AlethioAccountsTxSchema)
-              if (txValid) {
-                const tx = this.processAlethioTransaction(
-                  tokenTransfer,
-                  txJsonObj.data,
-                  currencyCode
-                )
-                if (tx) {
-                  allTransactions.push(tx)
-                }
-              } else {
-                throw new Error(
-                  `checkTxsAlethio ${txLink} response is invalid(1)`
-                )
+            let txCurrencyCode = PRIMARY_CURRENCY
+            if (currencyCode !== PRIMARY_CURRENCY) {
+              const contractAddress = tokenTransfer.relationships.token.data.id
+              txCurrencyCode = this.getTokenCurrencyCode(contractAddress)
+            }
+            if (typeof txCurrencyCode === 'string') {
+              const tx = this.processAlethioTransaction(
+                tokenTransfer,
+                txCurrencyCode
+              )
+              if (tx) {
+                allTransactions.push(tx)
               }
             }
           } else {
