@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.5.9 (2019-12-06)
+
+- Fix nonce query to save nonce as string.
+- Add try/catch to checkAndUpdate
+- Ensure ETH is checked for balance and txs
+
 # 0.5.8 (2019-12-05)
 
 - Update Tezos explorer and RPC nodes
