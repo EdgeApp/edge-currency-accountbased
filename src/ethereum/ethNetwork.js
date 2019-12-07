@@ -52,7 +52,7 @@ type EdgeTransactionsBlockHeightTuple = {
 
 type EthereumNetworkUpdate = {
   blockHeight?: number,
-  nonce?: number,
+  newNonce?: string,
   tokenBal?: { [currencyCode: string]: string },
   tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple },
   server?: string
@@ -698,9 +698,8 @@ export class EthereumNetwork {
       )
       const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
       if (valid) {
-        const nonceString = bns.add('0', jsonObj.result)
-        const nonce = parseInt(nonceString)
-        return { nonce, server }
+        const newNonce = bns.add('0', jsonObj.result)
+        return { newNonce, server }
       }
     } catch (err) {
       this.ethEngine.log('Error fetching height: ' + err)
@@ -982,8 +981,12 @@ export class EthereumNetwork {
   ) {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
-      const ethUpdate = await checkFunc()
-      this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
+      try {
+        const ethUpdate = await checkFunc()
+        this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
+      } catch (e) {
+        console.log(e)
+      }
     }
   }
 
@@ -1013,7 +1016,19 @@ export class EthereumNetwork {
         this.checkNonce
       )
 
-      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+      let currencyCodes
+      if (
+        this.ethEngine.walletLocalData.enabledTokens.indexOf(
+          PRIMARY_CURRENCY
+        ) === -1
+      ) {
+        currencyCodes = [PRIMARY_CURRENCY].concat(
+          this.ethEngine.walletLocalData.enabledTokens
+        )
+      } else {
+        currencyCodes = this.ethEngine.walletLocalData.enabledTokens
+      }
+      for (const tk of currencyCodes) {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalLastChecked[tk],
           BAL_POLL_MILLISECONDS,
@@ -1066,14 +1081,14 @@ export class EthereumNetwork {
       }
     }
 
-    if (ethereumNetworkUpdate.nonce) {
+    if (ethereumNetworkUpdate.newNonce) {
       this.ethEngine.log(
         `ETH processEthereumNetworkUpdate nonce ${ethereumNetworkUpdate.server ||
           'no server'} won`
       )
       this.ethNeeds.nonceLastChecked = now
       this.ethEngine.walletLocalData.otherData.nextNonce =
-        ethereumNetworkUpdate.nonce
+        ethereumNetworkUpdate.newNonce
       this.ethEngine.walletLocalDataDirty = true
     }
 
