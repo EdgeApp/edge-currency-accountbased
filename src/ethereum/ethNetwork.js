@@ -1016,7 +1016,19 @@ export class EthereumNetwork {
         this.checkNonce
       )
 
-      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+      let currencyCodes
+      if (
+        this.ethEngine.walletLocalData.enabledTokens.indexOf(
+          PRIMARY_CURRENCY
+        ) === -1
+      ) {
+        currencyCodes = [PRIMARY_CURRENCY].concat(
+          this.ethEngine.walletLocalData.enabledTokens
+        )
+      } else {
+        currencyCodes = this.ethEngine.walletLocalData.enabledTokens
+      }
+      for (const tk of currencyCodes) {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalLastChecked[tk],
           BAL_POLL_MILLISECONDS,
