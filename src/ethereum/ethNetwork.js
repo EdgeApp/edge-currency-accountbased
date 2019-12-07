@@ -981,8 +981,12 @@ export class EthereumNetwork {
   ) {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
-      const ethUpdate = await checkFunc()
-      this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
+      try {
+        const ethUpdate = await checkFunc()
+        this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
+      } catch (e) {
+        console.log(e)
+      }
     }
   }
 
