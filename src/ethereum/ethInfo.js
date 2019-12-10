@@ -22,7 +22,9 @@ const otherSettings: EthereumSettings = {
     AGLD: true
   },
   blockchairApiServers: ['https://api.blockchair.com'],
-  alethioApiServers: ['https://api.aleth.io/v1']
+  alethioApiServers: ['https://api.aleth.io/v1'],
+  amberdataRpcServers: ['https://rpc.web3api.io'],
+  amberdataApiServers: ['https://web3api.io/api/v2']
 }
 
 const defaultSettings: any = {

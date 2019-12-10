@@ -224,6 +224,14 @@ export const BlockChairStatsSchema = {
   required: ['data']
 }
 
+export const AmberdataRpcSchema = {
+  type: 'object',
+  properties: {
+    result: { type: 'string' }
+  },
+  required: ['result']
+}
+
 export const BlockChairAddressSchema = {
   type: 'object',
   properties: {
@@ -369,36 +377,65 @@ export const AlethioAccountsTokenTransferSchema = {
   required: ['data', 'links', 'meta']
 }
 
-export const AlethioAccountsTxSchema = {
+export const AmberdataAccountsTxSchema = {
   type: 'object',
   properties: {
-    data: {
+    payload: {
       type: 'object',
       properties: {
-        attributes: {
-          type: 'object',
-          properties: {
-            txHash: { type: 'string' },
-            value: { type: 'string' },
-            fee: { type: 'string' },
-            msgGasLimit: { type: 'string' },
-            txGasPrice: { type: 'string' },
-            txGasUsed: { type: 'number' },
-            msgError: { type: 'boolean' }
-          },
-          required: [
-            'txHash',
-            'value',
-            'fee',
-            'msgGasLimit',
-            'txGasPrice',
-            'txGasUsed',
-            'msgError'
-          ]
+        records: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              hash: { type: 'string' },
+              timestamp: { type: 'string' },
+              blockNumber: { type: 'string' },
+              value: { type: 'string' },
+              fee: { type: 'string' },
+              gasLimit: { type: 'string' },
+              gasPrice: { type: 'string' },
+              gasUsed: { type: 'string' },
+              cumulativeGasUsed: { type: 'string' },
+              from: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    address: { type: 'string' }
+                  },
+                  required: ['address']
+                }
+              },
+              to: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    address: { type: 'string' }
+                  },
+                  required: ['address']
+                }
+              }
+            },
+            required: [
+              'hash',
+              'timestamp',
+              'blockNumber',
+              'value',
+              'fee',
+              'gasLimit',
+              'gasPrice',
+              'gasUsed',
+              'cumulativeGasUsed',
+              'from',
+              'to'
+            ]
+          }
         }
       },
-      required: ['attributes']
+      required: ['records']
     }
   },
-  required: ['data']
+  required: ['payload']
 }
