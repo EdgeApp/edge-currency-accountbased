@@ -535,7 +535,7 @@ export class RskEngine extends CurrencyEngine {
           server => async () => {
             const result = await this.fetchGetBlockScout(
               server,
-              'module=proxy&action=eth_blockNumber'
+              'module=block&action=eth_block_number'
             )
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_blockNumber in ${server}`
@@ -556,20 +556,7 @@ export class RskEngine extends CurrencyEngine {
         break
 
       case 'eth_getTransactionCount':
-        url = `module=proxy&action=eth_getTransactionCount&address=${
-          params[0]
-        }&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            const result = await this.fetchGetBlockScout(server, url)
-            if (typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_getTransactionCount in ${server}`
-              this.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
-          }
-        )
+        funcs = []
         funcs2 = async () => {
           const result = await this.fetchPostPublicNode(
             'eth_getTransactionCount',
