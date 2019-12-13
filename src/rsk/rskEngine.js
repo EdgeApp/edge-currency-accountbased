@@ -570,7 +570,7 @@ export class RskEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
       case 'eth_getBalance':
-        url = `module=account&action=balance&address=${params[0]}&tag=latest`
+        url = `module=account&action=eth_get_balance&address=${params[0]}&block=latest`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetBlockScout(server, url)
@@ -579,6 +579,12 @@ export class RskEngine extends CurrencyEngine {
               this.log(msg)
               throw new Error(msg)
             }
+            // Convert hex
+            if (!isHex(result.result)) {
+              throw new Error('Blockscout eth_get_balance not hex')
+            }
+            // Convert to decimal
+            result.result = bns.add(result.result, '0')
             return { server, result }
           }
         )
@@ -603,7 +609,7 @@ export class RskEngine extends CurrencyEngine {
       case 'getTokenBalance':
         url = `module=account&action=tokenbalance&contractaddress=${
           params[1]
-        }&address=${params[0]}&tag=latest`
+        }&address=${params[0]}`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetBlockScout(server, url)
