@@ -38,6 +38,7 @@ const BAL_POLL_MILLISECONDS = 20000
 const TXS_POLL_MILLISECONDS = 20000
 
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
+const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
@@ -498,7 +499,6 @@ export class EthereumNetwork {
    * @throws Exception when Alethio throttles with a 429 response code
    */
   async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
-    console.log(`fetchGetAlethio: ${pathOrLink}`)
     const { alethioApiKey } = this.ethEngine.initOptions
     if (alethioApiKey) {
       const url = isPath
@@ -1051,6 +1051,7 @@ export class EthereumNetwork {
 
   async checkTxsAmberdata(
     startBlock: number,
+    startDate: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
@@ -1058,9 +1059,14 @@ export class EthereumNetwork {
     let page = 0
     const allTransactions: Array<EdgeTransaction> = []
     while (1) {
-      const jsonObj = await this.fetchGetAmberdataApi(
-        `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
-      )
+      let url = `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
+      if (startDate) {
+        const newDateObj = new Date(startDate)
+        if (newDateObj) {
+          url = url + `&startDate=${newDateObj.toISOString()}`
+        }
+      }
+      const jsonObj = await this.fetchGetAmberdataApi(url)
 
       const valid = validateObject(jsonObj, AmberdataAccountsTxSchema)
       if (valid) {
@@ -1093,12 +1099,13 @@ export class EthereumNetwork {
 
   async checkTxs(
     startBlock: number,
+    startDate: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
     let checkTxsFuncs = []
     if (currencyCode === PRIMARY_CURRENCY) {
       checkTxsFuncs = [
-        async () => this.checkTxsAmberdata(startBlock, currencyCode),
+        async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
         async () => this.checkTxsAlethio(startBlock, currencyCode),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
@@ -1211,6 +1218,15 @@ export class EthereumNetwork {
     }
   }
 
+  getQueryDateWithLookback(date: number): number {
+    if (date > ADDRESS_QUERY_LOOKBACK_SEC) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
+      return date - ADDRESS_QUERY_LOOKBACK_SEC
+    } else {
+      return 0
+    }
+  }
+
   async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
       const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
@@ -1256,6 +1272,9 @@ export class EthereumNetwork {
             this.checkTxs(
               this.getQueryHeightWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
+              ),
+              this.getQueryDateWithLookback(
+                this.ethEngine.walletLocalData.lastTransactionDate[tk]
               ),
               tk
             )
@@ -1333,6 +1352,7 @@ export class EthereumNetwork {
           this.ethEngine.walletLocalData.lastTransactionQueryHeight[
             tk
           ] = preUpdateBlockHeight
+          this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
         }
       }
       this.ethEngine.updateOnAddressesChecked()
