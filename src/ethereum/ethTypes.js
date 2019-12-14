@@ -8,7 +8,8 @@ export type EthereumInitOptions = {
   etherscanApiKey?: string | Array<string>,
   infuraProjectId?: string,
   blockchairApiKey?: string,
-  alethioApiKey?: string
+  alethioApiKey?: string,
+  amberdataApiKey?: string
 }
 
 export type EthereumSettings = {
@@ -114,4 +115,18 @@ export type AlethioTokenTransfer = {
   type: string,
   attributes: AlethioTokenTransferAttributes,
   relationships: AlethioTransactionRelationships
+}
+
+export type AmberdataTx = {
+  hash: string,
+  timestamp: string,
+  blockNumber: string,
+  value: string,
+  fee: string,
+  gasLimit: string,
+  gasPrice: string,
+  gasUsed: string,
+  cumulativeGasUsed: string,
+  from: Array<{ address: string }>,
+  to: Array<{ address: string }>
 }

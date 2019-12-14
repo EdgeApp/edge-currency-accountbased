@@ -15,6 +15,8 @@ import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
   AlethioAccountsTokenTransferSchema,
+  AmberdataAccountsTxSchema,
+  AmberdataRpcSchema,
   BlockChairAddressSchema,
   BlockChairStatsSchema,
   EtherscanGetAccountBalance,
@@ -25,6 +27,7 @@ import {
 } from './ethSchema'
 import type {
   AlethioTokenTransfer,
+  AmberdataTx,
   EthereumTxOtherParams,
   EtherscanTransaction
 } from './ethTypes'
@@ -35,6 +38,7 @@ const BAL_POLL_MILLISECONDS = 20000
 const TXS_POLL_MILLISECONDS = 20000
 
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
+const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes
 const NUM_TRANSACTIONS_TO_QUERY = 50
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
@@ -72,6 +76,10 @@ type BroadcastResults = {
   decrementNonce: boolean
 }
 
+const AMBERDATA_BLOCKCHAIN_IDS = {
+  ETH_MAINNET: '1c9c969065fcd1cf'
+}
+
 async function broadcastWrapper(promise: Promise<Object>, server: string) {
   const out = {
     result: await promise,
@@ -88,7 +96,10 @@ export class EthereumNetwork {
   multicastServers: (...any) => any
   checkBlockHeightEthscan: (...any) => any
   checkBlockHeightBlockchair: (...any) => any
+  checkBlockHeightAmberdata: (...any) => any
   checkBlockHeight: (...any) => any
+  checkNonceEthscan: (...any) => any
+  checkNonceAmberdata: (...any) => any
   checkNonce: (...any) => any
   checkTxs: (...any) => any
   checkTokenBalEthscan: (...any) => any
@@ -110,7 +121,10 @@ export class EthereumNetwork {
     this.multicastServers = this.multicastServers.bind(this)
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
     this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
+    this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
     this.checkBlockHeight = this.checkBlockHeight.bind(this)
+    this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
+    this.checkNonceAmberdata = this.checkNonceAmberdata.bind(this)
     this.checkNonce = this.checkNonce.bind(this)
     this.checkTxs = this.checkTxs.bind(this)
     this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
@@ -263,6 +277,78 @@ export class EthereumNetwork {
     return edgeTransaction
   }
 
+  processAmberdataTransaction(
+    amberdataTx: AmberdataTx,
+    currencyCode: string
+  ): EdgeTransaction | null {
+    const walletAddress = this.ethEngine.walletLocalData.publicKey
+    let netNativeAmount: string
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
+    let tokenRecipientAddress: string | null
+
+    const value = amberdataTx.value
+    const fee = amberdataTx.fee ? amberdataTx.fee : '0'
+    const fromAddress =
+      amberdataTx.from.length > 0 ? amberdataTx.from[0].address : ''
+    const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
+
+    if (fromAddress && toAddress) {
+      nativeNetworkFee = fee
+      tokenRecipientAddress = null
+
+      if (fromAddress.toLowerCase() === walletAddress.toLowerCase()) {
+        // is a spend
+        if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
+          // Spend to self. netNativeAmount is just the fee
+          netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+        } else {
+          // spend to someone else
+          netNativeAmount = bns.sub('0', value)
+
+          // For spends, include the network fee in the transaction amount
+          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        }
+      } else if (toAddress.toLowerCase() === walletAddress.toLowerCase()) {
+        // Receive transaction
+        netNativeAmount = value
+        ourReceiveAddresses.push(walletAddress.toLowerCase())
+      } else {
+        return null
+      }
+
+      const otherParams: EthereumTxOtherParams = {
+        from: [fromAddress],
+        to: [toAddress],
+        gas: '0',
+        gasPrice: '0',
+        gasUsed: '0',
+        errorVal: 0,
+        tokenRecipientAddress
+      }
+
+      let blockHeight = parseInt(amberdataTx.blockNumber, 10)
+      if (blockHeight < 0) blockHeight = 0
+      const date = new Date(amberdataTx.timestamp).getTime() / 1000
+      const edgeTransaction: EdgeTransaction = {
+        txid: amberdataTx.hash,
+        date,
+        currencyCode,
+        blockHeight,
+        nativeAmount: netNativeAmount,
+        networkFee: nativeNetworkFee,
+        ourReceiveAddresses,
+        signedTx: '',
+        parentNetworkFee: '',
+        otherParams
+      }
+
+      return edgeTransaction
+    } else {
+      return null
+    }
+  }
+
   async fetchGet(url: string, _options: Object = {}) {
     const options = { ..._options }
     options.method = 'GET'
@@ -363,6 +449,47 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
+  async fetchPostAmberdataRpc(method: string, params: Array<string> = []) {
+    const { amberdataApiKey } = this.ethEngine.initOptions
+    let apiKey = ''
+    if (amberdataApiKey) {
+      apiKey = '?x-api-key=' + amberdataApiKey
+    }
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .amberdataRpcServers[0]
+    }${apiKey}`
+    const body = {
+      jsonrpc: '2.0',
+      method: method,
+      params: params,
+      id: 1
+    }
+    const response = await this.ethEngine.io.fetch(url, {
+      headers: {
+        'x-amberdata-blockchain-id': AMBERDATA_BLOCKCHAIN_IDS.ETH_MAINNET
+      },
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+    const jsonObj = await response.json()
+    return jsonObj
+  }
+
+  async fetchGetAmberdataApi(path: string) {
+    const { amberdataApiKey } = this.ethEngine.initOptions
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .amberdataApiServers[0]
+    }${path}`
+    return this.fetchGet(url, {
+      headers: {
+        'x-amberdata-blockchain-id': AMBERDATA_BLOCKCHAIN_IDS.ETH_MAINNET,
+        'x-api-key': amberdataApiKey
+      }
+    })
+  }
+
   /*
    * @param pathOrLink: A "path" is appended to the alethioServers base URL and
    *  a "link" is a full URL that needs no further modification
@@ -372,7 +499,6 @@ export class EthereumNetwork {
    * @throws Exception when Alethio throttles with a 429 response code
    */
   async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
-    console.log(`fetchGetAlethio: ${pathOrLink}`)
     const { alethioApiKey } = this.ethEngine.initOptions
     if (alethioApiKey) {
       const url = isPath
@@ -679,9 +805,21 @@ export class EthereumNetwork {
     }
   }
 
+  async checkBlockHeightAmberdata(): Promise<EthereumNetworkUpdate> {
+    const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
+    const valid = validateObject(jsonObj, AmberdataRpcSchema)
+    if (valid) {
+      const blockHeight = parseInt(jsonObj.result, 16)
+      return { blockHeight, server: 'amberdata' }
+    } else {
+      throw new Error('Amberdata returned invalid JSON')
+    }
+  }
+
   async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
     return asyncWaterfall([
       this.checkBlockHeightEthscan,
+      this.checkBlockHeightAmberdata,
       this.checkBlockHeightBlockchair
     ]).catch(err => {
       this.ethEngine.log('checkBlockHeight failed to update', err)
@@ -689,22 +827,44 @@ export class EthereumNetwork {
     })
   }
 
-  async checkNonce(): Promise<EthereumNetworkUpdate> {
-    try {
-      const address = this.ethEngine.walletLocalData.publicKey
-      const { result: jsonObj, server } = await this.multicastServers(
-        'eth_getTransactionCount',
-        address
-      )
-      const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
-      if (valid) {
-        const newNonce = bns.add('0', jsonObj.result)
-        return { newNonce, server }
-      }
-    } catch (err) {
-      this.ethEngine.log('Error fetching height: ' + err)
+  async checkNonceEthscan(): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey
+    const { result: jsonObj, server } = await this.multicastServers(
+      'eth_getTransactionCount',
+      address
+    )
+    const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
+    if (valid) {
+      const newNonce = bns.add('0', jsonObj.result)
+      return { newNonce, server }
+    } else {
+      throw new Error('Ethscan returned invalid JSON')
     }
-    return {}
+  }
+
+  async checkNonceAmberdata(): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey
+    const jsonObj = await this.fetchPostAmberdataRpc(
+      'eth_getTransactionCount',
+      [address, 'latest']
+    )
+    const valid = validateObject(jsonObj, AmberdataRpcSchema)
+    if (valid) {
+      const newNonce = `${parseInt(jsonObj.result, 16)}`
+      return { newNonce, server: 'amberdata' }
+    } else {
+      throw new Error('Amberdata returned invalid JSON')
+    }
+  }
+
+  async checkNonce(): Promise<EthereumNetworkUpdate> {
+    return asyncWaterfall([
+      this.checkNonceEthscan,
+      this.checkNonceAmberdata
+    ]).catch(err => {
+      this.ethEngine.log('checkNonce failed to update', err)
+      return {}
+    })
   }
 
   async checkTxsEthscan(
@@ -889,14 +1049,73 @@ export class EthereumNetwork {
     return response
   }
 
-  async checkTxs(
+  async checkTxsAmberdata(
     startBlock: number,
+    startDate: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      async () => this.checkTxsAlethio(startBlock, currencyCode),
-      async () => this.checkTxsEthscan(startBlock, currencyCode)
-    ]).catch(err => {
+    const address = this.ethEngine.walletLocalData.publicKey
+
+    let page = 0
+    const allTransactions: Array<EdgeTransaction> = []
+    while (1) {
+      let url = `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
+      if (startDate) {
+        const newDateObj = new Date(startDate)
+        if (newDateObj) {
+          url = url + `&startDate=${newDateObj.toISOString()}`
+        }
+      }
+      const jsonObj = await this.fetchGetAmberdataApi(url)
+
+      const valid = validateObject(jsonObj, AmberdataAccountsTxSchema)
+      if (valid) {
+        const amberdataTxs: Array<AmberdataTx> = jsonObj.payload.records
+        for (const amberdataTx of amberdataTxs) {
+          const tx = this.processAmberdataTransaction(amberdataTx, currencyCode)
+          if (tx) {
+            allTransactions.push(tx)
+          }
+        }
+        if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
+          break
+        }
+        page++
+      } else {
+        throw new Error('checkTxsAmberdata response is invalid')
+      }
+    }
+
+    return {
+      tokenTxs: {
+        ETH: {
+          blockHeight: startBlock,
+          edgeTransactions: allTransactions
+        }
+      },
+      server: 'amberdata'
+    }
+  }
+
+  async checkTxs(
+    startBlock: number,
+    startDate: number,
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> {
+    let checkTxsFuncs = []
+    if (currencyCode === PRIMARY_CURRENCY) {
+      checkTxsFuncs = [
+        async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
+        async () => this.checkTxsAlethio(startBlock, currencyCode),
+        async () => this.checkTxsEthscan(startBlock, currencyCode)
+      ]
+    } else {
+      checkTxsFuncs = [
+        async () => this.checkTxsAlethio(startBlock, currencyCode),
+        async () => this.checkTxsEthscan(startBlock, currencyCode)
+      ]
+    }
+    return asyncWaterfall(checkTxsFuncs).catch(err => {
       this.ethEngine.log('checkTxs failed to update', err)
       return {}
     })
@@ -999,6 +1218,15 @@ export class EthereumNetwork {
     }
   }
 
+  getQueryDateWithLookback(date: number): number {
+    if (date > ADDRESS_QUERY_LOOKBACK_SEC) {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
+      return date - ADDRESS_QUERY_LOOKBACK_SEC
+    } else {
+      return 0
+    }
+  }
+
   async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
       const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
@@ -1044,6 +1272,9 @@ export class EthereumNetwork {
             this.checkTxs(
               this.getQueryHeightWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
+              ),
+              this.getQueryDateWithLookback(
+                this.ethEngine.walletLocalData.lastTransactionDate[tk]
               ),
               tk
             )
@@ -1121,6 +1352,7 @@ export class EthereumNetwork {
           this.ethEngine.walletLocalData.lastTransactionQueryHeight[
             tk
           ] = preUpdateBlockHeight
+          this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
         }
       }
       this.ethEngine.updateOnAddressesChecked()
