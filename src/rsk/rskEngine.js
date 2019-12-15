@@ -684,6 +684,9 @@ export class RskEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
+    if (!this.walletLocalData.enabledTokens.includes('RBTC')) {
+      this.walletLocalData.enabledTokens.push('RBTC')
+    }
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
