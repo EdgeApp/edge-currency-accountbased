@@ -450,34 +450,36 @@ export class EthereumEngine extends CurrencyEngine {
     } else {
       nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
     }
-
-    let nonceHex
-    // Use an unconfirmed nonce if
-    // 1. We have unconfirmed spending txs in the transaction list
-    // 2. It is greater than the confirmed nonce
-    // 3. Is no more than 5 higher than confirmed nonce
-    if (
-      this.walletLocalData.numUnconfirmedSpendTxs &&
-      bns.gt(
-        this.walletLocalData.otherData.unconfirmedNextNonce,
-        this.walletLocalData.otherData.nextNonce
-      )
-    ) {
-      const diff = bns.sub(
-        this.walletLocalData.otherData.unconfirmedNextNonce,
-        this.walletLocalData.otherData.nextNonce
-      )
-      if (bns.lte(diff, '5')) {
-        nonceHex = toHex(this.walletLocalData.otherData.unconfirmedNextNonce)
-        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+    const nonceArg = edgeTransaction.otherParams.nonceArg
+    let nonceHex = nonceArg && toHex(nonceArg)
+    if (!nonceHex) {
+      // Use an unconfirmed nonce if
+      // 1. We have unconfirmed spending txs in the transaction list
+      // 2. It is greater than the confirmed nonce
+      // 3. Is no more than 5 higher than confirmed nonce
+      if (
+        this.walletLocalData.numUnconfirmedSpendTxs &&
+        bns.gt(
           this.walletLocalData.otherData.unconfirmedNextNonce,
-          '1'
+          this.walletLocalData.otherData.nextNonce
         )
-        this.walletLocalDataDirty = true
-      } else {
-        const e = new Error('Excessive pending spend transactions')
-        e.name = 'ErrorExcessivePendingSpends'
-        throw e
+      ) {
+        const diff = bns.sub(
+          this.walletLocalData.otherData.unconfirmedNextNonce,
+          this.walletLocalData.otherData.nextNonce
+        )
+        if (bns.lte(diff, '5')) {
+          nonceHex = toHex(this.walletLocalData.otherData.unconfirmedNextNonce)
+          this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+            this.walletLocalData.otherData.unconfirmedNextNonce,
+            '1'
+          )
+          this.walletLocalDataDirty = true
+        } else {
+          const e = new Error('Excessive pending spend transactions')
+          e.name = 'ErrorExcessivePendingSpends'
+          throw e
+        }
       }
     }
     if (!nonceHex) {
