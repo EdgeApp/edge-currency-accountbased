@@ -166,10 +166,14 @@ export class RskEngine extends CurrencyEngine {
         this.updateBalance('RBTC', balance)
       }
     } catch (e) {
-      this.log(`Error checking token balance: RBTC`, e)
-      //  Blockscout returns 404 & 'Balance not found' for new accounts
-      const balance = '0'
-      this.updateBalance('RBTC', balance)
+      let errorMsg = e.toString()
+      //  Blockscout returns 404 for new accounts
+      if (errorMsg.includes('&action=eth_get_balance') && errorMsg.includes('error code 404')) {
+        const balance = '0'
+        this.updateBalance('RBTC', balance)
+      } else {
+        this.log(`Error checking token balance: RBTC`, errorMsg)
+      }
     }
   }
 
@@ -590,11 +594,6 @@ export class RskEngine extends CurrencyEngine {
               this.log(msg)
               throw new Error(msg)
             }
-            // Convert hex
-            result.result = result.result.replace('0x', '')
-            if (!isHex(result.result)) {
-              throw new Error('Blockscout eth_get_balance not hex')
-            }
             // Convert to decimal
             result.result = bns.add(result.result, '0')
             return { server, result }
@@ -605,11 +604,6 @@ export class RskEngine extends CurrencyEngine {
             params[0],
             'latest'
           ])
-          // Convert hex
-          result.result = result.result.replace('0x', '')
-          if (!isHex(result.result)) {
-            throw new Error('Public-node eth_getBalance not hex')
-          }
           // Convert to decimal
           result.result = bns.add(result.result, '0')
           return { server: 'public-node', result }
