@@ -114,6 +114,12 @@ export class RskEngine extends CurrencyEngine {
     return response.json()
   }
 
+  checkPrimaryCurrencyIsEnabled() {
+    if (!this.walletLocalData.enabledTokens.includes('RBTC')) {
+      this.walletLocalData.enabledTokens.push('RBTC')
+    }
+  }
+
   async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers('eth_blockNumber')
@@ -160,7 +166,14 @@ export class RskEngine extends CurrencyEngine {
         this.updateBalance('RBTC', balance)
       }
     } catch (e) {
-      this.log(`Error checking token balance: RBTC`)
+      let errorMsg = e.toString()
+      //  Blockscout returns 404 for new accounts
+      if (errorMsg.includes('&action=eth_get_balance') && errorMsg.includes('error code 404')) {
+        const balance = '0'
+        this.updateBalance('RBTC', balance)
+      } else {
+        this.log(`Error checking token balance: RBTC`, errorMsg)
+      }
     }
   }
 
@@ -210,6 +223,7 @@ export class RskEngine extends CurrencyEngine {
     try {
       // Ethereum only has one address
       const promiseArray = []
+      this.checkPrimaryCurrencyIsEnabled();
 
       // ************************************
       // Fetch token balances
@@ -448,6 +462,7 @@ export class RskEngine extends CurrencyEngine {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
     const promiseArray = []
+    this.checkPrimaryCurrencyIsEnabled();
 
     if (
       this.walletLocalData.lastAddressQueryHeight >
@@ -535,7 +550,7 @@ export class RskEngine extends CurrencyEngine {
           server => async () => {
             const result = await this.fetchGetBlockScout(
               server,
-              'module=proxy&action=eth_blockNumber'
+              'module=block&action=eth_block_number'
             )
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_blockNumber in ${server}`
@@ -556,20 +571,7 @@ export class RskEngine extends CurrencyEngine {
         break
 
       case 'eth_getTransactionCount':
-        url = `module=proxy&action=eth_getTransactionCount&address=${
-          params[0]
-        }&tag=latest`
-        funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            const result = await this.fetchGetBlockScout(server, url)
-            if (typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_getTransactionCount in ${server}`
-              this.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
-          }
-        )
+        funcs = []
         funcs2 = async () => {
           const result = await this.fetchPostPublicNode(
             'eth_getTransactionCount',
@@ -583,7 +585,7 @@ export class RskEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
       case 'eth_getBalance':
-        url = `module=account&action=balance&address=${params[0]}&tag=latest`
+        url = `module=account&action=eth_get_balance&address=${params[0]}&block=latest`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetBlockScout(server, url)
@@ -592,6 +594,8 @@ export class RskEngine extends CurrencyEngine {
               this.log(msg)
               throw new Error(msg)
             }
+            // Convert to decimal
+            result.result = bns.add(result.result, '0')
             return { server, result }
           }
         )
@@ -600,10 +604,6 @@ export class RskEngine extends CurrencyEngine {
             params[0],
             'latest'
           ])
-          // Convert hex
-          if (!isHex(result.result)) {
-            throw new Error('Public-node eth_getBalance not hex')
-          }
           // Convert to decimal
           result.result = bns.add(result.result, '0')
           return { server: 'public-node', result }
@@ -616,7 +616,7 @@ export class RskEngine extends CurrencyEngine {
       case 'getTokenBalance':
         url = `module=account&action=tokenbalance&contractaddress=${
           params[1]
-        }&address=${params[0]}&tag=latest`
+        }&address=${params[0]}`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetBlockScout(server, url)
@@ -686,6 +686,7 @@ export class RskEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
+    this.checkPrimaryCurrencyIsEnabled();
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
