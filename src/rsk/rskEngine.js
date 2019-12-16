@@ -114,6 +114,12 @@ export class RskEngine extends CurrencyEngine {
     return response.json()
   }
 
+  checkPrimaryCurrencyIsEnabled() {
+    if (!this.walletLocalData.enabledTokens.includes('RBTC')) {
+      this.walletLocalData.enabledTokens.push('RBTC')
+    }
+  }
+
   async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers('eth_blockNumber')
@@ -213,6 +219,7 @@ export class RskEngine extends CurrencyEngine {
     try {
       // Ethereum only has one address
       const promiseArray = []
+      this.checkPrimaryCurrencyIsEnabled();
 
       // ************************************
       // Fetch token balances
@@ -451,6 +458,7 @@ export class RskEngine extends CurrencyEngine {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
     const promiseArray = []
+    this.checkPrimaryCurrencyIsEnabled();
 
     if (
       this.walletLocalData.lastAddressQueryHeight >
@@ -684,9 +692,7 @@ export class RskEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    if (!this.walletLocalData.enabledTokens.includes('RBTC')) {
-      this.walletLocalData.enabledTokens.push('RBTC')
-    }
+    this.checkPrimaryCurrencyIsEnabled();
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
