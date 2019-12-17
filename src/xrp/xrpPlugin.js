@@ -125,7 +125,10 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const networks = { ripple: true }
+    const networks = {
+      ripple: true,
+      'xrp-ledger': true
+    }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
 
     // Handle special case of https://ripple.com//send?to= URIs
