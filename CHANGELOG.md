@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.6.0 (2019-12-18)
+
+- Add Amberdata support
+- RBTC fixes
+- Add 'xrp-ledger:' prefix support
+
 # 0.5.9 (2019-12-06)
 
 - Fix nonce query to save nonce as string.
