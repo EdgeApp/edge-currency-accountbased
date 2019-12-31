@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.1 (2019-12-31)
+
+- Fix missing parent currency code from enabledTokens
+
 # 0.6.0 (2019-12-18)
 
 - Add Amberdata support
