@@ -16,6 +16,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getDenomInfo,
+  getOtherParams,
   promiseAny,
   shuffleArray,
   validateObject
@@ -511,6 +512,8 @@ export class BinanceEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     const bnbClient = new BnbApiClient(
       currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
     )
@@ -537,21 +540,23 @@ export class BinanceEngine extends CurrencyEngine {
     }
     // WILL NOT ACTUALLY TRANSFER! That will be done in this.broadcastTx
     const signedTx = await bnbClient.transfer(
-      edgeTransaction.otherParams.from[0],
-      edgeTransaction.otherParams.to[0],
+      otherParams.from[0],
+      otherParams.to[0],
       nativeAmount,
       currencyCode,
-      edgeTransaction.otherParams.memo
+      otherParams.memo
     )
     this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(signedTx)}`)
-    edgeTransaction.otherParams.serializedTx = signedTx.serialize()
+    otherParams.serializedTx = signedTx.serialize()
     return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const bnbSignedTransaction = edgeTransaction.otherParams.serializedTx
+    const otherParams = getOtherParams(edgeTransaction)
+
+    const bnbSignedTransaction = otherParams.serializedTx
     const response = await this.multicastServers(
       'bnb_broadcastTx',
       bnbSignedTransaction

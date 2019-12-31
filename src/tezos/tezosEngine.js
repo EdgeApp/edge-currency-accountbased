@@ -11,7 +11,12 @@ import {
 import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { asyncWaterfall, promiseAny, validateObject } from '../common/utils.js'
+import {
+  asyncWaterfall,
+  getOtherParams,
+  promiseAny,
+  validateObject
+} from '../common/utils.js'
 import { TezosPlugin } from '../tezos/tezosPlugin.js'
 import { currencyInfo } from './tezosInfo.js'
 import { XtzTransactionSchema } from './tezosSchema.js'
@@ -436,15 +441,17 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     if (edgeTransaction.signedTx === '') {
       const sk = this.walletInfo.keys.privateKey
       const signed = eztz.crypto.sign(
-        edgeTransaction.otherParams.fullOp.opbytes,
+        otherParams.fullOp.opbytes,
         sk,
         eztz.watermark.generic
       )
-      edgeTransaction.otherParams.fullOp.opbytes = signed.sbytes
-      edgeTransaction.otherParams.fullOp.opOb.signature = signed.edsig
+      otherParams.fullOp.opbytes = signed.sbytes
+      otherParams.fullOp.opOb.signature = signed.edsig
       edgeTransaction.signedTx = signed.sbytes
     }
     return edgeTransaction
@@ -453,8 +460,10 @@ export class TezosEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const opBytes = edgeTransaction.otherParams.fullOp.opbytes
-    const opOb = edgeTransaction.otherParams.fullOp.opOb
+    const otherParams = getOtherParams(edgeTransaction)
+
+    const opBytes = otherParams.fullOp.opbytes
+    const opOb = otherParams.fullOp.opOb
     const result = await this.multicastServers('injectOperation', opOb, opBytes)
     edgeTransaction.txid = result.hash
     edgeTransaction.date = Date.now() / 1000

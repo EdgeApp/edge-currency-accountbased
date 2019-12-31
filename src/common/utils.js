@@ -5,7 +5,12 @@
 
 import { bns } from 'biggystring'
 import { Buffer } from 'buffer'
-import { type EdgeCurrencyInfo, type EdgeMetaToken } from 'edge-core-js/types'
+import {
+  type EdgeCurrencyInfo,
+  type EdgeMetaToken,
+  type EdgeTransaction,
+  type JsonObject
+} from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
 function normalizeAddress(address: string) {
@@ -196,6 +201,16 @@ function getEdgeInfoServer() {
 }
 
 const imageServerUrl = 'https://developer.airbitz.co/content'
+
+/**
+ * Safely read `otherParams` from a transaction, throwing if it's missing.
+ */
+export function getOtherParams(tx: EdgeTransaction): JsonObject {
+  if (tx.otherParams == null) {
+    throw new TypeError('Transaction is missing otherParams')
+  }
+  return tx.otherParams
+}
 
 export {
   normalizeAddress,

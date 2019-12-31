@@ -20,6 +20,7 @@ import {
   addHexPrefix,
   asyncWaterfall,
   bufToHex,
+  getOtherParams,
   normalizeAddress,
   promiseAny,
   shuffleArray,
@@ -815,10 +816,11 @@ export class RskEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Do signing
+    const otherParams = getOtherParams(edgeTransaction)
 
-    const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
-    const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
+    // Do signing
+    const gasLimitHex = toHex(otherParams.gas)
+    const gasPriceHex = toHex(otherParams.gasPrice)
     let nativeAmountHex
 
     if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
@@ -875,7 +877,7 @@ export class RskEngine extends CurrencyEngine {
     } else {
       const dataArray = abi.simpleEncode(
         'transfer(address,uint256):(uint256)',
-        edgeTransaction.otherParams.tokenRecipientAddress,
+        otherParams.tokenRecipientAddress,
         nativeAmountHex
       )
       data = '0x' + Buffer.from(dataArray).toString('hex')
@@ -886,7 +888,7 @@ export class RskEngine extends CurrencyEngine {
       nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
-      to: edgeTransaction.otherParams.to[0],
+      to: otherParams.to[0],
       value: nativeAmountHex,
       data: data,
       // EIP 155 chainId - mainnet: 1, ropsten: 3, rsk: 30

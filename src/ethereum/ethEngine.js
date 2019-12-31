@@ -22,6 +22,7 @@ import {
   asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
+  getOtherParams,
   normalizeAddress,
   toHex,
   validateObject
@@ -432,10 +433,11 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Do signing
+    const otherParams = getOtherParams(edgeTransaction)
 
-    const gasLimitHex = toHex(edgeTransaction.otherParams.gas)
-    const gasPriceHex = toHex(edgeTransaction.otherParams.gasPrice)
+    // Do signing
+    const gasLimitHex = toHex(otherParams.gas)
+    const gasPriceHex = toHex(otherParams.gasPrice)
     let nativeAmountHex
 
     if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
@@ -448,7 +450,7 @@ export class EthereumEngine extends CurrencyEngine {
     } else {
       nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
     }
-    const nonceArg = edgeTransaction.otherParams.nonceArg
+    const nonceArg = otherParams.nonceArg
     let nonceHex = nonceArg && toHex(nonceArg)
     if (!nonceHex) {
       // Use an unconfirmed nonce if
@@ -489,14 +491,14 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     let data
-    if (edgeTransaction.otherParams.data != null) {
-      data = edgeTransaction.otherParams.data
+    if (otherParams.data != null) {
+      data = otherParams.data
     } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
         'transfer(address,uint256):(uint256)',
-        edgeTransaction.otherParams.tokenRecipientAddress,
+        otherParams.tokenRecipientAddress,
         nativeAmountHex
       )
       data = '0x' + Buffer.from(dataArray).toString('hex')
@@ -507,7 +509,7 @@ export class EthereumEngine extends CurrencyEngine {
       nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
-      to: edgeTransaction.otherParams.to[0],
+      to: otherParams.to[0],
       value: nativeAmountHex,
       data: data,
       // EIP 155 chainId - mainnet: 1, ropsten: 3
