@@ -644,6 +644,9 @@ class CurrencyEngine {
 
   disableTokensSync(tokens: Array<string>) {
     for (const token of tokens) {
+      if (token === this.currencyInfo.currencyCode) {
+        continue
+      }
       const index = this.walletLocalData.enabledTokens.indexOf(token)
       if (index !== -1) {
         this.walletLocalData.enabledTokens.splice(index, 1)
