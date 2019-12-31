@@ -421,10 +421,7 @@ export class EthereumNetwork {
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
-    const url = `${
-      this.ethEngine.currencyInfo.defaultSettings.otherSettings
-        .blockcypherApiServers[0]
-    }/${cmd}${apiKey}`
+    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockcypherApiServers[0]}/${cmd}${apiKey}`
     const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -442,10 +439,7 @@ export class EthereumNetwork {
     if (includeKey && blockchairApiKey) {
       keyParam = `&key=${blockchairApiKey}`
     }
-    const url = `${
-      this.ethEngine.currencyInfo.defaultSettings.otherSettings
-        .blockchairApiServers[0]
-    }${path}${keyParam}`
+    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockchairApiServers[0]}${path}${keyParam}`
     return this.fetchGet(url)
   }
 
@@ -455,10 +449,7 @@ export class EthereumNetwork {
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
     }
-    const url = `${
-      this.ethEngine.currencyInfo.defaultSettings.otherSettings
-        .amberdataRpcServers[0]
-    }${apiKey}`
+    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataRpcServers[0]}${apiKey}`
     const body = {
       jsonrpc: '2.0',
       method: method,
@@ -478,10 +469,7 @@ export class EthereumNetwork {
 
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey } = this.ethEngine.initOptions
-    const url = `${
-      this.ethEngine.currencyInfo.defaultSettings.otherSettings
-        .amberdataApiServers[0]
-    }${path}`
+    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataApiServers[0]}${path}`
     return this.fetchGet(url, {
       headers: {
         'x-amberdata-blockchain-id': AMBERDATA_BLOCKCHAIN_IDS.ETH_MAINNET,
@@ -502,10 +490,7 @@ export class EthereumNetwork {
     const { alethioApiKey } = this.ethEngine.initOptions
     if (alethioApiKey) {
       const url = isPath
-        ? `${
-            this.ethEngine.currencyInfo.defaultSettings.otherSettings
-              .alethioApiServers[0]
-          }${pathOrLink}`
+        ? `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.alethioApiServers[0]}${pathOrLink}`
         : pathOrLink
       return this.fetchGet(url, {
         headers: {
@@ -660,9 +645,7 @@ export class EthereumNetwork {
         break
 
       case 'eth_getTransactionCount':
-        url = `?module=proxy&action=eth_getTransactionCount&address=${
-          params[0]
-        }&tag=latest`
+        url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             if (!server.includes('etherscan')) {
@@ -723,9 +706,7 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
       case 'getTokenBalance':
-        url = `?module=account&action=tokenbalance&contractaddress=${
-          params[1]
-        }&address=${params[0]}&tag=latest`
+        url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetEtherscan(server, url)

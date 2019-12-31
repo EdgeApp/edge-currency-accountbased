@@ -133,9 +133,7 @@ export class EthereumEngine extends CurrencyEngine {
 
   async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
-    const url = `${
-      this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
-    }/v1/eth/main/txs/${address}`
+    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
     let jsonObj = null
     try {
       jsonObj = await this.ethNetwork.fetchGet(url)

@@ -20,7 +20,6 @@ import {
   addHexPrefix,
   asyncWaterfall,
   bufToHex,
-  isHex,
   normalizeAddress,
   promiseAny,
   shuffleArray,
@@ -166,9 +165,12 @@ export class RskEngine extends CurrencyEngine {
         this.updateBalance('RBTC', balance)
       }
     } catch (e) {
-      let errorMsg = e.toString()
+      const errorMsg = e.toString()
       //  Blockscout returns 404 for new accounts
-      if (errorMsg.includes('&action=eth_get_balance') && errorMsg.includes('error code 404')) {
+      if (
+        errorMsg.includes('&action=eth_get_balance') &&
+        errorMsg.includes('error code 404')
+      ) {
         const balance = '0'
         this.updateBalance('RBTC', balance)
       } else {
@@ -223,7 +225,7 @@ export class RskEngine extends CurrencyEngine {
     try {
       // Ethereum only has one address
       const promiseArray = []
-      this.checkPrimaryCurrencyIsEnabled();
+      this.checkPrimaryCurrencyIsEnabled()
 
       // ************************************
       // Fetch token balances
@@ -424,9 +426,7 @@ export class RskEngine extends CurrencyEngine {
 
   async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
-    const url = `${
-      this.currencyInfo.defaultSettings.otherSettings.superethServers[0]
-    }/v1/eth/main/txs/${address}`
+    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
     let jsonObj = null
     try {
       jsonObj = await this.fetchGet(url)
@@ -462,7 +462,7 @@ export class RskEngine extends CurrencyEngine {
     const blockHeight = this.walletLocalData.blockHeight
     let startBlock: number = 0
     const promiseArray = []
-    this.checkPrimaryCurrencyIsEnabled();
+    this.checkPrimaryCurrencyIsEnabled()
 
     if (
       this.walletLocalData.lastAddressQueryHeight >
@@ -614,9 +614,7 @@ export class RskEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
       case 'getTokenBalance':
-        url = `module=account&action=tokenbalance&contractaddress=${
-          params[1]
-        }&address=${params[0]}`
+        url = `module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}`
         funcs = this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetBlockScout(server, url)
@@ -686,7 +684,7 @@ export class RskEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    this.checkPrimaryCurrencyIsEnabled();
+    this.checkPrimaryCurrencyIsEnabled()
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
