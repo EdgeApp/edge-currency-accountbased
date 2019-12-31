@@ -66,6 +66,9 @@ export class WalletLocalData {
       }
       if (typeof data.enabledTokens !== 'undefined') {
         this.enabledTokens = data.enabledTokens
+        if (!this.enabledTokens.includes(primaryCurrency)) {
+          this.enabledTokens.push(primaryCurrency)
+        }
       }
       if (typeof data.otherData !== 'undefined') this.otherData = data.otherData
       if (typeof data.lastTransactionQueryHeight === 'object')
