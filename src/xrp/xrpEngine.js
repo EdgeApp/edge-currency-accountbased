@@ -14,7 +14,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { validateObject } from '../common/utils.js'
+import { getOtherParams, validateObject } from '../common/utils.js'
 import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
 import {
@@ -485,8 +485,10 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     // Do signing
-    const txJson = edgeTransaction.otherParams.preparedTx.txJSON
+    const txJson = otherParams.preparedTx.txJSON
     const privateKey = this.walletInfo.keys.rippleKey
 
     const { signedTransaction, id } = await this.multicastServers(

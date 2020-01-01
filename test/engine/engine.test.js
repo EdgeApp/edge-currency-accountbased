@@ -168,7 +168,6 @@ for (const fixture of fixtures) {
       if (!engine) throw new Error('ErrorNoEngine')
       engine.killEngine().then(() => {
         closeEdge()
-        keys = undefined
         done()
         // $FlowFixMe
         console.warn(process._getActiveRequests())

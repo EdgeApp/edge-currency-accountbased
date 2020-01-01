@@ -15,7 +15,12 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { asyncWaterfall, getDenomInfo, promiseAny } from '../common/utils.js'
+import {
+  asyncWaterfall,
+  getDenomInfo,
+  getOtherParams,
+  promiseAny
+} from '../common/utils.js'
 import { StellarPlugin } from '../stellar/stellarPlugin.js'
 import {
   type StellarAccount,
@@ -485,9 +490,11 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     // Do signing
     try {
-      const idInternal = edgeTransaction.otherParams.idInternal
+      const { idInternal } = otherParams
       const transaction = this.pendingTransactionsMap[idInternal]
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
@@ -507,8 +514,10 @@ export class StellarEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     try {
-      const idInternal = edgeTransaction.otherParams.idInternal
+      const { idInternal } = otherParams
       const transaction = this.pendingTransactionsMap[idInternal]
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
@@ -520,7 +529,7 @@ export class StellarEngine extends CurrencyEngine {
       )
       edgeTransaction.txid = result.hash
       edgeTransaction.date = Date.now() / 1000
-      this.activatedAccountsCache[edgeTransaction.otherParams.toAddress] = true
+      this.activatedAccountsCache[otherParams.toAddress] = true
       this.otherData.accountSequence++
       this.walletLocalDataDirty = true
     } catch (e) {

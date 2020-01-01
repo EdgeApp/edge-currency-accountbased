@@ -172,7 +172,8 @@ describe(`Tezos engine`, function() {
     if (engine) {
       edgeTransaction = await engine.signTx(edgeTransaction)
       assert.equal(edgeTransaction.signedTx === signedOpBytes, true)
-      assert.equal(edgeTransaction.otherParams.fullOp.opbytes, signedOpBytes)
+      const { otherParams = {} } = edgeTransaction
+      assert.equal(otherParams.fullOp.opbytes, signedOpBytes)
     } else {
       assert.equal(0, 1)
     }

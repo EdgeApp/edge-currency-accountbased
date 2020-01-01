@@ -330,6 +330,8 @@ class CurrencyEngine {
       const transactionsArray = this.transactionList[currencyCode]
       const edgeTx = transactionsArray[idx]
 
+      const { otherParams: otherParamsOld = {} } = edgeTx
+      const { otherParams: otherParamsNew = {} } = edgeTransaction
       if (
         // if something in the transaction has changed?
         edgeTx.blockHeight < edgeTransaction.blockHeight ||
@@ -337,8 +339,7 @@ class CurrencyEngine {
         (edgeTx.blockHeight === edgeTransaction.blockHeight &&
           (edgeTx.networkFee !== edgeTransaction.networkFee ||
             edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
-            edgeTx.otherParams.lastSeenTime !==
-              edgeTransaction.otherParams.lastSeenTime ||
+            otherParamsOld.lastSeenTime !== otherParamsNew.lastSeenTime ||
             edgeTx.date !== edgeTransaction.date))
       ) {
         // If a spend transaction goes from unconfirmed to dropped or confirmed,
@@ -409,7 +410,8 @@ class CurrencyEngine {
       for (let i = 0; i < this.transactionList[currencyCode].length; i++) {
         const tx = this.transactionList[currencyCode][i]
         if (tx.blockHeight === 0) {
-          const lastSeen = tx.otherParams.lastSeenTime
+          const { otherParams = {} } = tx
+          const lastSeen = otherParams.lastSeenTime
           if (dateNow - lastSeen > DROPPED_TX_TIME_GAP) {
             // droppedTxIndices.push(i)
             tx.blockHeight = -1

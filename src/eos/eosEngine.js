@@ -18,6 +18,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getDenomInfo,
+  getOtherParams,
   pickRandom,
   validateObject
 } from '../common/utils.js'
@@ -744,6 +745,8 @@ export class EosEngine extends CurrencyEngine {
   // }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     // Do signing
     // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
     // const privateKey = this.walletInfo.keys.eosKey
@@ -754,15 +757,11 @@ export class EosEngine extends CurrencyEngine {
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
-    await this.multicastServers(
-      'transaction',
-      edgeTransaction.otherParams.transactionJson,
-      {
-        keyProvider,
-        sign: true,
-        broadcast: false
-      }
-    )
+    await this.multicastServers('transaction', otherParams.transactionJson, {
+      keyProvider,
+      sign: true,
+      broadcast: false
+    })
 
     // Complete edgeTransaction.txid params if possible at this state
     return edgeTransaction
@@ -771,6 +770,8 @@ export class EosEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
+    const otherParams = getOtherParams(edgeTransaction)
+
     // Broadcast transaction and add date
     const keyProvider = []
     if (this.walletInfo.keys.eosKey) {
@@ -782,7 +783,7 @@ export class EosEngine extends CurrencyEngine {
     try {
       const signedTx = await this.multicastServers(
         'transaction',
-        edgeTransaction.otherParams.transactionJson,
+        otherParams.transactionJson,
         {
           keyProvider,
           sign: true,
