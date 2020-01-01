@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.6.2 (2020-01-01)
+
+- Upgrade to edge-core-js v0.16.17
+- Upgrade devDependencies
+
 # 0.6.1 (2019-12-31)
 
 - Fix missing parent currency code from enabledTokens
