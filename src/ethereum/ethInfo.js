@@ -552,6 +552,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643',
       symbolImage: `${imageServerUrl}/cdai-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'ETHBNT',
+      currencyName: 'BNT Smart Token Relay',
+      denominations: [
+        {
+          name: 'ETHBNT',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xb1CD6e4153B2a390Cf00A6556b0fC1458C4A5533',
+      symbolImage: `${imageServerUrl}/bancor-logo-solo-64.png`
     }
   ]
 }
