@@ -176,7 +176,7 @@ export class TronEngine extends CurrencyEngine {
     // isSpend Tx
     if (fromAddr === publicKey) {
       // if it's a send to one's self
-      if (tx.owner_address === toAddr) {
+      if (fromAddr === toAddr) {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
       } else {
@@ -189,14 +189,13 @@ export class TronEngine extends CurrencyEngine {
       // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
-    const otherParams: Object = {}
+    const otherParams: TronTxOtherParams = {}
 
     let blockHeight = tx.blockNumber
     if (blockHeight < 0) blockHeight = 0
-    const unixTimestamp = new Date(tx.block_timestamp)
     const edgeTransaction: EdgeTransaction = {
       txid: tx.txID,
-      date: unixTimestamp.getTime(),
+      date: tx.block_timestamp,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
@@ -302,7 +301,7 @@ export class TronEngine extends CurrencyEngine {
 
     if (checkAddressSuccess) {
       this.tokenCheckTransactionsStatus[currencyCode] = 1
-      // this.updateOnAddressesChecked()
+      this.updateOnAddressesChecked()
       return true
     } else {
       return false
@@ -325,7 +324,6 @@ export class TronEngine extends CurrencyEngine {
     }
 
     for (const currencyCode of this.walletLocalData.enabledTokens) {
-      this.log('enabled Token: ', currencyCode)
       promiseArray.push(this.checkTransactionsFetch(startTime, currencyCode))
     }
 
@@ -514,6 +512,7 @@ export class TronEngine extends CurrencyEngine {
     )
     // this.log(`SUCCESS TRX broadcastTx\n${JSON.stringify(signedTx, null, 2)}`)
     edgeTransaction.signedTx = signedTx
+    // edgeTransaction.signedTx = JSON.stringify(signedTx, null, 2)
     return edgeTransaction
   }
 

@@ -16,7 +16,8 @@ export const TronApiNodeInfo = {
         },
         required: ['number'],
         witness_signature: { type: 'string' }
-      }
+      },
+      required: ['raw_data']
     }
   },
   required: ['blockID', 'block_header']

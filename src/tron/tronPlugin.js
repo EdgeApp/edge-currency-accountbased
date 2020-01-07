@@ -3,7 +3,8 @@
 
 import { Buffer } from 'buffer'
 import { bns } from 'biggystring'
-import { entropyToMnemonic, mnemonicToSeed } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
+import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 import hdkey from 'ethereumjs-wallet/hdkey'
 import TronWeb from 'tronweb'
@@ -32,16 +33,33 @@ export class TronPlugin extends CurrencyPlugin {
     super(io, 'tron', currencyInfo)
   }
 
-  async importPrivateKey (passPhrase: string): Promise<Object> {
-    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
-    const buffer = Buffer.from(strippedPassPhrase, 'hex')
-    if (buffer.length !== 32) throw new Error('Private key wrong length')
-    const tronKey = buffer.toString('hex')
-    const wallet = ethWallet.fromPrivateKey(buffer)
-    wallet.getAddressString()
-    return {
-      tronMnemonic: passPhrase,
-      tronKey
+  async importPrivateKey(userInput: string): Promise<Object> {
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      // It looks like a private key, so validate the hex:
+      const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
+      if (!EthereumUtil.isValidPrivate(tronKeyBuffer)) {
+        throw new Error('Invalid private key')
+      }
+      const tronKey = tronKeyBuffer.toString('hex')
+
+      // Validate the address derivation:
+      const keys = { tronKey }
+      this.derivePublicKey({
+        type: 'wallet:tron',
+        id: 'fake',
+        keys
+      })
+      return keys
+    } else {
+      // it looks like a mnemonic, so validate that way:
+      if (!validateMnemonic(userInput)) {
+        throw new Error('Invalid input')
+      }
+      const tronKey = await this._mnemonicToTronKey(userInput)
+      return {
+        tronMnemonic: userInput,
+        tronKey
+      }
     }
   }
 
@@ -50,15 +68,20 @@ export class TronPlugin extends CurrencyPlugin {
     if (type === 'tron') {
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
       const tronMnemonic = entropyToMnemonic(entropy)
-      const myMnemonicToSeed = mnemonicToSeed(tronMnemonic).toString('hex')
-      const hdwallet = hdkey.fromMasterSeed(myMnemonicToSeed)
-      const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
-      const wallet = hdwallet.derivePath(walletHDpath).getWallet()
-      const tronKey = wallet.getPrivateKeyString().replace('0x', '')
+      const tronKey = await this._mnemonicToTronKey(tronMnemonic)
       return { tronMnemonic, tronKey }
     } else {
       throw new Error('InvalidWalletType')
     }
+  }
+
+  async _mnemonicToTronKey (mnemonic: string): Promise<string> {
+      const myMnemonicToSeed = mnemonicToSeed(mnemonic).toString('hex')
+      const hdwallet = hdkey.fromMasterSeed(myMnemonicToSeed)
+      const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
+      const wallet = hdwallet.derivePath(walletHDpath).getWallet()
+      const tronKey = wallet.getPrivateKeyString().replace('0x', '')
+      return tronKey
   }
 
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
