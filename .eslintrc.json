@@ -9,6 +9,7 @@
   ],
   "rules": {
     "no-var": "error",
-    "simple-import-sort/sort": "error"
+    "simple-import-sort/sort": "error",
+    "prettier/prettier": "off"
   }
 }
