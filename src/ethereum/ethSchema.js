@@ -61,6 +61,39 @@ export const EtherscanGetTransactions = {
   required: ['result']
 }
 
+export const EtherscanGetInternalTransactions = {
+  type: 'object',
+  properties: {
+    result: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          blockNumber: { type: 'string' },
+          timeStamp: { type: 'string' },
+          hash: { type: 'string' },
+          from: { type: 'string' },
+          to: { type: 'string' },
+          value: { type: 'string' },
+          gas: { type: 'string' },
+          gasUsed: { type: 'string' }
+        },
+        required: [
+          'blockNumber',
+          'timeStamp',
+          'hash',
+          'from',
+          'to',
+          'value',
+          'gas',
+          'gasUsed'
+        ]
+      }
+    }
+  },
+  required: ['result']
+}
+
 export const EtherscanGetTokenTransactions = {
   type: 'object',
   properties: {

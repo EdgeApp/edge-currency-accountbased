@@ -52,7 +52,7 @@ export type EthereumCalcedFees = {
   useDefaults: boolean
 }
 
-export type EtherscanTransaction = {
+export type EtherscanTransaction = {|
   hash: string,
   blockNumber: string,
   timeStamp: string,
@@ -63,15 +63,26 @@ export type EtherscanTransaction = {
   from: string,
   to: string,
   gas: string,
-  gasPrice: string,
-  gasUsed: string,
   cumulativeGasUsed: string,
   isError: string,
   contractAddress?: string,
   tokenName?: string,
   tokenSymbol?: string,
   tokenDecimal?: string
-}
+|}
+
+export type EtherscanInternalTransaction = {|
+  hash: string,
+  blockNumber: string,
+  timeStamp: string,
+  gasUsed: string,
+  value: string,
+  from: string,
+  to: string,
+  gas: string,
+  isError: string,
+  contractAddress?: string
+|}
 
 export type EthereumTxOtherParams = {
   from: Array<string>,
