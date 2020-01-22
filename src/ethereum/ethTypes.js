@@ -128,7 +128,7 @@ export type AlethioTokenTransfer = {
   relationships: AlethioTransactionRelationships
 }
 
-export type AmberdataTx = {
+export type AmberdataTx = {|
   hash: string,
   timestamp: string,
   blockNumber: string,
@@ -140,4 +140,15 @@ export type AmberdataTx = {
   cumulativeGasUsed: string,
   from: Array<{ address: string }>,
   to: Array<{ address: string }>
-}
+|}
+
+export type AmberdataInternalTx = {|
+  transactionHash: string,
+  timestamp: string,
+  blockNumber: string,
+  value: string,
+  initialGas: string,
+  leftOverGas: string,
+  from: { address: string },
+  to: Array<{ address: string }>
+|}

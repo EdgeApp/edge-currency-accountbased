@@ -472,3 +472,57 @@ export const AmberdataAccountsTxSchema = {
   },
   required: ['payload']
 }
+
+export const AmberdataAccountsFuncsSchema = {
+  type: 'object',
+  properties: {
+    payload: {
+      type: 'object',
+      properties: {
+        records: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              transactionHash: { type: 'string' },
+              timestamp: { type: 'number' },
+              blockNumber: { type: 'string' },
+              value: { type: 'string' },
+              initialGas: { type: 'string' },
+              leftOverGas: { type: 'string' },
+              from: {
+                type: 'object',
+                properties: {
+                  address: { type: 'string' }
+                },
+                required: ['address']
+              },
+              to: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    address: { type: 'string' }
+                  },
+                  required: ['address']
+                }
+              }
+            },
+            required: [
+              'transactionHash',
+              'timestamp',
+              'blockNumber',
+              'value',
+              'initialGas',
+              'leftOverGas',
+              'from',
+              'to'
+            ]
+          }
+        }
+      },
+      required: ['records']
+    }
+  },
+  required: ['payload']
+}
