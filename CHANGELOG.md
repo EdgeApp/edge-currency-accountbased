@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.4 (2020-01-22)
+
+- Add ETH internal transaction support
+
 # 0.6.3 (2020-01-06)
 
 - Add ETHBNT
