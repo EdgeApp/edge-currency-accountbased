@@ -15,6 +15,7 @@ import { EthereumEngine } from './ethEngine'
 import { currencyInfo } from './ethInfo'
 import {
   AlethioAccountsTokenTransferSchema,
+  AmberdataAccountsFuncsSchema,
   AmberdataAccountsTxSchema,
   AmberdataRpcSchema,
   BlockChairAddressSchema,
@@ -22,13 +23,16 @@ import {
   EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
   EtherscanGetBlockHeight,
+  EtherscanGetInternalTransactions,
   EtherscanGetTokenTransactions,
   EtherscanGetTransactions
 } from './ethSchema'
 import type {
   AlethioTokenTransfer,
+  AmberdataInternalTx,
   AmberdataTx,
   EthereumTxOtherParams,
+  EtherscanInternalTransaction,
   EtherscanTransaction
 } from './ethTypes'
 
@@ -74,6 +78,16 @@ type EthFunction =
 type BroadcastResults = {
   incrementNonce: boolean,
   decrementNonce: boolean
+}
+
+type GetEthscanAllTxsOptions = {
+  contractAddress?: string,
+  searchRegularTxs?: boolean
+}
+
+type GetEthscanAllTxsResponse = {
+  allTransactions: Array<EdgeTransaction>,
+  server: string
 }
 
 const AMBERDATA_BLOCKCHAIN_IDS = {
@@ -135,7 +149,10 @@ export class EthereumNetwork {
     )
   }
 
-  processEtherscanTransaction(tx: EtherscanTransaction, currencyCode: string) {
+  processEtherscanTransaction(
+    tx: EtherscanTransaction | EtherscanInternalTransaction,
+    currencyCode: string
+  ) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: Array<string> = []
     let nativeNetworkFee: string
@@ -143,7 +160,11 @@ export class EthereumNetwork {
     if (tx.contractAddress) {
       nativeNetworkFee = '0'
     } else {
-      nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
+      if (tx.gasPrice) {
+        nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
+      } else {
+        nativeNetworkFee = '0'
+      }
     }
 
     if (
@@ -173,9 +194,9 @@ export class EthereumNetwork {
       from: [tx.from],
       to: [tx.to],
       gas: tx.gas,
-      gasPrice: tx.gasPrice,
+      gasPrice: tx.gasPrice || '',
       gasUsed: tx.gasUsed,
-      cumulativeGasUsed: tx.cumulativeGasUsed,
+      cumulativeGasUsed: tx.cumulativeGasUsed || '',
       errorVal: parseInt(tx.isError),
       tokenRecipientAddress: null
     }
@@ -277,7 +298,75 @@ export class EthereumNetwork {
     return edgeTransaction
   }
 
-  processAmberdataTransaction(
+  processAmberdataTxInternal(
+    amberdataTx: AmberdataInternalTx,
+    currencyCode: string
+  ): EdgeTransaction | null {
+    const walletAddress = this.ethEngine.walletLocalData.publicKey
+    let netNativeAmount: string = bns.add('0', amberdataTx.value)
+    const ourReceiveAddresses: Array<string> = []
+    let nativeNetworkFee: string
+
+    const value = amberdataTx.value
+    const fromAddress = amberdataTx.from.address || ''
+    const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
+
+    if (fromAddress && toAddress) {
+      nativeNetworkFee = '0'
+
+      if (fromAddress.toLowerCase() === walletAddress.toLowerCase()) {
+        // is a spend
+        if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
+          // Spend to self. netNativeAmount is just the fee
+          netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+        } else {
+          // spend to someone else
+          netNativeAmount = bns.sub('0', value)
+
+          // For spends, include the network fee in the transaction amount
+          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        }
+      } else if (toAddress.toLowerCase() === walletAddress.toLowerCase()) {
+        // Receive transaction
+        netNativeAmount = value
+        ourReceiveAddresses.push(walletAddress.toLowerCase())
+      } else {
+        return null
+      }
+
+      const otherParams: EthereumTxOtherParams = {
+        from: [fromAddress],
+        to: [toAddress],
+        gas: '0',
+        gasPrice: '0',
+        gasUsed: '0',
+        errorVal: 0,
+        tokenRecipientAddress: null
+      }
+
+      let blockHeight = parseInt(amberdataTx.blockNumber, 10)
+      if (blockHeight < 0) blockHeight = 0
+      const date = new Date(amberdataTx.timestamp).getTime() / 1000
+      const edgeTransaction: EdgeTransaction = {
+        txid: amberdataTx.transactionHash,
+        date,
+        currencyCode,
+        blockHeight,
+        nativeAmount: netNativeAmount,
+        networkFee: nativeNetworkFee,
+        ourReceiveAddresses,
+        signedTx: '',
+        parentNetworkFee: '',
+        otherParams
+      }
+
+      return edgeTransaction
+    } else {
+      return null
+    }
+  }
+
+  processAmberdataTxRegular(
     amberdataTx: AmberdataTx,
     currencyCode: string
   ): EdgeTransaction | null {
@@ -421,7 +510,10 @@ export class EthereumNetwork {
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockcypherApiServers[0]}/${cmd}${apiKey}`
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .blockcypherApiServers[0]
+    }/${cmd}${apiKey}`
     const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -439,7 +531,10 @@ export class EthereumNetwork {
     if (includeKey && blockchairApiKey) {
       keyParam = `&key=${blockchairApiKey}`
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockchairApiServers[0]}${path}${keyParam}`
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .blockchairApiServers[0]
+    }${path}${keyParam}`
     return this.fetchGet(url)
   }
 
@@ -449,7 +544,10 @@ export class EthereumNetwork {
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataRpcServers[0]}${apiKey}`
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .amberdataRpcServers[0]
+    }${apiKey}`
     const body = {
       jsonrpc: '2.0',
       method: method,
@@ -469,7 +567,10 @@ export class EthereumNetwork {
 
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey } = this.ethEngine.initOptions
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataApiServers[0]}${path}`
+    const url = `${
+      this.ethEngine.currencyInfo.defaultSettings.otherSettings
+        .amberdataApiServers[0]
+    }${path}`
     return this.fetchGet(url, {
       headers: {
         'x-amberdata-blockchain-id': AMBERDATA_BLOCKCHAIN_IDS.ETH_MAINNET,
@@ -490,7 +591,10 @@ export class EthereumNetwork {
     const { alethioApiKey } = this.ethEngine.initOptions
     if (alethioApiKey) {
       const url = isPath
-        ? `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.alethioApiServers[0]}${pathOrLink}`
+        ? `${
+            this.ethEngine.currencyInfo.defaultSettings.otherSettings
+              .alethioApiServers[0]
+          }${pathOrLink}`
         : pathOrLink
       return this.fetchGet(url, {
         headers: {
@@ -645,7 +749,9 @@ export class EthereumNetwork {
         break
 
       case 'eth_getTransactionCount':
-        url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
+        url = `?module=proxy&action=eth_getTransactionCount&address=${
+          params[0]
+        }&tag=latest`
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             if (!server.includes('etherscan')) {
@@ -706,7 +812,9 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
       case 'getTokenBalance':
-        url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
+        url = `?module=account&action=tokenbalance&contractaddress=${
+          params[1]
+        }&address=${params[0]}&tag=latest`
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
@@ -729,11 +837,14 @@ export class EthereumNetwork {
           startBlock,
           page,
           offset,
-          contractAddress
+          contractAddress,
+          searchRegularTxs
         } = params[0]
         let startUrl
         if (currencyCode === 'ETH') {
-          startUrl = `?action=txlist&module=account`
+          startUrl = `?action=${
+            searchRegularTxs ? 'txlist' : 'txlistinternal'
+          }&module=account`
         } else {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
@@ -848,29 +959,22 @@ export class EthereumNetwork {
     })
   }
 
-  async checkTxsEthscan(
+  async getAllTxsEthscan(
     startBlock: number,
-    currencyCode: string
-  ): Promise<EthereumNetworkUpdate> {
+    currencyCode: string,
+    schema:
+      | EtherscanGetTransactions
+      | EtherscanGetInternalTransactions
+      | EtherscanGetTokenTransactions,
+    options: GetEthscanAllTxsOptions
+  ): Promise<GetEthscanAllTxsResponse> {
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
-    let contractAddress = ''
-    let schema
 
-    if (currencyCode === PRIMARY_CURRENCY) {
-      schema = EtherscanGetTransactions
-    } else {
-      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
-      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-        contractAddress = tokenInfo.contractAddress
-        schema = EtherscanGetTokenTransactions
-      } else {
-        return {}
-      }
-    }
-
-    const allTransactions = []
-    let server
+    const allTransactions: Array<EdgeTransaction> = []
+    let server: string = ''
+    const contractAddress = options.contractAddress
+    const searchRegularTxs = options.searchRegularTxs
     while (1) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
       const response = await this.multicastServers('getTransactions', {
@@ -879,7 +983,8 @@ export class EthereumNetwork {
         startBlock,
         page,
         offset,
-        contractAddress
+        contractAddress,
+        searchRegularTxs
       })
       server = response.server
       const jsonObj = response.result
@@ -901,6 +1006,51 @@ export class EthereumNetwork {
         throw new Error(
           `checkTxsEthscan invalid JSON data:${JSON.stringify(jsonObj)}`
         )
+      }
+    }
+
+    return { allTransactions, server }
+  }
+
+  async checkTxsEthscan(
+    startBlock: number,
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> {
+    let server
+    let allTransactions
+
+    if (currencyCode === PRIMARY_CURRENCY) {
+      const txsRegularResp = await this.getAllTxsEthscan(
+        startBlock,
+        currencyCode,
+        EtherscanGetTransactions,
+        { searchRegularTxs: true }
+      )
+      const txsInternalResp = await this.getAllTxsEthscan(
+        startBlock,
+        currencyCode,
+        EtherscanGetInternalTransactions,
+        { searchRegularTxs: false }
+      )
+      server = txsRegularResp.server || txsInternalResp.server
+      allTransactions = [
+        ...txsRegularResp.allTransactions,
+        ...txsInternalResp.allTransactions
+      ]
+    } else {
+      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
+      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+        const contractAddress = tokenInfo.contractAddress
+        const resp = await this.getAllTxsEthscan(
+          startBlock,
+          currencyCode,
+          EtherscanGetTokenTransactions,
+          { contractAddress }
+        )
+        server = resp.server
+        allTransactions = resp.allTransactions
+      } else {
+        return {}
       }
     }
 
@@ -1030,48 +1180,103 @@ export class EthereumNetwork {
     return response
   }
 
-  async checkTxsAmberdata(
+  async getAllTxsAmberdata(
     startBlock: number,
     startDate: number,
-    currencyCode: string
-  ): Promise<EthereumNetworkUpdate> {
+    currencyCode: string,
+    searchRegularTxs: boolean
+  ): Promise<Array<EdgeTransaction>> {
     const address = this.ethEngine.walletLocalData.publicKey
 
     let page = 0
     const allTransactions: Array<EdgeTransaction> = []
     while (1) {
-      let url = `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
-      if (startDate) {
-        const newDateObj = new Date(startDate)
-        if (newDateObj) {
-          url = url + `&startDate=${newDateObj.toISOString()}`
-        }
-      }
-      const jsonObj = await this.fetchGetAmberdataApi(url)
+      let url = `/addresses/${address}/${
+        searchRegularTxs ? 'transactions' : 'functions'
+      }?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
 
-      const valid = validateObject(jsonObj, AmberdataAccountsTxSchema)
-      if (valid) {
-        const amberdataTxs: Array<AmberdataTx> = jsonObj.payload.records
-        for (const amberdataTx of amberdataTxs) {
-          const tx = this.processAmberdataTransaction(amberdataTx, currencyCode)
-          if (tx) {
-            allTransactions.push(tx)
+      if (searchRegularTxs) {
+        if (startDate) {
+          const newDateObj = new Date(startDate)
+          const now = new Date()
+          if (newDateObj) {
+            url =
+              url +
+              `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
           }
         }
-        if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
-          break
+        const jsonObj = await this.fetchGetAmberdataApi(url)
+        const valid = validateObject(jsonObj, AmberdataAccountsTxSchema)
+        if (valid) {
+          const amberdataTxs: Array<AmberdataTx> = jsonObj.payload.records
+          for (const amberdataTx of amberdataTxs) {
+            const tx = this.processAmberdataTxRegular(amberdataTx, currencyCode)
+            if (tx) {
+              allTransactions.push(tx)
+            }
+          }
+          if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
+            break
+          }
+          page++
+        } else {
+          throw new Error('checkTxsAmberdata (regular tx) response is invalid')
         }
-        page++
       } else {
-        throw new Error('checkTxsAmberdata response is invalid')
+        if (startDate) {
+          url = url + `&startDate=${startDate}&endDate=${Date.now()}`
+        }
+        const jsonObj = await this.fetchGetAmberdataApi(url)
+        const valid = validateObject(jsonObj, AmberdataAccountsFuncsSchema)
+        if (valid) {
+          const amberdataTxs: Array<AmberdataInternalTx> =
+            jsonObj.payload.records
+          for (const amberdataTx of amberdataTxs) {
+            const tx = this.processAmberdataTxInternal(
+              amberdataTx,
+              currencyCode
+            )
+            if (tx) {
+              allTransactions.push(tx)
+            }
+          }
+          if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
+            break
+          }
+          page++
+        } else {
+          throw new Error('checkTxsAmberdata (internal tx) response is invalid')
+        }
       }
     }
+
+    return allTransactions
+  }
+
+  async checkTxsAmberdata(
+    startBlock: number,
+    startDate: number,
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> {
+    const allTxsRegular: Array<EdgeTransaction> = await this.getAllTxsAmberdata(
+      startBlock,
+      startDate,
+      currencyCode,
+      true
+    )
+
+    const allTxsInternal: Array<EdgeTransaction> = await this.getAllTxsAmberdata(
+      startBlock,
+      startDate,
+      currencyCode,
+      false
+    )
 
     return {
       tokenTxs: {
         ETH: {
           blockHeight: startBlock,
-          edgeTransactions: allTransactions
+          edgeTransactions: [...allTxsRegular, ...allTxsInternal]
         }
       },
       server: 'amberdata'
