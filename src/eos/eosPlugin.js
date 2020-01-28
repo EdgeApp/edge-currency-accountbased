@@ -68,6 +68,17 @@ export class EosPlugin extends CurrencyPlugin {
     this.eosServer = eosjs(eosConfig)
   }
 
+  async importPrivateKey(privateKey: string): Promise<Object> {
+    const strippedPrivateKey = privateKey.replace(/ /g, '') // should be in WIF format
+    if (strippedPrivateKey.length !== 51) {
+      throw new Error('Private key wrong length')
+    }
+    return {
+      eosOwnerKey: strippedPrivateKey,
+      eosKey: strippedPrivateKey
+    }
+  }
+
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
@@ -77,7 +88,7 @@ export class EosPlugin extends CurrencyPlugin {
       // Multiple keys can be created and stored here. ie. If there is both a mnemonic and key format,
       // Generate and store them here by returning an arbitrary object with them.
       let entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const eosOwnerKey = ecc.seedPrivate(entropy)
+      const eosOwnerKey = ecc.seedPrivate(entropy) // returns WIF format
       entropy = Buffer.from(this.io.random(32)).toString('hex')
       const eosKey = ecc.seedPrivate(entropy)
       return { eosOwnerKey, eosKey }
@@ -99,6 +110,8 @@ export class EosPlugin extends CurrencyPlugin {
       if (walletInfo.keys.eosOwnerKey) {
         ownerPublicKey = ecc.privateToPublic(walletInfo.keys.eosOwnerKey)
       }
+      console.log('privateKey: ', walletInfo.keys.eosKey)
+      console.log('publicKey: ', publicKey)
       return { publicKey, ownerPublicKey }
     } else {
       throw new Error('InvalidWalletType')
