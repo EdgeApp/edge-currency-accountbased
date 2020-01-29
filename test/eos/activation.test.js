@@ -16,6 +16,7 @@ import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index.js'
+import { fakeLog } from '../fakeLog.js'
 
 describe(`EOS activation`, function() {
   let engine: EdgeCurrencyEngine
@@ -25,6 +26,7 @@ describe(`EOS activation`, function() {
     initOptions: {},
     io: { ...fakeIo, fetch, random: size => new Uint8Array(size) },
     nativeIo: {},
+    log: fakeLog,
     pluginDisklet: fakeIo.disklet
   }
   const factory = edgeCorePlugins.eos
@@ -57,6 +59,7 @@ describe(`EOS activation`, function() {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
+    log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet

@@ -18,12 +18,14 @@ import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index.js'
 import { TezosEngine } from '../../src/tezos/tezosEngine.js'
+import { fakeLog } from '../fakeLog.js'
 
 describe(`Tezos engine`, function() {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
     io: { ...fakeIo, fetch, random: size => new Uint8Array(size) },
+    log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
@@ -53,6 +55,7 @@ describe(`Tezos engine`, function() {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
+    log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
