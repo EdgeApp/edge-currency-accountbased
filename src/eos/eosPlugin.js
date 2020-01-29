@@ -16,14 +16,13 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import eosjs from 'eosjs'
+import EosApi from 'eosjs-api'
+import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
 import { currencyInfo } from './eosInfo.js'
-
-const { ecc } = eosjs.modules
 
 // ----MAIN NET----
 export const eosConfig = {
@@ -31,9 +30,6 @@ export const eosConfig = {
   keyProvider: [],
   httpEndpoint: '', // main net
   fetch: fetch,
-  expireInSeconds: 60,
-  sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
-  broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
   verbose: false // verbose logging such as API activity
 }
 
@@ -64,8 +60,7 @@ export class EosPlugin extends CurrencyPlugin {
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     eosConfig.fetch = fetchCors
-
-    this.eosServer = eosjs(eosConfig)
+    this.eosServer = EosApi(eosConfig)
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
