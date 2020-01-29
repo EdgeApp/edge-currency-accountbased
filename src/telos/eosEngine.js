@@ -151,7 +151,7 @@ export class EosEngine extends CurrencyEngine {
 
     const { act, trx_id, block_num } = action
     const block_time = action['@timestamp']
-
+    console.log('kylan act.data:', act.data)
     const { from, to, memo, symbol } = act.data
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
@@ -201,13 +201,17 @@ export class EosEngine extends CurrencyEngine {
     const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
-      this.log('Invalid EOS transaction data. No tx block_num')
+      this.log(
+        `Invalid ${this.currencyInfo.currencyCode} transaction data. No tx block_num`
+      )
       return 0
     }
     const txid = action.trx_id
 
     if (!action.act) {
-      this.log('Invalid EOS transaction data. No action.act')
+      this.log(
+        `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act`
+      )
       return 0
     }
     const name = action.act.name
@@ -216,7 +220,9 @@ export class EosEngine extends CurrencyEngine {
     // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
       if (!action.act.data) {
-        this.log('Invalid EOS transaction data. No action.act.data')
+        this.log(
+          `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act.data`
+        )
         return 0
       }
       const { from, to, memo, amount, symbol } = action.act.data
@@ -268,6 +274,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async checkOutgoingTransactions(acct: string): Promise<boolean> {
+    const { currencyCode } = this.currencyInfo
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
     const limit = 10
     let skip = 0
@@ -277,7 +284,7 @@ export class EosEngine extends CurrencyEngine {
 
     while (!finish) {
       this.log('looping through checkOutgoingTransactions')
-      const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
+      const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
 
       // query the server / node
       const response = await this.multicastServers(
@@ -323,6 +330,7 @@ export class EosEngine extends CurrencyEngine {
 
   // similar to checkOutgoingTransactions, possible to refactor
   async checkIncomingTransactions(acct: string): Promise<boolean> {
+    const { currencyCode } = this.currencyInfo
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
@@ -335,7 +343,7 @@ export class EosEngine extends CurrencyEngine {
       this.log('looping through checkIncomingTransactions')
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
-      const url = `/v2/history/get_transfers?to=${acct}&symbol=EOS&skip=${skip}&limit=${limit}&sort=desc`
+      const url = `/v2/history/get_transfers?to=${acct}&symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
       const result = await this.multicastServers('getIncomingTransactions', url)
       const actionsObject = await result.json()
       let actions = []
@@ -377,6 +385,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async checkTransactionsInnerLoop() {
+    const { currencyCode } = this.currencyInfo
     if (
       !this.walletLocalData.otherData ||
       !this.walletLocalData.otherData.accountName
@@ -395,7 +404,7 @@ export class EosEngine extends CurrencyEngine {
     }
 
     if (incomingResult && outgoingResult) {
-      this.tokenCheckTransactionsStatus.EOS = 1
+      this.tokenCheckTransactionsStatus[currencyCode] = 1
       this.updateOnAddressesChecked()
     }
     if (this.transactionsChangedArray.length > 0) {
@@ -407,6 +416,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async multicastServers(func: EosFunction, ...params: any): Promise<any> {
+    const { currencyCode } = this.currencyInfo
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
@@ -450,6 +460,9 @@ export class EosEngine extends CurrencyEngine {
           randomNodes.map(server => async () => {
             const eosServer = eosjs({ ...eosConfig, httpEndpoint: server })
             const result = await eosServer[func](...params)
+            // console.log(
+            //   'func: ', func, 'server: ', server, ', result: ', result, ' params: ', params
+            // )
             return { server, result }
           })
         )
@@ -457,7 +470,7 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
-    this.log(`EOS multicastServers ${func} ${out.server} won`)
+    this.log(`${currencyCode} multicastServers ${func} ${out.server} won`)
     return out.result
   }
 
@@ -481,7 +494,7 @@ export class EosEngine extends CurrencyEngine {
       if (this.walletLocalData.otherData.accountName) {
         const results = await this.multicastServers(
           'getCurrencyBalance',
-          'eosio.token',
+          this.currencyInfo.eosTokenAccountName,
           this.walletLocalData.otherData.accountName
         )
         if (results && results.length > 0) {
@@ -526,7 +539,7 @@ export class EosEngine extends CurrencyEngine {
           }
         }
       }
-      this.tokenCheckBalanceStatus.EOS = 1
+      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching account: ${JSON.stringify(e)}`)
@@ -641,7 +654,7 @@ export class EosEngine extends CurrencyEngine {
     const transactionJson = {
       actions: [
         {
-          account: 'eosio.token',
+          account: this.currencyInfo.eosTokenAccountName,
           name: 'transfer',
           authorization: [
             {
@@ -682,7 +695,7 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
-    this.log('EOS transaction prepared')
+    this.log(`${this.currencyInfo.currencyCode} transaction prepared`)
     this.log(
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )

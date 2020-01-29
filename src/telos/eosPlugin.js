@@ -27,7 +27,7 @@ const { ecc } = eosjs.modules
 
 // ----MAIN NET----
 export const eosConfig = {
-  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
+  chainId: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11', // main net
   keyProvider: [],
   httpEndpoint: '', // main net
   fetch: fetch,
@@ -60,7 +60,7 @@ export class EosPlugin extends CurrencyPlugin {
   eosServer: Object
 
   constructor(io: EdgeIo, fetchCors: Function) {
-    super(io, 'eos', currencyInfo)
+    super(io, currencyInfo.pluginName, currencyInfo) // what about the hard-coded 'eos'?
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     eosConfig.fetch = fetchCors
@@ -81,8 +81,8 @@ export class EosPlugin extends CurrencyPlugin {
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
-
-    if (type === 'eos') {
+    const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
+    if (type === currencyInfoType) {
       // TODO: User currency library to create private key as a string
       // Use io.random() for random number generation
       // Multiple keys can be created and stored here. ie. If there is both a mnemonic and key format,
@@ -99,7 +99,9 @@ export class EosPlugin extends CurrencyPlugin {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
-    if (type === 'eos') {
+    const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
+
+    if (type === currencyInfoType) {
       // TODO: User currency library to derive the public keys/addresses from the private key.
       // Multiple keys can be generated and stored if needed. Do not store an HD chain
       // but rather just different versions of the master public key
@@ -118,9 +120,10 @@ export class EosPlugin extends CurrencyPlugin {
     }
   }
 
+  // will need to check URI
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, {
-      eos: true
+      [currencyInfo.pluginName]: true
     })
 
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
@@ -137,7 +140,7 @@ export class EosPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      const currencyCode: string = 'EOS'
+      const currencyCode: string = this.currencyInfo.currencyCode
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
@@ -145,7 +148,12 @@ export class EosPlugin extends CurrencyPlugin {
       }
       amount = bns.div(nativeAmount, denom.multiplier, 4)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'eos', amount)
+    // change this "eos"?
+    const encodedUri = this.encodeUriCommon(
+      obj,
+      currencyInfo.pluginName,
+      amount
+    )
     return encodedUri
   }
 
@@ -164,7 +172,7 @@ export class EosPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+export function makeTelosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
   const fetchJson = getFetchJson(opts)
 
@@ -215,7 +223,10 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
-        const prices = await fetchJson(`${infoServer}/v1/eosPrices`)
+        const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
+        const prices = await fetchJson(
+          `${infoServer}/v1/${lowerCaseCurrencyCode}Prices`
+        )
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +

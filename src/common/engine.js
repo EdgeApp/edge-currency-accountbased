@@ -289,7 +289,7 @@ class CurrencyEngine {
     if (!edgeTransaction.otherParams) {
       edgeTransaction.otherParams = {}
     }
-
+    // if unconfirmed
     if (edgeTransaction.blockHeight < 1) {
       edgeTransaction.otherParams.lastSeenTime =
         lastSeenTime || Math.round(Date.now() / 1000)
@@ -332,7 +332,7 @@ class CurrencyEngine {
       // Already have this tx in the database. See if anything changed
       const transactionsArray = this.transactionList[currencyCode]
       const edgeTx = transactionsArray[idx]
-
+      console.log('addTransaction and edgeTx: ', edgeTx)
       const { otherParams: otherParamsOld = {} } = edgeTx
       const { otherParams: otherParamsNew = {} } = edgeTransaction
       if (
@@ -343,6 +343,8 @@ class CurrencyEngine {
           (edgeTx.networkFee !== edgeTransaction.networkFee ||
             edgeTx.nativeAmount !== edgeTransaction.nativeAmount ||
             otherParamsOld.lastSeenTime !== otherParamsNew.lastSeenTime ||
+            (edgeTx.metadata && edgeTransaction.metadata &&
+              (edgeTx.metadata.notes !== edgeTransaction.metadata.notes)) ||
             edgeTx.date !== edgeTransaction.date))
       ) {
         // If a spend transaction goes from unconfirmed to dropped or confirmed,
@@ -363,7 +365,7 @@ class CurrencyEngine {
         )
         this.updateTransaction(currencyCode, edgeTransaction, idx)
       } else {
-        // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
+        this.log('old transaction: ', edgeTransaction)
       }
     }
     if (needsReSort) {
@@ -449,7 +451,7 @@ class CurrencyEngine {
     this.transactionList[currencyCode][idx] = edgeTransaction
     this.transactionListDirty = true
     this.transactionsChangedArray.push(edgeTransaction)
-    this.log('updateTransaction:' + edgeTransaction.txid)
+    this.log('updateTransaction:', edgeTransaction)
   }
 
   // *************************************
@@ -853,6 +855,9 @@ class CurrencyEngine {
     } else {
       returnArray = this.transactionList[currencyCode].slice(startIndex)
     }
+    console.log(
+      'getTransactions options: ', options, ' and returnArray: ', returnArray
+    )
     return returnArray
   }
 
