@@ -152,7 +152,7 @@ export class EosPlugin extends CurrencyPlugin {
 }
 
 export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
-  const { io } = opts
+  const { io, log } = opts
   const { fetchCors = io.fetch } = io
 
   let toolsPromise: Promise<EosPlugin>
@@ -248,7 +248,7 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           throw e
         }
       }
-      console.log(`validateAccount: result=${out.result}`)
+      log(`validateAccount: result=${out.result}`)
       return out
     }
   }

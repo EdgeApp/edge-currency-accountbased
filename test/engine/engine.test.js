@@ -172,10 +172,9 @@ for (const fixture of fixtures) {
       engine.killEngine().then(() => {
         closeEdge()
         done()
-        // $FlowFixMe
-        console.warn(process._getActiveRequests())
-        // $FlowFixMe
-        console.warn(process._getActiveHandles())
+        // const flowHack: any = process
+        // console.warn(flowHack._getActiveRequests())
+        // console.warn(flowHack._getActiveHandles())
       })
     })
   })

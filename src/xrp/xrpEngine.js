@@ -450,7 +450,7 @@ export class XrpEngine extends CurrencyEngine {
           if (err.message.includes('has too many decimal places')) {
             // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
             // Just retrying seems to resolve it. -paulvp
-            console.log(
+            this.log(
               'Got "too many decimal places" error. Retrying... ' + i.toString()
             )
             continue
