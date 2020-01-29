@@ -9,6 +9,7 @@ import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyTools,
+  type EdgeFetchFunction,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
   type EdgeTransaction,
@@ -36,16 +37,16 @@ export class FioEngine extends CurrencyEngine {
   otherData: any
   otherMethods: Object
   fioSDK: FIOSDK
-  fetchJson: Function
+  fetchCors: EdgeFetchFunction
 
   constructor(
     currencyPlugin: FioPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchJson: Function
+    fetchCors: Function
   ) {
     super(currencyPlugin, walletInfo, opts)
-    this.fetchJson = fetchJson
+    this.fetchCors = fetchCors
     this.fioPlugin = currencyPlugin
     this.activatedAccountsCache = {}
     this.otherMethods = {}

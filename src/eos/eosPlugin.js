@@ -11,6 +11,7 @@ import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyPlugin,
   type EdgeEncodeUri,
+  type EdgeFetchFunction,
   type EdgeIo,
   type EdgeParsedUri,
   type EdgeWalletInfo
@@ -19,7 +20,6 @@ import eosjs from 'eosjs'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
-import { getFetchCors, getFetchJson } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { currencyInfo } from './eosInfo.js'
 
@@ -59,7 +59,7 @@ export class EosPlugin extends CurrencyPlugin {
   otherMethods: Object
   eosServer: Object
 
-  constructor(io: EdgeIo, fetchCors: Function) {
+  constructor(io: EdgeIo, fetchCors: EdgeFetchFunction) {
     super(io, 'eos', currencyInfo)
 
     eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
@@ -153,13 +153,13 @@ export class EosPlugin extends CurrencyPlugin {
 
 export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
-  const fetchJson = getFetchJson(opts)
+  const { fetchCors = io.fetch } = io
 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    const fetch = getFetchCors(opts)
-    toolsPromise = Promise.resolve(new EosPlugin(io, fetch))
+    const { fetchCors = io.fetch } = io
+    toolsPromise = Promise.resolve(new EosPlugin(io, fetchCors))
     return toolsPromise
   }
 
@@ -168,7 +168,7 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetchJson)
+    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetchCors)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -197,12 +197,22 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     getActivationSupportedCurrencies: async (): Promise<Object> => {
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-      return fetchJson(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
+      const uri = `${eosPaymentServer}/api/v1/getSupportedCurrencies`
+      const response = await fetchCors(uri)
+      if (!response.ok) {
+        throw new Error(`Error ${response.status} while fetching ${uri}`)
+      }
+      return response.json()
     },
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
-        const prices = await fetchJson(`${infoServer}/v1/eosPrices`)
+        const uri = `${infoServer}/v1/eosPrices`
+        const response = await fetchCors(uri)
+        if (!response.ok) {
+          throw new Error(`Error ${response.status} while fetching ${uri}`)
+        }
+        const prices = await response.json()
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +

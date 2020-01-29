@@ -5,6 +5,7 @@ import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyTools,
+  type EdgeFetchFunction,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
   type EdgeTransaction,
@@ -59,7 +60,7 @@ export class EosEngine extends CurrencyEngine {
     currencyPlugin: EosPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchJson: Function
+    fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
 
@@ -100,8 +101,12 @@ export class EosEngine extends CurrencyEngine {
         }
         const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
           .eosActivationServers[0]
-        const url = `${eosPaymentServer}/api/v1/activateAccount`
-        return fetchJson(url, options)
+        const uri = `${eosPaymentServer}/api/v1/activateAccount`
+        const response = await fetchCors(uri, options)
+        if (!response.ok) {
+          throw new Error(`Error ${response.status} while fetching ${uri}`)
+        }
+        return response.json()
       }
     }
   }
