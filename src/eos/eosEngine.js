@@ -206,13 +206,13 @@ export class EosEngine extends CurrencyEngine {
     const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
-      this.log('Invalid EOS transaction data. No tx block_num')
+      this.log('Invalid transaction data. No tx block_num')
       return 0
     }
     const txid = action.trx_id
 
     if (!action.act) {
-      this.log('Invalid EOS transaction data. No action.act')
+      this.log('Invalid transaction data. No action.act')
       return 0
     }
     const name = action.act.name
@@ -221,7 +221,7 @@ export class EosEngine extends CurrencyEngine {
     // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
       if (!action.act.data) {
-        this.log('Invalid EOS transaction data. No action.act.data')
+        this.log('Invalid transaction data. No action.act.data')
         return 0
       }
       const { from, to, memo, amount, symbol } = action.act.data
@@ -462,7 +462,7 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
-    this.log(`EOS multicastServers ${func} ${out.server} won`)
+    this.log(`multicastServers ${func} ${out.server} won`)
     return out.result
   }
 
@@ -687,7 +687,7 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
-    this.log('EOS transaction prepared')
+    this.log('transaction prepared')
     this.log(
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
