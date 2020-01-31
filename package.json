@@ -70,7 +70,7 @@
     "babel-eslint": ">=10.0.0",
     "babel-loader": "^8.0.5",
     "chai": "^4.1.2",
-    "edge-core-js": "^0.16.17",
+    "edge-core-js": "^0.16.20",
     "eslint": ">=6.2.2",
     "eslint-config-standard-kit": ">=0.14.2",
     "eslint-plugin-flowtype": ">=4.3.0",

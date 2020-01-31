@@ -11,6 +11,7 @@ import { before, describe, it } from 'mocha'
 
 import edgeCorePlugins from '../../src/index.js'
 import { expectRejection } from '../expectRejection.js'
+import { fakeLog } from '../fakeLog.js'
 import fixtures from './fixtures.js'
 
 for (const fixture of fixtures) {
@@ -28,6 +29,7 @@ for (const fixture of fixtures) {
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
     io: { ...fakeIo, random: size => fixture.key },
+    log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }

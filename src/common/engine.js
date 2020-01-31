@@ -15,6 +15,7 @@ import {
   type EdgeFreshAddress,
   type EdgeGetTransactionsOptions,
   type EdgeIo,
+  type EdgeLog,
   type EdgeMetaToken,
   type EdgeSpendInfo,
   type EdgeTransaction,
@@ -68,6 +69,7 @@ class CurrencyEngine {
   timers: any
   walletId: string
   io: EdgeIo
+  log: EdgeLog
   otherData: Object
 
   constructor(
@@ -80,6 +82,7 @@ class CurrencyEngine {
 
     this.currencyPlugin = currencyPlugin
     this.io = currencyPlugin.io
+    this.log = opts.log
     this.engineOn = false
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}
@@ -144,7 +147,7 @@ class CurrencyEngine {
 
   async loadTransactions() {
     if (this.transactionsLoaded) {
-      console.log('Transactions already loaded')
+      this.log('Transactions already loaded')
       return
     }
     this.transactionsLoaded = true
@@ -573,12 +576,6 @@ class CurrencyEngine {
     this.log(`${this.walletInfo.id} syncRatio of: ${totalStatus}`)
     // note that sometimes callback does not get triggered on Android debug
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
-  }
-
-  log(...text: Array<any>) {
-    text[0] = `${this.walletId.slice(0, 5)}: ${text[0].toString()}`
-    console.log(...text)
-    this.io.console.info(...text)
   }
 
   async startEngine() {

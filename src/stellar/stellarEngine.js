@@ -124,7 +124,7 @@ export class StellarEngine extends CurrencyEngine {
         )
         break
     }
-    this.log(`XLM multicastServers ${func} ${out.server} won`)
+    this.log(`multicastServers ${func} ${out.server} won`)
     return out.result
   }
 

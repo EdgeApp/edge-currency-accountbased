@@ -21,6 +21,7 @@ import { CurrencyPlugin } from '../../src/common/plugin.js'
 import { WalletLocalData } from '../../src/common/types.js'
 import { currencyInfo } from '../../src/ethereum/ethInfo.js'
 import edgeCorePlugins from '../../src/index.js'
+import { fakeLog } from '../fakeLog.js'
 import { engineTestTxs } from './engine.txs.js'
 import fixtures from './fixtures.js'
 
@@ -36,6 +37,7 @@ for (const fixture of fixtures) {
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
     io: { ...fakeIo, fetch, random: size => fixture.key },
+    log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
@@ -69,6 +71,7 @@ for (const fixture of fixtures) {
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
     callbacks,
+    log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
     walletLocalEncryptedDisklet: walletLocalDisklet
@@ -169,10 +172,9 @@ for (const fixture of fixtures) {
       engine.killEngine().then(() => {
         closeEdge()
         done()
-        // $FlowFixMe
-        console.warn(process._getActiveRequests())
-        // $FlowFixMe
-        console.warn(process._getActiveHandles())
+        // const flowHack: any = process
+        // console.warn(flowHack._getActiveRequests())
+        // console.warn(flowHack._getActiveHandles())
       })
     })
   })
@@ -207,6 +209,7 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
 const walletLocalDisklet = fakeIo.disklet
 const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   callbacks,
+  log: fakeLog,
   userSettings: undefined,
   walletLocalDisklet,
   walletLocalEncryptedDisklet: walletLocalDisklet

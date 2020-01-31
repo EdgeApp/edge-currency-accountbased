@@ -2555,10 +2555,10 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.16.17:
-  version "0.16.17"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.16.17.tgz#88f086f6c574c2aa2396032d9532caf388c14696"
-  integrity sha512-knQje90Lnqs+fK5uKe494HkFoH0/vn4e+rASXcTEis3U6hLiPVRJh8/LLHUKlpF58YzIR8OJ6xJLLUiGILXB5A==
+edge-core-js@^0.16.20:
+  version "0.16.20"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.16.20.tgz#a109fe87d71cf112f888810b008d2431c470f1f0"
+  integrity sha512-q7yMY/285ZYavmDQ486R39VXYk3stHudzjxzA4Nzbz5ZP9xt1BWzVnR0jG/kR6Eb2tMQzYsi2YYSUiuZwyvCsQ==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
@@ -2578,9 +2578,8 @@ edge-core-js@^0.16.17:
     redux-pixies "^0.3.6"
     rfc4648 "^1.1.0"
     scrypt-js "^2.0.3"
-    utf8 "^3.0.0"
     ws "^5.1.1"
-    yaob "^0.3.5"
+    yaob "^0.3.6"
 
 electron-to-chromium@^1.3.322:
   version "1.3.322"
@@ -7489,11 +7488,6 @@ utf8@^2.1.1:
   resolved "https://registry.yarnpkg.com/utf8/-/utf8-2.1.2.tgz#1fa0d9270e9be850d9b05027f63519bf46457d96"
   integrity sha1-H6DZJw6b6FDZsFAn9jUZv0ZFfZY=
 
-utf8@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/utf8/-/utf8-3.0.0.tgz#f052eed1364d696e769ef058b183df88c87f69d1"
-  integrity sha512-E8VjFIQ/TyQgp+TZfS6l8yp/xWppSAHzidGiRrqe4bK4XP9pTRyKFgGJpO3SN7zdX4DeomTrwaseCHovfpFcqQ==
-
 util-deprecate@~1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
@@ -7800,10 +7794,10 @@ yallist@^3.0.2:
   resolved "https://registry.yarnpkg.com/yallist/-/yallist-3.1.1.tgz#dbb7daf9bfd8bac9ab45ebf602b8cbad0d5d08fd"
   integrity sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==
 
-yaob@^0.3.5:
-  version "0.3.5"
-  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.5.tgz#838035a8488a2b0f1b6117db171730bdcb57a75a"
-  integrity sha512-b2r4f4r+nDZKLfDCYHCubQNe/V7SLlzLrfufYwik9FC5yiSlzTc074wQpo1Q418fhiJvfUMP74HubOEkVWgZTA==
+yaob@^0.3.6:
+  version "0.3.6"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.6.tgz#84f9970d2e3629e041a791d1dea41f8a5387e91f"
+  integrity sha512-MGfSGsmQsRgWM62vPn+7NjSeU70EH78aZg5uXhLGAw94C7nMDxKJaamozTTGuiF4cwp8bsoM4cOhiDogk23INg==
   dependencies:
     rfc4648 "^1.1.0"
 
