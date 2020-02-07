@@ -8,6 +8,7 @@ import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
+  eosFuelServers: ['https://eos.greymass.com'],
   eosHyperionNodes: [
     'https://mainnet.eosn.io',
     'https://api.eossweden.org',
