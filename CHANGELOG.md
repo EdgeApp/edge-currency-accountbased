@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.5 (2020-02-06)
+
+- EOS - Add Greymass Fuel
+
 # 0.6.4 (2020-01-22)
 
 - Add ETH internal transaction support
