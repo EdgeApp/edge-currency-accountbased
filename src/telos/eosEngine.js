@@ -494,7 +494,7 @@ export class EosEngine extends CurrencyEngine {
       if (this.walletLocalData.otherData.accountName) {
         const results = await this.multicastServers(
           'getCurrencyBalance',
-          this.currencyInfo.eosTokenAccountName,
+          'eosio.token',
           this.walletLocalData.otherData.accountName
         )
         if (results && results.length > 0) {
@@ -654,7 +654,7 @@ export class EosEngine extends CurrencyEngine {
     const transactionJson = {
       actions: [
         {
-          account: this.currencyInfo.eosTokenAccountName,
+          account: 'eosio.token',
           name: 'transfer',
           authorization: [
             {

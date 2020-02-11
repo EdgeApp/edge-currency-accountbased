@@ -69,7 +69,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginName: 'telos',
   // do we need plugin name?
   walletType: 'wallet:telos',
-  eosTokenAccountName: 'eosio.token',
 
   defaultSettings,
 
