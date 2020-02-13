@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.6 (2020-02-13)
+
+- EOS - Revert fetch update to fix syncing
+
 # 0.6.5 (2020-02-06)
 
 - EOS - Add Greymass Fuel
