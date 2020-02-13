@@ -21,6 +21,7 @@ import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
+import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { currencyInfo } from './eosInfo.js'
 
@@ -148,13 +149,12 @@ export class EosPlugin extends CurrencyPlugin {
 
 export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io, log } = opts
-  const { fetchCors = io.fetch } = io
+  const fetch = getFetchCors(opts)
 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    const { fetchCors = io.fetch } = io
-    toolsPromise = Promise.resolve(new EosPlugin(io, fetchCors))
+    toolsPromise = Promise.resolve(new EosPlugin(io, fetch))
     return toolsPromise
   }
 
@@ -163,7 +163,7 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetchCors)
+    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetch)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -193,7 +193,7 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
       const uri = `${eosPaymentServer}/api/v1/getSupportedCurrencies`
-      const response = await fetchCors(uri)
+      const response = await fetch(uri)
       if (!response.ok) {
         throw new Error(`Error ${response.status} while fetching ${uri}`)
       }
@@ -203,7 +203,7 @@ export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       try {
         const infoServer = getEdgeInfoServer()
         const uri = `${infoServer}/v1/eosPrices`
-        const response = await fetchCors(uri)
+        const response = await fetch(uri)
         if (!response.ok) {
           throw new Error(`Error ${response.status} while fetching ${uri}`)
         }
