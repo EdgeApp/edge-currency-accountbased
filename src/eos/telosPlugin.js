@@ -11,17 +11,14 @@ import {
 
 import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosBasedPlugin'
-import { type EosSettings } from './eosTypes.js'
+import { type EosSettings } from './eosTypes'
 
 // ----TELOS MAIN NET----
 export const eosJsConfig = {
-  chainId: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11', // main net
+  chainId: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11', // Telos main net
   keyProvider: [],
   httpEndpoint: '', // main net
   fetch: fetch,
-  expireInSeconds: 60,
-  sign: false, // sign the transaction with a private key. Leaving a transaction unsigned avoids the need to provide a private key
-  broadcast: false, // post the transaction to the blockchain. Use false to obtain a fully signed transaction
   verbose: false // verbose logging such as API activity
 }
 
@@ -75,6 +72,7 @@ const otherSettings: EosSettings = {
     'https://api.eosimpera.com',
     'https://telos.get-scatter.com'
   ],
+  eosFuelServers: ['https://eos.greymass.com'], // this will need to be fixed
   eosJsConfig
 }
 

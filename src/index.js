@@ -5,15 +5,15 @@
 
 import 'regenerator-runtime/runtime'
 
-import { makeBinancePlugin } from './binance/bnbPlugin.js'
-import { makeEosPlugin } from './eos/eosPlugin.js'
-import { makeEthereumPlugin } from './ethereum/ethPlugin.js'
+import { makeBinancePlugin } from './binance/bnbPlugin'
+import { makeEosPlugin } from './eos/eosPlugin'
+import { makeTelosPlugin } from './eos/telosPlugin'
+import { makeEthereumPlugin } from './ethereum/ethPlugin'
 import { makeFioPlugin } from './fio/fioPlugin'
-import { makeRskPlugin } from './rsk/rskPlugin.js'
-import { makeStellarPlugin } from './stellar/stellarPlugin.js'
-import { makeTelosPlugin } from './telos/eosBasedPlugin.js/index.js'
-import { makeTezosPlugin } from './tezos/tezosPlugin.js'
-import { makeRipplePlugin } from './xrp/xrpPlugin.js'
+import { makeRskPlugin } from './rsk/rskPlugin'
+import { makeStellarPlugin } from './stellar/stellarPlugin'
+import { makeTezosPlugin } from './tezos/tezosPlugin'
+import { makeRipplePlugin } from './xrp/xrpPlugin'
 
 const plugins = {
   eos: makeEosPlugin,

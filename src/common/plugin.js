@@ -18,7 +18,7 @@ import {
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
-import { getDenomInfo } from '../common/utils.js'
+import { getDenomInfo } from '../common/utils'
 
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {

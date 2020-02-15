@@ -12,18 +12,18 @@ import {
   type EdgeCurrencyInfo,
   type EdgeCurrencyPlugin,
   type EdgeEncodeUri,
+  type EdgeFetchFunction,
   type EdgeIo,
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import eosjs from 'eosjs'
+import EosApi from 'eosjs-api'
+import ecc from 'eosjs-ecc'
 
-import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
-import { getFetchCors, getFetchJson } from '../react-native-io.js'
+import { CurrencyPlugin } from '../common/plugin'
+import { getDenomInfo, getEdgeInfoServer } from '../common/utils'
+import { getFetchCors } from '../react-native-io'
 import { EosEngine } from './eosEngine'
-
-const { ecc } = eosjs.modules
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
@@ -48,15 +48,22 @@ export class EosPlugin extends CurrencyPlugin {
   otherMethods: Object
   eosServer: Object
 
-  constructor(io: EdgeIo, fetchCors: Function, currencyInfo: EdgeCurrencyInfo) {
+  constructor(
+    io: EdgeIo,
+    fetchCors: EdgeFetchFunction,
+    currencyInfo: EdgeCurrencyInfo
+  ) {
     // what about the hard-coded 'eos'?
     // second parameter was 'eos', technically that *is* plugin name...
     super(io, currencyInfo.pluginName, currencyInfo)
+    console.log('kylan EosPlugin constructor this.currencyInfo is: ', this.currencyInfo)
     const eosJsConfig = currencyInfo.defaultSettings.otherSettings.eosJsConfig
+    console.log('kylan EosPlugin eosJsConfig has been assigned')
     eosJsConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    console.log('kylan fetchCors is: ', fetchCors)
     eosJsConfig.fetch = fetchCors
 
-    this.eosServer = eosjs(eosJsConfig)
+    this.eosServer = EosApi(eosJsConfig)
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {
@@ -169,13 +176,12 @@ export function makeEosBasedPluginInner(
   opts: EdgeCorePluginOptions,
   currencyInfo: EdgeCurrencyInfo
 ): EdgeCurrencyPlugin {
-  const { io } = opts
-  const fetchJson = getFetchJson(opts)
+  const { io, log } = opts
+  const fetch = getFetchCors(opts)
 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    const fetch = getFetchCors(opts)
     toolsPromise = Promise.resolve(new EosPlugin(io, fetch, currencyInfo))
     return toolsPromise
   }
@@ -185,7 +191,7 @@ export function makeEosBasedPluginInner(
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetchJson)
+    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetch)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -214,15 +220,19 @@ export function makeEosBasedPluginInner(
     getActivationSupportedCurrencies: async (): Promise<Object> => {
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-      return fetchJson(`${eosPaymentServer}/api/v1/getSupportedCurrencies`)
+      const uri = `${eosPaymentServer}/api/v1/getSupportedCurrencies`
+      const response = await fetch(uri)
+      if (!response.ok) {
+        throw new Error(`Error ${response.status} while fetching ${uri}`)
+      }
+      return response.json()
     },
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
         const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
-        const prices = await fetchJson(
-          `${infoServer}/v1/${lowerCaseCurrencyCode}Prices`
-        )
+        const uri = `${infoServer}/v1/${lowerCaseCurrencyCode}Prices`
+        const prices = await fetch(uri)
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +
@@ -258,7 +268,7 @@ export function makeEosBasedPluginInner(
           throw e
         }
       }
-      console.log(`validateAccount: result=${out.result}`)
+      log(`validateAccount: result=${out.result}`)
       return out
     }
   }
