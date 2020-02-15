@@ -446,7 +446,7 @@ export class CurrencyEngine {
     this.transactionList[currencyCode][idx] = edgeTransaction
     this.transactionListDirty = true
     this.transactionsChangedArray.push(edgeTransaction)
-    this.log('updateTransaction:' + edgeTransaction.txid)
+    this.log('updateTransaction:', edgeTransaction)
   }
 
   // *************************************
