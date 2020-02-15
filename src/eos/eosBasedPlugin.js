@@ -56,14 +56,13 @@ export class EosPlugin extends CurrencyPlugin {
     // what about the hard-coded 'eos'?
     // second parameter was 'eos', technically that *is* plugin name...
     super(io, currencyInfo.pluginName, currencyInfo)
-    console.log('kylan EosPlugin constructor this.currencyInfo is: ', this.currencyInfo)
-    const eosJsConfig = currencyInfo.defaultSettings.otherSettings.eosJsConfig
+    console.log('kylan EosPlugin constructor this.currencyInfo is: ', currencyInfo)
     console.log('kylan EosPlugin eosJsConfig has been assigned')
-    eosJsConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    currencyInfo.defaultSettings.otherSettings.eosJsConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     console.log('kylan fetchCors is: ', fetchCors)
-    eosJsConfig.fetch = fetchCors
-
-    this.eosServer = EosApi(eosJsConfig)
+    currencyInfo.defaultSettings.otherSettings.eosJsConfig.fetch = fetchCors
+    console.log('kylan end of constructor and currencyInfo is: ', currencyInfo)
+    this.eosServer = EosApi(currencyInfo.defaultSettings.otherSettings.eosJsConfig)
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {

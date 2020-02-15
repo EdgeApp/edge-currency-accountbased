@@ -525,6 +525,7 @@ export class EosEngine extends CurrencyEngine {
             const rpc = new JsonRpc(server, {
               fetch: (...args) => {
                 // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
+                console.log('kylan about to transaction and eosJsConfig is: ', eosJsConfig)
                 return eosJsConfig.fetch(...args)
               }
             })
