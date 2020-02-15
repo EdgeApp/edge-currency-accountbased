@@ -8,53 +8,57 @@ import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
-  // used for the following routines, is Hyperion v2:
-
-  // getIncomingTransactions
-  // `/v2/history/get_transfers?to=${acct}&symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-
-  // getOutgoingTransactions
-  // `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-
-  // getKeyAccounts
-  // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
-
   eosHyperionNodes: [
-    'https://mainnet.telosusa.io', // v2
-    'https://telos.eosphere.io',
-    'https://api-telos-21zephyr.maltablock.org',
-    'https://hyperion.telos.eosdetroit.io'
+    'https://mainnet.eosn.io',
+    'https://api.eossweden.org',
+    'https://mainnet.eosn.io'
   ],
-
-  // used for eosjs fetch routines
-  // getCurrencyBalance
-  // getInfo
-  // transaction
   eosNodes: [
-    'https://api.telos.alohaeos.com',
-    'https://telosapi.atticlab.net',
-    'https://telos.caleos.io',
-    'https://telos.cryptolions.io',
-    'https://telos.cryptosuvi.io',
-    'https://telos-bp.dmail.co',
-    'https://telos.eos.barcelona',
-    'https://telos.eosdublin.io',
-    'https://telosapi.eosmetal.io',
-    'https://telos.eosphere.io',
-    'https://telos.eosrio.io',
-    'https://api.telos.eostribe.io',
-    'https://telos.eosvibes.io',
-    'https://api.telos.africa',
-    'https://telos.eossweden.eu',
-    'https://api.mainnet.bp.teleology.world:8000',
-    'https://api.telosarabia.net',
-    'https://api.telosgermany.io',
-    'https://api.telos.telosgreen.com',
-    'https://api.telosmadrid.io',
-    'https://api.eos.miami',
-    'https://api.telosuk.io',
-    'https://api.eosimpera.com',
-    'https://telos.get-scatter.com'
+    'https://api.redpacketeos.com',
+    'https://api.eoseoul.io',
+    'https://api.eoslaomao.com',
+    'https://eos-api.b1.run',
+    'https://mainnet.eoscannon.io',
+    'https://api.eos.wiki',
+    'https://mainnet.eosio.sg',
+    'https://eos.newdex.one',
+    'https://api.bitmars.one',
+    'https://node1.zbeos.com',
+    'https://pubnode.eosrapid.com',
+    'https://api.eosbeijing.one',
+    'https://api.eosn.io',
+    'https://eosapi.hoo.com',
+    'https://eos-api.inbex.com',
+    'https://api.bp.lambda.im',
+    'https://eos.eoscafeblock.com',
+    'https://publicapi-mainnet.eosauthority.com',
+    'https://mainnet.eoscanada.com',
+    'https://api.eos.education',
+    'https://api.eosargentina.io',
+    'https://api.acroeos.one',
+    'https://api.eostitan.com',
+    'https://eos-mainnet.ecoboost.app',
+    'https://bp.dexeos.io',
+    'https://hapi.eosrio.io',
+    'https://eu.eosdac.io',
+    'https://bp.cryptolions.io',
+    'https://eos.greymass.com',
+    'https://api-emlg.eosnairobi.io:8089',
+    'https://api.eoscleaner.com',
+    'https://mainnet.libertyblock.io:7777',
+    'https://mainnet.genereos.io',
+    'https://api.jeda.one',
+    'https://node1.eosphere.io',
+    'https://api.sheos.org',
+    'https://eos-mainnet.eosblocksmith.io:443',
+    'https://api-mainnet.eosgravity.com',
+    'https://api.tokenika.io',
+    'https://api.eostribe.io',
+    'https://node1.eosvibes.io',
+    'https://api.eosdetroit.io',
+    'https://eospublic.chainrift.com',
+    'https://eosapi.blockmatrix.network',
+    'https://node.eosflare.io'
   ]
 }
 
@@ -64,26 +68,25 @@ const defaultSettings: any = {
 
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
-  currencyCode: 'TLOS',
-  displayName: 'Telos',
-  pluginName: 'telos',
-  // do we need plugin name?
-  walletType: 'wallet:telos',
+  currencyCode: 'EOS',
+  displayName: 'EOS',
+  pluginName: 'eos',
+  walletType: 'wallet:eos',
 
   defaultSettings,
 
-  addressExplorer: 'https://telos.eosx.io/account/%s',
-  transactionExplorer: 'https://telos.eosx.io/tx/%s?listView=traces',
+  addressExplorer: 'https://eospark.com/account/%s',
+  transactionExplorer: 'https://eospark.com/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
     {
-      name: 'TLOS',
+      name: 'EOS',
       multiplier: '10000',
-      symbol: 'T'
+      symbol: 'E'
     }
   ],
-  symbolImage: `${imageServerUrl}/telos-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/telos-logo-solo-64.png`,
+  symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
   metaTokens: []
 }

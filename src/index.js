@@ -11,7 +11,7 @@ import { makeEthereumPlugin } from './ethereum/ethPlugin.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeRskPlugin } from './rsk/rskPlugin.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
-import { makeTelosPlugin } from './telos/eosPlugin.js'
+import { makeTelosPlugin } from './telos/eosBasedPlugin.js/index.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
 

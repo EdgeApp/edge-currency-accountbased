@@ -22,7 +22,7 @@ import {
   pickRandom,
   validateObject
 } from '../common/utils.js'
-import { checkAddress, eosConfig, EosPlugin } from './eosPlugin.js'
+import { checkAddress, EosPlugin } from './eosBasedPlugin'
 import { EosTransactionSuperNodeSchema } from './eosSchema.js'
 import {
   type EosTransaction,
@@ -416,7 +416,8 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async multicastServers(func: EosFunction, ...params: any): Promise<any> {
-    const { currencyCode } = this.currencyInfo
+    const { currencyCode, defaultSettings } = this.currencyInfo
+    const { eosConfig } = defaultSettings.otherSettings
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
