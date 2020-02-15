@@ -9,11 +9,26 @@ import { type EosSettings } from './eosTypes.js'
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
   eosFuelServers: ['https://eos.greymass.com'],
+  // used for the following routines, is Hyperion v2:
+
+  // getIncomingTransactions
+  // `/v2/history/get_transfers?to=${acct}&symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+
+  // getOutgoingTransactions
+  // `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+
+  // getKeyAccounts
+  // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
+
   eosHyperionNodes: [
     'https://mainnet.eosn.io',
     'https://api.eossweden.org',
     'https://mainnet.eosn.io'
   ],
+  // used for eosjs fetch routines
+  // getCurrencyBalance
+  // getInfo
+  // transaction
   eosNodes: [
     'https://api.redpacketeos.com',
     'https://api.eoseoul.io',
