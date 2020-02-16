@@ -11,10 +11,10 @@ import {
 
 import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosBasedPlugin'
-import { type EosSettings } from './eosTypes'
+import { type EosJsConfig, type EosSettings } from './eosTypes'
 
 // ----EOSIO MAIN NET----
-export const eosJsConfig = {
+export const eosJsConfig: EosJsConfig = {
   chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // eosio main net
   keyProvider: [],
   httpEndpoint: '', // main net
@@ -76,8 +76,7 @@ const otherSettings: EosSettings = {
     'https://eosapi.blockmatrix.network',
     'https://node.eosflare.io'
   ],
-  eosFuelServers: ['https://eos.greymass.com'],
-  eosJsConfig
+  eosFuelServers: ['https://eos.greymass.com']
 }
 
 const defaultSettings: any = {
@@ -110,5 +109,5 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
 }
 
 export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEosBasedPluginInner(opts, eosCurrencyInfo)
+  return makeEosBasedPluginInner(opts, eosCurrencyInfo, eosJsConfig)
 }

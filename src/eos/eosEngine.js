@@ -29,6 +29,7 @@ import {
 import { checkAddress, EosPlugin } from './eosBasedPlugin.js'
 import { EosTransactionSuperNodeSchema } from './eosSchema.js'
 import {
+  type EosJsConfig,
   type EosTransaction,
   type EosTransactionSuperNode,
   type EosWalletOtherData
@@ -93,10 +94,12 @@ export class EosEngine extends CurrencyEngine {
     currencyPlugin: EosPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchCors: EdgeFetchFunction
+    fetchCors: EdgeFetchFunction,
+    eosJsConfig: EosJsConfig
   ) {
     super(currencyPlugin, walletInfo, opts)
-
+    this.fetchCors = fetchCors
+    this.eosJsConfig = eosJsConfig
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
     this.otherMethods = {
@@ -454,8 +457,7 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async multicastServers(func: EosFunction, ...params: any): Promise<any> {
-    const { currencyCode, defaultSettings } = this.currencyInfo
-    const { eosJsConfig } = defaultSettings.otherSettings
+    const { currencyCode } = this.currencyInfo
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
@@ -464,7 +466,7 @@ export class EosEngine extends CurrencyEngine {
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
               const url = server + params[0]
-              const result = await eosJsConfig.fetch(url)
+              const result = await this.fetchCors(url)
               return { server, result }
             }
           )
@@ -475,7 +477,7 @@ export class EosEngine extends CurrencyEngine {
         out = await asyncWaterfall(
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
-              const reply = await eosJsConfig.fetch(
+              const reply = await this.fetchCors(
                 `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
               )
               if (!reply.ok) {
@@ -496,7 +498,10 @@ export class EosEngine extends CurrencyEngine {
         const randomNodes = pickRandom(eosNodes, 3)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const eosServer = EosApi({ ...eosJsConfig, httpEndpoint: server })
+            const eosServer = EosApi({
+              ...this.eosJsConfig,
+              httpEndpoint: server
+            })
             const result = await eosServer[func](...params)
             return { server, result }
           })
@@ -513,7 +518,7 @@ export class EosEngine extends CurrencyEngine {
             const rpc = new JsonRpc(server, {
               fetch: (...args) => {
                 // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
-                return eosJsConfig.fetch(...args)
+                return this.eosJsConfig.fetch(...args)
               }
             })
             const keys = params[1].keyProvider ? params[1].keyProvider : []
