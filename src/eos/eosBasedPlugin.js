@@ -1,7 +1,7 @@
 /**
  * Created by paul on 8/8/17.
  */
-/* global fetch */
+/* global */
 // @flow
 
 import { bns } from 'biggystring'
@@ -24,15 +24,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
 import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
-
-// ----MAIN NET----
-export const eosConfig = {
-  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // main net
-  keyProvider: [],
-  httpEndpoint: '', // main net
-  fetch: fetch,
-  verbose: false // verbose logging such as API activity
-}
+import { type EosJsConfig } from './eosTypes'
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
 
@@ -59,13 +51,14 @@ export class EosPlugin extends CurrencyPlugin {
   constructor(
     io: EdgeIo,
     fetchCors: EdgeFetchFunction,
-    currencyInfo: EdgeCurrencyInfo
+    currencyInfo: EdgeCurrencyInfo,
+    eosJsConfig: EosJsConfig
   ) {
     super(io, currencyInfo.pluginName, currencyInfo)
 
-    eosConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
-    eosConfig.fetch = fetchCors
-    this.eosServer = EosApi(eosConfig)
+    eosJsConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    eosJsConfig.fetch = fetchCors
+    this.eosServer = EosApi(eosJsConfig)
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
@@ -159,7 +152,8 @@ export class EosPlugin extends CurrencyPlugin {
 
 export function makeEosBasedPluginInner(
   opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo
+  currencyInfo: EdgeCurrencyInfo,
+  eosJsConfig: EosJsConfig
 ): EdgeCurrencyPlugin {
   const { io, log } = opts
   const fetch = getFetchCors(opts)
@@ -167,7 +161,9 @@ export function makeEosBasedPluginInner(
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new EosPlugin(io, fetch, currencyInfo))
+    toolsPromise = Promise.resolve(
+      new EosPlugin(io, fetch, currencyInfo, eosJsConfig)
+    )
     return toolsPromise
   }
 
@@ -176,7 +172,7 @@ export function makeEosBasedPluginInner(
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetch)
+    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetch, eosJsConfig)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
