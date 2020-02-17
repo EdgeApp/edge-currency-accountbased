@@ -61,6 +61,20 @@ export class EosPlugin extends CurrencyPlugin {
     this.eosServer = EosApi(eosJsConfig)
   }
 
+  async importPrivateKey(privateKey: string): Promise<Object> {
+    const strippedPrivateKey = privateKey.replace(/ /g, '') // should be in WIF format
+    if (strippedPrivateKey.length !== 51) {
+      throw new Error('Private key wrong length')
+    }
+    if (!ecc.isValidPrivate(strippedPrivateKey)) {
+      throw new Error('Invalid private key')
+    }
+    return {
+      eosOwnerKey: strippedPrivateKey,
+      eosKey: strippedPrivateKey
+    }
+  }
+
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
