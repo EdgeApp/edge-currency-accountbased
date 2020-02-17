@@ -36,10 +36,7 @@ const otherSettings: EosSettings = {
   // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
 
   eosHyperionNodes: [
-    'https://mainnet.telosusa.io', // v2
-    'https://telos.eosphere.io',
-    'https://api-telos-21zephyr.maltablock.org',
-    'https://hyperion.telos.eosdetroit.io'
+    'https://mainnet.telosusa.io'
   ],
 
   // used for eosjs fetch routines
@@ -47,30 +44,7 @@ const otherSettings: EosSettings = {
   // getInfo
   // transaction
   eosNodes: [
-    'https://api.telos.alohaeos.com',
-    'https://telosapi.atticlab.net',
-    'https://telos.caleos.io',
-    'https://telos.cryptolions.io',
-    'https://telos.cryptosuvi.io',
-    'https://telos-bp.dmail.co',
-    'https://telos.eos.barcelona',
-    'https://telos.eosdublin.io',
-    'https://telosapi.eosmetal.io',
-    'https://telos.eosphere.io',
-    'https://telos.eosrio.io',
-    'https://api.telos.eostribe.io',
-    'https://telos.eosvibes.io',
-    'https://api.telos.africa',
-    'https://telos.eossweden.eu',
-    'https://api.mainnet.bp.teleology.world:8000',
-    'https://api.telosarabia.net',
-    'https://api.telosgermany.io',
-    'https://api.telos.telosgreen.com',
-    'https://api.telosmadrid.io',
-    'https://api.eos.miami',
-    'https://api.telosuk.io',
-    'https://api.eosimpera.com',
-    'https://telos.get-scatter.com'
+    'https://telos.caleos.io'
   ],
   eosFuelServers: ['https://eos.greymass.com'] // this will need to be fixed
 }
