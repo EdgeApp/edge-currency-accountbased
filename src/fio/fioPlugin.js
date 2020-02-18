@@ -126,9 +126,65 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     return out
   }
 
+  const otherMethods = {
+    getConnectedPublicAddress: async (
+      fioAddress: string,
+      chainCode: string,
+      tokenCode: string
+    ) => {
+      const fioSDK = new FIOSDK(
+        '',
+        '',
+        currencyInfo.defaultSettings.apiUrls[0],
+        fetchCors
+      )
+      return fioSDK.getPublicAddress(fioAddress, chainCode, tokenCode)
+    },
+    validateAccount: async (fioAddress: string): boolean => {
+      if (
+        !new RegExp(
+          `^(([a-z0-9]+)(-?[a-z0-9]+)*@{1}${currencyInfo.defaultSettings.fioDomain}{1})$`,
+          'gim'
+        ).test(fioAddress)
+      )
+        return false
+      try {
+        const fioSDK = new FIOSDK(
+          '',
+          '',
+          currencyInfo.defaultSettings.apiUrls[0],
+          fetchCors
+        )
+        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
+
+        return !isAvailableRes.is_registered
+      } catch (e) {
+        console.log('validateAccount error: ' + JSON.stringify(e))
+        return false
+      }
+    },
+    isAccountAvailable: async (fioAddress: string): boolean => {
+      try {
+        const fioSDK = new FIOSDK(
+          '',
+          '',
+          currencyInfo.defaultSettings.apiUrls[0],
+          fetchCors
+        )
+        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
+
+        return isAvailableRes.is_registered
+      } catch (e) {
+        console.log('isAccountAvailable error: ' + JSON.stringify(e))
+        return false
+      }
+    }
+  }
+
   return {
     currencyInfo,
     makeCurrencyEngine,
-    makeCurrencyTools
+    makeCurrencyTools,
+    otherMethods
   }
 }

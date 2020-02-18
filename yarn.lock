@@ -726,10 +726,10 @@
   optionalDependencies:
     "@ledgerhq/hw-transport-node-hid" "^4.63.2"
 
-"@fioprotocol/fiojs@0.5.1":
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiojs/-/fiojs-0.5.1.tgz#28aa9a6ec31628a35693f8150b6d584b3d8a7cc8"
-  integrity sha512-ZOxhuLTXNh6pz/9FAhymgJh63OOEL6mpGaKpGI+skou9WvztWqv3lopgvKRcWzuLl/BS/lTb50ACefb4eR7d7Q==
+"@fioprotocol/fiojs@0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@fioprotocol/fiojs/-/fiojs-0.9.0.tgz#0a769dc572a0768c513080069c559e02cee418a5"
+  integrity sha512-oU3Y+W7ejkWrIeKlhb7j/fk7q38tvkAGwBKBUVeHis+sYly46SD027WWnDOeqrAkvBaiU5OwuKhoToCWS6qCBg==
   dependencies:
     ajv "^6.10.2"
     babel-runtime "6.26.0"
@@ -743,12 +743,12 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@^0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-0.8.0.tgz#79a27fd234ea2bc22db83696c02f387d8e906abb"
-  integrity sha512-n9XIYzDXLnfB2qzZouI9QZdrkIqJTfLmqdcL9YmAXpl/So8I3cclxo9RkIAZ3fBPgfAEm/JtJWKw9H6ECCzdJw==
+"@fioprotocol/fiosdk@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-0.9.0.tgz#740fff778d11eced91181a4541ea32e3bb12d953"
+  integrity sha512-8+Sd6c+PjesP6mB32LaTlQ0JMCRpzJz6ZTT2Tl46j04eFMa5W5aK10ao/3URiVTq6VMrU3sBnEYWLRSrRsTtRA==
   dependencies:
-    "@fioprotocol/fiojs" "0.5.1"
+    "@fioprotocol/fiojs" "0.9.0"
     "@types/text-encoding" "0.0.35"
     bip39 "^3.0.2"
     hdkey "^1.1.1"

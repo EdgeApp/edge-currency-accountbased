@@ -4,7 +4,8 @@
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
 const defaultSettings: any = {
-  apiUrl: 'https://testnet.fioprotocol.io:443/v1/'
+  apiUrls: ['https://testnet.fioprotocol.io:443/v1/'],
+  fioDomain: 'fiotestnet'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
