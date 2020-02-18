@@ -13,7 +13,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { Api, JsonRpc, RpcError } from 'eosjs'
+import { Api, JsonRpc } from 'eosjs'
 import EosApi from 'eosjs-api'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
@@ -51,36 +51,6 @@ type EosFunction =
   | 'getOutgoingTransactions'
   | 'transact'
 
-class CosignAuthorityProvider {
-  rpc: JsonRpc
-  constructor(rpc: JsonRpc) {
-    this.rpc = rpc
-  }
-
-  async getRequiredKeys(args) {
-    const { transaction } = args
-    // Iterate over the actions and authorizations
-    transaction.actions.forEach((action, ti) => {
-      action.authorization.forEach((auth, ai) => {
-        // If the authorization matches the expected cosigner
-        // then remove it from the transaction while checking
-        // for what public keys are required
-        if (auth.actor === 'greymassfuel' && auth.permission === 'cosign') {
-          delete transaction.actions[ti].authorization.splice(ai, 1)
-        }
-      })
-    })
-    // the rpc below should be an already configured JsonRPC client from eosjs
-    return convertLegacyPublicKeys(
-      (
-        await this.rpc.fetch('/v1/chain/get_required_keys', {
-          transaction,
-          available_keys: args.availableKeys
-        })
-      ).required_keys
-    )
-  }
-}
 export class EosEngine extends CurrencyEngine {
   // TODO: Add currency specific params
   // Store any per wallet specific data in the `currencyEngine` object. Add any params
@@ -516,28 +486,22 @@ export class EosEngine extends CurrencyEngine {
         break
       }
       case 'transact': {
-        const {
-          eosFuelServers
-        } = this.currencyInfo.defaultSettings.otherSettings
-        const randomNodes = pickRandom(eosFuelServers, 30)
+        const { eosNodes } = this.currencyInfo.defaultSettings.otherSettings
+        const randomNodes = pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const rpc = new JsonRpc(server, {
-              fetch: (...args) => {
-                // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
-                return this.eosJsConfig.fetch(...args)
-              }
-            })
+            const rpc = new JsonRpc(server, { fetch: this.eosJsConfig.fetch })
             const keys = params[1].keyProvider ? params[1].keyProvider : []
             params[1] = {
               ...params[1],
               blocksBehind: 3,
               expireSeconds: 30
             }
+            this.io.console.info('EOS-based keys: ', keys)
             const signatureProvider = new JsSignatureProvider(keys)
             const eos = new Api({
               // Pass in new authorityProvider
-              authorityProvider: new CosignAuthorityProvider(rpc),
+              // authorityProvider: new CosignAuthorityProvider(rpc),
               rpc,
               signatureProvider,
               textDecoder: new TextDecoder(),
@@ -736,17 +700,6 @@ export class EosEngine extends CurrencyEngine {
     const transactionJson = {
       actions: [
         {
-          authorization: [
-            {
-              actor: 'greymassfuel',
-              permission: 'cosign'
-            }
-          ],
-          account: 'greymassnoop',
-          name: 'noop',
-          data: {}
-        },
-        {
           account: 'eosio.token',
           name: 'transfer',
           authorization: [
@@ -765,12 +718,11 @@ export class EosEngine extends CurrencyEngine {
       ]
     }
 
-    // XXX Greymass doesn't let us hit their servers too often
     // Create an unsigned transaction to catch any errors
-    // await this.multicastServers('transact', transactionJson, {
-    //   sign: false,
-    //   broadcast: false
-    // })
+    await this.multicastServers('transact', transactionJson, {
+      sign: false,
+      broadcast: false
+    })
 
     nativeAmount = `-${nativeAmount}`
 
@@ -852,24 +804,24 @@ export class EosEngine extends CurrencyEngine {
   // }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // const otherParams = getOtherParams(edgeTransaction)
+    const otherParams = getOtherParams(edgeTransaction)
 
     // Do signing
     // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
     // const privateKey = this.walletInfo.keys.eosKey
-    // const keyProvider = []
-    // if (this.walletInfo.keys.eosKey) {
-    //   keyProvider.push(this.walletInfo.keys.eosKey)
-    // }
-    // if (this.walletInfo.keys.eosOwnerKey) {
-    //   keyProvider.push(this.walletInfo.keys.eosOwnerKey)
-    // }
+    const keyProvider = []
+    if (this.walletInfo.keys.eosKey) {
+      keyProvider.push(this.walletInfo.keys.eosKey)
+    }
+    if (this.walletInfo.keys.eosOwnerKey) {
+      keyProvider.push(this.walletInfo.keys.eosOwnerKey)
+    }
     // XXX Greymass doesn't let us hit their servers too often
-    // await this.multicastServers('transact', otherParams.transactionJson, {
-    //   keyProvider,
-    //   sign: true,
-    //   broadcast: false
-    // })
+    await this.multicastServers('transact', otherParams.transactionJson, {
+      keyProvider,
+      sign: true,
+      broadcast: false
+    })
 
     // Complete edgeTransaction.txid params if possible at this state
     return edgeTransaction
@@ -904,13 +856,7 @@ export class EosEngine extends CurrencyEngine {
       edgeTransaction.txid = signedTx.transaction_id
       return edgeTransaction
     } catch (e) {
-      this.log('\nCaught exception: ' + e)
-      if (e instanceof RpcError) this.log(JSON.stringify(e.json, null, 2))
       let err = e
-      if (err.error) {
-        this.log(`err.error= ${err.error}`)
-        this.log(`err.error.name= ${err.error.name}`)
-      }
       try {
         err = JSON.parse(e)
       } catch (e2) {
