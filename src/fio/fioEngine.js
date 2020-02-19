@@ -46,9 +46,15 @@ export class FioEngine extends CurrencyEngine {
               endPoint: EndPoint.registerFioAddress
             })
             params.maxFee = fee
-            await this.multicastServers(actionName, params)
-            this.walletLocalData.otherData.fioNames.push(params.fioAddress)
-            return this.localDataDirty()
+            const res = await this.multicastServers(actionName, params)
+            this.walletLocalData.otherData.fioAddresses.push({
+              name: params.fioAddress,
+              expiration: res.expiration
+            })
+            return {
+              expiration: res.expiration,
+              feeCollected: res.fee_collected
+            }
           }
           case 'renewFioAddress': {
             const { fee } = await this.multicastServers('getFee', {
@@ -117,8 +123,13 @@ export class FioEngine extends CurrencyEngine {
         })
         return fee
       },
-      getFioAddresses(): [] {
-        return this.walletLocalData.otherData.fioNames
+      getFioAddresses: (): { name: string, expiration: string }[] => {
+        return this.walletLocalData.otherData.fioAddresses
+      },
+      getFioAddressNames: (): string[] => {
+        return this.walletLocalData.otherData.fioAddresses.map(
+          fioAddress => fioAddress.name
+        )
       }
     }
   }
@@ -137,20 +148,22 @@ export class FioEngine extends CurrencyEngine {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
-    this.walletLocalData.otherData.fioNames = []
+    this.walletLocalData.otherData.fioAddresses = []
     try {
       const result = await this.multicastServers('getFioNames', {
         fioPublicKey: walletInfo.keys.publicKey
       })
 
       for (const fioAddress of result.fio_addresses) {
-        this.walletLocalData.otherData.fioNames.push(fioAddress.fio_address)
+        this.walletLocalData.otherData.fioAddresses.push({
+          name: fioAddress.fio_address,
+          expiration: fioAddress.expiration
+        })
       }
       this.localDataDirty()
     } catch (error) {
       console.log(error)
     }
-    this.otherMethods.walletLocalData = this.walletLocalData
   }
 
   // Poll on the blockheight
@@ -238,9 +251,12 @@ export class FioEngine extends CurrencyEngine {
         fioPublicKey: this.walletInfo.keys.publicKey
       })
 
-      this.walletLocalData.otherData.fioNames = []
+      this.walletLocalData.otherData.fioAddresses = []
       for (const fioAddress of result.fio_addresses) {
-        this.walletLocalData.otherData.fioNames.push(fioAddress.fio_address)
+        this.walletLocalData.otherData.fioAddresses.push({
+          name: fioAddress.fio_address,
+          expiration: fioAddress.expiration
+        })
       }
       this.localDataDirty()
     } catch (e) {
