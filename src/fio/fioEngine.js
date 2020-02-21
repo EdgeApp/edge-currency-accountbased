@@ -40,74 +40,61 @@ export class FioEngine extends CurrencyEngine {
     this.fioPlugin = currencyPlugin
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
+        const feeActionMap = {
+          addPublicAddress: {
+            action: 'getFeeForPublicAddress',
+            propName: 'fioAddress'
+          },
+          addPublicAddresses: {
+            action: 'getFeeForPublicAddress',
+            propName: 'fioAddress'
+          },
+          rejectFundsRequest: {
+            action: 'getFeeForRejectFundsRequest',
+            propName: 'payeeFioAddress'
+          },
+          requestFunds: {
+            action: 'getFeeForNewFundsRequest',
+            propName: 'payeeFioAddress'
+          },
+          recordObtData: {
+            action: 'getFeeForRecordObtData',
+            propName: 'payerFioAddress'
+          }
+        }
         switch (actionName) {
-          case 'registerFioAddress': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint.registerFioAddress
-            })
-            params.maxFee = fee
-            const res = await this.multicastServers(actionName, params)
-            this.walletLocalData.otherData.fioAddresses.push({
-              name: params.fioAddress,
-              expiration: res.expiration
-            })
-            return {
-              expiration: res.expiration,
-              feeCollected: res.fee_collected
-            }
-          }
-          case 'renewFioAddress': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint.renewFioAddress
-            })
-            params.maxFee = fee
-            break
-          }
-          case 'addPublicAddress': {
-            const { fee } = await this.multicastServers(
-              'getFeeForPublicAddress',
-              params
-            )
-            params.maxFee = fee
-            break
-          }
-          case 'addPublicAddresses': {
-            const { fee } = await this.multicastServers(
-              'getFeeForPublicAddress',
-              params
-            )
-            params.maxFee = fee
-            break
-          }
+          case 'addPublicAddresses':
+          case 'addPublicAddress':
+          case 'requestFunds':
+          case 'rejectFundsRequest':
           case 'recordObtData': {
             const { fee } = await this.multicastServers(
-              'getFeeForRecordObtData',
+              feeActionMap[actionName].action,
               {
-                payerFioAddress: params.payerFIOAddress
+                [feeActionMap[actionName].propName]:
+                  params[feeActionMap[actionName].propName]
               }
             )
             params.maxFee = fee
             break
           }
-          case 'rejectFundsRequest': {
-            const { fee } = await this.multicastServers(
-              'getFeeForRejectFundsRequest',
-              {
-                payeeFioAddress: params.payeeFioAddress
-              }
-            )
+          case 'registerFioAddress':
+          case 'renewFioAddress': {
+            const { fee } = await this.multicastServers('getFee', {
+              endPoint: EndPoint[actionName]
+            })
             params.maxFee = fee
-            break
-          }
-          case 'requestFunds': {
-            const { fee } = await this.multicastServers(
-              'getFeeForNewFundsRequest',
-              {
-                payeeFioAddress: params.payeeFioAddress
+            if (actionName === 'registerFioAddress') {
+              const res = await this.multicastServers(actionName, params)
+              this.walletLocalData.otherData.fioAddresses.push({
+                name: params.fioAddress,
+                expiration: res.expiration
+              })
+              return {
+                expiration: res.expiration,
+                feeCollected: res.fee_collected
               }
-            )
-            params.maxFee = fee
-            break
+            }
           }
         }
 
@@ -218,10 +205,13 @@ export class FioEngine extends CurrencyEngine {
           apiUrl,
           this.fetchCors
         )
-        if (actionName === 'getChainInfo') {
-          return fioSDK.transactions.getChainInfo()
+
+        switch (actionName) {
+          case 'getChainInfo':
+            return fioSDK.transactions.getChainInfo()
+          default:
+            return fioSDK.genericAction(actionName, params)
         }
-        return fioSDK.genericAction(actionName, params)
       })
     )
   }
@@ -239,12 +229,11 @@ export class FioEngine extends CurrencyEngine {
     try {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
-      this.updateBalance(currencyCode, nativeAmount)
     } catch (e) {
       this.log('checkAccountInnerLoop error: ' + JSON.stringify(e))
       nativeAmount = '0'
-      this.updateBalance(currencyCode, nativeAmount)
     }
+    this.updateBalance(currencyCode, nativeAmount)
 
     try {
       const result = await this.multicastServers('getFioNames', {
