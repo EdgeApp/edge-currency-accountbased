@@ -484,10 +484,11 @@ export class EthereumNetwork {
 
   async fetchPostInfura(method: string, params: Object) {
     const { infuraProjectId } = this.ethEngine.initOptions
+    const { infuraServers } = this.currencyInfo.defaultSettings.otherSettings
     if (!infuraProjectId || infuraProjectId.length < 6) {
       throw new Error('Need Infura Project ID')
     }
-    const url = `https://mainnet.infura.io/v3/${infuraProjectId}`
+    const url = `${infuraServers[0]}/${infuraProjectId}`
     const body = {
       id: 1,
       jsonrpc: '2.0',
@@ -694,20 +695,34 @@ export class EthereumNetwork {
   }
 
   async multicastServers(func: EthFunction, ...params: any): Promise<any> {
+    const {
+      blockcypherApiServers,
+      etherscanApiServers,
+      infuraServers
+    } = this.currencyInfo.defaultSettings.otherSettings
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
       case 'broadcastTx': {
         const promises = []
-        promises.push(
-          broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
-        )
-        promises.push(
-          broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
-        )
-        promises.push(
-          broadcastWrapper(this.broadcastBlockCypher(params[0]), 'blockcypher')
-        )
+        if (infuraServers.length > 0) {
+          promises.push(
+            broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
+          )
+        }
+        if (etherscanApiServers.length > 0) {
+          promises.push(
+            broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
+          )
+        }
+        if (blockcypherApiServers.length > 0) {
+          promises.push(
+            broadcastWrapper(
+              this.broadcastBlockCypher(params[0]),
+              'blockcypher'
+            )
+          )
+        }
         out = await promiseAny(promises)
 
         this.ethEngine.log(
@@ -719,7 +734,10 @@ export class EthereumNetwork {
       case 'eth_blockNumber':
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
-            if (!server.includes('etherscan')) {
+            if (
+              !server.includes('etherscan') ||
+              !server.includes('blockscout')
+            ) {
               throw new Error(
                 `Unsupported command eth_blockNumber in ${server}`
               )
@@ -736,11 +754,13 @@ export class EthereumNetwork {
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_blockNumber', [])
-          return { server: 'infura', result }
+        if (infuraServers.length > 0) {
+          funcs2 = async () => {
+            const result = await this.fetchPostInfura('eth_blockNumber', [])
+            return { server: 'infura', result }
+          }
+          funcs.push(funcs2)
         }
-        funcs.push(funcs2)
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -748,13 +768,15 @@ export class EthereumNetwork {
 
       case 'eth_estimateGas':
         funcs = []
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_estimateGas', [
-            params[0]
-          ])
-          return { server: 'infura', result }
+        if (infuraServers.length > 0) {
+          funcs2 = async () => {
+            const result = await this.fetchPostInfura('eth_estimateGas', [
+              params[0]
+            ])
+            return { server: 'infura', result }
+          }
+          funcs.push(funcs2)
         }
-        funcs.push(funcs2)
         out = await asyncWaterfall(funcs)
         break
 
@@ -762,7 +784,10 @@ export class EthereumNetwork {
         url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
-            if (!server.includes('etherscan')) {
+            if (
+              !server.includes('etherscan') ||
+              !server.includes('blockscout')
+            ) {
               throw new Error(
                 `Unsupported command eth_getTransactionCount in ${server}`
               )
@@ -776,14 +801,17 @@ export class EthereumNetwork {
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getTransactionCount', [
-            params[0],
-            'latest'
-          ])
-          return { server: 'infura', result }
+        if (infuraServers.length > 0) {
+          funcs2 = async () => {
+            const result = await this.fetchPostInfura(
+              'eth_getTransactionCount',
+              [[params[0], 'latest']]
+            )
+            return { server: 'infura', result }
+          }
+          funcs.push(funcs2)
         }
-        funcs.push(funcs2)
+
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -801,20 +829,23 @@ export class EthereumNetwork {
             return { server, result }
           }
         )
-        funcs2 = async () => {
-          const result = await this.fetchPostInfura('eth_getBalance', [
-            params[0],
-            'latest'
-          ])
-          // Convert hex
-          if (!isHex(result.result)) {
-            throw new Error('Infura eth_getBalance not hex')
+        if (infuraServers.length > 0) {
+          funcs2 = async () => {
+            const result = await this.fetchPostInfura('eth_getBalance', [
+              params[0],
+              'latest'
+            ])
+            // Convert hex
+            if (!isHex(result.result)) {
+              throw new Error('Infura eth_getBalance not hex')
+            }
+            // Convert to decimal
+            result.result = bns.add(result.result, '0')
+            return { server: 'infura', result }
           }
-          // Convert to decimal
-          result.result = bns.add(result.result, '0')
-          return { server: 'infura', result }
+          funcs.push(funcs2)
         }
-        funcs.push(funcs2)
+
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -1080,7 +1111,7 @@ export class EthereumNetwork {
   getTokenCurrencyCode(txnContractAddress: string): string | void {
     const address = this.ethEngine.walletLocalData.publicKey
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
-      return 'ETH'
+      return this.currencyInfo.currencyCode
     } else {
       for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
         const tokenInfo = this.ethEngine.getTokenInfo(tk)
@@ -1386,10 +1417,15 @@ export class EthereumNetwork {
   }
 
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      async () => this.checkTokenBalEthscan(tk),
-      this.checkTokenBalBlockchair
-    ]).catch(err => {
+    const {
+      blockchairApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const waterfallFuncs = []
+    waterfallFuncs.push(async () => this.checkTokenBalEthscan(tk))
+    if (blockchairApiServers.length > 0) {
+      waterfallFuncs.push(this.checkTokenBalBlockchair)
+    }
+    return asyncWaterfall(waterfallFuncs).catch(err => {
       this.ethEngine.log('checkTokenBal failed to update', err)
       return {}
     })

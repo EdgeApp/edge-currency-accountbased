@@ -1,15 +1,54 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo } from 'edge-core-js/types'
+import type {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo
+} from 'edge-core-js/types'
 
-import type { RskSettings } from './rskTypes.js'
+import { makeEthereumBasedPluginInner } from './ethBasedPlugin.js'
+import type { EthereumSettings } from './ethTypes.js'
 
 export const imageServerUrl = 'https://developer.airbitz.co/content'
 
-const otherSettings: RskSettings = {
+const defaultNetworkFees = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21000',
+      tokenTransaction: '200000'
+    },
+    gasPrice: {
+      lowFee: '59240000',
+      standardFeeLow: '59240000', // TODO: check this values
+      standardFeeHigh: '59240000',
+      standardFeeLowAmount: '59240000',
+      standardFeeHighAmount: '59240000',
+      highFee: '59240000'
+    }
+  }
+}
+
+const otherSettings: EthereumSettings = {
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
-  iosAllowedTokens: { RIF: true }
+  blockcypherApiServers: [],
+  superethServers: [],
+  infuraServers: [
+    /* 'https://public-node.rsk.co' */
+  ], // use or no?
+  blockchairApiServers: [],
+  blockchairUrlTokenString: 'rrc_20', // ? just a guess
+  alethioApiServers: [],
+  alethioCurrrencies: null,
+  amberdataRpcServers: [],
+  amberdataApiServers: [],
+  amberDataBlockchainId: '', // Only used for ETH right now
+  uriNetworks: ['rsk', 'rbtc'],
+  ercTokenStandard: 'RRC20',
+  chainId: 30,
+  checkUnconfirmedTransactions: false,
+  iosAllowedTokens: { RIF: true },
+
+  defaultNetworkFees
 }
 
 const defaultSettings: any = {
@@ -54,4 +93,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/rif-logo-solo-64.png` // TODO: add rif logo
     }
   ]
+}
+export const makeRskPlugin = (opts: EdgeCorePluginOptions) => {
+  return makeEthereumBasedPluginInner(opts, currencyInfo)
 }

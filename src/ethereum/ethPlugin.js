@@ -1,9 +1,13 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo, EdgeCorePluginOptions } from 'edge-core-js/types'
-import { makeEthereumBasedPluginInner } from './ethBasedPlugin'
+import type {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo
+} from 'edge-core-js/types'
+
 import { imageServerUrl } from '../common/utils'
+import { makeEthereumBasedPluginInner } from './ethBasedPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
 const defaultNetworkFees = {
@@ -64,9 +68,16 @@ const otherSettings: EthereumSettings = {
     AGLD: true
   },
   blockchairApiServers: ['https://api.blockchair.com'],
+  blockchairUrlTokenString: 'erc_20',
   alethioApiServers: ['https://api.aleth.io/v1'],
+  alethioCurrencies: {
+    // object or null
+    native: 'ether',
+    token: 'token'
+  },
   amberdataRpcServers: ['https://rpc.web3api.io'],
   amberdataApiServers: ['https://web3api.io/api/v2'],
+  amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   defaultNetworkFees
 }
 
@@ -75,7 +86,7 @@ const defaultSettings: any = {
   otherSettings
 }
 
-export const ethereumCurrencyInfo: EdgeCurrencyInfo = {
+export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'ETH',
   displayName: 'Ethereum',
@@ -612,5 +623,5 @@ export const ethereumCurrencyInfo: EdgeCurrencyInfo = {
 }
 
 export const makeEthereumPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEthereumBasedPluginInner(opts, ethereumCurrencyInfo)
+  return makeEthereumBasedPluginInner(opts, currencyInfo)
 }
