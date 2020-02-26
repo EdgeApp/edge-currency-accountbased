@@ -78,7 +78,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       .split(',')
       .join(' ')
 
-    const hexKey = await this._mnemonicToHex(mnemonicKey)
+    const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
     return {
       [`${this.currencyInfo.pluginName}Mnemonic`]: mnemonicKey,
       [`${this.currencyInfo.pluginName}Key`]: hexKey
@@ -86,7 +86,8 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const { pluginName } = this.currencyInfo
+    const { pluginName, defaultSettings } = this.currencyInfo
+    const { hdPathCoinType } = defaultSettings.otherSettings
     if (walletInfo.type !== `wallet:${pluginName}`) {
       throw new Error('Invalid wallet type')
     }
@@ -97,7 +98,7 @@ export class EthereumPlugin extends CurrencyPlugin {
         walletInfo.keys[`${pluginName}Mnemonic`]
       )
       const hdwallet = hdKey.fromMasterSeed(seedBuffer)
-      const walletHdpath = "m/44'/137'/0'/0/"
+      const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
       const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
       const wallet = walletPathDerivation.getWallet()
       const publicKey = wallet.getPublicKey()
@@ -120,12 +121,14 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 
   async _mnemonicToHex(mnemonic: string): Promise<string> {
+    const { defaultSettings } = this.currencyInfo
+    const { hdPathCoinType } = defaultSettings.otherSettings
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
-    const walletHdpath = "m/44'/137'/0'/0/"
+    const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
     const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
     const wallet = walletPathDerivation.getWallet()
-    const rskKey = wallet.getPrivateKeyString().replace(/^0x/, '')
-    return rskKey
+    const privKey = wallet.getPrivateKeyString().replace(/^0x/, '')
+    return privKey
   }
 
   async parseUri(

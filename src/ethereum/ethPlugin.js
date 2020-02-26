@@ -58,6 +58,7 @@ const otherSettings: EthereumSettings = {
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainId: 1,
+  hdPathCoinType: 60,
   checkUnconfirmedTransactions: true,
   iosAllowedTokens: {
     REP: true,

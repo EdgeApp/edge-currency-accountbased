@@ -70,7 +70,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
-    this.ethNetwork = new EthereumNetwork(this)
+    this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
   }
 
   updateBalance(tk: string, balance: string) {

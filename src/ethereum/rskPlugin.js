@@ -47,6 +47,7 @@ const otherSettings: EthereumSettings = {
   chainId: 30,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: { RIF: true },
+  hdPathCoinType: 137,
 
   defaultNetworkFees
 }

@@ -120,7 +120,7 @@ export class EthereumNetwork {
   processEthereumNetworkUpdate: (...any) => any
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(ethEngine: EthereumEngine) {
+  constructor(ethEngine: EthereumEngine, currencyInfo: EdgeCurrencyInfo) {
     this.ethEngine = ethEngine
     this.ethNeeds = {
       blockHeightLastChecked: 0,
@@ -128,7 +128,7 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
-
+    this.currencyInfo = currencyInfo
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     this.fetchPostInfura = this.fetchPostInfura.bind(this)
     this.multicastServers = this.multicastServers.bind(this)
@@ -735,16 +735,21 @@ export class EthereumNetwork {
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             if (
-              !server.includes('etherscan') ||
+              !server.includes('etherscan') &&
               !server.includes('blockscout')
             ) {
               throw new Error(
                 `Unsupported command eth_blockNumber in ${server}`
               )
             }
+            let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+            // special case for RSK
+            if (server.includes('blockscout')) {
+              blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+            }
             const result = await this.fetchGetEtherscan(
               server,
-              '?module=proxy&action=eth_blockNumber'
+              blockNumberUrlSyntax
             )
             if (typeof result.result !== 'string') {
               const msg = `Invalid return value eth_blockNumber in ${server}`
@@ -785,7 +790,7 @@ export class EthereumNetwork {
         funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
           server => async () => {
             if (
-              !server.includes('etherscan') ||
+              !server.includes('etherscan') &&
               !server.includes('blockscout')
             ) {
               throw new Error(
@@ -949,11 +954,22 @@ export class EthereumNetwork {
   }
 
   async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      this.checkBlockHeightEthscan,
-      this.checkBlockHeightAmberdata,
-      this.checkBlockHeightBlockchair
-    ]).catch(err => {
+    const {
+      etherscanApiServers,
+      amberdataApiServers,
+      blockchairApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const waterfallFuncs = []
+    if (etherscanApiServers.length > 0) {
+      waterfallFuncs.push(this.checkBlockHeightEthscan)
+    }
+    if (amberdataApiServers.length > 0) {
+      waterfallFuncs.push(this.checkBlockHeightAmberdata)
+    }
+    if (blockchairApiServers.length > 0) {
+      waterfallFuncs.push(this.checkBlockHeightBlockchair)
+    }
+    return asyncWaterfall(waterfallFuncs).catch(err => {
       this.ethEngine.log('checkBlockHeight failed to update', err)
       return {}
     })
@@ -990,10 +1006,18 @@ export class EthereumNetwork {
   }
 
   async checkNonce(): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      this.checkNonceEthscan,
-      this.checkNonceAmberdata
-    ]).catch(err => {
+    const {
+      etherscanApiServers,
+      amberdataApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const waterfallFuncs = []
+    if (etherscanApiServers.length > 0) {
+      waterfallFuncs.push(etherscanApiServers)
+    }
+    if (amberdataApiServers > 0) {
+      waterfallFuncs.push(amberdataApiServers)
+    }
+    return asyncWaterfall(waterfallFuncs).catch(err => {
       this.ethEngine.log('checkNonce failed to update', err)
       return {}
     })
