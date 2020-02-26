@@ -137,7 +137,8 @@ export class EthereumEngine extends CurrencyEngine {
   // currently only for Ethereum
   async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
-    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
+    const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
+    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/${lowerCaseCurrencyCode}/main/txs/${address}`
     let jsonObj = null
     try {
       jsonObj = await this.ethNetwork.fetchGet(url)
@@ -169,7 +170,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  // possibly only for Ethereum
+  // curreently for Ethereum but should allow other currencies
   async checkUpdateNetworkFees() {
     try {
       const infoServer = getEdgeInfoServer()
@@ -189,13 +190,16 @@ export class EthereumEngine extends CurrencyEngine {
         this.log('Error: Fetched invalid networkFees')
       }
     } catch (err) {
-      this.log('Error fetching networkFees from Edge info server')
+      this.log(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`
+      )
       this.log(err)
     }
 
     // only for Ethereum, can keep hard-coded URL for now
     try {
-      const url = 'https://www.ethgasstation.info/json/ethgasAPI.json'
+      const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
+      const url = `https://www.ethgasstation.info/json/${lowerCaseCurrencyCode}gasAPI.json`
       const jsonObj = await this.ethNetwork.fetchGet(url)
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
@@ -265,7 +269,9 @@ export class EthereumEngine extends CurrencyEngine {
         this.log('Error: Fetched invalid networkFees from EthGasStation')
       }
     } catch (err) {
-      this.log('Error fetching networkFees from EthGasStation')
+      this.log(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
+      )
       this.log(err)
     }
   }
