@@ -32,9 +32,8 @@ const otherSettings: EthereumSettings = {
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
   blockcypherApiServers: [],
   superethServers: [],
-  infuraServers: [
-    /* 'https://public-node.rsk.co' */
-  ], // use or no?
+  infuraServers: ['https://public-node.rsk.co'],
+  infuraNeedProjectId: false,
   blockchairApiServers: [],
   blockchairUrlTokenString: 'rrc_20', // ? just a guess
   alethioApiServers: [],

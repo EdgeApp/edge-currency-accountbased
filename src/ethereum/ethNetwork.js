@@ -484,11 +484,19 @@ export class EthereumNetwork {
 
   async fetchPostInfura(method: string, params: Object) {
     const { infuraProjectId } = this.ethEngine.initOptions
-    const { infuraServers } = this.currencyInfo.defaultSettings.otherSettings
-    if (!infuraProjectId || infuraProjectId.length < 6) {
+    const {
+      infuraServers,
+      infuraNeedProjectId
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const projectIdSyntax =
+      infuraNeedProjectId && infuraProjectId ? infuraProjectId : ''
+    if (
+      infuraNeedProjectId &&
+      (!infuraProjectId || infuraProjectId.length < 6)
+    ) {
       throw new Error('Need Infura Project ID')
     }
-    const url = `${infuraServers[0]}/${infuraProjectId}`
+    const url = `${infuraServers[0]}/${projectIdSyntax}`
     const body = {
       id: 1,
       jsonrpc: '2.0',
@@ -808,9 +816,13 @@ export class EthereumNetwork {
         )
         if (infuraServers.length > 0) {
           funcs2 = async () => {
+            const adjustedParams =
+              this.currencyInfo.currencyCode === 'RBTC'
+                ? [params[0], 'latest']
+                : [[params[0], 'latest']]
             const result = await this.fetchPostInfura(
               'eth_getTransactionCount',
-              [[params[0], 'latest']]
+              adjustedParams
             )
             return { server: 'infura', result }
           }
@@ -1012,11 +1024,12 @@ export class EthereumNetwork {
     } = this.currencyInfo.defaultSettings.otherSettings
     const waterfallFuncs = []
     if (etherscanApiServers.length > 0) {
-      waterfallFuncs.push(etherscanApiServers)
+      waterfallFuncs.push(this.checkNonceEthscan)
     }
     if (amberdataApiServers > 0) {
-      waterfallFuncs.push(amberdataApiServers)
+      waterfallFuncs.push(this.checkNonceAmberdata)
     }
+    if (waterfallFuncs.length === 0) return {}
     return asyncWaterfall(waterfallFuncs).catch(err => {
       this.ethEngine.log('checkNonce failed to update', err)
       return {}

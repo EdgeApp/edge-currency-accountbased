@@ -55,6 +55,7 @@ const otherSettings: EthereumSettings = {
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
   infuraServers: ['https://mainnet.infura.io/v3'],
+  infuraNeedProjectId: true,
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainId: 1,

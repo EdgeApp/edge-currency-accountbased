@@ -575,7 +575,7 @@ export class EthereumEngine extends CurrencyEngine {
       this.walletInfo.keys &&
       this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
     ) {
-      return this.walletInfo.keys.ethereumKey
+      return this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
     }
     return ''
   }
