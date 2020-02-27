@@ -331,7 +331,8 @@ export class EthereumEngine extends CurrencyEngine {
 
     const miningFees = calcMiningFee(
       edgeSpendInfo,
-      this.walletLocalData.otherData.networkFees
+      this.walletLocalData.otherData.networkFees,
+      this.currencyInfo
     )
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
