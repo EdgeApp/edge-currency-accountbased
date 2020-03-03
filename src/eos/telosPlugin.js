@@ -36,7 +36,9 @@ const otherSettings: EosSettings = {
   // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
 
   eosHyperionNodes: [
-    'https://mainnet.telosusa.io'
+    'https://mainnet.telosusa.io',
+    'https://telos.eosphere.io',
+    'https://api-telos-21zephyr.maltablock.org/'
   ],
 
   // used for eosjs fetch routines

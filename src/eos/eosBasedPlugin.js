@@ -225,8 +225,7 @@ export function makeEosBasedPluginInner(
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
-        const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
-
+        const lowerCaseCurrencyCode = currencyInfo.currencyCode.toLowerCase()
         const uri = `${infoServer}/v1/${lowerCaseCurrencyCode}Prices`
         const response = await fetch(uri)
         if (!response.ok) {

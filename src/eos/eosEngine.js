@@ -60,6 +60,8 @@ export class EosEngine extends CurrencyEngine {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData: EosWalletOtherData
   otherMethods: Object
+  fetchCors: Function
+  eosJsConfig: any
 
   constructor(
     currencyPlugin: EosPlugin,
@@ -111,6 +113,8 @@ export class EosEngine extends CurrencyEngine {
         const uri = `${eosPaymentServer}/api/v1/activateAccount`
         const response = await fetchCors(uri, options)
         if (!response.ok) {
+          this.log(`Error ${response.status} while posting ${uri}`)
+          this.log(`kylantest options.body: `, options.body)
           throw new Error(`Error ${response.status} while fetching ${uri}`)
         }
         return response.json()
@@ -356,12 +360,15 @@ export class EosEngine extends CurrencyEngine {
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
       const url = `/v2/history/get_transfers?to=${acct}&symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+      this.log('kylan1')
       const result = await this.multicastServers('getIncomingTransactions', url)
+      this.log('kylan2')
       const actionsObject = await result.json()
+      this.log('kylan3')
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
-
+      this.log('incoming transactions actionss: ', actions)
       // if there are no actions
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
