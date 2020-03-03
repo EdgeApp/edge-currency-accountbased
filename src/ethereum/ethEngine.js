@@ -28,9 +28,9 @@ import {
   toHex,
   validateObject
 } from '../common/utils.js'
-import { EthereumPlugin } from './ethBasedPlugin.js'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
+import { EthereumPlugin } from './ethPlugin'
 import {
   EthGasStationSchema,
   NetworkFeesSchema,

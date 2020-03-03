@@ -6,7 +6,7 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethBasedPlugin.js'
+import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
 export const imageServerUrl = 'https://developer.airbitz.co/content'

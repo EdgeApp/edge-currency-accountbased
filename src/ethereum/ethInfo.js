@@ -1,10 +1,51 @@
 /* global */
 // @flow
 
-import type { EdgeCurrencyInfo } from 'edge-core-js/types'
+import type {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo
+} from 'edge-core-js/types'
 
 import { imageServerUrl } from '../common/utils'
+import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
+
+const defaultNetworkFees = {
+  default: {
+    gasLimit: {
+      regularTransaction: '21000',
+      tokenTransaction: '200000'
+    },
+    gasPrice: {
+      lowFee: '1000000001',
+      standardFeeLow: '40000000001',
+      standardFeeHigh: '300000000001',
+      standardFeeLowAmount: '100000000000000000',
+      standardFeeHighAmount: '10000000000000000000',
+      highFee: '40000000001'
+    }
+  },
+  '1983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    },
+    gasPrice: {
+      lowFee: '1000000002',
+      standardFeeLow: '40000000002',
+      standardFeeHigh: '300000000002',
+      standardFeeLowAmount: '200000000000000000',
+      standardFeeHighAmount: '20000000000000000000',
+      highFee: '40000000002'
+    }
+  },
+  '2983987abc9837fbabc0982347ad828': {
+    gasLimit: {
+      regularTransaction: '21002',
+      tokenTransaction: '37124'
+    }
+  }
+}
 
 const otherSettings: EthereumSettings = {
   etherscanApiServers: [
@@ -13,6 +54,13 @@ const otherSettings: EthereumSettings = {
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
+  infuraServers: ['https://mainnet.infura.io/v3'],
+  infuraNeedProjectId: true,
+  uriNetworks: ['ethereum', 'ether'],
+  ercTokenStandard: 'ERC20',
+  chainId: 1,
+  hdPathCoinType: 60,
+  checkUnconfirmedTransactions: true,
   iosAllowedTokens: {
     REP: true,
     WINGS: true,
@@ -22,9 +70,17 @@ const otherSettings: EthereumSettings = {
     AGLD: true
   },
   blockchairApiServers: ['https://api.blockchair.com'],
+  blockchairUrlTokenString: 'erc_20',
   alethioApiServers: ['https://api.aleth.io/v1'],
+  alethioCurrencies: {
+    // object or null
+    native: 'ether',
+    token: 'token'
+  },
   amberdataRpcServers: ['https://rpc.web3api.io'],
-  amberdataApiServers: ['https://web3api.io/api/v2']
+  amberdataApiServers: ['https://web3api.io/api/v2'],
+  amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
+  defaultNetworkFees
 }
 
 const defaultSettings: any = {
@@ -578,4 +634,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/met-logo-solo-64.png`
     }
   ]
+}
+
+export const makeEthereumPlugin = (opts: EdgeCorePluginOptions) => {
+  return makeEthereumBasedPluginInner(opts, currencyInfo)
 }
