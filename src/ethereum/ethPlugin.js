@@ -34,6 +34,10 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async importPrivateKey(userInput: string): Promise<Object> {
     const { pluginName } = this.currencyInfo
+    const {
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = this.currencyInfo.defaultSettings.otherSettings
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const keyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -44,7 +48,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
       // Validate the address derivation:
       const keys = {
-        [`${pluginName}Key`]: hexKey
+        [pluginRegularKeyName]: hexKey
       }
       this.derivePublicKey({
         type: `wallet:${pluginName}`,
@@ -61,13 +65,17 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       const hexKey = await this._mnemonicToHex(userInput)
       return {
-        [`${pluginName}Mnemonic`]: userInput,
-        [`${pluginName}Key`]: hexKey
+        [pluginMnemonicKeyName]: userInput,
+        [pluginRegularKeyName]: hexKey
       }
     }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
+    const {
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = this.currencyInfo.defaultSettings.otherSettings
     const type = walletType.replace('wallet:', '')
 
     if (type !== this.currencyInfo.pluginName) {
@@ -80,22 +88,26 @@ export class EthereumPlugin extends CurrencyPlugin {
 
     const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
     return {
-      [`${this.currencyInfo.pluginName}Mnemonic`]: mnemonicKey,
-      [`${this.currencyInfo.pluginName}Key`]: hexKey
+      [pluginMnemonicKeyName]: mnemonicKey,
+      [pluginRegularKeyName]: hexKey
     }
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const { pluginName, defaultSettings } = this.currencyInfo
-    const { hdPathCoinType } = defaultSettings.otherSettings
+    const {
+      hdPathCoinType,
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = defaultSettings.otherSettings
     if (walletInfo.type !== `wallet:${pluginName}`) {
       throw new Error('Invalid wallet type')
     }
     let address
-    if (walletInfo.keys[`${pluginName}Mnemonic`] != null) {
+    if (walletInfo.keys[pluginMnemonicKeyName] != null) {
       // If we have a mnemonic, use that:
       const seedBuffer = mnemonicToSeedSync(
-        walletInfo.keys[`${pluginName}Mnemonic`]
+        walletInfo.keys[pluginMnemonicKeyName]
       )
       const hdwallet = hdKey.fromMasterSeed(seedBuffer)
       const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
@@ -106,7 +118,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     } else {
       // Otherwise, use the private key:
       const keyBuffer = Buffer.from(
-        walletInfo.keys[`${pluginName}Key`].replace(/^0x/, ''),
+        walletInfo.keys[pluginRegularKeyName].replace(/^0x/, ''),
         'hex'
       )
       if (!EthereumUtil.isValidPrivate(keyBuffer)) {

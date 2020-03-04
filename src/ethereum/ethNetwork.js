@@ -816,10 +816,12 @@ export class EthereumNetwork {
         )
         if (infuraServers.length > 0) {
           funcs2 = async () => {
-            const adjustedParams =
-              this.currencyInfo.currencyCode === 'RBTC'
-                ? [params[0], 'latest']
-                : [[params[0], 'latest']]
+            const {
+              isNestedInfuraParams
+            } = this.currencyInfo.defaultSettings.otherSettings
+            const adjustedParams = isNestedInfuraParams
+              ? [params[0], 'latest']
+              : [[params[0], 'latest']]
             const result = await this.fetchPostInfura(
               'eth_getTransactionCount',
               adjustedParams
@@ -966,22 +968,11 @@ export class EthereumNetwork {
   }
 
   async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
-    const {
-      etherscanApiServers,
-      amberdataApiServers,
-      blockchairApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
-    const waterfallFuncs = []
-    if (etherscanApiServers.length > 0) {
-      waterfallFuncs.push(this.checkBlockHeightEthscan)
-    }
-    if (amberdataApiServers.length > 0) {
-      waterfallFuncs.push(this.checkBlockHeightAmberdata)
-    }
-    if (blockchairApiServers.length > 0) {
-      waterfallFuncs.push(this.checkBlockHeightBlockchair)
-    }
-    return asyncWaterfall(waterfallFuncs).catch(err => {
+    return asyncWaterfall([
+      this.checkBlockHeightEthscan,
+      this.checkBlockHeightAmberdata,
+      this.checkBlockHeightBlockchair
+    ]).catch(err => {
       this.ethEngine.log('checkBlockHeight failed to update', err)
       return {}
     })
@@ -1018,19 +1009,11 @@ export class EthereumNetwork {
   }
 
   async checkNonce(): Promise<EthereumNetworkUpdate> {
-    const {
-      etherscanApiServers,
-      amberdataApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
-    const waterfallFuncs = []
-    if (etherscanApiServers.length > 0) {
-      waterfallFuncs.push(this.checkNonceEthscan)
-    }
-    if (amberdataApiServers > 0) {
-      waterfallFuncs.push(this.checkNonceAmberdata)
-    }
-    if (waterfallFuncs.length === 0) return {}
-    return asyncWaterfall(waterfallFuncs).catch(err => {
+    return asyncWaterfall([
+      this.checkBlockHeightEthscan,
+      this.checkBlockHeightAmberdata,
+      this.checkBlockHeightBlockchair
+    ]).catch(err => {
       this.ethEngine.log('checkNonce failed to update', err)
       return {}
     })
@@ -1422,11 +1405,8 @@ export class EthereumNetwork {
 
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
-    const {
-      blockchairUrlTokenString
-    } = this.currencyInfo.defaultSettings.otherSettings
     const jsonObj = await this.fetchGetBlockchair(
-      `/${this.currencyInfo.pluginName}/dashboards/address/${address}?${blockchairUrlTokenString}=true`,
+      `/${this.currencyInfo.pluginName}/dashboards/address/${address}?erc_20=true`,
       true
     )
     const valid = validateObject(jsonObj, BlockChairAddressSchema)
@@ -1454,15 +1434,10 @@ export class EthereumNetwork {
   }
 
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
-    const {
-      blockchairApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
-    const waterfallFuncs = []
-    waterfallFuncs.push(async () => this.checkTokenBalEthscan(tk))
-    if (blockchairApiServers.length > 0) {
-      waterfallFuncs.push(this.checkTokenBalBlockchair)
-    }
-    return asyncWaterfall(waterfallFuncs).catch(err => {
+    return asyncWaterfall([
+      async () => this.checkTokenBalEthscan(tk),
+      this.checkTokenBalBlockchair
+    ]).catch(err => {
       this.ethEngine.log('checkTokenBal failed to update', err)
       return {}
     })

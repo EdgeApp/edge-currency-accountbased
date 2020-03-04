@@ -33,9 +33,9 @@ const otherSettings: EthereumSettings = {
   blockcypherApiServers: [],
   superethServers: [],
   infuraServers: ['https://public-node.rsk.co'],
+  isNestedInfuraParams: false,
   infuraNeedProjectId: false,
   blockchairApiServers: [],
-  blockchairUrlTokenString: 'rrc_20', // ? just a guess
   alethioApiServers: [],
   alethioCurrrencies: null,
   amberdataRpcServers: [],
@@ -47,7 +47,9 @@ const otherSettings: EthereumSettings = {
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: { RIF: true },
   hdPathCoinType: 137,
-
+  pluginMnemonicKeyName: 'rskMnemonic',
+  pluginRegularKeyName: 'rskKey',
+  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
   defaultNetworkFees
 }
 

@@ -198,9 +198,10 @@ export class EthereumEngine extends CurrencyEngine {
 
     // only for Ethereum, can keep hard-coded URL for now
     try {
-      const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
-      const url = `https://www.ethgasstation.info/json/${lowerCaseCurrencyCode}gasAPI.json`
-      const jsonObj = await this.ethNetwork.fetchGet(url)
+      const {
+        ethGasStationUrl
+      } = this.currencyInfo.defaultSettings.otherSettings
+      const jsonObj = await this.ethNetwork.fetchGet(ethGasStationUrl)
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
@@ -289,15 +290,10 @@ export class EthereumEngine extends CurrencyEngine {
   async startEngine() {
     this.engineOn = true
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    if (
-      this.currencyInfo.defaultSettings.otherSettings
-        .checkUnconfirmedTransactions
-    ) {
-      this.addToLoop(
-        'checkUnconfirmedTransactionsInnerLoop',
-        UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
-      )
-    }
+    this.addToLoop(
+      'checkUnconfirmedTransactionsInnerLoop',
+      UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
+    )
 
     this.ethNetwork.needsLoop()
 
