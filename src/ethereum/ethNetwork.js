@@ -468,6 +468,7 @@ export class EthereumNetwork {
     return response.json()
   }
 
+  // checked
   async fetchGetEtherscan(server: string, cmd: string) {
     const { etherscanApiKey } = this.ethEngine.initOptions
     const chosenKey = Array.isArray(etherscanApiKey)
@@ -482,6 +483,7 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
+  // checked
   async fetchPostInfura(method: string, params: Object) {
     const { infuraProjectId } = this.ethEngine.initOptions
     const {
@@ -521,13 +523,17 @@ export class EthereumNetwork {
     return jsonObj
   }
 
+  // checked, only for broadcastTx
   async fetchPostBlockcypher(cmd: string, body: any) {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockcypherApiServers[0]}/${cmd}${apiKey}`
+    const {
+      blockcypherApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const url = `${blockcypherApiServers[0]}/${cmd}${apiKey}`
     const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -545,23 +551,31 @@ export class EthereumNetwork {
     return response.json()
   }
 
+  // checked: checkBlockHeightBlockchair & checkTokenBalBlockchair
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     let keyParam = ''
     const { blockchairApiKey } = this.ethEngine.initOptions
+    const {
+      blockchairApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
     if (includeKey && blockchairApiKey) {
       keyParam = `&key=${blockchairApiKey}`
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.blockchairApiServers[0]}${path}${keyParam}`
+    const url = `${blockchairApiServers[0]}${path}${keyParam}`
     return this.fetchGet(url)
   }
 
+  // checked, only called in checkBlockHeightAmberData (called in asyncWaterfall)
   async fetchPostAmberdataRpc(method: string, params: Array<string> = []) {
     const { amberdataApiKey } = this.ethEngine.initOptions
+    const {
+      amberdataRpcServers
+    } = this.currencyInfo.defaultSettings.otherSettings
     let apiKey = ''
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
     }
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataRpcServers[0]}${apiKey}`
+    const url = `${amberdataRpcServers[0]}${apiKey}`
     const body = {
       jsonrpc: '2.0',
       method: method,
@@ -586,9 +600,13 @@ export class EthereumNetwork {
     return jsonObj
   }
 
+  // checked, ultimately used in asyncWaterfalls
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey } = this.ethEngine.initOptions
-    const url = `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.amberdataApiServers[0]}${path}`
+    const {
+      amberdataApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+    const url = `${amberdataApiServers[0]}${path}`
     return this.fetchGet(url, {
       headers: {
         'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
@@ -606,12 +624,15 @@ export class EthereumNetwork {
    *
    * @throws Exception when Alethio throttles with a 429 response code
    */
+
+  // checked, ulatimately used in asyncWaterfalls
   async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
     const { alethioApiKey } = this.ethEngine.initOptions
+    const {
+      alethioApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
     if (alethioApiKey) {
-      const url = isPath
-        ? `${this.ethEngine.currencyInfo.defaultSettings.otherSettings.alethioApiServers[0]}${pathOrLink}`
-        : pathOrLink
+      const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
       return this.fetchGet(url, {
         headers: {
           Authorization: `Bearer ${alethioApiKey}`
@@ -624,6 +645,7 @@ export class EthereumNetwork {
     }
   }
 
+  // checked, ultimately used in broadcastTx
   async broadcastEtherscan(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
@@ -653,6 +675,7 @@ export class EthereumNetwork {
     }
   }
 
+  // checked, used in broadcastTx
   async broadcastInfura(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
@@ -677,6 +700,7 @@ export class EthereumNetwork {
     }
   }
 
+  // checked, only for broadcastTx
   async broadcastBlockCypher(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
@@ -706,7 +730,8 @@ export class EthereumNetwork {
     const {
       blockcypherApiServers,
       etherscanApiServers,
-      infuraServers
+      infuraServers,
+      isNestedInfuraParams
     } = this.currencyInfo.defaultSettings.otherSettings
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
@@ -740,33 +765,27 @@ export class EthereumNetwork {
       }
 
       case 'eth_blockNumber':
-        funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            if (
-              !server.includes('etherscan') &&
-              !server.includes('blockscout')
-            ) {
-              throw new Error(
-                `Unsupported command eth_blockNumber in ${server}`
-              )
-            }
-            let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
-            // special case for RSK
-            if (server.includes('blockscout')) {
-              blockNumberUrlSyntax = `?module=block&action=eth_block_number`
-            }
-            const result = await this.fetchGetEtherscan(
-              server,
-              blockNumberUrlSyntax
-            )
-            if (typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_blockNumber in ${server}`
-              this.ethEngine.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
+        funcs = etherscanApiServers.map(server => async () => {
+          if (!server.includes('etherscan') && !server.includes('blockscout')) {
+            throw new Error(`Unsupported command eth_blockNumber in ${server}`)
           }
-        )
+          let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+          // special case for RSK
+          if (server.includes('blockscout')) {
+            blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+          }
+
+          const result = await this.fetchGetEtherscan(
+            server,
+            blockNumberUrlSyntax
+          )
+          if (typeof result.result !== 'string') {
+            const msg = `Invalid return value eth_blockNumber in ${server}`
+            this.ethEngine.log(msg)
+            throw new Error(msg)
+          }
+          return { server, result }
+        })
         if (infuraServers.length > 0) {
           funcs2 = async () => {
             const result = await this.fetchPostInfura('eth_blockNumber', [])
@@ -795,30 +814,23 @@ export class EthereumNetwork {
 
       case 'eth_getTransactionCount':
         url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
-        funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            if (
-              !server.includes('etherscan') &&
-              !server.includes('blockscout')
-            ) {
-              throw new Error(
-                `Unsupported command eth_getTransactionCount in ${server}`
-              )
-            }
-            const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_getTransactionCount in ${server}`
-              this.ethEngine.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
+        funcs = etherscanApiServers.map(server => async () => {
+          // if falsy URL then error thrown
+          if (!server.includes('etherscan') && !server.includes('blockscout')) {
+            throw new Error(
+              `Unsupported command eth_getTransactionCount in ${server}`
+            )
           }
-        )
+          const result = await this.fetchGetEtherscan(server, url)
+          if (typeof result.result !== 'string') {
+            const msg = `Invalid return value eth_getTransactionCount in ${server}`
+            this.ethEngine.log(msg)
+            throw new Error(msg)
+          }
+          return { server, result }
+        })
         if (infuraServers.length > 0) {
           funcs2 = async () => {
-            const {
-              isNestedInfuraParams
-            } = this.currencyInfo.defaultSettings.otherSettings
             const adjustedParams = isNestedInfuraParams
               ? [params[0], 'latest']
               : [[params[0], 'latest']]
@@ -837,17 +849,15 @@ export class EthereumNetwork {
         break
       case 'eth_getBalance':
         url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-        funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
-            if (!result.result || typeof result.result !== 'string') {
-              const msg = `Invalid return value eth_getBalance in ${server}`
-              this.ethEngine.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
+        funcs = etherscanApiServers.map(server => async () => {
+          const result = await this.fetchGetEtherscan(server, url)
+          if (!result.result || typeof result.result !== 'string') {
+            const msg = `Invalid return value eth_getBalance in ${server}`
+            this.ethEngine.log(msg)
+            throw new Error(msg)
           }
-        )
+          return { server, result }
+        })
         if (infuraServers.length > 0) {
           funcs2 = async () => {
             const result = await this.fetchPostInfura('eth_getBalance', [
@@ -871,17 +881,15 @@ export class EthereumNetwork {
         break
       case 'getTokenBalance':
         url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
-        funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
-            if (!result.result || typeof result.result !== 'string') {
-              const msg = `Invalid return value getTokenBalance in ${server}`
-              this.ethEngine.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
+        funcs = etherscanApiServers.map(server => async () => {
+          const result = await this.fetchGetEtherscan(server, url)
+          if (!result.result || typeof result.result !== 'string') {
+            const msg = `Invalid return value getTokenBalance in ${server}`
+            this.ethEngine.log(msg)
+            throw new Error(msg)
           }
-        )
+          return { server, result }
+        })
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -905,20 +913,18 @@ export class EthereumNetwork {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
         url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-        funcs = this.ethEngine.currencyInfo.defaultSettings.otherSettings.etherscanApiServers.map(
-          server => async () => {
-            const result = await this.fetchGetEtherscan(server, url)
-            if (
-              typeof result.result !== 'object' ||
-              typeof result.result.length !== 'number'
-            ) {
-              const msg = `Invalid return value getTransactions in ${server}`
-              this.ethEngine.log(msg)
-              throw new Error(msg)
-            }
-            return { server, result }
+        funcs = etherscanApiServers.map(server => async () => {
+          const result = await this.fetchGetEtherscan(server, url)
+          if (
+            typeof result.result !== 'object' ||
+            typeof result.result.length !== 'number'
+          ) {
+            const msg = `Invalid return value getTransactions in ${server}`
+            this.ethEngine.log(msg)
+            throw new Error(msg)
           }
-        )
+          return { server, result }
+        })
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -929,6 +935,7 @@ export class EthereumNetwork {
     return out
   }
 
+  // checked, used in asyncWaterfall
   async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_blockNumber'
@@ -942,6 +949,7 @@ export class EthereumNetwork {
     }
   }
 
+  // asyncWaterfalls: checkBlockHeight & checkNonce
   async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
     const jsonObj = await this.fetchGetBlockchair(
       `/${this.currencyInfo.pluginName}/stats`,
@@ -956,6 +964,7 @@ export class EthereumNetwork {
     }
   }
 
+  // asyncWaterfall: checkBlockHeight
   async checkBlockHeightAmberdata(): Promise<EthereumNetworkUpdate> {
     const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
     const valid = validateObject(jsonObj, AmberdataRpcSchema)
@@ -978,6 +987,7 @@ export class EthereumNetwork {
     })
   }
 
+  // asyncWaterfall
   async checkNonceEthscan(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const { result: jsonObj, server } = await this.multicastServers(
@@ -993,6 +1003,7 @@ export class EthereumNetwork {
     }
   }
 
+  // asyncWaterfall
   async checkNonceAmberdata(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const jsonObj = await this.fetchPostAmberdataRpc(
@@ -1010,9 +1021,8 @@ export class EthereumNetwork {
 
   async checkNonce(): Promise<EthereumNetworkUpdate> {
     return asyncWaterfall([
-      this.checkBlockHeightEthscan,
-      this.checkBlockHeightAmberdata,
-      this.checkBlockHeightBlockchair
+      this.checkNonceEthscan,
+      this.checkNonceAmberdata
     ]).catch(err => {
       this.ethEngine.log('checkNonce failed to update', err)
       return {}
@@ -1072,6 +1082,7 @@ export class EthereumNetwork {
     return { allTransactions, server }
   }
 
+  // used in asyncWaterfall
   async checkTxsEthscan(
     startBlock: number,
     currencyCode: string
@@ -1150,6 +1161,7 @@ export class EthereumNetwork {
     }
   }
 
+  // fine, used in asyncWaterfalls
   async checkTxsAlethio(
     startBlock: number,
     currencyCode: string
@@ -1243,6 +1255,7 @@ export class EthereumNetwork {
     return response
   }
 
+  // fine, used in asyncWaterfalls
   async getAllTxsAmberdata(
     startBlock: number,
     startDate: number,
@@ -1316,6 +1329,7 @@ export class EthereumNetwork {
     return allTransactions
   }
 
+  // used in asyncWaterfall
   async checkTxsAmberdata(
     startBlock: number,
     startDate: number,
@@ -1403,6 +1417,7 @@ export class EthereumNetwork {
     }
   }
 
+  // used in asyncWaterfall
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const jsonObj = await this.fetchGetBlockchair(
