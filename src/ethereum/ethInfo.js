@@ -55,7 +55,7 @@ const otherSettings: EthereumSettings = {
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
   infuraServers: ['https://mainnet.infura.io/v3'],
-  isNestedInfuraParams: true,
+  isNestedInfuraParams: false,
   infuraNeedProjectId: true,
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
@@ -82,7 +82,7 @@ const otherSettings: EthereumSettings = {
   amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
-  ethGasStationUrl: '',
+  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
   defaultNetworkFees
 }
 

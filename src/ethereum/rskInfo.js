@@ -33,7 +33,7 @@ const otherSettings: EthereumSettings = {
   blockcypherApiServers: [],
   superethServers: [],
   infuraServers: ['https://public-node.rsk.co'],
-  isNestedInfuraParams: false,
+  isNestedInfuraParams: true,
   infuraNeedProjectId: false,
   blockchairApiServers: [],
   alethioApiServers: [],
@@ -49,7 +49,7 @@ const otherSettings: EthereumSettings = {
   hdPathCoinType: 137,
   pluginMnemonicKeyName: 'rskMnemonic',
   pluginRegularKeyName: 'rskKey',
-  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
+  ethGasStationUrl: '',
   defaultNetworkFees
 }
 
