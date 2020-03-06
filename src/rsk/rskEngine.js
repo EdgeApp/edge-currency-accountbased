@@ -14,6 +14,7 @@ import {
 import abi from 'ethereumjs-abi'
 import EthereumTx from 'ethereumjs-tx'
 import ethWallet from 'ethereumjs-wallet'
+import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -927,6 +928,12 @@ export class RskEngine extends CurrencyEngine {
       method: 'POST',
       body: JSON.stringify(body)
     })
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+      )
+    }
     const jsonObj = await response.json()
     return jsonObj
   }

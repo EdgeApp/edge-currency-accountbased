@@ -1,6 +1,7 @@
 // @flow
 import { bns } from 'biggystring'
 import type { EdgeTransaction } from 'edge-core-js/src/types/types'
+import parse from 'url-parse'
 
 import {
   asyncWaterfall,
@@ -500,6 +501,12 @@ export class EthereumNetwork {
       method: 'POST',
       body: JSON.stringify(body)
     })
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+      )
+    }
     const jsonObj = await response.json()
     return jsonObj
   }
@@ -519,6 +526,12 @@ export class EthereumNetwork {
       method: 'POST',
       body: JSON.stringify(body)
     })
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+      )
+    }
     return response.json()
   }
 
@@ -552,6 +565,12 @@ export class EthereumNetwork {
       method: 'POST',
       body: JSON.stringify(body)
     })
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+      )
+    }
     const jsonObj = await response.json()
     return jsonObj
   }
