@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.6.7 (2020-03-06)
+
+- Add response error checking to fetch() calls
+- Fixed crash when Etherscan API returned text rather than a number by adding decimal and hex regex to response validation
+
 # 0.6.6 (2020-02-13)
 
 - EOS - Revert fetch update to fix syncing
