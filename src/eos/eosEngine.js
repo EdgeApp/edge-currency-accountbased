@@ -17,6 +17,7 @@ import { Api, JsonRpc, RpcError } from 'eosjs'
 import EosApi from 'eosjs-api'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
+import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
@@ -454,6 +455,12 @@ export class EosEngine extends CurrencyEngine {
             server => async () => {
               const url = server + params[0]
               const result = await eosConfig.fetch(url)
+              const parsedUrl = parse(url, {}, true)
+              if (!result.ok) {
+                throw new Error(
+                  `The server returned error code ${result.status} for ${parsedUrl.hostname}`
+                )
+              }
               return { server, result }
             }
           )
