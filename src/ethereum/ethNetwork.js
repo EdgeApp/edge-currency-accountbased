@@ -859,7 +859,7 @@ export class EthereumNetwork {
       'eth_blockNumber'
     )
     const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
-    if (valid && /^\d+$/.test(jsonObj.result)) {
+    if (valid && /0[xX][0-9a-fA-F]+/.test(jsonObj.result)) {
       const blockHeight = parseInt(jsonObj.result, 16)
       return { blockHeight, server }
     } else {
@@ -907,7 +907,7 @@ export class EthereumNetwork {
       address
     )
     const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
-    if (valid && /^\d+$/.test(jsonObj.result)) {
+    if (valid && /0[xX][0-9a-fA-F]+/.test(jsonObj.result)) {
       const newNonce = bns.add('0', jsonObj.result)
       return { newNonce, server }
     } else {
