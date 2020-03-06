@@ -1,65 +1,171 @@
 // @flow
-import { api, tx, wallet } from '@cityofzion/neon-js'
+import { tx } from '@cityofzion/neon-core'
+import { api, rpc,wallet } from '@cityofzion/neon-js'
 import { bns } from 'biggystring'
 import {
   type EdgeSpendInfo,
   type EdgeTransaction,
-  type EdgeWalletInfo,
   InsufficientFundsError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getDenomInfo, getOtherParams, promiseAny } from '../common/utils.js'
+import { getDenomInfo, getOtherParams, promiseAny, validateObject } from '../common/utils.js'
 import { currencyInfo } from './neoInfo.js'
-import { NeoPlugin } from './neoPlugin.js'
+import { checkAddress } from './neoPlugin.js'
+import {
+  NeoTransactionOnline
+} from './neoSchema.js'
 import { type NeoTxOtherParams } from './neoTypes.js'
 const { Account } = wallet
+const { RPCClient } = rpc
 const ApiProvider = api.neoscan.instance
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 // const ADDRESS_POLL_MILLISECONDS = 10000
 const ACCOUNT_POLL_MILLISECONDS = 15000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 10000
+const TRANSACTION_POLL_MILLISECONDS = 20000
+const ADDRESS_QUERY_LOOKBACK_BLOCKS = 1
 
 type NeoFunction =
-  | 'neo_sendTx'
   | 'neo_getBalance'
   | 'neo_getTx'
-  | 'neo_getblockcount'
+  | 'neo_getBlockCount'
   | 'neo_broadcastTx'
+  | 'neo_getTxHeight'
+  | 'neo_getTxOut'
+  | 'neo_getBlock'
 
 export class NeoEngine extends CurrencyEngine {
-  neoPlugin: NeoPlugin
+  async multicastServers(func: NeoFunction, ...params: any): Promise<any> {
+    this.log(`start to query ${func} on Neo Blockchain`)
+    const out = { result: '', server: 'no server' }
+    switch (func) {
+      case 'neo_getBalance': {
+        const address = params[0];
+        if (!checkAddress(address)) {
+          throw new Error(`${address} is not a neo address`);
+        }
+        const promises = []
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.getAccountState(address))
+        }
+        const response = await promiseAny(promises)
+        if (response) {
+          return response
+        } else {
+          throw new Error('NEO get balance with error')
+        }
+      }
+      case 'neo_broadcastTx': {
+        const transaction = params[0];
+        if (typeof transaction !== 'string' && !transaction.serialize) {
+          throw new Error(`${transaction} is not a transaction.`);
+        }
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.sendRawTransaction(transaction))
+        }
+        const response = (await promiseAny(promises)).json()
+        if (response && response.result) {
+          return response.result
+        } else {
+          throw new Error('NEO send fail with error: ' + response.error.message)
+        }
+      }
+      case 'neo_getTx': {
+        const txId = params[0];
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.getRawTransaction(txId, 1))
+        }
+        const response = (await promiseAny(promises))
+        if (response && response.result) {
+          return response.result
+        } else {
+          throw new Error('NEO get TX fail with error: ' + response.error.message)
+        }
+      }
+      case 'neo_getBlockCount': {
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.getBlockCount())
+        }
+        const blockHeight = (await promiseAny(promises))
+        if (blockHeight) {
+          return blockHeight
+        } else {
+          throw new Error('NEO get block count fail with error')
+        }
+      }
+      case 'neo_getTxHeight': {
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          promises.push(rpc.queryRPC(node, {
+            method: 'gettransactionheight',
+            params
+          }))
+        }
+        const response = (await promiseAny(promises)).json()
+        if (response && response.result) {
+          return response.result
+        } else {
+          throw new Error('NEO get transaction height fail with error: ' + response.error.message)
+        }
+      }
+      case 'neo_getTxOut': {
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.getTxOut(...params))
+        }
+        const response = (await promiseAny(promises)).json()
+        if (response && response.result) {
+          return response.result
+        } else {
+          throw new Error('NEO get tx outputs with error: ' + response.error.message)
+        }
+      }
+      case 'neo_getBlock': {
+        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+        const promises = []
+        for (const node of rpcNodes) {
+          const client = new RPCClient(node);
+          promises.push(client.getBlock(...params))
+        }
+        const response = (await promiseAny(promises)).json()
+        if (response && response.result) {
+          return response.result
+        } else {
+          throw new Error('NEO get tx outputs with error: ' + response.error.message)
+        }
+      }
+      default: {
 
-  constructor(
-    currencyPlugin: NeoPlugin,
-    walletInfo: EdgeWalletInfo,
-    initOptions: any, // BinanceInitOptions,
-    opts: any // EdgeCurrencyEngineOptions
-  ) {
-    super(currencyPlugin, walletInfo, opts)
-  }
-
-  async fetchGet(url: string) {
-    const response = await this.io.fetch(url, {
-      method: 'GET'
-    })
-    if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${url}`
-      )
+      }
     }
-    return response.json()
+    this.log(`NEO multicastServers ${func} ${out.server} won`)
+
+    return out.result
   }
 
   async checkBlockchainInnerLoop() {
     try {
-      const blockHeight = await this.multicastServers('neo_getblockcount')
+      const blockHeight = await this.multicastServers('neo_getBlockCount')
       this.log(`Got block height ${blockHeight}`)
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
-        this.walletLocalData.blockHeight = blockHeight // Convert to decimal
+        this.walletLocalData.blockHeight = blockHeight
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onBlockHeightChanged(
           this.walletLocalData.blockHeight
@@ -89,8 +195,8 @@ export class NeoEngine extends CurrencyEngine {
     )
 
     try {
-      const balances = await this.multicastServers('neo_getBalance', address)
-      if (balances.length === 0) {
+      const balances = (await this.multicastServers('neo_getBalance', address)).balances
+      if (!balances  || balances.length === 0) {
         this.updateBalance('NEO', '0')
       }
       for (const tk of this.walletLocalData.enabledTokens) {
@@ -112,53 +218,113 @@ export class NeoEngine extends CurrencyEngine {
     }
   }
 
-  // TODO:
+  async processTransaction(transaction: Object, currencyCode: string) {
+    const valid = validateObject(transaction, NeoTransactionOnline)
+    if (valid) {
+      const { vin, vout, txid, net_fee: netFee, blocktime } = transaction
+      const neoInputs = []
+      for(let i = 0; i < vin.length; i++) {
+        const { txid: prevHash, vout: prevIndex } = vin[i]
+        const from = await this.multicastServers('neo_getTxOut', prevHash, prevIndex)
+        if (from.asset === currencyInfo.defaultSettings.assets.NEO) {
+          neoInputs.push(from)
+        }
+      }
+  
+      const neoOutputs = vout.filter(output => 
+        output.asset === currencyInfo.defaultSettings.assets.NEO &&
+        neoInputs.every(input => input.address !== output.address)
+      )
+  
+      const nativeAmount = neoOutputs.reduce((sum, cur) => sum + cur.value, 0)
+  
+      const from = neoInputs[0].address
+      const to = [neoOutputs[0].address]
+  
+      const otherParams = {
+        from,
+        to,
+        networkFee: transaction.fees,
+        isNative: true
+      }
+  
+      const blockHeight = await this.multicastServers('neo_getTxHeight', txid)
+      
+      const edgeTransaction: EdgeTransaction = {
+        txid,
+        date: blocktime,
+        currencyCode,
+        blockHeight,
+        nativeAmount,
+        networkFee: netFee,
+        parentNetworkFee: '0',
+        ourReceiveAddresses: to,
+        signedTx: '',
+        otherParams
+      }
+  
+      this.addTransaction(currencyCode, edgeTransaction)
+    }
+  }
+
+  async checkTransactionsFetch(startBlockHeight: number, currencyCode: string, blockHeight: number): Promise<boolean> {
+    let checkAddressSuccess: boolean = true
+    try {
+      for (let curHeight = startBlockHeight; curHeight++; curHeight <= blockHeight) {
+        const { tx: transactions } = await this.multicastServers('neo_getBlock', curHeight, 1)
+        for(let i = 0; i < transactions.length; i++) {
+          await this.processTransaction(transactions[i], currencyCode)
+        }
+      }
+      checkAddressSuccess = true
+    } catch (e) {
+      this.log(`Error checkTransactionsFetch ${currencyCode}`, e)
+      checkAddressSuccess = false
+    }
+
+    if (checkAddressSuccess) {
+      this.tokenCheckTransactionsStatus[currencyCode] = 1
+      this.updateOnAddressesChecked()
+      return true
+    } else {
+      return false
+    }
+  }
+
   async checkTransactionsInnerLoop() {
+    const blockHeight = Number(await this.multicastServers('neo_getBlockCount'))
+    let startBlockHeight = 0
+    const promiseArray = []
+
+    if (this.walletLocalData.lastAddressQueryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
+      startBlockHeight = this.walletLocalData.lastAddressQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
+    }
+
+    for(const currencyCode of this.walletLocalData.enabledTokens) {
+      promiseArray.push(this.checkTransactionsFetch(startBlockHeight, currencyCode, blockHeight))
+    }
+
+    let resultArray = []
+    try {
+      resultArray = await Promise.all(promiseArray)
+    } catch (e) {
+      this.log('Failed to query transactions')
+      this.log(e.name)
+      this.log(e.message)
+    }
+    let successCount = 0
+    for (const r of resultArray) {
+      if (r) successCount++
+    }
+    if (successCount === promiseArray.length) {
+      this.walletLocalData.lastAddressQueryHeight = blockHeight
+    }
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
       )
       this.transactionsChangedArray = []
     }
-  }
-
-  async multicastServers(func: NeoFunction, ...params: any): Promise<any> {
-    const out = { result: '', server: 'no server' }
-    switch (func) {
-      case 'neo_getBalance': {
-        const promises = []
-        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
-        for (const node of rpcNodes) {
-          const endpoint: string = node
-          promises.push(
-            this.io.fetch(endpoint, {
-              method: 'POST',
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'getaccountstate',
-                params: params,
-                id: 1
-              }),
-              headers: {
-                'content-type': 'text/plain'
-              }
-            })
-          )
-        }
-        const response = (await promiseAny(promises)).json()
-        if (response && response.result) {
-          return {
-            result: response.result.balances,
-            server: 'irrelevant'
-          }
-        } else {
-          throw new Error('NEO send fail with error: ' + response.error)
-        }
-      }
-    }
-    this.log(`NEO multicastServers ${func} ${out.server} won`)
-
-    return out.result
   }
 
   // // ****************************************************************************
@@ -171,10 +337,6 @@ export class NeoEngine extends CurrencyEngine {
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     // this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // this.addToLoop(
-    //   'checkUnconfirmedTransactionsInnerLoop',
-    //   UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
-    // )
     super.startEngine()
   }
 
@@ -190,6 +352,10 @@ export class NeoEngine extends CurrencyEngine {
     )
 
     /* Just consider only one target */
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output supported now for neo')
+    }
+
     const networkFee = 0 // neo has 10 gas free.
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
