@@ -361,13 +361,13 @@ export class BinanceEngine extends CurrencyEngine {
         const response = await promiseAny(promises)
         const result = await response.json()
         if (result[0] && result[0].ok && result[0].code === 0) {
-          this.log(`BNB multicastServers ${func} ${JSON.stringify(out)} won`)
+          this.log(`multicastServers ${func} ${JSON.stringify(out)} won`)
           return {
             result,
             server: 'irrelevant'
           }
         } else {
-          throw new Error('BNB send fail with error: ' + result.message)
+          throw new Error('send fail with error: ' + result.message)
         }
       }
 
@@ -390,7 +390,7 @@ export class BinanceEngine extends CurrencyEngine {
         out = await asyncWaterfall(funcs)
         break
     }
-    this.log(`BNB multicastServers ${func} ${out.server} won`)
+    this.log(`multicastServers ${func} ${out.server} won`)
 
     return out.result
   }
@@ -546,7 +546,7 @@ export class BinanceEngine extends CurrencyEngine {
       currencyCode,
       otherParams.memo
     )
-    this.log(`SUCCESS BNB broadcastTx\n${JSON.stringify(signedTx)}`)
+    this.log(`SUCCESS broadcastTx\n${JSON.stringify(signedTx)}`)
     otherParams.serializedTx = signedTx.serialize()
     return edgeTransaction
   }

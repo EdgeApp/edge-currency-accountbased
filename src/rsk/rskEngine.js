@@ -542,7 +542,7 @@ export class RskEngine extends CurrencyEngine {
         )
         out = await promiseAny(promises)
 
-        this.log(`RSK multicastServers ${func} ${out.server} won`)
+        this.log(`multicastServers ${func} ${out.server} won`)
         break
       }
 
@@ -668,7 +668,7 @@ export class RskEngine extends CurrencyEngine {
         break
       }
     }
-    this.log(`RSK multicastServers ${func} ${out.server} won`)
+    this.log(`multicastServers ${func} ${out.server} won`)
 
     return out.result
   }

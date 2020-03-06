@@ -17,7 +17,6 @@ import {
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
-import { getFetchJson } from '../react-native-io.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
 
@@ -103,7 +102,7 @@ export class FioPlugin extends CurrencyPlugin {
 
 export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
-  const fetchJson = getFetchJson(opts)
+  const { fetchCors = io.fetch } = opts
 
   let toolsPromise: Promise<FioPlugin>
   function makeCurrencyTools(): Promise<FioPlugin> {
@@ -117,7 +116,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new FioEngine(tools, walletInfo, opts, fetchJson)
+    const currencyEngine = new FioEngine(tools, walletInfo, opts, fetchCors)
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     const out: EdgeCurrencyEngine = currencyEngine

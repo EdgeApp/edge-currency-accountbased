@@ -209,19 +209,19 @@ export class EthereumEngine extends CurrencyEngine {
 
         // Sanity checks
         if (safeLow < 1 || safeLow > 3000) {
-          console.log('Invalid safeLow value from EthGasStation')
+          this.log('Invalid safeLow value from EthGasStation')
           return
         }
         if (average < 1 || average > 3000) {
-          console.log('Invalid average value from EthGasStation')
+          this.log('Invalid average value from EthGasStation')
           return
         }
         if (fast < 1 || fast > 3000) {
-          console.log('Invalid fastest value from EthGasStation')
+          this.log('Invalid fastest value from EthGasStation')
           return
         }
         if (fastest < 1 || fastest > 3000) {
-          console.log('Invalid fastest value from EthGasStation')
+          this.log('Invalid fastest value from EthGasStation')
           return
         }
 
@@ -337,7 +337,7 @@ export class EthereumEngine extends CurrencyEngine {
         const result = await asyncWaterfall(funcs, 5000)
         gasLimit = bns.add(result.result, '0')
       } catch (err) {
-        console.log(err)
+        this.log(err)
       }
     }
 
