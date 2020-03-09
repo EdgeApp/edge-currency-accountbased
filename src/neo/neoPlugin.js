@@ -1,5 +1,5 @@
 // @flow
-import { rpc, u,wallet } from '@cityofzion/neon-js'
+import { rpc, u, wallet } from '@cityofzion/neon-js'
 import { bns } from 'biggystring'
 import {
   type EdgeCorePluginOptions,
@@ -39,14 +39,15 @@ export class NeoPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey(privateKey: string): Promise<{ neoKey: string }> {
-    if (this.validPrivateKey(privateKey)) throw new Error('Neo Private key wrong length')
+    if (this.validPrivateKey(privateKey))
+      throw new Error('Neo Private key wrong length')
     return { neoKey: privateKey }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === 'neo') {
-      const privateKey = u.ab2hexstring(this.io.random(32));
+      const privateKey = u.ab2hexstring(this.io.random(32))
       return { neoKey: privateKey }
     } else {
       throw new Error('InvalidWalletType')
@@ -55,7 +56,7 @@ export class NeoPlugin extends CurrencyPlugin {
 
   /**
    * This function actually returns neo address as publickey, to keep to edge style.
-   * @param {EdgeWalletInfo} walletInfo 
+   * @param {EdgeWalletInfo} walletInfo
    */
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
@@ -73,8 +74,8 @@ export class NeoPlugin extends CurrencyPlugin {
     customTokens?: Array<EdgeMetaToken>
   ): Promise<EdgeParsedUri> {
     const { edgeParsedUri, parsedUri } = this.parseUriCommon(
-      currencyInfo, 
-      uri, 
+      currencyInfo,
+      uri,
       {
         neo: true
       },
@@ -113,7 +114,10 @@ export class NeoPlugin extends CurrencyPlugin {
     return edgeParsedUri
   }
 
-  async encodeUri(obj: EdgeEncodeUri, customTokens?: Array<EdgeMetaToken>): Promise<string> {
+  async encodeUri(
+    obj: EdgeEncodeUri,
+    customTokens?: Array<EdgeMetaToken>
+  ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = checkAddress(publicAddress)
     if (!valid) {
@@ -121,7 +125,11 @@ export class NeoPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof nativeAmount === 'string') {
-      const denom = getDenomInfo(currencyInfo, currencyCode || 'NEO', customTokens)
+      const denom = getDenomInfo(
+        currencyInfo,
+        currencyCode || 'NEO',
+        customTokens
+      )
       if (!denom) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
