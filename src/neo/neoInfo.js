@@ -35,7 +35,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'N'
     }
   ],
-  symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`, // TODO: upload currency logo
-  symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`, // TODO: upload currency logo
+  symbolImage: `${imageServerUrl}/neo-logo.png`, // TODO: upload currency logo
+  symbolImageDarkMono: `${imageServerUrl}/neo-logo.png`, // TODO: upload currency logo
   metaTokens: []
 }
