@@ -564,6 +564,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0xb1CD6e4153B2a390Cf00A6556b0fC1458C4A5533',
       symbolImage: `${imageServerUrl}/bancor-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'MET',
+      currencyName: 'Metronome',
+      denominations: [
+        {
+          name: 'MET',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xa3d58c4e56fedcae3a7c43a725aee9a71f0ece4e',
+      symbolImage: `${imageServerUrl}/met-logo-solo-64.png`
     }
   ]
 }
