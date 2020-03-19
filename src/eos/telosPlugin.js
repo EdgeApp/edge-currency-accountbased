@@ -23,7 +23,7 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
+  eosActivationServers: ['http://localhost:80'],
   // used for the following routines, is Hyperion v2:
 
   // getIncomingTransactions
