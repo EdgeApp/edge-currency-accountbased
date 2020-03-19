@@ -216,6 +216,7 @@ export function makeEosBasedPluginInner(
       const eosPaymentServer =
         currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
       const uri = `${eosPaymentServer}/api/v1/getSupportedCurrencies`
+      log('kylan getActivationSupportedCurrencies uri: ', uri)
       const response = await fetch(uri)
       if (!response.ok) {
         throw new Error(`Error ${response.status} while fetching ${uri}`)
