@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.8 (2020-03-20)
+
+- Add MET token
+
 # 0.6.7 (2020-03-06)
 
 - Add response error checking to fetch() calls
