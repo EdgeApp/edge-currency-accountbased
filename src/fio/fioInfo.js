@@ -5,6 +5,10 @@ import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
 const defaultSettings: any = {
   apiUrls: ['https://testnet.fioprotocol.io:443/v1/'],
+  historyNodeUrls: ['https://testnet.fio.dev/v1/'],
+  historyNodeActions: {
+    getActions: 'get_actions'
+  },
   fioDomain: 'fiotestnet'
 }
 
