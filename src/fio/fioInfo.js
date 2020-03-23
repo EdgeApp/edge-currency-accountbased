@@ -3,10 +3,7 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
-const defaultSettings: any = {
-  apiUrls: ['https://testnet.fioprotocol.io:443/v1/'],
-  fioDomain: 'fiotestnet'
-}
+const defaultSettings: any = {}
 
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
@@ -14,12 +11,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'FIO',
   pluginName: 'fio',
   walletType: 'wallet:fio',
-
   defaultSettings,
-
-  // todo: Get proper urls
-  addressExplorer: 'https://monitor.testnet.fioprotocol.io/#accountInfo',
-  transactionExplorer: 'https://monitor.testnet.fioprotocol.io/',
+  addressExplorer: 'https://eospark.com/account/%s',
+  transactionExplorer: 'https://eospark.com/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency

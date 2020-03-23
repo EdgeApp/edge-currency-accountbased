@@ -1,4 +1,4 @@
-import { FIOSDK } from '@fioprotocol/fiosdk'
+import { FIOSDK } from '@dapix/react-native-fio'
 import { bns } from 'biggystring'
 /**
  * Created by paul on 8/8/17.
@@ -20,25 +20,22 @@ import { getDenomInfo } from '../common/utils.js'
 import { FioEngine } from './fioEngine'
 import { currencyInfo } from './fioInfo.js'
 
-const FIO_CURRENCY_CODE = 'FIO'
-const FIO_TYPE = 'fio'
-
 export function checkAddress(address: string): boolean {
-  const start = address.startsWith(FIO_CURRENCY_CODE)
-  const length = address.length === 53
-  return start && length
+  const start = address.startsWith('FIO')
+  const lenght = address.length === 53
+  return start && lenght
 }
 
 export class FioPlugin extends CurrencyPlugin {
   otherMethods: Object
 
   constructor(io: EdgeIo) {
-    super(io, FIO_TYPE, currencyInfo)
+    super(io, 'fio', currencyInfo)
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
-    if (type === FIO_TYPE) {
+    if (type === 'fio') {
       const buffer = this.io.random(32)
       return FIOSDK.createPrivateKey(buffer)
     } else {
@@ -48,7 +45,7 @@ export class FioPlugin extends CurrencyPlugin {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
-    if (type === FIO_TYPE) {
+    if (type === 'fio') {
       return FIOSDK.derivedPublicKey(walletInfo.keys.fioKey)
     } else {
       throw new Error('InvalidWalletType')
@@ -62,7 +59,7 @@ export class FioPlugin extends CurrencyPlugin {
       {
         fio: true
       },
-      FIO_CURRENCY_CODE
+      'FIO'
     )
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
@@ -90,7 +87,7 @@ export class FioPlugin extends CurrencyPlugin {
     }
     let amount
     if (typeof obj.nativeAmount === 'string') {
-      const currencyCode: string = FIO_CURRENCY_CODE
+      const currencyCode: string = 'FIO'
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
       if (!denom) {
@@ -98,14 +95,14 @@ export class FioPlugin extends CurrencyPlugin {
       }
       amount = bns.div(nativeAmount, denom.multiplier, 16)
     }
-    const encodedUri = this.encodeUriCommon(obj, FIO_TYPE, amount)
+    const encodedUri = this.encodeUriCommon(obj, 'fio', amount)
     return encodedUri
   }
 }
 
 export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io } = opts
-  const { fetchCors = io.fetch } = io
+  const { fetchCors = io.fetch } = opts
 
   let toolsPromise: Promise<FioPlugin>
   function makeCurrencyTools(): Promise<FioPlugin> {
@@ -126,65 +123,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     return out
   }
 
-  const otherMethods = {
-    getConnectedPublicAddress: async (
-      fioAddress: string,
-      chainCode: string,
-      tokenCode: string
-    ) => {
-      const fioSDK = new FIOSDK(
-        '',
-        '',
-        currencyInfo.defaultSettings.apiUrls[0],
-        fetchCors
-      )
-      return fioSDK.getPublicAddress(fioAddress, chainCode, tokenCode)
-    },
-    validateAccount: async (fioAddress: string): boolean => {
-      if (
-        !new RegExp(
-          `^(([a-z0-9]+)(-?[a-z0-9]+)*@{1}${currencyInfo.defaultSettings.fioDomain}{1})$`,
-          'gim'
-        ).test(fioAddress)
-      )
-        return false
-      try {
-        const fioSDK = new FIOSDK(
-          '',
-          '',
-          currencyInfo.defaultSettings.apiUrls[0],
-          fetchCors
-        )
-        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
-
-        return !isAvailableRes.is_registered
-      } catch (e) {
-        console.log('validateAccount error: ' + JSON.stringify(e))
-        return false
-      }
-    },
-    isAccountAvailable: async (fioAddress: string): boolean => {
-      try {
-        const fioSDK = new FIOSDK(
-          '',
-          '',
-          currencyInfo.defaultSettings.apiUrls[0],
-          fetchCors
-        )
-        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
-
-        return isAvailableRes.is_registered
-      } catch (e) {
-        console.log('isAccountAvailable error: ' + JSON.stringify(e))
-        return false
-      }
-    }
-  }
-
   return {
     currencyInfo,
     makeCurrencyEngine,
-    makeCurrencyTools,
-    otherMethods
+    makeCurrencyTools
   }
 }
