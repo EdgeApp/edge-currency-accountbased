@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.6.9 (2020-03-23)
+
+- Remove FIO codebase, accidentally included in v0.6.8.
+
 # 0.6.8 (2020-03-20)
 
 - Add MET token
