@@ -10,7 +10,8 @@ import {
   type EdgeFreshAddress,
   type EdgeSpendInfo,
   type EdgeTransaction,
-  type EdgeWalletInfo
+  type EdgeWalletInfo,
+  InsufficientFundsError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -541,7 +542,9 @@ export class FioEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
+      edgeSpendInfoIn
+    )
 
     const feeResponse = await this.multicastServers('getFee', {
       endPoint: EndPoint.transferTokens
@@ -549,6 +552,9 @@ export class FioEngine extends CurrencyEngine {
     const fee = feeResponse.fee
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
+    if (bns.gt(quantity, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
     const memo = ''
     const actor = ''
     const transactionJson = {

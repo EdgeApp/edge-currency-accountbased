@@ -9,6 +9,8 @@ const defaultSettings: any = {
   historyNodeActions: {
     getActions: 'get_actions'
   },
+  fioAddressRegApiUrl:
+    'https://fio-registrations.herokuapp.com/public-api/buy-address',
   fioDomain: 'fiotestnet'
 }
 
