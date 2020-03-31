@@ -138,13 +138,11 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       return fioSDK.getPublicAddress(fioAddress, chainCode, tokenCode)
     },
     validateAccount: async (fioAddress: string): Promise<boolean> => {
-      if (
-        !new RegExp(
-          '^(?:(?=.{3,64}$)[a-zA-Z0-9]{1}(?:(?!-{2,}))[a-zA-Z0-9-]*[a-zA-Z0-9]+@[a-zA-Z0-9]{1}(?:(?!-{2,}))[a-zA-Z0-9-]*[a-zA-Z0-9]+$)',
-          'gim'
-        ).test(fioAddress)
-      )
+      try {
+        if (!FIOSDK.isFioAddressValid(fioAddress)) return false
+      } catch (e) {
         return false
+      }
       try {
         const fioSDK = new FIOSDK(
           '',
