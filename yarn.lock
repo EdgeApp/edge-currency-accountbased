@@ -743,10 +743,10 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.0.0.tgz#d1d74167a9a26e845f2177e78a3ab838d99c79f7"
-  integrity sha512-Asyt9wppltPR8HDugLOeDp6VD4XdgyaqxHg2VVWIJ4fxQhCcfflzIVQfUs+t0pev+VXi9EIlfGsdtBFW2Mk0vw==
+"@fioprotocol/fiosdk@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.0.1.tgz#55e1b3a6f047c93007936731a1ba647571021c5d"
+  integrity sha512-xVhVmmj5vuXsBSt2QX+ogMkgp0/VVoD2/YUf66F/oBpKRwWXtJWS4N/v4JQMOIQC0lxSOrx1FAqVq6KZlS8ihQ==
   dependencies:
     "@fioprotocol/fiojs" "1.0.0"
     "@types/text-encoding" "0.0.35"

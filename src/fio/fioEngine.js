@@ -82,7 +82,7 @@ export class FioEngine extends CurrencyEngine {
           },
           rejectFundsRequest: {
             action: 'getFeeForRejectFundsRequest',
-            propName: 'payeeFioAddress'
+            propName: 'payerFioAddress'
           },
           requestFunds: {
             action: 'getFeeForNewFundsRequest',

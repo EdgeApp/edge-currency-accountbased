@@ -160,6 +160,11 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     },
     isAccountAvailable: async (fioAddress: string): Promise<boolean> => {
       try {
+        if (!FIOSDK.isFioAddressValid(fioAddress)) return false
+      } catch (e) {
+        return false
+      }
+      try {
         const fioSDK = new FIOSDK(
           '',
           '',
