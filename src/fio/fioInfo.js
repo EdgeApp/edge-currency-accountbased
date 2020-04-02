@@ -4,14 +4,13 @@
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
 const defaultSettings: any = {
-  apiUrls: ['https://testnet.fioprotocol.io:443/v1/'],
-  historyNodeUrls: ['https://testnet.fio.dev/v1/'],
+  apiUrls: ['https://fio.cryptolions.io:443/v1/'],
+  historyNodeUrls: ['https://fio.greymass.com/v1/'],
   historyNodeActions: {
     getActions: 'get_actions'
   },
-  fioAddressRegApiUrl:
-    'https://fio-registrations.herokuapp.com/public-api/buy-address',
-  fioDomain: 'fiotestnet'
+  fioAddressRegApiUrl: 'https://reg.fioprotocol.io/public-api/buy-address',
+  fioDomain: 'edge'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
