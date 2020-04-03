@@ -162,7 +162,7 @@ export class StellarEngine extends CurrencyEngine {
     let rawTx: StellarTransaction
     try {
       rawTx = await tx.transaction()
-      networkFee = rawTx.fee_paid.toString()
+      networkFee = rawTx.fee_charged.toString()
     } catch (e) {
       this.log(e)
       throw e
