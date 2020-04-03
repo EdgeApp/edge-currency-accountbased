@@ -356,7 +356,7 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (!lastActionSeqNumber) {
-      return false
+      return true
     }
 
     const limit = 10
