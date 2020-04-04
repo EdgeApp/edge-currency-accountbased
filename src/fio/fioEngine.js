@@ -227,8 +227,7 @@ export class FioEngine extends CurrencyEngine {
 
   processTransaction(action: FioTransactionSuperNode, actor: string): number {
     const {
-      act: { name: trxName, data },
-      receiver
+      act: { name: trxName, data }
     } = action.action_trace
     let nativeAmount
     let actorSender
@@ -243,15 +242,15 @@ export class FioEngine extends CurrencyEngine {
     if (trxName === 'trnsfiopubky') {
       nativeAmount = data.amount.toString()
       actorSender = data.actor
-      if (receiver === actor) {
+      memo = `Recipient Address: ${data.payee_public_key}`
+      if (data.payee_public_key === this.walletInfo.keys.publicKey) {
         name = actorSender
         ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
-        memo = `Recipient Address: ${data.payee_public_key}`
         if (actorSender === actor) {
           nativeAmount = '0'
         }
       } else {
-        name = receiver
+        name = data.payee_public_key
         nativeAmount = `-${nativeAmount}`
       }
 
