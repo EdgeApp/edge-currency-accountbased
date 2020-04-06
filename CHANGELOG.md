@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.0 (2020-04-06)
+
+- Add FIO
+
 # 0.6.10 (2020-04-06)
 
 - Import EOS private key
