@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.6.9 (2020-04-06)
+
+- Import EOS private key
+- Fix XLM transaction history not showing
+
 # 0.6.8 (2020-03-20)
 
 - Add MET token
