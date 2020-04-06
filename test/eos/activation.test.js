@@ -84,7 +84,7 @@ describe(`EOS activation`, function() {
       })
   })
 
-  it('getSupportedCurrencies', async function() {
+  it.skip('getSupportedCurrencies', async function() {
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationSupportedCurrencies()
       assert.equal(result.BTC, true)
