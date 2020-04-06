@@ -1,9 +1,6 @@
+// @flow
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { bns } from 'biggystring'
-/**
- * Created by paul on 8/8/17.
- */
-// @flow
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -140,14 +137,19 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       )
       return fioSDK.getPublicAddress(fioAddress, chainCode, tokenCode)
     },
-    validateAccount: async (fioAddress: string): boolean => {
-      if (
-        !new RegExp(
-          `^(([a-z0-9]+)(-?[a-z0-9]+)*@{1}${currencyInfo.defaultSettings.fioDomain}{1})$`,
-          'gim'
-        ).test(fioAddress)
-      )
+    isFioAddressValid: async (fioAddress: string): Promise<boolean> => {
+      try {
+        return FIOSDK.isFioAddressValid(fioAddress)
+      } catch (e) {
         return false
+      }
+    },
+    validateAccount: async (fioAddress: string): Promise<boolean> => {
+      try {
+        if (!FIOSDK.isFioAddressValid(fioAddress)) return false
+      } catch (e) {
+        return false
+      }
       try {
         const fioSDK = new FIOSDK(
           '',
@@ -163,7 +165,12 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    isAccountAvailable: async (fioAddress: string): boolean => {
+    isAccountAvailable: async (fioAddress: string): Promise<boolean> => {
+      try {
+        if (!FIOSDK.isFioAddressValid(fioAddress)) return false
+      } catch (e) {
+        return false
+      }
       try {
         const fioSDK = new FIOSDK(
           '',
@@ -177,6 +184,24 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e) {
         console.log('isAccountAvailable error: ' + JSON.stringify(e))
         return false
+      }
+    },
+    buyAddressRequest: async (options: any): Promise<any> => {
+      try {
+        const result = await fetchCors(
+          currencyInfo.defaultSettings.fioAddressRegApiUrl,
+          {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(options)
+          }
+        )
+        return result.json()
+      } catch (e) {
+        return { error: e }
       }
     }
   }

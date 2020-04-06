@@ -10,15 +10,46 @@ import {
   type EdgeFreshAddress,
   type EdgeSpendInfo,
   type EdgeTransaction,
-  type EdgeWalletInfo
+  type EdgeWalletInfo,
+  InsufficientFundsError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { asyncWaterfall } from '../common/utils'
+import { asyncWaterfall, getDenomInfo } from '../common/utils'
 import { FioPlugin } from './fioPlugin.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
+const TRANSACTION_POLL_MILLISECONDS = 10000
+
+type FioTransactionSuperNode = {
+  block_num: number,
+  block_time: string,
+  action_trace: {
+    receiver: string,
+    act: {
+      account: string,
+      name: string,
+      authorization: [],
+      data: {
+        payee_public_key: string,
+        amount: number,
+        max_fee: number,
+        actor: string,
+        tpid: string,
+        quantity: string,
+        memo: string,
+        to: string,
+        from: string
+      },
+      hex_data: string
+    },
+    trx_id: string,
+    block_num: number,
+    block_time: string,
+    producer_block_id: string
+  }
+}
 
 export class FioEngine extends CurrencyEngine {
   fioPlugin: FioPlugin
@@ -51,7 +82,7 @@ export class FioEngine extends CurrencyEngine {
           },
           rejectFundsRequest: {
             action: 'getFeeForRejectFundsRequest',
-            propName: 'payeeFioAddress'
+            propName: 'payerFioAddress'
           },
           requestFunds: {
             action: 'getFeeForNewFundsRequest',
@@ -135,6 +166,8 @@ export class FioEngine extends CurrencyEngine {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
+    this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.feeTransactions = []
     this.walletLocalData.otherData.fioAddresses = []
     try {
       const result = await this.multicastServers('getFioNames', {
@@ -192,11 +225,240 @@ export class FioEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  async checkTransactionsInnerLoop() {
-    // todo: waiting on FIO History API/Node
+  processTransaction(action: FioTransactionSuperNode, actor: string): number {
+    const {
+      act: { name: trxName, data }
+    } = action.action_trace
+    let nativeAmount
+    let actorSender
+    let name
+    let memo = ''
+    let networkFee = '0'
+    let currencyCode = 'FIO'
+    const ourReceiveAddresses = []
+    if (trxName !== 'trnsfiopubky' && trxName !== 'transfer') {
+      return action.block_num
+    }
+    if (trxName === 'trnsfiopubky') {
+      nativeAmount = data.amount.toString()
+      actorSender = data.actor
+      memo = `Recipient Address: ${data.payee_public_key}`
+      if (data.payee_public_key === this.walletInfo.keys.publicKey) {
+        name = actorSender
+        ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        if (actorSender === actor) {
+          nativeAmount = '0'
+        }
+      } else {
+        name = data.payee_public_key
+        nativeAmount = `-${nativeAmount}`
+      }
+
+      const edgeTransaction: EdgeTransaction = {
+        txid: action.action_trace.trx_id,
+        date: Date.parse(action.block_time) / 1000,
+        currencyCode,
+        blockHeight: action.block_num > 0 ? action.block_num : 0,
+        nativeAmount,
+        networkFee: '0',
+        parentNetworkFee: '0',
+        ourReceiveAddresses,
+        signedTx: '',
+        otherParams: {},
+        metadata: {
+          name,
+          notes: memo
+        }
+      }
+      this.addTransaction(currencyCode, edgeTransaction)
+    }
+
+    if (trxName === 'transfer') {
+      const [amount, cCode] = data.quantity.split(' ')
+      currencyCode = cCode
+      const exchangeAmount = amount.toString()
+      const denom = getDenomInfo(this.currencyInfo, currencyCode)
+      if (!denom) {
+        this.log(`Received unsupported currencyCode: ${currencyCode}`)
+        return 0
+      }
+      networkFee = bns.mul(exchangeAmount, denom.multiplier)
+      const index = this.findTransaction(
+        currencyCode,
+        action.action_trace.trx_id
+      )
+      const feeTrxIndex = this.walletLocalData.otherData.feeTransactions.findIndex(
+        trxId => trxId === action.action_trace.trx_id
+      )
+      if (index > -1 && feeTrxIndex < 0) {
+        const existingTrx = this.transactionList[currencyCode][index]
+        existingTrx.nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
+        existingTrx.networkFee = networkFee
+        this.updateTransaction(currencyCode, existingTrx, index)
+      } else {
+        memo = data.memo
+        name = data.to
+        if (feeTrxIndex < 0) {
+          this.walletLocalData.otherData.feeTransactions.push(
+            action.action_trace.trx_id
+          )
+        }
+        const edgeTransaction: EdgeTransaction = {
+          txid: action.action_trace.trx_id,
+          date: Date.parse(action.block_time) / 1000,
+          currencyCode,
+          blockHeight: action.block_num > 0 ? action.block_num : 0,
+          nativeAmount: `-${networkFee}`,
+          networkFee: '0',
+          signedTx: '',
+          ourReceiveAddresses: [],
+          otherParams: {},
+          metadata: {
+            name,
+            notes: memo
+          }
+        }
+        this.addTransaction(currencyCode, edgeTransaction)
+      }
+    }
+
+    return action.block_num
   }
 
-  async multicastServers(actionName: string, params?: any): Promise<any> {
+  async checkTransactions(): Promise<boolean> {
+    let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
+    let lastActionSeqNumber = 0
+    const fioSDK = new FIOSDK(
+      '',
+      '',
+      this.currencyInfo.defaultSettings.historyNodeUrls[0],
+      this.fetchCors
+    )
+    const actor = fioSDK.transactions.getActor(this.walletInfo.keys.publicKey)
+    try {
+      const lastActionObject = await this.multicastServers(
+        'history',
+        {
+          account_name: actor,
+          pos: -1,
+          offset: -1
+        },
+        this.currencyInfo.defaultSettings.historyNodeActions.getActions
+      )
+
+      if (lastActionObject.actions && lastActionObject.actions.length) {
+        lastActionSeqNumber = lastActionObject.actions[0].account_action_seq
+      }
+    } catch (e) {
+      console.log(e)
+      this.log(e)
+    }
+
+    if (!lastActionSeqNumber) {
+      return true
+    }
+
+    const limit = 10
+    let offset = 0
+    let finish = false
+
+    if (lastActionSeqNumber > 1000) {
+      offset = lastActionSeqNumber - 1000
+    }
+
+    while (!finish) {
+      this.log('looping through checkTransactions')
+      const actionsObject = await this.multicastServers(
+        'history',
+        {
+          account_name: actor,
+          pos: offset,
+          offset: limit
+        },
+        this.currencyInfo.defaultSettings.historyNodeActions.getActions
+      )
+      let actions = []
+      actionsObject.actions.sort((a, b) => a.block_num - b.block_num)
+
+      if (actionsObject.actions && actionsObject.actions.length > 0) {
+        actions = actionsObject.actions
+      } else {
+        break
+      }
+
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i]
+        const blockNum = this.processTransaction(action, actor)
+
+        if (blockNum > newHighestTxHeight) {
+          newHighestTxHeight = blockNum
+        } else if (offset === 0 && blockNum === newHighestTxHeight && i === 0) {
+          finish = true
+          break
+        }
+      }
+
+      if (!actions.length || actions.length < limit) {
+        break
+      }
+      offset += limit
+    }
+    if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
+      this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
+      this.walletLocalDataDirty = true
+    }
+    return true
+  }
+
+  async checkTransactionsInnerLoop() {
+    let transactions
+    try {
+      transactions = await this.checkTransactions()
+    } catch (e) {
+      console.log(e)
+      this.log('checkTransactionsInnerLoop fetches failed with error: ')
+      this.log(e)
+      return false
+    }
+
+    if (transactions) {
+      this.tokenCheckTransactionsStatus.FIO = 1
+      this.updateOnAddressesChecked()
+    }
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
+  }
+
+  async multicastServers(
+    actionName: string,
+    params?: any,
+    uri?: string
+  ): Promise<any> {
+    if (actionName === 'history') {
+      return asyncWaterfall(
+        this.currencyInfo.defaultSettings.historyNodeUrls.map(
+          apiUrl => async () => {
+            const result = await this.fetchCors(
+              `${apiUrl}history/${uri || ''}`,
+              {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(params)
+              }
+            )
+            return result.json()
+          }
+        )
+      )
+    }
+
     return asyncWaterfall(
       this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
         const fioSDK = new FIOSDK(
@@ -255,6 +517,8 @@ export class FioEngine extends CurrencyEngine {
 
   async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
+    this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.feeTransactions = []
   }
 
   // ****************************************************************************
@@ -266,6 +530,7 @@ export class FioEngine extends CurrencyEngine {
     this.engineOn = true
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     super.startEngine()
   }
 
@@ -276,7 +541,9 @@ export class FioEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
+      edgeSpendInfoIn
+    )
 
     const feeResponse = await this.multicastServers('getFee', {
       endPoint: EndPoint.transferTokens
@@ -284,6 +551,9 @@ export class FioEngine extends CurrencyEngine {
     const fee = feeResponse.fee
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
+    if (bns.gt(quantity, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
     const memo = ''
     const actor = ''
     const transactionJson = {
@@ -312,7 +582,7 @@ export class FioEngine extends CurrencyEngine {
       date: 0, // date
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: quantity, // nativeAmount
+      nativeAmount: bns.sub(`-${quantity}`, `${fee}`), // nativeAmount
       networkFee: `${fee}`, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '0', // signedTx
@@ -340,18 +610,17 @@ export class FioEngine extends CurrencyEngine {
       )
     const publicAddress =
       edgeTransaction.otherParams.transactionJson.actions[0].data.to
-    const quantity = edgeTransaction.nativeAmount
-    const fee = edgeTransaction.networkFee
+    const amount = bns.abs(
+      bns.add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+    )
     const transfer = await this.multicastServers('transferTokens', {
       payeeFioPublicKey: publicAddress,
-      amount: quantity,
-      maxFee: fee
+      amount,
+      maxFee: edgeTransaction.networkFee
     })
 
-    edgeTransaction.nativeAmount = `-${quantity}`
     edgeTransaction.txid = transfer.transaction_id
     edgeTransaction.date = Date.now() / 1000
-    edgeTransaction.networkFee = `-${fee}`
     edgeTransaction.blockHeight = transfer.block_num
     return edgeTransaction
   }
