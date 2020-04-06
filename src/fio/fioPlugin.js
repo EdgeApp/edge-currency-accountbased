@@ -1,4 +1,5 @@
 // @flow
+
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { bns } from 'biggystring'
 import {
@@ -101,8 +102,18 @@ export class FioPlugin extends CurrencyPlugin {
 }
 
 export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
-  const { io } = opts
+  const { initOptions, io } = opts
   const { fetchCors = io.fetch } = io
+  const { tpid = 'finance@edge' } = initOptions
+
+  const connection = new FIOSDK(
+    '',
+    '',
+    currencyInfo.defaultSettings.apiUrls[0],
+    fetchCors,
+    undefined,
+    tpid
+  )
 
   let toolsPromise: Promise<FioPlugin>
   function makeCurrencyTools(): Promise<FioPlugin> {
@@ -116,7 +127,13 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new FioEngine(tools, walletInfo, opts, fetchCors)
+    const currencyEngine = new FioEngine(
+      tools,
+      walletInfo,
+      opts,
+      fetchCors,
+      tpid
+    )
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     const out: EdgeCurrencyEngine = currencyEngine
@@ -129,13 +146,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       chainCode: string,
       tokenCode: string
     ) => {
-      const fioSDK = new FIOSDK(
-        '',
-        '',
-        currencyInfo.defaultSettings.apiUrls[0],
-        fetchCors
-      )
-      return fioSDK.getPublicAddress(fioAddress, chainCode, tokenCode)
+      return connection.getPublicAddress(fioAddress, chainCode, tokenCode)
     },
     isFioAddressValid: async (fioAddress: string): Promise<boolean> => {
       try {
@@ -151,13 +162,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
       try {
-        const fioSDK = new FIOSDK(
-          '',
-          '',
-          currencyInfo.defaultSettings.apiUrls[0],
-          fetchCors
-        )
-        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
+        const isAvailableRes = await connection.isAvailable(fioAddress)
 
         return !isAvailableRes.is_registered
       } catch (e) {
@@ -172,13 +177,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
       try {
-        const fioSDK = new FIOSDK(
-          '',
-          '',
-          currencyInfo.defaultSettings.apiUrls[0],
-          fetchCors
-        )
-        const isAvailableRes = await fioSDK.isAvailable(fioAddress)
+        const isAvailableRes = await connection.isAvailable(fioAddress)
 
         return isAvailableRes.is_registered
       } catch (e) {

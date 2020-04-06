@@ -52,10 +52,12 @@ type FioTransactionSuperNode = {
 }
 
 export class FioEngine extends CurrencyEngine {
+  fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
   otherData: any
   otherMethods: Object
-  fetchCors: EdgeFetchFunction
+  tpid: string
+
   localDataDirty() {
     this.walletLocalDataDirty = true
   }
@@ -64,11 +66,14 @@ export class FioEngine extends CurrencyEngine {
     currencyPlugin: FioPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchCors: Function
+    fetchCors: Function,
+    tpid: string
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.fetchCors = fetchCors
     this.fioPlugin = currencyPlugin
+    this.tpid = tpid
+
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
         const feeActionMap = {
