@@ -1479,8 +1479,9 @@ export class EthereumNetwork {
     if (!ethereumNetworkUpdate) return
     if (ethereumNetworkUpdate.blockHeight) {
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate blockHeight ${ethereumNetworkUpdate.server ||
-          'no server'} won`
+        `ETH processEthereumNetworkUpdate blockHeight ${
+          ethereumNetworkUpdate.server || 'no server'
+        } won`
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight || 'no blockheight'}`)
@@ -1500,8 +1501,9 @@ export class EthereumNetwork {
 
     if (ethereumNetworkUpdate.newNonce) {
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate nonce ${ethereumNetworkUpdate.server ||
-          'no server'} won`
+        `ETH processEthereumNetworkUpdate nonce ${
+          ethereumNetworkUpdate.server || 'no server'
+        } won`
       )
       this.ethNeeds.nonceLastChecked = now
       this.ethEngine.walletLocalData.otherData.nextNonce =
@@ -1512,8 +1514,9 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.tokenBal) {
       const tokenBal = ethereumNetworkUpdate.tokenBal
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate tokenBal ${ethereumNetworkUpdate.server ||
-          'no server'} won`
+        `ETH processEthereumNetworkUpdate tokenBal ${
+          ethereumNetworkUpdate.server || 'no server'
+        } won`
       )
       for (const tk of Object.keys(tokenBal)) {
         this.ethNeeds.tokenBalLastChecked[tk] = now
@@ -1524,8 +1527,9 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.tokenTxs) {
       const tokenTxs = ethereumNetworkUpdate.tokenTxs
       this.ethEngine.log(
-        `ETH processEthereumNetworkUpdate tokenTxs ${ethereumNetworkUpdate.server ||
-          'no server'} won`
+        `ETH processEthereumNetworkUpdate tokenTxs ${
+          ethereumNetworkUpdate.server || 'no server'
+        } won`
       )
       for (const tk of Object.keys(tokenTxs)) {
         this.ethNeeds.tokenTxsLastChecked[tk] = now

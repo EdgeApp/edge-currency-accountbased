@@ -85,9 +85,7 @@ export class RskPlugin extends CurrencyPlugin {
     if (walletType !== 'wallet:rsk') {
       throw new Error('Invalid wallet type')
     }
-    const rskMnemonic = generateMnemonic(128)
-      .split(',')
-      .join(' ')
+    const rskMnemonic = generateMnemonic(128).split(',').join(' ')
     const rskKey = await this._mnemonicToRskKey(rskMnemonic)
     return {
       rskMnemonic,

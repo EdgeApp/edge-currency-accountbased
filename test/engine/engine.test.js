@@ -77,8 +77,8 @@ for (const fixture of fixtures) {
     walletLocalEncryptedDisklet: walletLocalDisklet
   }
 
-  describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function() {
-    it('Tools', async function() {
+  describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function () {
+    it('Tools', async function () {
       expect(plugin.currencyInfo.currencyCode).equals(
         fixture['Test Currency code']
       )
@@ -97,8 +97,8 @@ for (const fixture of fixtures) {
     })
   })
 
-  describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function() {
-    it('Make Engine', function() {
+  describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
+    it('Make Engine', function () {
       const info: EdgeWalletInfo = {
         id: '1',
         type: WALLET_TYPE,
@@ -141,8 +141,8 @@ for (const fixture of fixtures) {
     })
   })
 
-  describe('Start engine', function() {
-    it('Get BlockHeight', function(done) {
+  describe('Start engine', function () {
+    it('Get BlockHeight', function (done) {
       this.timeout(10000)
       emitter.once('onBlockHeightChange', height => {
         const thirdPartyHeight = 1578127
@@ -166,8 +166,8 @@ for (const fixture of fixtures) {
     })
   })
 
-  describe('Stop the engine', function() {
-    it('Should stop the engine', function(done) {
+  describe('Stop the engine', function () {
+    it('Should stop the engine', function (done) {
       if (!engine) throw new Error('ErrorNoEngine')
       engine.killEngine().then(() => {
         closeEdge()

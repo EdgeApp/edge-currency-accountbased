@@ -65,10 +65,10 @@ export class TezosEngine extends CurrencyEngine {
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             .fetch(server + '/chains/main/blocks/head/header')
-            .then(function(response) {
+            .then(function (response) {
               return response.json()
             })
-            .then(function(json) {
+            .then(function (json) {
               return json
             })
           return { server, result }
@@ -94,10 +94,10 @@ export class TezosEngine extends CurrencyEngine {
             .fetch(
               `${server}/v3/number_operations/${params[0]}?type=Transaction`
             )
-            .then(function(response) {
+            .then(function (response) {
               return response.json()
             })
-            .then(function(json) {
+            .then(function (json) {
               return json[0]
             })
           return { server, result }
@@ -115,7 +115,7 @@ export class TezosEngine extends CurrencyEngine {
               `${server}/v3/operations/${params[0]}?type=Transaction` +
                 pagination
             )
-            .then(function(response) {
+            .then(function (response) {
               return response.json()
             })
           return { server, result }
@@ -138,7 +138,7 @@ export class TezosEngine extends CurrencyEngine {
               this.currencyInfo.defaultSettings.limit.storage,
               this.currencyInfo.defaultSettings.fee.reveal
             )
-            .then(function(response) {
+            .then(function (response) {
               return response
             })
           return { server, result }

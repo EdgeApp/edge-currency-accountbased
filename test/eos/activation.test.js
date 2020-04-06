@@ -18,7 +18,7 @@ import fetch from 'node-fetch'
 import edgeCorePlugins from '../../src/index.js'
 import { fakeLog } from '../fakeLog.js'
 
-describe(`EOS activation`, function() {
+describe(`EOS activation`, function () {
   let engine: EdgeCurrencyEngine
 
   const fakeIo = makeFakeIo()
@@ -76,7 +76,7 @@ describe(`EOS activation`, function() {
     }
   }
 
-  before('Engine', function() {
+  before('Engine', function () {
     return plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
@@ -84,7 +84,7 @@ describe(`EOS activation`, function() {
       })
   })
 
-  it.skip('getSupportedCurrencies', async function() {
+  it.skip('getSupportedCurrencies', async function () {
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationSupportedCurrencies()
       assert.equal(result.BTC, true)
@@ -94,7 +94,7 @@ describe(`EOS activation`, function() {
     }
   })
 
-  it('getActivationCost', async function() {
+  it('getActivationCost', async function () {
     this.timeout(10000)
     if (plugin.otherMethods) {
       const result = await plugin.otherMethods.getActivationCost()
@@ -125,8 +125,8 @@ describe(`EOS activation`, function() {
   //   }
   // })
 
-  describe('killEngine...', function() {
-    it('Should stop the engine', function(done) {
+  describe('killEngine...', function () {
+    it('Should stop the engine', function (done) {
       engine.killEngine().then(() => {
         closeEdge()
         done()
