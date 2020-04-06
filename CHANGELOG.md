@@ -1,6 +1,6 @@
 # edge-currency-accountbased
 
-# 0.6.9 (2020-04-06)
+# 0.6.10 (2020-04-06)
 
 - Import EOS private key
 - Fix XLM transaction history not showing
