@@ -52,10 +52,12 @@ type FioTransactionSuperNode = {
 }
 
 export class FioEngine extends CurrencyEngine {
+  fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
   otherData: any
   otherMethods: Object
-  fetchCors: EdgeFetchFunction
+  tpid: string
+
   localDataDirty() {
     this.walletLocalDataDirty = true
   }
@@ -64,13 +66,16 @@ export class FioEngine extends CurrencyEngine {
     currencyPlugin: FioPlugin,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchCors: Function
+    fetchCors: Function,
+    tpid: string
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.fetchCors = fetchCors
     this.fioPlugin = currencyPlugin
+    this.tpid = tpid
+
     this.otherMethods = {
-      fioAction: async (actionName: string, params: any): Promise<any> => {
+      async fioAction(actionName: string, params: any): Promise<any> {
         const feeActionMap = {
           addPublicAddress: {
             action: 'getFeeForAddPublicAddress',
@@ -131,20 +136,20 @@ export class FioEngine extends CurrencyEngine {
 
         return this.multicastServers(actionName, params)
       },
-      getFee: async (
+      async getFee(
         actionName: string,
         fioAddress: string = ''
-      ): Promise<number> => {
+      ): Promise<number> {
         const { fee } = await this.multicastServers('getFee', {
           endPoint: EndPoint[actionName],
           fioAddress
         })
         return fee
       },
-      getFioAddresses: (): { name: string, expiration: string }[] => {
+      async getFioAddresses(): Promise<{ name: string, expiration: string }[]> {
         return this.walletLocalData.otherData.fioAddresses
       },
-      getFioAddressNames: (): string[] => {
+      async getFioAddressNames(): Promise<string[]> {
         return this.walletLocalData.otherData.fioAddresses.map(
           fioAddress => fioAddress.name
         )
@@ -332,7 +337,9 @@ export class FioEngine extends CurrencyEngine {
       '',
       '',
       this.currencyInfo.defaultSettings.historyNodeUrls[0],
-      this.fetchCors
+      this.fetchCors,
+      undefined,
+      this.tpid
     )
     const actor = fioSDK.transactions.getActor(this.walletInfo.keys.publicKey)
     try {
@@ -465,7 +472,9 @@ export class FioEngine extends CurrencyEngine {
           this.walletInfo.keys.fioKey,
           this.walletInfo.keys.publicKey,
           apiUrl,
-          this.fetchCors
+          this.fetchCors,
+          undefined,
+          this.tpid
         )
 
         switch (actionName) {
