@@ -78,11 +78,11 @@ export class FioEngine extends CurrencyEngine {
       fioAction: async (actionName: string, params: any): Promise<any> => {
         const feeActionMap = {
           addPublicAddress: {
-            action: 'getFeeForPublicAddress',
+            action: 'getFeeForAddPublicAddress',
             propName: 'fioAddress'
           },
           addPublicAddresses: {
-            action: 'getFeeForPublicAddress',
+            action: 'getFeeForAddPublicAddress',
             propName: 'fioAddress'
           },
           rejectFundsRequest: {
@@ -470,7 +470,9 @@ export class FioEngine extends CurrencyEngine {
           this.walletInfo.keys.fioKey,
           this.walletInfo.keys.publicKey,
           apiUrl,
-          this.fetchCors
+          this.fetchCors,
+          undefined,
+          this.tpid
         )
 
         switch (actionName) {

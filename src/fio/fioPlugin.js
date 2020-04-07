@@ -148,7 +148,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     ) => {
       return connection.getPublicAddress(fioAddress, chainCode, tokenCode)
     },
-    isFioAddressValid: async (fioAddress: string): Promise<boolean> => {
+    isFioAddressValid: (fioAddress: string): boolean => {
       try {
         return FIOSDK.isFioAddressValid(fioAddress)
       } catch (e) {
