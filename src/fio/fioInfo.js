@@ -3,9 +3,37 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { imageServerUrl } from '../common/utils'
+
 const defaultSettings: any = {
-  apiUrls: ['https://fio.cryptolions.io:443/v1/'],
-  historyNodeUrls: ['https://fio.greymass.com/v1/'],
+  apiUrls: [
+    'https://fio.cryptolions.io:443/v1/',
+    'https://fio.eu.eosamsterdam.net:443/v1/',
+    'https://fio.eosdac.io:443/v1/',
+    'http://fioapi.nodeone.io:6881/v1/',
+    'https://fio.eosphere.io:443/v1/',
+    'https://fio.acherontrading.com:443/v1/',
+    'https://fio.eos.barcelona:443/v1/',
+    'https://api.fio.eosdetroit.io:443/v1/',
+    'https://fio.zenblocks.io:443/v1/',
+    'https://api.fio.alohaeos.com:443/v1/',
+    'https://fio.greymass.com:443/v1/',
+    'https://fio.eosusa.news:443/v1/',
+    'https://fio.eosargentina.io:443/v1/',
+    'https://fio-mainnet.eosblocksmith.io:443/v1/',
+    'https://api.fio.currencyhub.io:443/v1/',
+    'https://fio.eoscannon.io:443/v1/',
+    'https://fio.eosdublin.io:443/v1/',
+    'https://fio.eossweden.org:443/v1/',
+    'https://fio.maltablock.org:443/v1/'
+  ],
+  historyNodeUrls: [
+    'https://fio.greymass.com/v1/',
+    'http://api.fio.eosdetroit.io/v1/',
+    'https://fio.greymass.com/v1/',
+    'https://fio.eosphere.io/v1/',
+    'https://fio.eossweden.org/v1/'
+  ],
   historyNodeActions: {
     getActions: 'get_actions'
   },
@@ -22,9 +50,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  // todo: Get proper urls
-  addressExplorer: 'https://monitor.testnet.fioprotocol.io/#accountInfo',
-  transactionExplorer: 'https://monitor.testnet.fioprotocol.io/',
+  addressExplorer: 'https://explorer.fioprotocol.io/pubkey/%s',
+  transactionExplorer: 'https://explorer.fioprotocol.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
@@ -34,9 +61,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'ᵮ'
     }
   ],
-  symbolImage:
-    'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
-  symbolImageDarkMono:
-    'https://firebasestorage.googleapis.com/v0/b/whitelabel-eventshouse.appspot.com/o/fio.png?alt=media&token=a8de6377-453a-4c66-96dc-d1ba6fdec78a',
+  symbolImage: `${imageServerUrl}/fio-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/fio-logo-solo-64.png`,
   metaTokens: []
 }
