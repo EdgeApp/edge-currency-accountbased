@@ -50,8 +50,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  // todo: addressExplorer set to explorer homepage until request screen can convert publickey to account
-  addressExplorer: 'https://explorer.fioprotocol.io/',
+  addressExplorer: 'https://explorer.fioprotocol.io/pubkey/%s',
   transactionExplorer: 'https://explorer.fioprotocol.io/transaction/%s',
 
   denominations: [
