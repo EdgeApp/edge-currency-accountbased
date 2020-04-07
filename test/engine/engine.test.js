@@ -99,6 +99,7 @@ for (const fixture of fixtures) {
 
   describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
     it('Make Engine', function () {
+      if (WALLET_TYPE === 'wallet:fio') this.timeout(60000)
       const info: EdgeWalletInfo = {
         id: '1',
         type: WALLET_TYPE,
