@@ -551,7 +551,7 @@ export class FioEngine extends CurrencyEngine {
     const fee = feeResponse.fee
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
-    if (bns.gt(quantity, nativeBalance)) {
+    if (bns.gt(bns.add(quantity, `${fee}`), nativeBalance)) {
       throw new InsufficientFundsError()
     }
     const memo = ''
