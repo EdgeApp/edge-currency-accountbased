@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.1 (2020-04-07)
+
+- Add TPID to FIO requests
+- Fix Max Sends
+- Updated fioInfo.js to mainnet
+
 # 0.7.0 (2020-04-06)
 
 - Add FIO
