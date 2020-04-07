@@ -141,21 +141,21 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   }
 
   const otherMethods = {
-    getConnectedPublicAddress: async (
+    async getConnectedPublicAddress(
       fioAddress: string,
       chainCode: string,
       tokenCode: string
-    ) => {
+    ) {
       return connection.getPublicAddress(fioAddress, chainCode, tokenCode)
     },
-    isFioAddressValid: async (fioAddress: string): Promise<boolean> => {
+    async isFioAddressValid(fioAddress: string): Promise<boolean> {
       try {
         return FIOSDK.isFioAddressValid(fioAddress)
       } catch (e) {
         return false
       }
     },
-    validateAccount: async (fioAddress: string): Promise<boolean> => {
+    async validateAccount(fioAddress: string): Promise<boolean> {
       try {
         if (!FIOSDK.isFioAddressValid(fioAddress)) return false
       } catch (e) {
@@ -170,7 +170,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    isAccountAvailable: async (fioAddress: string): Promise<boolean> => {
+    async isAccountAvailable(fioAddress: string): Promise<boolean> {
       try {
         if (!FIOSDK.isFioAddressValid(fioAddress)) return false
       } catch (e) {
@@ -185,7 +185,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    buyAddressRequest: async (options: any): Promise<any> => {
+    async buyAddressRequest(options: any): Promise<any> {
       try {
         const result = await fetchCors(
           currencyInfo.defaultSettings.fioAddressRegApiUrl,

@@ -75,7 +75,7 @@ export class FioEngine extends CurrencyEngine {
     this.tpid = tpid
 
     this.otherMethods = {
-      fioAction: async (actionName: string, params: any): Promise<any> => {
+      async fioAction(actionName: string, params: any): Promise<any> {
         const feeActionMap = {
           addPublicAddress: {
             action: 'getFeeForAddPublicAddress',
@@ -136,20 +136,20 @@ export class FioEngine extends CurrencyEngine {
 
         return this.multicastServers(actionName, params)
       },
-      getFee: async (
+      async getFee(
         actionName: string,
         fioAddress: string = ''
-      ): Promise<number> => {
+      ): Promise<number> {
         const { fee } = await this.multicastServers('getFee', {
           endPoint: EndPoint[actionName],
           fioAddress
         })
         return fee
       },
-      getFioAddresses: (): { name: string, expiration: string }[] => {
+      async getFioAddresses(): Promise<{ name: string, expiration: string }[]> {
         return this.walletLocalData.otherData.fioAddresses
       },
-      getFioAddressNames: (): string[] => {
+      async getFioAddressNames(): Promise<string[]> {
         return this.walletLocalData.otherData.fioAddresses.map(
           fioAddress => fioAddress.name
         )
