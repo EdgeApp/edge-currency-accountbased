@@ -122,10 +122,14 @@ export class FioEngine extends CurrencyEngine {
             params.maxFee = fee
             if (actionName === 'registerFioAddress') {
               const res = await this.multicastServers(actionName, params)
-              this.walletLocalData.otherData.fioAddresses.push({
-                name: params.fioAddress,
-                expiration: res.expiration
-              })
+              const addressAlreadyAdded = this.walletLocalData.otherData.fioAddresses.find(
+                ({ name }) => name === params.fioAddress
+              )
+              if (!addressAlreadyAdded)
+                this.walletLocalData.otherData.fioAddresses.push({
+                  name: params.fioAddress,
+                  expiration: res.expiration
+                })
               return {
                 expiration: res.expiration,
                 feeCollected: res.fee_collected
