@@ -175,7 +175,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
     address = contractAddress
     // TODO: add chainId 30 to isValidAddress when included EIP-1191 and remove toLowerCase
-    const valid = EthereumUtil.isValidAddress(address.toLowerCase() || '')
+    const valid = EthereumUtil.isValidAddress(address || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -220,7 +220,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     customTokens?: Array<EdgeMetaToken>
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
-    const valid = EthereumUtil.isValidAddress(publicAddress.toLowerCase())
+    const valid = EthereumUtil.isValidAddress(publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }

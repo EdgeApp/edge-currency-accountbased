@@ -196,7 +196,6 @@ export class EthereumEngine extends CurrencyEngine {
       this.log(err)
     }
 
-    // only for Ethereum, can keep hard-coded URL for now
     try {
       const {
         ethGasStationUrl

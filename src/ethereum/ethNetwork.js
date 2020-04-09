@@ -154,17 +154,10 @@ export class EthereumNetwork {
   ) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: Array<string> = []
-    let nativeNetworkFee: string
+    let nativeNetworkFee: string = '0'
 
-    if (tx.contractAddress) {
-      nativeNetworkFee = '0'
-    } else {
-      if (tx.gasPrice) {
-        nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
-      } else {
-        // implemented for ETH, not RSK
-        nativeNetworkFee = '0'
-      }
+    if (!tx.contractAddress && tx.gasPrice) {
+      nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
     }
 
     if (
@@ -468,7 +461,6 @@ export class EthereumNetwork {
     return response.json()
   }
 
-  // checked
   async fetchGetEtherscan(server: string, cmd: string) {
     const { etherscanApiKey } = this.ethEngine.initOptions
     const chosenKey = Array.isArray(etherscanApiKey)
@@ -484,10 +476,9 @@ export class EthereumNetwork {
   }
 
   // checked
-  async fetchPostInfura(method: string, params: Object) {
+  async fetchPostInfura(method: string, params: Object, baseUrl: string) {
     const { infuraProjectId } = this.ethEngine.initOptions
     const {
-      infuraServers,
       infuraNeedProjectId
     } = this.currencyInfo.defaultSettings.otherSettings
     const projectIdSyntax =
@@ -498,7 +489,7 @@ export class EthereumNetwork {
     ) {
       throw new Error('Need Infura Project ID')
     }
-    const url = `${infuraServers[0]}/${projectIdSyntax}`
+    const url = `${baseUrl}/${projectIdSyntax}`
     const body = {
       id: 1,
       jsonrpc: '2.0',
@@ -524,16 +515,14 @@ export class EthereumNetwork {
   }
 
   // checked, only for broadcastTx
-  async fetchPostBlockcypher(cmd: string, body: any) {
+  async fetchPostBlockcypher(cmd: string, body: any, baseUrl: string) {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
-    const {
-      blockcypherApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
-    const url = `${blockcypherApiServers[0]}/${cmd}${apiKey}`
+
+    const url = `${baseUrl}/${cmd}${apiKey}`
     const response = await this.ethEngine.io.fetch(url, {
       headers: {
         Accept: 'application/json',
@@ -647,7 +636,8 @@ export class EthereumNetwork {
 
   // checked, ultimately used in broadcastTx
   async broadcastEtherscan(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    baseUrl: string
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
@@ -655,12 +645,8 @@ export class EthereumNetwork {
       `${this.currencyInfo.currencyCode} Etherscan: sent transaction to network:\n${transactionParsed}\n`
     )
     // RSK also uses the "eth_sendRaw" syntax
-    const url = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
-    const jsonObj = await this.fetchGetEtherscan(
-      this.ethEngine.currencyInfo.defaultSettings.otherSettings
-        .etherscanApiServers[0],
-      url
-    )
+    const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
+    const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
 
     this.ethEngine.log('broadcastEtherscan jsonObj:', jsonObj)
 
@@ -677,14 +663,15 @@ export class EthereumNetwork {
 
   // checked, used in broadcastTx
   async broadcastInfura(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    baseUrl: string
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
 
     const method = 'eth_sendRawTransaction'
     const params = [edgeTransaction.signedTx]
 
-    const jsonObj = await this.fetchPostInfura(method, params)
+    const jsonObj = await this.fetchPostInfura(method, params, baseUrl)
 
     if (typeof jsonObj.error !== 'undefined') {
       this.ethEngine.log('EtherScan: Error sending transaction')
@@ -702,16 +689,21 @@ export class EthereumNetwork {
 
   // checked, only for broadcastTx
   async broadcastBlockCypher(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    baseUrl: string
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
     this.ethEngine.log(
       `Blockcypher: sending transaction to network:\n${transactionParsed}\n`
     )
 
-    const url = `v1/${this.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
+    const urlSuffix = `v1/${this.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
     const hexTx = edgeTransaction.signedTx.replace('0x', '')
-    const jsonObj = await this.fetchPostBlockcypher(url, { tx: hexTx })
+    const jsonObj = await this.fetchPostBlockcypher(
+      urlSuffix,
+      { tx: hexTx },
+      baseUrl
+    )
 
     this.ethEngine.log('broadcastBlockCypher jsonObj:', jsonObj)
     if (typeof jsonObj.error !== 'undefined') {
@@ -738,24 +730,30 @@ export class EthereumNetwork {
     switch (func) {
       case 'broadcastTx': {
         const promises = []
-        if (infuraServers.length > 0) {
+        infuraServers.forEach(baseUrl => {
           promises.push(
-            broadcastWrapper(this.broadcastInfura(params[0]), 'infura')
+            broadcastWrapper(this.broadcastInfura(params[0], baseUrl), 'infura')
           )
-        }
-        if (etherscanApiServers.length > 0) {
-          promises.push(
-            broadcastWrapper(this.broadcastEtherscan(params[0]), 'etherscan')
-          )
-        }
-        if (blockcypherApiServers.length > 0) {
+        })
+
+        etherscanApiServers.forEach(baseUrl => {
           promises.push(
             broadcastWrapper(
-              this.broadcastBlockCypher(params[0]),
+              this.broadcastEtherscan(params[0], baseUrl),
+              'etherscan'
+            )
+          )
+        })
+
+        blockcypherApiServers.forEach(baseUrl => {
+          promises.push(
+            broadcastWrapper(
+              this.broadcastBlockCypher(params[0], baseUrl),
               'blockcypher'
             )
           )
-        }
+        })
+
         out = await promiseAny(promises)
 
         this.ethEngine.log(
@@ -786,13 +784,19 @@ export class EthereumNetwork {
           }
           return { server, result }
         })
-        if (infuraServers.length > 0) {
+
+        infuraServers.forEach(baseUrl => {
           funcs2 = async () => {
-            const result = await this.fetchPostInfura('eth_blockNumber', [])
+            const result = await this.fetchPostInfura(
+              'eth_blockNumber',
+              [],
+              baseUrl
+            )
             return { server: 'infura', result }
           }
           funcs.push(funcs2)
-        }
+        })
+
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -800,15 +804,17 @@ export class EthereumNetwork {
 
       case 'eth_estimateGas':
         funcs = []
-        if (infuraServers.length > 0) {
+        infuraServers.forEach(baseUrl => {
           funcs2 = async () => {
-            const result = await this.fetchPostInfura('eth_estimateGas', [
-              params[0]
-            ])
+            const result = await this.fetchPostInfura(
+              'eth_estimateGas',
+              params[0],
+              baseUrl
+            )
             return { server: 'infura', result }
           }
           funcs.push(funcs2)
-        }
+        })
         out = await asyncWaterfall(funcs)
         break
 
@@ -829,19 +835,21 @@ export class EthereumNetwork {
           }
           return { server, result }
         })
-        if (infuraServers.length > 0) {
+
+        infuraServers.forEach(baseUrl => {
           funcs2 = async () => {
             const adjustedParams = isNestedInfuraParams
               ? [params[0], 'latest']
               : [[params[0], 'latest']]
             const result = await this.fetchPostInfura(
               'eth_getTransactionCount',
-              adjustedParams
+              adjustedParams,
+              baseUrl
             )
             return { server: 'infura', result }
           }
           funcs.push(funcs2)
-        }
+        })
 
         // Randomize array
         funcs = shuffleArray(funcs)
@@ -858,12 +866,14 @@ export class EthereumNetwork {
           }
           return { server, result }
         })
-        if (infuraServers.length > 0) {
+
+        infuraServers.forEach(baseUrl => {
           funcs2 = async () => {
-            const result = await this.fetchPostInfura('eth_getBalance', [
-              params[0],
-              'latest'
-            ])
+            const result = await this.fetchPostInfura(
+              'eth_getBalance',
+              [params[0], 'latest'],
+              baseUrl
+            )
             // Convert hex
             if (!isHex(result.result)) {
               throw new Error('Infura eth_getBalance not hex')
@@ -873,7 +883,7 @@ export class EthereumNetwork {
             return { server: 'infura', result }
           }
           funcs.push(funcs2)
-        }
+        })
 
         // Randomize array
         funcs = shuffleArray(funcs)
