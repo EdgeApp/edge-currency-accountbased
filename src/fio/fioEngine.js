@@ -131,26 +131,37 @@ export class FioEngine extends CurrencyEngine {
             params.maxFee = fee
             break
           }
-          case 'registerFioAddress':
           case 'renewFioAddress': {
             const { fee } = await this.multicastServers('getFee', {
               endPoint: EndPoint[actionName]
             })
             params.maxFee = fee
-            if (actionName === 'registerFioAddress') {
-              const res = await this.multicastServers(actionName, params)
-              const addressAlreadyAdded = this.walletLocalData.otherData.fioAddresses.find(
-                ({ name }) => name === params.fioAddress
-              )
-              if (!addressAlreadyAdded)
-                this.walletLocalData.otherData.fioAddresses.push({
-                  name: params.fioAddress,
-                  expiration: res.expiration
-                })
-              return {
-                expiration: res.expiration,
-                feeCollected: res.fee_collected
-              }
+            const res = await this.multicastServers(actionName, params)
+            const renewedAddress = this.walletLocalData.otherData.fioAddresses.find(
+              ({ name }) => name === params.fioAddress
+            )
+            if (renewedAddress) {
+              renewedAddress.expiration = res.expiration
+            }
+            return res
+          }
+          case 'registerFioAddress': {
+            const { fee } = await this.multicastServers('getFee', {
+              endPoint: EndPoint[actionName]
+            })
+            params.maxFee = fee
+            const res = await this.multicastServers(actionName, params)
+            const addressAlreadyAdded = this.walletLocalData.otherData.fioAddresses.find(
+              ({ name }) => name === params.fioAddress
+            )
+            if (!addressAlreadyAdded)
+              this.walletLocalData.otherData.fioAddresses.push({
+                name: params.fioAddress,
+                expiration: res.expiration
+              })
+            return {
+              expiration: res.expiration,
+              feeCollected: res.fee_collected
             }
           }
         }
