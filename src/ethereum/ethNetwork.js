@@ -475,7 +475,6 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
-  // checked
   async fetchPostInfura(method: string, params: Object, baseUrl: string) {
     const { infuraProjectId } = this.ethEngine.initOptions
     const {
@@ -514,7 +513,6 @@ export class EthereumNetwork {
     return jsonObj
   }
 
-  // checked, only for broadcastTx
   async fetchPostBlockcypher(cmd: string, body: any, baseUrl: string) {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
@@ -540,7 +538,6 @@ export class EthereumNetwork {
     return response.json()
   }
 
-  // checked: checkBlockHeightBlockchair & checkTokenBalBlockchair
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     let keyParam = ''
     const { blockchairApiKey } = this.ethEngine.initOptions
@@ -554,7 +551,6 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
-  // checked, only called in checkBlockHeightAmberData (called in asyncWaterfall)
   async fetchPostAmberdataRpc(method: string, params: Array<string> = []) {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const {
@@ -589,7 +585,6 @@ export class EthereumNetwork {
     return jsonObj
   }
 
-  // checked, ultimately used in asyncWaterfalls
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const {
@@ -614,7 +609,6 @@ export class EthereumNetwork {
    * @throws Exception when Alethio throttles with a 429 response code
    */
 
-  // checked, ulatimately used in asyncWaterfalls
   async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
     const { alethioApiKey } = this.ethEngine.initOptions
     const {
@@ -634,7 +628,6 @@ export class EthereumNetwork {
     }
   }
 
-  // checked, ultimately used in broadcastTx
   async broadcastEtherscan(
     edgeTransaction: EdgeTransaction,
     baseUrl: string
@@ -661,7 +654,6 @@ export class EthereumNetwork {
     }
   }
 
-  // checked, used in broadcastTx
   async broadcastInfura(
     edgeTransaction: EdgeTransaction,
     baseUrl: string
@@ -687,7 +679,6 @@ export class EthereumNetwork {
     }
   }
 
-  // checked, only for broadcastTx
   async broadcastBlockCypher(
     edgeTransaction: EdgeTransaction,
     baseUrl: string
@@ -945,7 +936,6 @@ export class EthereumNetwork {
     return out
   }
 
-  // checked, used in asyncWaterfall
   async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_blockNumber'
@@ -959,7 +949,6 @@ export class EthereumNetwork {
     }
   }
 
-  // asyncWaterfalls: checkBlockHeight & checkNonce
   async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
     const jsonObj = await this.fetchGetBlockchair(
       `/${this.currencyInfo.pluginName}/stats`,
@@ -974,7 +963,6 @@ export class EthereumNetwork {
     }
   }
 
-  // asyncWaterfall: checkBlockHeight
   async checkBlockHeightAmberdata(): Promise<EthereumNetworkUpdate> {
     const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
     const valid = validateObject(jsonObj, AmberdataRpcSchema)
@@ -997,7 +985,6 @@ export class EthereumNetwork {
     })
   }
 
-  // asyncWaterfall
   async checkNonceEthscan(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const { result: jsonObj, server } = await this.multicastServers(
@@ -1013,7 +1000,6 @@ export class EthereumNetwork {
     }
   }
 
-  // asyncWaterfall
   async checkNonceAmberdata(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const jsonObj = await this.fetchPostAmberdataRpc(
@@ -1092,7 +1078,6 @@ export class EthereumNetwork {
     return { allTransactions, server }
   }
 
-  // used in asyncWaterfall
   async checkTxsEthscan(
     startBlock: number,
     currencyCode: string
@@ -1171,7 +1156,6 @@ export class EthereumNetwork {
     }
   }
 
-  // fine, used in asyncWaterfalls
   async checkTxsAlethio(
     startBlock: number,
     currencyCode: string
@@ -1339,7 +1323,6 @@ export class EthereumNetwork {
     return allTransactions
   }
 
-  // used in asyncWaterfall
   async checkTxsAmberdata(
     startBlock: number,
     startDate: number,
@@ -1427,7 +1410,6 @@ export class EthereumNetwork {
     }
   }
 
-  // used in asyncWaterfall
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const jsonObj = await this.fetchGetBlockchair(

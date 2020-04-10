@@ -174,7 +174,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
     }
     address = contractAddress
-    // TODO: add chainId 30 to isValidAddress when included EIP-1191 and remove toLowerCase
+    // TODO: add chainId 30 to isValidAddress when included EIP-1191
     const valid = EthereumUtil.isValidAddress(address || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
