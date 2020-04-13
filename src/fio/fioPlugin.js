@@ -202,6 +202,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e) {
         return { error: e }
       }
+    },
+    getRegDomainUrl(): string {
+      return currencyInfo.defaultSettings.fioDomainRegUrl
     }
   }
 

@@ -38,6 +38,7 @@ const defaultSettings: any = {
     getActions: 'get_actions'
   },
   fioAddressRegApiUrl: 'https://reg.fioprotocol.io/public-api/buy-address',
+  fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/edge?publicKey=',
   fioDomain: 'edge'
 }
 
