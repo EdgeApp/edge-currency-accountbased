@@ -1,11 +1,9 @@
-/**
- * Created by paul on 7/7/17.
- */
 // @flow
 
 import { bns } from 'biggystring'
 import type { Disklet } from 'disklet'
 import {
+  type EdgeCurrencyCodeOptions,
   type EdgeCurrencyEngineCallbacks,
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
@@ -25,7 +23,11 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from './plugin.js'
-import { CustomTokenSchema, MakeSpendSchema } from './schema.js'
+import {
+  asCurrencyCodeOptions,
+  checkCustomToken,
+  checkEdgeSpendInfo
+} from './schema.js'
 import {
   type CustomToken,
   DATA_STORE_FILE,
@@ -34,18 +36,13 @@ import {
   TXID_MAP_FILE,
   WalletLocalData
 } from './types.js'
-import {
-  getDenomInfo,
-  isHex,
-  normalizeAddress,
-  validateObject
-} from './utils.js'
+import { getDenomInfo, isHex, normalizeAddress } from './utils.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
-class CurrencyEngine {
+export class CurrencyEngine {
   currencyPlugin: CurrencyPlugin
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
@@ -665,133 +662,96 @@ class CurrencyEngine {
     return this.walletLocalData.enabledTokens
   }
 
-  async addCustomToken(obj: any) {
-    const valid = validateObject(obj, CustomTokenSchema)
+  async addCustomToken(obj: CustomToken) {
+    checkCustomToken(obj)
 
-    if (valid) {
-      const tokenObj: CustomToken = obj
-      // If token is already in currencyInfo, error as it cannot be changed
-      for (const tk of this.currencyInfo.metaTokens) {
-        if (
-          tk.currencyCode.toLowerCase() ===
-            tokenObj.currencyCode.toLowerCase() ||
-          tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
-        ) {
-          throw new Error('ErrorCannotModifyToken')
-        }
-      }
-
-      // Validate the token object
-      if (tokenObj.currencyCode.toUpperCase() !== tokenObj.currencyCode) {
-        throw new Error('ErrorInvalidCurrencyCode')
-      }
+    const tokenObj: CustomToken = obj
+    // If token is already in currencyInfo, error as it cannot be changed
+    for (const tk of this.currencyInfo.metaTokens) {
       if (
-        tokenObj.currencyCode.length < 2 ||
-        tokenObj.currencyCode.length > 7
+        tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
+        tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
       ) {
-        throw new Error('ErrorInvalidCurrencyCodeLength')
+        throw new Error('ErrorCannotModifyToken')
       }
-      if (
-        tokenObj.currencyName.length < 3 ||
-        tokenObj.currencyName.length > 20
-      ) {
-        throw new Error('ErrorInvalidCurrencyNameLength')
-      }
-      if (
-        bns.lt(tokenObj.multiplier, '1') ||
-        bns.gt(tokenObj.multiplier, '100000000000000000000000000000000')
-      ) {
-        throw new Error('ErrorInvalidMultiplier')
-      }
-      let contractAddress = tokenObj.contractAddress
-        .replace('0x', '')
-        .toLowerCase()
-      if (!isHex(contractAddress) || contractAddress.length !== 40) {
-        throw new Error('ErrorInvalidContractAddress')
-      }
-      contractAddress = '0x' + contractAddress
-
-      for (const tk of this.customTokens) {
-        if (
-          tk.currencyCode.toLowerCase() ===
-            tokenObj.currencyCode.toLowerCase() ||
-          tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
-        ) {
-          // Remove old token first then re-add it to incorporate any modifications
-          const idx = this.customTokens.findIndex(
-            element => element.currencyCode === tokenObj.currencyCode
-          )
-          if (idx !== -1) {
-            this.customTokens.splice(idx, 1)
-          }
-        }
-      }
-
-      // Create a token object for inclusion in customTokens
-      const denom: EdgeDenomination = {
-        name: tokenObj.currencyCode,
-        multiplier: tokenObj.multiplier
-      }
-      const edgeMetaToken: EdgeMetaToken = {
-        currencyCode: tokenObj.currencyCode,
-        currencyName: tokenObj.currencyName,
-        denominations: [denom],
-        contractAddress
-      }
-
-      this.customTokens.push(edgeMetaToken)
-      this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
-      this.enableTokensSync([edgeMetaToken.currencyCode])
-    } else {
-      throw new Error('Invalid custom token object')
     }
+
+    // Validate the token object
+    if (tokenObj.currencyCode.toUpperCase() !== tokenObj.currencyCode) {
+      throw new Error('ErrorInvalidCurrencyCode')
+    }
+    if (tokenObj.currencyCode.length < 2 || tokenObj.currencyCode.length > 7) {
+      throw new Error('ErrorInvalidCurrencyCodeLength')
+    }
+    if (tokenObj.currencyName.length < 3 || tokenObj.currencyName.length > 20) {
+      throw new Error('ErrorInvalidCurrencyNameLength')
+    }
+    if (
+      bns.lt(tokenObj.multiplier, '1') ||
+      bns.gt(tokenObj.multiplier, '100000000000000000000000000000000')
+    ) {
+      throw new Error('ErrorInvalidMultiplier')
+    }
+    let contractAddress = tokenObj.contractAddress
+      .replace('0x', '')
+      .toLowerCase()
+    if (!isHex(contractAddress) || contractAddress.length !== 40) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    contractAddress = '0x' + contractAddress
+
+    for (const tk of this.customTokens) {
+      if (
+        tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
+        tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
+      ) {
+        // Remove old token first then re-add it to incorporate any modifications
+        const idx = this.customTokens.findIndex(
+          element => element.currencyCode === tokenObj.currencyCode
+        )
+        if (idx !== -1) {
+          this.customTokens.splice(idx, 1)
+        }
+      }
+    }
+
+    // Create a token object for inclusion in customTokens
+    const denom: EdgeDenomination = {
+      name: tokenObj.currencyCode,
+      multiplier: tokenObj.multiplier
+    }
+    const edgeMetaToken: EdgeMetaToken = {
+      currencyCode: tokenObj.currencyCode,
+      currencyName: tokenObj.currencyName,
+      denominations: [denom],
+      contractAddress
+    }
+
+    this.customTokens.push(edgeMetaToken)
+    this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
+    this.enableTokensSync([edgeMetaToken.currencyCode])
   }
 
   getTokenStatus(token: string) {
     return this.walletLocalData.enabledTokens.indexOf(token) !== -1
   }
 
-  getBalance(options: any): string {
-    let currencyCode = this.currencyInfo.currencyCode
+  getBalance(options: EdgeCurrencyCodeOptions): string {
+    const cleanOptions = asCurrencyCodeOptions(options)
+    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
-    if (typeof options !== 'undefined') {
-      const valid = validateObject(options, {
-        type: 'object',
-        properties: {
-          currencyCode: { type: 'string' }
-        }
-      })
-
-      if (valid) {
-        currencyCode = options.currencyCode
-      }
-    }
-
-    if (
-      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
-    ) {
+    if (this.walletLocalData.totalBalances[currencyCode] == null) {
       return '0'
-    } else {
-      const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-      return nativeBalance
     }
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    return nativeBalance
   }
 
-  getNumTransactions(options: any): number {
-    let currencyCode = this.currencyInfo.currencyCode
+  getNumTransactions(options: EdgeCurrencyCodeOptions): number {
+    const cleanOptions = asCurrencyCodeOptions(options)
+    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
-    const valid = validateObject(options, {
-      type: 'object',
-      properties: {
-        currencyCode: { type: 'string' }
-      }
-    })
-
-    if (valid) {
-      currencyCode = options.currencyCode
-    }
-
-    if (typeof this.transactionList[currencyCode] === 'undefined') {
+    if (this.transactionList[currencyCode] == null) {
       return 0
     } else {
       return this.transactionList[currencyCode].length
@@ -801,22 +761,12 @@ class CurrencyEngine {
   async getTransactions(
     options: EdgeGetTransactionsOptions
   ): Promise<Array<EdgeTransaction>> {
-    let currencyCode: string = this.currencyInfo.currencyCode
-
-    const valid: boolean = validateObject(options, {
-      type: 'object',
-      properties: {
-        currencyCode: { type: 'string' }
-      }
-    })
-
-    if (valid) {
-      currencyCode = options.currencyCode || currencyCode
-    }
+    const cleanOptions = asCurrencyCodeOptions(options)
+    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
     await this.loadTransactions()
 
-    if (typeof this.transactionList[currencyCode] === 'undefined') {
+    if (this.transactionList[currencyCode] == null) {
       return []
     }
 
@@ -879,11 +829,7 @@ class CurrencyEngine {
   }
 
   makeSpend(edgeSpendInfo: EdgeSpendInfo): Object {
-    const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
-
-    if (!valid) {
-      throw new Error('Error: Invalid EdgeSpendInfo')
-    }
+    checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (st.publicAddress === this.walletLocalData.publicKey) {
@@ -936,5 +882,3 @@ class CurrencyEngine {
     }
   }
 }
-
-export { CurrencyEngine }
