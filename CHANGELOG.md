@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.2 (2020-04-17)
+
+- Add cleaners v0.2.0 type checking
+- Fix duplicate FIO address after registration
+- Reprioritize EOS Hyperion nodes to resolve transaction history view issue
+
 # 0.7.1 (2020-04-07)
 
 - Add TPID to FIO requests
