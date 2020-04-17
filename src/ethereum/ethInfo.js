@@ -566,6 +566,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/bancor-logo-solo-64.png`
     },
     {
+      currencyCode: 'OXT',
+      currencyName: 'Orchid',
+      denominations: [
+        {
+          name: 'OXT',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x4575f41308EC1483f3d399aa9a2826d74Da13Deb',
+      symbolImage: `${imageServerUrl}/orchid-logo-solo-64.png`
+    },
+    {
       currencyCode: 'MET',
       currencyName: 'Metronome',
       denominations: [
