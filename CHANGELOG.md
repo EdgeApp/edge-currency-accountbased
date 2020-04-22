@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.3 (2020-04-22)
+
+- isAccountAvailable() renamed to doesAccountExist()
+
 # 0.7.2 (2020-04-17)
 
 - Add cleaners v0.2.0 type checking
