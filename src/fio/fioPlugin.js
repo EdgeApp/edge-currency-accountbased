@@ -170,7 +170,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    async isAccountAvailable(fioAddress: string): Promise<boolean> {
+    async doesAccountExist(fioAddress: string): Promise<boolean> {
       try {
         if (!FIOSDK.isFioAddressValid(fioAddress)) return false
       } catch (e) {
@@ -181,7 +181,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
         return isAvailableRes.is_registered
       } catch (e) {
-        console.log('isAccountAvailable error: ' + JSON.stringify(e))
+        console.log('doesAccountExist error: ' + JSON.stringify(e))
         return false
       }
     },
