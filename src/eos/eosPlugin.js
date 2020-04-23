@@ -73,8 +73,9 @@ export class EosPlugin extends CurrencyPlugin {
       throw new Error('Invalid private key')
     }
     return {
-      eosOwnerKey: strippedPrivateKey,
-      eosKey: strippedPrivateKey
+      // best practice not to import owner key, only active
+      // note that signing is done by active key (eosKey, not eosOwnerKey)
+      eosKey: strippedPrivateKey // active private key
     }
   }
 
