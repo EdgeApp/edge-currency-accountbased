@@ -9,7 +9,7 @@ export const imageServerUrl = 'https://developer.airbitz.co/content'
 
 const otherSettings: RskSettings = {
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
-  iosAllowedTokens: { RIF: true }
+  iosAllowedTokens: { RIF: true, DOC: true }
 }
 
 const defaultSettings: any = {
@@ -52,6 +52,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5',
       symbolImage: `${imageServerUrl}/rif-logo-solo-64.png` // TODO: add rif logo
+    },
+    {
+      currencyCode: 'DOC',
+      currencyName: 'Dollar on Chain',
+      denominations: [
+        {
+          name: 'DOC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xe700691da7b9851f2f35f8b8182c69c53ccad9db',
+      symbolImage: `${imageServerUrl}/doc-logo-solo-64.png` // TODO: add doc logo
     }
   ]
 }
