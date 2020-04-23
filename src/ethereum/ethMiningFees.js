@@ -4,7 +4,7 @@
  */
 
 import { bns } from 'biggystring'
-import { type EdgeSpendInfo } from 'edge-core-js/types'
+import type { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
 import { normalizeAddress } from '../common/utils.js'
 import type {
@@ -20,7 +20,8 @@ export const ES_FEE_CUSTOM = 'custom'
 
 export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
-  networkFees: EthereumFees
+  networkFees: EthereumFees,
+  currencyInfo: EdgeCurrencyInfo
 ): EthereumCalcedFees {
   let useDefaults = true
   if (
@@ -56,7 +57,10 @@ export function calcMiningFee(
     }
 
     let useLimit = 'regularTransaction'
-    if (spendInfo.currencyCode && spendInfo.currencyCode !== 'ETH') {
+    if (
+      spendInfo.currencyCode &&
+      spendInfo.currencyCode !== currencyInfo.currencyCode
+    ) {
       useLimit = 'tokenTransaction'
     }
 

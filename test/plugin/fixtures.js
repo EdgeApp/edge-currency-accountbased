@@ -464,7 +464,9 @@ export default [
       40,
       238
     ],
-    xpub: '0x466d506cd7fbcd29a06015da03f0de814df050ee',
+    mnemonic:
+      'room soda device label bicycle hill fork nest lion knee purpose hen',
+    xpub: '0x21d45fd06e291c49abfa135460de827b6579cef5',
     key_length: 64,
     'invalid key name': {
       type: 'wallet:ethereum',

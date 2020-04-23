@@ -6,6 +6,7 @@
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyInfo,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -27,10 +28,9 @@ import {
   toHex,
   validateObject
 } from '../common/utils.js'
-import { currencyInfo } from './ethInfo.js'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
-import { EthereumPlugin } from './ethPlugin.js'
+import { EthereumPlugin } from './ethPlugin'
 import {
   EthGasStationSchema,
   NetworkFeesSchema,
@@ -44,7 +44,6 @@ import {
   type EthereumWalletOtherData
 } from './ethTypes.js'
 
-const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const WEI_MULTIPLIER = 100000000
@@ -58,17 +57,20 @@ export class EthereumEngine extends CurrencyEngine {
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    currencyInfo: EdgeCurrencyInfo
   ) {
     super(currencyPlugin, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ethereumKey !== 'string') {
-      if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumKey) {
-        this.walletInfo.keys.ethereumKey = walletInfo.keys.keys.ethereumKey
+    const { pluginName } = this.currencyInfo
+    if (typeof this.walletInfo.keys[`${pluginName}Key`] !== 'string') {
+      if (walletInfo.keys.keys && walletInfo.keys.keys[`${pluginName}Key`]) {
+        this.walletInfo.keys[`${pluginName}Key`] =
+          walletInfo.keys.keys[`${pluginName}Key`]
       }
     }
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
-    this.ethNetwork = new EthereumNetwork(this)
+    this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
   }
 
   updateBalance(tk: string, balance: string) {
@@ -121,7 +123,7 @@ export class EthereumEngine extends CurrencyEngine {
     const edgeTransaction: EdgeTransaction = {
       txid: addHexPrefix(tx.hash),
       date: epochTime,
-      currencyCode: 'ETH',
+      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: 0,
       nativeAmount,
       networkFee: tx.fees.toString(10),
@@ -129,12 +131,14 @@ export class EthereumEngine extends CurrencyEngine {
       signedTx: '',
       otherParams
     }
-    this.addTransaction('ETH', edgeTransaction)
+    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  // currently only for Ethereum
   async checkUnconfirmedTransactionsInnerLoop() {
     const address = normalizeAddress(this.walletLocalData.publicKey)
-    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/eth/main/txs/${address}`
+    const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
+    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/${lowerCaseCurrencyCode}/main/txs/${address}`
     let jsonObj = null
     try {
       jsonObj = await this.ethNetwork.fetchGet(url)
@@ -166,10 +170,11 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  // curreently for Ethereum but should allow other currencies
   async checkUpdateNetworkFees() {
     try {
       const infoServer = getEdgeInfoServer()
-      const url = `${infoServer}/v1/networkFees/ETH`
+      const url = `${infoServer}/v1/networkFees/${this.currencyInfo.currencyCode}`
       const jsonObj = await this.ethNetwork.fetchGet(url)
       const valid = validateObject(jsonObj, NetworkFeesSchema)
 
@@ -185,13 +190,17 @@ export class EthereumEngine extends CurrencyEngine {
         this.log('Error: Fetched invalid networkFees')
       }
     } catch (err) {
-      this.log('Error fetching networkFees from Edge info server')
+      this.log(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`
+      )
       this.log(err)
     }
 
     try {
-      const url = 'https://www.ethgasstation.info/json/ethgasAPI.json'
-      const jsonObj = await this.ethNetwork.fetchGet(url)
+      const {
+        ethGasStationUrl
+      } = this.currencyInfo.defaultSettings.otherSettings
+      const jsonObj = await this.ethNetwork.fetchGet(ethGasStationUrl)
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
@@ -260,7 +269,9 @@ export class EthereumEngine extends CurrencyEngine {
         this.log('Error: Fetched invalid networkFees from EthGasStation')
       }
     } catch (err) {
-      this.log('Error fetching networkFees from EthGasStation')
+      this.log(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
+      )
       this.log(err)
     }
   }
@@ -305,7 +316,7 @@ export class EthereumEngine extends CurrencyEngine {
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     if (!EthereumUtil.isValidAddress(publicAddress)) {
-      throw new TypeError('Invalid Ethereum address')
+      throw new TypeError(`Invalid ${this.currencyInfo.pluginName} address`)
     }
 
     const data =
@@ -315,12 +326,13 @@ export class EthereumEngine extends CurrencyEngine {
 
     const miningFees = calcMiningFee(
       edgeSpendInfo,
-      this.walletLocalData.otherData.networkFees
+      this.walletLocalData.otherData.networkFees,
+      this.currencyInfo
     )
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    if (currencyCode === PRIMARY_CURRENCY && useDefaults) {
+    if (currencyCode === this.currencyInfo.currencyCode && useDefaults) {
       const estimateGasParams = {
         to: publicAddress,
         gas: '0xffffff',
@@ -341,7 +353,7 @@ export class EthereumEngine extends CurrencyEngine {
       }
     }
 
-    if (currencyCode === PRIMARY_CURRENCY) {
+    if (currencyCode === this.currencyInfo.currencyCode) {
       const ethParams: EthereumTxOtherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
@@ -378,12 +390,12 @@ export class EthereumEngine extends CurrencyEngine {
         cumulativeGasUsed: '0',
         errorVal: 0,
         tokenRecipientAddress: publicAddress,
-        data: data
+        data
       }
       otherParams = ethParams
     }
 
-    const balanceEth = this.walletLocalData.totalBalances[
+    const nativeBalance = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
 
@@ -391,17 +403,19 @@ export class EthereumEngine extends CurrencyEngine {
     let totalTxAmount = '0'
     let parentNetworkFee = null
 
-    if (currencyCode === PRIMARY_CURRENCY) {
+    if (currencyCode === this.currencyInfo.currencyCode) {
       totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      if (bns.gt(totalTxAmount, balanceEth)) {
+      if (bns.gt(totalTxAmount, nativeBalance)) {
         throw new InsufficientFundsError()
       }
       nativeAmount = bns.mul(totalTxAmount, '-1')
     } else {
       parentNetworkFee = nativeNetworkFee
 
-      if (bns.gt(nativeNetworkFee, balanceEth)) {
-        throw new InsufficientFundsError('Insufficient ETH for transaction fee')
+      if (bns.gt(nativeNetworkFee, nativeBalance)) {
+        throw new InsufficientFundsError(
+          `Insufficient ${this.currencyInfo.currencyCode} for transaction fee`
+        )
       }
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
@@ -440,7 +454,7 @@ export class EthereumEngine extends CurrencyEngine {
     const gasPriceHex = toHex(otherParams.gasPrice)
     let nativeAmountHex
 
-    if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
       // Remove the networkFee from the nativeAmount
       const nativeAmount = bns.add(
         edgeTransaction.nativeAmount,
@@ -493,7 +507,9 @@ export class EthereumEngine extends CurrencyEngine {
     let data
     if (otherParams.data != null) {
       data = otherParams.data
-    } else if (edgeTransaction.currencyCode === PRIMARY_CURRENCY) {
+    } else if (
+      edgeTransaction.currencyCode === this.currencyInfo.currencyCode
+    ) {
       data = ''
     } else {
       const dataArray = abi.simpleEncode(
@@ -511,12 +527,15 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: nativeAmountHex,
-      data: data,
-      // EIP 155 chainId - mainnet: 1, ropsten: 3
-      chainId: 1
+      data,
+      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
+      chainId: this.currencyInfo.defaultSettings.otherSettings.chainId
     }
 
-    const privKey = Buffer.from(this.walletInfo.keys.ethereumKey, 'hex')
+    const privKey = Buffer.from(
+      this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`],
+      'hex'
+    )
     const wallet = ethWallet.fromPrivateKey(privKey)
 
     this.log(wallet.getAddressString())
@@ -548,8 +567,11 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed() {
-    if (this.walletInfo.keys && this.walletInfo.keys.ethereumKey) {
-      return this.walletInfo.keys.ethereumKey
+    if (
+      this.walletInfo.keys &&
+      this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
+    ) {
+      return this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
     }
     return ''
   }

@@ -4,11 +4,13 @@
 // @flow
 
 import { bns } from 'biggystring'
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
   type EdgeCurrencyEngineOptions,
+  type EdgeCurrencyInfo,
   type EdgeCurrencyPlugin,
   type EdgeEncodeUri,
   type EdgeIo,
@@ -17,101 +19,128 @@ import {
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
-import ethWallet from 'ethereumjs-wallet'
+import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo, hexToBuf } from '../common/utils.js'
+import { getDenomInfo } from '../common/utils.js'
 import { EthereumEngine } from './ethEngine.js'
-import { currencyInfo } from './ethInfo.js'
 
-export { calcMiningFee } from './ethMiningFees.js'
-
-const defaultNetworkFees = {
-  default: {
-    gasLimit: {
-      regularTransaction: '21000',
-      tokenTransaction: '200000'
-    },
-    gasPrice: {
-      lowFee: '1000000001',
-      standardFeeLow: '40000000001',
-      standardFeeHigh: '300000000001',
-      standardFeeLowAmount: '100000000000000000',
-      standardFeeHighAmount: '10000000000000000000',
-      highFee: '40000000001'
-    }
-  },
-  '1983987abc9837fbabc0982347ad828': {
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    gasPrice: {
-      lowFee: '1000000002',
-      standardFeeLow: '40000000002',
-      standardFeeHigh: '300000000002',
-      standardFeeLowAmount: '200000000000000000',
-      standardFeeHighAmount: '20000000000000000000',
-      highFee: '40000000002'
-    }
-  },
-  '2983987abc9837fbabc0982347ad828': {
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    }
-  }
-}
+export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK
 
 export class EthereumPlugin extends CurrencyPlugin {
-  constructor(io: EdgeIo) {
-    super(io, 'ethereum', currencyInfo)
+  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+    super(io, currencyInfo.pluginName, currencyInfo)
   }
 
-  async importPrivateKey(passPhrase: string): Promise<Object> {
-    const strippedPassPhrase = passPhrase.replace('0x', '').replace(/ /g, '')
-    const buffer = Buffer.from(strippedPassPhrase, 'hex')
-    if (buffer.length !== 32) throw new Error('Private key wrong length')
-    const ethereumKey = buffer.toString('hex')
-    const wallet = ethWallet.fromPrivateKey(buffer)
-    wallet.getAddressString()
-    return {
-      ethereumKey
+  async importPrivateKey(userInput: string): Promise<Object> {
+    const { pluginName } = this.currencyInfo
+    const {
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = this.currencyInfo.defaultSettings.otherSettings
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      // It looks like a private key, so validate the hex:
+      const keyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
+      if (!EthereumUtil.isValidPrivate(keyBuffer)) {
+        throw new Error('Invalid private key')
+      }
+      const hexKey = keyBuffer.toString('hex')
+
+      // Validate the address derivation:
+      const keys = {
+        [pluginRegularKeyName]: hexKey
+      }
+      this.derivePublicKey({
+        type: `wallet:${pluginName}`,
+        id: 'fake',
+        keys
+      })
+      return keys
+    } else {
+      // it looks like a mnemonic, so validate that way:
+      if (!validateMnemonic(userInput)) {
+        // "input" instead of "mnemonic" in case private key
+        // was just the wrong length
+        throw new Error('Invalid input')
+      }
+      const hexKey = await this._mnemonicToHex(userInput)
+      return {
+        [pluginMnemonicKeyName]: userInput,
+        [pluginRegularKeyName]: hexKey
+      }
     }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
+    const {
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = this.currencyInfo.defaultSettings.otherSettings
     const type = walletType.replace('wallet:', '')
 
-    if (type === 'ethereum') {
-      const { io } = this
-      const cryptoObj = {
-        randomBytes: size => {
-          const array = io.random(size)
-          return Buffer.from(array)
-        }
-      }
-      ethWallet.overrideCrypto(cryptoObj)
-
-      const wallet = ethWallet.generate(false)
-      const ethereumKey = wallet.getPrivateKeyString().replace('0x', '')
-      return { ethereumKey }
-    } else {
+    if (type !== this.currencyInfo.pluginName) {
       throw new Error('InvalidWalletType')
+    }
+
+    const mnemonicKey = generateMnemonic(128)
+      .split(',')
+      .join(' ')
+
+    const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
+    return {
+      [pluginMnemonicKeyName]: mnemonicKey,
+      [pluginRegularKeyName]: hexKey
     }
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (type === 'ethereum') {
-      const privKey = hexToBuf(walletInfo.keys.ethereumKey)
-      const wallet = ethWallet.fromPrivateKey(privKey)
-
-      const publicKey = wallet.getAddressString()
-      return { publicKey }
-    } else {
-      throw new Error('InvalidWalletType')
+    const { pluginName, defaultSettings } = this.currencyInfo
+    const {
+      hdPathCoinType,
+      pluginMnemonicKeyName,
+      pluginRegularKeyName
+    } = defaultSettings.otherSettings
+    if (walletInfo.type !== `wallet:${pluginName}`) {
+      throw new Error('Invalid wallet type')
     }
+    let address
+    if (walletInfo.keys[pluginMnemonicKeyName] != null) {
+      // If we have a mnemonic, use that:
+      const seedBuffer = mnemonicToSeedSync(
+        walletInfo.keys[pluginMnemonicKeyName]
+      )
+      const hdwallet = hdKey.fromMasterSeed(seedBuffer)
+      const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
+      const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+      const wallet = walletPathDerivation.getWallet()
+      const publicKey = wallet.getPublicKey()
+      address = `0x${EthereumUtil.pubToAddress(publicKey).toString('hex')}`
+    } else {
+      // Otherwise, use the private key:
+      const keyBuffer = Buffer.from(
+        walletInfo.keys[pluginRegularKeyName].replace(/^0x/, ''),
+        'hex'
+      )
+      if (!EthereumUtil.isValidPrivate(keyBuffer)) {
+        throw new Error('Invalid private key')
+      }
+      address = `0x${EthereumUtil.privateToAddress(keyBuffer).toString('hex')}`
+    }
+    if (!EthereumUtil.isValidAddress(address)) {
+      throw new Error('Invalid address')
+    }
+    return { publicKey: address }
+  }
+
+  async _mnemonicToHex(mnemonic: string): Promise<string> {
+    const { defaultSettings } = this.currencyInfo
+    const { hdPathCoinType } = defaultSettings.otherSettings
+    const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
+    const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
+    const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+    const wallet = walletPathDerivation.getWallet()
+    const privKey = wallet.getPrivateKeyString().replace(/^0x/, '')
+    return privKey
   }
 
   async parseUri(
@@ -119,13 +148,18 @@ export class EthereumPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<EdgeParsedUri> {
-    const networks = { ethereum: true, ether: true }
+    const networks = {}
+    this.currencyInfo.defaultSettings.otherSettings.uriNetworks.forEach(
+      network => {
+        networks[network] = true
+      }
+    )
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       networks,
-      currencyCode || 'ETH',
+      currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
     let address = ''
@@ -140,6 +174,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
     }
     address = contractAddress
+    // TODO: add chainId 30 to isValidAddress when included EIP-1191
     const valid = EthereumUtil.isValidAddress(address || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -161,7 +196,9 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       multiplier = '1' + '0'.repeat(decimals)
 
-      const type = parsedUri.query.type || 'ERC20'
+      const type =
+        parsedUri.query.type ||
+        this.currencyInfo.defaultSettings.otherSettings.ercTokenStandard
 
       const edgeParsedUriToken: EdgeParsedUri = {
         token: {
@@ -190,8 +227,8 @@ export class EthereumPlugin extends CurrencyPlugin {
     let amount
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
-        currencyInfo,
-        currencyCode || 'ETH',
+        this.currencyInfo,
+        currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
       if (!denom) {
@@ -199,20 +236,25 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       amount = bns.div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'ethereum', amount)
+    const encodedUri = this.encodeUriCommon(
+      obj,
+      this.currencyInfo.pluginName,
+      amount
+    )
     return encodedUri
   }
 }
 
-export function makeEthereumPlugin(
-  opts: EdgeCorePluginOptions
+export function makeEthereumBasedPluginInner(
+  opts: EdgeCorePluginOptions,
+  currencyInfo: EdgeCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<EthereumPlugin>
   function makeCurrencyTools(): Promise<EthereumPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new EthereumPlugin(io))
+    toolsPromise = Promise.resolve(new EthereumPlugin(io, currencyInfo))
     return toolsPromise
   }
 
@@ -225,7 +267,8 @@ export function makeEthereumPlugin(
       tools,
       walletInfo,
       initOptions,
-      opts
+      opts,
+      currencyInfo
     )
 
     // Do any async initialization necessary for the engine
@@ -242,7 +285,8 @@ export function makeEthereumPlugin(
       currencyEngine.otherData.unconfirmedNextNonce = '0'
     }
     if (!currencyEngine.otherData.networkFees) {
-      currencyEngine.otherData.networkFees = defaultNetworkFees
+      currencyEngine.otherData.networkFees =
+        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
