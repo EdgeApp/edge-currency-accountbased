@@ -107,6 +107,8 @@ export class EosPlugin extends CurrencyPlugin {
       // const publicKey = deriveAddress(walletInfo.keys.eosKey)
       const publicKey = ecc.privateToPublic(walletInfo.keys.eosKey)
       let ownerPublicKey
+      // usage of eosOwnerKey must be protected by conditional
+      // checking for its existence
       if (walletInfo.keys.eosOwnerKey) {
         ownerPublicKey = ecc.privateToPublic(walletInfo.keys.eosOwnerKey)
       }

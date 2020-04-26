@@ -869,6 +869,8 @@ export class EosEngine extends CurrencyEngine {
     if (this.walletInfo.keys.eosKey) {
       keyProvider.push(this.walletInfo.keys.eosKey)
     }
+    // usage of eosOwnerKey must be protected by conditional
+    // checking for its existence
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
@@ -914,6 +916,8 @@ export class EosEngine extends CurrencyEngine {
 
   getDisplayPrivateSeed() {
     let out = ''
+    // usage of eosOwnerKey must be protected by conditional
+    // checking for its existence
     if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
       out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
     }
