@@ -37,6 +37,7 @@ const otherSettings: EosSettings = {
 
   eosHyperionNodes: [
     'https://mainnet.telosusa.io',
+    'https://telos.caleos.io',
     'https://telos.eosphere.io',
     'https://api-telos-21zephyr.maltablock.org/'
   ],
@@ -45,9 +46,7 @@ const otherSettings: EosSettings = {
   // getCurrencyBalance
   // getInfo
   // transaction
-  eosNodes: [
-    'https://telos.caleos.io'
-  ],
+  eosNodes: ['https://telos.caleos.io'],
   eosFuelServers: ['https://eos.greymass.com'] // this will need to be fixed
 }
 
