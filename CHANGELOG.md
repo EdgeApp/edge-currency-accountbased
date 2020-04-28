@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.4 (2020-04-28)
+
+- Refactor ETH and RSK to use common code
+- FIO performance improvements
+
 # 0.7.3 (2020-04-22)
 
 - isAccountAvailable() renamed to doesAccountExist()
