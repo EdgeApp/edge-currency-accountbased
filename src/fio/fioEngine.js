@@ -21,6 +21,7 @@ import { FioPlugin } from './fioPlugin.js'
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
+const fioApiErrorCodes = [400, 403, 404]
 
 type FioTransactionSuperNode = {
   block_num: number,
@@ -48,6 +49,22 @@ type FioTransactionSuperNode = {
     block_num: number,
     block_time: string,
     producer_block_id: string
+  }
+}
+
+class FioError extends Error {
+  list: { field: string, message: string }[]
+  errorCode: number
+  json: any
+
+  constructor(...params: any) {
+    super(...params)
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, FioError)
+    }
+
+    this.name = 'FioError'
   }
 }
 
@@ -472,7 +489,7 @@ export class FioEngine extends CurrencyEngine {
       )
     }
 
-    return asyncWaterfall(
+    const res = await asyncWaterfall(
       this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
         const fioSDK = new FIOSDK(
           this.walletInfo.keys.fioKey,
@@ -483,14 +500,47 @@ export class FioEngine extends CurrencyEngine {
           this.tpid
         )
 
-        switch (actionName) {
-          case 'getChainInfo':
-            return fioSDK.transactions.getChainInfo()
-          default:
-            return fioSDK.genericAction(actionName, params)
+        let res
+
+        try {
+          switch (actionName) {
+            case 'getChainInfo':
+              res = await fioSDK.transactions.getChainInfo()
+              break
+            default:
+              res = await fioSDK.genericAction(actionName, params)
+          }
+        } catch (e) {
+          // handle FIO API error
+          if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+            res = {
+              isError: true,
+              data: {
+                code: e.errorCode,
+                message: e.message,
+                json: e.json,
+                list: e.list
+              }
+            }
+          } else {
+            throw e
+          }
         }
+
+        return res
       })
     )
+
+    if (res.isError) {
+      const error = new FioError(res.errorMessage)
+      error.json = res.data.json
+      error.list = res.data.list
+      error.errorCode = res.data.code
+
+      throw error
+    }
+
+    return res
   }
 
   // Check all account balance and other relevant info
