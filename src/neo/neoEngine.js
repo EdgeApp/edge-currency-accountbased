@@ -338,7 +338,7 @@ export class NeoEngine extends CurrencyEngine {
 
     for (const currencyCode of this.walletLocalData.enabledTokens) {
       promiseArray.push(
-        this.checkTransactionsFetch(startBlockHeight, currencyCode, blockHeight)
+        this.checkTransactionsFetch(startBlockHeight, currencyCode, blockHeight - 1)
       )
     }
 
