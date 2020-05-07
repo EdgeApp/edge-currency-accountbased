@@ -475,7 +475,42 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
-  async fetchPostInfura(method: string, params: Object, baseUrl: string) {
+  async fetchPostRPC(
+    method: string,
+    params: Object,
+    networkId: number,
+    url: string
+  ) {
+    const body = {
+      id: networkId,
+      jsonrpc: '2.0',
+      method,
+      params
+    }
+    const response = await this.ethEngine.io.fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+      )
+    }
+    return response.json()
+  }
+
+  async fetchPostInfura(
+    method: string,
+    params: Object,
+    networkId: number,
+    baseUrl: string
+  ) {
     const { infuraProjectId } = this.ethEngine.initOptions
     const {
       infuraNeedProjectId
@@ -489,28 +524,17 @@ export class EthereumNetwork {
       throw new Error('Need Infura Project ID')
     }
     const url = `${baseUrl}/${projectIdSyntax}`
-    const body = {
-      id: 1,
-      jsonrpc: '2.0',
-      method,
-      params
-    }
-    const response = await this.ethEngine.io.fetch(url, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
-      method: 'POST',
-      body: JSON.stringify(body)
-    })
-    const parsedUrl = parse(url, {}, true)
-    if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
-      )
-    }
-    const jsonObj = await response.json()
-    return jsonObj
+
+    return this.fetchPostRPC(method, params, networkId, url)
+  }
+
+  async fetchPostEthercluster(
+    method: string,
+    params: Object,
+    networkId: number,
+    url: string
+  ) {
+    return this.fetchPostRPC(method, params, networkId, url)
   }
 
   async fetchPostBlockcypher(cmd: string, body: any, baseUrl: string) {
@@ -656,6 +680,7 @@ export class EthereumNetwork {
 
   async broadcastInfura(
     edgeTransaction: EdgeTransaction,
+    networkId: number,
     baseUrl: string
   ): Promise<BroadcastResults> {
     const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
@@ -663,15 +688,51 @@ export class EthereumNetwork {
     const method = 'eth_sendRawTransaction'
     const params = [edgeTransaction.signedTx]
 
-    const jsonObj = await this.fetchPostInfura(method, params, baseUrl)
+    const jsonObj = await this.fetchPostInfura(
+      method,
+      params,
+      networkId,
+      baseUrl
+    )
 
     if (typeof jsonObj.error !== 'undefined') {
-      this.ethEngine.log('EtherScan: Error sending transaction')
+      this.ethEngine.log('Infura: Error sending transaction')
       throw jsonObj.error
     } else if (typeof jsonObj.result === 'string') {
       // Success!!
       this.ethEngine.log(
         `Infura: sent transaction to network:\n${transactionParsed}\n`
+      )
+      return jsonObj
+    } else {
+      throw new Error('Invalid return value on transaction send')
+    }
+  }
+
+  async broadcastEthercluster(
+    edgeTransaction: EdgeTransaction,
+    networkId: number,
+    url: string
+  ): Promise<BroadcastResults> {
+    const transactionParsed = JSON.stringify(edgeTransaction, null, 2)
+
+    const method = 'eth_sendRawTransaction'
+    const params = [edgeTransaction.signedTx]
+
+    const jsonObj = await this.fetchPostEthercluster(
+      method,
+      params,
+      networkId,
+      url
+    )
+
+    if (typeof jsonObj.error !== 'undefined') {
+      this.ethEngine.log('Ethercluster: Error sending transaction')
+      throw jsonObj.error
+    } else if (typeof jsonObj.result === 'string') {
+      // Success!!
+      this.ethEngine.log(
+        `Ethercluster: sent transaction to network:\n${transactionParsed}\n`
       )
       return jsonObj
     } else {
@@ -711,19 +772,34 @@ export class EthereumNetwork {
 
   async multicastServers(func: EthFunction, ...params: any): Promise<any> {
     const {
+      etherclusterApiServers,
       blockcypherApiServers,
       etherscanApiServers,
       infuraServers,
-      isNestedInfuraParams
+      isNestedInfuraParams,
+      chainId
     } = this.currencyInfo.defaultSettings.otherSettings
     let out = { result: '', server: 'no server' }
     let funcs, funcs2, url
     switch (func) {
       case 'broadcastTx': {
         const promises = []
+
+        etherclusterApiServers.forEach(baseUrl => {
+          promises.push(
+            broadcastWrapper(
+              this.broadcastEthercluster(params[0], chainId, baseUrl),
+              'ethercluster'
+            )
+          )
+        })
+
         infuraServers.forEach(baseUrl => {
           promises.push(
-            broadcastWrapper(this.broadcastInfura(params[0], baseUrl), 'infura')
+            broadcastWrapper(
+              this.broadcastInfura(params[0], chainId, baseUrl),
+              'infura'
+            )
           )
         })
 

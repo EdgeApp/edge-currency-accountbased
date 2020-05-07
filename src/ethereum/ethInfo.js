@@ -48,6 +48,7 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
+  etherclusterApiServers: [],
   etherscanApiServers: [
     'https://api.etherscan.io'
     // 'https://blockscout.com/eth/mainnet' // not reliable enough...
