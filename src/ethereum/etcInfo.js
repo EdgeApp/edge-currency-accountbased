@@ -58,16 +58,9 @@ const otherSettings: EthereumSettings = {
   uriNetworks: ['ethereumclassic', 'etherclass'],
   ercTokenStandard: 'ERC20',
   chainId: 61,
-  hdPathCoinType: 60,
-  checkUnconfirmedTransactions: true,
-  iosAllowedTokens: {
-    // REP: true,
-    // WINGS: true,
-    // HUR: true,
-    // IND: true,
-    // USDT: true,
-    // AGLD: true
-  },
+  hdPathCoinType: 61,
+  checkUnconfirmedTransactions: false,
+  iosAllowedTokens: {},
   blockchairApiServers: [],
   alethioApiServers: [],
   alethioCurrencies: null, // object or null
