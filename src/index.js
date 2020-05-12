@@ -7,6 +7,7 @@ import 'regenerator-runtime/runtime'
 
 import { makeBinancePlugin } from './binance/bnbPlugin.js'
 import { makeEosPlugin } from './eos/eosPlugin.js'
+import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
@@ -17,6 +18,7 @@ import { makeRipplePlugin } from './xrp/xrpPlugin.js'
 const plugins = {
   eos: makeEosPlugin,
   ethereum: makeEthereumPlugin,
+  ethereumclassic: makeEthereumClassicPlugin,
   fio: makeFioPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,

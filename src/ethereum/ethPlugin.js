@@ -82,9 +82,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       throw new Error('InvalidWalletType')
     }
 
-    const mnemonicKey = generateMnemonic(128)
-      .split(',')
-      .join(' ')
+    const mnemonicKey = generateMnemonic(128).split(',').join(' ')
 
     const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
     return {
