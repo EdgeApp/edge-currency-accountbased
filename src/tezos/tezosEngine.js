@@ -428,7 +428,7 @@ export class TezosEngine extends CurrencyEngine {
       blockHeight: 0,
       nativeAmount,
       networkFee,
-      ourReceiveAddresses: [publicAddress],
+      ourReceiveAddresses: [],
       signedTx: '',
       otherParams: {
         idInternal: 0,
