@@ -176,6 +176,11 @@ export class FioEngine extends CurrencyEngine {
         return this.walletLocalData.otherData.fioAddresses.map(
           fioAddress => fioAddress.name
         )
+      },
+      getFioDomains: async (): Promise<
+        { name: string, expiration: string, isPublic: boolean }[]
+      > => {
+        return this.walletLocalData.otherData.fioDomains
       }
     }
   }
@@ -205,6 +210,15 @@ export class FioEngine extends CurrencyEngine {
           expiration: fioAddress.expiration
         })
       }
+
+      for (const fioDomain of result.fio_domains) {
+        this.walletLocalData.otherData.fioDomains.push({
+          name: fioDomain.fio_domain,
+          expiration: fioDomain.expiration,
+          isPublic: !!fioDomain.is_public
+        })
+      }
+
       this.localDataDirty()
     } catch (error) {
       console.log(error)
@@ -563,6 +577,7 @@ export class FioEngine extends CurrencyEngine {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
 
+    // Balance
     try {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
@@ -572,6 +587,7 @@ export class FioEngine extends CurrencyEngine {
     }
     this.updateBalance(currencyCode, nativeAmount)
 
+    // Fio Addresses
     try {
       const result = await this.multicastServers('getFioNames', {
         fioPublicKey: this.walletInfo.keys.publicKey
@@ -582,6 +598,15 @@ export class FioEngine extends CurrencyEngine {
         this.walletLocalData.otherData.fioAddresses.push({
           name: fioAddress.fio_address,
           expiration: fioAddress.expiration
+        })
+      }
+
+      this.walletLocalData.otherData.fioDomains = []
+      for (const fioDomain of result.fio_domains) {
+        this.walletLocalData.otherData.fioDomains.push({
+          name: fioDomain.fio_domain,
+          expiration: fioDomain.expiration,
+          isPublic: !!fioDomain.is_public
         })
       }
       this.localDataDirty()
