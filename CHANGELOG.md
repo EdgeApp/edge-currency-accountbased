@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.5 (2020-05-14)
+
+- Refactor EOS plugin to remove owner key to support importing wallets
+- Add Ethereum Classic support
+- Remove own receive address from Tezos makeSpend
+
 # 0.7.4 (2020-04-28)
 
 - Refactor ETH and RSK to use common code
