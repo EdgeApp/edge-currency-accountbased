@@ -1,13 +1,8 @@
-/* global fetch */
 // @flow
 
-import { Buffer } from 'buffer'
 import { bns } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
-import EthereumUtil from 'ethereumjs-util'
-import ethWallet from 'ethereumjs-wallet'
-import hdkey from 'ethereumjs-wallet/hdkey'
-import TronWeb from 'tronweb'
+import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -19,6 +14,9 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import EthereumUtil from 'ethereumjs-util'
+import hdkey from 'ethereumjs-wallet/hdkey'
+import TronWeb from 'tronweb'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
@@ -33,7 +31,7 @@ export class TronPlugin extends CurrencyPlugin {
     super(io, 'tron', currencyInfo)
   }
 
-  async importPrivateKey(userInput: string): Promise<Object> {
+  async importPrivateKey (userInput: string): Promise<Object> {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -76,12 +74,12 @@ export class TronPlugin extends CurrencyPlugin {
   }
 
   async _mnemonicToTronKey (mnemonic: string): Promise<string> {
-      const myMnemonicToSeed = mnemonicToSeed(mnemonic).toString('hex')
-      const hdwallet = hdkey.fromMasterSeed(myMnemonicToSeed)
-      const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
-      const wallet = hdwallet.derivePath(walletHDpath).getWallet()
-      const tronKey = wallet.getPrivateKeyString().replace('0x', '')
-      return tronKey
+    const myMnemonicToSeed = mnemonicToSeed(mnemonic).toString('hex')
+    const hdwallet = hdkey.fromMasterSeed(myMnemonicToSeed)
+    const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
+    const wallet = hdwallet.derivePath(walletHDpath).getWallet()
+    const tronKey = wallet.getPrivateKeyString().replace('0x', '')
+    return tronKey
   }
 
   async derivePublicKey (walletInfo: EdgeWalletInfo): Promise<Object> {
@@ -151,7 +149,7 @@ export class TronPlugin extends CurrencyPlugin {
 export function makeTronPlugin (
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
-  const { io, initOptions } = opts
+  const { io } = opts
   const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<TronPlugin>
@@ -166,13 +164,7 @@ export function makeTronPlugin (
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new TronEngine(
-      tools,
-      walletInfo,
-      initOptions,
-      opts,
-      fetchCors
-    )
+    const currencyEngine = new TronEngine(tools, walletInfo, opts, fetchCors)
 
     // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(tools, walletInfo, opts)
@@ -180,6 +172,7 @@ export function makeTronPlugin (
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // $FlowFixMe not undefined
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out
