@@ -104,33 +104,21 @@ export const NetworkFeesSchema = {
   items: {
     type: 'object',
     properties: {
-      getMaintenanceTimeInterval: { type: 'number' },
-      getAccountUpgradeCost: { type: 'number' },
-      getCreateAccountFee: { type: 'number' },
-      getTransactionFee: { type: 'number' },
-      getAssetIssueFee: { type: 'number' },
-      getWitnessPayPerBlock: { type: 'number' },
-      getWitnessStandbyAllowance: { type: 'number' },
-      getCreateNewAccountFeeInSystemContract: { type: 'number' },
-      getCreateNewAccountBandwidthRate: { type: 'number' },
-      getAllowCreationOfContracts: { type: 'number' },
-      getRemoveThePowerOfTheGr: { type: 'number' },
-      getEnergyFee: { type: 'number' },
-      getExchangeCreateFee: { type: 'number' },
-      getMaxCpuTimeOfOneTx: { type: 'number' },
-      getAllowUpdateAccountName: { type: 'number' },
-      getAllowSameTokenName: { type: 'number' },
-      getAllowDelegateResource: { type: 'number' },
-      getTotalEnergyLimit: { type: 'number' },
-      getAllowTvmTransferTrc10: { type: 'number' },
-      getTotalEnergyCurrentLimit: { type: 'number' },
-      getAllowMultiSign: { type: 'number' },
-      getAllowAdaptiveEnergy: { type: 'number' },
-      getTotalEnergyTargetLimit: { type: 'number' },
-      getTotalEnergyAverageUsage: { type: 'number' },
-      getUpdateAccountPermissionFee: { type: 'number' },
-      getMultiSignFee: { type: 'number' }
+      key: { type: 'string' },
+      value: { type: 'number' }
     },
-    required: ['getCreateAccountFee', 'getTransactionFee']
+    required: ['key']
   }
+}
+
+export const TronAccountResources = {
+  type: 'object',
+  properties: {
+    TotalEnergyLimit: { type: 'number' },
+    TotalEnergyWeight: { type: 'number' },
+    TotalNetLimit: { type: 'number' },
+    TotalNetWeight: { type: 'number' },
+    freeNetLimit: { type: 'number' }
+  },
+  required: ['freeNetLimit']
 }
