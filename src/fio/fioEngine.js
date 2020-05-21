@@ -18,9 +18,11 @@ import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, getDenomInfo } from '../common/utils'
 import { FioPlugin } from './fioPlugin.js'
 
+const OBT_DATA_CACHE = 'ObtDataCache.json'
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
+const OBT_DATA_POLL_MILLISECONDS = 10000
 const fioApiErrorCodes = [400, 403, 404]
 
 type FioTransactionSuperNode = {
@@ -50,6 +52,20 @@ type FioTransactionSuperNode = {
     block_time: string,
     producer_block_id: string
   }
+}
+
+type FioObtRecord = {
+  payer_fio_address: string,
+  payee_fio_address: string,
+  payer_fio_public_key: string,
+  payee_fio_public_key: string,
+  content: {
+    obt_id: string,
+    memo: string | null
+  },
+  fio_request_id: number,
+  status: string,
+  time_stamp: string
 }
 
 class FioError extends Error {
@@ -176,6 +192,12 @@ export class FioEngine extends CurrencyEngine {
         return this.walletLocalData.otherData.fioAddresses.map(
           fioAddress => fioAddress.name
         )
+      },
+      getObtDataById: async (obtId: string): Promise<FioObtRecord | null> => {
+        const obtDataFromCache = await this.getObtData()
+        if (obtDataFromCache[obtId]) return obtDataFromCache[obtId]
+        const obtData = await this.checkObtData()
+        return obtData[obtId] || null
       }
     }
   }
@@ -195,6 +217,7 @@ export class FioEngine extends CurrencyEngine {
       }
     }
     this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.obtLastRecord = 0
     this.walletLocalData.otherData.feeTransactions = []
     this.walletLocalData.otherData.fioAddresses = []
     try {
@@ -440,6 +463,88 @@ export class FioEngine extends CurrencyEngine {
     return true
   }
 
+  // Poll on the obt data
+  async checkObtData() {
+    try {
+      const obtDataFromCache = await this.getObtData()
+      const limit = 100
+      let offset =
+        this.walletLocalData.otherData.obtLastRecord > 5
+          ? this.walletLocalData.otherData.obtLastRecord - 5
+          : this.walletLocalData.otherData.obtLastRecord
+      let finish = false
+
+      while (!finish) {
+        let obtData = []
+        try {
+          const res = await this.multicastServers('getObtData', {
+            limit,
+            offset
+          })
+          obtData = res.obt_data_records
+        } catch (e) {
+          obtData = []
+          this.log(`Error fetching getObtData: ${JSON.stringify(e)}`)
+        }
+        for (const obtDataRecord of obtData) {
+          if (obtDataRecord.content && obtDataRecord.content.obt_id) {
+            obtDataFromCache[obtDataRecord.content.obt_id] = obtDataRecord
+          }
+        }
+        if (obtData.length && obtData.length === limit) {
+          offset += limit
+        } else {
+          await this.setObtData(obtDataFromCache)
+          this.walletLocalData.otherData.obtLastRecord = offset + obtData.length
+          finish = true
+        }
+      }
+
+      return obtDataFromCache
+    } catch (e) {
+      this.log(`Error checkObtData: ${JSON.stringify(e)}`)
+      this.log(`e.code: ${JSON.stringify(e.code)}`)
+      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      console.error('checkObtData error: ' + JSON.stringify(e))
+      return {}
+    }
+  }
+
+  async getObtData(): { [obtId: string]: FioObtRecord } {
+    try {
+      const obtData = await this.getAllObtData()
+      return obtData[this.walletInfo.keys.publicKey]
+        ? obtData[this.walletInfo.keys.publicKey]
+        : {}
+    } catch (e) {
+      return {}
+    }
+  }
+
+  async getAllObtData(): {
+    [pubKey: string]: { [obtId: string]: FioObtRecord }
+  } {
+    try {
+      const obtDataText = await this.walletLocalDisklet.getText(OBT_DATA_CACHE)
+      return JSON.parse(obtDataText)
+    } catch (e) {
+      return {}
+    }
+  }
+
+  async setObtData(obtData: { [obtId: string]: FioObtRecord }) {
+    const obtDataFromCache = await this.getAllObtData()
+    obtDataFromCache[this.walletInfo.keys.publicKey] = obtData
+    try {
+      await this.walletLocalDisklet.setText(
+        OBT_DATA_CACHE,
+        JSON.stringify(obtDataFromCache)
+      )
+    } catch (e) {
+      console.error('setObtData error: ' + JSON.stringify(e))
+    }
+  }
+
   async checkTransactionsInnerLoop() {
     let transactions
     try {
@@ -583,6 +688,7 @@ export class FioEngine extends CurrencyEngine {
   async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.obtLastRecord = 0
     this.walletLocalData.otherData.feeTransactions = []
   }
 
@@ -596,6 +702,7 @@ export class FioEngine extends CurrencyEngine {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop('checkObtData', OBT_DATA_POLL_MILLISECONDS)
     super.startEngine()
   }
 
