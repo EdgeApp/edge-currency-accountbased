@@ -14,6 +14,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   getOtherParams,
+  makeMutex,
   promiseAny,
   validateObject
 } from '../common/utils.js'
@@ -30,6 +31,8 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 15000
 const BLOCKCHAIN_POLL_MILLISECONDS = 30000
 const TRANSACTION_POLL_MILLISECONDS = 5000
+
+const makeSpendMutex = makeMutex()
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 type TezosFunction =
@@ -357,6 +360,10 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    return makeSpendMutex(() => this.makeSpendInner(edgeSpendInfoIn))
+  }
+
+  async makeSpendInner(edgeSpendInfoIn: EdgeSpendInfo) {
     const {
       edgeSpendInfo,
       currencyCode,
