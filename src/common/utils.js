@@ -212,6 +212,34 @@ export function getOtherParams(tx: EdgeTransaction): JsonObject {
   return tx.otherParams
 }
 
+type Mutex = <T>(callback: () => T | Promise<T>) => Promise<T>
+/**
+ * Constructs a mutex.
+ *
+ * The mutex is a function that accepts & runs a callback,
+ * ensuring that only one callback runs at a time. Use it like:
+ *
+ * const result = await mutex(() => {
+ *   // Critical code that must not run more than one copy.
+ *   return result
+ * })
+ */
+export function makeMutex(): Mutex {
+  let busy = false
+  const queue: Array<() => void> = []
+  return async function lock<T>(callback: () => T | Promise<T>): Promise<T> {
+    if (busy) await new Promise(resolve => queue.push(resolve))
+    try {
+      busy = true
+      return callback()
+    } finally {
+      busy = false
+      const resolve = queue.shift()
+      if (resolve != null) resolve()
+    }
+  }
+}
+
 export {
   normalizeAddress,
   addHexPrefix,
