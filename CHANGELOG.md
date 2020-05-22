@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.6 (2020-05-21)
+
+- Tezos - Add makeMutex to wrap makeSpend() to avoid entering it more than once
+
 # 0.7.5 (2020-05-14)
 
 - Refactor EOS plugin to remove owner key to support importing wallets
