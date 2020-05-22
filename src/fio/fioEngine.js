@@ -194,9 +194,6 @@ export class FioEngine extends CurrencyEngine {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
-    this.walletLocalData.otherData.highestTxHeight = 0
-    this.walletLocalData.otherData.feeTransactions = []
-    this.walletLocalData.otherData.fioAddresses = []
     try {
       const result = await this.multicastServers('getFioNames', {
         fioPublicKey: walletInfo.keys.publicKey
@@ -222,7 +219,7 @@ export class FioEngine extends CurrencyEngine {
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
         this.walletLocalData.blockHeight = blockHeight
-        this.walletLocalDataDirty = true
+        this.localDataDirty()
         this.currencyEngineCallbacks.onBlockHeightChanged(
           this.walletLocalData.blockHeight
         )
@@ -245,7 +242,7 @@ export class FioEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.walletLocalDataDirty = true
+      this.localDataDirty()
       this.log(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
@@ -264,6 +261,9 @@ export class FioEngine extends CurrencyEngine {
     let networkFee = '0'
     let currencyCode = 'FIO'
     const ourReceiveAddresses = []
+    if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
+      return action.block_num
+    }
     if (trxName !== 'trnsfiopubky' && trxName !== 'transfer') {
       return action.block_num
     }
@@ -320,9 +320,22 @@ export class FioEngine extends CurrencyEngine {
       )
       if (index > -1 && feeTrxIndex < 0) {
         const existingTrx = this.transactionList[currencyCode][index]
-        existingTrx.nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
-        existingTrx.networkFee = networkFee
-        this.updateTransaction(currencyCode, existingTrx, index)
+        if (existingTrx.networkFee === '0') {
+          const edgeTransaction: EdgeTransaction = {
+            txid: existingTrx.txid,
+            date: existingTrx.date,
+            currencyCode,
+            blockHeight: existingTrx.blockHeight,
+            nativeAmount: bns.sub(existingTrx.nativeAmount, networkFee),
+            networkFee,
+            signedTx: existingTrx.signedTx,
+            ourReceiveAddresses: existingTrx.ourReceiveAddresses,
+            otherParams: existingTrx.otherParams,
+            metadata: existingTrx.metadata
+          }
+
+          this.addTransaction(currencyCode, edgeTransaction)
+        }
       } else {
         memo = data.memo
         name = data.to
@@ -390,13 +403,13 @@ export class FioEngine extends CurrencyEngine {
 
     const limit = 10
     let offset = 0
-    let finish = false
 
+    // history node saves up to 1000 records, so if seq number is more than 1000 we set pos to smallest value
     if (lastActionSeqNumber > 1000) {
       offset = lastActionSeqNumber - 1000
     }
 
-    while (!finish) {
+    while (true) {
       this.log('looping through checkTransactions')
       const actionsObject = await this.multicastServers(
         'history',
@@ -422,9 +435,6 @@ export class FioEngine extends CurrencyEngine {
 
         if (blockNum > newHighestTxHeight) {
           newHighestTxHeight = blockNum
-        } else if (offset === 0 && blockNum === newHighestTxHeight && i === 0) {
-          finish = true
-          break
         }
       }
 
@@ -435,7 +445,7 @@ export class FioEngine extends CurrencyEngine {
     }
     if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
       this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
-      this.walletLocalDataDirty = true
+      this.localDataDirty()
     }
     return true
   }
@@ -584,6 +594,7 @@ export class FioEngine extends CurrencyEngine {
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.highestTxHeight = 0
     this.walletLocalData.otherData.feeTransactions = []
+    this.walletLocalData.otherData.fioAddresses = []
   }
 
   // ****************************************************************************
