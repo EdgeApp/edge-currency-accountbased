@@ -23,7 +23,10 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: ['http://localhost:80'],
+  eosActivationServers: [
+    'http://38.75.137.119:3873',
+    'https://eos-pay-sf2.edgesecure.co'
+  ],
   // used for the following routines, is Hyperion v2:
 
   // getIncomingTransactions
@@ -36,10 +39,7 @@ const otherSettings: EosSettings = {
   // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
 
   eosHyperionNodes: [
-    'https://mainnet.telosusa.io',
-    'https://telos.caleos.io',
-    'https://telos.eosphere.io',
-    'https://api-telos-21zephyr.maltablock.org/'
+    'https://telos.caleos.io'
   ],
 
   // used for eosjs fetch routines

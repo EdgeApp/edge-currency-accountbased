@@ -21,7 +21,11 @@ import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo, getEdgeInfoServer } from '../common/utils.js'
+import {
+  asyncWaterfall,
+  getDenomInfo,
+  getEdgeInfoServer
+} from '../common/utils.js'
 import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { type EosJsConfig } from './eosTypes'
@@ -186,7 +190,13 @@ export function makeEosBasedPluginInner(
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(tools, walletInfo, opts, fetch, eosJsConfig)
+    const currencyEngine = new EosEngine(
+      tools,
+      walletInfo,
+      opts,
+      fetch,
+      eosJsConfig
+    )
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
@@ -212,27 +222,51 @@ export function makeEosBasedPluginInner(
   }
 
   const otherMethods = {
-    getActivationSupportedCurrencies: async (): Promise<Object> => {
-      const eosPaymentServer =
-        currencyInfo.defaultSettings.otherSettings.eosActivationServers[0]
-      const uri = `${eosPaymentServer}/api/v1/getSupportedCurrencies`
-      log('kylan getActivationSupportedCurrencies uri: ', uri)
-      const response = await fetch(uri)
-      if (!response.ok) {
-        throw new Error(`Error ${response.status} while fetching ${uri}`)
+    getActivationSupportedCurrencies: async (): Object => {
+      try {
+        log('in getActivationSuppoortedCurrencies 1')
+        this.log('in getActivationSuppoortedCurrencies 2')
+        await asyncWaterfall(
+          currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+            server => async () => {
+              const uri = `${server}/api/v1/getSupportedCurrencies`
+              const response = await fetch(uri)
+              this.log(
+                'kylan multicast in / out tx server: ',
+                server,
+                ' and response: ',
+                response
+              )
+              const result = await response.json()
+              log(
+                'kylan getActivationSupportedCurrencies result: ',
+                result,
+                'server: ',
+                server
+              )
+              return {
+                server,
+                result
+              }
+            }
+          )
+        )
+      } catch (e) {
+        throw new Error('UnableToGetSupportedCurrencies')
       }
-      return response.json()
     },
     getActivationCost: async (): Promise<string> => {
       try {
         const infoServer = getEdgeInfoServer()
-        const lowerCaseCurrencyCode = currencyInfo.currencyCode.toLowerCase()
-        const uri = `${infoServer}/v1/${lowerCaseCurrencyCode}Prices`
+        const uri = `${infoServer}/v1/eosPrices`
+        log('kylan getActivationCost uri: ', uri)
         const response = await fetch(uri)
+        log('kylan getActivationCost response: ', response)
         if (!response.ok) {
           throw new Error(`Error ${response.status} while fetching ${uri}`)
         }
         const prices = await response.json()
+        log('kylan getActivationCost prices: ', prices)
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +
@@ -241,10 +275,11 @@ export function makeEosBasedPluginInner(
         out = bns.toFixed(out, 0, 4)
         return out
       } catch (e) {
+        log('kylan getActivationCost error: ', e)
         throw new Error('ErrorUnableToGetCost')
       }
     },
-    validateAccount: async (account: string): Promise<boolean> => {
+    checkAccountName: async (account: string): Promise<boolean> => {
       const valid = checkAddress(account)
       const out = { result: '' }
       if (!valid) {
@@ -268,7 +303,7 @@ export function makeEosBasedPluginInner(
           throw e
         }
       }
-      log(`validateAccount: result=${out.result}`)
+      log(`checkAccountName: result=${out.result}`)
       return out
     }
   }
@@ -280,3 +315,7 @@ export function makeEosBasedPluginInner(
     otherMethods
   }
 }
+
+// http://59a40392.ngrok.io/api/v1/getSupportedCurrencies
+
+// https://info1.edgesecure.co:8444/v1/eosPrices
