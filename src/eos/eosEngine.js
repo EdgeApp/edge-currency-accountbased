@@ -81,7 +81,8 @@ export class EosEngine extends CurrencyEngine {
           requestedAccountName,
           currencyCode,
           ownerPublicKey,
-          activePublicKey
+          activePublicKey,
+          requestedAccountCurrencyCode
         } = params
         if (!currencyCode || !requestedAccountName) {
           throw new Error('ErrorInvalidParams')
@@ -105,12 +106,14 @@ export class EosEngine extends CurrencyEngine {
             requestedAccountName,
             currencyCode,
             ownerPublicKey,
-            activePublicKey
+            activePublicKey,
+            requestedAccountCurrencyCode // chain ie TLOS or EOS
           })
         }
         const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
           .eosActivationServers[0]
         const uri = `${eosPaymentServer}/api/v1/activateAccount`
+        this.log('kylan getAccountActivationQuote uri: ', uri, ' options: ', options)
         const response = await fetchCors(uri, options)
         if (!response.ok) {
           this.log(`Error ${response.status} while posting ${uri}`)
@@ -356,26 +359,20 @@ export class EosEngine extends CurrencyEngine {
     let finish = false
 
     while (!finish) {
-      this.log('looping through checkIncomingTransactions')
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
       const url = `/v2/history/get_transfers?to=${acct}&symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-      this.log('kylan1')
       const result = await this.multicastServers('getIncomingTransactions', url)
-      this.log('kylan2')
       const actionsObject = await result.json()
-      this.log('kylan3')
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
-      this.log('incoming transactions actionss: ', actions)
       // if there are no actions
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
         break
       }
-
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i]
         const blockNum = this.processIncomingTransaction(action)

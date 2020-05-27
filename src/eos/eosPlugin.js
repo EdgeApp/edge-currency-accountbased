@@ -23,7 +23,10 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: ['http://localhost:80'],
+  eosActivationServers: [
+    'https://eos-pay-sf2.edgesecure.co',
+    'http://38.75.137.119:3873' // Account.TelosCrew.com
+  ],
   eosHyperionNodes: ['https://api.eossweden.org'],
   eosNodes: [
     'https://api.redpacketeos.com',
