@@ -78,3 +78,11 @@ export type EosWalletOtherData = {
   lastQueryActionSeq: number,
   highestTxHeight: number
 }
+
+export type EosJsConfig = {
+  chainId: string,
+  keyProvider: Array<any>,
+  httpEndpoint: string,
+  fetch: Function,
+  verbose: boolean // verbose logging such as API activity
+}
