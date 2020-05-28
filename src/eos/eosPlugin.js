@@ -1,5 +1,5 @@
 /**
- * Created by Kylan on 2020-02-14
+ * Created by on 2020-02-14
  */
 /* global fetch */
 // @flow
@@ -23,10 +23,7 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: [
-    'https://eos-pay-sf2.edgesecure.co',
-    'http://38.75.137.119:3873' // Account.TelosCrew.com
-  ],
+  eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
   eosHyperionNodes: ['https://api.eossweden.org'],
   eosNodes: [
     'https://api.redpacketeos.com',
