@@ -562,9 +562,7 @@ export class EosEngine extends CurrencyEngine {
       }
     }
 
-    this.log(
-      `${currencyCode} multicastServers Greymass Fuel ${func} ${out.server} won`
-    )
+    this.log(`${currencyCode} multicastServers ${func} ${out.server} won`)
     return out.result
   }
 
