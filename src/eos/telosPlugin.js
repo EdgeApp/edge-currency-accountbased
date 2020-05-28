@@ -1,5 +1,5 @@
 /**
- * Created by Kylan on 2020-02-14
+ * Created by on 2020-02-14
  */
 /* global fetch */
 // @flow
@@ -24,7 +24,7 @@ export const eosJsConfig: EosJsConfig = {
 
 const otherSettings: EosSettings = {
   eosActivationServers: [
-    'http://38.75.137.119:3873',
+    'http://38.75.137.119:3873', // React Native doesn't seem to like subdomain
     'https://eos-pay-sf2.edgesecure.co'
   ],
   // used for the following routines, is Hyperion v2:
@@ -38,9 +38,7 @@ const otherSettings: EosSettings = {
   // getKeyAccounts
   // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
 
-  eosHyperionNodes: [
-    'https://telos.caleos.io'
-  ],
+  eosHyperionNodes: ['https://telos.caleos.io'],
 
   // used for eosjs fetch routines
   // getCurrencyBalance

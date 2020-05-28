@@ -224,33 +224,32 @@ export function makeEosBasedPluginInner(
   const otherMethods = {
     getActivationSupportedCurrencies: async (): Object => {
       try {
-        log('in getActivationSuppoortedCurrencies 1')
-        this.log('in getActivationSuppoortedCurrencies 2')
-        await asyncWaterfall(
+        const out = await asyncWaterfall(
           currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
             server => async () => {
               const uri = `${server}/api/v1/getSupportedCurrencies`
               const response = await fetch(uri)
-              this.log(
-                'kylan multicast in / out tx server: ',
+              log(
+                'getActivationSupportedCurrencies multicast in / out tx server: ',
                 server,
                 ' and response: ',
                 response
               )
               const result = await response.json()
               log(
-                'kylan getActivationSupportedCurrencies result: ',
+                'getActivationSupportedCurrencies result: ',
                 result,
                 'server: ',
                 server
               )
               return {
-                server,
+                activationServer: server,
                 result
               }
             }
           )
         )
+        return out
       } catch (e) {
         throw new Error('UnableToGetSupportedCurrencies')
       }
@@ -259,14 +258,11 @@ export function makeEosBasedPluginInner(
       try {
         const infoServer = getEdgeInfoServer()
         const uri = `${infoServer}/v1/eosPrices`
-        log('kylan getActivationCost uri: ', uri)
         const response = await fetch(uri)
-        log('kylan getActivationCost response: ', response)
         if (!response.ok) {
           throw new Error(`Error ${response.status} while fetching ${uri}`)
         }
         const prices = await response.json()
-        log('kylan getActivationCost prices: ', prices)
         const totalEos =
           Number(prices.ram) * 8 +
           Number(prices.net) * 2 +
@@ -275,7 +271,6 @@ export function makeEosBasedPluginInner(
         out = bns.toFixed(out, 0, 4)
         return out
       } catch (e) {
-        log('kylan getActivationCost error: ', e)
         throw new Error('ErrorUnableToGetCost')
       }
     },

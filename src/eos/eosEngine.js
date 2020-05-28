@@ -82,7 +82,8 @@ export class EosEngine extends CurrencyEngine {
           currencyCode,
           ownerPublicKey,
           activePublicKey,
-          requestedAccountCurrencyCode
+          requestedAccountCurrencyCode,
+          activationServer
         } = params
         if (!currencyCode || !requestedAccountName) {
           throw new Error('ErrorInvalidParams')
@@ -110,14 +111,11 @@ export class EosEngine extends CurrencyEngine {
             requestedAccountCurrencyCode // chain ie TLOS or EOS
           })
         }
-        const eosPaymentServer = this.currencyInfo.defaultSettings.otherSettings
-          .eosActivationServers[0]
+        const eosPaymentServer = activationServer
         const uri = `${eosPaymentServer}/api/v1/activateAccount`
-        this.log('kylan getAccountActivationQuote uri: ', uri, ' options: ', options)
         const response = await fetchCors(uri, options)
         if (!response.ok) {
           this.log(`Error ${response.status} while posting ${uri}`)
-          this.log(`kylantest options.body: `, options.body)
           throw new Error(`Error ${response.status} while fetching ${uri}`)
         }
         return response.json()
