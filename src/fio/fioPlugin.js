@@ -149,6 +149,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     if (!currencyEngine.otherData.fioAddresses) {
       currencyEngine.otherData.fioAddresses = []
     }
+    if (!currencyEngine.otherData.fioDomains) {
+      currencyEngine.otherData.fioDomains = []
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
