@@ -142,6 +142,7 @@ export class FioEngine extends CurrencyEngine {
             )
             if (renewedAddress) {
               renewedAddress.expiration = res.expiration
+              this.localDataDirty()
             }
             return res
           }
@@ -154,11 +155,13 @@ export class FioEngine extends CurrencyEngine {
             const addressAlreadyAdded = this.walletLocalData.otherData.fioAddresses.find(
               ({ name }) => name === params.fioAddress
             )
-            if (!addressAlreadyAdded)
+            if (!addressAlreadyAdded) {
               this.walletLocalData.otherData.fioAddresses.push({
                 name: params.fioAddress,
                 expiration: res.expiration
               })
+              this.localDataDirty()
+            }
             return {
               expiration: res.expiration,
               feeCollected: res.fee_collected
@@ -175,6 +178,7 @@ export class FioEngine extends CurrencyEngine {
             )
             if (renewedDomain) {
               renewedDomain.expiration = res.expiration
+              this.localDataDirty()
             }
             return {
               expiration: res.expiration,
