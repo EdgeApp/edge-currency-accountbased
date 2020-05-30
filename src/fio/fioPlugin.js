@@ -136,6 +136,20 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     )
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
+    // This is just to make sure otherData is Flow type checked
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+
+    // Initialize otherData defaults if they weren't on disk
+    if (!currencyEngine.otherData.highestTxHeight) {
+      currencyEngine.otherData.highestTxHeight = 0
+    }
+    if (!currencyEngine.otherData.feeTransactions) {
+      currencyEngine.otherData.feeTransactions = []
+    }
+    if (!currencyEngine.otherData.fioAddresses) {
+      currencyEngine.otherData.fioAddresses = []
+    }
+
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }
