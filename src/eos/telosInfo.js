@@ -45,7 +45,8 @@ const otherSettings: EosSettings = {
   // getInfo
   // transaction
   eosNodes: ['https://telos.caleos.io'],
-  eosFuelServers: ['https://telos.greymass.com'] // this will need to be fixed
+  eosFuelServers: ['https://telos.greymass.com'], // this will need to be fixed
+  uriProtocol: 'telos'
 }
 
 const defaultSettings: any = {

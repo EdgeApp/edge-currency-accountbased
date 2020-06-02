@@ -1,15 +1,29 @@
-/* global */
+/**
+ * Created by on 2020-02-14
+ */
+/* global fetch */
 // @flow
 
-import { type EdgeCurrencyInfo } from 'edge-core-js/types'
+import {
+  type EdgeCorePluginOptions,
+  type EdgeCurrencyInfo
+} from 'edge-core-js/types'
 
 import { imageServerUrl } from '../common/utils'
-import { makeEosBasedPluginInner } from './eosPlugin.js'
-import { type EosSettings } from './eosTypes.js'
+import { makeEosBasedPluginInner } from './eosPlugin'
+import { type EosJsConfig, type EosSettings } from './eosTypes'
+
+// ----EOSIO MAIN NET----
+export const eosJsConfig: EosJsConfig = {
+  chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // eosio main net
+  keyProvider: [],
+  httpEndpoint: '', // main net
+  fetch: fetch,
+  verbose: false // verbose logging such as API activity
+}
 
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
-  eosFuelServers: ['https://eos.greymass.com'],
   eosHyperionNodes: ['https://api.eossweden.org', 'https://mainnet.eosn.io'],
   eosNodes: [
     'https://api.redpacketeos.com',
@@ -57,14 +71,16 @@ const otherSettings: EosSettings = {
     'https://eospublic.chainrift.com',
     'https://eosapi.blockmatrix.network',
     'https://node.eosflare.io'
-  ]
+  ],
+  eosFuelServers: ['https://eos.greymass.com'],
+  uriProtocol: 'eos'
 }
 
 const defaultSettings: any = {
   otherSettings
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+export const eosCurrencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'EOS',
   displayName: 'EOS',
