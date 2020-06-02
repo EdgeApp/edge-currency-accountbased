@@ -4,6 +4,7 @@
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { imageServerUrl } from '../common/utils'
+import { makeEosBasedPluginInner } from './eosPlugin.js'
 import { type EosSettings } from './eosTypes.js'
 
 const otherSettings: EosSettings = {
@@ -86,4 +87,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
   metaTokens: []
+}
+
+export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
+  return makeEosBasedPluginInner(opts, eosCurrencyInfo, eosJsConfig)
 }

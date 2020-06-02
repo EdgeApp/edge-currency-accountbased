@@ -164,7 +164,7 @@ export class EosPlugin extends CurrencyPlugin {
   }
 }
 
-export function makeEosPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+export function makeEosBasedPluginInner(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { io, log } = opts
   const fetch = getFetchCors(opts)
 
