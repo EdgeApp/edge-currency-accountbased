@@ -29,6 +29,7 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
+  etherclusterApiServers: [],
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
   blockcypherApiServers: [],
   superethServers: [],
