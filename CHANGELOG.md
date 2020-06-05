@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.8 (2020-06-04)
+
+- Add etherclusterApiServers[] to rskInfo.js
+- Add custom FIO domain support
+- Add FIO address renewal support
+
 # 0.7.6 (2020-05-21)
 
 - Tezos - Add makeMutex to wrap makeSpend() to avoid entering it more than once
