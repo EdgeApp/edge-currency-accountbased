@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.9 (2020-06-05)
+
+- Fix case where a FIO address could appear associated with two FIO wallets
+
 # 0.7.8 (2020-06-04)
 
 - Add etherclusterApiServers[] to rskInfo.js
