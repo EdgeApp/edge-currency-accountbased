@@ -21,11 +21,7 @@ import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import {
-  asyncWaterfall,
-  getDenomInfo,
-  getEdgeInfoServer
-} from '../common/utils.js'
+import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { type EosJsConfig } from './eosTypes'
@@ -246,21 +242,35 @@ export function makeEosBasedPluginInner(
         throw new Error('UnableToGetSupportedCurrencies')
       }
     },
-    getActivationCost: async (): Promise<string> => {
+    getActivationCost: async (currencyCode: string): Promise<string> | void => {
       try {
-        const infoServer = getEdgeInfoServer()
-        const uri = `${infoServer}/v1/eosPrices`
-        const response = await fetch(uri)
-        if (!response.ok) {
-          throw new Error(`Error ${response.status} while fetching ${uri}`)
-        }
-        const prices = await response.json()
-        const totalEos =
-          Number(prices.ram) * 8 +
-          Number(prices.net) * 2 +
-          Number(prices.cpu) * 10
-        let out = totalEos.toString()
-        out = bns.toFixed(out, 0, 4)
+        const out = await asyncWaterfall(
+          currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+            server => async () => {
+              const uri = `${server}/api/v1/eosPrices/${currencyCode}`
+              const response = await fetch(uri)
+              log(
+                'getActivationCost multicast in / out tx server: ',
+                server,
+                ' and response: ',
+                response
+              )
+              const prices = await response.json()
+              log('getActivationCost result: ', prices, 'server: ', server)
+              const {
+                startingResources
+              } = currencyInfo.defaultSettings.otherSettings
+              const totalEos =
+                Number(prices.ram) * startingResources.ram +
+                Number(prices.net) * startingResources.net +
+                Number(prices.cpu) * startingResources.cpu
+              const totalEosString = totalEos.toString()
+              const price = bns.toFixed(totalEosString, 0, 4)
+              return price
+            }
+          )
+        )
+        log('kylan out2: ', out)
         return out
       } catch (e) {
         throw new Error('ErrorUnableToGetCost')

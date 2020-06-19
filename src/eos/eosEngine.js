@@ -112,8 +112,7 @@ export class EosEngine extends CurrencyEngine {
           currencyCode,
           ownerPublicKey,
           activePublicKey,
-          requestedAccountCurrencyCode,
-          activationServer
+          requestedAccountCurrencyCode
         } = params
         if (!currencyCode || !requestedAccountName) {
           throw new Error('ErrorInvalidParams')
@@ -141,14 +140,21 @@ export class EosEngine extends CurrencyEngine {
             requestedAccountCurrencyCode // chain ie TLOS or EOS
           })
         }
-        const eosPaymentServer = activationServer
-        const uri = `${eosPaymentServer}/api/v1/activateAccount`
-        const response = await fetchCors(uri, options)
-        if (!response.ok) {
-          this.log(`Error ${response.status} while posting ${uri}`)
-          throw new Error(`Error ${response.status} while fetching ${uri}`)
+
+        try {
+          const out = await asyncWaterfall(
+            this.currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+              server => async () => {
+                const uri = `${server}/api/v1/activateAccount`
+                const response = await fetchCors(uri, options)
+                return response.json()
+              }
+            )
+          )
+          return out
+        } catch (e) {
+          throw new Error(`getAccountActivationQuoteError`)
         }
-        return response.json()
       }
     }
   }

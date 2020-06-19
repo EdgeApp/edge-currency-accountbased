@@ -73,7 +73,12 @@ const otherSettings: EosSettings = {
     'https://node.eosflare.io'
   ],
   eosFuelServers: ['https://eos.greymass.com'],
-  uriProtocol: 'eos'
+  uriProtocol: 'eos',
+  startingResources: {
+    ram: 8,
+    cpu: 2,
+    net: 10
+  }
 }
 
 const defaultSettings: any = {
