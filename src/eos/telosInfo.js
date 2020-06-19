@@ -24,7 +24,7 @@ export const eosJsConfig: EosJsConfig = {
 
 const otherSettings: EosSettings = {
   eosActivationServers: [
-    'http://38.75.137.119:3873', // React Native doesn't seem to like subdomain
+    'http://127.0.0.1:3873', // React Native doesn't seem to like subdomain
     'https://eos-pay-sf2.edgesecure.co'
   ],
   // used for the following routines, is Hyperion v2:
@@ -46,7 +46,12 @@ const otherSettings: EosSettings = {
   // transaction
   eosNodes: ['https://telos.caleos.io'],
   eosFuelServers: ['https://telos.greymass.com'], // this will need to be fixed
-  uriProtocol: 'telos'
+  uriProtocol: 'telos',
+  startingResources: {
+    ram: 8,
+    cpu: 2,
+    net: 10
+  }
 }
 
 const defaultSettings: any = {
