@@ -29,13 +29,10 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  etherclusterApiServers: [],
+  rpcServers: ['https://public-node.rsk.co'],
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
   blockcypherApiServers: [],
   superethServers: [],
-  infuraServers: ['https://public-node.rsk.co'],
-  isNestedInfuraParams: true,
-  infuraNeedProjectId: false,
   blockchairApiServers: [],
   alethioApiServers: [],
   alethioCurrrencies: null,

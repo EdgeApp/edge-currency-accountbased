@@ -48,13 +48,10 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  etherclusterApiServers: ['https://www.ethercluster.com/etc'],
-  etherscanApiServers: [],
+  rpcServers: ['https://www.ethercluster.com/etc'],
+  etherscanApiServers: ['https://blockscout.com/etc/mainnet'],
   blockcypherApiServers: [],
   superethServers: [],
-  infuraServers: [],
-  isNestedInfuraParams: false,
-  infuraNeedProjectId: true,
   uriNetworks: ['ethereumclassic', 'etherclass'],
   ercTokenStandard: 'ERC20',
   chainId: 61,

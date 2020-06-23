@@ -48,16 +48,13 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  etherclusterApiServers: [],
+  rpcServers: ['https://mainnet.infura.io/v3'],
   etherscanApiServers: [
     'https://api.etherscan.io'
     // 'https://blockscout.com/eth/mainnet' // not reliable enough...
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
-  infuraServers: ['https://mainnet.infura.io/v3'],
-  isNestedInfuraParams: false,
-  infuraNeedProjectId: true,
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainId: 1,
