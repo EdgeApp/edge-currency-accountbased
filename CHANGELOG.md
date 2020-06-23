@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.10 (2020-06-23)
+
+- Categorize servers by rpc and etherscan
+
 # 0.7.9 (2020-06-05)
 
 - Fix case where a FIO address could appear associated with two FIO wallets
