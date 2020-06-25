@@ -121,39 +121,53 @@ export class OneEngine extends CurrencyEngine {
       // const blockHeight = this.walletLocalData.blockHeight
       // let startBlock: number = 0
 
-      this.tokenCheckTransactionsStatus.ONE = 0.5
+      if (!this.otherData.numberTransactions) {
+        this.otherData.numberTransactions = 0
+      }
 
-      const res: OneGetTransactions = await this.onePlugin.harmonyApi.blockchain.messenger.send(
-        'hmyv2_getTransactionsHistory',
-        [
-          {
-            address: address,
-            pageIndex: 0,
-            pageSize: 100,
-            fullTx: true,
-            txType: 'ALL',
-            order: 'ASC'
-          }
-        ]
+      const res: OneGetLastHeader = await this.onePlugin.harmonyApi.blockchain.messenger.send(
+        'hmyv2_getTransactionsCount',
+        [address, 'ALL']
       )
 
-      if (res.result && Array.isArray(res.result.transactions)) {
-        res.result.transactions.forEach(tx => this.processOneTransaction(tx))
-      }
+      const num = res.result
 
-      if (this.transactionsChangedArray.length > 0) {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
+      if (num > this.otherData.numberTransactions) {
+        this.tokenCheckTransactionsStatus.ONE = 0.5
+
+        const res: OneGetTransactions = await this.onePlugin.harmonyApi.blockchain.messenger.send(
+          'hmyv2_getTransactionsHistory',
+          [
+            {
+              address: address,
+              pageIndex: 0,
+              pageSize: 100,
+              fullTx: true,
+              txType: 'ALL',
+              order: 'ASC'
+            }
+          ]
         )
 
-        this.transactionsChangedArray = []
+        if (res.result && Array.isArray(res.result.transactions)) {
+          res.result.transactions.forEach(tx => this.processOneTransaction(tx))
+        }
+
+        if (this.transactionsChangedArray.length > 0) {
+          this.currencyEngineCallbacks.onTransactionsChanged(
+            this.transactionsChangedArray
+          )
+
+          this.transactionsChangedArray = []
+        }
+
+        this.otherData.numberTransactions = num
+        this.walletLocalDataDirty = true
+
+        this.tokenCheckTransactionsStatus.ONE = 1
+
+        this.updateOnAddressesChecked()
       }
-      // this.otherData.numberTransactions = num
-      this.walletLocalDataDirty = true
-
-      this.tokenCheckTransactionsStatus.ONE = 1
-
-      this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`ONE Error fetching address info: ${JSON.stringify(e)}`)
       this.log(`ONE e.code: ${JSON.stringify(e.code)}`)
