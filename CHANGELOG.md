@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.11 (2020-06-25)
+
+- Update FIO apiUrls
+
 # 0.7.10 (2020-06-23)
 
 - Categorize servers by rpc and etherscan
