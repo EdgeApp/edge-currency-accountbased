@@ -635,6 +635,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/orchid-logo-solo-64.png`
     },
     {
+      currencyCode: 'COMP',
+      currencyName: 'Compound',
+      denominations: [
+        {
+          name: 'COMP',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xc00e94cb662c3520282e6f5717214004a7f26888',
+      symbolImage: `${imageServerUrl}/compound-logo-solo-64.png`
+    },
+    {
       currencyCode: 'MET',
       currencyName: 'Metronome',
       denominations: [
