@@ -152,6 +152,7 @@ export class EosPlugin extends CurrencyPlugin {
     return encodedUri
   }
 
+  // change to fetch call in the future
   async getAccSystemStats(account: string) {
     return new Promise((resolve, reject) => {
       this.eosServer.getAccount(account, (error, result) => {
@@ -230,7 +231,6 @@ export function makeEosBasedPluginInner(
               const response = await fetch(uri)
               const result = await response.json()
               return {
-                activationServer: server,
                 result
               }
             }
@@ -257,9 +257,11 @@ export function makeEosBasedPluginInner(
               )
               const prices = await response.json()
               log('getActivationCost result: ', prices, 'server: ', server)
-              const {
-                startingResources
-              } = currencyInfo.defaultSettings.otherSettings
+              const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
+              const startingResourcesResponse = await fetch(
+                startingResourcesUri
+              )
+              const startingResources = await startingResourcesResponse.json()
               const totalEos =
                 Number(prices.ram) * startingResources.ram +
                 Number(prices.net) * startingResources.net +
@@ -270,9 +272,9 @@ export function makeEosBasedPluginInner(
             }
           )
         )
-        log('kylan out2: ', out)
         return out
       } catch (e) {
+        log('ErrorUnableToGetCost: ', e)
         throw new Error('ErrorUnableToGetCost')
       }
     },
@@ -300,7 +302,7 @@ export function makeEosBasedPluginInner(
           throw e
         }
       }
-      log(`checkAccountName: result=${out.result}`)
+      log(`validateAccount: result=${out.result}`)
       return out
     }
   }

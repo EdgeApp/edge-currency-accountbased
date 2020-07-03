@@ -24,8 +24,8 @@ export const eosJsConfig: EosJsConfig = {
 
 const otherSettings: EosSettings = {
   eosActivationServers: [
-    'https://account.teloscrew.com',
-    'https://eos-pay-sf2.edgesecure.co'
+    'https://eos-pay-sf2.edgesecure.co',
+    'https://account.teloscrew.com'
   ],
   // used for the following routines, is Hyperion v2:
 
@@ -46,12 +46,7 @@ const otherSettings: EosSettings = {
   // transaction
   eosNodes: ['https://telos.caleos.io'],
   eosFuelServers: ['https://telos.greymass.com'], // this will need to be fixed
-  uriProtocol: 'telos',
-  startingResources: {
-    ram: 8,
-    cpu: 2,
-    net: 10
-  }
+  uriProtocol: 'telos'
 }
 
 const defaultSettings: any = {
