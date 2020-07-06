@@ -14,6 +14,7 @@ import { makeFioPlugin } from './fio/fioPlugin'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
+import { makeTronPlugin } from './tron/tronPlugin.js'
 
 const plugins = {
   eos: makeEosPlugin,
@@ -25,7 +26,8 @@ const plugins = {
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
   rsk: makeRskPlugin,
-  binance: makeBinancePlugin
+  binance: makeBinancePlugin,
+  tron: makeTronPlugin
 }
 
 if (

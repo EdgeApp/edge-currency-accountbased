@@ -1,5 +1,147 @@
 export default [
   {
+    pluginName: 'tron',
+    WALLET_TYPE: 'wallet:tron',
+    'Test Currency code': 'TRX',
+    key: [
+      39,
+      190,
+      34,
+      129,
+      208,
+      32,
+      145,
+      88,
+      191,
+      217,
+      226,
+      98,
+      183,
+      16,
+      52,
+      150,
+      52,
+      53,
+      31,
+      137,
+      164,
+      40,
+      236,
+      146,
+      128,
+      107,
+      129,
+      59,
+      192,
+      240,
+      40,
+      238
+    ],
+    xpub: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:tron',
+      keys: { tronKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'wallet:tronz',
+      keys: { tronKey: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+      ],
+      'invalid address': [
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE1',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2B',
+        'GMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+      ],
+      'uri address': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+      ],
+      'uri address with amount': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        '12345670',
+        'TRX'
+      ],
+      'uri address with unique identifier': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?memo=1234567',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'TRX',
+        '1234567'
+      ],
+      'uri address with amount & label': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&label=Johnny%20Tron',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        '12345670',
+        'TRX',
+        'Johnny Tron'
+      ],
+      'uri address with amount, label & message': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&label=Johnny%20Tron&message=Hellow%20Tron%20World',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        '12345670',
+        'TRX',
+        'Johnny Tron',
+        'Hello Tron World'
+      ],
+      'uri address with unsupported param': [
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&unsupported=I%20am%20unsupported',
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        '12345670',
+        'TRX'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        },
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+      ],
+      'weird address': [
+        {
+          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        },
+        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+      ],
+      'invalid address': [
+        { publicAddress: 'BGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE' },
+        { publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2B' },
+        { publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BEw' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          nativeAmount: '12345678000000'
+        },
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12345678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          nativeAmount: '12300',
+          currencyCode: 'TRX',
+          label: 'Johnny Tron'
+        },
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=0.0123&label=Johnny%20Tron'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          nativeAmount: '12300',
+          currencyCode: 'TRX',
+          label: 'Johnny Tron',
+          message: 'Hello World, I miss you !'
+        },
+        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=0.0123&label=Johnny%20Tron&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
+  },
+  {
     pluginName: 'binance',
     WALLET_TYPE: 'wallet:binance',
     'Test Currency code': 'BNB',
