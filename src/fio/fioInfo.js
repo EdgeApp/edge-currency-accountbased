@@ -37,9 +37,13 @@ const defaultSettings: any = {
   historyNodeActions: {
     getActions: 'get_actions'
   },
-  fioAddressRegApiUrl: 'https://reg.fioprotocol.io/public-api/buy-address',
+  fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
+  fioRegApiEndPoints: {
+    buyAddress: 'buy-address',
+    getDomains: 'get-domains'
+  },
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/edge?publicKey=',
-  fioDomain: 'edge'
+  defaultRef: 'edge'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
