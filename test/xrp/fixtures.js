@@ -1,6 +1,6 @@
 export default [
   {
-    pluginName: 'ripple',
+    pluginId: 'ripple',
     WALLET_TYPE: 'wallet:ripple',
     'Test Currency code': 'XRP',
     parseUri: {

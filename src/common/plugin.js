@@ -23,13 +23,13 @@ import { getDenomInfo } from '../common/utils.js'
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {
   io: EdgeIo
-  pluginName: string
+  pluginId: string
   currencyInfo: EdgeCurrencyInfo
   highestTxHeight: number
 
-  constructor(io: EdgeIo, pluginName: string, currencyInfo: EdgeCurrencyInfo) {
+  constructor(io: EdgeIo, pluginId: string, currencyInfo: EdgeCurrencyInfo) {
     this.io = io
-    this.pluginName = pluginName
+    this.pluginId = pluginId
     this.currencyInfo = currencyInfo
     this.highestTxHeight = 0
   }

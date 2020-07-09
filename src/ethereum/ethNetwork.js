@@ -959,7 +959,7 @@ export class EthereumNetwork {
 
   async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
     const jsonObj = await this.fetchGetBlockchair(
-      `/${this.currencyInfo.pluginName}/stats`,
+      `/${this.currencyInfo.pluginId}/stats`,
       false
     )
     const valid = validateObject(jsonObj, BlockChairStatsSchema)
@@ -1421,7 +1421,7 @@ export class EthereumNetwork {
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const jsonObj = await this.fetchGetBlockchair(
-      `/${this.currencyInfo.pluginName}/dashboards/address/${address}?erc_20=true`,
+      `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`,
       true
     )
     const valid = validateObject(jsonObj, BlockChairAddressSchema)

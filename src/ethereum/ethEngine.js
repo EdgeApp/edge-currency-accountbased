@@ -61,11 +61,11 @@ export class EthereumEngine extends CurrencyEngine {
     currencyInfo: EdgeCurrencyInfo
   ) {
     super(currencyPlugin, walletInfo, opts)
-    const { pluginName } = this.currencyInfo
-    if (typeof this.walletInfo.keys[`${pluginName}Key`] !== 'string') {
-      if (walletInfo.keys.keys && walletInfo.keys.keys[`${pluginName}Key`]) {
-        this.walletInfo.keys[`${pluginName}Key`] =
-          walletInfo.keys.keys[`${pluginName}Key`]
+    const { pluginId } = this.currencyInfo
+    if (typeof this.walletInfo.keys[`${pluginId}Key`] !== 'string') {
+      if (walletInfo.keys.keys && walletInfo.keys.keys[`${pluginId}Key`]) {
+        this.walletInfo.keys[`${pluginId}Key`] =
+          walletInfo.keys.keys[`${pluginId}Key`]
       }
     }
     this.currencyPlugin = currencyPlugin
@@ -316,7 +316,7 @@ export class EthereumEngine extends CurrencyEngine {
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     if (!EthereumUtil.isValidAddress(publicAddress)) {
-      throw new TypeError(`Invalid ${this.currencyInfo.pluginName} address`)
+      throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
     const data =
@@ -533,7 +533,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     const privKey = Buffer.from(
-      this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`],
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
       'hex'
     )
     const wallet = ethWallet.fromPrivateKey(privKey)
@@ -569,9 +569,9 @@ export class EthereumEngine extends CurrencyEngine {
   getDisplayPrivateSeed() {
     if (
       this.walletInfo.keys &&
-      this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
     ) {
-      return this.walletInfo.keys[`${this.currencyInfo.pluginName}Key`]
+      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
     }
     return ''
   }

@@ -93,7 +93,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'ETH',
   displayName: 'Ethereum',
-  pluginName: 'ethereum',
+  pluginId: 'ethereum',
   walletType: 'wallet:ethereum',
 
   defaultSettings,
