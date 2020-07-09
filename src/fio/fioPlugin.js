@@ -234,15 +234,24 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           }
         )
         if (!result.ok) {
-          return { error: await result.json() }
+          const data = await result.json()
+          return {
+            error: true,
+            code: result.status,
+            ...data
+          }
         }
         return result.json()
       } catch (e) {
         return { error: e }
       }
     },
-    getRegDomainUrl(): string {
-      return currencyInfo.defaultSettings.fioDomainRegUrl
+    getRegDomainUrl(pubKey: string, isFallback: boolean = false): string {
+      return `${currencyInfo.defaultSettings.fioDomainRegUrl}/${
+        isFallback
+          ? currencyInfo.defaultSettings.fallbackRef
+          : currencyInfo.defaultSettings.defaultRef
+      }?publicKey=${pubKey}`
     },
     async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
       if (!ref) ref = currencyInfo.defaultSettings.defaultRef
@@ -255,7 +264,11 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         )
         const json = await result.json()
         if (!result.ok) {
-          return { error: json }
+          return {
+            error: true,
+            code: result.status,
+            ...json
+          }
         }
         return json.domains
       } catch (e) {
