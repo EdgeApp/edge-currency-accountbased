@@ -434,6 +434,10 @@ export class EthereumEngine extends CurrencyEngine {
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
+      feeRateUsed: {
+        gasLimit,
+        gasPrice: bns.div(gasPrice, '1000000000')
+      },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams // otherParams
