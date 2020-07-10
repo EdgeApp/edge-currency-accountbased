@@ -79,7 +79,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'ETC',
   displayName: 'Ethereum Classic',
-  pluginName: 'ethereumclassic',
+  pluginId: 'ethereumclassic',
   walletType: 'wallet:ethereumclassic',
 
   defaultSettings,

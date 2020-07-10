@@ -41,7 +41,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'XTZ',
   displayName: 'Tezos',
-  pluginName: 'tezos',
+  pluginId: 'tezos',
   walletType: 'wallet:tezos',
 
   defaultSettings,

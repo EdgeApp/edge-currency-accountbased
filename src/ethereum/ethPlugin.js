@@ -29,11 +29,11 @@ export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK
 
 export class EthereumPlugin extends CurrencyPlugin {
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginName, currencyInfo)
+    super(io, currencyInfo.pluginId, currencyInfo)
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
-    const { pluginName } = this.currencyInfo
+    const { pluginId } = this.currencyInfo
     const {
       pluginMnemonicKeyName,
       pluginRegularKeyName
@@ -51,7 +51,7 @@ export class EthereumPlugin extends CurrencyPlugin {
         [pluginRegularKeyName]: hexKey
       }
       this.derivePublicKey({
-        type: `wallet:${pluginName}`,
+        type: `wallet:${pluginId}`,
         id: 'fake',
         keys
       })
@@ -78,7 +78,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     } = this.currencyInfo.defaultSettings.otherSettings
     const type = walletType.replace('wallet:', '')
 
-    if (type !== this.currencyInfo.pluginName) {
+    if (type !== this.currencyInfo.pluginId) {
       throw new Error('InvalidWalletType')
     }
 
@@ -92,13 +92,13 @@ export class EthereumPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const { pluginName, defaultSettings } = this.currencyInfo
+    const { pluginId, defaultSettings } = this.currencyInfo
     const {
       hdPathCoinType,
       pluginMnemonicKeyName,
       pluginRegularKeyName
     } = defaultSettings.otherSettings
-    if (walletInfo.type !== `wallet:${pluginName}`) {
+    if (walletInfo.type !== `wallet:${pluginId}`) {
       throw new Error('Invalid wallet type')
     }
     let address
@@ -236,7 +236,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
     const encodedUri = this.encodeUriCommon(
       obj,
-      this.currencyInfo.pluginName,
+      this.currencyInfo.pluginId,
       amount
     )
     return encodedUri

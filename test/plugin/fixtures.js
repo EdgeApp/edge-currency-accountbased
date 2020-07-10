@@ -1,6 +1,6 @@
 export default [
   {
-    pluginName: 'binance',
+    pluginId: 'binance',
     WALLET_TYPE: 'wallet:binance',
     'Test Currency code': 'BNB',
     key: [
@@ -142,7 +142,7 @@ export default [
     }
   },
   {
-    pluginName: 'stellar',
+    pluginId: 'stellar',
     WALLET_TYPE: 'wallet:stellar',
     'Test Currency code': 'XLM',
     key: [
@@ -289,7 +289,7 @@ export default [
     }
   },
   {
-    pluginName: 'ripple',
+    pluginId: 'ripple',
     WALLET_TYPE: 'wallet:ripple',
     'Test Currency code': 'XRP',
     key: [
@@ -427,7 +427,7 @@ export default [
     }
   },
   {
-    pluginName: 'ethereum',
+    pluginId: 'ethereum',
     WALLET_TYPE: 'wallet:ethereum',
     'Test Currency code': 'ETH',
     key: [
@@ -566,7 +566,7 @@ export default [
     }
   },
   {
-    pluginName: 'rsk',
+    pluginId: 'rsk',
     WALLET_TYPE: 'wallet:rsk',
     'Test Currency code': 'RBTC',
     key: [
@@ -705,7 +705,7 @@ export default [
     }
   },
   {
-    pluginName: 'fio',
+    pluginId: 'fio',
     WALLET_TYPE: 'wallet:fio',
     'Test Currency code': 'FIO',
     key: [

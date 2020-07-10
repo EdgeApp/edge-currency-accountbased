@@ -46,7 +46,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'FIO',
   displayName: 'FIO',
-  pluginName: 'fio',
+  pluginId: 'fio',
   walletType: 'wallet:fio',
 
   defaultSettings,

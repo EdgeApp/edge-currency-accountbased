@@ -33,7 +33,7 @@ for (const fixture of fixtures) {
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
-  const factory = edgeCorePlugins[fixture.pluginName]
+  const factory = edgeCorePlugins[fixture.pluginId]
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
   describe(`Info for Wallet type ${WALLET_TYPE}`, function () {

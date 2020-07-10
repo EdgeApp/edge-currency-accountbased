@@ -60,7 +60,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'RBTC',
   displayName: 'RSK',
-  pluginName: 'rsk',
+  pluginId: 'rsk',
   walletType: 'wallet:rsk',
 
   defaultSettings,
