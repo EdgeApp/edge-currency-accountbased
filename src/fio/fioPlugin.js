@@ -20,6 +20,9 @@ import { currencyInfo } from './fioInfo.js'
 
 const FIO_CURRENCY_CODE = 'FIO'
 const FIO_TYPE = 'fio'
+const FIO_REG_SITE_API_KEY = 'qeP9KTU30BYhonbmF7BrNzxPUye7vV6QdwrJbcMspVlE'
+
+type DomainItem = { domain: string, free: boolean }
 
 export function checkAddress(address: string): boolean {
   const start = address.startsWith(FIO_CURRENCY_CODE)
@@ -104,7 +107,10 @@ export class FioPlugin extends CurrencyPlugin {
 export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { initOptions, io } = opts
   const { fetchCors = io.fetch } = io
-  const { tpid = 'finance@edge' } = initOptions
+  const {
+    tpid = 'finance@edge',
+    fioRegApiToken = FIO_REG_SITE_API_KEY
+  } = initOptions
 
   const connection = new FIOSDK(
     '',
@@ -202,26 +208,72 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    async buyAddressRequest(options: any): Promise<any> {
+    async buyAddressRequest(
+      options: {
+        address: string,
+        referralCode: string,
+        publicKey: string,
+        apiToken?: string
+      },
+      isFree: boolean = false
+    ): Promise<any> {
+      const headers = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      }
+      if (isFree) {
+        options.apiToken = fioRegApiToken
+      }
       try {
         const result = await fetchCors(
-          currencyInfo.defaultSettings.fioAddressRegApiUrl,
+          `${currencyInfo.defaultSettings.fioRegApiUrl}${currencyInfo.defaultSettings.fioRegApiEndPoints.buyAddress}`,
           {
             method: 'POST',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json'
-            },
+            headers,
             body: JSON.stringify(options)
           }
         )
+        if (!result.ok) {
+          const data = await result.json()
+          return {
+            error: true,
+            code: result.status,
+            ...data
+          }
+        }
         return result.json()
       } catch (e) {
         return { error: e }
       }
     },
-    getRegDomainUrl(): string {
-      return currencyInfo.defaultSettings.fioDomainRegUrl
+    getRegDomainUrl(pubKey: string, isFallback: boolean = false): string {
+      return `${currencyInfo.defaultSettings.fioDomainRegUrl}/${
+        isFallback
+          ? currencyInfo.defaultSettings.fallbackRef
+          : currencyInfo.defaultSettings.defaultRef
+      }?publicKey=${pubKey}`
+    },
+    async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
+      if (!ref) ref = currencyInfo.defaultSettings.defaultRef
+      try {
+        const result = await fetchCors(
+          `${currencyInfo.defaultSettings.fioRegApiUrl}${currencyInfo.defaultSettings.fioRegApiEndPoints.getDomains}/${ref}`,
+          {
+            method: 'GET'
+          }
+        )
+        const json = await result.json()
+        if (!result.ok) {
+          return {
+            error: true,
+            code: result.status,
+            ...json
+          }
+        }
+        return json.domains
+      } catch (e) {
+        return { error: e }
+      }
     }
   }
 
