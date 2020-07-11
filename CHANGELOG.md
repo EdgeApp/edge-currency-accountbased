@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.13 (2020-07-10)
+
+- Add get domains method to FIO plugin
+- FIO fallback ref mode
+- Add fee strings to ethEngine makeSpend() return value
+
 # 0.7.12 (2020-07-05)
 
 - Add Compound ERC20 token (COMP)
