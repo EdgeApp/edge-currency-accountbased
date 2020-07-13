@@ -247,7 +247,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       }
     },
     getRegDomainUrl(pubKey: string, isFallback: boolean = false): string {
-      return `${currencyInfo.defaultSettings.fioDomainRegUrl}/${
+      return `${currencyInfo.defaultSettings.fioDomainRegUrl}${
         isFallback
           ? currencyInfo.defaultSettings.fallbackRef
           : currencyInfo.defaultSettings.defaultRef
