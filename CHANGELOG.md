@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.14 (2020-07-12)
+
+- FIO fix domain reg url
+
 # 0.7.13 (2020-07-10)
 
 - Add get domains method to FIO plugin
