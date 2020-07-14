@@ -2,6 +2,7 @@
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
+  type EdgeFetchFunction,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -46,14 +47,17 @@ type TezosFunction =
 
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
+  fetchCors: EdgeFetchFunction
 
   constructor(
     currencyPlugin: TezosPlugin,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.tezosPlugin = currencyPlugin
+    this.fetchCors = fetchCors
   }
 
   async multicastServers(func: TezosFunction, ...params: any): Promise<any> {
@@ -93,10 +97,9 @@ export class TezosEngine extends CurrencyEngine {
 
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
-          const result = await this.io
-            .fetch(
-              `${server}/v3/number_operations/${params[0]}?type=Transaction`
-            )
+          const result = await this.fetchCors(
+            `${server}/v3/number_operations/${params[0]}?type=Transaction`
+          )
             .then(function (response) {
               return response.json()
             })
@@ -113,14 +116,11 @@ export class TezosEngine extends CurrencyEngine {
           const pagination = /mystique/.test(server)
             ? ''
             : `&p='${params[1]}&number=50`
-          const result: XtzGetTransaction = await this.io
-            .fetch(
-              `${server}/v3/operations/${params[0]}?type=Transaction` +
-                pagination
-            )
-            .then(function (response) {
-              return response.json()
-            })
+          const result: XtzGetTransaction = await this.fetchCors(
+            `${server}/v3/operations/${params[0]}?type=Transaction` + pagination
+          ).then(function (response) {
+            return response.json()
+          })
           return { server, result }
         })
         out = await asyncWaterfall(funcs)
