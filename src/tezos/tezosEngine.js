@@ -359,11 +359,13 @@ export class TezosEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     return makeSpendMutex(() => this.makeSpendInner(edgeSpendInfoIn))
   }
 
-  async makeSpendInner(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpendInner(
+    edgeSpendInfoIn: EdgeSpendInfo
+  ): Promise<EdgeTransaction> {
     const {
       edgeSpendInfo,
       currencyCode,
