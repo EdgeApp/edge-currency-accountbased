@@ -1,5 +1,6 @@
 // @flow
 import { bns } from 'biggystring'
+import { asNumber, asObject, asString } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeFetchFunction,
@@ -16,12 +17,10 @@ import {
   asyncWaterfall,
   getOtherParams,
   makeMutex,
-  promiseAny,
-  validateObject
+  promiseAny
 } from '../common/utils.js'
 import { TezosPlugin } from '../tezos/tezosPlugin.js'
 import { currencyInfo } from './tezosInfo.js'
-import { XtzTransactionSchema } from './tezosSchema.js'
 import {
   type HeadInfo,
   type OperationsContainer,
@@ -44,6 +43,22 @@ type TezosFunction =
   | 'createTransaction'
   | 'injectOperation'
   | 'silentInjection'
+
+const asProcessTezosTransaction = asObject({
+  level: asNumber,
+  timestamp: asString,
+  hash: asString,
+  sender: asObject({
+    address: asString
+  }),
+  bakerFee: asNumber,
+  allocationFee: asNumber,
+  target: asObject({
+    address: asString
+  }),
+  amount: asNumber,
+  status: asString
+})
 
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
@@ -98,13 +113,13 @@ export class TezosEngine extends CurrencyEngine {
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
-            `${server}/v3/number_operations/${params[0]}?type=Transaction`
+            `${server}/v1/accounts/${params[0]}`
           )
             .then(function (response) {
               return response.json()
             })
             .then(function (json) {
-              return json[0]
+              return json.numTransactions
             })
           return { server, result }
         })
@@ -113,11 +128,12 @@ export class TezosEngine extends CurrencyEngine {
 
       case 'getTransactions':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
-          const pagination = /mystique/.test(server)
+          const pagination = /tzkt/.test(server)
             ? ''
             : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.fetchCors(
-            `${server}/v3/operations/${params[0]}?type=Transaction` + pagination
+            `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
+              pagination
           ).then(function (response) {
             return response.json()
           })
@@ -221,22 +237,20 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   processTezosTransaction(tx: XtzGetTransaction) {
-    const valid = validateObject(tx, XtzTransactionSchema)
-    if (!valid) {
-      this.log('Invalid transaction!')
-      throw new Error('InvalidTransactionError')
-    }
+    const transaction = asProcessTezosTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: Array<string> = []
     const currencyCode = PRIMARY_CURRENCY
-    const date = new Date(tx.type.operations[0].timestamp).getTime() / 1000
-    const blockHeight = tx.type.operations[0].op_level
-    let nativeAmount = tx.type.operations[0].amount.toString()
-    const networkFee = tx.type.operations[0].fee.toString()
-    const failedOperation = tx.type.operations[0].failed
-    if (pkh === tx.type.operations[0].destination.tz) {
+    const date = new Date(transaction.timestamp).getTime() / 1000
+    const blockHeight = transaction.level
+    let nativeAmount = transaction.amount.toString()
+    const networkFee = (
+      transaction.bakerFee + transaction.allocationFee
+    ).toString()
+    const failedOperation = transaction.status === 'failed'
+    if (pkh === transaction.target.address) {
       ourReceiveAddresses.push(pkh)
-      if (tx.type.source.tz === pkh) {
+      if (transaction.sender.address === pkh) {
         nativeAmount = '-' + networkFee
       }
     } else {
