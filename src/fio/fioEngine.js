@@ -15,13 +15,13 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { asyncWaterfall, getDenomInfo } from '../common/utils'
+import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
+import { fioApiErrorCodes, FioError } from './fioError.js'
 import { FioPlugin } from './fioPlugin.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-const fioApiErrorCodes = [400, 403, 404]
 
 type FioTransactionSuperNode = {
   block_num: number,
@@ -49,22 +49,6 @@ type FioTransactionSuperNode = {
     block_num: number,
     block_time: string,
     producer_block_id: string
-  }
-}
-
-class FioError extends Error {
-  list: { field: string, message: string }[]
-  errorCode: number
-  json: any
-
-  constructor(...params: any) {
-    super(...params)
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, FioError)
-    }
-
-    this.name = 'FioError'
   }
 }
 
@@ -511,65 +495,69 @@ export class FioEngine extends CurrencyEngine {
   ): Promise<any> {
     if (actionName === 'history') {
       return asyncWaterfall(
-        this.currencyInfo.defaultSettings.historyNodeUrls.map(
-          apiUrl => async () => {
-            const result = await this.fetchCors(
-              `${apiUrl}history/${uri || ''}`,
-              {
-                method: 'POST',
-                headers: {
-                  Accept: 'application/json',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(params)
-              }
-            )
-            return result.json()
-          }
+        shuffleArray(
+          this.currencyInfo.defaultSettings.historyNodeUrls.map(
+            apiUrl => async () => {
+              const result = await this.fetchCors(
+                `${apiUrl}history/${uri || ''}`,
+                {
+                  method: 'POST',
+                  headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(params)
+                }
+              )
+              return result.json()
+            }
+          )
         )
       )
     }
 
     const res = await asyncWaterfall(
-      this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
-        const fioSDK = new FIOSDK(
-          this.walletInfo.keys.fioKey,
-          this.walletInfo.keys.publicKey,
-          apiUrl,
-          this.fetchCors,
-          undefined,
-          this.tpid
-        )
+      shuffleArray(
+        this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
+          const fioSDK = new FIOSDK(
+            this.walletInfo.keys.fioKey,
+            this.walletInfo.keys.publicKey,
+            apiUrl,
+            this.fetchCors,
+            undefined,
+            this.tpid
+          )
 
-        let res
+          let res
 
-        try {
-          switch (actionName) {
-            case 'getChainInfo':
-              res = await fioSDK.transactions.getChainInfo()
-              break
-            default:
-              res = await fioSDK.genericAction(actionName, params)
-          }
-        } catch (e) {
-          // handle FIO API error
-          if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
-            res = {
-              isError: true,
-              data: {
-                code: e.errorCode,
-                message: e.message,
-                json: e.json,
-                list: e.list
-              }
+          try {
+            switch (actionName) {
+              case 'getChainInfo':
+                res = await fioSDK.transactions.getChainInfo()
+                break
+              default:
+                res = await fioSDK.genericAction(actionName, params)
             }
-          } else {
-            throw e
+          } catch (e) {
+            // handle FIO API error
+            if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+              res = {
+                isError: true,
+                data: {
+                  code: e.errorCode,
+                  message: e.message,
+                  json: e.json,
+                  list: e.list
+                }
+              }
+            } else {
+              throw e
+            }
           }
-        }
 
-        return res
-      })
+          return res
+        })
+      )
     )
 
     if (res.isError) {
