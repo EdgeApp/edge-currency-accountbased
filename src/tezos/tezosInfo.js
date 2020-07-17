@@ -22,7 +22,7 @@ const otherSettings: TezosSettings = {
     //  'https://teznode.letzbake.com',
     'https://mainnet.tezrpc.me'
   ],
-  tezosApiServers: ['https://mystique.tzkt.io', 'https://tzsimple.tulip.tools']
+  tezosApiServers: ['https://api.tzkt.io']
 }
 
 const defaultSettings: any = {

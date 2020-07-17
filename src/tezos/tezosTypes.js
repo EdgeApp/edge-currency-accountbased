@@ -4,16 +4,19 @@ export type TezosSettings = {
 }
 
 export type XtzGetTransaction = {
-  block_hash: string,
+  level: number,
+  timestamp: string,
   hash: string,
-  network_hash: string,
-  type: {
-    kind: string,
-    operations: Array<any>,
-    source: {
-      tz: string
-    }
-  }
+  sender: {
+    address: string
+  },
+  bakerFee: number,
+  allocationFee: number,
+  target: {
+    address: string
+  },
+  amount: number,
+  status: string
 }
 
 export type UriTransaction = {
