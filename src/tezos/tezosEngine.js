@@ -1,6 +1,5 @@
 // @flow
 import { bns } from 'biggystring'
-import { asNumber, asObject, asString } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeFetchFunction,
@@ -25,7 +24,8 @@ import {
   type HeadInfo,
   type OperationsContainer,
   type TezosOperation,
-  type XtzGetTransaction
+  type XtzGetTransaction,
+  asXtzGetTransaction
 } from './tezosTypes.js'
 
 const ADDRESS_POLL_MILLISECONDS = 15000
@@ -43,22 +43,6 @@ type TezosFunction =
   | 'createTransaction'
   | 'injectOperation'
   | 'silentInjection'
-
-const asProcessTezosTransaction = asObject({
-  level: asNumber,
-  timestamp: asString,
-  hash: asString,
-  sender: asObject({
-    address: asString
-  }),
-  bakerFee: asNumber,
-  allocationFee: asNumber,
-  target: asObject({
-    address: asString
-  }),
-  amount: asNumber,
-  status: asString
-})
 
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
@@ -237,7 +221,7 @@ export class TezosEngine extends CurrencyEngine {
   }
 
   processTezosTransaction(tx: XtzGetTransaction) {
-    const transaction = asProcessTezosTransaction(tx)
+    const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: Array<string> = []
     const currencyCode = PRIMARY_CURRENCY
