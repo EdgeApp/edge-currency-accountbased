@@ -1,23 +1,27 @@
 // @flow
+
+import { asNumber, asObject, asString } from 'cleaners'
 export type TezosSettings = {
   tezosRpcNodes: Array<string>
 }
 
-export type XtzGetTransaction = {
-  level: number,
-  timestamp: string,
-  hash: string,
-  sender: {
-    address: string
-  },
-  bakerFee: number,
-  allocationFee: number,
-  target: {
-    address: string
-  },
-  amount: number,
-  status: string
-}
+export const asXtzGetTransaction = asObject({
+  level: asNumber,
+  timestamp: asString,
+  hash: asString,
+  sender: asObject({
+    address: asString
+  }),
+  bakerFee: asNumber,
+  allocationFee: asNumber,
+  target: asObject({
+    address: asString
+  }),
+  amount: asNumber,
+  status: asString
+})
+
+export type XtzGetTransaction = $Call<typeof asXtzGetTransaction>
 
 export type UriTransaction = {
   kind: 'transaction',
