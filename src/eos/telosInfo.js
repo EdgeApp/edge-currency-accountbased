@@ -24,7 +24,7 @@ export const eosJsConfig: EosJsConfig = {
 
 const otherSettings: EosSettings = {
   eosActivationServers: [
-    'https://eos-pay-sf2.edgesecure.co',
+    'https://eospay.edge.app',
     'https://account.teloscrew.com'
   ],
   // used for the following routines, is Hyperion v2:

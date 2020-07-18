@@ -23,7 +23,7 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: ['https://eos-pay-sf2.edgesecure.co'],
+  eosActivationServers: ['https://eospay.edge.app'],
   eosHyperionNodes: ['https://api.eossweden.org', 'https://mainnet.eosn.io'],
   eosNodes: [
     'https://api.redpacketeos.com',
