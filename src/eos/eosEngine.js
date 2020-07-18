@@ -149,7 +149,8 @@ export class EosEngine extends CurrencyEngine {
                 const response = await fetchCors(uri, options)
                 return response.json()
               }
-            )
+            ),
+            15000
           )
           return out
         } catch (e) {
