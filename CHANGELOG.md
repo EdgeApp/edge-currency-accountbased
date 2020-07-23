@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.15 (2020-07-23)
+
+- Add new Tezos API
+- FIO - fix multicastServers
+
 # 0.7.14 (2020-07-12)
 
 - FIO fix domain reg url
