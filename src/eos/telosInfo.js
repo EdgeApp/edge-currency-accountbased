@@ -57,6 +57,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'TLOS',
   displayName: 'Telos',
+  pluginId: 'telos',
   pluginName: 'telos',
   // do we need plugin name?
   walletType: 'wallet:telos',

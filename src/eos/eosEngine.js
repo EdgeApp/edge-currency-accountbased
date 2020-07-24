@@ -154,6 +154,7 @@ export class EosEngine extends CurrencyEngine {
           )
           return out
         } catch (e) {
+          this.log(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
         }
       }

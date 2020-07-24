@@ -85,6 +85,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'EOS',
   displayName: 'EOS',
   pluginId: 'eos',
+  pluginName: 'eos',
   walletType: 'wallet:eos',
 
   defaultSettings,
