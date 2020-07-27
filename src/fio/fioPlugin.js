@@ -228,9 +228,16 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return false
       }
     },
-    async validateAccount(fioName: string): Promise<boolean> {
+    async validateAccount(
+      fioName: string,
+      isDomain: boolean = false
+    ): Promise<boolean> {
       try {
-        if (!FIOSDK.isFioAddressValid(fioName)) return false
+        if (isDomain) {
+          if (!FIOSDK.isFioDomainValid(fioName)) return false
+        } else {
+          if (!FIOSDK.isFioAddressValid(fioName)) return false
+        }
       } catch (e) {
         return false
       }
@@ -299,13 +306,6 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e) {
         return { error: e }
       }
-    },
-    getRegDomainUrl(pubKey: string, isFallback: boolean = false): string {
-      return `${currencyInfo.defaultSettings.fioDomainRegUrl}${
-        isFallback
-          ? currencyInfo.defaultSettings.fallbackRef
-          : currencyInfo.defaultSettings.defaultRef
-      }?publicKey=${pubKey}`
     },
     async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
       if (!ref) ref = currencyInfo.defaultSettings.defaultRef
