@@ -77,19 +77,13 @@ export class OneEngine extends CurrencyEngine {
       const currencyCode = PRIMARY_CURRENCY
       const ourReceiveAddresses: Array<string> = []
 
-      ourReceiveAddresses.push(tx.to)
-
-      let name
-
-      if (this.walletLocalData.publicKey === tx.to) {
-        name = tx.from
-      } else {
-        name = tx.to
-      }
-
-      let nativeAmount = String(Number(tx.value))
+      let nativeAmount = bns.add('0', tx.value)
 
       const networkFee = bns.mul(tx.gas, tx.gasPrice)
+
+      if (this.walletLocalData.publicKey === tx.to) {
+        ourReceiveAddresses.push(tx.to)
+      }
 
       if (tx.to !== this.walletLocalData.publicKey) {
         nativeAmount = '-' + bns.add(tx.value, networkFee)
@@ -103,13 +97,11 @@ export class OneEngine extends CurrencyEngine {
         currencyCode,
         blockHeight: Number(tx.blockNumber),
         nativeAmount,
-        networkFee: String(networkFee),
+        networkFee: networkFee,
         ourReceiveAddresses,
         signedTx: '',
         otherParams: {},
-        metadata: {
-          name
-        }
+        metadata: {}
       }
 
       this.addTransaction(currencyCode, edgeTransaction)
@@ -195,12 +187,13 @@ export class OneEngine extends CurrencyEngine {
         .asOne()
         .toEther()
 
-      this.walletLocalData.totalBalances.ONE = balance
+      if (this.walletLocalData.totalBalances.ONE !== balance) {
+        this.walletLocalData.totalBalances.ONE = balance
 
-      // this.tokenCheckBalanceStatus.ONE = 1
-      // this.updateOnAddressesChecked()
-
-      this.currencyEngineCallbacks.onBalanceChanged('ONE', balance)
+        this.currencyEngineCallbacks.onBalanceChanged('ONE', balance)
+        // this.tokenCheckBalanceStatus.ONE = 1
+        // this.updateOnAddressesChecked()
+      }
     } catch (e) {
       this.log(`ONE Error fetching address info: ${JSON.stringify(e)}`)
       this.log(`ONE e.code: ${JSON.stringify(e.code)}`)
@@ -263,9 +256,9 @@ export class OneEngine extends CurrencyEngine {
       throw new Error('Error: no amount specified')
     }
 
-    if (!nativeAmount || nativeAmount === '0') {
-      throw new NoAmountSpecifiedError()
-    }
+    // if (!nativeAmount || nativeAmount === '0') {
+    //   throw new NoAmountSpecifiedError()
+    // }
 
     const { nativeNetworkFee, gasLimit, gasPrice } = this.otherData
 

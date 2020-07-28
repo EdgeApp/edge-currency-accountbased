@@ -25,12 +25,10 @@ export class OnePlugin extends CurrencyPlugin {
   harmonyApi: Harmony
   harmonyApiSubscribers: { [walletId: string]: boolean }
   // connectionPool: Object
-  connectionClients: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo) {
     super(io, 'one', currencyInfo)
     // this.connectionPool = new RippledWsClientPool()
-    this.connectionClients = {}
     this.harmonyApi = {}
     this.harmonyApiSubscribers = {}
   }
