@@ -19,7 +19,7 @@ import {
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { OneEngine } from './oneEngine.js'
-import { currencyInfo, URL_MAINNET } from './oneInfo.js'
+import { GAS_LIMIT, GAS_PRICE, currencyInfo, URL_MAINNET } from './oneInfo'
 
 export class OnePlugin extends CurrencyPlugin {
   harmonyApi: Harmony
@@ -171,8 +171,13 @@ export function makeOnePlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    currencyEngine.otherData.gasPrice = GAS_PRICE
+    currencyEngine.otherData.gasLimit = GAS_LIMIT
+
     if (!currencyEngine.otherData.recommendedFee) {
-      currencyEngine.otherData.recommendedFee = '0'
+      currencyEngine.otherData.recommendedFee = String(
+        GAS_PRICE * GAS_LIMIT
+      )
     }
 
     const out: EdgeCurrencyEngine = currencyEngine

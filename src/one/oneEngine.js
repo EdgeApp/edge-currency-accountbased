@@ -1,6 +1,5 @@
 // @flow
 
-import { Unit } from '@harmony-js/utils'
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
@@ -12,8 +11,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getOtherParams } from '../common/utils.js'
-import { currencyInfo } from './oneInfo.js'
+import { getOtherParams, validateObject } from '../common/utils.js'
 import { OnePlugin } from './onePlugin.js'
 import {
   type OneBalanceChange,
@@ -22,6 +20,8 @@ import {
   type OneGetTransactions,
   type OneWalletOtherData
 } from './oneTypes.js'
+import { currencyInfo } from './oneInfo'
+import { OneGetTransactionSchema } from '../one/oneSchema'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -47,72 +47,75 @@ export class OneEngine extends CurrencyEngine {
   }
 
   async checkServerInfoInnerLoop() {
-    const GAS_PRICE = new Unit('1').asGwei().toHex()
-    const GAS_LIMIT_BASE = new Unit('21000').asWei().toHex()
+    try {
+      const res: OneGetLastHeader = await this.onePlugin.harmonyApi.blockchain.messenger.send(
+        'hmyv2_latestHeader',
+        []
+      )
 
-    const nativeNetworkFee = String(GAS_PRICE * GAS_LIMIT_BASE)
-
-    this.otherData.recommendedFee = nativeNetworkFee
-    this.walletLocalDataDirty = true
-
-    const res: OneGetLastHeader = await this.onePlugin.harmonyApi.blockchain.messenger.send(
-      'hmyv2_latestHeader',
-      []
-    )
-
-    if (
-      res.result &&
-      this.walletLocalData.blockHeight !== res.result.blockNumber
-    ) {
-      this.checkDroppedTransactionsThrottled()
-      this.walletLocalData.blockHeight = res.result.blockNumber // Convert to decimal
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onBlockHeightChanged(
-        this.walletLocalData.blockHeight
+      if (
+        res.result &&
+        this.walletLocalData.blockHeight !== res.result.blockNumber
+      ) {
+        this.checkDroppedTransactionsThrottled()
+        this.walletLocalData.blockHeight = res.result.blockNumber // Convert to decimal
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
+        )
+      }
+    } catch (e) {
+      this.log(
+        `ONE checkServerInfoInnerLoop e.message: ${JSON.stringify(e.message)}`
       )
     }
   }
 
   processOneTransaction(tx: OneGetTransaction) {
-    const currencyCode = PRIMARY_CURRENCY
-    const ourReceiveAddresses: Array<string> = []
+    const valid = validateObject(tx, OneGetTransactionSchema)
+    if (valid) {
+      const currencyCode = PRIMARY_CURRENCY
+      const ourReceiveAddresses: Array<string> = []
 
-    ourReceiveAddresses.push(tx.to)
+      ourReceiveAddresses.push(tx.to)
 
-    let name
+      let name
 
-    if (this.walletLocalData.publicKey === tx.to) {
-      name = tx.from
-    } else {
-      name = tx.to
-    }
-
-    let nativeAmount = String(Number(tx.value))
-
-    const networkFee = bns.mul(tx.gas, tx.gasPrice)
-
-    if (tx.to !== this.walletLocalData.publicKey) {
-      nativeAmount = '-' + bns.add(tx.value, networkFee)
-    }
-
-    const date = Number(tx.timestamp)
-
-    const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
-      date,
-      currencyCode,
-      blockHeight: Number(tx.blockNumber),
-      nativeAmount,
-      networkFee: String(networkFee),
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams: {},
-      metadata: {
-        name
+      if (this.walletLocalData.publicKey === tx.to) {
+        name = tx.from
+      } else {
+        name = tx.to
       }
-    }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+      let nativeAmount = String(Number(tx.value))
+
+      const networkFee = bns.mul(tx.gas, tx.gasPrice)
+
+      if (tx.to !== this.walletLocalData.publicKey) {
+        nativeAmount = '-' + bns.add(tx.value, networkFee)
+      }
+
+      const date = Number(tx.timestamp)
+
+      const edgeTransaction: EdgeTransaction = {
+        txid: tx.hash,
+        date,
+        currencyCode,
+        blockHeight: Number(tx.blockNumber),
+        nativeAmount,
+        networkFee: String(networkFee),
+        ourReceiveAddresses,
+        signedTx: '',
+        otherParams: {},
+        metadata: {
+          name
+        }
+      }
+
+      this.addTransaction(currencyCode, edgeTransaction)
+    } else {
+      this.log('ONE Invalid transaction data')
+    }
   }
 
   async checkTransactionsInnerLoop() {
@@ -264,10 +267,7 @@ export class OneEngine extends CurrencyEngine {
       throw new NoAmountSpecifiedError()
     }
 
-    const GAS_PRICE = new Unit('1').asGwei().toHex()
-    const GAS_LIMIT_BASE = new Unit('21000').asWei().toHex()
-
-    const nativeNetworkFee = String(GAS_PRICE * GAS_LIMIT_BASE)
+    const { nativeNetworkFee, gasLimit, gasPrice } = this.otherData
 
     const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
 
@@ -281,8 +281,8 @@ export class OneEngine extends CurrencyEngine {
       from: senderAddress,
       to: receiverAddress,
       value: nativeAmount,
-      gasLimit: GAS_LIMIT_BASE,
-      gasPrice: GAS_PRICE,
+      gasLimit,
+      gasPrice,
       shardID: 0,
       toShardID: 0
     }

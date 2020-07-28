@@ -1,11 +1,14 @@
 /* global */
 // @flow
 
+import { Unit } from '@harmony-js/utils'
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { type OneSettings } from './oneTypes.js'
-
 export const URL_MAINNET = `https://api.s0.t.hmny.io`
+
+export const GAS_PRICE = new Unit('1').asGwei().toHex()
+export const GAS_LIMIT = new Unit('21000').asWei().toHex()
 
 const otherSettings: OneSettings = {
   oneServers: [URL_MAINNET]
