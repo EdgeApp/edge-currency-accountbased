@@ -16,41 +16,18 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
+import { HISTORY_NODE_ACTIONS, HISTORY_NODE_OFFSET } from './fioConst.js'
 import { fioApiErrorCodes, FioError } from './fioError.js'
 import { FioPlugin } from './fioPlugin.js'
+import {
+  type FioHistoryNodeAction,
+  asFioHistoryNodeAction,
+  asHistoryResponse
+} from './fioSchema.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-
-type FioTransactionSuperNode = {
-  block_num: number,
-  block_time: string,
-  action_trace: {
-    receiver: string,
-    act: {
-      account: string,
-      name: string,
-      authorization: [],
-      data: {
-        payee_public_key: string,
-        amount: number,
-        max_fee: number,
-        actor: string,
-        tpid: string,
-        quantity: string,
-        memo: string,
-        to: string,
-        from: string
-      },
-      hex_data: string
-    },
-    trx_id: string,
-    block_num: number,
-    block_time: string,
-    producer_block_id: string
-  }
-}
 
 export class FioEngine extends CurrencyEngine {
   fetchCors: EdgeFetchFunction
@@ -265,16 +242,18 @@ export class FioEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  processTransaction(action: FioTransactionSuperNode, actor: string): number {
+  processTransaction(action: FioHistoryNodeAction, actor: string): number {
     const {
       act: { name: trxName, data }
     } = action.action_trace
     let nativeAmount
     let actorSender
-    let name
-    let memo = ''
     let networkFee = '0'
-    let currencyCode = 'FIO'
+    let otherParams: {
+      isTransferProcessed?: boolean,
+      isFeeProcessed?: boolean
+    } = {}
+    const currencyCode = this.currencyInfo.currencyCode
     const ourReceiveAddresses = []
     if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
       return action.block_num
@@ -282,20 +261,43 @@ export class FioEngine extends CurrencyEngine {
     if (trxName !== 'trnsfiopubky' && trxName !== 'transfer') {
       return action.block_num
     }
+
+    // Transfer funds transaction
     if (trxName === 'trnsfiopubky') {
       nativeAmount = data.amount.toString()
       actorSender = data.actor
-      memo = `Recipient Address: ${data.payee_public_key}`
       if (data.payee_public_key === this.walletInfo.keys.publicKey) {
-        name = actorSender
         ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
         if (actorSender === actor) {
           nativeAmount = '0'
         }
       } else {
-        name = data.payee_public_key
         nativeAmount = `-${nativeAmount}`
       }
+
+      const index = this.findTransaction(
+        currencyCode,
+        action.action_trace.trx_id
+      )
+      // Check if fee transaction have already added
+      if (index > -1) {
+        const existingTrx = this.transactionList[currencyCode][index]
+        otherParams = { ...existingTrx.otherParams }
+        if (bns.gte(nativeAmount, '0')) {
+          return action.block_num
+        }
+        if (otherParams.isTransferProcessed) {
+          return action.block_num
+        }
+        if (otherParams.isFeeProcessed) {
+          nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
+        } else {
+          console.log(
+            'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
+          )
+        }
+      }
+      otherParams.isTransferProcessed = true
 
       const edgeTransaction: EdgeTransaction = {
         txid: action.action_trace.trx_id,
@@ -303,22 +305,18 @@ export class FioEngine extends CurrencyEngine {
         currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
         nativeAmount,
-        networkFee: '0',
+        networkFee,
         parentNetworkFee: '0',
         ourReceiveAddresses,
         signedTx: '',
-        otherParams: {},
-        metadata: {
-          name,
-          notes: memo
-        }
+        otherParams
       }
       this.addTransaction(currencyCode, edgeTransaction)
     }
 
+    // Fee transaction
     if (trxName === 'transfer') {
-      const [amount, cCode] = data.quantity.split(' ')
-      currencyCode = cCode
+      const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (!denom) {
@@ -326,137 +324,144 @@ export class FioEngine extends CurrencyEngine {
         return 0
       }
       networkFee = bns.mul(exchangeAmount, denom.multiplier)
+      nativeAmount = `-${networkFee}`
+
       const index = this.findTransaction(
         currencyCode,
         action.action_trace.trx_id
       )
-      const feeTrxIndex = this.walletLocalData.otherData.feeTransactions.findIndex(
-        trxId => trxId === action.action_trace.trx_id
-      )
-      if (index > -1 && feeTrxIndex < 0) {
+      // Check if transfer transaction have already added
+      if (index > -1) {
         const existingTrx = this.transactionList[currencyCode][index]
-        if (existingTrx.networkFee === '0') {
-          const edgeTransaction: EdgeTransaction = {
-            txid: existingTrx.txid,
-            date: existingTrx.date,
-            currencyCode,
-            blockHeight: existingTrx.blockHeight,
-            nativeAmount: bns.sub(existingTrx.nativeAmount, networkFee),
-            networkFee,
-            signedTx: existingTrx.signedTx,
-            ourReceiveAddresses: existingTrx.ourReceiveAddresses,
-            otherParams: existingTrx.otherParams,
-            metadata: existingTrx.metadata
-          }
-
-          this.addTransaction(currencyCode, edgeTransaction)
+        otherParams = { ...existingTrx.otherParams }
+        if (bns.gte(existingTrx.nativeAmount, '0')) {
+          return action.block_num
         }
-      } else {
-        memo = data.memo
-        name = data.to
-        if (feeTrxIndex < 0) {
-          this.walletLocalData.otherData.feeTransactions.push(
-            action.action_trace.trx_id
+        if (otherParams.isFeeProcessed) {
+          return action.block_num
+        }
+        if (otherParams.isTransferProcessed) {
+          nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
+        } else {
+          console.log(
+            'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
           )
         }
-        const edgeTransaction: EdgeTransaction = {
-          txid: action.action_trace.trx_id,
-          date: Date.parse(action.block_time) / 1000,
-          currencyCode,
-          blockHeight: action.block_num > 0 ? action.block_num : 0,
-          nativeAmount: `-${networkFee}`,
-          networkFee: '0',
-          signedTx: '',
-          ourReceiveAddresses: [],
-          otherParams: {},
-          metadata: {
-            name,
-            notes: memo
-          }
-        }
-        this.addTransaction(currencyCode, edgeTransaction)
       }
+
+      otherParams.isFeeProcessed = true
+      const edgeTransaction: EdgeTransaction = {
+        txid: action.action_trace.trx_id,
+        date: Date.parse(action.block_time) / 1000,
+        currencyCode,
+        blockHeight: action.block_num > 0 ? action.block_num : 0,
+        nativeAmount,
+        networkFee,
+        signedTx: '',
+        ourReceiveAddresses: [],
+        otherParams
+      }
+      this.addTransaction(currencyCode, edgeTransaction)
     }
 
     return action.block_num
   }
 
-  async checkTransactions(): Promise<boolean> {
+  async checkTransactions(historyNodeIndex: number = 0): Promise<boolean> {
+    if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
+      return false
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const fioSDK = new FIOSDK(
       '',
       '',
-      this.currencyInfo.defaultSettings.historyNodeUrls[0],
+      this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex],
       this.fetchCors,
       undefined,
       this.tpid
     )
     const actor = fioSDK.transactions.getActor(this.walletInfo.keys.publicKey)
     try {
-      const lastActionObject = await this.multicastServers(
-        'history',
+      const lastActionObject = await this.requestHistory(
+        historyNodeIndex,
         {
           account_name: actor,
           pos: -1,
           offset: -1
         },
-        this.currencyInfo.defaultSettings.historyNodeActions.getActions
+        HISTORY_NODE_ACTIONS.getActions
       )
 
-      if (lastActionObject.actions && lastActionObject.actions.length) {
+      if (lastActionObject.error && lastActionObject.error.noNodeForIndex) {
+        // no more history nodes left
+        return false
+      }
+
+      asHistoryResponse(lastActionObject)
+      if (lastActionObject.actions.length) {
         lastActionSeqNumber = lastActionObject.actions[0].account_action_seq
+      } else {
+        // if no transactions at all
+        return true
       }
     } catch (e) {
-      console.log(e)
-      this.log(e)
+      return this.checkTransactions(++historyNodeIndex)
     }
 
-    if (!lastActionSeqNumber) {
-      return true
-    }
+    let pos = lastActionSeqNumber
+    let finish = false
 
-    const limit = 10
-    let offset = 0
-
-    // history node saves up to 1000 records, so if seq number is more than 1000 we set pos to smallest value
-    if (lastActionSeqNumber > 1000) {
-      offset = lastActionSeqNumber - 1000
-    }
-
-    while (true) {
-      this.log('looping through checkTransactions')
-      const actionsObject = await this.multicastServers(
-        'history',
-        {
-          account_name: actor,
-          pos: offset,
-          offset: limit
-        },
-        this.currencyInfo.defaultSettings.historyNodeActions.getActions
-      )
-      let actions = []
-      actionsObject.actions.sort((a, b) => a.block_num - b.block_num)
-
-      if (actionsObject.actions && actionsObject.actions.length > 0) {
-        actions = actionsObject.actions
-      } else {
+    while (!finish) {
+      if (pos < 0) {
         break
       }
-
-      for (let i = 0; i < actions.length; i++) {
-        const action = actions[i]
-        const blockNum = this.processTransaction(action, actor)
-
-        if (blockNum > newHighestTxHeight) {
-          newHighestTxHeight = blockNum
+      let actionsObject
+      try {
+        actionsObject = await this.requestHistory(
+          historyNodeIndex,
+          {
+            account_name: actor,
+            pos,
+            offset: -HISTORY_NODE_OFFSET + 1
+          },
+          HISTORY_NODE_ACTIONS.getActions
+        )
+        if (actionsObject.error && actionsObject.error.noNodeForIndex) {
+          return false
         }
-      }
 
-      if (!actions.length || actions.length < limit) {
-        break
+        let actions = []
+
+        if (actionsObject.actions && actionsObject.actions.length > 0) {
+          actions = actionsObject.actions
+        } else {
+          break
+        }
+
+        for (let i = actions.length - 1; i > -1; i--) {
+          const action = actions[i]
+          asFioHistoryNodeAction(action)
+          const blockNum = this.processTransaction(action, actor)
+
+          if (blockNum > newHighestTxHeight) {
+            newHighestTxHeight = blockNum
+          } else if (
+            (blockNum === newHighestTxHeight &&
+              i === HISTORY_NODE_OFFSET - 1) ||
+            blockNum < this.walletLocalData.otherData.highestTxHeight
+          ) {
+            finish = true
+            break
+          }
+        }
+
+        if (!actions.length || actions.length < HISTORY_NODE_OFFSET) {
+          break
+        }
+        pos -= HISTORY_NODE_OFFSET
+      } catch (e) {
+        return this.checkTransactions(++historyNodeIndex)
       }
-      offset += limit
     }
     if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
       this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
@@ -488,34 +493,30 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
-  async multicastServers(
-    actionName: string,
-    params?: any,
-    uri?: string
+  async requestHistory(
+    nodeIndex: number,
+    params: {
+      account_name: string,
+      pos: number,
+      offset: number
+    },
+    uri: string
   ): Promise<any> {
-    if (actionName === 'history') {
-      return asyncWaterfall(
-        shuffleArray(
-          this.currencyInfo.defaultSettings.historyNodeUrls.map(
-            apiUrl => async () => {
-              const result = await this.fetchCors(
-                `${apiUrl}history/${uri || ''}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(params)
-                }
-              )
-              return result.json()
-            }
-          )
-        )
-      )
-    }
+    if (!this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex])
+      return { error: { noNodeForIndex: true } }
+    const apiUrl = this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex]
+    const result = await this.fetchCors(`${apiUrl}history/${uri || ''}`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    })
+    return result.json()
+  }
 
+  async multicastServers(actionName: string, params?: any): Promise<any> {
     const res = await asyncWaterfall(
       shuffleArray(
         this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
@@ -649,7 +650,6 @@ export class FioEngine extends CurrencyEngine {
   async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.highestTxHeight = 0
-    this.walletLocalData.otherData.feeTransactions = []
     this.walletLocalData.otherData.fioAddresses = []
   }
 
