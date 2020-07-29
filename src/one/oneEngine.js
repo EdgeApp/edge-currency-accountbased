@@ -11,7 +11,11 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getOtherParams, validateObject } from '../common/utils.js'
+import {
+  getOtherParams,
+  validateObject,
+  asyncWaterfall
+} from '../common/utils.js'
 import { OnePlugin } from './onePlugin.js'
 import {
   type OneBalanceChange,
@@ -31,6 +35,14 @@ const PRIMARY_CURRENCY = currencyInfo.currencyCode
 
 const maxAttempts = 5
 
+type harmonyActions =
+  | 'hmyv2_latestHeader'
+  | 'hmyv2_getTransactionsCount'
+  | 'hmyv2_getTransactionsHistory'
+  | 'getBalance'
+  | 'signTransaction'
+  | 'sendTransaction'
+
 export class OneEngine extends CurrencyEngine {
   onePlugin: OnePlugin
   otherData: OneWalletOtherData
@@ -46,10 +58,77 @@ export class OneEngine extends CurrencyEngine {
     // this.callbacksSetup = false
   }
 
+  async multicastServers(
+    actionName: harmonyActions,
+    params?: any
+  ): Promise<any> {
+    const { oneServers } = this.currencyInfo.defaultSettings.otherSettings
+    const { harmonyApi } = this.onePlugin
+    let funcs = []
+
+    switch (actionName) {
+      case 'hmyv2_latestHeader':
+      case 'hmyv2_getTransactionsCount':
+      case 'hmyv2_getTransactionsHistory':
+        funcs = oneServers.map(apiUrl => async () => {
+          harmonyApi.blockchain.messenger.provider.url = apiUrl
+
+          const res = await harmonyApi.blockchain.messenger.send(
+            actionName,
+            params
+          )
+
+          return res
+        })
+        break
+
+      case 'getBalance':
+        funcs = oneServers.map(apiUrl => async () => {
+          harmonyApi.blockchain.messenger.provider.url = apiUrl
+
+          const res = await harmonyApi.blockchain.getBalance(params)
+
+          return res
+        })
+        break
+
+      case 'signTransaction':
+        funcs = oneServers.map(apiUrl => async () => {
+          harmonyApi.blockchain.messenger.provider.url = apiUrl
+
+          const res = await harmonyApi.wallet.signTransaction(
+            params[0],
+            params[1]
+          )
+
+          return res
+        })
+        break
+
+      case 'sendTransaction':
+        funcs = oneServers.map(apiUrl => async () => {
+          harmonyApi.blockchain.messenger.provider.url = apiUrl
+
+          const signedTransaction = await harmonyApi.transactions.recover(
+            params
+          )
+
+          const res = await signedTransaction.sendTransaction()
+
+          return res
+        })
+        break
+    }
+
+    const result = await asyncWaterfall(funcs)
+
+    return result
+  }
+
   async checkServerInfoInnerLoop() {
     try {
-      const res: OneGetLastHeader = await this.onePlugin.harmonyApi.blockchain.messenger.send(
-        'hmyv2_latestHeader',
+      const res: OneGetLastHeader = await this.multicastServers(
+        'getLatestHeader',
         []
       )
 
@@ -120,7 +199,7 @@ export class OneEngine extends CurrencyEngine {
         this.otherData.numberTransactions = 0
       }
 
-      const res: OneGetLastHeader = await this.onePlugin.harmonyApi.blockchain.messenger.send(
+      const res: OneGetLastHeader = await this.multicastServers(
         'hmyv2_getTransactionsCount',
         [address, 'ALL']
       )
@@ -130,7 +209,7 @@ export class OneEngine extends CurrencyEngine {
       if (num > this.otherData.numberTransactions) {
         this.tokenCheckTransactionsStatus.ONE = 0.5
 
-        const res: OneGetTransactions = await this.onePlugin.harmonyApi.blockchain.messenger.send(
+        const res: OneGetTransactions = await this.multicastServers(
           'hmyv2_getTransactionsHistory',
           [
             {
@@ -177,11 +256,9 @@ export class OneEngine extends CurrencyEngine {
     try {
       const address = this.walletLocalData.publicKey
 
-      const res: OneBalanceChange = await this.onePlugin.harmonyApi.blockchain.getBalance(
-        {
-          address
-        }
-      )
+      const res: OneBalanceChange = await this.multicastServers('getBalance', {
+        address
+      })
 
       const balance = new this.onePlugin.harmonyApi.utils.Unit(res.result)
         .asOne()
@@ -211,17 +288,7 @@ export class OneEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    try {
-      await this.onePlugin.connectApi(this.walletId)
-    } catch (e) {
-      this.log(`Error connecting to server`, String(e))
-      setTimeout(() => {
-        if (this.engineOn) {
-          this.startEngine()
-        }
-      }, 10000)
-      return
-    }
+
     this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
@@ -230,7 +297,6 @@ export class OneEngine extends CurrencyEngine {
 
   async killEngine() {
     await super.killEngine()
-    await this.onePlugin.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -256,13 +322,13 @@ export class OneEngine extends CurrencyEngine {
       throw new Error('Error: no amount specified')
     }
 
-    // if (!nativeAmount || nativeAmount === '0') {
-    //   throw new NoAmountSpecifiedError()
-    // }
+    if (!nativeAmount || nativeAmount === '0') {
+      throw new NoAmountSpecifiedError()
+    }
 
-    const { nativeNetworkFee, gasLimit, gasPrice } = this.otherData
+    const { recommendedFee, gasLimit, gasPrice } = this.otherData
 
-    const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+    const totalTxAmount = bns.add(recommendedFee, nativeAmount)
 
     if (bns.gt(totalTxAmount, nativeBalance)) {
       throw new InsufficientFundsError()
@@ -284,7 +350,7 @@ export class OneEngine extends CurrencyEngine {
       txParams
     }
 
-    nativeAmount = bns.add(nativeAmount, nativeNetworkFee)
+    nativeAmount = bns.add(nativeAmount, recommendedFee)
     nativeAmount = '-' + nativeAmount
 
     const edgeTransaction: EdgeTransaction = {
@@ -293,7 +359,7 @@ export class OneEngine extends CurrencyEngine {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: nativeNetworkFee, // networkFee
+      networkFee: recommendedFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams
@@ -318,10 +384,10 @@ export class OneEngine extends CurrencyEngine {
       txParams
     )
 
-    const signedTransaction = await this.onePlugin.harmonyApi.wallet.signTransaction(
+    const signedTransaction = await this.multicastServers('signTransaction', [
       harmonyTx,
       signer
-    )
+    ])
 
     edgeTransaction.signedTx = signedTransaction.getRawTransaction()
     edgeTransaction.date = Date.now() / 1000
@@ -334,11 +400,10 @@ export class OneEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const signedTransaction = await this.onePlugin.harmonyApi.transactions.recover(
+    const [sentTxn, txnHash] = await this.multicastServers(
+      'sendTransaction',
       edgeTransaction.signedTx
     )
-
-    const [sentTxn, txnHash] = await signedTransaction.sendTransaction()
 
     edgeTransaction.txid = txnHash
 

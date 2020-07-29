@@ -19,46 +19,32 @@ import {
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { OneEngine } from './oneEngine.js'
-import { GAS_LIMIT, GAS_PRICE, currencyInfo, URL_MAINNET } from './oneInfo'
+import { GAS_LIMIT, GAS_PRICE, currencyInfo } from './oneInfo'
 
 export class OnePlugin extends CurrencyPlugin {
   harmonyApi: Harmony
-  harmonyApiSubscribers: { [walletId: string]: boolean }
+  harmonyRpcNodes: Array<string>
   // connectionPool: Object
 
   constructor(io: EdgeIo) {
     super(io, 'one', currencyInfo)
-    // this.connectionPool = new RippledWsClientPool()
-    this.harmonyApi = {}
-    this.harmonyApiSubscribers = {}
-  }
 
-  async connectApi(walletId?: string): Promise<void> {
-    if (!this.harmonyApi.blockchain) {
-      this.harmonyApi = new Harmony(URL_MAINNET, {
-        // chainType set to Harmony
-        chainType: ChainType.Harmony,
-        // chainType set to HmyLocal
-        chainId: ChainID.HmyMainnet
-      })
+    this.harmonyRpcNodes = []
+
+    for (const rpcNode of currencyInfo.defaultSettings.otherSettings
+      .oneServers) {
+      this.harmonyRpcNodes.push(rpcNode)
     }
 
-    if (walletId) {
-      this.harmonyApiSubscribers[walletId] = true
-    }
-  }
-
-  async disconnectApi(walletId: string): Promise<void> {
-    delete this.harmonyApiSubscribers[walletId]
-
-    if (Object.keys(this.harmonyApiSubscribers).length === 0) {
-      this.harmonyApi = {}
-    }
+    this.harmonyApi = new Harmony(this.harmonyRpcNodes[0], {
+      // chainType set to Harmony
+      chainType: ChainType.Harmony,
+      // chainType set to HmyLocal
+      chainId: ChainID.HmyMainnet
+    })
   }
 
   async importPrivateKey(privateKey: string): { oneKey: string } | void {
-    this.connectApi()
-
     const account = await this.harmonyApi.wallet.addByPrivateKey(privateKey)
 
     if (account) {
@@ -70,8 +56,6 @@ export class OnePlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'one') {
-      this.connectApi()
-
       const account = await this.harmonyApi.wallet.createAccount()
 
       const privateKey = account.privateKey.replace('0x', '')
@@ -86,8 +70,6 @@ export class OnePlugin extends CurrencyPlugin {
     const type = walletInfo.type.replace('wallet:', '')
 
     if (type === 'one') {
-      this.connectApi()
-
       const account = await this.harmonyApi.wallet.addByPrivateKey(
         walletInfo.keys.oneKey
       )
@@ -173,9 +155,7 @@ export function makeOnePlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     currencyEngine.otherData.gasLimit = GAS_LIMIT
 
     if (!currencyEngine.otherData.recommendedFee) {
-      currencyEngine.otherData.recommendedFee = String(
-        GAS_PRICE * GAS_LIMIT
-      )
+      currencyEngine.otherData.recommendedFee = String(GAS_PRICE * GAS_LIMIT)
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
