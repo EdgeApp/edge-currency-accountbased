@@ -128,7 +128,7 @@ export class OneEngine extends CurrencyEngine {
   async checkServerInfoInnerLoop() {
     try {
       const res: OneGetLastHeader = await this.multicastServers(
-        'getLatestHeader',
+        'hmyv2_latestHeader',
         []
       )
 

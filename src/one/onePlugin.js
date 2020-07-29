@@ -2,9 +2,10 @@
 
 // import { bns } from 'biggystring'
 import { Harmony } from '@harmony-js/core'
+import { ChainID, ChainType, isPrivateKey } from '@harmony-js/utils'
 // import or require settings
-import { ChainID, ChainType } from '@harmony-js/utils'
 import { bns } from 'biggystring'
+import { generateMnemonic, validateMnemonic } from 'bip39'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -19,7 +20,7 @@ import {
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { OneEngine } from './oneEngine.js'
-import { GAS_LIMIT, GAS_PRICE, currencyInfo } from './oneInfo'
+import { currencyInfo, GAS_LIMIT, GAS_PRICE } from './oneInfo'
 
 export class OnePlugin extends CurrencyPlugin {
   harmonyApi: Harmony
@@ -44,11 +45,23 @@ export class OnePlugin extends CurrencyPlugin {
     })
   }
 
-  async importPrivateKey(privateKey: string): { oneKey: string } | void {
-    const account = await this.harmonyApi.wallet.addByPrivateKey(privateKey)
+  async importPrivateKey(userInput: string): Promise<Object> {
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      if (!isPrivateKey(userInput)) {
+        throw new Error('Invalid private key')
+      }
 
-    if (account) {
-      return { oneKey: privateKey }
+      return { oneKey: userInput }
+    } else {
+      if (!validateMnemonic(userInput)) {
+        throw new Error('Invalid mnemonic')
+      }
+
+      const account = await this.harmonyApi.wallet.addByMnemonic(userInput)
+
+      const privateKey = account.privateKey.replace('0x', '')
+
+      return { oneKey: privateKey, oneMnemonic: userInput }
     }
   }
 
@@ -56,11 +69,13 @@ export class OnePlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'one') {
-      const account = await this.harmonyApi.wallet.createAccount()
+      const mnemonic = generateMnemonic()
+
+      const account = await this.harmonyApi.wallet.addByMnemonic(mnemonic)
 
       const privateKey = account.privateKey.replace('0x', '')
 
-      return { oneKey: privateKey }
+      return { oneKey: privateKey, oneMnemonic: mnemonic }
     } else {
       throw new Error('InvalidWalletType')
     }
