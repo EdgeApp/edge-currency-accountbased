@@ -204,27 +204,36 @@ export class OneEngine extends CurrencyEngine {
         [address, 'ALL']
       )
 
-      const num = res.result
+      const txsCount = res.result
 
-      if (num > this.otherData.numberTransactions) {
+      if (txsCount > this.otherData.numberTransactions) {
         this.tokenCheckTransactionsStatus.ONE = 0.5
 
-        const res: OneGetTransactions = await this.multicastServers(
-          'hmyv2_getTransactionsHistory',
-          [
-            {
-              address: address,
-              pageIndex: 0,
-              pageSize: 100,
-              fullTx: true,
-              txType: 'ALL',
-              order: 'ASC'
-            }
-          ]
-        )
+        let pageIndex = 0
+        const pageSize = 100
 
-        if (res.result && Array.isArray(res.result.transactions)) {
-          res.result.transactions.forEach(tx => this.processOneTransaction(tx))
+        while (pageIndex * pageSize < txsCount) {
+          const res: OneGetTransactions = await this.multicastServers(
+            'hmyv2_getTransactionsHistory',
+            [
+              {
+                address: address,
+                pageIndex,
+                pageSize,
+                fullTx: true,
+                txType: 'ALL',
+                order: 'DESC'
+              }
+            ]
+          )
+
+          pageIndex++
+
+          if (res.result && Array.isArray(res.result.transactions)) {
+            res.result.transactions.forEach(tx =>
+              this.processOneTransaction(tx)
+            )
+          }
         }
 
         if (this.transactionsChangedArray.length > 0) {
@@ -235,7 +244,7 @@ export class OneEngine extends CurrencyEngine {
           this.transactionsChangedArray = []
         }
 
-        this.otherData.numberTransactions = num
+        this.otherData.numberTransactions = txsCount
         this.walletLocalDataDirty = true
 
         this.tokenCheckTransactionsStatus.ONE = 1
