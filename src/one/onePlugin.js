@@ -102,19 +102,13 @@ export class OnePlugin extends CurrencyPlugin {
       one: true
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
-      currencyInfo,
-      uri,
-      networks
-    )
+    const { edgeParsedUri } = this.parseUriCommon(currencyInfo, uri, networks)
 
     try {
       this.harmonyApi.crypto.getAddress(edgeParsedUri.publicAddress)
     } catch (e) {
       throw new Error('InvalidPublicAddressError')
     }
-
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.dt || undefined
 
     return edgeParsedUri
   }
