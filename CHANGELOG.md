@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.16 (2020-07-29)
+
+- Add REPV2 ERC20 token
+
 # 0.7.15 (2020-07-23)
 
 - Add new Tezos API
