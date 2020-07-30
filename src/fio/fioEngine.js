@@ -291,6 +291,7 @@ export class FioEngine extends CurrencyEngine {
         }
         if (otherParams.isFeeProcessed) {
           nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
+          networkFee = existingTrx.networkFee
         } else {
           console.log(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
@@ -323,8 +324,13 @@ export class FioEngine extends CurrencyEngine {
         this.log(`Received unsupported currencyCode: ${currencyCode}`)
         return 0
       }
-      networkFee = bns.mul(exchangeAmount, denom.multiplier)
-      nativeAmount = `-${networkFee}`
+      const fioAmount = bns.mul(exchangeAmount, denom.multiplier)
+      if (data.to === actor) {
+        nativeAmount = `${fioAmount}`
+      } else {
+        nativeAmount = `-${fioAmount}`
+        networkFee = fioAmount
+      }
 
       const index = this.findTransaction(
         currencyCode,
