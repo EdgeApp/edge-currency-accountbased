@@ -131,6 +131,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/augur-logo-solo-64.png`
     },
     {
+      currencyCode: 'REPV2',
+      currencyName: 'Augur v2',
+      denominations: [
+        {
+          name: 'REPV2',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x23916a8F5C3846e3100e5f587FF14F3098722F5d',
+      symbolImage: `${imageServerUrl}/augur-logo-solo-64.png`
+    },
+    {
       currencyCode: 'HERC',
       currencyName: 'Hercules',
       denominations: [
