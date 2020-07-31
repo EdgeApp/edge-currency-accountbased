@@ -15,6 +15,7 @@ import {
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
+import { FIO_REG_API_ENDPOINTS } from './fioConst.js'
 import { FioEngine } from './fioEngine'
 import { fioApiErrorCodes, FioError } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
@@ -195,9 +196,6 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     if (!currencyEngine.otherData.highestTxHeight) {
       currencyEngine.otherData.highestTxHeight = 0
     }
-    if (!currencyEngine.otherData.feeTransactions) {
-      currencyEngine.otherData.feeTransactions = []
-    }
     if (!currencyEngine.otherData.fioAddresses) {
       currencyEngine.otherData.fioAddresses = []
     }
@@ -280,7 +278,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       }
       try {
         const result = await fetchCors(
-          `${currencyInfo.defaultSettings.fioRegApiUrl}${currencyInfo.defaultSettings.fioRegApiEndPoints.buyAddress}`,
+          `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
           {
             method: 'POST',
             headers,
@@ -311,7 +309,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       if (!ref) ref = currencyInfo.defaultSettings.defaultRef
       try {
         const result = await fetchCors(
-          `${currencyInfo.defaultSettings.fioRegApiUrl}${currencyInfo.defaultSettings.fioRegApiEndPoints.getDomains}/${ref}`,
+          `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
           {
             method: 'GET'
           }
