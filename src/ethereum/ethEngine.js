@@ -200,7 +200,10 @@ export class EthereumEngine extends CurrencyEngine {
       const {
         ethGasStationUrl
       } = this.currencyInfo.defaultSettings.otherSettings
-      const jsonObj = await this.ethNetwork.fetchGet(ethGasStationUrl)
+      const { ethGasStationApiKey } = this.initOptions
+      const jsonObj = await this.ethNetwork.fetchGet(
+        `${ethGasStationUrl}?api-key=${ethGasStationApiKey || ''}`
+      )
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
