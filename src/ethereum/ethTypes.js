@@ -9,7 +9,8 @@ export type EthereumInitOptions = {
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,
-  amberdataApiKey?: string
+  amberdataApiKey?: string,
+  ethGasStationApiKey?: string
 }
 
 export type EthereumSettings = {
