@@ -139,7 +139,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x23916a8F5C3846e3100e5f587FF14F3098722F5d',
+      contractAddress: '0x221657776846890989a759BA2973e427DfF5C9bB',
       symbolImage: `${imageServerUrl}/augur-logo-solo-64.png`
     },
     {
