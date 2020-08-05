@@ -16,7 +16,11 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
-import { HISTORY_NODE_ACTIONS, HISTORY_NODE_OFFSET } from './fioConst.js'
+import {
+  ACTIONS_SKIP_SWITCH,
+  HISTORY_NODE_ACTIONS,
+  HISTORY_NODE_OFFSET
+} from './fioConst.js'
 import { fioApiErrorCodes, FioError } from './fioError.js'
 import { FioPlugin } from './fioPlugin.js'
 import {
@@ -522,50 +526,66 @@ export class FioEngine extends CurrencyEngine {
     return result.json()
   }
 
-  async multicastServers(actionName: string, params?: any): Promise<any> {
-    const res = await asyncWaterfall(
-      shuffleArray(
-        this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
-          const fioSDK = new FIOSDK(
-            this.walletInfo.keys.fioKey,
-            this.walletInfo.keys.publicKey,
-            apiUrl,
-            this.fetchCors,
-            undefined,
-            this.tpid
-          )
-
-          let res
-
-          try {
-            switch (actionName) {
-              case 'getChainInfo':
-                res = await fioSDK.transactions.getChainInfo()
-                break
-              default:
-                res = await fioSDK.genericAction(actionName, params)
-            }
-          } catch (e) {
-            // handle FIO API error
-            if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
-              res = {
-                isError: true,
-                data: {
-                  code: e.errorCode,
-                  message: e.message,
-                  json: e.json,
-                  list: e.list
-                }
-              }
-            } else {
-              throw e
-            }
-          }
-
-          return res
-        })
-      )
+  async fioApiRequest(
+    apiUrl: string,
+    actionName: string,
+    params?: any
+  ): Promise<any> {
+    const fioSDK = new FIOSDK(
+      this.walletInfo.keys.fioKey,
+      this.walletInfo.keys.publicKey,
+      apiUrl,
+      this.fetchCors,
+      undefined,
+      this.tpid
     )
+
+    let res
+
+    try {
+      switch (actionName) {
+        case 'getChainInfo':
+          res = await fioSDK.transactions.getChainInfo()
+          break
+        default:
+          res = await fioSDK.genericAction(actionName, params)
+      }
+    } catch (e) {
+      // handle FIO API error
+      if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+        res = {
+          isError: true,
+          data: {
+            code: e.errorCode,
+            message: e.message,
+            json: e.json,
+            list: e.list
+          }
+        }
+      } else {
+        throw e
+      }
+    }
+
+    return res
+  }
+
+  async multicastServers(actionName: string, params?: any): Promise<any> {
+    let res
+    if (ACTIONS_SKIP_SWITCH[actionName]) {
+      const apiUrl = shuffleArray([
+        ...this.currencyInfo.defaultSettings.apiUrls
+      ])[0]
+      res = await this.fioApiRequest(apiUrl, actionName, params)
+    } else {
+      res = await asyncWaterfall(
+        shuffleArray(
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
+            this.fioApiRequest(apiUrl, actionName, params)
+          )
+        )
+      )
+    }
 
     if (res.isError) {
       const error = new FioError(res.errorMessage)
