@@ -198,6 +198,11 @@ export class CurrencyEngine {
         }
       }
     }
+    for (const currencyCode in this.transactionList) {
+      this.walletLocalData.numTransactions[currencyCode] = this.transactionList[
+        currencyCode
+      ].length
+    }
   }
 
   async loadEngine(
@@ -322,6 +327,9 @@ export class CurrencyEngine {
       }
       // add transaction to list of tx's, and array of changed transactions
       this.transactionList[currencyCode].push(edgeTransaction)
+      this.walletLocalData.numTransactions[currencyCode] = this.transactionList[
+        currencyCode
+      ].length
 
       this.transactionListDirty = true
       this.transactionsChangedArray.push(edgeTransaction)
@@ -751,10 +759,10 @@ export class CurrencyEngine {
     const cleanOptions = asCurrencyCodeOptions(options)
     const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
-    if (this.transactionList[currencyCode] == null) {
+    if (this.walletLocalData.numTransactions[currencyCode] == null) {
       return 0
     } else {
-      return this.transactionList[currencyCode].length
+      return this.walletLocalData.numTransactions[currencyCode]
     }
   }
 
