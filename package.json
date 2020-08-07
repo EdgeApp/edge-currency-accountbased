@@ -45,6 +45,7 @@
     "@binance-chain/javascript-sdk": "^2.14.4",
     "@fioprotocol/fiosdk": "^1.0.2",
     "@cityofzion/neon-js": "4",
+    "@hashgraph/sdk": "^1.1.9",
     "base-x": "^1.0.4",
     "biggystring": "^3.0.0",
     "bip39": "^3.0.2",

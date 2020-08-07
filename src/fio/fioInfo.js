@@ -34,14 +34,7 @@ const defaultSettings: any = {
     'https://fio.eosphere.io/v1/',
     'https://fio.eossweden.org/v1/'
   ],
-  historyNodeActions: {
-    getActions: 'get_actions'
-  },
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
-  fioRegApiEndPoints: {
-    buyAddress: 'buy-address',
-    getDomains: 'get-domains'
-  },
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
   defaultRef: 'edgefree',
   fallbackRef: 'edge'
