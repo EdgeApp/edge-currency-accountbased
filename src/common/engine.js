@@ -278,7 +278,7 @@ export class CurrencyEngine {
     edgeTransaction: EdgeTransaction,
     lastSeenTime?: number
   ) {
-    this.log('executing addTransaction: ', edgeTransaction)
+    this.log('executing addTransaction: ', edgeTransaction.txid)
     // remove SPAM and proxy allowance transactions (ie DEX extra transaction)
     // this should reduce confusion for users
     if (
