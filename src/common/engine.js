@@ -330,6 +330,7 @@ export class CurrencyEngine {
       this.walletLocalData.numTransactions[currencyCode] = this.transactionList[
         currencyCode
       ].length
+      this.walletLocalDataDirty = true
 
       this.transactionListDirty = true
       this.transactionsChangedArray.push(edgeTransaction)
