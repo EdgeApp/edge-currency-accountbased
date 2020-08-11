@@ -1,4 +1,4 @@
-export const NeoTransactonOnline = {
+export const NeoTransactionOnline = {
   type: 'object',
   properties: {
     txid: { type: 'string' },
