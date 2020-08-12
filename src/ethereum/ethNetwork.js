@@ -194,8 +194,16 @@ export class EthereumNetwork {
 
     let blockHeight = parseInt(tx.blockNumber)
     if (blockHeight < 0) blockHeight = 0
+    let txid
+    if (tx.hash != null) {
+      txid = tx.hash
+    } else if (tx.transactionHash != null) {
+      txid = tx.transactionHash
+    } else {
+      throw new Error('Invalid transaction result format')
+    }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
+      txid,
       date: parseInt(tx.timeStamp),
       currencyCode,
       blockHeight,
