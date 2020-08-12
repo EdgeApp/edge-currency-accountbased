@@ -3,6 +3,8 @@
  */
 // @flow
 
+import { asObject, asOptional, asString } from 'cleaners'
+
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
   etherscanApiKey?: string | Array<string>,
@@ -53,37 +55,66 @@ export type EthereumCalcedFees = {
   useDefaults: boolean
 }
 
-export type EtherscanTransaction = {|
-  hash: string,
-  blockNumber: string,
-  timeStamp: string,
-  gasPrice: string,
-  gasUsed: string,
-  value: string,
-  nonce: string,
-  from: string,
-  to: string,
-  gas: string,
-  cumulativeGasUsed: string,
-  isError: string,
-  contractAddress?: string,
-  tokenName?: string,
-  tokenSymbol?: string,
-  tokenDecimal?: string
-|}
+export const asEtherscanTokenTransaction = asObject({
+  blockNumber: asString,
+  timeStamp: asString,
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  to: asString,
+  from: asString,
+  value: asString,
+  nonce: asString,
+  gasPrice: asString,
+  gas: asString,
+  cumulativeGasUsed: asString,
+  gasUsed: asString,
+  confirmations: asString,
+  contractAddress: asString,
+  tokenName: asString,
+  tokenSymbol: asString,
+  tokenDecimal: asString
+})
 
-export type EtherscanInternalTransaction = {|
-  hash: string,
-  blockNumber: string,
-  timeStamp: string,
-  gasUsed: string,
-  value: string,
-  from: string,
-  to: string,
-  gas: string,
-  isError: string,
-  contractAddress?: string
-|}
+export type EtherscanTokenTransaction = $Call<
+  typeof asEtherscanTokenTransaction
+>
+
+export const asEtherscanTransaction = asObject({
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  blockNumber: asString,
+  timeStamp: asString,
+  gasPrice: asString,
+  gasUsed: asString,
+  value: asString,
+  nonce: asString,
+  from: asString,
+  to: asString,
+  gas: asString,
+  isError: asString,
+  cumulativeGasUsed: asString,
+  confirmations: asOptional(asString)
+})
+
+export type EtherscanTransaction = $Call<typeof asEtherscanTransaction>
+
+export const asEtherscanInternalTransaction = asObject({
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  blockNumber: asString,
+  timeStamp: asString,
+  gasUsed: asString,
+  value: asString,
+  from: asString,
+  to: asString,
+  gas: asString,
+  isError: asString,
+  contractAddress: asOptional(asString)
+})
+
+export type EtherscanInternalTransaction = $Call<
+  typeof asEtherscanInternalTransaction
+>
 
 export type EthereumTxOtherParams = {
   from: Array<string>,
