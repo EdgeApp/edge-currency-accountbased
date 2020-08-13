@@ -36,7 +36,7 @@ const defaultSettings: any = {
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
-  defaultRef: 'edgefree',
+  defaultRef: 'edge',
   fallbackRef: 'edge'
 }
 

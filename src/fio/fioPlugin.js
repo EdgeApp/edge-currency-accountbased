@@ -22,7 +22,7 @@ import { currencyInfo } from './fioInfo.js'
 
 const FIO_CURRENCY_CODE = 'FIO'
 const FIO_TYPE = 'fio'
-const FIO_REG_SITE_API_KEY = 'qeP9KTU30BYhonbmF7BrNzxPUye7vV6QdwrJbcMspVlE'
+const FIO_REG_SITE_API_KEY = ''
 
 type DomainItem = { domain: string, free: boolean }
 
