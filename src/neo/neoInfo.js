@@ -19,7 +19,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'NEO',
   displayName: 'NEO',
-  pluginName: 'neo',
+  pluginId: 'neo',
   walletType: 'wallet:neo',
 
   defaultSettings,

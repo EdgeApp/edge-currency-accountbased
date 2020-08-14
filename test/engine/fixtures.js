@@ -1,6 +1,6 @@
 export default [
   {
-    pluginName: 'neo',
+    pluginId: 'neo',
     WALLET_TYPE: 'wallet:neo',
     'Test Currency code': 'NEO',
     key: [
@@ -39,7 +39,7 @@ export default [
     ]
   },
   {
-    pluginName: 'ripple',
+    pluginId: 'ripple',
     WALLET_TYPE: 'wallet:ripple',
     'Test Currency code': 'XRP',
     key: [

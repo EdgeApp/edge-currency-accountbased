@@ -1,6 +1,6 @@
 export default [
   {
-    pluginName: 'neo',
+    pluginId: 'neo',
     WALLET_TYPE: 'wallet:neo',
     'Test Currency code': 'NEO',
     key: [
@@ -140,7 +140,7 @@ export default [
     }
   },
   {
-    pluginName: 'binance',
+    pluginId: 'binance',
     WALLET_TYPE: 'wallet:binance',
     'Test Currency code': 'BNB',
     key: [
