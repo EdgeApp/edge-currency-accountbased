@@ -25,18 +25,18 @@ import {
   BlockChairStatsSchema,
   EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
-  EtherscanGetBlockHeight,
-  EtherscanGetInternalTransactions,
-  EtherscanGetTokenTransactions,
-  EtherscanGetTransactions
+  EtherscanGetBlockHeight
 } from './ethSchema'
-import type {
-  AlethioTokenTransfer,
-  AmberdataInternalTx,
-  AmberdataTx,
-  EthereumTxOtherParams,
-  EtherscanInternalTransaction,
-  EtherscanTransaction
+import {
+  type AlethioTokenTransfer,
+  type AmberdataInternalTx,
+  type AmberdataTx,
+  type EthereumTxOtherParams,
+  type EtherscanInternalTransaction,
+  type EtherscanTransaction,
+  asEtherscanInternalTransaction,
+  asEtherscanTokenTransaction,
+  asEtherscanTransaction
 } from './ethTypes'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
@@ -194,8 +194,16 @@ export class EthereumNetwork {
 
     let blockHeight = parseInt(tx.blockNumber)
     if (blockHeight < 0) blockHeight = 0
+    let txid
+    if (tx.hash != null) {
+      txid = tx.hash
+    } else if (tx.transactionHash != null) {
+      txid = tx.transactionHash
+    } else {
+      throw new Error('Invalid transaction result format')
+    }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
+      txid,
       date: parseInt(tx.timeStamp),
       currencyCode,
       blockHeight,
@@ -1036,10 +1044,7 @@ export class EthereumNetwork {
   async getAllTxsEthscan(
     startBlock: number,
     currencyCode: string,
-    schema:
-      | EtherscanGetTransactions
-      | EtherscanGetInternalTransactions
-      | EtherscanGetTokenTransactions,
+    cleanerFunc: Function,
     options: GetEthscanAllTxsOptions
   ): Promise<GetEthscanAllTxsResponse> {
     const address = this.ethEngine.walletLocalData.publicKey
@@ -1061,26 +1066,19 @@ export class EthereumNetwork {
         searchRegularTxs
       })
       server = response.server
-      const jsonObj = response.result
-      const valid = validateObject(jsonObj, schema)
-      if (valid) {
-        const transactions = jsonObj.result
-        for (let i = 0; i < transactions.length; i++) {
-          const tx = this.processEtherscanTransaction(
-            transactions[i],
-            currencyCode
-          )
-          allTransactions.push(tx)
-        }
-        if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
-          break
-        }
-        page++
-      } else {
-        throw new Error(
-          `checkTxsEthscan invalid JSON data:${JSON.stringify(jsonObj)}`
+      const transactions = response.result.result
+      for (let i = 0; i < transactions.length; i++) {
+        cleanerFunc(transactions[i])
+        const tx = this.processEtherscanTransaction(
+          transactions[i],
+          currencyCode
         )
+        allTransactions.push(tx)
       }
+      if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
+        break
+      }
+      page++
     }
 
     return { allTransactions, server }
@@ -1097,13 +1095,13 @@ export class EthereumNetwork {
       const txsRegularResp = await this.getAllTxsEthscan(
         startBlock,
         currencyCode,
-        EtherscanGetTransactions,
+        asEtherscanTransaction,
         { searchRegularTxs: true }
       )
       const txsInternalResp = await this.getAllTxsEthscan(
         startBlock,
         currencyCode,
-        EtherscanGetInternalTransactions,
+        asEtherscanInternalTransaction,
         { searchRegularTxs: false }
       )
       server = txsRegularResp.server || txsInternalResp.server
@@ -1118,7 +1116,7 @@ export class EthereumNetwork {
         const resp = await this.getAllTxsEthscan(
           startBlock,
           currencyCode,
-          EtherscanGetTokenTransactions,
+          asEtherscanTokenTransaction,
           { contractAddress }
         )
         server = resp.server

@@ -1,5 +1,16 @@
 # edge-currency-accountbased
 
+# 0.7.18 (2020-08-12)
+
+- Disable asyncWaterfall for some FIO operations
+- Save numTransactions in localWalletData
+- Add cleaners to Etherscan get tx api responses
+
+# 0.7.17 (2020-08-04)
+
+- FIO checkTransactions algorithm update to page transactions
+- Fix REPv2 token address
+
 # 0.7.16 (2020-07-29)
 
 - Add REPV2 ERC20 token
