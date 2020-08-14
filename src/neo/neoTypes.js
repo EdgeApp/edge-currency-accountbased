@@ -1,7 +1,7 @@
 // @flow
 
 export type NeoTxOtherParams = {
-  from: string,
+  from: Array<string>,
   to: Array<string>,
   networkFee: number,
   isNative: boolean,

@@ -23,13 +23,13 @@ export const NeoTransactionOnline = {
         properties: {
           n: { type: 'number' },
           asset: { type: 'string' },
-          value: { type: 'number' },
+          value: { type: 'string' },
           address: { type: 'string' }
         }
       }
     },
-    sys_fee: { type: 'number' },
-    net_fee: { type: 'number' },
+    sys_fee: { type: 'string' },
+    net_fee: { type: 'string' },
     scripts: {
       type: 'array',
       items: {

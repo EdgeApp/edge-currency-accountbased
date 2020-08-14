@@ -36,12 +36,12 @@ type NeoFunction =
   | 'neo_getBlockCount'
   | 'neo_broadcastTx'
   | 'neo_getTxHeight'
-  | 'neo_getTxOut'
+  // | 'neo_getTxOut'
   | 'neo_getBlock'
 
 export class NeoEngine extends CurrencyEngine {
   async multicastServers(func: NeoFunction, ...params: any): Promise<any> {
-    this.log(`start to query ${func} on Neo Blockchain`)
+    // this.log(`start to query ${func} on Neo Blockchain`)
     const out = { result: '', server: 'no server' }
     switch (func) {
       case 'neo_getBalance': {
@@ -73,9 +73,9 @@ export class NeoEngine extends CurrencyEngine {
           const client = new RPCClient(node)
           promises.push(client.sendRawTransaction(transaction))
         }
-        const response = (await promiseAny(promises)).json()
-        if (response && response.result) {
-          return response.result
+        const response = await promiseAny(promises)
+        if (response) {
+          return response
         } else {
           throw new Error('NEO send fail with error: ' + response.error.message)
         }
@@ -89,8 +89,8 @@ export class NeoEngine extends CurrencyEngine {
           promises.push(client.getRawTransaction(txId, 1))
         }
         const response = await promiseAny(promises)
-        if (response && response.result) {
-          return response.result
+        if (response) {
+          return response
         } else {
           throw new Error(
             'NEO get TX fail with error: ' + response.error.message
@@ -122,7 +122,7 @@ export class NeoEngine extends CurrencyEngine {
             })
           )
         }
-        const response = (await promiseAny(promises)).json()
+        const response = await promiseAny(promises)
         if (response && response.result) {
           return response.result
         } else {
@@ -132,22 +132,22 @@ export class NeoEngine extends CurrencyEngine {
           )
         }
       }
-      case 'neo_getTxOut': {
-        const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
-        const promises = []
-        for (const node of rpcNodes) {
-          const client = new RPCClient(node)
-          promises.push(client.getTxOut(...params))
-        }
-        const response = (await promiseAny(promises)).json()
-        if (response && response.result) {
-          return response.result
-        } else {
-          throw new Error(
-            'NEO get tx outputs with error: ' + response.error.message
-          )
-        }
-      }
+      // case 'neo_getTxOut': {
+      //   const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
+      //   const promises = []
+      //   for (const node of rpcNodes) {
+      //     const client = new RPCClient(node)
+      //     promises.push(client.getTxOut(...params))
+      //   }
+      //   const response = await promiseAny(promises)
+      //   if (response) {
+      //     return response
+      //   } else {
+      //     throw new Error(
+      //       'NEO get tx outputs with error: ' + response
+      //     )
+      //   }
+      // }
       case 'neo_getBlock': {
         const rpcNodes = this.currencyInfo.defaultSettings.neoRpcNodes
         const promises = []
@@ -155,9 +155,9 @@ export class NeoEngine extends CurrencyEngine {
           const client = new RPCClient(node)
           promises.push(client.getBlock(...params))
         }
-        const response = (await promiseAny(promises)).json()
-        if (response && response.result) {
-          return response.result
+        const response = await promiseAny(promises)
+        if (response) {
+          return response
         } else {
           throw new Error(
             'NEO get tx outputs with error: ' + response.error.message
@@ -203,9 +203,7 @@ export class NeoEngine extends CurrencyEngine {
   }
 
   async checkAccountInnerLoop() {
-    const address = wallet.getAddressFromScriptHash(
-      wallet.getScriptHashFromPublicKey(this.walletLocalData.publicKey)
-    )
+    const address = this.walletLocalData.publicKey
 
     try {
       const balances = (await this.multicastServers('neo_getBalance', address))
@@ -239,13 +237,12 @@ export class NeoEngine extends CurrencyEngine {
       const neoInputs = []
       for (let i = 0; i < vin.length; i++) {
         const { txid: prevHash, vout: prevIndex } = vin[i]
-        const from = await this.multicastServers(
-          'neo_getTxOut',
-          prevHash,
-          prevIndex
-        )
-        if (from.asset === currencyInfo.defaultSettings.assets.NEO) {
-          neoInputs.push(from)
+        const prevTx = await this.multicastServers('neo_getTx', prevHash)
+        if (prevTx && prevTx.vout) {
+          const from = prevTx.vout[prevIndex]
+          if (from.asset === currencyInfo.defaultSettings.assets.NEO) {
+            neoInputs.push(from)
+          }
         }
       }
 
@@ -257,8 +254,14 @@ export class NeoEngine extends CurrencyEngine {
 
       const nativeAmount = neoOutputs.reduce((sum, cur) => sum + cur.value, 0)
 
-      const from = neoInputs[0].address
-      const to = [neoOutputs[0].address]
+      const from = []
+      if (neoInputs.length > 0) {
+        from.push(neoInputs[0].address)
+      }
+      const to = []
+      if (neoOutputs.length > 0) {
+        to.push(neoOutputs[0].address)
+      }
 
       const otherParams = {
         from,
@@ -309,7 +312,7 @@ export class NeoEngine extends CurrencyEngine {
       }
       checkAddressSuccess = true
     } catch (e) {
-      this.log(`Error checkTransactionsFetch ${currencyCode}`, e)
+      this.log(`Error checkTransactionsFetch ${currencyCode}`, String(e))
       checkAddressSuccess = false
     }
 
@@ -413,7 +416,7 @@ export class NeoEngine extends CurrencyEngine {
 
     if (currencyCode === PRIMARY_CURRENCY) {
       const neoParams: NeoTxOtherParams = {
-        from: this.walletLocalData.publicKey,
+        from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         networkFee,
         isNative: true,
@@ -430,7 +433,7 @@ export class NeoEngine extends CurrencyEngine {
       const contractAddress = tokenInfo.contractAddress
 
       const neoParams: NeoTxOtherParams = {
-        from: this.walletLocalData.publicKey,
+        from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         networkFee,
         isNative: false,
