@@ -335,27 +335,9 @@ export class EthereumEngine extends CurrencyEngine {
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    if (currencyCode === this.currencyInfo.currencyCode && useDefaults) {
-      const estimateGasParams = {
-        to: publicAddress,
-        gas: '0xffffff',
-        value: bns.add(nativeAmount, '0', 16)
-      }
-      try {
-        const funcs = []
-        funcs.push(async () => {
-          return this.ethNetwork.multicastServers(
-            'eth_estimateGas',
-            estimateGasParams
-          )
-        })
-        const result = await asyncWaterfall(funcs, 5000)
-        gasLimit = bns.add(result.result, '0')
-      } catch (err) {
-        this.log(err)
-      }
-    }
 
+    let contractAddress
+    let value
     if (currencyCode === this.currencyInfo.currencyCode) {
       const ethParams: EthereumTxOtherParams = {
         from: [this.walletLocalData.publicKey],
@@ -369,8 +351,8 @@ export class EthereumEngine extends CurrencyEngine {
         data: data
       }
       otherParams = ethParams
+      value = bns.add(nativeAmount, '0', 16)
     } else {
-      let contractAddress = ''
       if (data) {
         contractAddress = publicAddress
       } else {
@@ -382,6 +364,7 @@ export class EthereumEngine extends CurrencyEngine {
         }
 
         contractAddress = tokenInfo.contractAddress
+        value = '0x0'
       }
 
       const ethParams: EthereumTxOtherParams = {
@@ -398,6 +381,38 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
+    const dataArray = abi.simpleEncode(
+      'transfer(address,uint256):(uint256)',
+      contractAddress || publicAddress,
+      value
+    )
+    const gasData = '0x' + Buffer.from(dataArray).toString('hex')
+    if (useDefaults) {
+      const estimateGasParams = {
+        to: contractAddress || publicAddress,
+        gas: '0xffffff',
+        value,
+        data: gasData
+      }
+      try {
+        const funcs = []
+        funcs.push(async () => {
+          return this.ethNetwork.multicastServers('eth_estimateGas', [
+            estimateGasParams
+          ])
+        })
+        const result = await asyncWaterfall(funcs, 5000)
+
+        gasLimit = bns.add(result.result.result, '0')
+
+        // Over estimate gas limit for token transactions
+        if (currencyCode !== this.currencyInfo.currencyCode) {
+          gasLimit = bns.mul(gasLimit, '2')
+        }
+      } catch (err) {
+        this.log(err)
+      }
+    }
     const nativeBalance = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
@@ -448,6 +463,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     if (parentNetworkFee) {
       edgeTransaction.parentNetworkFee = parentNetworkFee
+      otherParams.gas = gasLimit
     }
 
     return edgeTransaction
