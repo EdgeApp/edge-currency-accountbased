@@ -494,14 +494,21 @@ export class EthereumNetwork {
       params
     }
 
+    let addOnUrl = ''
     if (url.includes('infura')) {
       const { infuraProjectId } = this.ethEngine.initOptions
-      const projectIdSyntax = infuraProjectId || ''
       if (!infuraProjectId || infuraProjectId.length < 6) {
         throw new Error('Need Infura Project ID')
       }
-      url += `/${projectIdSyntax}`
+      addOnUrl = `/${infuraProjectId}`
+    } else if (url.includes('alchemyapi')) {
+      const { alchemyApiKey } = this.ethEngine.initOptions
+      if (!alchemyApiKey || alchemyApiKey.length < 6) {
+        throw new Error('Need Alchemy API key')
+      }
+      addOnUrl = `/v2/-${alchemyApiKey}`
     }
+    url += addOnUrl
 
     const response = await this.ethEngine.io.fetch(url, {
       headers: {

@@ -12,7 +12,8 @@ export type EthereumInitOptions = {
   blockchairApiKey?: string,
   alethioApiKey?: string,
   amberdataApiKey?: string,
-  ethGasStationApiKey?: string
+  ethGasStationApiKey?: string,
+  alchemyApiKey?: string
 }
 
 export type EthereumSettings = {
