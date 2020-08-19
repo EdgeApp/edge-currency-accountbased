@@ -20,7 +20,6 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import {
   addHexPrefix,
-  asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
   getOtherParams,
@@ -395,14 +394,10 @@ export class EthereumEngine extends CurrencyEngine {
         data: gasData
       }
       try {
-        const funcs = []
-        funcs.push(async () => {
-          return this.ethNetwork.multicastServers('eth_estimateGas', [
-            estimateGasParams
-          ])
-        })
-        const result = await asyncWaterfall(funcs, 5000)
-
+        const result = await this.ethNetwork.multicastServers(
+          'eth_estimateGas',
+          [estimateGasParams]
+        )
         gasLimit = bns.add(result.result.result, '0')
 
         // Over estimate gas limit for token transactions
