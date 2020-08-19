@@ -40,7 +40,8 @@ import {
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumTxOtherParams,
-  type EthereumWalletOtherData
+  type EthereumWalletOtherData,
+  type LastEstimatedGasLimit
 } from './ethTypes.js'
 
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
@@ -51,6 +52,7 @@ export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
+  lastEstimatedGasLimit: LastEstimatedGasLimit
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -70,6 +72,11 @@ export class EthereumEngine extends CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
     this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
+    this.lastEstimatedGasLimit = {
+      publicAddress: '',
+      contractAddress: '',
+      gasLimit: ''
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -386,7 +393,13 @@ export class EthereumEngine extends CurrencyEngine {
       value
     )
     const gasData = '0x' + Buffer.from(dataArray).toString('hex')
-    if (useDefaults) {
+
+    // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
+    if (
+      useDefaults &&
+      (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
+        this.lastEstimatedGasLimit.contractAddress !== contractAddress)
+    ) {
       const estimateGasParams = {
         to: contractAddress || publicAddress,
         gas: '0xffffff',
@@ -404,9 +417,19 @@ export class EthereumEngine extends CurrencyEngine {
         if (currencyCode !== this.currencyInfo.currencyCode) {
           gasLimit = bns.mul(gasLimit, '2')
         }
+
+        // Save locally to compare for future makeSpend() calls
+        this.lastEstimatedGasLimit = {
+          publicAddress,
+          contractAddress,
+          gasLimit
+        }
       } catch (err) {
         this.log(err)
       }
+    } else if (useDefaults) {
+      // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
+      gasLimit = this.lastEstimatedGasLimit.gasLimit
     }
     const nativeBalance = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode

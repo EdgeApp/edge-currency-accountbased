@@ -56,6 +56,12 @@ export type EthereumCalcedFees = {
   useDefaults: boolean
 }
 
+export type LastEstimatedGasLimit = {
+  publicAddress: string,
+  contractAddress: string | void,
+  gasLimit: string
+}
+
 export const asEtherscanTokenTransaction = asObject({
   blockNumber: asString,
   timeStamp: asString,
