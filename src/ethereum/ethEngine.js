@@ -407,17 +407,26 @@ export class EthereumEngine extends CurrencyEngine {
         data: gasData
       }
       try {
-        const result = await this.ethNetwork.multicastServers(
-          'eth_estimateGas',
-          [estimateGasParams]
+        // Determine if recipient is a normal or contract address
+        const getCodeResult = await this.ethNetwork.multicastServers(
+          'eth_getCode',
+          [contractAddress || publicAddress, 'latest']
         )
-        gasLimit = bns.add(result.result.result, '0')
 
-        // Over estimate gas limit for token transactions
-        if (currencyCode !== this.currencyInfo.currencyCode) {
-          gasLimit = bns.mul(gasLimit, '2')
+        if (bns.gt(getCodeResult.result.result, '0')) {
+          const estimateGasResult = await this.ethNetwork.multicastServers(
+            'eth_estimateGas',
+            [estimateGasParams]
+          )
+          gasLimit = bns.add(estimateGasResult.result.result, '0')
+
+          // Over estimate gas limit for token transactions
+          if (currencyCode !== this.currencyInfo.currencyCode) {
+            gasLimit = bns.mul(gasLimit, '2')
+          }
+        } else {
+          gasLimit = '21000'
         }
-
         // Save locally to compare for future makeSpend() calls
         this.lastEstimatedGasLimit = {
           publicAddress,
@@ -431,6 +440,8 @@ export class EthereumEngine extends CurrencyEngine {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
       gasLimit = this.lastEstimatedGasLimit.gasLimit
     }
+    otherParams.gas = gasLimit
+
     const nativeBalance = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode
     ]
@@ -481,7 +492,6 @@ export class EthereumEngine extends CurrencyEngine {
 
     if (parentNetworkFee) {
       edgeTransaction.parentNetworkFee = parentNetworkFee
-      otherParams.gas = gasLimit
     }
 
     return edgeTransaction

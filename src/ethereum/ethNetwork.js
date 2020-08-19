@@ -76,6 +76,7 @@ type EthFunction =
   | 'eth_estimateGas'
   | 'getTokenBalance'
   | 'getTransactions'
+  | 'eth_getCode'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -823,6 +824,23 @@ export class EthereumNetwork {
             params[0],
             chainId,
             baseUrl
+          )
+          return { server: parse(baseUrl).hostname, result }
+        })
+
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'eth_getCode':
+        funcs = rpcServers.map(baseUrl => async () => {
+          const result = await this.fetchPostRPC(
+            'eth_getCode',
+            params[0],
+            chainId,
+            baseUrl
+          )
+          this.ethEngine.log(
+            `estimateGas waterwall ${JSON.stringify(result)} ${baseUrl}`
           )
           return { server: parse(baseUrl).hostname, result }
         })
