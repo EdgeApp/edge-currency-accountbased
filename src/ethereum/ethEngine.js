@@ -20,7 +20,6 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import {
   addHexPrefix,
-  asyncWaterfall,
   bufToHex,
   getEdgeInfoServer,
   getOtherParams,
@@ -41,7 +40,8 @@ import {
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumTxOtherParams,
-  type EthereumWalletOtherData
+  type EthereumWalletOtherData,
+  type LastEstimatedGasLimit
 } from './ethTypes.js'
 
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
@@ -52,6 +52,7 @@ export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
+  lastEstimatedGasLimit: LastEstimatedGasLimit
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -71,6 +72,11 @@ export class EthereumEngine extends CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
     this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
+    this.lastEstimatedGasLimit = {
+      publicAddress: '',
+      contractAddress: '',
+      gasLimit: ''
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -335,27 +341,9 @@ export class EthereumEngine extends CurrencyEngine {
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    if (currencyCode === this.currencyInfo.currencyCode && useDefaults) {
-      const estimateGasParams = {
-        to: publicAddress,
-        gas: '0xffffff',
-        value: bns.add(nativeAmount, '0', 16)
-      }
-      try {
-        const funcs = []
-        funcs.push(async () => {
-          return this.ethNetwork.multicastServers(
-            'eth_estimateGas',
-            estimateGasParams
-          )
-        })
-        const result = await asyncWaterfall(funcs, 5000)
-        gasLimit = bns.add(result.result, '0')
-      } catch (err) {
-        this.log(err)
-      }
-    }
 
+    let contractAddress
+    let value
     if (currencyCode === this.currencyInfo.currencyCode) {
       const ethParams: EthereumTxOtherParams = {
         from: [this.walletLocalData.publicKey],
@@ -369,8 +357,8 @@ export class EthereumEngine extends CurrencyEngine {
         data: data
       }
       otherParams = ethParams
+      value = bns.add(nativeAmount, '0', 16)
     } else {
-      let contractAddress = ''
       if (data) {
         contractAddress = publicAddress
       } else {
@@ -382,6 +370,7 @@ export class EthereumEngine extends CurrencyEngine {
         }
 
         contractAddress = tokenInfo.contractAddress
+        value = '0x0'
       }
 
       const ethParams: EthereumTxOtherParams = {
@@ -397,6 +386,61 @@ export class EthereumEngine extends CurrencyEngine {
       }
       otherParams = ethParams
     }
+
+    const dataArray = abi.simpleEncode(
+      'transfer(address,uint256):(uint256)',
+      contractAddress || publicAddress,
+      value
+    )
+    const gasData = '0x' + Buffer.from(dataArray).toString('hex')
+
+    // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
+    if (
+      useDefaults &&
+      (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
+        this.lastEstimatedGasLimit.contractAddress !== contractAddress)
+    ) {
+      const estimateGasParams = {
+        to: contractAddress || publicAddress,
+        gas: '0xffffff',
+        value,
+        data: gasData
+      }
+      try {
+        // Determine if recipient is a normal or contract address
+        const getCodeResult = await this.ethNetwork.multicastServers(
+          'eth_getCode',
+          [contractAddress || publicAddress, 'latest']
+        )
+
+        if (bns.gt(getCodeResult.result.result, '0')) {
+          const estimateGasResult = await this.ethNetwork.multicastServers(
+            'eth_estimateGas',
+            [estimateGasParams]
+          )
+          gasLimit = bns.add(estimateGasResult.result.result, '0')
+
+          // Over estimate gas limit for token transactions
+          if (currencyCode !== this.currencyInfo.currencyCode) {
+            gasLimit = bns.mul(gasLimit, '2')
+          }
+        } else {
+          gasLimit = '21000'
+        }
+        // Save locally to compare for future makeSpend() calls
+        this.lastEstimatedGasLimit = {
+          publicAddress,
+          contractAddress,
+          gasLimit
+        }
+      } catch (err) {
+        this.log(err)
+      }
+    } else if (useDefaults) {
+      // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
+      gasLimit = this.lastEstimatedGasLimit.gasLimit
+    }
+    otherParams.gas = gasLimit
 
     const nativeBalance = this.walletLocalData.totalBalances[
       this.currencyInfo.currencyCode

@@ -48,7 +48,10 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://mainnet.infura.io/v3'],
+  rpcServers: [
+    'https://eth-mainnet.alchemyapi.io',
+    'https://mainnet.infura.io/v3'
+  ],
   etherscanApiServers: [
     'https://api.etherscan.io'
     // 'https://blockscout.com/eth/mainnet' // not reliable enough...
