@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.19 (2020-08-20)
+
+- Use eth_estimategas and eth_getcode to improve ETH and ERC20 token transaction fee estimation
+
 # 0.7.18 (2020-08-12)
 
 - Disable asyncWaterfall for some FIO operations
