@@ -458,11 +458,9 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmount = bns.mul(totalTxAmount, '-1')
     } else {
       parentNetworkFee = nativeNetworkFee
-
+      // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code
       if (bns.gt(nativeNetworkFee, nativeBalance)) {
-        throw new InsufficientFundsError(
-          `Insufficient ${this.currencyInfo.currencyCode} for transaction fee`
-        )
+        throw new InsufficientFundsError(this.currencyInfo.currencyCode)
       }
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
       if (bns.gt(nativeAmount, balanceToken)) {
