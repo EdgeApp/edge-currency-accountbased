@@ -144,7 +144,7 @@ for (const fixture of fixtures) {
 
   describe('Start engine', function () {
     it('Get BlockHeight', function (done) {
-      this.timeout(10000)
+      this.timeout(100000)
       emitter.once('onBlockHeightChange', height => {
         const thirdPartyHeight = 1578127
         // this validation is not OK for RSK
