@@ -6,7 +6,8 @@
 import 'regenerator-runtime/runtime'
 
 import { makeBinancePlugin } from './binance/bnbPlugin.js'
-import { makeEosPlugin } from './eos/eosPlugin.js'
+import { makeEosPlugin } from './eos/eosInfo.js'
+import { makeTelosPlugin } from './eos/telosInfo.js'
 import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
@@ -20,6 +21,7 @@ import { makeRipplePlugin } from './xrp/xrpPlugin.js'
 
 const plugins = {
   eos: makeEosPlugin,
+  telos: makeTelosPlugin,
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
   fio: makeFioPlugin,
