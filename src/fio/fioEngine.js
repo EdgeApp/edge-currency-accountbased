@@ -33,12 +33,18 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
 
+type RecentFioFee = {
+  publicAddress: string,
+  fee: number
+}
+
 export class FioEngine extends CurrencyEngine {
   fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
   otherData: any
   otherMethods: Object
   tpid: string
+  recentFioFee: RecentFioFee
 
   localDataDirty() {
     this.walletLocalDataDirty = true
@@ -55,6 +61,7 @@ export class FioEngine extends CurrencyEngine {
     this.fetchCors = fetchCors
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
+    this.recentFioFee = { publicAddress: '', fee: 0 }
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -703,10 +710,20 @@ export class FioEngine extends CurrencyEngine {
       edgeSpendInfoIn
     )
 
-    const feeResponse = await this.multicastServers('getFee', {
-      endPoint: EndPoint.transferTokens
-    })
-    const fee = feeResponse.fee
+    // Only query FIO fee if the public address is different from last makeSpend()
+    let fee
+    if (
+      edgeSpendInfo.spendTargets[0].publicAddress ===
+      this.recentFioFee.publicAddress
+    ) {
+      fee = this.recentFioFee.fee
+    } else {
+      const feeResponse = await this.multicastServers('getFee', {
+        endPoint: EndPoint.transferTokens
+      })
+      fee = feeResponse.fee
+    }
+
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
     if (bns.gt(bns.add(quantity, `${fee}`), nativeBalance)) {
@@ -748,6 +765,9 @@ export class FioEngine extends CurrencyEngine {
         transactionJson
       }
     }
+
+    this.recentFioFee = { publicAddress, fee }
+
     return edgeTransaction
   }
 
