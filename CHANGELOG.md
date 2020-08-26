@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+# 0.7.20 (2020-08-25)
+
+- Add Synthetix ERC20 tokens (SNX, SBTC, and SUSD)
+- Save FIO tx fee between makeSpend() requests to the same address to reduce network calls
+- Pass parent currency code in error when there's insufficient parent currency to pay transaction fee
+- Increase timeout on network-dependent block height test
+
 # 0.7.19 (2020-08-20)
 
 - Use eth_estimategas and eth_getcode to improve ETH and ERC20 token transaction fee estimation
