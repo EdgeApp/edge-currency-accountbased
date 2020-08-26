@@ -672,6 +672,42 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0xa3d58c4e56fedcae3a7c43a725aee9a71f0ece4e',
       symbolImage: `${imageServerUrl}/met-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'SNX',
+      currencyName: 'Synthetix Network',
+      denominations: [
+        {
+          name: 'SNX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f',
+      symbolImage: `${imageServerUrl}/snx-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'SUSD',
+      currencyName: 'Synthetix USD',
+      denominations: [
+        {
+          name: 'SUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x57Ab1ec28D129707052df4dF418D58a2D46d5f51',
+      symbolImage: `${imageServerUrl}/synthusd-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'SBTC',
+      currencyName: 'Synthetix BTC',
+      denominations: [
+        {
+          name: 'SBTC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xfE18be6b3Bd88A2D2A7f928d00292E7a9963CfC6',
+      symbolImage: `${imageServerUrl}/synthbtc-logo-solo-64.png`
     }
   ]
 }
