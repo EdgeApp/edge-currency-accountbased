@@ -202,6 +202,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     if (!currencyEngine.otherData.fioDomains) {
       currencyEngine.otherData.fioDomains = []
     }
+    if (!currencyEngine.otherData.fioRequestsToApprove) {
+      currencyEngine.otherData.fioRequestsToApprove = {}
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
