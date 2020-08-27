@@ -116,11 +116,13 @@ export class FioEngine extends CurrencyEngine {
               this.walletLocalData.otherData.fioRequestsToApprove[
                 params.fioRequestId
               ] = params
+              this.localDataDirty()
               const res = await this.multicastServers(actionName, params)
               if (res && res.status === 'sent_to_blockchain') {
                 delete this.walletLocalData.otherData.fioRequestsToApprove[
                   params.fioRequestId
                 ]
+                this.localDataDirty()
               }
               return res
             }
