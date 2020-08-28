@@ -91,7 +91,17 @@ export class FioEngine extends CurrencyEngine {
           case 'addPublicAddresses':
           case 'addPublicAddress':
           case 'requestFunds':
-          case 'rejectFundsRequest':
+          case 'rejectFundsRequest': {
+            const { fee } = await this.multicastServers(
+              feeActionMap[actionName].action,
+              {
+                [feeActionMap[actionName].propName]:
+                  params[feeActionMap[actionName].propName]
+              }
+            )
+            params.maxFee = fee
+            break
+          }
           case 'recordObtData': {
             const { fee } = await this.multicastServers(
               feeActionMap[actionName].action,
@@ -101,6 +111,21 @@ export class FioEngine extends CurrencyEngine {
               }
             )
             params.maxFee = fee
+
+            if (params.fioRequestId) {
+              this.walletLocalData.otherData.fioRequestsToApprove[
+                params.fioRequestId
+              ] = params
+              this.localDataDirty()
+              const res = await this.multicastServers(actionName, params)
+              if (res && res.status === 'sent_to_blockchain') {
+                delete this.walletLocalData.otherData.fioRequestsToApprove[
+                  params.fioRequestId
+                ]
+                this.localDataDirty()
+              }
+              return res
+            }
             break
           }
           case 'renewFioAddress': {
@@ -194,6 +219,23 @@ export class FioEngine extends CurrencyEngine {
         { name: string, expiration: string, isPublic: boolean }[]
       > => {
         return this.walletLocalData.otherData.fioDomains
+      },
+      getApproveNeededFioRequests: async (): Promise<{
+        [fioRequestId: string]: {
+          payeeFioAddress: string,
+          payerFioAddress: string,
+          payerPublicAddress: string,
+          payeePublicAddress: string,
+          amount: string,
+          currencyCode: string,
+          chainCode: string,
+          tokenCode: string,
+          obtId: string,
+          memo: string,
+          fioRequestId: string
+        }
+      }> => {
+        return this.walletLocalData.otherData.fioRequestsToApprove
       }
     }
   }
@@ -680,6 +722,26 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
+  async approveErroredFioRequests(): Promise<void> {
+    for (const fioRequestId in this.walletLocalData.otherData
+      .fioRequestsToApprove) {
+      try {
+        await this.otherMethods.fioAction(
+          'recordObtData',
+          this.walletLocalData.otherData.fioRequestsToApprove[fioRequestId]
+        )
+      } catch (e) {
+        this.log(
+          `approveErroredFioRequests recordObtData error: ${JSON.stringify(
+            e
+          )} for ${
+            this.walletLocalData.otherData.fioRequestsToApprove[fioRequestId]
+          }`
+        )
+      }
+    }
+  }
+
   async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.highestTxHeight = 0
@@ -696,6 +758,7 @@ export class FioEngine extends CurrencyEngine {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    this.addToLoop('approveErroredFioRequests', ADDRESS_POLL_MILLISECONDS)
     super.startEngine()
   }
 
