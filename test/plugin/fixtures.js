@@ -891,7 +891,7 @@ export default [
       40,
       238
     ],
-    xpub: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+    xpub: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
     key_length: 64,
     'invalid key name': {
       type: 'wallet:tron',
@@ -903,48 +903,48 @@ export default [
     },
     parseUri: {
       'address only': [
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
       ],
       'invalid address': [
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE1',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2B',
-        'GMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp761',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp7',
+        'GLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
       ],
       'uri address': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
       ],
       'uri address with amount': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
         '12345670',
         'TRX'
       ],
       'uri address with unique identifier': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?memo=1234567',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?memo=1234567',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
         'TRX',
         '1234567'
       ],
       'uri address with amount & label': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&label=Johnny%20Tron',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&label=Johnny%20Tron',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
         '12345670',
         'TRX',
         'Johnny Tron'
       ],
       'uri address with amount, label & message': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&label=Johnny%20Tron&message=Hellow%20Tron%20World',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&label=Johnny%20Tron&message=Hellow%20Tron%20World',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
         '12345670',
         'TRX',
         'Johnny Tron',
         'Hello Tron World'
       ],
       'uri address with unsupported param': [
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12.34567&unsupported=I%20am%20unsupported',
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&unsupported=I%20am%20unsupported',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
         '12345670',
         'TRX'
       ]
@@ -952,46 +952,46 @@ export default [
     encodeUri: {
       'address only': [
         {
-          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
         },
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
       ],
       'weird address': [
         {
-          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
         },
-        'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE'
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
       ],
       'invalid address': [
-        { publicAddress: 'BGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE' },
-        { publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2B' },
-        { publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BEw' }
+        { publicAddress: 'BLACvKsccxHiHBgxGfZjaXdQaako7Rsp76' },
+        { publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp7' },
+        { publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76w' }
       ],
       'address & amount': [
         {
-          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
           nativeAmount: '12345678000000'
         },
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=12345678'
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12345678'
       ],
       'address, amount, and label': [
         {
-          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
           nativeAmount: '12300',
           currencyCode: 'TRX',
           label: 'Johnny Tron'
         },
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=0.0123&label=Johnny%20Tron'
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=0.0123&label=Johnny%20Tron'
       ],
       'address, amount, label, & message': [
         {
-          publicAddress: 'TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE',
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
           nativeAmount: '12300',
           currencyCode: 'TRX',
           label: 'Johnny Tron',
           message: 'Hello World, I miss you !'
         },
-        'tron:TGMgNz9gEhwXEXZ3to5VdZxEKwkDD3R2BE?amount=0.0123&label=Johnny%20Tron&message=Hello%20World,%20I%20miss%20you%20!'
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=0.0123&label=Johnny%20Tron&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
   }
