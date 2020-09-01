@@ -8,7 +8,7 @@ import { imageServerUrl } from '../common/utils'
 // import { imageServerUrl } from '../common/utils'
 import { type HederaSettings } from './hederaTypes.js'
 
-export const useTestnet = true
+export const useTestnet = false
 
 const otherSettings: HederaSettings = {
   creatorApiServers: useTestnet

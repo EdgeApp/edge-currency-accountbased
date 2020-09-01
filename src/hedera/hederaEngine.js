@@ -134,7 +134,10 @@ export class HederaEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
           this.addToLoop('checkAccountCreationStatus', 5000)
         } else {
-          this.log('hederaEngine invalid activation payment', response.text())
+          this.log(
+            'hederaEngine invalid activation payment',
+            await response.text()
+          )
           throw new Error('ErrorInvalidActivationPayment')
         }
       },
