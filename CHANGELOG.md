@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.21 (2020-09-02)
+
+- Update ETH gas price sanity check values
+
 # 0.7.20 (2020-08-25)
 
 - Add Synthetix ERC20 tokens (SNX, SBTC, and SUSD)
