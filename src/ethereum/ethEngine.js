@@ -47,6 +47,7 @@ import {
 const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const WEI_MULTIPLIER = 100000000
+const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 
 export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
@@ -226,19 +227,19 @@ export class EthereumEngine extends CurrencyEngine {
         let fastest = jsonObj.fastest
 
         // Sanity checks
-        if (safeLow < 1 || safeLow > 3000) {
+        if (safeLow < 1 || safeLow > GAS_PRICE_SANITY_CHECK) {
           this.log('Invalid safeLow value from EthGasStation')
           return
         }
-        if (average < 1 || average > 3000) {
+        if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
           this.log('Invalid average value from EthGasStation')
           return
         }
-        if (fast < 1 || fast > 3000) {
+        if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
           this.log('Invalid fastest value from EthGasStation')
           return
         }
-        if (fastest < 1 || fastest > 3000) {
+        if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
           this.log('Invalid fastest value from EthGasStation')
           return
         }
