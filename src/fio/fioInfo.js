@@ -36,8 +36,10 @@ const defaultSettings: any = {
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
+  fioAddressRegUrl: 'https://reg.fioprotocol.io/address/',
   defaultRef: 'edge',
-  fallbackRef: 'edge'
+  fallbackRef: 'edge',
+  freeAddressRef: 'edgefree'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
