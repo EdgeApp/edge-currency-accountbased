@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.22 (2020-09-03)
+
+- Added free FIO address link
+- Updated FIO api urls to remove port
+
 # 0.7.21 (2020-09-02)
 
 - Update ETH gas price sanity check values
