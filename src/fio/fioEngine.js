@@ -612,6 +612,9 @@ export class FioEngine extends CurrencyEngine {
           }
         }
       } else {
+        this.log(
+          `FIO. fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
+        )
         throw e
       }
     }
