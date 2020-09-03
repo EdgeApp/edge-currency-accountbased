@@ -27,8 +27,8 @@
     "fix": "npm run lint -- --fix",
     "flow": "flow",
     "lint": "eslint .",
-    "precommit": "lint-staged && flow && npm test && npm run build",
-    "prepare": "npm run build",
+    "precommit": "lint-staged && flow && npm test && NODE_OPTIONS='--max-old-space-size=2048' npm run build",
+    "prepare": "NODE_OPTIONS='--max-old-space-size=2048' npm run build",
     "test": "nyc mocha -r sucrase/register './test/**/*.test.js'",
     "posttest": "nyc report --reporter=html",
     "updot": "updot"
