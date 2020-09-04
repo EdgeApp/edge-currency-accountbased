@@ -602,6 +602,14 @@ export class FioEngine extends CurrencyEngine {
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+        if (
+          e.json &&
+          e.json.fields &&
+          e.json.fields[0] &&
+          e.json.fields[0].error
+        ) {
+          e.message = e.json.fields[0].error
+        }
         res = {
           isError: true,
           data: {
@@ -611,6 +619,11 @@ export class FioEngine extends CurrencyEngine {
             list: e.list
           }
         }
+        this.log(
+          `FIO. fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
+            e.json
+          )}`
+        )
       } else {
         this.log(
           `FIO. fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
@@ -640,7 +653,7 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (res.isError) {
-      const error = new FioError(res.errorMessage)
+      const error = new FioError(res.errorMessage || res.data.message)
       error.json = res.data.json
       error.list = res.data.list
       error.errorCode = res.data.code
