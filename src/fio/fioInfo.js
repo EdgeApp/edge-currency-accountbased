@@ -40,7 +40,12 @@ const defaultSettings: any = {
   fioAddressRegUrl: 'https://reg.fioprotocol.io/address/',
   defaultRef: 'edge',
   fallbackRef: 'edge',
-  freeAddressRef: 'edgefree'
+  freeAddressRef: 'edgefree',
+  errorCodes: {
+    INVALID_FIO_ADDRESS: 'INVALID_FIO_ADDRESS',
+    FIO_ADDRESS_IS_NOT_EXIST: 'FIO_ADDRESS_IS_NOT_EXIST',
+    FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED'
+  }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
