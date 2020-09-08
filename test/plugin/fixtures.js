@@ -852,5 +852,147 @@ export default [
         'fio:FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z?amount=0.00000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
+  },
+  {
+    pluginId: 'tron',
+    WALLET_TYPE: 'wallet:tron',
+    'Test Currency code': 'TRX',
+    key: [
+      39,
+      190,
+      34,
+      129,
+      208,
+      32,
+      145,
+      88,
+      191,
+      217,
+      226,
+      98,
+      183,
+      16,
+      52,
+      150,
+      52,
+      53,
+      31,
+      137,
+      164,
+      40,
+      236,
+      146,
+      128,
+      107,
+      129,
+      59,
+      192,
+      240,
+      40,
+      238
+    ],
+    xpub: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:tron',
+      keys: { tronKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'wallet:tronz',
+      keys: { tronKey: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+      ],
+      'invalid address': [
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp761',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp7',
+        'GLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+      ],
+      'uri address': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+      ],
+      'uri address with amount': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        '12345670',
+        'TRX'
+      ],
+      'uri address with unique identifier': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?memo=1234567',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        'TRX',
+        '1234567'
+      ],
+      'uri address with amount & label': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&label=Johnny%20Tron',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        '12345670',
+        'TRX',
+        'Johnny Tron'
+      ],
+      'uri address with amount, label & message': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&label=Johnny%20Tron&message=Hellow%20Tron%20World',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        '12345670',
+        'TRX',
+        'Johnny Tron',
+        'Hello Tron World'
+      ],
+      'uri address with unsupported param': [
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12.34567&unsupported=I%20am%20unsupported',
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+        '12345670',
+        'TRX'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+        },
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+      ],
+      'weird address': [
+        {
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+        },
+        'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76'
+      ],
+      'invalid address': [
+        { publicAddress: 'BLACvKsccxHiHBgxGfZjaXdQaako7Rsp76' },
+        { publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp7' },
+        { publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76w' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+          nativeAmount: '12345678000000'
+        },
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=12345678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+          nativeAmount: '12300',
+          currencyCode: 'TRX',
+          label: 'Johnny Tron'
+        },
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=0.0123&label=Johnny%20Tron'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76',
+          nativeAmount: '12300',
+          currencyCode: 'TRX',
+          label: 'Johnny Tron',
+          message: 'Hello World, I miss you !'
+        },
+        'tron:TLACvKsccxHiHBgxGfZjaXdQaako7Rsp76?amount=0.0123&label=Johnny%20Tron&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
   }
 ]
