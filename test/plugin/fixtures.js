@@ -1,5 +1,145 @@
 export default [
   {
+    pluginId: 'neo',
+    WALLET_TYPE: 'wallet:neo',
+    'Test Currency code': 'NEO',
+    key: [
+      39,
+      190,
+      34,
+      129,
+      208,
+      32,
+      145,
+      88,
+      191,
+      217,
+      226,
+      98,
+      183,
+      16,
+      52,
+      150,
+      52,
+      53,
+      31,
+      137,
+      164,
+      40,
+      236,
+      146,
+      128,
+      107,
+      129,
+      59,
+      192,
+      240,
+      40,
+      238
+    ],
+    xpub: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:neo',
+      keys: { neoKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'wallet:neo',
+      keys: { neoKeyz: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+      ],
+      'invalid address': [
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu23',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Quf'
+      ],
+      'uri address': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+      ],
+      'uri address with amount': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        '12',
+        'NEO'
+      ],
+      'uri address with unique identifier': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?memo=123456700',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        'NEO',
+        '123456700'
+      ],
+      'uri address with amount & label': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12&label=Johnny%20Binance',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        '12',
+        'NEO',
+        'Johnny Binance'
+      ],
+      'uri address with amount, label & message': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12&label=Johnny%20Binance&message=Hellow%20Binance%20World',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        '12',
+        'NEO',
+        'Johnny Binance',
+        'Hello Binance World'
+      ],
+      'uri address with unsupported param': [
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12&unsupported=I%20am%20unsupported',
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+        '12',
+        'NEO'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+        },
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+      ],
+      'weird address': [
+        {
+          publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+        },
+        'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu'
+      ],
+      'invalid address': [
+        { publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu23' },
+        { publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Quf' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+          nativeAmount: '12345678'
+        },
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12345678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+          nativeAmount: '12300',
+          currencyCode: 'NEO',
+          label: 'Johnny Ripple'
+        },
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12300&label=Johnny%20Ripple'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu',
+          nativeAmount: '12300',
+          currencyCode: 'NEO',
+          label: 'Johnny Ripple',
+          message: 'Hello World, I miss you !'
+        },
+        'neo:AM7cfQdn4gKb2sL1DujuLDa8GpYnTFj5Qu?amount=12300&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
+  },
+  {
     pluginId: 'binance',
     WALLET_TYPE: 'wallet:binance',
     'Test Currency code': 'BNB',
