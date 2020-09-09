@@ -12,10 +12,12 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import {
+  asyncWaterfall,
   getOtherParams,
-  validateObject,
-  asyncWaterfall
+  validateObject
 } from '../common/utils.js'
+import { OneGetTransactionSchema } from '../one/oneSchema'
+import { currencyInfo } from './oneInfo'
 import { OnePlugin } from './onePlugin.js'
 import {
   type OneBalanceChange,
@@ -24,8 +26,6 @@ import {
   type OneGetTransactions,
   type OneWalletOtherData
 } from './oneTypes.js'
-import { currencyInfo } from './oneInfo'
-import { OneGetTransactionSchema } from '../one/oneSchema'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -58,10 +58,10 @@ export class OneEngine extends CurrencyEngine {
     // this.callbacksSetup = false
   }
 
-  async multicastServers(
+  async multicastServers<P>(
     actionName: harmonyActions,
     params?: any
-  ): Promise<any> {
+  ): Promise<P> {
     const { oneServers } = this.currencyInfo.defaultSettings.otherSettings
     const { harmonyApi } = this.onePlugin
     let funcs = []
@@ -96,6 +96,10 @@ export class OneEngine extends CurrencyEngine {
         funcs = oneServers.map(apiUrl => async () => {
           harmonyApi.blockchain.messenger.provider.url = apiUrl
 
+          if (!params || params.length < 2) {
+            throw new Error('Error: signTransaction invalid params')
+          }
+
           const res = await harmonyApi.wallet.signTransaction(
             params[0],
             params[1]
@@ -127,7 +131,7 @@ export class OneEngine extends CurrencyEngine {
 
   async checkServerInfoInnerLoop() {
     try {
-      const res: OneGetLastHeader = await this.multicastServers(
+      const res = await this.multicastServers<OneGetLastHeader>(
         'hmyv2_latestHeader',
         []
       )
@@ -199,7 +203,7 @@ export class OneEngine extends CurrencyEngine {
         this.otherData.numberTransactions = 0
       }
 
-      const res: OneGetLastHeader = await this.multicastServers(
+      const res = await this.multicastServers<{ result: number }>(
         'hmyv2_getTransactionsCount',
         [address, 'ALL']
       )
@@ -265,7 +269,7 @@ export class OneEngine extends CurrencyEngine {
     try {
       const address = this.walletLocalData.publicKey
 
-      const res: OneBalanceChange = await this.multicastServers('getBalance', {
+      const res = await this.multicastServers<OneBalanceChange>('getBalance', {
         address
       })
 

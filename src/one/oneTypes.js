@@ -41,7 +41,10 @@ export type OneGetLastHeader = {
 }
 
 export type OneWalletOtherData = {
-  recommendedFee: string // Floating point value in full XRP value
+  recommendedFee: string, // Floating point value in full XRP value
+  gasPrice: string,
+  gasLimit: string,
+  numberTransactions: number
 }
 
 export type OneGetTransactions = {
