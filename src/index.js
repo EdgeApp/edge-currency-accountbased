@@ -12,6 +12,7 @@ import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeNeoPlugin } from './neo/neoPlugin.js'
+import { makeOnePlugin } from './one/onePlugin.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeTronPlugin } from './tron/tronPlugin.js'
@@ -29,7 +30,8 @@ const plugins = {
   rsk: makeRskPlugin,
   binance: makeBinancePlugin,
   tron: makeTronPlugin,
-  neo: makeNeoPlugin
+  neo: makeNeoPlugin,
+  one: makeOnePlugin
 }
 
 if (
