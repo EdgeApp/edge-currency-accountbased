@@ -191,6 +191,24 @@ export class FioEngine extends CurrencyEngine {
               feeCollected: res.fee_collected
             }
           }
+          case 'registerFioDomain': {
+            const { fee } = await this.multicastServers('getFee', {
+              endPoint: EndPoint.registerFioDomain
+            })
+            params.max_fee = fee
+            const res = await this.multicastServers('pushTransaction', {
+              action: 'regdomain',
+              account: '',
+              data: {
+                ...params,
+                tpid
+              }
+            })
+            return {
+              expiration: res.expiration,
+              feeCollected: res.fee_collected
+            }
+          }
         }
 
         return this.multicastServers(actionName, params)
