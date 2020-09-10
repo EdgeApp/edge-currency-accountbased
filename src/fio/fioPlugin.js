@@ -217,6 +217,15 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       tokenCode: string
     ) {
       try {
+        FIOSDK.isFioAddressValid(fioAddress)
+      } catch (e) {
+        throw new FioError(
+          '',
+          400,
+          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        )
+      }
+      try {
         const isAvailableRes = await multicastServers('isAvailable', {
           fioName: fioAddress
         })
@@ -236,7 +245,6 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         ) {
           e.labelCode =
             currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-          throw e
         }
 
         throw e
@@ -256,11 +264,20 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         }
         return result
       } catch (e) {
-        throw new FioError(
-          '',
-          404,
-          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
-        )
+        if (
+          (e.name === 'FioError' &&
+            e.labelCode ===
+              currencyInfo.defaultSettings.errorCodes
+                .FIO_ADDRESS_IS_NOT_LINKED) ||
+          e.errorCode === 404
+        ) {
+          throw new FioError(
+            '',
+            404,
+            currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
+          )
+        }
+        throw e
       }
     },
     async isFioAddressValid(fioAddress: string): Promise<boolean> {
