@@ -494,18 +494,47 @@ export class EosEngine extends CurrencyEngine {
         break
 
       case 'getKeyAccounts': {
+        const body = JSON.stringify({
+          keys: [params[0]]
+        })
         out = await asyncWaterfall(
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
-              const reply = await this.eosJsConfig.fetch(
-                `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
+              const authorizersReply = await this.eosJsConfig.fetch(
+                `${server}/v1/chain/get_accounts_by_authorizers`,
+                {
+                  method: 'POST',
+                  body
+                }
               )
-              if (!reply.ok) {
+              if (!authorizersReply.ok) {
                 throw new Error(
-                  `${server} get_key_accounts failed with ${reply.status}`
+                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
                 )
               }
-              return { server, result: await reply.json() }
+              const authorizersData = await authorizersReply.json()
+              if (!authorizersData.accounts[0]) {
+                throw new Error(
+                  `${server} could not find account with public key: ${params[0]}`
+                )
+              }
+              const accountName = authorizersData.accounts[0].account_name
+              const getAccountBody = JSON.stringify({
+                account_name: accountName
+              })
+              const accountReply = await this.eosJsConfig.fetch(
+                `${server}/v1/chain/get_account`,
+                {
+                  method: 'POST',
+                  body: getAccountBody
+                }
+              )
+              if (!accountReply.ok) {
+                throw new Error(
+                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
+                )
+              }
+              return { server, result: await accountReply.json() }
             }
           )
         )
@@ -575,12 +604,9 @@ export class EosEngine extends CurrencyEngine {
     try {
       // Check if the publicKey has an account accountName
       if (!this.walletLocalData.otherData.accountName) {
-        const accounts = await this.multicastServers(
-          'getKeyAccounts',
-          publicKey
-        )
-        if (accounts.account_names && accounts.account_names.length > 0) {
-          this.walletLocalData.otherData.accountName = accounts.account_names[0]
+        const account = await this.multicastServers('getKeyAccounts', publicKey)
+        if (account) {
+          this.walletLocalData.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
         }
       }
