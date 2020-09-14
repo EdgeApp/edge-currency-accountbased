@@ -5,7 +5,7 @@ import { Harmony } from '@harmony-js/core'
 import { ChainID, ChainType, isPrivateKey } from '@harmony-js/utils'
 // import or require settings
 import { bns } from 'biggystring'
-import { generateMnemonic, validateMnemonic } from 'bip39'
+import { generateMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -16,6 +16,7 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import { fromMasterSeed } from 'hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
@@ -69,11 +70,14 @@ export class OnePlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'one') {
-      const mnemonic = generateMnemonic()
+      const mnemonic = generateMnemonic(128).split(',').join(' ')
 
-      const account = await this.harmonyApi.wallet.addByMnemonic(mnemonic)
+      const seed = mnemonicToSeed(mnemonic)
+      const hdKey = fromMasterSeed(seed)
 
-      const privateKey = account.privateKey.replace('0x', '')
+      const path = '1023'
+      const childKey = hdKey.derive("m/44'/" + path + "'/0'/0/" + 0)
+      const privateKey = childKey.privateKey.toString('hex')
 
       return { oneKey: privateKey, oneMnemonic: mnemonic }
     } else {
