@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.24 (2020-09-16)
+
+- Add Telos (TLOS)
+- EOS fixes
+
 # 0.7.23 (2020-09-16)
 
 - FIO register domain
