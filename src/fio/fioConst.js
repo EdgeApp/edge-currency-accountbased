@@ -14,5 +14,20 @@ export const ACTIONS_SKIP_SWITCH = {
   registerFioDomain: true,
   renewFioAddress: true,
   renewFioDomain: true,
-  transferTokens: true
+  transferTokens: true,
+  addPublicAddresses: true
+}
+
+export const ACTIONS_TO_END_POINT_KEYS = {
+  requestFunds: 'newFundsRequest',
+  registerFioAddress: 'registerFioAddress',
+  registerFioDomain: 'registerFioDomain',
+  renewFioDomain: 'renewFioDomain',
+  renewFioAddress: 'renewFioAddress',
+  addPublicAddresses: 'addPubAddress',
+  setFioDomainPublic: 'setFioDomainPublic',
+  rejectFundsRequest: 'rejectFundsRequest',
+  recordObtData: 'recordObtData',
+  transferTokens: 'transferTokens',
+  pushTransaction: 'pushTransaction'
 }
