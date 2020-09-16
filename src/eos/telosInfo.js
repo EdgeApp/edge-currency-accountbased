@@ -64,8 +64,8 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://telos.eosx.io/account/%s',
-  transactionExplorer: 'https://telos.eosx.io/tx/%s?listView=traces',
+  addressExplorer: 'https://bloks.io/account/%s',
+  transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency

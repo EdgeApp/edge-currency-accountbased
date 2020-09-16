@@ -58,8 +58,8 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://eospark.com/account/%s',
-  transactionExplorer: 'https://eospark.com/tx/%s',
+  addressExplorer: 'https://bloks.io/account/%s',
+  transactionExplorer: 'https://bloks.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
