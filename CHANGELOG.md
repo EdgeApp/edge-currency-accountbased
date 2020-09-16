@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.23 (2020-09-16)
+
+- FIO register domain
+- FIO check pub address error handling
+
 # 0.7.22 (2020-09-03)
 
 - Added free FIO address link
