@@ -57,8 +57,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://explorer.fioprotocol.io/pubkey/%s',
-  transactionExplorer: 'https://explorer.fioprotocol.io/transaction/%s',
+  addressExplorer: 'https://fio.bloks.io/key/%s',
+  transactionExplorer: 'https://fio.bloks.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
