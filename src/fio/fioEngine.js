@@ -18,10 +18,16 @@ import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
 import {
   ACTIONS_SKIP_SWITCH,
+  ACTIONS_TO_END_POINT_KEYS,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
 } from './fioConst.js'
-import { fioApiErrorCodes, FioError } from './fioError.js'
+import {
+  FIO_BLOCK_NUMBER_ERROR_CODE,
+  FIO_CHAIN_INFO_ERROR_CODE,
+  fioApiErrorCodes,
+  FioError
+} from './fioError'
 import { FioPlugin } from './fioPlugin.js'
 import {
   type FioHistoryNodeAction,
@@ -653,13 +659,112 @@ export class FioEngine extends CurrencyEngine {
     return res
   }
 
+  async fioRetryApiRequest(
+    apiUrl: string,
+    requestParams: {
+      endPoint: string,
+      body: string,
+      fetchOptions?: any
+    }
+  ): Promise<any> {
+    const { endPoint, body, fetchOptions } = requestParams
+    const fioSDK = new FIOSDK(
+      this.walletInfo.keys.fioKey,
+      this.walletInfo.keys.publicKey,
+      apiUrl,
+      this.fetchCors,
+      undefined,
+      this.tpid
+    )
+    let res
+
+    try {
+      res = await fioSDK.transactions.executeCall(endPoint, body, fetchOptions)
+    } catch (e) {
+      // handle FIO API error
+      if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+        this.log(
+          `FIO. fioApiRequest error. requestParams: ${JSON.stringify(
+            requestParams
+          )} - apiUrl: ${apiUrl} - message: ${JSON.stringify(e.json)}`
+        )
+        if (
+          e.json &&
+          e.json.fields &&
+          e.json.fields[0] &&
+          e.json.fields[0].error
+        ) {
+          e.message = e.json.fields[0].error
+        }
+        res = {
+          isError: true,
+          data: {
+            code: e.errorCode,
+            message: e.message,
+            json: e.json,
+            list: e.list
+          }
+        }
+      } else {
+        this.log(
+          `FIO. fioApiRequest error. requestParams: ${JSON.stringify(
+            requestParams
+          )} - apiUrl: ${apiUrl} - message: ${e.message}`
+        )
+        throw e
+      }
+    }
+
+    return res
+  }
+
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
     if (ACTIONS_SKIP_SWITCH[actionName]) {
-      const apiUrl = shuffleArray([
+      for (const apiUrl of shuffleArray([
         ...this.currencyInfo.defaultSettings.apiUrls
-      ])[0]
-      res = await this.fioApiRequest(apiUrl, actionName, params)
+      ])) {
+        try {
+          res = await this.fioApiRequest(apiUrl, actionName, params)
+          break
+        } catch (e) {
+          if (e.requestParams) {
+            if (
+              EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]] &&
+              e.requestParams.endPoint.indexOf(
+                EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]]
+              ) < 0
+            ) {
+              continue
+            }
+            res = await asyncWaterfall(
+              shuffleArray(
+                this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
+                  this.fioRetryApiRequest(apiUrl, e.requestParams)
+                )
+              )
+            )
+            break
+          } else if (
+            e.errorCode &&
+            [FIO_CHAIN_INFO_ERROR_CODE, FIO_BLOCK_NUMBER_ERROR_CODE].indexOf(
+              parseInt(e.errorCode)
+            ) > -1
+          ) {
+            continue
+          } else {
+            this.log(
+              `FIO. multicastServers. actionName - ${actionName}. Error message - ${
+                e.message
+              } - ${JSON.stringify(e.json)}`
+            )
+            throw e
+          }
+        }
+      }
+      if (!res) {
+        throw new Error('Service is unavailable')
+      }
     } else {
       res = await asyncWaterfall(
         shuffleArray(
@@ -671,6 +776,10 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (res.isError) {
+      if (res.data.code === 409) {
+        // duplicate trx was sent, success case
+        return {}
+      }
       const error = new FioError(res.errorMessage || res.data.message)
       error.json = res.data.json
       error.list = res.data.list
