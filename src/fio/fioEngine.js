@@ -684,7 +684,7 @@ export class FioEngine extends CurrencyEngine {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
         this.log(
-          `FIO. fioApiRequest error. requestParams: ${JSON.stringify(
+          `FIO. fioRetryApiRequest error. requestParams: ${JSON.stringify(
             requestParams
           )} - apiUrl: ${apiUrl} - message: ${JSON.stringify(e.json)}`
         )
@@ -707,7 +707,7 @@ export class FioEngine extends CurrencyEngine {
         }
       } else {
         this.log(
-          `FIO. fioApiRequest error. requestParams: ${JSON.stringify(
+          `FIO. fioRetryApiRequest error. requestParams: ${JSON.stringify(
             requestParams
           )} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
@@ -725,9 +725,21 @@ export class FioEngine extends CurrencyEngine {
         ...this.currencyInfo.defaultSettings.apiUrls
       ])) {
         try {
+          this.log(
+            `FIO. multicastServers fioApiRequest loop. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
+              params
+            )}`
+          )
           res = await this.fioApiRequest(apiUrl, actionName, params)
           break
         } catch (e) {
+          this.log(
+            `FIO. multicastServers error. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
+              params
+            )} - error message: ${e.message} - error code: ${
+              e.code || e.errorCode
+            } - error json: ${JSON.stringify(e.json)}`
+          )
           if (e.requestParams) {
             if (
               EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]] &&
@@ -735,8 +747,18 @@ export class FioEngine extends CurrencyEngine {
                 EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]]
               ) < 0
             ) {
+              this.log(
+                `FIO. multicastServers continue. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
+                  e.requestParams
+                )}`
+              )
               continue
             }
+            this.log(
+              `FIO. multicastServers fioRetryApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
+                e.requestParams
+              )}`
+            )
             res = await asyncWaterfall(
               shuffleArray(
                 this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
@@ -751,17 +773,20 @@ export class FioEngine extends CurrencyEngine {
               parseInt(e.errorCode)
             ) > -1
           ) {
+            this.log(
+              `FIO. multicastServers FIO_CHAIN_INFO_ERROR_CODE/FIO_BLOCK_NUMBER_ERROR_CODE continue. actionName: ${actionName} - apiUrl: ${apiUrl}`
+            )
             continue
           } else {
-            this.log(
-              `FIO. multicastServers. actionName - ${actionName}. Error message - ${
-                e.message
-              } - ${JSON.stringify(e.json)}`
-            )
             throw e
           }
         }
       }
+      this.log(
+        `FIO. multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
+          res
+        )}`
+      )
       if (!res) {
         throw new Error('Service is unavailable')
       }
