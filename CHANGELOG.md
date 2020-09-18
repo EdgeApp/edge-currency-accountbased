@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.25 (2020-09-18)
+
+- Upgrade FIO SDK to v1.1.0
+- Retry failed FIO tx broadcasts
+- Update FIO explorer
+
 # 0.7.24 (2020-09-16)
 
 - Add Telos (TLOS)
