@@ -329,7 +329,7 @@ export class EthereumEngine extends CurrencyEngine {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    const data =
+    let data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
@@ -388,24 +388,26 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
-    const dataArray = abi.simpleEncode(
-      'transfer(address,uint256):(uint256)',
-      contractAddress || publicAddress,
-      value
-    )
-    const gasData = '0x' + Buffer.from(dataArray).toString('hex')
-
     // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
     if (
       useDefaults &&
       (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
         this.lastEstimatedGasLimit.contractAddress !== contractAddress)
     ) {
+      if (!data) {
+        const dataArray = abi.simpleEncode(
+          'transfer(address,uint256):(uint256)',
+          contractAddress || publicAddress,
+          value
+        )
+        data = '0x' + Buffer.from(dataArray).toString('hex')
+      }
+
       const estimateGasParams = {
         to: contractAddress || publicAddress,
         gas: '0xffffff',
         value,
-        data: gasData
+        data
       }
       try {
         // Determine if recipient is a normal or contract address
