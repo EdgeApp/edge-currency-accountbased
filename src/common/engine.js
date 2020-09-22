@@ -175,7 +175,10 @@ export class CurrencyEngine {
       this.log(
         'Could not load transactionList file. Failure is ok on new device'
       )
-      await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
+      await disklet.setText(
+        TRANSACTION_STORE_FILE,
+        JSON.stringify(this.transactionList)
+      )
     }
 
     let isEmptyTransactions = true
