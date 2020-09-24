@@ -104,6 +104,8 @@ export class EosPlugin extends CurrencyPlugin {
       // but rather just different versions of the master public key
       // const publicKey = derivePubkey(walletInfo.keys.eosKey)
       // const publicKey = deriveAddress(walletInfo.keys.eosKey)
+      // set default publicKey to ACTIVE public key = eosKey
+      // because that is what keys we will encourage to import will get put, do NOT use ownerKey
       const publicKey = ecc.privateToPublic(walletInfo.keys.eosKey)
       let ownerPublicKey
       // usage of eosOwnerKey must be protected by conditional

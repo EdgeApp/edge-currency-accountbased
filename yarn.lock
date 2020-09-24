@@ -828,10 +828,10 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.0.2.tgz#fece083173ef7e309b49e9312538fffa1896a346"
-  integrity sha512-ABukfhRfUqmu+tHqfUUBqw2FSIfkaMUp4ALtlXZwYBd1ZgH0pYBbzrSGR8KHJyEXcs3sEvWb9nh1alu68ztDLg==
+"@fioprotocol/fiosdk@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.1.0.tgz#53078191bc728741c770d9b5ebe47997fd2c37f3"
+  integrity sha512-cHUlGZqOeLBPMHPlnvSObzJm7u0x9dx7afFOCUxhal0e3zHJrEbLw5vAKP/nmJ9nlf6HsvZKr1qJDeyik48CAg==
   dependencies:
     "@fioprotocol/fiojs" "1.0.1"
     "@types/text-encoding" "0.0.35"
