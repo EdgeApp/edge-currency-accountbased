@@ -64,7 +64,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://bloks.io/account/%s',
+  addressExplorer: 'https://telos.bloks.io/account/%s',
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
   denominations: [
