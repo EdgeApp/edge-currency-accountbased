@@ -2,6 +2,7 @@
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { bns } from 'biggystring'
+import { validateMnemonic } from 'bip39'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -12,6 +13,7 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
@@ -37,6 +39,38 @@ export class FioPlugin extends CurrencyPlugin {
 
   constructor(io: EdgeIo) {
     super(io, FIO_TYPE, currencyInfo)
+  }
+
+  async importPrivateKey(userInput: string): Promise<Object> {
+    const { pluginId } = this.currencyInfo
+    const keys = {}
+    if (/[0-9a-zA-Z]{51}$/.test(userInput)) {
+      if (!ecc.isValidPrivate(userInput)) {
+        throw new Error('Invalid private key')
+      }
+
+      keys.fioKey = userInput
+    } else {
+      // it looks like a mnemonic, so validate that way:
+      if (!validateMnemonic(userInput)) {
+        // "input" instead of "mnemonic" in case private key
+        // was just the wrong length
+        throw new Error('Invalid input')
+      }
+      const privKeys = await FIOSDK.createPrivateKeyMnemonic(userInput)
+      keys.fioKey = privKeys.fioKey
+      keys.mnemonic = privKeys.mnemonic
+    }
+
+    // Validate the address derivation:
+    const pubKeys = await this.derivePublicKey({
+      type: `wallet:${pluginId}`,
+      id: 'fake',
+      keys
+    })
+    keys.publicKey = pubKeys.publicKey
+
+    return keys
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
