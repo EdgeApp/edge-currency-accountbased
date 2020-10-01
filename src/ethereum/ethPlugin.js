@@ -13,6 +13,7 @@ import {
   type EdgeCurrencyInfo,
   type EdgeCurrencyPlugin,
   type EdgeEncodeUri,
+  type EdgeFetchFunction,
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
@@ -23,12 +24,17 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
+import { getFetchCors } from '../react-native-io.js'
 import { EthereumEngine } from './ethEngine.js'
 
 export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK
 
 export class EthereumPlugin extends CurrencyPlugin {
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+  constructor(
+    io: EdgeIo,
+    currencyInfo: EdgeCurrencyInfo,
+    fetchCors: EdgeFetchFunction
+  ) {
     super(io, currencyInfo.pluginId, currencyInfo)
   }
 
@@ -248,11 +254,14 @@ export function makeEthereumBasedPluginInner(
   currencyInfo: EdgeCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
+  const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<EthereumPlugin>
   function makeCurrencyTools(): Promise<EthereumPlugin> {
     if (toolsPromise != null) return toolsPromise
-    toolsPromise = Promise.resolve(new EthereumPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(
+      new EthereumPlugin(io, currencyInfo, fetchCors)
+    )
     return toolsPromise
   }
 
@@ -266,7 +275,8 @@ export function makeEthereumBasedPluginInner(
       walletInfo,
       initOptions,
       opts,
-      currencyInfo
+      currencyInfo,
+      fetchCors
     )
 
     // Do any async initialization necessary for the engine

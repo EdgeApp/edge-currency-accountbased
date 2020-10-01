@@ -482,6 +482,18 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
+  async fetchGetAmberdata(url: string, _options: Object = {}) {
+    const options = { ..._options }
+    options.method = 'GET'
+    const response = await this.ethEngine.fetchCors(url, options)
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${url}`
+      )
+    }
+    return response.json()
+  }
+
   async fetchPostRPC(
     method: string,
     params: Object,
@@ -607,7 +619,7 @@ export class EthereumNetwork {
       amberdataApiServers
     } = this.currencyInfo.defaultSettings.otherSettings
     const url = `${amberdataApiServers[0]}${path}`
-    return this.fetchGet(url, {
+    return this.fetchGetAmberdata(url, {
       headers: {
         'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
           .otherSettings.amberDataBlockchainId,

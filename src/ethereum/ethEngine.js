@@ -7,6 +7,7 @@ import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
+  type EdgeFetchFunction,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -54,13 +55,15 @@ export class EthereumEngine extends CurrencyEngine {
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
+  fetchCors: EdgeFetchFunction
 
   constructor(
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions,
-    currencyInfo: EdgeCurrencyInfo
+    currencyInfo: EdgeCurrencyInfo,
+    fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
     const { pluginId } = this.currencyInfo
@@ -78,6 +81,7 @@ export class EthereumEngine extends CurrencyEngine {
       contractAddress: '',
       gasLimit: ''
     }
+    this.fetchCors = fetchCors
   }
 
   updateBalance(tk: string, balance: string) {
