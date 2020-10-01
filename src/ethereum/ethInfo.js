@@ -50,7 +50,8 @@ const defaultNetworkFees = {
 const otherSettings: EthereumSettings = {
   rpcServers: [
     'https://eth-mainnet.alchemyapi.io',
-    'https://mainnet.infura.io/v3'
+    'https://mainnet.infura.io/v3',
+    'https://cloudflare-eth.com'
   ],
   etherscanApiServers: [
     'https://api.etherscan.io'

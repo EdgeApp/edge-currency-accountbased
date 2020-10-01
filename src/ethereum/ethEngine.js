@@ -416,12 +416,15 @@ export class EthereumEngine extends CurrencyEngine {
           [contractAddress || publicAddress, 'latest']
         )
 
-        if (bns.gt(getCodeResult.result.result, '0')) {
+        if (bns.gt(parseInt(getCodeResult.result, 16).toString(), '0')) {
           const estimateGasResult = await this.ethNetwork.multicastServers(
             'eth_estimateGas',
             [estimateGasParams]
           )
-          gasLimit = bns.add(estimateGasResult.result.result, '0')
+          gasLimit = bns.add(
+            parseInt(estimateGasResult.result.result, 16).toString(),
+            '0'
+          )
 
           // Over estimate gas limit for token transactions
           if (currencyCode !== this.currencyInfo.currencyCode) {

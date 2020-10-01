@@ -839,9 +839,6 @@ export class EthereumNetwork {
             chainId,
             baseUrl
           )
-          this.ethEngine.log(
-            `estimateGas waterwall ${JSON.stringify(result)} ${baseUrl}`
-          )
           return { server: parse(baseUrl).hostname, result }
         })
 
