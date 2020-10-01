@@ -17,13 +17,8 @@ import {
 } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import {
-  AlethioAccountsTokenTransferSchema,
-  AmberdataAccountsFuncsSchema,
-  AmberdataAccountsTxSchema,
   AmberdataRpcSchema,
-  BlockChairAddressSchema,
   BlockChairStatsSchema,
-  EtherscanGetAccountBalance,
   EtherscanGetAccountNonce,
   EtherscanGetBlockHeight
 } from './ethSchema'
@@ -34,9 +29,17 @@ import {
   type EthereumTxOtherParams,
   type EtherscanInternalTransaction,
   type EtherscanTransaction,
+  asAlethioAccountsTokenTransfer,
+  asAmberdataAccountsFuncs,
+  asAmberdataAccountsTx,
+  asBlockChairAddress,
+  asCheckTokenBalBlockchair,
+  asEtherscanGetAccountBalance,
   asEtherscanInternalTransaction,
   asEtherscanTokenTransaction,
-  asEtherscanTransaction
+  asEtherscanTransaction, // TODO:
+  asFetchGetAlethio,
+  asFetchGetAmberdataApiResponse
 } from './ethTypes'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
@@ -637,22 +640,24 @@ export class EthereumNetwork {
    * @throws Exception when Alethio throttles with a 429 response code
    */
 
-  async fetchGetAlethio(pathOrLink: string, isPath: boolean = true) {
+  async fetchGetAlethio(
+    pathOrLink: string,
+    isPath: boolean = true,
+    useApiKey: boolean
+  ) {
     const { alethioApiKey } = this.ethEngine.initOptions
     const {
       alethioApiServers
     } = this.currencyInfo.defaultSettings.otherSettings
-    if (alethioApiKey) {
-      const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
+    const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
+    if (alethioApiKey && useApiKey) {
       return this.fetchGet(url, {
         headers: {
           Authorization: `Bearer ${alethioApiKey}`
         }
       })
     } else {
-      return Promise.reject(
-        new Error('fetchGetAlethio ERROR: alethioApiKey not set')
-      )
+      return this.fetchGet(url)
     }
   }
 
@@ -1102,14 +1107,20 @@ export class EthereumNetwork {
       server = response.server
       const transactions = response.result.result
       for (let i = 0; i < transactions.length; i++) {
-        cleanerFunc(transactions[i])
-        const tx = this.processEtherscanTransaction(
-          transactions[i],
-          currencyCode
-        )
-        allTransactions.push(tx)
+        try {
+          const cleanedTx = cleanerFunc(transactions[i])
+          const tx = this.processEtherscanTransaction(cleanedTx, currencyCode)
+          allTransactions.push(tx)
+        } catch (e) {
+          this.ethEngine.log(
+            `getAllTxsEthscan ${cleanerFunc.name}\n${
+              e.message
+            }\n${JSON.stringify(transactions[i])}`
+          )
+          throw new Error(`getAllTxsEthscan ${cleanerFunc.name} is invalid`)
+        }
       }
-      if (transactions.length < NUM_TRANSACTIONS_TO_QUERY) {
+      if (transactions.length === 0) {
         break
       }
       page++
@@ -1198,7 +1209,8 @@ export class EthereumNetwork {
 
   async checkTxsAlethio(
     startBlock: number,
-    currencyCode: string
+    currencyCode: string,
+    useApiKey: boolean
   ): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const {
@@ -1206,40 +1218,53 @@ export class EthereumNetwork {
       token
     } = this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
     let linkNext
+    let cleanedResponseObj: $Call<typeof asFetchGetAlethio>
     const allTransactions: Array<EdgeTransaction> = []
     while (1) {
       let jsonObj
-      if (linkNext) {
-        jsonObj = await this.fetchGetAlethio(linkNext, false)
-      } else {
-        if (currencyCode === this.currencyInfo.currencyCode) {
-          jsonObj = await this.fetchGetAlethio(
-            `/accounts/${address}/${native}Transfers`,
-            true
-          )
+      try {
+        if (linkNext) {
+          jsonObj = await this.fetchGetAlethio(linkNext, false, useApiKey)
         } else {
-          jsonObj = await this.fetchGetAlethio(
-            `/accounts/${address}/${token}Transfers`,
-            true
-          )
+          if (currencyCode === this.currencyInfo.currencyCode) {
+            jsonObj = await this.fetchGetAlethio(
+              `/accounts/${address}/${native}Transfers`,
+              true,
+              useApiKey
+            )
+          } else {
+            jsonObj = await this.fetchGetAlethio(
+              `/accounts/${address}/${token}Transfers`,
+              true,
+              useApiKey
+            )
+          }
         }
+        cleanedResponseObj = asFetchGetAlethio(jsonObj)
+      } catch (e) {
+        this.ethEngine.log(`checkTxsAlethio \n${e.message}\n${linkNext || ''}`)
+        throw new Error('checkTxsAlethio response is invalid')
       }
-      const valid = validateObject(jsonObj, AlethioAccountsTokenTransferSchema)
-      if (valid) {
-        const tokenTransfers: Array<AlethioTokenTransfer> = jsonObj.data
-        linkNext = jsonObj.links.next
-        let hasNext = jsonObj.meta.page.hasNext
-        for (const tokenTransfer of tokenTransfers) {
-          const txBlockheight = tokenTransfer.attributes.globalRank[0]
+
+      linkNext = cleanedResponseObj.links.next
+      let hasNext = cleanedResponseObj.meta.page.hasNext
+
+      for (const tokenTransfer of cleanedResponseObj.data) {
+        try {
+          const cleanTokenTransfer = asAlethioAccountsTokenTransfer(
+            tokenTransfer
+          )
+          const txBlockheight = cleanTokenTransfer.attributes.globalRank[0]
           if (txBlockheight > startBlock) {
             let txCurrencyCode = this.currencyInfo.currencyCode
             if (currencyCode !== this.currencyInfo.currencyCode) {
-              const contractAddress = tokenTransfer.relationships.token.data.id
+              const contractAddress =
+                cleanTokenTransfer.relationships.token.data.id
               txCurrencyCode = this.getTokenCurrencyCode(contractAddress)
             }
             if (typeof txCurrencyCode === 'string') {
               const tx = this.processAlethioTransaction(
-                tokenTransfer,
+                cleanTokenTransfer,
                 txCurrencyCode
               )
               if (tx) {
@@ -1250,12 +1275,18 @@ export class EthereumNetwork {
             hasNext = false
             break
           }
+        } catch (e) {
+          this.ethEngine.log(`checkTxsAlethio tokenTransfer ${e.message}`)
+          throw new Error(
+            `checkTxsAlethio tokenTransfer is invalid\n${JSON.stringify(
+              tokenTransfer
+            )}`
+          )
         }
-        if (!hasNext) {
-          break
-        }
-      } else {
-        throw new Error(`checkTxsAlethio response is invalid(2)`)
+      }
+
+      if (!hasNext) {
+        break
       }
     }
 
@@ -1306,57 +1337,89 @@ export class EthereumNetwork {
       }?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
 
       if (searchRegularTxs) {
-        if (startDate) {
-          const newDateObj = new Date(startDate)
-          const now = new Date()
-          if (newDateObj) {
-            url =
-              url +
-              `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
-          }
-        }
-        const jsonObj = await this.fetchGetAmberdataApi(url)
-        const valid = validateObject(jsonObj, AmberdataAccountsTxSchema)
-        if (valid) {
-          const amberdataTxs: Array<AmberdataTx> = jsonObj.payload.records
-          for (const amberdataTx of amberdataTxs) {
-            const tx = this.processAmberdataTxRegular(amberdataTx, currencyCode)
-            if (tx) {
-              allTransactions.push(tx)
+        let cleanedResponseObj: $Call<typeof asFetchGetAmberdataApiResponse>
+        try {
+          if (startDate) {
+            const newDateObj = new Date(startDate)
+            const now = new Date()
+            if (newDateObj) {
+              url =
+                url +
+                `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
             }
           }
-          if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
-            break
-          }
-          page++
-        } else {
+
+          const jsonObj = await this.fetchGetAmberdataApi(url)
+          cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
+        } catch (e) {
+          this.ethEngine.log(
+            `checkTxsAmberdata fetch regular ${e.message}\n${url}`
+          )
           throw new Error('checkTxsAmberdata (regular tx) response is invalid')
         }
-      } else {
-        if (startDate) {
-          url = url + `&startDate=${startDate}&endDate=${Date.now()}`
-        }
-        const jsonObj = await this.fetchGetAmberdataApi(url)
-        const valid = validateObject(jsonObj, AmberdataAccountsFuncsSchema)
-        if (valid) {
-          const amberdataTxs: Array<AmberdataInternalTx> =
-            jsonObj.payload.records
-          for (const amberdataTx of amberdataTxs) {
-            const tx = this.processAmberdataTxInternal(
-              amberdataTx,
+        const amberdataTxs = cleanedResponseObj.payload.records
+        for (const amberdataTx of amberdataTxs) {
+          try {
+            const cleanAmberdataTx = asAmberdataAccountsTx(amberdataTx)
+
+            const tx = this.processAmberdataTxRegular(
+              cleanAmberdataTx,
               currencyCode
             )
             if (tx) {
               allTransactions.push(tx)
             }
+          } catch (e) {
+            this.ethEngine.log(
+              `checkTxsAmberdata process regular ${JSON.stringify(
+                e
+              )}\n${JSON.stringify(amberdataTx)}`
+            )
+            throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
           }
-          if (amberdataTxs.length < NUM_TRANSACTIONS_TO_QUERY) {
-            break
+        }
+        if (amberdataTxs.length === 0) {
+          break
+        }
+        page++
+      } else {
+        let cleanedResponseObj: $Call<typeof asFetchGetAmberdataApiResponse>
+        try {
+          if (startDate) {
+            url = url + `&startDate=${startDate}&endDate=${Date.now()}`
           }
-          page++
-        } else {
+          const jsonObj = await this.fetchGetAmberdataApi(url)
+          cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
+        } catch (e) {
+          this.ethEngine.log(
+            `checkTxsAmberdata fetch internal ${e.message}\n${url}`
+          )
           throw new Error('checkTxsAmberdata (internal tx) response is invalid')
         }
+        const amberdataTxs = cleanedResponseObj.payload.records
+        for (const amberdataTx of amberdataTxs) {
+          try {
+            const cleanamberdataTx = asAmberdataAccountsFuncs(amberdataTx)
+            const tx = this.processAmberdataTxInternal(
+              cleanamberdataTx,
+              currencyCode
+            )
+            if (tx) {
+              allTransactions.push(tx)
+            }
+          } catch (e) {
+            this.ethEngine.log(
+              `checkTxsAmberdata process internal ${JSON.stringify(
+                e
+              )}\n${JSON.stringify(amberdataTx)}`
+            )
+            throw new Error('checkTxsAmberdata internal amberdataTx is invalid')
+          }
+        }
+        if (amberdataTxs.length === 0) {
+          break
+        }
+        page++
       }
     }
 
@@ -1399,15 +1462,18 @@ export class EthereumNetwork {
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
     let checkTxsFuncs = []
+    const useApiKey = true
     if (currencyCode === this.currencyInfo.currencyCode) {
       checkTxsFuncs = [
         async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
-        async () => this.checkTxsAlethio(startBlock, currencyCode),
+        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     } else {
       checkTxsFuncs = [
-        async () => this.checkTxsAlethio(startBlock, currencyCode),
+        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     }
@@ -1419,65 +1485,80 @@ export class EthereumNetwork {
 
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
-    let jsonObj = {}
+    let response
+    let jsonObj
     let server
-
-    if (tk === this.currencyInfo.currencyCode) {
-      const response = await this.multicastServers('eth_getBalance', address)
-      jsonObj = response.result
-      server = response.server
-    } else {
-      const tokenInfo = this.ethEngine.getTokenInfo(tk)
-      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
-        const contractAddress = tokenInfo.contractAddress
-        const response = await this.multicastServers(
-          'getTokenBalance',
-          address,
-          contractAddress
-        )
+    let cleanedResponseObj: $Call<typeof asEtherscanGetAccountBalance>
+    try {
+      if (tk === this.currencyInfo.currencyCode) {
+        response = await this.multicastServers('eth_getBalance', address)
         jsonObj = response.result
         server = response.server
+      } else {
+        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+          const contractAddress = tokenInfo.contractAddress
+          const response = await this.multicastServers(
+            'getTokenBalance',
+            address,
+            contractAddress
+          )
+          jsonObj = response.result
+          server = response.server
+        }
       }
+      cleanedResponseObj = asEtherscanGetAccountBalance(jsonObj)
+    } catch (e) {
+      this.ethEngine.log(`checkTokenBalEthscan ${e.message}`)
+      throw new Error(
+        `checkTokenBalEthscan invalid ${tk} response ${JSON.stringify(jsonObj)}`
+      )
     }
-    const valid = validateObject(jsonObj, EtherscanGetAccountBalance)
-    if (valid && /^\d+$/.test(jsonObj.result)) {
-      const balance = jsonObj.result
+    if (/^\d+$/.test(cleanedResponseObj.result)) {
+      const balance = cleanedResponseObj.result
       return { tokenBal: { [tk]: balance }, server }
     } else {
-      throw new Error(
-        `Ethscan returned invalid JSON for ${this.currencyInfo.currencyCode} tokens`
-      )
+      throw new Error(`checkTokenBalEthscan returned invalid JSON for ${tk}`)
     }
   }
 
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
+    let cleanedResponseObj: $Call<typeof asCheckTokenBalBlockchair>
     const address = this.ethEngine.walletLocalData.publicKey
-    const jsonObj = await this.fetchGetBlockchair(
-      `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`,
-      true
-    )
-    const valid = validateObject(jsonObj, BlockChairAddressSchema)
-    if (valid) {
-      // Note: Blockchair returns eth balance and all tokens balances
-      const response = {
-        [this.currencyInfo.currencyCode]: jsonObj.data[address].address.balance
-      }
-
-      for (const tokenData of jsonObj.data[address].layer_2.erc_20) {
-        const balance = tokenData.balance
-        const tokenAddress = tokenData.token_address
-        const tokenSymbol = tokenData.token_symbol
+    const url = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
+    try {
+      const jsonObj = await this.fetchGetBlockchair(url, true)
+      cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
+    } catch (e) {
+      this.ethEngine.log(`checkTokenBalBlockchair ${url} ${e.message}`)
+      throw new Error('checkTokenBalBlockchair response is invalid')
+    }
+    const response = {
+      [this.currencyInfo.currencyCode]:
+        cleanedResponseObj.data[address].address.balance
+    }
+    for (const tokenData of cleanedResponseObj.data[address].layer_2.erc_20) {
+      try {
+        const cleanTokenData = asBlockChairAddress(tokenData)
+        const balance = cleanTokenData.balance
+        const tokenAddress = cleanTokenData.token_address
+        const tokenSymbol = cleanTokenData.token_symbol
         const tokenInfo = this.ethEngine.getTokenInfo(tokenSymbol)
         if (tokenInfo && tokenInfo.contractAddress === tokenAddress) {
           response[tokenSymbol] = balance
         } else {
           // Do nothing, eg: Old DAI token balance is ignored
         }
+      } catch (e) {
+        this.ethEngine.log(
+          `checkTokenBalBlockchair tokenData ${JSON.stringify(
+            e
+          )}\n${JSON.stringify(tokenData)}`
+        )
+        throw new Error('checkTokenBalBlockchair tokenData is invalid')
       }
-      return { tokenBal: response, server: 'blockchair' }
-    } else {
-      throw new Error('Blockchair returned invalid JSON')
     }
+    return { tokenBal: response, server: 'blockchair' }
   }
 
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
