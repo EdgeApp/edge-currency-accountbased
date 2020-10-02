@@ -345,6 +345,7 @@ export class EthereumEngine extends CurrencyEngine {
     )
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
+    const defaultGasLimit = gasLimit
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
     let contractAddress
@@ -396,7 +397,8 @@ export class EthereumEngine extends CurrencyEngine {
     if (
       useDefaults &&
       (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
-        this.lastEstimatedGasLimit.contractAddress !== contractAddress)
+        this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
+        this.lastEstimatedGasLimit.gasLimit === '')
     ) {
       if (!data) {
         const dataArray = abi.simpleEncode(
@@ -425,6 +427,13 @@ export class EthereumEngine extends CurrencyEngine {
             'eth_estimateGas',
             [estimateGasParams]
           )
+          // Check if successful http response was actually an error
+          if (estimateGasResult.error != null) {
+            this.lastEstimatedGasLimit.gasLimit = ''
+            throw new Error(
+              'Successful estimateGasResult response object included an error'
+            )
+          }
           gasLimit = bns.add(
             parseInt(estimateGasResult.result.result, 16).toString(),
             '0'
@@ -437,6 +446,14 @@ export class EthereumEngine extends CurrencyEngine {
         } else {
           gasLimit = '21000'
         }
+
+        // Sanity check calculated value
+        if (bns.lt(gasLimit, '21000')) {
+          gasLimit = defaultGasLimit
+          this.lastEstimatedGasLimit.gasLimit = ''
+          throw new Error('Calculated gasLimit less than minimum')
+        }
+
         // Save locally to compare for future makeSpend() calls
         this.lastEstimatedGasLimit = {
           publicAddress,
