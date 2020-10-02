@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "0.7.25",
+  "version": "0.7.27",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
@@ -27,7 +27,8 @@
     "fix": "npm run lint -- --fix",
     "flow": "flow",
     "lint": "eslint .",
-    "precommit": "lint-staged && flow && npm test && npm run build",
+    "postinstall": "sh ./postinstall.sh",
+    "precommit": "lint-staged && flow && npm run postinstall && npm test && npm run build",
     "prepare": "npm run build",
     "test": "nyc mocha -r sucrase/register './test/**/*.test.js'",
     "posttest": "nyc report --reporter=html",

@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.27 (2020-10-01)
+
+- Add FIO import private key support
+- Fix TLOS block explorer link
+
 # 0.7.25 (2020-09-18)
 
 - Upgrade FIO SDK to v1.1.0
