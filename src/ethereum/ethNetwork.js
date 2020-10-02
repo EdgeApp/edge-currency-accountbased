@@ -26,9 +26,13 @@ import {
   type AlethioTokenTransfer,
   type AmberdataInternalTx,
   type AmberdataTx,
+  type CheckTokenBalBlockchair,
   type EthereumTxOtherParams,
+  type EtherscanGetAccountBalance,
   type EtherscanInternalTransaction,
   type EtherscanTransaction,
+  type FetchGetAlethio,
+  type FetchGetAmberdataApiResponse,
   asAlethioAccountsTokenTransfer,
   asAmberdataAccountsFuncs,
   asAmberdataAccountsTx,
@@ -37,7 +41,7 @@ import {
   asEtherscanGetAccountBalance,
   asEtherscanInternalTransaction,
   asEtherscanTokenTransaction,
-  asEtherscanTransaction, // TODO:
+  asEtherscanTransaction,
   asFetchGetAlethio,
   asFetchGetAmberdataApiResponse
 } from './ethTypes'
@@ -1218,7 +1222,7 @@ export class EthereumNetwork {
       token
     } = this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
     let linkNext
-    let cleanedResponseObj: $Call<typeof asFetchGetAlethio>
+    let cleanedResponseObj: FetchGetAlethio
     const allTransactions: Array<EdgeTransaction> = []
     while (1) {
       let jsonObj
@@ -1337,7 +1341,7 @@ export class EthereumNetwork {
       }?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
 
       if (searchRegularTxs) {
-        let cleanedResponseObj: $Call<typeof asFetchGetAmberdataApiResponse>
+        let cleanedResponseObj: FetchGetAmberdataApiResponse
         try {
           if (startDate) {
             const newDateObj = new Date(startDate)
@@ -1383,7 +1387,7 @@ export class EthereumNetwork {
         }
         page++
       } else {
-        let cleanedResponseObj: $Call<typeof asFetchGetAmberdataApiResponse>
+        let cleanedResponseObj: FetchGetAmberdataApiResponse
         try {
           if (startDate) {
             url = url + `&startDate=${startDate}&endDate=${Date.now()}`
@@ -1488,7 +1492,7 @@ export class EthereumNetwork {
     let response
     let jsonObj
     let server
-    let cleanedResponseObj: $Call<typeof asEtherscanGetAccountBalance>
+    let cleanedResponseObj: EtherscanGetAccountBalance
     try {
       if (tk === this.currencyInfo.currencyCode) {
         response = await this.multicastServers('eth_getBalance', address)
@@ -1523,7 +1527,7 @@ export class EthereumNetwork {
   }
 
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
-    let cleanedResponseObj: $Call<typeof asCheckTokenBalBlockchair>
+    let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
     const url = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
     try {
