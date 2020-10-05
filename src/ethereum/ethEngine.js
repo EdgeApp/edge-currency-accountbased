@@ -7,6 +7,7 @@ import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
+  type EdgeFetchFunction,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -54,13 +55,15 @@ export class EthereumEngine extends CurrencyEngine {
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
+  fetchCors: EdgeFetchFunction
 
   constructor(
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions,
-    currencyInfo: EdgeCurrencyInfo
+    currencyInfo: EdgeCurrencyInfo,
+    fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
     const { pluginId } = this.currencyInfo
@@ -78,6 +81,7 @@ export class EthereumEngine extends CurrencyEngine {
       contractAddress: '',
       gasLimit: ''
     }
+    this.fetchCors = fetchCors
   }
 
   updateBalance(tk: string, balance: string) {
@@ -329,7 +333,7 @@ export class EthereumEngine extends CurrencyEngine {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    const data =
+    let data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
     let otherParams: Object = {}
@@ -341,6 +345,7 @@ export class EthereumEngine extends CurrencyEngine {
     )
     const { gasPrice, useDefaults } = miningFees
     let { gasLimit } = miningFees
+    const defaultGasLimit = gasLimit
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
     let contractAddress
@@ -388,24 +393,27 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams = ethParams
     }
 
-    const dataArray = abi.simpleEncode(
-      'transfer(address,uint256):(uint256)',
-      contractAddress || publicAddress,
-      value
-    )
-    const gasData = '0x' + Buffer.from(dataArray).toString('hex')
-
     // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
     if (
       useDefaults &&
       (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
-        this.lastEstimatedGasLimit.contractAddress !== contractAddress)
+        this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
+        this.lastEstimatedGasLimit.gasLimit === '')
     ) {
+      if (!data) {
+        const dataArray = abi.simpleEncode(
+          'transfer(address,uint256):(uint256)',
+          contractAddress || publicAddress,
+          value
+        )
+        data = '0x' + Buffer.from(dataArray).toString('hex')
+      }
+
       const estimateGasParams = {
         to: contractAddress || publicAddress,
         gas: '0xffffff',
         value,
-        data: gasData
+        data
       }
       try {
         // Determine if recipient is a normal or contract address
@@ -414,12 +422,22 @@ export class EthereumEngine extends CurrencyEngine {
           [contractAddress || publicAddress, 'latest']
         )
 
-        if (bns.gt(getCodeResult.result.result, '0')) {
+        if (bns.gt(parseInt(getCodeResult.result, 16).toString(), '0')) {
           const estimateGasResult = await this.ethNetwork.multicastServers(
             'eth_estimateGas',
             [estimateGasParams]
           )
-          gasLimit = bns.add(estimateGasResult.result.result, '0')
+          // Check if successful http response was actually an error
+          if (estimateGasResult.error != null) {
+            this.lastEstimatedGasLimit.gasLimit = ''
+            throw new Error(
+              'Successful estimateGasResult response object included an error'
+            )
+          }
+          gasLimit = bns.add(
+            parseInt(estimateGasResult.result.result, 16).toString(),
+            '0'
+          )
 
           // Over estimate gas limit for token transactions
           if (currencyCode !== this.currencyInfo.currencyCode) {
@@ -428,6 +446,14 @@ export class EthereumEngine extends CurrencyEngine {
         } else {
           gasLimit = '21000'
         }
+
+        // Sanity check calculated value
+        if (bns.lt(gasLimit, '21000')) {
+          gasLimit = defaultGasLimit
+          this.lastEstimatedGasLimit.gasLimit = ''
+          throw new Error('Calculated gasLimit less than minimum')
+        }
+
         // Save locally to compare for future makeSpend() calls
         this.lastEstimatedGasLimit = {
           publicAddress,

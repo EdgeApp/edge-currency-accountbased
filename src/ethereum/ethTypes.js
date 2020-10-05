@@ -3,7 +3,16 @@
  */
 // @flow
 
-import { asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asEither,
+  asMap,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
@@ -144,7 +153,7 @@ export type EthereumWalletOtherData = {
 export type AlethioTokenTransferAttributes = {
   blockCreationTime: number,
   symbol: string,
-  fee: string,
+  fee: string | void,
   value: string,
   globalRank: Array<number>
 }
@@ -167,6 +176,100 @@ export type AlethioTokenTransfer = {
   relationships: AlethioTransactionRelationships
 }
 
+export const asAlethioAccountsTokenTransfer = asObject({
+  type: asString,
+  attributes: asObject({
+    fee: asOptional(asString),
+    value: asString,
+    blockCreationTime: asNumber,
+    symbol: asString,
+    globalRank: asArray(asNumber)
+  }),
+  relationships: asObject({
+    token: asObject({
+      data: asObject({
+        id: asString
+      }),
+      links: asObject({
+        related: asString
+      })
+    }),
+    from: asObject({
+      data: asObject({
+        id: asString
+      }),
+      links: asObject({
+        related: asString
+      })
+    }),
+    to: asObject({
+      data: asObject({
+        id: asString
+      }),
+      links: asObject({
+        related: asString
+      })
+    }),
+    transaction: asObject({
+      data: asObject({
+        id: asString
+      }),
+      links: asObject({
+        related: asString
+      })
+    })
+  }),
+  links: asObject({
+    next: asString
+  }),
+  meta: asObject({
+    page: asObject({
+      hasNext: asBoolean
+    })
+  })
+})
+
+export type AlethioAccountsTokenTransfer = $Call<
+  typeof asAlethioAccountsTokenTransfer
+>
+
+export const asFetchGetAlethio = asObject({
+  data: asArray(asAlethioAccountsTokenTransfer),
+  links: asObject({
+    next: asString
+  }),
+  meta: asObject({
+    page: asObject({
+      hasNext: asBoolean
+    })
+  })
+})
+
+export type FetchGetAlethio = $Call<typeof asFetchGetAlethio>
+
+export const asBlockChairAddress = asObject({
+  balance: asString,
+  token_address: asString,
+  token_symbol: asString
+})
+
+export type BlockChairAddress = $Call<typeof asBlockChairAddress>
+
+export const asCheckTokenBalBlockchair = asObject({
+  data: asMap(
+    asObject({
+      address: asObject({
+        balance: asString
+      }),
+      layer_2: asObject({
+        erc_20: asArray(asOptional(asString))
+      })
+    })
+  )
+})
+
+export type CheckTokenBalBlockchair = $Call<typeof asCheckTokenBalBlockchair>
+
 export type AmberdataTx = {|
   hash: string,
   timestamp: string,
@@ -181,6 +284,53 @@ export type AmberdataTx = {|
   to: Array<{ address: string }>
 |}
 
+export const asAmberdataAccountsTx = asObject({
+  hash: asString,
+  timestamp: asString,
+  blockNumber: asString,
+  value: asString,
+  fee: asString,
+  gasLimit: asString,
+  gasPrice: asString,
+  gasUsed: asString,
+  cumulativeGasUsed: asString,
+  from: asArray(
+    asObject({
+      address: asString
+    })
+  ),
+  to: asArray(
+    asObject({
+      address: asString
+    })
+  )
+})
+
+export type AmberdataAccountsTx = $Call<typeof asAmberdataAccountsTx>
+
+export const asAmberdataAccountsFuncs = asObject({
+  transactionHash: asString,
+  timestamp: asString,
+  blockNumber: asString,
+  value: asString,
+  initialGas: asString,
+  leftOverGas: asString,
+  from: asObject({ address: asString }),
+  to: asArray(asObject({ address: asString }))
+})
+
+export type AmberdataAccountsFuncs = $Call<typeof asAmberdataAccountsFuncs>
+
+export const asFetchGetAmberdataApiResponse = asObject({
+  payload: asObject({
+    records: asArray(asEither(asAmberdataAccountsTx, asAmberdataAccountsFuncs))
+  })
+})
+
+export type FetchGetAmberdataApiResponse = $Call<
+  typeof asFetchGetAmberdataApiResponse
+>
+
 export type AmberdataInternalTx = {|
   transactionHash: string,
   timestamp: string,
@@ -191,3 +341,11 @@ export type AmberdataInternalTx = {|
   from: { address: string },
   to: Array<{ address: string }>
 |}
+
+export const asEtherscanGetAccountBalance = asObject({
+  result: asString
+})
+
+export type EtherscanGetAccountBalance = $Call<
+  typeof asEtherscanGetAccountBalance
+>
