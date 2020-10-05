@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.29 (2020-10-04)
+
+- Add postinstall script to npm package
+
 # 0.7.28 (2020-10-04)
 
 - Replace schema with cleaners for transaction history api calls
