@@ -1,5 +1,17 @@
 # edge-currency-accountbased
 
+# 0.7.28 (2020-10-04)
+
+- Replace schema with cleaners for transaction history api calls
+- Add cloudflare rpcServer
+- Only calculate 'data' parameter if using default fees
+- Fix TRANSACTION_STORE_FILE data initialization
+- Fix hex number parsing
+- Pass fetchCors function to amberdata api calls
+- Remove unnecessary log
+- Add postinstall script for node14 dependency compatibility (usb and node-hid)
+- Update cleaners
+
 # 0.7.27 (2020-10-01)
 
 - Add FIO import private key support
