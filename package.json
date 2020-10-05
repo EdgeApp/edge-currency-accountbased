@@ -18,6 +18,7 @@
     "lib/*",
     "LICENSE",
     "package.json",
+    "postinstall.sh",
     "README.md"
   ],
   "main": "./index.js",
