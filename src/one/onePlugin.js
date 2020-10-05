@@ -72,7 +72,7 @@ export class OnePlugin extends CurrencyPlugin {
     if (type === 'one') {
       const mnemonic = generateMnemonic(128).split(',').join(' ')
 
-      const seed = mnemonicToSeed(mnemonic)
+      const seed = await mnemonicToSeed(mnemonic)
       const hdKey = fromMasterSeed(seed)
 
       const path = '1023'
