@@ -76,7 +76,7 @@
     "babel-eslint": "^10.1.0",
     "babel-loader": "^8.1.0",
     "chai": "^4.2.0",
-    "edge-core-js": "0.17.8",
+    "edge-core-js": "0.17.15",
     "eslint": "^6.8.0",
     "eslint-config-standard-kit": "^0.14.4",
     "eslint-plugin-flowtype": "^4.7.0",
