@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.30 (2020-10-08)
+
+- Add onAddressChanged callback to EOS to inform GUI of new account activation
+
 # 0.7.29 (2020-10-04)
 
 - Add postinstall script to npm package
