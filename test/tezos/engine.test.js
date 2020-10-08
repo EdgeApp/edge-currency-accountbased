@@ -48,6 +48,9 @@ describe(`Tezos engine`, function () {
     },
     onTransactionsChanged(transactionList) {
       emitter.emit('onTransactionsChanged', transactionList)
+    },
+    onAddressChanged() {
+      emitter.emit('addressChanged')
     }
   }
   // $FlowFixMe

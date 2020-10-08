@@ -608,6 +608,7 @@ export class EosEngine extends CurrencyEngine {
         if (account) {
           this.walletLocalData.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
+          this.currencyEngineCallbacks.onAddressChanged()
         }
       }
 
