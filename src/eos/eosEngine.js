@@ -495,30 +495,33 @@ export class EosEngine extends CurrencyEngine {
 
       case 'getKeyAccounts': {
         const body = JSON.stringify({
-          keys: [params[0]]
+          public_key: params[0]
         })
         out = await asyncWaterfall(
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
               const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v1/chain/get_accounts_by_authorizers`,
+                `${server}/v2/state/get_key_accounts`,
                 {
                   method: 'POST',
-                  body
+                  body,
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
                 }
               )
               if (!authorizersReply.ok) {
                 throw new Error(
-                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
+                  `${server} get_key_accounts failed with ${authorizersReply}`
                 )
               }
               const authorizersData = await authorizersReply.json()
-              if (!authorizersData.accounts[0]) {
+              if (!authorizersData.account_names[0]) {
                 throw new Error(
                   `${server} could not find account with public key: ${params[0]}`
                 )
               }
-              const accountName = authorizersData.accounts[0].account_name
+              const accountName = authorizersData.account_names[0]
               const getAccountBody = JSON.stringify({
                 account_name: accountName
               })
@@ -531,7 +534,7 @@ export class EosEngine extends CurrencyEngine {
               )
               if (!accountReply.ok) {
                 throw new Error(
-                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
+                  `${server} get_account failed with ${authorizersReply}`
                 )
               }
               return { server, result: await accountReply.json() }
