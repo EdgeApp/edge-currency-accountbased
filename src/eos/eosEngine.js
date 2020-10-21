@@ -562,9 +562,13 @@ export class EosEngine extends CurrencyEngine {
       }
       case 'transact': {
         const {
-          eosFuelServers
+          eosFuelServers,
+          eosNodes
         } = this.currencyInfo.defaultSettings.otherSettings
-        const randomNodes = pickRandom(eosFuelServers, 30)
+        const isUsingGreymassFuel = eosFuelServers.length > 0
+        const randomNodes = isUsingGreymassFuel
+          ? pickRandom(eosFuelServers, 30)
+          : pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const rpc = new JsonRpc(server, {
@@ -721,7 +725,16 @@ export class EosEngine extends CurrencyEngine {
       nativeBalance,
       denom
     } = super.makeSpend(edgeSpendInfoIn)
-
+    const { denominations, defaultSettings } = this.currencyInfo
+    const nativeDenomination = denominations.find(
+      denomination => denomination.name === currencyCode
+    )
+    if (!nativeDenomination) {
+      throw new Error(`Error: no native denomination found for ${currencyCode}`)
+    }
+    const nativePrecision = nativeDenomination.multiplier.length - 1
+    const { eosFuelServers } = defaultSettings.otherSettings
+    const isUsingGreymassFuel = eosFuelServers.length > 0
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -760,14 +773,18 @@ export class EosEngine extends CurrencyEngine {
     if (bns.eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
-
-    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 4)
+    const exchangeAmount = bns.div(
+      nativeAmount,
+      denom.multiplier,
+      nativePrecision
+    )
     const networkFee = '0'
     if (bns.gt(nativeAmount, nativeBalance)) {
       throw new InsufficientFundsError()
     }
 
-    const quantity = bns.toFixed(exchangeAmount, 4, 4) + ` ${currencyCode}`
+    const quantity =
+      bns.toFixed(exchangeAmount, nativePrecision) + ` ${currencyCode}`
     let memo = ''
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&
@@ -777,38 +794,44 @@ export class EosEngine extends CurrencyEngine {
       memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
 
-    const transactionJson = {
-      actions: [
+    const greymassFuelAction = {
+      authorization: [
         {
-          authorization: [
-            {
-              actor: 'greymassfuel',
-              permission: 'cosign'
-            }
-          ],
-          account: 'greymassnoop',
-          name: 'noop',
-          data: {}
-        },
-        {
-          account: 'eosio.token',
-          name: 'transfer',
-          authorization: [
-            {
-              actor: this.walletLocalData.otherData.accountName,
-              permission: 'active'
-            }
-          ],
-          data: {
-            from: this.walletLocalData.otherData.accountName,
-            to: publicAddress,
-            quantity,
-            memo
-          }
+          actor: 'greymassfuel',
+          permission: 'cosign'
         }
-      ]
+      ],
+      account: 'greymassnoop',
+      name: 'noop',
+      data: {}
     }
 
+    const transactionActions = [
+      {
+        account: 'eosio.token',
+        name: 'transfer',
+        authorization: [
+          {
+            actor: this.walletLocalData.otherData.accountName,
+            permission: 'active'
+          }
+        ],
+        data: {
+          from: this.walletLocalData.otherData.accountName,
+          to: publicAddress,
+          quantity,
+          memo
+        }
+      }
+    ]
+
+    const finalActions = isUsingGreymassFuel
+      ? [greymassFuelAction, ...transactionActions]
+      : transactionActions
+    const transactionJson = {
+      actions: finalActions
+    }
+    console.log('kylan and transactionJson: ', transactionJson)
     // XXX Greymass doesn't let us hit their servers too often
     // Create an unsigned transaction to catch any errors
     // await this.multicastServers('transact', transactionJson, {
@@ -832,9 +855,15 @@ export class EosEngine extends CurrencyEngine {
         transactionJson
       }
     }
-
+    console.log('kylan edgeTransaction: ', edgeTransaction)
     this.log(
       `${this.currencyInfo.currencyCode} tx prepared: ${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
+    )
+    this.log(
+      'kylan edgeTransaction: ',
+      edgeTransaction,
+      ' and transactionJson: ',
+      transactionJson
     )
     return edgeTransaction
   }

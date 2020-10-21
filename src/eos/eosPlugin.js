@@ -26,14 +26,12 @@ import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { type EosJsConfig } from './eosTypes'
 
-const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
+const validCharacters = '12345abcdefghijklmnopqrstuvwxyz.'
 
 export function checkAddress(address: string): boolean {
   // TODO: Check for a valid address format. The passed in
   // address would be a use visible displayed address such as what would
   // go into a QR code
-
-  if (address.length !== 12) return false
 
   for (let i = 0; i < address.length; i++) {
     const c = address.charAt(i)
