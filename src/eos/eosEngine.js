@@ -831,7 +831,6 @@ export class EosEngine extends CurrencyEngine {
     const transactionJson = {
       actions: finalActions
     }
-    console.log('kylan and transactionJson: ', transactionJson)
     // XXX Greymass doesn't let us hit their servers too often
     // Create an unsigned transaction to catch any errors
     // await this.multicastServers('transact', transactionJson, {
@@ -855,15 +854,8 @@ export class EosEngine extends CurrencyEngine {
         transactionJson
       }
     }
-    console.log('kylan edgeTransaction: ', edgeTransaction)
     this.log(
       `${this.currencyInfo.currencyCode} tx prepared: ${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
-    )
-    this.log(
-      'kylan edgeTransaction: ',
-      edgeTransaction,
-      ' and transactionJson: ',
-      transactionJson
     )
     return edgeTransaction
   }
@@ -951,7 +943,6 @@ export class EosEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
-
     // Broadcast transaction and add date
     const keyProvider = []
     if (this.walletInfo.keys.eosKey) {
