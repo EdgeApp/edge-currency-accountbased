@@ -247,14 +247,7 @@ export function makeEosBasedPluginInner(
             server => async () => {
               const uri = `${server}/api/v1/eosPrices/${currencyCode}`
               const response = await fetch(uri)
-              log(
-                'getActivationCost multicast in / out tx server: ',
-                server,
-                ' and response: ',
-                response
-              )
               const prices = await response.json()
-              log('getActivationCost result: ', prices, 'server: ', server)
               const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
               const startingResourcesResponse = await fetch(
                 startingResourcesUri
@@ -302,6 +295,35 @@ export function makeEosBasedPluginInner(
       }
       log(`validateAccount: result=${out.result}`)
       return out
+    },
+    createAccountViaSingleApi: async (keys: {
+      ownerPublicKey: string,
+      activePublicKey: string
+    }): Promise<void> => {
+      const {
+        createAccountViaSingleApiEndpoints
+      } = currencyInfo.defaultSettings.otherSettings
+      const { ownerPublicKey, activePublicKey } = keys
+      try {
+        const request = await fetch(createAccountViaSingleApiEndpoints[0], {
+          method: 'POST',
+          body: JSON.stringify({
+            ownerPublicKey,
+            activePublicKey
+          }),
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          }
+        })
+        const response = await request.json()
+        const { accountName, transactionId } = response
+        log(
+          `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+        )
+      } catch (err) {
+        throw new Error('Unable to create account via single endpoint')
+      }
     }
   }
 
