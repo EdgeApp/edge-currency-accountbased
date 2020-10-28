@@ -1,6 +1,7 @@
 export const FIO_REG_API_ENDPOINTS = {
   buyAddress: 'buy-address',
-  getDomains: 'get-domains'
+  getDomains: 'get-domains',
+  isDomainPublic: 'is-domain-public'
 }
 export const HISTORY_NODE_ACTIONS = {
   getActions: 'get_actions'
