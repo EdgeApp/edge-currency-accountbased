@@ -818,47 +818,110 @@ export class FioEngine extends CurrencyEngine {
       })
 
       let isChanged = false
+      let areAddressesChanged = false
+      let areDomainsChanged = false
 
-      for (const fioAddress of result.fio_addresses) {
-        const existedFioAddress = this.walletLocalData.otherData.fioAddresses.find(
-          existedFioAddress => existedFioAddress.name === fioAddress.fio_address
-        )
-        if (existedFioAddress) {
-          if (existedFioAddress.expiration !== fioAddress.expiration) {
-            existedFioAddress.expiration = fioAddress.expiration
-            isChanged = true
+      // check addresses
+      if (
+        result.fio_addresses.length !==
+        this.walletLocalData.otherData.fioAddresses.length
+      ) {
+        areAddressesChanged = true
+      } else {
+        for (const fioAddress of result.fio_addresses) {
+          const existedFioAddress = this.walletLocalData.otherData.fioAddresses.find(
+            existedFioAddress =>
+              existedFioAddress.name === fioAddress.fio_address
+          )
+          if (existedFioAddress) {
+            if (existedFioAddress.expiration !== fioAddress.expiration) {
+              areAddressesChanged = true
+              break
+            }
+          } else {
+            areAddressesChanged = true
+            break
           }
-        } else {
-          this.walletLocalData.otherData.fioAddresses.push({
-            name: fioAddress.fio_address,
-            expiration: fioAddress.expiration
-          })
-          isChanged = true
+        }
+
+        // check for removed / transferred addresses
+        if (!areAddressesChanged) {
+          for (const fioAddress of this.walletLocalData.otherData
+            .fioAddresses) {
+            if (
+              result.fio_addresses.findIndex(
+                item => item.fio_address === fioAddress.name
+              ) < 0
+            ) {
+              areAddressesChanged = true
+              break
+            }
+          }
         }
       }
 
-      for (const fioDomain of result.fio_domains) {
-        const existedFioDomain = this.walletLocalData.otherData.fioDomains.find(
-          existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
+      // check domains
+      if (
+        result.fio_domains.length !==
+        this.walletLocalData.otherData.fioDomains.length
+      ) {
+        areDomainsChanged = true
+      } else {
+        for (const fioDomain of result.fio_domains) {
+          const existedFioDomain = this.walletLocalData.otherData.fioDomains.find(
+            existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
+          )
+          if (existedFioDomain) {
+            if (existedFioDomain.expiration !== fioDomain.expiration) {
+              areDomainsChanged = true
+              break
+            }
+            if (existedFioDomain.isPublic !== !!fioDomain.is_public) {
+              areDomainsChanged = true
+              break
+            }
+          } else {
+            areDomainsChanged = true
+            break
+          }
+        }
+
+        // check for removed / transferred domains
+        if (!areDomainsChanged) {
+          for (const fioDomain of this.walletLocalData.otherData.fioDomains) {
+            if (
+              result.fio_domains.findIndex(
+                item => item.fio_domain === fioDomain.name
+              ) < 0
+            ) {
+              areDomainsChanged = true
+              break
+            }
+          }
+        }
+      }
+
+      if (areAddressesChanged) {
+        isChanged = true
+        this.walletLocalData.otherData.fioAddresses = result.fio_addresses.map(
+          fioAddress => ({
+            name: fioAddress.fio_address,
+            expiration: fioAddress.expiration
+          })
         )
-        if (existedFioDomain) {
-          if (existedFioDomain.expiration !== fioDomain.expiration) {
-            existedFioDomain.expiration = fioDomain.expiration
-            isChanged = true
-          }
-          if (existedFioDomain.isPublic !== !!fioDomain.is_public) {
-            existedFioDomain.isPublic = !!fioDomain.is_public
-            isChanged = true
-          }
-        } else {
-          this.walletLocalData.otherData.fioDomains.push({
+      }
+
+      if (areDomainsChanged) {
+        isChanged = true
+        this.walletLocalData.otherData.fioDomains = result.fio_domains.map(
+          fioDomain => ({
             name: fioDomain.fio_domain,
             expiration: fioDomain.expiration,
             isPublic: !!fioDomain.is_public
           })
-          isChanged = true
-        }
+        )
       }
+
       if (isChanged) this.localDataDirty()
     } catch (e) {
       this.log('checkAccountInnerLoop getFioNames error: ' + JSON.stringify(e))
