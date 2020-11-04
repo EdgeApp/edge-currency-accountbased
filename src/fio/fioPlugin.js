@@ -332,7 +332,11 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           if (!FIOSDK.isFioAddressValid(fioName)) return false
         }
       } catch (e) {
-        return false
+        throw new FioError(
+          '',
+          400,
+          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        )
       }
       try {
         const isAvailableRes = await multicastServers('isAvailable', {
@@ -341,9 +345,46 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
         return !isAvailableRes.is_registered
       } catch (e) {
-        console.log('validateAccount error: ' + JSON.stringify(e))
-        return false
+        if (
+          e.name === 'FioError' &&
+          e.json &&
+          e.json.fields &&
+          e.errorCode === 400
+        ) {
+          e.labelCode =
+            currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        }
+
+        throw e
       }
+    },
+    async isDomainPublic(domain): Promise<boolean> {
+      const isAvailableRes = await multicastServers('isAvailable', {
+        fioName: domain
+      })
+      if (!isAvailableRes.is_registered)
+        throw new FioError(
+          '',
+          400,
+          currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
+        )
+      const result = await fetchCors(
+        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
+        {
+          method: 'GET'
+        }
+      )
+      if (!result.ok) {
+        const data = await result.json()
+        throw new FioError(
+          '',
+          result.status,
+          currencyInfo.defaultSettings.errorCodes.IS_DOMAIN_PUBLIC_ERROR,
+          data
+        )
+      }
+      const { isPublic } = await result.json()
+      return isPublic
     },
     async doesAccountExist(fioName: string): Promise<boolean> {
       try {
