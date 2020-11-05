@@ -644,13 +644,13 @@ export class FioEngine extends CurrencyEngine {
           }
         }
         this.log(
-          `FIO. fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
+          `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
             e.json
           )}`
         )
       } else {
         this.log(
-          `FIO. fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
+          `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
         throw e
       }
@@ -684,7 +684,7 @@ export class FioEngine extends CurrencyEngine {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
         this.log(
-          `FIO. fioRetryApiRequest error. requestParams: ${JSON.stringify(
+          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
             requestParams
           )} - apiUrl: ${apiUrl} - message: ${JSON.stringify(e.json)}`
         )
@@ -707,7 +707,7 @@ export class FioEngine extends CurrencyEngine {
         }
       } else {
         this.log(
-          `FIO. fioRetryApiRequest error. requestParams: ${JSON.stringify(
+          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
             requestParams
           )} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
@@ -726,7 +726,7 @@ export class FioEngine extends CurrencyEngine {
       ])) {
         try {
           this.log(
-            `FIO. multicastServers fioApiRequest loop. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
+            `multicastServers fioApiRequest loop. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
               params
             )}`
           )
@@ -734,7 +734,7 @@ export class FioEngine extends CurrencyEngine {
           break
         } catch (e) {
           this.log(
-            `FIO. multicastServers error. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
+            `multicastServers error. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
               params
             )} - error message: ${e.message} - error code: ${
               e.code || e.errorCode
@@ -748,14 +748,14 @@ export class FioEngine extends CurrencyEngine {
               ) < 0
             ) {
               this.log(
-                `FIO. multicastServers continue. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
+                `multicastServers continue. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
                   e.requestParams
                 )}`
               )
               continue
             }
             this.log(
-              `FIO. multicastServers fioRetryApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
+              `multicastServers fioRetryApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
                 e.requestParams
               )}`
             )
@@ -774,7 +774,7 @@ export class FioEngine extends CurrencyEngine {
             ) > -1
           ) {
             this.log(
-              `FIO. multicastServers FIO_CHAIN_INFO_ERROR_CODE/FIO_BLOCK_NUMBER_ERROR_CODE continue. actionName: ${actionName} - apiUrl: ${apiUrl}`
+              `multicastServers FIO_CHAIN_INFO_ERROR_CODE/FIO_BLOCK_NUMBER_ERROR_CODE continue. actionName: ${actionName} - apiUrl: ${apiUrl}`
             )
             continue
           } else {
@@ -783,7 +783,7 @@ export class FioEngine extends CurrencyEngine {
         }
       }
       this.log(
-        `FIO. multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
+        `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
           res
         )}`
       )
