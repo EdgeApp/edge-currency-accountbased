@@ -215,6 +215,23 @@ export class FioEngine extends CurrencyEngine {
               feeCollected: res.fee_collected
             }
           }
+          case 'transferFioDomain': {
+            const res = await this.multicastServers(actionName, params)
+            const transferredDomainIndex = this.walletLocalData.otherData.fioDomains.findIndex(
+              ({ name }) => name === params.fioDomain
+            )
+            if (transferredDomainIndex) {
+              this.walletLocalData.otherData.fioDomains.splice(
+                transferredDomainIndex,
+                1
+              )
+              this.localDataDirty()
+            }
+            return {
+              status: res.status,
+              feeCollected: res.fee_collected
+            }
+          }
         }
 
         return this.multicastServers(actionName, params)
