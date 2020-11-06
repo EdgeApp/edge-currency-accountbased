@@ -141,6 +141,7 @@ export type EthereumTxOtherParams = {
   cumulativeGasUsed?: string,
   errorVal: number,
   tokenRecipientAddress: string | null,
+  nonceUsed?: string,
   data?: string | null
 }
 
