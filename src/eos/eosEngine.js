@@ -329,6 +329,7 @@ export class EosEngine extends CurrencyEngine {
       // this.log(`Amount: ${exchangeAmount}`)
       // this.log(`currencyCode: ${currencyCode}`)
     }
+    this.log('Returning block height: ', blockHeight)
     return blockHeight
   }
 
@@ -382,7 +383,7 @@ export class EosEngine extends CurrencyEngine {
     // if there have been new valid actions then increase the last sequence number
     if (
       newHighestTxHeight >
-      this.walletLocalData.otherData.lastQueryActionSeq[currencyCode]
+      (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
       this.walletLocalData.otherData.lastQueryActionSeq[
         currencyCode
@@ -399,16 +400,18 @@ export class EosEngine extends CurrencyEngine {
   ): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
-    let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight[
-      currencyCode
-    ]
+    let newHighestTxHeight =
+      this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
 
     const limit = 10
     let skip = 0
     let finish = false
 
     while (!finish) {
-      this.log('looping through checkIncomingTransactions')
+      this.log(
+        'looping through checkIncomingTransactions, newHighestTxHeight: ',
+        newHighestTxHeight
+      )
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
       const url = `/v2/history/get_actions?transfer.to=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
@@ -447,13 +450,19 @@ export class EosEngine extends CurrencyEngine {
     }
     if (
       newHighestTxHeight >
-      this.walletLocalData.otherData.highestTxHeight[currencyCode]
+      (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
     ) {
       this.walletLocalData.otherData.highestTxHeight[
         currencyCode
       ] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
+    this.log(
+      'newHighestTxHeight is now: ',
+      newHighestTxHeight,
+      'this.walletLocalData.otherData.highestTxHeight[currencyCode] is: ',
+      this.walletLocalData.otherData.highestTxHeight[currencyCode]
+    )
     return true
   }
 
@@ -622,7 +631,10 @@ export class EosEngine extends CurrencyEngine {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop() {
-    this.log('checkAccountInnerLoop and this is: ', this)
+    this.log(
+      'checkAccountInnerLoop and this.walletLocalData.otherData is: ',
+      this.walletLocalData.otherData
+    )
     const publicKey = this.walletLocalData.publicKey
     try {
       // Check if the publicKey has an account accountName
