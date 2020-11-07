@@ -142,6 +142,7 @@ export type EthereumTxOtherParams = {
   errorVal: number,
   tokenRecipientAddress: string | null,
   nonceUsed?: string,
+  rbfTxid?: string,
   data?: string | null
 }
 

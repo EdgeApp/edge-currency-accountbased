@@ -402,7 +402,8 @@ export class EthereumEngine extends CurrencyEngine {
         errorVal: 0,
         tokenRecipientAddress: null,
         nonceArg: rbfNonce,
-        data: data
+        rbfTxid,
+        data
       }
       otherParams = ethParams
       value = bns.add(nativeAmount, '0', 16)
@@ -431,6 +432,7 @@ export class EthereumEngine extends CurrencyEngine {
         errorVal: 0,
         tokenRecipientAddress: publicAddress,
         nonceArg: rbfNonce,
+        rbfTxid,
         data
       }
       otherParams = ethParams
@@ -712,6 +714,28 @@ export class EthereumEngine extends CurrencyEngine {
       return this.walletInfo.keys.publicKey
     }
     return ''
+  }
+
+  // Overload saveTx to mutate replaced transactions by RBF
+  async saveTx(edgeTransaction: EdgeTransaction) {
+    // We must check if this transaction replaces another transaction
+    if (edgeTransaction.otherParams && edgeTransaction.otherParams.rbfTxid) {
+      const { currencyCode } = this.currencyInfo
+
+      // Get the replaced transaction using the rbfTxid
+      const txid = edgeTransaction.otherParams.rbfTxid
+      const idx = this.findTransaction(currencyCode, txid)
+      const replacedEdgeTransaction = this.transactionList[currencyCode][idx]
+
+      // Update the transaction's blockHeight to -1 (drops the transaction)
+      const updatedEdgeTransaction: EdgeTransaction = {
+        ...replacedEdgeTransaction,
+        blockHeight: -1
+      }
+      this.addTransaction(currencyCode, updatedEdgeTransaction)
+    }
+
+    super.saveTx(edgeTransaction)
   }
 }
 
