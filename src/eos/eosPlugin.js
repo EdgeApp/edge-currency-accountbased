@@ -211,10 +211,10 @@ export function makeEosBasedPluginInner(
       currencyEngine.otherData.accountName = ''
     }
     if (!currencyEngine.otherData.lastQueryActionSeq) {
-      currencyEngine.otherData.lastQueryActionSeq = 0
+      currencyEngine.otherData.lastQueryActionSeq = {}
     }
     if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = 0
+      currencyEngine.otherData.highestTxHeight = {}
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
@@ -256,7 +256,6 @@ export function makeEosBasedPluginInner(
                 response
               )
               const prices = await response.json()
-              log('getActivationCost result: ', prices, 'server: ', server)
               const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
               const startingResourcesResponse = await fetch(
                 startingResourcesUri
