@@ -614,54 +614,62 @@ export class EosEngine extends CurrencyEngine {
 
       // Check balance on account
       if (this.walletLocalData.otherData.accountName) {
-        const results = await this.multicastServers(
-          'getCurrencyBalance',
-          'eosio.token',
-          this.walletLocalData.otherData.accountName
-        )
-        if (results && results.length > 0) {
-          for (const r of results) {
-            if (typeof r === 'string') {
-              const balanceArray = r.split(' ')
-              if (balanceArray.length === 2) {
-                const exchangeAmount = balanceArray[0]
-                const currencyCode = balanceArray[1]
-                let nativeAmount = ''
+        for (const token of this.allTokens) {
+          if (this.walletLocalData.enabledTokens.includes(token.currencyCode)) {
+            const results = await this.multicastServers(
+              'getCurrencyBalance',
+              token.contractAddress,
+              this.walletLocalData.otherData.accountName
+            )
+            if (results && results.length > 0) {
+              for (const r of results) {
+                if (typeof r === 'string') {
+                  const balanceArray = r.split(' ')
+                  if (balanceArray.length === 2) {
+                    const exchangeAmount = balanceArray[0]
+                    const currencyCode = balanceArray[1]
+                    let nativeAmount = ''
 
-                // Convert exchange amount to native amount
-                const denom = getDenomInfo(this.currencyInfo, currencyCode)
-                if (denom && denom.multiplier) {
-                  nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
-                } else {
-                  this.log(
-                    `Received balance for unsupported currencyCode: ${currencyCode}`
-                  )
-                }
+                    // Convert exchange amount to native amount
+                    const denom = getDenomInfo(
+                      this.currencyInfo,
+                      currencyCode,
+                      this.customTokens
+                    )
+                    if (denom && denom.multiplier) {
+                      nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+                    } else {
+                      this.log(
+                        `Received balance for unsupported currencyCode: ${currencyCode}`
+                      )
+                    }
 
-                if (!this.walletLocalData.totalBalances[currencyCode]) {
-                  this.walletLocalData.totalBalances[currencyCode] = '0'
-                }
-                if (
-                  !bns.eq(
-                    this.walletLocalData.totalBalances[currencyCode],
-                    nativeAmount
-                  )
-                ) {
-                  this.walletLocalData.totalBalances[
-                    currencyCode
-                  ] = nativeAmount
-                  this.walletLocalDataDirty = true
-                  this.currencyEngineCallbacks.onBalanceChanged(
-                    currencyCode,
-                    nativeAmount
-                  )
+                    if (!this.walletLocalData.totalBalances[currencyCode]) {
+                      this.walletLocalData.totalBalances[currencyCode] = '0'
+                    }
+                    if (
+                      !bns.eq(
+                        this.walletLocalData.totalBalances[currencyCode],
+                        nativeAmount
+                      )
+                    ) {
+                      this.walletLocalData.totalBalances[
+                        currencyCode
+                      ] = nativeAmount
+                      this.walletLocalDataDirty = true
+                      this.currencyEngineCallbacks.onBalanceChanged(
+                        currencyCode,
+                        nativeAmount
+                      )
+                    }
+                  }
                 }
               }
             }
+            this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
           }
         }
       }
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching account: ${JSON.stringify(e)}`)

@@ -36,7 +36,7 @@ import {
   TXID_MAP_FILE,
   WalletLocalData
 } from './types.js'
-import { getDenomInfo, isHex, normalizeAddress } from './utils.js'
+import { getDenomInfo, normalizeAddress } from './utils.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -674,7 +674,7 @@ export class CurrencyEngine {
     return this.walletLocalData.enabledTokens
   }
 
-  async addCustomToken(obj: CustomToken) {
+  async addCustomToken(obj: CustomToken, contractAddress?: string) {
     checkCustomToken(obj)
 
     const tokenObj: CustomToken = obj
@@ -704,13 +704,6 @@ export class CurrencyEngine {
     ) {
       throw new Error('ErrorInvalidMultiplier')
     }
-    let contractAddress = tokenObj.contractAddress
-      .replace('0x', '')
-      .toLowerCase()
-    if (!isHex(contractAddress) || contractAddress.length !== 40) {
-      throw new Error('ErrorInvalidContractAddress')
-    }
-    contractAddress = '0x' + contractAddress
 
     for (const tk of this.customTokens) {
       if (
@@ -736,7 +729,7 @@ export class CurrencyEngine {
       currencyCode: tokenObj.currencyCode,
       currencyName: tokenObj.currencyName,
       denominations: [denom],
-      contractAddress
+      contractAddress: contractAddress || tokenObj.contractAddress
     }
 
     this.customTokens.push(edgeMetaToken)

@@ -22,6 +22,15 @@ export const eosJsConfig: EosJsConfig = {
   verbose: false // verbose logging such as API activity
 }
 
+const denominations = [
+  // An array of Objects of the possible denominations for this currency
+  {
+    name: 'EOS',
+    multiplier: '10000',
+    symbol: 'E'
+  }
+]
+
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eospay.edge.app'],
   eosHyperionNodes: [
@@ -61,17 +70,20 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://bloks.io/account/%s',
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
-  denominations: [
-    // An array of Objects of the possible denominations for this currency
-    {
-      name: 'EOS',
-      multiplier: '10000',
-      symbol: 'E'
-    }
-  ],
+  denominations,
   symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
-  metaTokens: []
+  metaTokens: [
+    {
+      name: 'EOS',
+      currencyName: 'EOS',
+      multiplier: '10000',
+      symbol: 'E',
+      currencyCode: 'EOS',
+      contractAddress: 'eosio.token',
+      denominations
+    }
+  ]
 }
 
 export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {

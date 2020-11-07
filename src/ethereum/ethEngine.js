@@ -19,11 +19,13 @@ import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine.js'
+import { type CustomToken } from '../common/types'
 import {
   addHexPrefix,
   bufToHex,
   getEdgeInfoServer,
   getOtherParams,
+  isHex,
   normalizeAddress,
   toHex,
   validateObject
@@ -657,6 +659,15 @@ export class EthereumEngine extends CurrencyEngine {
       return this.walletInfo.keys.publicKey
     }
     return ''
+  }
+
+  async addCustomToken(obj: CustomToken) {
+    let contractAddress = obj.contractAddress.replace('0x', '').toLowerCase()
+    if (!isHex(contractAddress) || contractAddress.length !== 40) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    contractAddress = '0x' + contractAddress
+    super.addCustomToken(obj, contractAddress)
   }
 }
 
