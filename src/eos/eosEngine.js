@@ -92,6 +92,7 @@ export class EosEngine extends CurrencyEngine {
   otherMethods: Object
   eosJsConfig: EosJsConfig
   fetchCors: EdgeFetchFunction
+  hasTriedActivation: boolean
 
   constructor(
     currencyPlugin: EosPlugin,
@@ -105,6 +106,7 @@ export class EosEngine extends CurrencyEngine {
     this.eosJsConfig = eosJsConfig
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
+    this.hasTriedActivation = false
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
         const {
@@ -156,6 +158,39 @@ export class EosEngine extends CurrencyEngine {
         } catch (e) {
           this.log(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
+        }
+      },
+      createAccountViaSingleApi: async (keys: {
+        ownerPublicKey: string,
+        activePublicKey: string
+      }): Promise<void> => {
+        this.log('calling createAccountViaSingleApi with keys: ', keys)
+        const {
+          createAccountViaSingleApiEndpoints
+        } = this.currencyInfo.defaultSettings.otherSettings
+        const { ownerPublicKey, activePublicKey } = keys
+        try {
+          const request = await fetchCors(
+            createAccountViaSingleApiEndpoints[0],
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                ownerPublicKey,
+                activePublicKey
+              }),
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+          const response = await request.json()
+          const { accountName, transactionId } = response
+          this.log(
+            `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+          )
+        } catch (err) {
+          throw new Error('Unable to create account via single endpoint')
         }
       }
     }
@@ -517,6 +552,21 @@ export class EosEngine extends CurrencyEngine {
               }
               const authorizersData = await authorizersReply.json()
               if (!authorizersData.account_names[0]) {
+                // indicates no activation has occurred
+                // set flag to indicate whether has hit activation API
+                // only do once per login (makeEngine)
+                if (
+                  !this.hasTriedActivation &&
+                  this.currencyInfo.defaultSettings.otherSettings
+                    .createAccountViaSingleApiEndpoints.length > 0
+                ) {
+                  const { publicKey, ownerPublicKey } = this.walletInfo.keys
+                  this.otherMethods.createAccountViaSingleApi({
+                    activePublicKey: publicKey,
+                    ownerPublicKey: ownerPublicKey
+                  })
+                  this.hasTriedActivation = true
+                }
                 throw new Error(
                   `${server} could not find account with public key: ${params[0]}`
                 )
@@ -565,10 +615,10 @@ export class EosEngine extends CurrencyEngine {
           eosFuelServers,
           eosNodes
         } = this.currencyInfo.defaultSettings.otherSettings
-        const isUsingGreymassFuel = eosFuelServers.length > 0
-        const randomNodes = isUsingGreymassFuel
-          ? pickRandom(eosFuelServers, 30)
-          : pickRandom(eosNodes, 30)
+        const randomNodes =
+          eosFuelServers.length > 0
+            ? pickRandom(eosFuelServers, 30)
+            : pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const rpc = new JsonRpc(server, {
@@ -733,8 +783,6 @@ export class EosEngine extends CurrencyEngine {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
     }
     const nativePrecision = nativeDenomination.multiplier.length - 1
-    const { eosFuelServers } = defaultSettings.otherSettings
-    const isUsingGreymassFuel = eosFuelServers.length > 0
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -794,19 +842,7 @@ export class EosEngine extends CurrencyEngine {
       memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
 
-    const greymassFuelAction = {
-      authorization: [
-        {
-          actor: 'greymassfuel',
-          permission: 'cosign'
-        }
-      ],
-      account: 'greymassnoop',
-      name: 'noop',
-      data: {}
-    }
-
-    const transactionActions = [
+    const transferActions = [
       {
         account: 'eosio.token',
         name: 'transfer',
@@ -824,12 +860,9 @@ export class EosEngine extends CurrencyEngine {
         }
       }
     ]
-
-    const finalActions = isUsingGreymassFuel
-      ? [greymassFuelAction, ...transactionActions]
-      : transactionActions
+    const { fuelActions = [] } = defaultSettings.otherSettings
     const transactionJson = {
-      actions: finalActions
+      actions: [...fuelActions, ...transferActions]
     }
     // XXX Greymass doesn't let us hit their servers too often
     // Create an unsigned transaction to catch any errors
