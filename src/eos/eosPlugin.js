@@ -209,10 +209,10 @@ export function makeEosBasedPluginInner(
       currencyEngine.otherData.accountName = ''
     }
     if (!currencyEngine.otherData.lastQueryActionSeq) {
-      currencyEngine.otherData.lastQueryActionSeq = 0
+      currencyEngine.otherData.lastQueryActionSeq = {}
     }
     if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = 0
+      currencyEngine.otherData.highestTxHeight = {}
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
