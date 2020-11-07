@@ -75,8 +75,8 @@ export type EosParams = {}
 
 export type EosWalletOtherData = {
   accountName: string,
-  lastQueryActionSeq: number,
-  highestTxHeight: number
+  lastQueryActionSeq: { [string]: number },
+  highestTxHeight: { [string]: number }
 }
 
 export type EosJsConfig = {
