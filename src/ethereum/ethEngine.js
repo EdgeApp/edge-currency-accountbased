@@ -322,6 +322,35 @@ export class EthereumEngine extends CurrencyEngine {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
+    /**
+    For RBF transactions, get the gas price and limit (fees) of the existing 
+    transaction as well as the current nonce. The fees and the nonce will be 
+    used instead of the calculated equivalents.
+    */
+    let rbfGasPrice: string
+    let rbfGasLimit: string
+    let rbfNonce: string
+    const rbfTxid =
+      edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
+    if (rbfTxid) {
+      const rbfTxIndex = this.findTransaction(currencyCode, rbfTxid)
+
+      if (rbfTxIndex > -1) {
+        const rbfTrx = this.transactionList[currencyCode][rbfTxIndex]
+
+        if (rbfTrx.otherParams) {
+          const { gasPrice, gas, nonceUsed } = rbfTrx.otherParams
+          rbfGasPrice = bns.mul(gasPrice, '2')
+          rbfGasLimit = gas
+          rbfNonce = nonceUsed
+        }
+      }
+
+      if (!rbfGasPrice || !rbfGasLimit || !rbfNonce) {
+        throw new Error('Missing data to complete RBF transaction.')
+      }
+    }
+
     // Ethereum can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -338,13 +367,25 @@ export class EthereumEngine extends CurrencyEngine {
 
     let otherParams: Object = {}
 
-    const miningFees = calcMiningFee(
-      edgeSpendInfo,
-      this.walletLocalData.otherData.networkFees,
-      this.currencyInfo
-    )
-    const { gasPrice, useDefaults } = miningFees
-    let { gasLimit } = miningFees
+    let gasPrice: string
+    let gasLimit: string
+    let useDefaults: boolean = false
+
+    // Use RBF gas price and gas limit when present, otherwise, calculate mining fees
+    if (rbfGasPrice && rbfGasLimit) {
+      gasPrice = rbfGasPrice
+      gasLimit = rbfGasLimit
+    } else {
+      const miningFees = calcMiningFee(
+        edgeSpendInfo,
+        this.walletLocalData.otherData.networkFees,
+        this.currencyInfo
+      )
+      gasPrice = miningFees.gasPrice
+      gasLimit = miningFees.gasLimit
+      useDefaults = miningFees.useDefaults
+    }
+
     const defaultGasLimit = gasLimit
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
@@ -360,7 +401,9 @@ export class EthereumEngine extends CurrencyEngine {
         cumulativeGasUsed: '0',
         errorVal: 0,
         tokenRecipientAddress: null,
-        data: data
+        nonceArg: rbfNonce,
+        rbfTxid,
+        data
       }
       otherParams = ethParams
       value = bns.add(nativeAmount, '0', 16)
@@ -388,6 +431,8 @@ export class EthereumEngine extends CurrencyEngine {
         cumulativeGasUsed: '0',
         errorVal: 0,
         tokenRecipientAddress: publicAddress,
+        nonceArg: rbfNonce,
+        rbfTxid,
         data
       }
       otherParams = ethParams
@@ -540,13 +585,17 @@ export class EthereumEngine extends CurrencyEngine {
     } else {
       nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
     }
-    const nonceArg = otherParams.nonceArg
-    let nonceHex = nonceArg && toHex(nonceArg)
-    if (!nonceHex) {
+
+    // Nonce:
+
+    const nonceArg: string = otherParams.nonceArg
+    let nonce: string = nonceArg
+    if (!nonce) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
       // 2. It is greater than the confirmed nonce
       // 3. Is no more than 5 higher than confirmed nonce
+      // Othewise, use the next nonce
       if (
         this.walletLocalData.numUnconfirmedSpendTxs &&
         bns.gt(
@@ -559,7 +608,7 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalData.otherData.nextNonce
         )
         if (bns.lte(diff, '5')) {
-          nonceHex = toHex(this.walletLocalData.otherData.unconfirmedNextNonce)
+          nonce = this.walletLocalData.otherData.unconfirmedNextNonce
           this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
             this.walletLocalData.otherData.unconfirmedNextNonce,
             '1'
@@ -570,15 +619,18 @@ export class EthereumEngine extends CurrencyEngine {
           e.name = 'ErrorExcessivePendingSpends'
           throw e
         }
+      } else {
+        nonce = this.walletLocalData.otherData.nextNonce
+        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+          this.walletLocalData.otherData.nextNonce,
+          '1'
+        )
       }
     }
-    if (!nonceHex) {
-      nonceHex = toHex(this.walletLocalData.otherData.nextNonce)
-      this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
-        this.walletLocalData.otherData.nextNonce,
-        '1'
-      )
-    }
+    // Convert nonce to hex for tsParams
+    const nonceHex = toHex(nonce)
+
+    // Data:
 
     let data
     if (otherParams.data != null) {
@@ -596,6 +648,8 @@ export class EthereumEngine extends CurrencyEngine {
       data = '0x' + Buffer.from(dataArray).toString('hex')
       nativeAmountHex = '0x00'
     }
+
+    // Tx Parameters:
 
     const txParams = {
       nonce: nonceHex,
@@ -623,6 +677,9 @@ export class EthereumEngine extends CurrencyEngine {
     edgeTransaction.signedTx = bufToHex(tx.serialize())
     edgeTransaction.txid = bufToHex(tx.hash())
     edgeTransaction.date = Date.now() / 1000
+    if (edgeTransaction.otherParams) {
+      edgeTransaction.otherParams.nonceUsed = nonce
+    }
 
     return edgeTransaction
   }
@@ -657,6 +714,28 @@ export class EthereumEngine extends CurrencyEngine {
       return this.walletInfo.keys.publicKey
     }
     return ''
+  }
+
+  // Overload saveTx to mutate replaced transactions by RBF
+  async saveTx(edgeTransaction: EdgeTransaction) {
+    // We must check if this transaction replaces another transaction
+    if (edgeTransaction.otherParams && edgeTransaction.otherParams.rbfTxid) {
+      const { currencyCode } = this.currencyInfo
+
+      // Get the replaced transaction using the rbfTxid
+      const txid = edgeTransaction.otherParams.rbfTxid
+      const idx = this.findTransaction(currencyCode, txid)
+      const replacedEdgeTransaction = this.transactionList[currencyCode][idx]
+
+      // Update the transaction's blockHeight to -1 (drops the transaction)
+      const updatedEdgeTransaction: EdgeTransaction = {
+        ...replacedEdgeTransaction,
+        blockHeight: -1
+      }
+      this.addTransaction(currencyCode, updatedEdgeTransaction)
+    }
+
+    super.saveTx(edgeTransaction)
   }
 }
 
