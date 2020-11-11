@@ -92,7 +92,6 @@ export class EosEngine extends CurrencyEngine {
   otherMethods: Object
   eosJsConfig: EosJsConfig
   fetchCors: EdgeFetchFunction
-  hasTriedActivation: boolean
 
   constructor(
     currencyPlugin: EosPlugin,
@@ -106,7 +105,6 @@ export class EosEngine extends CurrencyEngine {
     this.eosJsConfig = eosJsConfig
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
-    this.hasTriedActivation = false
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
         const {
@@ -158,39 +156,6 @@ export class EosEngine extends CurrencyEngine {
         } catch (e) {
           this.log(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
-        }
-      },
-      createAccountViaSingleApi: async (keys: {
-        ownerPublicKey: string,
-        activePublicKey: string
-      }): Promise<void> => {
-        this.log('calling createAccountViaSingleApi with keys: ', keys)
-        const {
-          createAccountViaSingleApiEndpoints
-        } = this.currencyInfo.defaultSettings.otherSettings
-        const { ownerPublicKey, activePublicKey } = keys
-        try {
-          const request = await fetchCors(
-            createAccountViaSingleApiEndpoints[0],
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                ownerPublicKey,
-                activePublicKey
-              }),
-              headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json'
-              }
-            }
-          )
-          const response = await request.json()
-          const { accountName, transactionId } = response
-          this.log(
-            `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
-          )
-        } catch (err) {
-          throw new Error('Unable to create account via single endpoint')
         }
       }
     }
@@ -551,12 +516,12 @@ export class EosEngine extends CurrencyEngine {
                 )
               }
               const authorizersData = await authorizersReply.json()
+              // verify array order (chronological)?
               if (!authorizersData.account_names[0]) {
                 // indicates no activation has occurred
                 // set flag to indicate whether has hit activation API
                 // only do once per login (makeEngine)
                 if (
-                  !this.hasTriedActivation &&
                   this.currencyInfo.defaultSettings.otherSettings
                     .createAccountViaSingleApiEndpoints.length > 0
                 ) {
@@ -565,7 +530,30 @@ export class EosEngine extends CurrencyEngine {
                     activePublicKey: publicKey,
                     ownerPublicKey: ownerPublicKey
                   })
-                  this.hasTriedActivation = true
+
+                  const {
+                    createAccountViaSingleApiEndpoints
+                  } = this.currencyInfo.defaultSettings.otherSettings
+                  const request = await this.fetchCors(
+                    createAccountViaSingleApiEndpoints[0],
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        ownerPublicKey,
+                        publicKey
+                      }),
+                      headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  )
+                  const response = await request.json()
+                  const { accountName, transactionId } = response
+                  if (!accountName) throw new Error(response)
+                  this.log(
+                    `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+                  )
                 }
                 throw new Error(
                   `${server} could not find account with public key: ${params[0]}`
