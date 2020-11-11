@@ -26,14 +26,12 @@ import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { type EosJsConfig } from './eosTypes'
 
-const validCharacters = '12345abcdefghijklmnopqrstuvwxyz'
+const validCharacters = '12345abcdefghijklmnopqrstuvwxyz.'
 
 export function checkAddress(address: string): boolean {
   // TODO: Check for a valid address format. The passed in
   // address would be a use visible displayed address such as what would
   // go into a QR code
-
-  if (address.length !== 12) return false
 
   for (let i = 0; i < address.length; i++) {
     const c = address.charAt(i)
@@ -249,14 +247,7 @@ export function makeEosBasedPluginInner(
             server => async () => {
               const uri = `${server}/api/v1/eosPrices/${currencyCode}`
               const response = await fetch(uri)
-              log(
-                'getActivationCost multicast in / out tx server: ',
-                server,
-                ' and response: ',
-                response
-              )
               const prices = await response.json()
-              log('getActivationCost result: ', prices, 'server: ', server)
               const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
               const startingResourcesResponse = await fetch(
                 startingResourcesUri

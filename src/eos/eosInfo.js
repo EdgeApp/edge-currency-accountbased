@@ -13,6 +13,18 @@ import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { type EosJsConfig, type EosSettings } from './eosTypes'
 
+const GREYMASS_FUEL_ACTION = {
+  authorization: [
+    {
+      actor: 'greymassfuel',
+      permission: 'cosign'
+    }
+  ],
+  account: 'greymassnoop',
+  name: 'noop',
+  data: {}
+}
+
 // ----EOSIO MAIN NET----
 export const eosJsConfig: EosJsConfig = {
   chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // eosio main net
@@ -41,7 +53,8 @@ const otherSettings: EosSettings = {
     'https://api.eosn.io'
   ],
   eosFuelServers: ['https://eos.greymass.com'],
-  uriProtocol: 'eos'
+  uriProtocol: 'eos',
+  fuelActions: [GREYMASS_FUEL_ACTION]
 }
 
 const defaultSettings: any = {

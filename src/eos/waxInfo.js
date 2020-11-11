@@ -13,9 +13,9 @@ import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { type EosJsConfig, type EosSettings } from './eosTypes'
 
-// ----TELOS MAIN NET----
+// ----WAX MAIN NET----
 export const eosJsConfig: EosJsConfig = {
-  chainId: '4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11', // Telos main net
+  chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4', // Wax main net
   keyProvider: [],
   httpEndpoint: '', // main net
   fetch: fetch,
@@ -23,10 +23,7 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
-  eosActivationServers: [
-    'https://eospay.edge.app',
-    'https://account.teloscrew.com'
-  ],
+  eosActivationServers: [],
   // used for the following routines, is Hyperion v2:
 
   // getIncomingTransactions
@@ -38,48 +35,51 @@ const otherSettings: EosSettings = {
   // getKeyAccounts
   // `${server}/v2/state/get_key_accounts?public_key=${params[0]}`
 
-  eosHyperionNodes: ['https://telos.caleos.io'],
+  eosHyperionNodes: ['https://api.waxsweden.org'],
 
   // used for eosjs fetch routines
   // getCurrencyBalance
   // getInfo
   // transaction
-  eosNodes: ['https://telos.caleos.io'],
+  eosNodes: ['https://api.waxsweden.org'],
   eosFuelServers: [], // this will need to be fixed
-  uriProtocol: 'telos'
+  uriProtocol: 'wax',
+  createAccountViaSingleApiEndpoints: [
+    'https://edge.maltablock.org/api/v1/activateAccount'
+  ]
 }
 
 const defaultSettings: any = {
   otherSettings
 }
 
-export const telosCurrencyInfo: EdgeCurrencyInfo = {
+export const waxCurrencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
-  currencyCode: 'TLOS',
-  displayName: 'Telos',
-  pluginId: 'telos',
-  pluginName: 'telos',
+  currencyCode: 'WAX',
+  displayName: 'Wax',
+  pluginId: 'wax',
+  pluginName: 'wax',
   // do we need plugin name?
-  walletType: 'wallet:telos',
+  walletType: 'wallet:wax',
 
   defaultSettings,
 
-  addressExplorer: 'https://telos.bloks.io/account/%s',
-  transactionExplorer: 'https://telos.bloks.io/transaction/%s',
+  addressExplorer: 'https://wax.bloks.io/account/%s',
+  transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
     {
-      name: 'TLOS',
-      multiplier: '10000',
-      symbol: 'T'
+      name: 'WAX',
+      multiplier: '100000000',
+      symbol: 'W'
     }
   ],
-  symbolImage: `${imageServerUrl}/telos-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/telos-logo-solo-64.png`,
+  symbolImage: `${imageServerUrl}/wax-logo-solo-64.png`,
+  symbolImageDarkMono: `${imageServerUrl}/wax-logo-solo-64.png`,
   metaTokens: []
 }
 
-export const makeTelosPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEosBasedPluginInner(opts, telosCurrencyInfo, eosJsConfig)
+export const makeWaxPlugin = (opts: EdgeCorePluginOptions) => {
+  return makeEosBasedPluginInner(opts, waxCurrencyInfo, eosJsConfig)
 }

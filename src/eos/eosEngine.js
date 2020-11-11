@@ -495,30 +495,71 @@ export class EosEngine extends CurrencyEngine {
 
       case 'getKeyAccounts': {
         const body = JSON.stringify({
-          keys: [params[0]]
+          public_key: params[0]
         })
         out = await asyncWaterfall(
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
               const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v1/chain/get_accounts_by_authorizers`,
+                `${server}/v2/state/get_key_accounts`,
                 {
                   method: 'POST',
-                  body
+                  body,
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
                 }
               )
               if (!authorizersReply.ok) {
                 throw new Error(
-                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
+                  `${server} get_key_accounts failed with ${authorizersReply}`
                 )
               }
               const authorizersData = await authorizersReply.json()
-              if (!authorizersData.accounts[0]) {
+              // verify array order (chronological)?
+              if (!authorizersData.account_names[0]) {
+                // indicates no activation has occurred
+                // set flag to indicate whether has hit activation API
+                // only do once per login (makeEngine)
+                if (
+                  this.currencyInfo.defaultSettings.otherSettings
+                    .createAccountViaSingleApiEndpoints.length > 0
+                ) {
+                  const { publicKey, ownerPublicKey } = this.walletInfo.keys
+                  this.otherMethods.createAccountViaSingleApi({
+                    activePublicKey: publicKey,
+                    ownerPublicKey: ownerPublicKey
+                  })
+
+                  const {
+                    createAccountViaSingleApiEndpoints
+                  } = this.currencyInfo.defaultSettings.otherSettings
+                  const request = await this.fetchCors(
+                    createAccountViaSingleApiEndpoints[0],
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        ownerPublicKey,
+                        publicKey
+                      }),
+                      headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  )
+                  const response = await request.json()
+                  const { accountName, transactionId } = response
+                  if (!accountName) throw new Error(response)
+                  this.log(
+                    `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+                  )
+                }
                 throw new Error(
                   `${server} could not find account with public key: ${params[0]}`
                 )
               }
-              const accountName = authorizersData.accounts[0].account_name
+              const accountName = authorizersData.account_names[0]
               const getAccountBody = JSON.stringify({
                 account_name: accountName
               })
@@ -531,7 +572,7 @@ export class EosEngine extends CurrencyEngine {
               )
               if (!accountReply.ok) {
                 throw new Error(
-                  `${server} get_accounts_by_authorizers failed with ${authorizersReply}`
+                  `${server} get_account failed with ${authorizersReply}`
                 )
               }
               return { server, result: await accountReply.json() }
@@ -559,9 +600,13 @@ export class EosEngine extends CurrencyEngine {
       }
       case 'transact': {
         const {
-          eosFuelServers
+          eosFuelServers,
+          eosNodes
         } = this.currencyInfo.defaultSettings.otherSettings
-        const randomNodes = pickRandom(eosFuelServers, 30)
+        const randomNodes =
+          eosFuelServers.length > 0
+            ? pickRandom(eosFuelServers, 30)
+            : pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const rpc = new JsonRpc(server, {
@@ -718,7 +763,14 @@ export class EosEngine extends CurrencyEngine {
       nativeBalance,
       denom
     } = super.makeSpend(edgeSpendInfoIn)
-
+    const { denominations, defaultSettings } = this.currencyInfo
+    const nativeDenomination = denominations.find(
+      denomination => denomination.name === currencyCode
+    )
+    if (!nativeDenomination) {
+      throw new Error(`Error: no native denomination found for ${currencyCode}`)
+    }
+    const nativePrecision = nativeDenomination.multiplier.length - 1
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -757,14 +809,18 @@ export class EosEngine extends CurrencyEngine {
     if (bns.eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
-
-    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 4)
+    const exchangeAmount = bns.div(
+      nativeAmount,
+      denom.multiplier,
+      nativePrecision
+    )
     const networkFee = '0'
     if (bns.gt(nativeAmount, nativeBalance)) {
       throw new InsufficientFundsError()
     }
 
-    const quantity = bns.toFixed(exchangeAmount, 4, 4) + ` ${currencyCode}`
+    const quantity =
+      bns.toFixed(exchangeAmount, nativePrecision) + ` ${currencyCode}`
     let memo = ''
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&
@@ -774,38 +830,28 @@ export class EosEngine extends CurrencyEngine {
       memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
 
-    const transactionJson = {
-      actions: [
-        {
-          authorization: [
-            {
-              actor: 'greymassfuel',
-              permission: 'cosign'
-            }
-          ],
-          account: 'greymassnoop',
-          name: 'noop',
-          data: {}
-        },
-        {
-          account: 'eosio.token',
-          name: 'transfer',
-          authorization: [
-            {
-              actor: this.walletLocalData.otherData.accountName,
-              permission: 'active'
-            }
-          ],
-          data: {
-            from: this.walletLocalData.otherData.accountName,
-            to: publicAddress,
-            quantity,
-            memo
+    const transferActions = [
+      {
+        account: 'eosio.token',
+        name: 'transfer',
+        authorization: [
+          {
+            actor: this.walletLocalData.otherData.accountName,
+            permission: 'active'
           }
+        ],
+        data: {
+          from: this.walletLocalData.otherData.accountName,
+          to: publicAddress,
+          quantity,
+          memo
         }
-      ]
+      }
+    ]
+    const { fuelActions = [] } = defaultSettings.otherSettings
+    const transactionJson = {
+      actions: [...fuelActions, ...transferActions]
     }
-
     // XXX Greymass doesn't let us hit their servers too often
     // Create an unsigned transaction to catch any errors
     // await this.multicastServers('transact', transactionJson, {
@@ -829,7 +875,6 @@ export class EosEngine extends CurrencyEngine {
         transactionJson
       }
     }
-
     this.log(
       `${this.currencyInfo.currencyCode} tx prepared: ${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
@@ -919,7 +964,6 @@ export class EosEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
-
     // Broadcast transaction and add date
     const keyProvider = []
     if (this.walletInfo.keys.eosKey) {
