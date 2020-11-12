@@ -1,5 +1,22 @@
 # edge-currency-accountbased
 
+# 0.7.31 (2020-11-11)
+
+- WAX Integration
+  - Update endpoint for finding EOSIO account by key
+  - Initial WAX integration
+  - Remove unnecessary comments and disable Greymass Fuel for Telos
+  - Enable WAX activation process
+  - Move WAX activation to eosEngine and attempt activation on engine start
+  - Adjustment to EosFuel routine
+  - Make singleApiActivation private for Wax
+- FIO changes:
+  - Check if domain is public
+  - Check for transferred addresses/domains.
+  - Transfer fio domain changes.
+  - Removed FIO str from logs.
+- RBF support for ETH, RSK, and ETH tokens
+
 # 0.7.30 (2020-10-08)
 
 - Add onAddressChanged callback to EOS to inform GUI of new account activation
