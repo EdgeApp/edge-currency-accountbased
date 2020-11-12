@@ -828,10 +828,10 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@^1.1.0":
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.1.0.tgz#53078191bc728741c770d9b5ebe47997fd2c37f3"
-  integrity sha512-cHUlGZqOeLBPMHPlnvSObzJm7u0x9dx7afFOCUxhal0e3zHJrEbLw5vAKP/nmJ9nlf6HsvZKr1qJDeyik48CAg==
+"@fioprotocol/fiosdk@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.2.0.tgz#81dd0fb58f13c9bd71857f98a692b4c86166038f"
+  integrity sha512-79RG3YTsUoIIrIpLfSeFJsKYRzU0/R9hLoxvYz7IsyO0zWimHgYR1o0Q7I7ttq7NGAU3Dfv4lgz8nr/6Dn4peA==
   dependencies:
     "@fioprotocol/fiojs" "1.0.1"
     "@types/text-encoding" "0.0.35"
@@ -2497,10 +2497,10 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@0.17.15:
-  version "0.17.15"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.15.tgz#91f1c848710fd69560a54bdc7cd1e9b9098d612d"
-  integrity sha512-Sl0ON0IIBUIorPAucKxVYIHSqnIX294sZx4jR5VSOmwj+ish3hWtEhr9xuxlqto96Sa77R/sHsQKZxz8GoFgNQ==
+edge-core-js@^0.17.16:
+  version "0.17.16"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.16.tgz#d7ec6ce58427601db0f2c719c8fd6453060c72bc"
+  integrity sha512-kngLimXJXNl7C4tV9nmlPTqMZ+biN6yb137WE3rU9d8kYk0jKeaS+/phjZBBaC9njSYY3n0m3vOHASSLy503SQ==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
