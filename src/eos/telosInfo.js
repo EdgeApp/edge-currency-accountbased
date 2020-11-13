@@ -22,6 +22,14 @@ export const eosJsConfig: EosJsConfig = {
   verbose: false // verbose logging such as API activity
 }
 
+const denominations = [
+  {
+    name: 'TLOS',
+    multiplier: '10000',
+    symbol: 'T'
+  }
+]
+
 const otherSettings: EosSettings = {
   eosActivationServers: [
     'https://eospay.edge.app',
@@ -67,17 +75,20 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://telos.bloks.io/account/%s',
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
-  denominations: [
-    // An array of Objects of the possible denominations for this currency
-    {
-      name: 'TLOS',
-      multiplier: '10000',
-      symbol: 'T'
-    }
-  ],
+  denominations,
   symbolImage: `${imageServerUrl}/telos-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/telos-logo-solo-64.png`,
-  metaTokens: []
+  metaTokens: [
+    {
+      name: 'TLOS',
+      currencyName: 'TLOS',
+      multiplier: '10000',
+      symbol: 'T',
+      currencyCode: 'TLOS',
+      contractAddress: 'eosio.token',
+      denominations
+    }
+  ]
 }
 
 export const makeTelosPlugin = (opts: EdgeCorePluginOptions) => {

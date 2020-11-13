@@ -211,7 +211,7 @@ export class EosEngine extends CurrencyEngine {
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
     const ourReceiveAddresses = []
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
     if (!denom) {
       this.log(`Received unsupported currencyCode: ${currencyCode}`)
       return 0
@@ -284,7 +284,11 @@ export class EosEngine extends CurrencyEngine {
       const exchangeAmount = amount.toString()
       const currencyCode = symbol
 
-      const denom = getDenomInfo(this.currencyInfo, currencyCode)
+      const denom = getDenomInfo(
+        this.currencyInfo,
+        currencyCode,
+        this.allTokens
+      )
       // if invalid currencyCode then don't count as valid transaction
       if (!denom) {
         this.log(`Received unsupported currencyCode: ${currencyCode}`)
@@ -328,17 +332,19 @@ export class EosEngine extends CurrencyEngine {
     return blockHeight
   }
 
-  async checkOutgoingTransactions(acct: string): Promise<boolean> {
-    const { currencyCode } = this.currencyInfo
+  async checkOutgoingTransactions(
+    acct: string,
+    currencyCode: string
+  ): Promise<boolean> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
     const limit = 10
     let skip = 0
     let finish = false
 
-    let newHighestTxHeight = this.walletLocalData.otherData.lastQueryActionSeq
+    let newHighestTxHeight =
+      this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
     while (!finish) {
-      this.log('looping through checkOutgoingTransactions')
       const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
       // query the server / node
       const response = await this.multicastServers(
@@ -374,27 +380,36 @@ export class EosEngine extends CurrencyEngine {
     }
     // if there have been new valid actions then increase the last sequence number
     if (
-      newHighestTxHeight > this.walletLocalData.otherData.lastQueryActionSeq
+      newHighestTxHeight >
+      (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
-      this.walletLocalData.otherData.lastQueryActionSeq = newHighestTxHeight
+      this.walletLocalData.otherData.lastQueryActionSeq[
+        currencyCode
+      ] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
   }
 
   // similar to checkOutgoingTransactions, possible to refactor
-  async checkIncomingTransactions(acct: string): Promise<boolean> {
-    const { currencyCode } = this.currencyInfo
+  async checkIncomingTransactions(
+    acct: string,
+    currencyCode: string
+  ): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
-    let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
+    let newHighestTxHeight =
+      this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
 
     const limit = 10
     let skip = 0
     let finish = false
 
     while (!finish) {
-      this.log('looping through checkIncomingTransactions')
+      this.log(
+        'looping through checkIncomingTransactions, newHighestTxHeight: ',
+        newHighestTxHeight
+      )
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
       const url = `/v2/history/get_actions?transfer.to=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
@@ -431,15 +446,20 @@ export class EosEngine extends CurrencyEngine {
       }
       skip += 10
     }
-    if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
-      this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
+    if (
+      newHighestTxHeight >
+      (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
+    ) {
+      this.walletLocalData.otherData.highestTxHeight[
+        currencyCode
+      ] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
   }
 
   async checkTransactionsInnerLoop() {
-    const { currencyCode } = this.currencyInfo
+    const { enabledTokens } = this.walletLocalData
     if (
       !this.walletLocalData.otherData ||
       !this.walletLocalData.otherData.accountName
@@ -447,25 +467,28 @@ export class EosEngine extends CurrencyEngine {
       return
     }
     const acct = this.walletLocalData.otherData.accountName
-    let incomingResult, outgoingResult
-    try {
-      incomingResult = await this.checkIncomingTransactions(acct)
-      outgoingResult = await this.checkOutgoingTransactions(acct)
-    } catch (e) {
-      this.log('checkTransactionsInnerLoop fetches failed with error: ')
-      this.log(e)
-      return false
-    }
 
-    if (incomingResult && outgoingResult) {
-      this.tokenCheckTransactionsStatus[currencyCode] = 1
-      this.updateOnAddressesChecked()
-    }
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    for (const token of enabledTokens) {
+      let incomingResult, outgoingResult
+      try {
+        incomingResult = await this.checkIncomingTransactions(acct, token)
+        outgoingResult = await this.checkOutgoingTransactions(acct, token)
+      } catch (e) {
+        this.log('checkTransactionsInnerLoop fetches failed with error: ')
+        this.log(e)
+        return false
+      }
+
+      if (incomingResult && outgoingResult) {
+        this.tokenCheckTransactionsStatus[token] = 1
+        this.updateOnAddressesChecked()
+      }
+      if (this.transactionsChangedArray.length > 0) {
+        this.currencyEngineCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      }
     }
   }
 
@@ -659,54 +682,62 @@ export class EosEngine extends CurrencyEngine {
 
       // Check balance on account
       if (this.walletLocalData.otherData.accountName) {
-        const results = await this.multicastServers(
-          'getCurrencyBalance',
-          'eosio.token',
-          this.walletLocalData.otherData.accountName
-        )
-        if (results && results.length > 0) {
-          for (const r of results) {
-            if (typeof r === 'string') {
-              const balanceArray = r.split(' ')
-              if (balanceArray.length === 2) {
-                const exchangeAmount = balanceArray[0]
-                const currencyCode = balanceArray[1]
-                let nativeAmount = ''
+        for (const token of this.allTokens) {
+          if (this.walletLocalData.enabledTokens.includes(token.currencyCode)) {
+            const results = await this.multicastServers(
+              'getCurrencyBalance',
+              token.contractAddress,
+              this.walletLocalData.otherData.accountName
+            )
+            if (results && results.length > 0) {
+              for (const r of results) {
+                if (typeof r === 'string') {
+                  const balanceArray = r.split(' ')
+                  if (balanceArray.length === 2) {
+                    const exchangeAmount = balanceArray[0]
+                    const currencyCode = balanceArray[1]
+                    let nativeAmount = ''
 
-                // Convert exchange amount to native amount
-                const denom = getDenomInfo(this.currencyInfo, currencyCode)
-                if (denom && denom.multiplier) {
-                  nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
-                } else {
-                  this.log(
-                    `Received balance for unsupported currencyCode: ${currencyCode}`
-                  )
-                }
+                    // Convert exchange amount to native amount
+                    const denom = getDenomInfo(
+                      this.currencyInfo,
+                      currencyCode,
+                      [...this.customTokens, ...this.allTokens]
+                    )
+                    if (denom && denom.multiplier) {
+                      nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+                    } else {
+                      this.log(
+                        `Received balance for unsupported currencyCode: ${currencyCode}`
+                      )
+                    }
 
-                if (!this.walletLocalData.totalBalances[currencyCode]) {
-                  this.walletLocalData.totalBalances[currencyCode] = '0'
-                }
-                if (
-                  !bns.eq(
-                    this.walletLocalData.totalBalances[currencyCode],
-                    nativeAmount
-                  )
-                ) {
-                  this.walletLocalData.totalBalances[
-                    currencyCode
-                  ] = nativeAmount
-                  this.walletLocalDataDirty = true
-                  this.currencyEngineCallbacks.onBalanceChanged(
-                    currencyCode,
-                    nativeAmount
-                  )
+                    if (!this.walletLocalData.totalBalances[currencyCode]) {
+                      this.walletLocalData.totalBalances[currencyCode] = '0'
+                    }
+                    if (
+                      !bns.eq(
+                        this.walletLocalData.totalBalances[currencyCode],
+                        nativeAmount
+                      )
+                    ) {
+                      this.walletLocalData.totalBalances[
+                        currencyCode
+                      ] = nativeAmount
+                      this.walletLocalDataDirty = true
+                      this.currencyEngineCallbacks.onBalanceChanged(
+                        currencyCode,
+                        nativeAmount
+                      )
+                    }
+                  }
                 }
               }
             }
+            this.tokenCheckBalanceStatus[token.currencyCode] = 1
           }
         }
       }
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
     } catch (e) {
       this.log(`Error fetching account: ${JSON.stringify(e)}`)
@@ -718,8 +749,8 @@ export class EosEngine extends CurrencyEngine {
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
-    this.walletLocalData.otherData.lastQueryActionSeq = 0
-    this.walletLocalData.otherData.highestTxHeight = 0
+    this.walletLocalData.otherData.lastQueryActionSeq = {}
+    this.walletLocalData.otherData.highestTxHeight = {}
     this.walletLocalData.otherData.accountName = ''
   }
 

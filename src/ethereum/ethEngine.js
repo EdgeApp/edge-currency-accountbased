@@ -19,11 +19,13 @@ import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine.js'
+import { type CustomToken } from '../common/types'
 import {
   addHexPrefix,
   bufToHex,
   getEdgeInfoServer,
   getOtherParams,
+  isHex,
   normalizeAddress,
   toHex,
   validateObject
@@ -323,8 +325,8 @@ export class EthereumEngine extends CurrencyEngine {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     /**
-    For RBF transactions, get the gas price and limit (fees) of the existing 
-    transaction as well as the current nonce. The fees and the nonce will be 
+    For RBF transactions, get the gas price and limit (fees) of the existing
+    transaction as well as the current nonce. The fees and the nonce will be
     used instead of the calculated equivalents.
     */
     let rbfGasPrice: string
@@ -736,6 +738,15 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     super.saveTx(edgeTransaction)
+  }
+
+  async addCustomToken(obj: CustomToken) {
+    let contractAddress = obj.contractAddress.replace('0x', '').toLowerCase()
+    if (!isHex(contractAddress) || contractAddress.length !== 40) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    contractAddress = '0x' + contractAddress
+    super.addCustomToken(obj, contractAddress)
   }
 }
 
