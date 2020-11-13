@@ -549,10 +549,6 @@ export class EosEngine extends CurrencyEngine {
                     .createAccountViaSingleApiEndpoints.length > 0
                 ) {
                   const { publicKey, ownerPublicKey } = this.walletInfo.keys
-                  this.otherMethods.createAccountViaSingleApi({
-                    activePublicKey: publicKey,
-                    ownerPublicKey: ownerPublicKey
-                  })
 
                   const {
                     createAccountViaSingleApiEndpoints
@@ -563,7 +559,7 @@ export class EosEngine extends CurrencyEngine {
                       method: 'POST',
                       body: JSON.stringify({
                         ownerPublicKey,
-                        publicKey
+                        activePublicKey: publicKey
                       }),
                       headers: {
                         Accept: 'application/json',
