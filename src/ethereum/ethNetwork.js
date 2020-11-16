@@ -1466,18 +1466,18 @@ export class EthereumNetwork {
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
     let checkTxsFuncs = []
-    const useApiKey = true
+    // const useApiKey = true
     if (currencyCode === this.currencyInfo.currencyCode) {
       checkTxsFuncs = [
         async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     } else {
       checkTxsFuncs = [
-        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     }
