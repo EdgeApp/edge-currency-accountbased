@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+# 0.7.32 (2020-11-16)
+
+- WAX changes
+  - Remove unnecessary logs and pass in token data to multiple routines
+  - Enable adding token and fetching token balance for EOSIO chains
+  - Merge in EOSIO token implementation
+  - Fix erroneous WAX activation call and publicKey typo
+
 # 0.7.31 (2020-11-11)
 
 - WAX Integration
