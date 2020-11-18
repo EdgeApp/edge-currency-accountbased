@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.33 (2020-11-18)
+
+- Fix EOSIO metaToken send issues (contractAddress and denom)
+
 # 0.7.32 (2020-11-16)
 
 - WAX changes
