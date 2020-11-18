@@ -13,6 +13,15 @@ import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { type EosJsConfig, type EosSettings } from './eosTypes'
 
+const denominations = [
+  // An array of Objects of the possible denominations for this currency
+  {
+    name: 'WAX',
+    multiplier: '100000000',
+    symbol: 'W'
+  }
+]
+
 // ----WAX MAIN NET----
 export const eosJsConfig: EosJsConfig = {
   chainId: '1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4', // Wax main net
@@ -67,17 +76,20 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://wax.bloks.io/account/%s',
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
-  denominations: [
-    // An array of Objects of the possible denominations for this currency
-    {
-      name: 'WAX',
-      multiplier: '100000000',
-      symbol: 'W'
-    }
-  ],
+  denominations,
   symbolImage: `${imageServerUrl}/wax-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/wax-logo-solo-64.png`,
-  metaTokens: []
+  metaTokens: [
+    {
+      name: 'WAX',
+      currencyName: 'WAX',
+      multiplier: '100000000',
+      symbol: 'W',
+      currencyCode: 'WAX',
+      contractAddress: 'eosio.token',
+      denominations
+    }
+  ]
 }
 
 export const makeWaxPlugin = (opts: EdgeCorePluginOptions) => {

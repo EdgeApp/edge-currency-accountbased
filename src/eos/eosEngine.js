@@ -546,6 +546,8 @@ export class EosEngine extends CurrencyEngine {
                 // only do once per login (makeEngine)
                 if (
                   this.currencyInfo.defaultSettings.otherSettings
+                    .createAccountViaSingleApiEndpoints &&
+                  this.currencyInfo.defaultSettings.otherSettings
                     .createAccountViaSingleApiEndpoints.length > 0
                 ) {
                   const { publicKey, ownerPublicKey } = this.walletInfo.keys
@@ -790,9 +792,14 @@ export class EosEngine extends CurrencyEngine {
       nativeBalance,
       denom
     } = super.makeSpend(edgeSpendInfoIn)
-    const { denominations, defaultSettings } = this.currencyInfo
-    const nativeDenomination = denominations.find(
-      denomination => denomination.name === currencyCode
+    const { defaultSettings } = this.currencyInfo
+    const tokenInfo = this.getTokenInfo(currencyCode)
+    if (!tokenInfo) throw new Error('Unable to find token info')
+    const { contractAddress } = tokenInfo
+    const nativeDenomination = getDenomInfo(
+      this.currencyInfo,
+      currencyCode,
+      this.allTokens
     )
     if (!nativeDenomination) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
@@ -859,7 +866,7 @@ export class EosEngine extends CurrencyEngine {
 
     const transferActions = [
       {
-        account: 'eosio.token',
+        account: contractAddress,
         name: 'transfer',
         authorization: [
           {
