@@ -1,8 +1,6 @@
 // @flow
 
 export const fioApiErrorCodes = [400, 403, 404, 409]
-export const FIO_CHAIN_INFO_ERROR_CODE = 800
-export const FIO_BLOCK_NUMBER_ERROR_CODE = 801
 
 export class FioError extends Error {
   list: { field: string, message: string }[]

@@ -22,12 +22,7 @@ import {
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
 } from './fioConst.js'
-import {
-  FIO_BLOCK_NUMBER_ERROR_CODE,
-  FIO_CHAIN_INFO_ERROR_CODE,
-  fioApiErrorCodes,
-  FioError
-} from './fioError'
+import { fioApiErrorCodes, FioError } from './fioError'
 import { FioPlugin } from './fioPlugin.js'
 import {
   type FioHistoryNodeAction,
@@ -619,7 +614,8 @@ export class FioEngine extends CurrencyEngine {
   async fioApiRequest(
     apiUrl: string,
     actionName: string,
-    params?: any
+    params?: any,
+    preparedTrx: boolean = false
   ): Promise<any> {
     const fioSDK = new FIOSDK(
       this.walletInfo.keys.fioKey,
@@ -627,11 +623,17 @@ export class FioEngine extends CurrencyEngine {
       apiUrl,
       this.fetchCors,
       undefined,
-      this.tpid
+      this.tpid,
+      preparedTrx
     )
 
     let res
 
+    this.log(
+      `fioApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
+        params
+      )}`
+    )
     try {
       switch (actionName) {
         case 'getChainInfo':
@@ -640,6 +642,12 @@ export class FioEngine extends CurrencyEngine {
         default:
           res = await fioSDK.genericAction(actionName, params)
       }
+
+      this.log(
+        `fioApiRequest result. actionName: ${actionName} - apiUrl: ${apiUrl} - res: ${JSON.stringify(
+          res
+        )}`
+      )
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
@@ -676,15 +684,7 @@ export class FioEngine extends CurrencyEngine {
     return res
   }
 
-  async fioRetryApiRequest(
-    apiUrl: string,
-    requestParams: {
-      endPoint: string,
-      body: string,
-      fetchOptions?: any
-    }
-  ): Promise<any> {
-    const { endPoint, body, fetchOptions } = requestParams
+  async executePreparedTrx(apiUrl: string, endpoint: string, preparedTrx: any) {
     const fioSDK = new FIOSDK(
       this.walletInfo.keys.fioKey,
       this.walletInfo.keys.publicKey,
@@ -695,14 +695,19 @@ export class FioEngine extends CurrencyEngine {
     )
     let res
 
+    this.log(
+      `executePreparedTrx. preparedTrx: ${JSON.stringify(
+        preparedTrx
+      )} - apiUrl: ${apiUrl}`
+    )
     try {
-      res = await fioSDK.transactions.executeCall(endPoint, body, fetchOptions)
+      res = await fioSDK.executePreparedTrx(endpoint, preparedTrx)
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
         this.log(
-          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
-            requestParams
+          `executePreparedTrx error. requestParams: ${JSON.stringify(
+            preparedTrx
           )} - apiUrl: ${apiUrl} - message: ${JSON.stringify(e.json)}`
         )
         if (
@@ -724,8 +729,8 @@ export class FioEngine extends CurrencyEngine {
         }
       } else {
         this.log(
-          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
-            requestParams
+          `executePreparedTrx error. requestParams: ${JSON.stringify(
+            preparedTrx
           )} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
         throw e
@@ -738,67 +743,34 @@ export class FioEngine extends CurrencyEngine {
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
     if (ACTIONS_SKIP_SWITCH[actionName]) {
-      for (const apiUrl of shuffleArray([
-        ...this.currencyInfo.defaultSettings.apiUrls
-      ])) {
-        try {
-          this.log(
-            `multicastServers fioApiRequest loop. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
-              params
-            )}`
+      this.log(
+        `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
+          params
+        )}`
+      )
+      const preparedTrx = await asyncWaterfall(
+        shuffleArray(
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
+            this.fioApiRequest(apiUrl, actionName, params, true)
           )
-          res = await this.fioApiRequest(apiUrl, actionName, params)
-          break
-        } catch (e) {
-          this.log(
-            `multicastServers error. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
-              params
-            )} - error message: ${e.message} - error code: ${
-              e.code || e.errorCode
-            } - error json: ${JSON.stringify(e.json)}`
+        )
+      )
+      this.log(
+        `multicastServers executePreparedTrx. actionName: ${actionName} - res: ${JSON.stringify(
+          preparedTrx
+        )}`
+      )
+      res = await asyncWaterfall(
+        shuffleArray(
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
+            this.executePreparedTrx(
+              apiUrl,
+              EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+              preparedTrx
+            )
           )
-          if (e.requestParams) {
-            if (
-              EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]] &&
-              e.requestParams.endPoint.indexOf(
-                EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]]
-              ) < 0
-            ) {
-              this.log(
-                `multicastServers continue. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
-                  e.requestParams
-                )}`
-              )
-              continue
-            }
-            this.log(
-              `multicastServers fioRetryApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
-                e.requestParams
-              )}`
-            )
-            res = await asyncWaterfall(
-              shuffleArray(
-                this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
-                  this.fioRetryApiRequest(apiUrl, e.requestParams)
-                )
-              )
-            )
-            break
-          } else if (
-            e.errorCode &&
-            [FIO_CHAIN_INFO_ERROR_CODE, FIO_BLOCK_NUMBER_ERROR_CODE].indexOf(
-              parseInt(e.errorCode)
-            ) > -1
-          ) {
-            this.log(
-              `multicastServers FIO_CHAIN_INFO_ERROR_CODE/FIO_BLOCK_NUMBER_ERROR_CODE continue. actionName: ${actionName} - apiUrl: ${apiUrl}`
-            )
-            continue
-          } else {
-            throw e
-          }
-        }
-      }
+        )
+      )
       this.log(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
           res
