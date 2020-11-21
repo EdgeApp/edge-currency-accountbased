@@ -602,7 +602,7 @@ export class EthereumNetwork {
       params: params,
       id: 1
     }
-    const response = await this.ethEngine.io.fetch(url, {
+    const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
           .otherSettings.amberDataBlockchainId
