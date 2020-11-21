@@ -178,6 +178,61 @@ export type AlethioTokenTransfer = {
   relationships: AlethioTransactionRelationships
 }
 
+export const asBlockbookBlockHeight = asObject({
+  blockbook: asObject({
+    bestHeight: asNumber
+  })
+})
+
+export type BlockbookBlockHeight = $Call<typeof asBlockbookBlockHeight>
+
+export const asBlockbookTokenTransfer = asObject({
+  from: asString,
+  to: asString,
+  symbol: asString,
+  value: asString
+})
+
+export type BlockbookTokenTransfer = $Call<typeof asBlockbookTokenTransfer>
+
+export const asBlockbookTx = asObject({
+  txid: asString,
+  vin: asArray(asObject({ addresses: asArray(asString) })),
+  vout: asArray(asObject({ addresses: asArray(asString) })),
+  blockHeight: asNumber,
+  value: asString,
+  blockTime: asNumber,
+  tokenTransfers: asOptional(asArray(asBlockbookTokenTransfer)),
+  ethereumSpecific: asObject({
+    status: asNumber,
+    gasLimit: asNumber,
+    gasUsed: asNumber,
+    gasPrice: asString
+  })
+})
+
+export type BlockbookTx = $Call<typeof asBlockbookTx>
+
+export const asBlockbookAddress = asObject({
+  page: asNumber,
+  totalPages: asNumber,
+  itemsOnPage: asNumber,
+  balance: asString,
+  unconfirmedBalance: asString,
+  unconfirmedTxs: asNumber,
+  transactions: asOptional(asArray(asBlockbookTx)),
+  nonce: asString,
+  tokens: asArray(
+    asObject({
+      symbol: asString,
+      contract: asString,
+      balance: asString
+    })
+  )
+})
+
+export type BlockbookAddress = $Call<typeof asBlockbookAddress>
+
 export const asAlethioAccountsTokenTransfer = asObject({
   type: asString,
   attributes: asObject({

@@ -58,6 +58,7 @@ const otherSettings: EthereumSettings = {
     // 'https://blockscout.com/eth/mainnet' // not reliable enough...
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
+  blockbookServers: ['https://blockbook-ethereum.tronwallet.me'],
   superethServers: ['https://supereth1.edgesecure.co:8443'],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
