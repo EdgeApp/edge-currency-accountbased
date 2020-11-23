@@ -11,7 +11,8 @@ import {
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  asUnknown
 } from 'cleaners'
 
 export type EthereumInitOptions = {
@@ -213,6 +214,14 @@ export const asBlockbookTx = asObject({
 
 export type BlockbookTx = $Call<typeof asBlockbookTx>
 
+export const asBlockbookTokenBalance = asObject({
+  symbol: asString,
+  contract: asString,
+  balance: asString
+})
+
+export type BlockbookTokenBalance = $Call<typeof asBlockbookTokenBalance>
+
 export const asBlockbookAddress = asObject({
   page: asNumber,
   totalPages: asNumber,
@@ -220,15 +229,9 @@ export const asBlockbookAddress = asObject({
   balance: asString,
   unconfirmedBalance: asString,
   unconfirmedTxs: asNumber,
-  transactions: asOptional(asArray(asBlockbookTx)),
+  transactions: asUnknown,
   nonce: asString,
-  tokens: asArray(
-    asObject({
-      symbol: asString,
-      contract: asString,
-      balance: asString
-    })
-  )
+  tokens: asUnknown
 })
 
 export type BlockbookAddress = $Call<typeof asBlockbookAddress>

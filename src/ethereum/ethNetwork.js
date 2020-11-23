@@ -26,6 +26,8 @@ import {
   type AlethioTokenTransfer,
   type AmberdataInternalTx,
   type AmberdataTx,
+  type BlockbookAddress,
+  type BlockbookTokenBalance,
   type BlockbookTokenTransfer,
   type BlockbookTx,
   type CheckTokenBalBlockchair,
@@ -40,6 +42,7 @@ import {
   asAmberdataAccountsTx,
   asBlockbookAddress,
   asBlockbookBlockHeight,
+  asBlockbookTokenBalance,
   asBlockbookTx,
   asBlockChairAddress,
   asCheckTokenBalBlockchair,
@@ -1560,12 +1563,18 @@ export class EthereumNetwork {
         'blockbookTxs',
         query
       )
-      let addressInfo
+      let addressInfo: BlockbookAddress
       try {
         addressInfo = asBlockbookAddress(jsonObj)
       } catch (e) {
-        this.ethEngine.log(`checkTxsBlockbook ${server} ${e}`)
-        throw new Error(`Blockbook ${server} returned invalid JSON`)
+        this.ethEngine.log(
+          `checkTxsBlockbook ${server} BlockbookAddress ${JSON.stringify(
+            jsonObj
+          )}`
+        )
+        throw new Error(
+          `Blockbook ${server} returned invalid JSON for BlockbookAddress`
+        )
       }
       const { nonce, tokens, balance, transactions } = addressInfo
       out.newNonce = nonce
@@ -1575,13 +1584,24 @@ export class EthereumNetwork {
       page++
 
       // Token balances
-      for (const token in tokens) {
-        const { symbol, balance } = tokens[token]
-        out.tokenBal[symbol] = balance
+      for (const token: BlockbookTokenBalance of tokens) {
+        try {
+          const { symbol, balance } = asBlockbookTokenBalance(token)
+          out.tokenBal[symbol] = balance
+        } catch (e) {
+          this.ethEngine.log(
+            `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
+              token
+            )}`
+          )
+          throw new Error(
+            `Blockbook ${server} returned invalid JSON for BlockbookTokenBalance`
+          )
+        }
       }
 
       // Transactions
-      for (const tx of transactions) {
+      for (const tx: BlockbookTx of transactions) {
         const transactionsArray = []
         try {
           const cleanTx = asBlockbookTx(tx)
@@ -1606,7 +1626,12 @@ export class EthereumNetwork {
           )
             transactionsArray.push(this.processBlockbookTx(tx))
         } catch (e) {
-          continue
+          this.ethEngine.log(
+            `checkTxsBlockbook ${server} BlockbookTx ${JSON.stringify(tx)}`
+          )
+          throw new Error(
+            `Blockbook ${server} returned invalid JSON for BlockbookTx`
+          )
         }
         for (const edgeTransaction of transactionsArray) {
           if (out.tokenTxs[edgeTransaction.currencyCode] === undefined)
@@ -1643,6 +1668,7 @@ export class EthereumNetwork {
     let nativeAmount = value
     let tokenRecipientAddress = null
     let networkFee = bns.mul(gasPrice, gasUsed.toString())
+    let parentNetworkFee
     const ourReceiveAddresses = []
     if (toAddress === fromAddress) {
       // Send to self
@@ -1663,6 +1689,7 @@ export class EthereumNetwork {
       nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
       tokenRecipientAddress = toAddress
       networkFee = '0'
+      parentNetworkFee = bns.mul(gasPrice, gasUsed.toString())
     }
     const otherParams: EthereumTxOtherParams = {
       from: [fromAddress],
@@ -1680,6 +1707,7 @@ export class EthereumNetwork {
       blockHeight,
       nativeAmount,
       networkFee,
+      parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
       otherParams
