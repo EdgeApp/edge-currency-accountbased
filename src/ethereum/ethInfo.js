@@ -59,7 +59,6 @@ const otherSettings: EthereumSettings = {
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   blockbookServers: ['https://blockbook-ethereum.tronwallet.me'],
-  superethServers: ['https://supereth1.edgesecure.co:8443'],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainId: 1,

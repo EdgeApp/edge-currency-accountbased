@@ -18,49 +18,6 @@ export const EtherscanGetAccountNonce = {
   required: ['result']
 }
 
-export const SuperEthGetUnconfirmedTransactions = {
-  type: 'array',
-  items: {
-    type: 'object',
-    properties: {
-      block_height: { type: 'number' },
-      fees: { type: 'number' },
-      received: { type: 'string' },
-      addresses: {
-        type: 'array',
-        items: { type: 'string' }
-      },
-      inputs: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            addresses: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          },
-          required: ['addresses']
-        }
-      },
-      outputs: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            addresses: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          },
-          required: ['addresses']
-        }
-      }
-    },
-    required: ['fees', 'received', 'addresses', 'inputs', 'outputs']
-  }
-}
-
 export const NetworkFeesSchema = {
   type: 'object',
   additionalProperties: {

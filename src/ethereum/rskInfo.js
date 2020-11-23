@@ -32,7 +32,6 @@ const otherSettings: EthereumSettings = {
   rpcServers: ['https://public-node.rsk.co'],
   etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
   blockcypherApiServers: [],
-  superethServers: [],
   blockchairApiServers: [],
   alethioApiServers: [],
   alethioCurrrencies: null,

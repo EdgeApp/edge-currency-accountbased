@@ -33,11 +33,7 @@ import {
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
-import {
-  EthGasStationSchema,
-  NetworkFeesSchema,
-  SuperEthGetUnconfirmedTransactions
-} from './ethSchema.js'
+import { EthGasStationSchema, NetworkFeesSchema } from './ethSchema.js'
 import {
   type EthereumFee,
   type EthereumFeesGasPrice,
@@ -47,7 +43,6 @@ import {
   type LastEstimatedGasLimit
 } from './ethTypes.js'
 
-const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const WEI_MULTIPLIER = 100000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
@@ -145,42 +140,6 @@ export class EthereumEngine extends CurrencyEngine {
       otherParams
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
-  }
-
-  // currently only for Ethereum
-  async checkUnconfirmedTransactionsInnerLoop() {
-    const address = normalizeAddress(this.walletLocalData.publicKey)
-    const lowerCaseCurrencyCode = this.currencyInfo.currencyCode.toLowerCase()
-    const url = `${this.currencyInfo.defaultSettings.otherSettings.superethServers[0]}/v1/${lowerCaseCurrencyCode}/main/txs/${address}`
-    let jsonObj = null
-    try {
-      jsonObj = await this.ethNetwork.fetchGet(url)
-    } catch (e) {
-      this.log(e)
-      this.log('Failed to fetch unconfirmed transactions')
-      return
-    }
-
-    const valid = validateObject(jsonObj, SuperEthGetUnconfirmedTransactions)
-    if (valid) {
-      const transactions = jsonObj
-      for (const tx of transactions) {
-        if (
-          normalizeAddress(tx.inputs[0].addresses[0]) === address ||
-          normalizeAddress(tx.outputs[0].addresses[0]) === address
-        ) {
-          this.processUnconfirmedTransaction(tx)
-        }
-      }
-    } else {
-      this.log('Invalid data for unconfirmed transactions')
-    }
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
-    }
   }
 
   // curreently for Ethereum but should allow other currencies
@@ -305,10 +264,6 @@ export class EthereumEngine extends CurrencyEngine {
   async startEngine() {
     this.engineOn = true
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
-    this.addToLoop(
-      'checkUnconfirmedTransactionsInnerLoop',
-      UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
-    )
 
     this.ethNetwork.needsLoop()
 
