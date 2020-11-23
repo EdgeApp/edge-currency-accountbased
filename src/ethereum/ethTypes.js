@@ -29,6 +29,7 @@ export type EthereumInitOptions = {
 export type EthereumSettings = {
   etherscanApiServers: Array<string>,
   blockcypherApiServers: Array<string>,
+  blockbookServers: Array<string>,
   iosAllowedTokens: { [currencyCode: string]: boolean }
 }
 

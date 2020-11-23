@@ -58,7 +58,11 @@ const otherSettings: EthereumSettings = {
     // 'https://blockscout.com/eth/mainnet' // not reliable enough...
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
-  blockbookServers: ['https://blockbook-ethereum.tronwallet.me'],
+  blockbookServers: [
+    'https://blockbook-ethereum.tronwallet.me',
+    'https://eth1.trezor.io/',
+    'https://eth2.bcfn.ca/'
+  ],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainId: 1,
