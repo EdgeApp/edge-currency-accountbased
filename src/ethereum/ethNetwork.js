@@ -26,6 +26,10 @@ import {
   type AlethioTokenTransfer,
   type AmberdataInternalTx,
   type AmberdataTx,
+  type BlockbookAddress,
+  type BlockbookTokenBalance,
+  type BlockbookTokenTransfer,
+  type BlockbookTx,
   type CheckTokenBalBlockchair,
   type EthereumTxOtherParams,
   type EtherscanGetAccountBalance,
@@ -36,6 +40,10 @@ import {
   asAlethioAccountsTokenTransfer,
   asAmberdataAccountsFuncs,
   asAmberdataAccountsTx,
+  asBlockbookAddress,
+  asBlockbookBlockHeight,
+  asBlockbookTokenBalance,
+  asBlockbookTx,
   asBlockChairAddress,
   asCheckTokenBalBlockchair,
   asEtherscanGetAccountBalance,
@@ -84,6 +92,8 @@ type EthFunction =
   | 'getTokenBalance'
   | 'getTransactions'
   | 'eth_getCode'
+  | 'blockbookBlockHeight'
+  | 'blockbookTxs'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -117,6 +127,8 @@ export class EthereumNetwork {
   checkBlockHeightBlockchair: (...any) => any
   checkBlockHeightAmberdata: (...any) => any
   checkBlockHeight: (...any) => any
+  checkBlockHeightBlockbook: (...any) => any
+  checkTxsBlockbook: (...any) => any
   checkNonceEthscan: (...any) => any
   checkNonceAmberdata: (...any) => any
   checkNonce: (...any) => any
@@ -141,6 +153,8 @@ export class EthereumNetwork {
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
     this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
     this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
+    this.checkBlockHeightBlockbook = this.checkBlockHeightBlockbook.bind(this)
+    this.checkTxsBlockbook = this.checkTxsBlockbook.bind(this)
     this.checkBlockHeight = this.checkBlockHeight.bind(this)
     this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
     this.checkNonceAmberdata = this.checkNonceAmberdata.bind(this)
@@ -602,7 +616,7 @@ export class EthereumNetwork {
       params: params,
       id: 1
     }
-    const response = await this.ethEngine.io.fetch(url, {
+    const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
           .otherSettings.amberDataBlockchainId
@@ -754,6 +768,7 @@ export class EthereumNetwork {
       rpcServers,
       blockcypherApiServers,
       etherscanApiServers,
+      blockbookServers,
       chainId
     } = this.currencyInfo.defaultSettings.otherSettings
     let out = { result: '', server: 'no server' }
@@ -990,6 +1005,27 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
       }
+
+      case 'blockbookBlockHeight':
+        funcs = blockbookServers.map(server => async () => {
+          const result = await this.fetchGet(server + '/api/v2')
+          return { server, result }
+        })
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'blockbookTxs':
+        funcs = blockbookServers.map(server => async () => {
+          const url = server + params[0]
+          const result = await this.fetchGet(url)
+          return { server, result }
+        })
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
     }
 
     return out
@@ -1005,6 +1041,22 @@ export class EthereumNetwork {
       return { blockHeight, server }
     } else {
       throw new Error('Ethscan returned invalid JSON')
+    }
+  }
+
+  async checkBlockHeightBlockbook(): Promise<EthereumNetworkUpdate> {
+    try {
+      const { result: jsonObj, server } = await this.multicastServers(
+        'blockbookBlockHeight'
+      )
+
+      const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
+      return { blockHeight, server }
+    } catch (e) {
+      this.ethEngine.log(
+        `checkBlockHeightBlockbook blockHeight ${JSON.stringify(e)}`
+      )
+      throw new Error(`checkBlockHeightBlockbook returned invalid JSON`)
     }
   }
 
@@ -1037,7 +1089,8 @@ export class EthereumNetwork {
     return asyncWaterfall([
       this.checkBlockHeightEthscan,
       this.checkBlockHeightAmberdata,
-      this.checkBlockHeightBlockchair
+      this.checkBlockHeightBlockchair,
+      this.checkBlockHeightBlockbook
     ]).catch(err => {
       this.ethEngine.log('checkBlockHeight failed to update', err)
       return {}
@@ -1466,18 +1519,20 @@ export class EthereumNetwork {
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
     let checkTxsFuncs = []
-    const useApiKey = true
+    // const useApiKey = true
     if (currencyCode === this.currencyInfo.currencyCode) {
       checkTxsFuncs = [
         async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        async () => this.checkTxsBlockbook(startBlock),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     } else {
       checkTxsFuncs = [
-        async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
+        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
+        async () => this.checkTxsBlockbook(startBlock),
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     }
@@ -1485,6 +1540,179 @@ export class EthereumNetwork {
       this.ethEngine.log('checkTxs failed to update', err)
       return {}
     })
+  }
+
+  async checkTxsBlockbook(
+    startBlock: number = 0
+  ): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
+    let page = 1
+    let totalPages = 1
+    const out = {
+      newNonce: '0',
+      tokenBal: {},
+      tokenTxs: {},
+      server: ''
+    }
+    while (page <= totalPages) {
+      const query =
+        '/api/v2/address/' +
+        address +
+        `?from=${startBlock}&page=${page}&details=txs`
+      const { result: jsonObj, server } = await this.multicastServers(
+        'blockbookTxs',
+        query
+      )
+      let addressInfo: BlockbookAddress
+      try {
+        addressInfo = asBlockbookAddress(jsonObj)
+      } catch (e) {
+        this.ethEngine.log(
+          `checkTxsBlockbook ${server} BlockbookAddress ${JSON.stringify(
+            jsonObj
+          )}`
+        )
+        throw new Error(
+          `Blockbook ${server} returned invalid JSON for BlockbookAddress`
+        )
+      }
+      const { nonce, tokens, balance, transactions } = addressInfo
+      out.newNonce = nonce
+      out.tokenBal.ETH = balance
+      out.server = server
+      totalPages = addressInfo.totalPages
+      page++
+
+      // Token balances
+      for (const token: BlockbookTokenBalance of tokens) {
+        try {
+          const { symbol, balance } = asBlockbookTokenBalance(token)
+          out.tokenBal[symbol] = balance
+        } catch (e) {
+          this.ethEngine.log(
+            `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
+              token
+            )}`
+          )
+          throw new Error(
+            `Blockbook ${server} returned invalid JSON for BlockbookTokenBalance`
+          )
+        }
+      }
+
+      // Transactions
+      for (const tx: BlockbookTx of transactions) {
+        const transactionsArray = []
+        try {
+          const cleanTx = asBlockbookTx(tx)
+          if (
+            cleanTx.tokenTransfers !== undefined &&
+            cleanTx.tokenTransfers.length > 0
+          ) {
+            for (const tokenTransfer of cleanTx.tokenTransfers) {
+              if (
+                address === tokenTransfer.to.toLowerCase() ||
+                address === tokenTransfer.from.toLowerCase()
+              ) {
+                transactionsArray.push(
+                  this.processBlockbookTx(tx, tokenTransfer)
+                )
+              }
+            }
+          }
+          if (
+            address === tx.vout[0].addresses[0].toLowerCase() ||
+            address === tx.vin[0].addresses[0].toLowerCase()
+          )
+            transactionsArray.push(this.processBlockbookTx(tx))
+        } catch (e) {
+          this.ethEngine.log(
+            `checkTxsBlockbook ${server} BlockbookTx ${JSON.stringify(tx)}`
+          )
+          throw new Error(
+            `Blockbook ${server} returned invalid JSON for BlockbookTx`
+          )
+        }
+        for (const edgeTransaction of transactionsArray) {
+          if (out.tokenTxs[edgeTransaction.currencyCode] === undefined)
+            out.tokenTxs[edgeTransaction.currencyCode] = {
+              blockHeight: startBlock,
+              edgeTransactions: []
+            }
+          out.tokenTxs[edgeTransaction.currencyCode].edgeTransactions.push(
+            edgeTransaction
+          )
+        }
+      }
+    }
+    return out
+  }
+
+  processBlockbookTx(
+    blockbookTx: BlockbookTx,
+    tokenTx?: BlockbookTokenTransfer
+  ): EdgeTransaction {
+    const {
+      txid,
+      blockHeight,
+      blockTime,
+      value,
+      ethereumSpecific: { gasLimit, status, gasUsed, gasPrice },
+      vin,
+      vout
+    } = blockbookTx
+    const ourAddress = this.ethEngine.walletLocalData.publicKey.toLowerCase()
+    let toAddress = vout[0].addresses[0].toLowerCase()
+    let fromAddress = vin[0].addresses[0].toLowerCase()
+    let currencyCode = 'ETH'
+    let nativeAmount = value
+    let tokenRecipientAddress = null
+    let networkFee = bns.mul(gasPrice, gasUsed.toString())
+    let parentNetworkFee
+    const ourReceiveAddresses = []
+    if (toAddress === fromAddress) {
+      // Send to self
+      nativeAmount = bns.mul('-1', networkFee)
+    } else if (toAddress === ourAddress) {
+      // Receive
+      ourReceiveAddresses.push(ourAddress)
+    } else if (fromAddress === ourAddress) {
+      // Send
+      nativeAmount = bns.mul('-1', bns.add(nativeAmount, networkFee))
+    }
+    // Override currencyCode and nativeAmount if token transaction
+    if (tokenTx) {
+      const { symbol, value, to, from } = tokenTx
+      toAddress = to.toLowerCase()
+      fromAddress = from.toLowerCase()
+      currencyCode = symbol
+      nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
+      tokenRecipientAddress = toAddress
+      networkFee = '0'
+      parentNetworkFee = bns.mul(gasPrice, gasUsed.toString())
+    }
+    const otherParams: EthereumTxOtherParams = {
+      from: [fromAddress],
+      to: [toAddress],
+      gas: gasLimit.toString(),
+      gasPrice,
+      gasUsed: gasUsed.toString(),
+      errorVal: status,
+      tokenRecipientAddress
+    }
+    const edgeTransaction: EdgeTransaction = {
+      txid,
+      date: blockTime,
+      currencyCode,
+      blockHeight,
+      nativeAmount,
+      networkFee,
+      parentNetworkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      otherParams
+    }
+    return edgeTransaction
   }
 
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
