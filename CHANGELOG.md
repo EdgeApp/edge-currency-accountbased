@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+
+# 0.7.34 (2020-11-23)
+
+- Add Blockbook API support for Ethereum
+- Disable Alethio API support
+- Remove Supereth API support
+
 # 0.7.33 (2020-11-18)
 
 - Fix EOSIO metaToken send issues (contractAddress and denom)
