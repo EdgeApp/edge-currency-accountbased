@@ -8,7 +8,7 @@ export const HISTORY_NODE_ACTIONS = {
 }
 export const HISTORY_NODE_OFFSET = 20
 
-export const ACTIONS_SKIP_SWITCH = {
+export const BROADCAST_ACTIONS = {
   recordObtData: true,
   requestFunds: true,
   registerFioAddress: true,
@@ -16,7 +16,9 @@ export const ACTIONS_SKIP_SWITCH = {
   renewFioAddress: true,
   renewFioDomain: true,
   transferTokens: true,
-  addPublicAddresses: true
+  addPublicAddresses: true,
+  transferFioAddress: true,
+  transferFioDomain: true
 }
 
 export const ACTIONS_TO_END_POINT_KEYS = {
@@ -30,5 +32,7 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   rejectFundsRequest: 'rejectFundsRequest',
   recordObtData: 'recordObtData',
   transferTokens: 'transferTokens',
-  pushTransaction: 'pushTransaction'
+  pushTransaction: 'pushTransaction',
+  transferFioAddress: 'transferFioAddress',
+  transferFioDomain: 'transferFioDomain'
 }

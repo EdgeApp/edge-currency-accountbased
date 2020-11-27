@@ -15,19 +15,19 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
 import {
-  ACTIONS_SKIP_SWITCH,
+  asyncWaterfall,
+  getDenomInfo,
+  promiseAny,
+  shuffleArray
+} from '../common/utils'
+import {
   ACTIONS_TO_END_POINT_KEYS,
+  BROADCAST_ACTIONS,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
 } from './fioConst.js'
-import {
-  FIO_BLOCK_NUMBER_ERROR_CODE,
-  FIO_CHAIN_INFO_ERROR_CODE,
-  fioApiErrorCodes,
-  FioError
-} from './fioError'
+import { fioApiErrorCodes, FioError } from './fioError'
 import { FioPlugin } from './fioPlugin.js'
 import {
   type FioHistoryNodeAction,
@@ -42,6 +42,13 @@ const TRANSACTION_POLL_MILLISECONDS = 10000
 type RecentFioFee = {
   publicAddress: string,
   fee: number
+}
+
+type PreparedTrx = {
+  signatures: string[],
+  compression: number,
+  packed_context_free_data: string,
+  packed_trx: string
 }
 
 export class FioEngine extends CurrencyEngine {
@@ -619,15 +626,17 @@ export class FioEngine extends CurrencyEngine {
   async fioApiRequest(
     apiUrl: string,
     actionName: string,
-    params?: any
-  ): Promise<any> {
+    params?: any,
+    returnPreparedTrx: boolean = false
+  ): Promise<any | PreparedTrx> {
     const fioSDK = new FIOSDK(
       this.walletInfo.keys.fioKey,
       this.walletInfo.keys.publicKey,
       apiUrl,
       this.fetchCors,
       undefined,
-      this.tpid
+      this.tpid,
+      returnPreparedTrx
     )
 
     let res
@@ -676,15 +685,11 @@ export class FioEngine extends CurrencyEngine {
     return res
   }
 
-  async fioRetryApiRequest(
+  async executePreparedTrx(
     apiUrl: string,
-    requestParams: {
-      endPoint: string,
-      body: string,
-      fetchOptions?: any
-    }
-  ): Promise<any> {
-    const { endPoint, body, fetchOptions } = requestParams
+    endpoint: string,
+    preparedTrx: PreparedTrx
+  ) {
     const fioSDK = new FIOSDK(
       this.walletInfo.keys.fioKey,
       this.walletInfo.keys.publicKey,
@@ -695,15 +700,27 @@ export class FioEngine extends CurrencyEngine {
     )
     let res
 
+    this.log(
+      `executePreparedTrx. preparedTrx: ${JSON.stringify(
+        preparedTrx
+      )} - apiUrl: ${apiUrl}`
+    )
     try {
-      res = await fioSDK.transactions.executeCall(endPoint, body, fetchOptions)
+      res = await fioSDK.executePreparedTrx(endpoint, preparedTrx)
+      this.log(
+        `executePreparedTrx. res: ${JSON.stringify(
+          res
+        )} - apiUrl: ${apiUrl} - endpoint: ${endpoint}`
+      )
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
         this.log(
-          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
-            requestParams
-          )} - apiUrl: ${apiUrl} - message: ${JSON.stringify(e.json)}`
+          `executePreparedTrx error. requestParams: ${JSON.stringify(
+            preparedTrx
+          )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${JSON.stringify(
+            e.json
+          )}`
         )
         if (
           e.json &&
@@ -713,20 +730,14 @@ export class FioEngine extends CurrencyEngine {
         ) {
           e.message = e.json.fields[0].error
         }
-        res = {
-          isError: true,
-          data: {
-            code: e.errorCode,
-            message: e.message,
-            json: e.json,
-            list: e.list
-          }
-        }
+        throw e
       } else {
         this.log(
-          `fioRetryApiRequest error. requestParams: ${JSON.stringify(
-            requestParams
-          )} - apiUrl: ${apiUrl} - message: ${e.message}`
+          `executePreparedTrx error. requestParams: ${JSON.stringify(
+            preparedTrx
+          )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${
+            e.message
+          }`
         )
         throw e
       }
@@ -737,68 +748,35 @@ export class FioEngine extends CurrencyEngine {
 
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
-    if (ACTIONS_SKIP_SWITCH[actionName]) {
-      for (const apiUrl of shuffleArray([
-        ...this.currencyInfo.defaultSettings.apiUrls
-      ])) {
-        try {
-          this.log(
-            `multicastServers fioApiRequest loop. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
-              params
-            )}`
+    if (BROADCAST_ACTIONS[actionName]) {
+      this.log(
+        `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
+          params
+        )}`
+      )
+      const preparedTrx = await asyncWaterfall(
+        shuffleArray(
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
+            this.fioApiRequest(apiUrl, actionName, params, true)
           )
-          res = await this.fioApiRequest(apiUrl, actionName, params)
-          break
-        } catch (e) {
-          this.log(
-            `multicastServers error. actionName: ${actionName} - apiUrl: ${apiUrl} - params: ${JSON.stringify(
-              params
-            )} - error message: ${e.message} - error code: ${
-              e.code || e.errorCode
-            } - error json: ${JSON.stringify(e.json)}`
+        )
+      )
+      this.log(
+        `multicastServers executePreparedTrx. actionName: ${actionName} - res: ${JSON.stringify(
+          preparedTrx
+        )}`
+      )
+      res = await promiseAny(
+        shuffleArray(
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl =>
+            this.executePreparedTrx(
+              apiUrl,
+              EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+              preparedTrx
+            )
           )
-          if (e.requestParams) {
-            if (
-              EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]] &&
-              e.requestParams.endPoint.indexOf(
-                EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]]
-              ) < 0
-            ) {
-              this.log(
-                `multicastServers continue. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
-                  e.requestParams
-                )}`
-              )
-              continue
-            }
-            this.log(
-              `multicastServers fioRetryApiRequest. actionName: ${actionName} - apiUrl: ${apiUrl} - requestParams: ${JSON.stringify(
-                e.requestParams
-              )}`
-            )
-            res = await asyncWaterfall(
-              shuffleArray(
-                this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
-                  this.fioRetryApiRequest(apiUrl, e.requestParams)
-                )
-              )
-            )
-            break
-          } else if (
-            e.errorCode &&
-            [FIO_CHAIN_INFO_ERROR_CODE, FIO_BLOCK_NUMBER_ERROR_CODE].indexOf(
-              parseInt(e.errorCode)
-            ) > -1
-          ) {
-            this.log(
-              `multicastServers FIO_CHAIN_INFO_ERROR_CODE/FIO_BLOCK_NUMBER_ERROR_CODE continue. actionName: ${actionName} - apiUrl: ${apiUrl}`
-            )
-            continue
-          } else {
-            throw e
-          }
-        }
-      }
+        )
+      )
       this.log(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
           res
@@ -818,10 +796,6 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (res.isError) {
-      if (res.data.code === 409) {
-        // duplicate trx was sent, success case
-        return {}
-      }
       const error = new FioError(res.errorMessage || res.data.message)
       error.json = res.data.json
       error.list = res.data.list
