@@ -24,7 +24,6 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
-import { getFetchCors } from '../react-native-io.js'
 import { EthereumEngine } from './ethEngine.js'
 
 export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK
@@ -254,7 +253,7 @@ export function makeEthereumBasedPluginInner(
   currencyInfo: EdgeCurrencyInfo
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
-  const fetchCors = getFetchCors(opts)
+  const fetchCors = io.fetchCors || io.fetch
 
   let toolsPromise: Promise<EthereumPlugin>
   function makeCurrencyTools(): Promise<EthereumPlugin> {

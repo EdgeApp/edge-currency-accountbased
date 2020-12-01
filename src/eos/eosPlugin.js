@@ -22,7 +22,6 @@ import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
-import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
 import { type EosJsConfig } from './eosTypes'
 
@@ -172,7 +171,7 @@ export function makeEosBasedPluginInner(
   eosJsConfig: EosJsConfig
 ): EdgeCurrencyPlugin {
   const { io, log } = opts
-  const fetch = getFetchCors(opts)
+  const fetch = io.fetchCors || io.fetch
 
   let toolsPromise: Promise<EosPlugin>
   function makeCurrencyTools(): Promise<EosPlugin> {
