@@ -1008,7 +1008,10 @@ export class EthereumNetwork {
 
       case 'blockbookBlockHeight':
         funcs = blockbookServers.map(server => async () => {
-          const result = await this.fetchGet(server + '/api/v2')
+          const result =
+            server.indexOf('trezor') === -1
+              ? await this.fetchGet(server + '/api/v2')
+              : await this.ethEngine.fetchCors(server + '/api/v2')
           return { server, result }
         })
         // Randomize array
@@ -1019,7 +1022,10 @@ export class EthereumNetwork {
       case 'blockbookTxs':
         funcs = blockbookServers.map(server => async () => {
           const url = server + params[0]
-          const result = await this.fetchGet(url)
+          const result =
+            server.indexOf('trezor') === -1
+              ? await this.fetchGet(url)
+              : await this.ethEngine.fetchCors(url)
           return { server, result }
         })
         // Randomize array
