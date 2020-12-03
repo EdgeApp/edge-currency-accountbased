@@ -9,7 +9,6 @@ const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
     'https://fio.eosdac.io/v1/',
-    'http://fioapi.nodeone.io:6881/v1/',
     'https://fio.eosphere.io/v1/',
     'https://fio.eosrio.io/v1/',
     'https://fio.acherontrading.com/v1/',
@@ -30,7 +29,6 @@ const defaultSettings: any = {
   ],
   historyNodeUrls: [
     'https://fio.greymass.com/v1/',
-    'http://api.fio.eosdetroit.io/v1/',
     'https://fio.greymass.com/v1/',
     'https://fio.eosphere.io/v1/',
     'https://fio.eossweden.org/v1/'
