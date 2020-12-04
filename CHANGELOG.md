@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.35 (2020-12-04)
+
+- FIO: Refactored multicast servers, add preparedTrx support, Removed non-SSL FIO servers
+- Used fetchCors for Trezor blookbook server
 
 # 0.7.34 (2020-11-23)
 
