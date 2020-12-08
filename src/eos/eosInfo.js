@@ -45,11 +45,7 @@ const denominations = [
 
 const otherSettings: EosSettings = {
   eosActivationServers: ['https://eospay.edge.app'],
-  eosHyperionNodes: [
-    'https://api.eossweden.org',
-    'https://mainnet.eosn.io',
-    'https://eos.hyperion.eosrio.io'
-  ],
+  eosHyperionNodes: ['https://api.eossweden.org', 'https://mainnet.eosn.io'],
   eosNodes: [
     'https://api.eoseoul.io',
     'https://api.eoslaomao.com',
