@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.36 (2020-12-07)
+
+- Remove eosrio from hyperion server list
+
 # 0.7.35 (2020-12-04)
 
 - FIO: Refactored multicast servers, add preparedTrx support, Removed non-SSL FIO servers
