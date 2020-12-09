@@ -51,6 +51,11 @@ type EosFunction =
   | 'getOutgoingTransactions'
   | 'transact'
 
+const bogusAccounts = {
+  ramdeathtest: true,
+  krpj4avazggi: true,
+  fobleos13125: true
+}
 class CosignAuthorityProvider {
   rpc: JsonRpc
   constructor(rpc: JsonRpc) {
@@ -668,10 +673,15 @@ export class EosEngine extends CurrencyEngine {
   async checkAccountInnerLoop() {
     const publicKey = this.walletLocalData.publicKey
     try {
+      if (bogusAccounts[this.walletLocalData.otherData.accountName]) {
+        this.walletLocalData.otherData.accountName = ''
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onAddressChanged()
+      }
       // Check if the publicKey has an account accountName
       if (!this.walletLocalData.otherData.accountName) {
         const account = await this.multicastServers('getKeyAccounts', publicKey)
-        if (account) {
+        if (account && !bogusAccounts[account.account_name]) {
           this.walletLocalData.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
