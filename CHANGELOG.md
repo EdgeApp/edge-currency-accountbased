@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.37 (2020-12-09)
+
+- EOS: Ignore bogus accounts getting returned by nodes
+
 # 0.7.36 (2020-12-07)
 
 - Remove eosrio from hyperion server list
