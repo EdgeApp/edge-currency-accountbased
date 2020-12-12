@@ -7,6 +7,7 @@ import {
   type EdgeCurrencyTools,
   type EdgeFetchFunction,
   type EdgeFreshAddress,
+  type EdgeMetaToken,
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
@@ -97,6 +98,7 @@ export class EosEngine extends CurrencyEngine {
   otherMethods: Object
   eosJsConfig: EosJsConfig
   fetchCors: EdgeFetchFunction
+  allTokens: Array<EdgeMetaToken>
 
   constructor(
     currencyPlugin: EosPlugin,
@@ -110,6 +112,10 @@ export class EosEngine extends CurrencyEngine {
     this.eosJsConfig = eosJsConfig
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
+    this.allTokens = [
+      ...currencyPlugin.currencyInfo.metaTokens,
+      currencyPlugin.currencyInfo.defaultSettings.otherSettings.nativeToken
+    ]
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
         const {
@@ -292,7 +298,7 @@ export class EosEngine extends CurrencyEngine {
       const denom = getDenomInfo(
         this.currencyInfo,
         currencyCode,
-        this.allTokens
+        this.allTokens // Kylan
       )
       // if invalid currencyCode then don't count as valid transaction
       if (!denom) {

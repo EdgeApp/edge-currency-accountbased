@@ -31,6 +31,15 @@ const denominations = [
 ]
 
 const otherSettings: EosSettings = {
+  nativeToken: {
+    name: 'TLOS',
+    currencyName: 'TLOS',
+    multiplier: '10000',
+    symbol: 'T',
+    currencyCode: 'TLOS',
+    contractAddress: 'eosio.token',
+    denominations
+  },
   eosActivationServers: [
     'https://eospay.edge.app',
     'https://account.teloscrew.com'
@@ -78,17 +87,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   denominations,
   symbolImage: `${imageServerUrl}/telos-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/telos-logo-solo-64.png`,
-  metaTokens: [
-    {
-      name: 'TLOS',
-      currencyName: 'TLOS',
-      multiplier: '10000',
-      symbol: 'T',
-      currencyCode: 'TLOS',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeTelosPlugin = (opts: EdgeCorePluginOptions) => {

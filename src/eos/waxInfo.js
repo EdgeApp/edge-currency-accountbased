@@ -32,6 +32,15 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
+  nativeToken: {
+    name: 'WAX',
+    currencyName: 'WAX',
+    multiplier: '100000000',
+    symbol: 'W',
+    currencyCode: 'WAX',
+    contractAddress: 'eosio.token',
+    denominations
+  },
   eosActivationServers: [],
   // used for the following routines, is Hyperion v2:
 
@@ -79,17 +88,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   denominations,
   symbolImage: `${imageServerUrl}/wax-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/wax-logo-solo-64.png`,
-  metaTokens: [
-    {
-      name: 'WAX',
-      currencyName: 'WAX',
-      multiplier: '100000000',
-      symbol: 'W',
-      currencyCode: 'WAX',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeWaxPlugin = (opts: EdgeCorePluginOptions) => {

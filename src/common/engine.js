@@ -733,7 +733,11 @@ export class CurrencyEngine {
     }
 
     this.customTokens.push(edgeMetaToken)
-    this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
+    this.allTokens = [
+      ...this.currencyInfo.metaTokens,
+      ...this.customTokens,
+      this.currencyInfo.defaultSettings.otherSettings.nativeToken
+    ]
     this.enableTokensSync([edgeMetaToken.currencyCode])
   }
 
