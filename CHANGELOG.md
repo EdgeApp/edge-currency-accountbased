@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.38 (2020-12-13)
+
+- Update ANT contract address and rename original token ANTV1
+
 # 0.7.37 (2020-12-09)
 
 - EOS: Ignore bogus accounts getting returned by nodes
