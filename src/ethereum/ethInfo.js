@@ -247,6 +247,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/hur-logo-solo-64.png`
     },
     {
+      currencyCode: 'ANTV1',
+      currencyName: 'Aragon',
+      denominations: [
+        {
+          name: 'ANTV1',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x960b236A07cf122663c4303350609A66A7B288C0',
+      symbolImage: `${imageServerUrl}/aragon-logo-solo-64.png`
+    },
+    {
       currencyCode: 'ANT',
       currencyName: 'Aragon',
       denominations: [
@@ -255,8 +267,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x960b236A07cf122663c4303350609A66A7B288C0',
-      symbolImage: `${imageServerUrl}/aragon-logo-solo-64.png`
+      contractAddress: '0xa117000000f279D81A1D3cc75430fAA017FA5A2e',
+      symbolImage: `${imageServerUrl}/aragon-v2-logo-solo-64.png`
     },
     {
       currencyCode: 'BAT',
