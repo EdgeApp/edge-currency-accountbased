@@ -318,9 +318,9 @@ export class FioEngine extends CurrencyEngine {
         )
       }
     } catch (e) {
-      this.log(`Error fetching height: ${JSON.stringify(e)}`)
-      this.log(`e.code: ${JSON.stringify(e.code)}`)
-      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      this.log.error(`Error fetching height: ${JSON.stringify(e)}`)
+      this.log.error(`e.code: ${JSON.stringify(e.code)}`)
+      this.log.error(`e.message: ${JSON.stringify(e.message)}`)
       console.error('checkBlockchainInnerLoop error: ' + JSON.stringify(e))
     }
   }
@@ -336,7 +336,7 @@ export class FioEngine extends CurrencyEngine {
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
       this.localDataDirty()
-      this.log(tk + ': token Address balance: ' + balance)
+      this.log.warn(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -422,7 +422,7 @@ export class FioEngine extends CurrencyEngine {
       const exchangeAmount = amount.toString()
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (!denom) {
-        this.log(`Received unsupported currencyCode: ${currencyCode}`)
+        this.log.warn(`Received unsupported currencyCode: ${currencyCode}`)
         return 0
       }
       const fioAmount = bns.mul(exchangeAmount, denom.multiplier)
@@ -582,9 +582,8 @@ export class FioEngine extends CurrencyEngine {
     try {
       transactions = await this.checkTransactions()
     } catch (e) {
-      console.log(e)
-      this.log('checkTransactionsInnerLoop fetches failed with error: ')
-      this.log(e)
+      this.log.error('checkTransactionsInnerLoop fetches failed with error: ')
+      this.log.error(e)
       return false
     }
 
@@ -669,13 +668,13 @@ export class FioEngine extends CurrencyEngine {
             list: e.list
           }
         }
-        this.log(
+        this.log.error(
           `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
             e.json
           )}`
         )
       } else {
-        this.log(
+        this.log.error(
           `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
         throw e
@@ -700,14 +699,14 @@ export class FioEngine extends CurrencyEngine {
     )
     let res
 
-    this.log(
+    this.log.warn(
       `executePreparedTrx. preparedTrx: ${JSON.stringify(
         preparedTrx
       )} - apiUrl: ${apiUrl}`
     )
     try {
       res = await fioSDK.executePreparedTrx(endpoint, preparedTrx)
-      this.log(
+      this.log.warn(
         `executePreparedTrx. res: ${JSON.stringify(
           res
         )} - apiUrl: ${apiUrl} - endpoint: ${endpoint}`
@@ -715,7 +714,7 @@ export class FioEngine extends CurrencyEngine {
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
-        this.log(
+        this.log.error(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${JSON.stringify(
@@ -732,7 +731,7 @@ export class FioEngine extends CurrencyEngine {
         }
         throw e
       } else {
-        this.log(
+        this.log.error(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${
@@ -749,7 +748,7 @@ export class FioEngine extends CurrencyEngine {
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
     if (BROADCAST_ACTIONS[actionName]) {
-      this.log(
+      this.log.warn(
         `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
           params
         )}`
@@ -761,7 +760,7 @@ export class FioEngine extends CurrencyEngine {
           )
         )
       )
-      this.log(
+      this.log.warn(
         `multicastServers executePreparedTrx. actionName: ${actionName} - res: ${JSON.stringify(
           preparedTrx
         )}`
@@ -777,7 +776,7 @@ export class FioEngine extends CurrencyEngine {
           )
         )
       )
-      this.log(
+      this.log.warn(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
           res
         )}`
@@ -822,7 +821,7 @@ export class FioEngine extends CurrencyEngine {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
     } catch (e) {
-      this.log('checkAccountInnerLoop error: ' + JSON.stringify(e))
+      this.log.error('checkAccountInnerLoop error: ' + JSON.stringify(e))
       nativeAmount = '0'
     }
     this.updateBalance(currencyCode, nativeAmount)
@@ -940,7 +939,9 @@ export class FioEngine extends CurrencyEngine {
 
       if (isChanged) this.localDataDirty()
     } catch (e) {
-      this.log('checkAccountInnerLoop getFioNames error: ' + JSON.stringify(e))
+      this.log.error(
+        'checkAccountInnerLoop getFioNames error: ' + JSON.stringify(e)
+      )
     }
   }
 
@@ -953,7 +954,7 @@ export class FioEngine extends CurrencyEngine {
           this.walletLocalData.otherData.fioRequestsToApprove[fioRequestId]
         )
       } catch (e) {
-        this.log(
+        this.log.error(
           `approveErroredFioRequests recordObtData error: ${JSON.stringify(
             e
           )} for ${
