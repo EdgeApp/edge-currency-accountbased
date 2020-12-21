@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.39 (2020-12-21)
+
+- Double gas estimate when sending ETH to a contract to reduce chance of failure
+- FIO logging cleanup
+
 # 0.7.38 (2020-12-13)
 
 - Update ANT contract address and rename original token ANTV1
