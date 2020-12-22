@@ -17,6 +17,7 @@ import {
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
+  type EdgeParseUriOptions,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -149,7 +150,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async parseUri(
     uri: string,
-    currencyCode?: string,
+    currencyOptions?: string | EdgeParseUriOptions,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<EdgeParsedUri> {
     const networks = {}
@@ -158,6 +159,29 @@ export class EthereumPlugin extends CurrencyPlugin {
         networks[network] = true
       }
     )
+
+    const currencyCode =
+      typeof currencyOptions === 'string'
+        ? currencyOptions
+        : currencyOptions.currencyCode
+    if (
+      typeof currencyOptions === 'object' &&
+      currencyOptions !== null &&
+      currencyOptions.fromFio
+    ) {
+      let noNetwork = true
+      for (const networkName of this.currencyInfo.defaultSettings.otherSettings
+        .uriNetworks) {
+        if (uri.indexOf(networkName) === 0) {
+          noNetwork = false
+          break
+        }
+      }
+
+      if (noNetwork) {
+        uri = `${this.currencyInfo.defaultSettings.otherSettings.uriNetworks[0]}:${uri}`
+      }
+    }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,

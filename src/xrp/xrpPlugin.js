@@ -13,6 +13,7 @@ import {
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
+  type EdgeParseUriOptions,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import keypairs from 'ripple-keypairs'
@@ -124,13 +125,29 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    options: EdgeParseUriOptions
+  ): Promise<EdgeParsedUri> {
     const networks = {
       ripple: true,
       'xrp-ledger': true
     }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
 
+    if (typeof options === 'object' && options !== null && options.fromFio) {
+      let noNetwork = true
+      for (const networkName in networks) {
+        if (uri.indexOf(networkName) === 0) {
+          noNetwork = false
+          break
+        }
+      }
+
+      if (noNetwork) {
+        uri = `ripple:${uri}`
+      }
+    }
     // Handle special case of https://ripple.com//send?to= URIs
     if (uri.includes(RIPPLE_DOT_COM_URI_PREFIX)) {
       const parsedUri = parse(uri, {}, true)

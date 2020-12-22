@@ -16,6 +16,7 @@ import {
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
+  type EdgeParseUriOptions,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -73,10 +74,32 @@ export class BinancePlugin extends CurrencyPlugin {
 
   async parseUri(
     uri: string,
-    currencyCode?: string,
+    currencyOptions?: string | EdgeParseUriOptions,
     customTokens?: Array<EdgeMetaToken>
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
+
+    const currencyCode =
+      typeof currencyOptions === 'string'
+        ? currencyOptions
+        : currencyOptions.currencyCode
+    if (
+      typeof currencyOptions === 'object' &&
+      currencyOptions !== null &&
+      currencyOptions.fromFio
+    ) {
+      let noNetwork = true
+      for (const networkName in networks) {
+        if (uri.indexOf(networkName) === 0) {
+          noNetwork = false
+          break
+        }
+      }
+
+      if (noNetwork) {
+        uri = `binance:${uri}`
+      }
+    }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       currencyInfo,

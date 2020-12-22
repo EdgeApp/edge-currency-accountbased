@@ -12,6 +12,7 @@ import {
   type EdgeEncodeUri,
   type EdgeIo,
   type EdgeParsedUri,
+  type EdgeParseUriOptions,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import stellarApi from 'stellar-sdk'
@@ -78,10 +79,22 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  async parseUri(uri: string): Promise<EdgeParsedUri> {
+  async parseUri(
+    uri: string,
+    options: EdgeParseUriOptions
+  ): Promise<EdgeParsedUri> {
     const networks = {}
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
+
+    if (
+      typeof options === 'object' &&
+      options !== null &&
+      options.fromFio &&
+      uri.indexOf(URI_PREFIX) !== 0
+    ) {
+      uri = `${URI_PREFIX}:${uri}`
+    }
 
     if (uri.includes(STELLAR_SEP007_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
