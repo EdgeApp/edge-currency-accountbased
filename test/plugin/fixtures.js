@@ -73,6 +73,12 @@ export default [
         'BNB',
         '123456700'
       ],
+      'uri address with unique identifier and without network prefix': [
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?memo=123456700',
+        'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+        'BNB',
+        '123456700'
+      ],
       'uri address with amount & label': [
         'binance:bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567&label=Johnny%20Binance',
         'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
@@ -211,6 +217,12 @@ export default [
       ],
       'uri address with unique identifier': [
         'web+stellar:pay?destination=GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD&memo=123456789&memo_type=MEMO_ID',
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD',
+        'XLM',
+        '123456789'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD?memo=123456789&memo_type=MEMO_ID',
         'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD',
         'XLM',
         '123456789'
@@ -362,6 +374,12 @@ export default [
         'XRP',
         '123456789'
       ],
+      'uri address with unique identifier and without network prefix': [
+        'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn?dt=123456789',
+        'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn',
+        'XRP',
+        '123456789'
+      ],
       'uri address with amount & label': [
         'ripple:rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn?amount=1234.56789&label=Johnny%20Ripple',
         'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn',
@@ -498,6 +516,11 @@ export default [
       ],
       'uri address with unique identifier': [
         'ethereum:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?dt=123456789',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        'ETH'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?dt=123456789',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         'ETH'
       ],
@@ -640,6 +663,11 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         'RBTC'
       ],
+      'uri address with unique identifier and without network prefix': [
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?dt=123456789',
+        '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
+        'RBTC'
+      ],
       'uri address with amount & label': [
         'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?amount=1234.56789&label=Johnny%20Ripple',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
@@ -779,8 +807,12 @@ export default [
       'uri address with unique identifier': [
         'fio:FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z?memo=123456789&memo_type=MEMO_ID',
         'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z',
-        'FIO',
-        '123456789'
+        'FIO'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z?memo=123456789&memo_type=MEMO_ID',
+        'FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z',
+        'FIO'
       ],
       'uri address with amount & label': [
         'fio:FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z?amount=1234.56789&label=Johnny%20Ripple',

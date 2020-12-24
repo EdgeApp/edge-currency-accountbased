@@ -93,7 +93,7 @@ export class FioPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { edgeParsedUri } = this.parseUriCommon(
       currencyInfo,
       uri,
       {
@@ -105,18 +105,7 @@ export class FioPlugin extends CurrencyPlugin {
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
-    if (parsedUri.query.memo_type) {
-      if (parsedUri.query.memo_type === 'MEMO_ID') {
-        if (parsedUri.query.memo) {
-          const m = bns.add(parsedUri.query.memo, '0')
-          // Check if the memo is an integer
-          if (m !== parsedUri.query.memo) {
-            throw new Error('ErrorInvalidMemoId')
-          }
-          edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
-        }
-      }
-    }
+
     return edgeParsedUri
   }
 
