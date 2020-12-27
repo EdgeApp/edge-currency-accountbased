@@ -236,7 +236,7 @@ export function makeEosBasedPluginInner(
         )
         return out
       } catch (e) {
-        log('UnableToGetSupportedCurrencies error: ', e)
+        log.error('UnableToGetSupportedCurrencies error: ', e)
         throw new Error('UnableToGetSupportedCurrencies')
       }
     },
@@ -265,7 +265,7 @@ export function makeEosBasedPluginInner(
         )
         return out
       } catch (e) {
-        log('ErrorUnableToGetCost: ', e)
+        log.error('ErrorUnableToGetCost: ', e)
         throw new Error('ErrorUnableToGetCost')
       }
     },
@@ -293,7 +293,7 @@ export function makeEosBasedPluginInner(
           throw e
         }
       }
-      log(`validateAccount: result=${out.result}`)
+      log.warn(`validateAccount: result=${out.result}`)
       return out
     }
   }

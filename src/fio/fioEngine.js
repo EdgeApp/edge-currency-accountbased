@@ -17,6 +17,7 @@ import {
 import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
+  cleanTxLogs,
   getDenomInfo,
   promiseAny,
   shuffleArray
@@ -243,7 +244,7 @@ export class FioEngine extends CurrencyEngine {
               }
               this.saveTx(edgeTransaction)
             } catch (e) {
-              this.log.error(e.message)
+              this.log.error(`transferFioDomain saveTx Error ${e.message}`)
             }
             return res
           }
@@ -326,10 +327,7 @@ export class FioEngine extends CurrencyEngine {
         )
       }
     } catch (e) {
-      this.log.error(`Error fetching height: ${JSON.stringify(e)}`)
-      this.log.error(`e.code: ${JSON.stringify(e.code)}`)
-      this.log.error(`e.message: ${JSON.stringify(e.message)}`)
-      console.error('checkBlockchainInnerLoop error: ' + JSON.stringify(e))
+      this.log.error(`checkBlockchainInnerLoop Error fetching height: ${e}`)
     }
   }
 
@@ -344,7 +342,7 @@ export class FioEngine extends CurrencyEngine {
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
       this.localDataDirty()
-      this.log.warn(tk + ': token Address balance: ' + balance)
+      this.log(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -402,7 +400,7 @@ export class FioEngine extends CurrencyEngine {
           nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
           networkFee = existingTrx.networkFee
         } else {
-          console.log(
+          this.log.error(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
           )
         }
@@ -430,7 +428,7 @@ export class FioEngine extends CurrencyEngine {
       const exchangeAmount = amount.toString()
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (!denom) {
-        this.log.warn(`Received unsupported currencyCode: ${currencyCode}`)
+        this.log.error(`Received unsupported currencyCode: ${currencyCode}`)
         return 0
       }
       const fioAmount = bns.mul(exchangeAmount, denom.multiplier)
@@ -458,7 +456,7 @@ export class FioEngine extends CurrencyEngine {
         if (otherParams.isTransferProcessed) {
           nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
         } else {
-          console.log(
+          this.log.error(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
           )
         }
@@ -829,7 +827,7 @@ export class FioEngine extends CurrencyEngine {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
     } catch (e) {
-      this.log.error('checkAccountInnerLoop error: ' + JSON.stringify(e))
+      this.log.error('checkAccountInnerLoop error: ' + e)
       nativeAmount = '0'
     }
     this.updateBalance(currencyCode, nativeAmount)
@@ -947,9 +945,7 @@ export class FioEngine extends CurrencyEngine {
 
       if (isChanged) this.localDataDirty()
     } catch (e) {
-      this.log.error(
-        'checkAccountInnerLoop getFioNames error: ' + JSON.stringify(e)
-      )
+      this.log.error('checkAccountInnerLoop getFioNames error: ' + e)
     }
   }
 
@@ -1094,6 +1090,7 @@ export class FioEngine extends CurrencyEngine {
     edgeTransaction.txid = transfer.transaction_id
     edgeTransaction.date = Date.now() / 1000
     edgeTransaction.blockHeight = transfer.block_num
+    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 

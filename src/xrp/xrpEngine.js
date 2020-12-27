@@ -14,7 +14,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getOtherParams, validateObject } from '../common/utils.js'
+import { cleanTxLogs, getOtherParams, validateObject } from '../common/utils.js'
 import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
 import {
@@ -110,10 +110,14 @@ export class XrpEngine extends CurrencyEngine {
           )
         }
       } else {
-        this.log('Invalid data returned from rippleApi.getServerInfo')
+        this.log.error(
+          `Invalid data returned from rippleApi.getServerInfo ${JSON.stringify(
+            jsonObj
+          )}`
+        )
       }
     } catch (err) {
-      this.log(`Error fetching height: ${JSON.stringify(err)}`)
+      this.log.error(`Error fetching height: ${err}`)
     }
   }
 
@@ -205,12 +209,14 @@ export class XrpEngine extends CurrencyEngine {
         this.tokenCheckTransactionsStatus.XRP = 1
         this.updateOnAddressesChecked()
       } else {
-        this.log('Invalid data returned from rippleApi.getTransactions')
+        this.log.error(
+          `Invalid data returned from rippleApi.getTransactions ${JSON.stringify(
+            transactions
+          )}`
+        )
       }
     } catch (e) {
-      this.log(`Error fetching transactions: ${JSON.stringify(e)}`)
-      this.log(`e.code: ${JSON.stringify(e.code)}`)
-      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      this.log.error(`Error fetching transactions: ${e}`)
     }
   }
 
@@ -248,20 +254,24 @@ export class XrpEngine extends CurrencyEngine {
         this.tokenCheckBalanceStatus.XRP = 1
         this.updateOnAddressesChecked()
       } else {
-        this.log('Invalid data returned from rippleApi.getBalances')
+        this.log.error(
+          `Invalid data returned from rippleApi.getBalances ${JSON.stringify(
+            jsonObj
+          )}`
+        )
       }
     } catch (e) {
       if (e.data) {
         if (e.data.error === 'actNotFound' || e.data.error_code === 19) {
-          this.log('Account not found. Probably not activated w/minimum XRP')
+          this.log.warn(
+            'Account not found. Probably not activated w/minimum XRP'
+          )
           this.tokenCheckBalanceStatus.XRP = 1
           this.updateOnAddressesChecked()
           return
         }
       }
-      this.log(`Error fetching address info: ${JSON.stringify(e)}`)
-      this.log(`e.code: ${JSON.stringify(e.code)}`)
-      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      this.log.error(`Error fetching address info: ${e}`)
     }
   }
 
@@ -336,7 +346,7 @@ export class XrpEngine extends CurrencyEngine {
     try {
       await this.xrpPlugin.connectApi(this.walletId)
     } catch (e) {
-      this.log(`Error connecting to server`, String(e))
+      this.log.error(`Error connecting to server`, String(e))
       setTimeout(() => {
         if (this.engineOn) {
           this.startEngine()
@@ -447,13 +457,13 @@ export class XrpEngine extends CurrencyEngine {
           if (err.message.includes('has too many decimal places')) {
             // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
             // Just retrying seems to resolve it. -paulvp
-            this.log(
+            this.log.warn(
               'Got "too many decimal places" error. Retrying... ' + i.toString()
             )
             continue
           }
         }
-        this.log(err)
+        this.log.error(`makeSpend Error ${err}`)
         throw new Error('Error in preparePayment')
       }
     }
@@ -477,7 +487,7 @@ export class XrpEngine extends CurrencyEngine {
       otherParams
     }
 
-    this.log('Payment transaction prepared...')
+    this.log.warn('Payment transaction prepared...')
     return edgeTransaction
   }
 
@@ -493,12 +503,13 @@ export class XrpEngine extends CurrencyEngine {
       txJson,
       privateKey
     )
-    this.log('Payment transaction signed...')
+    this.log.warn('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
     edgeTransaction.txid = id.toLowerCase()
     edgeTransaction.date = Date.now() / 1000
 
+    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -506,6 +517,7 @@ export class XrpEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     await this.multicastServers('submit', edgeTransaction.signedTx)
+    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 

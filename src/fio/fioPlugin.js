@@ -388,7 +388,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
         return isAvailableRes.is_registered
       } catch (e) {
-        console.log('doesAccountExist error: ' + JSON.stringify(e))
+        this.log.error('doesAccountExist error: ' + e)
         return false
       }
     },
