@@ -725,6 +725,210 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0xfE18be6b3Bd88A2D2A7f928d00292E7a9963CfC6',
       symbolImage: `${imageServerUrl}/synthbtc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'AAVE',
+      currencyName: 'Aave',
+      denominations: [
+        {
+          name: 'AAVE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+      symbolImage: `${imageServerUrl}/aave-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aYFI',
+      currencyName: 'Aave Interest Bearing YFI',
+      denominations: [
+        {
+          name: 'aYFI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x5165d24277cd063f5ac44efd447b27025e888f37',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-yfi-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aLINK',
+      currencyName: 'Aave Interest Bearing LINK',
+      denominations: [
+        {
+          name: 'aLINK',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xa06bc25b5805d5f8d82847d191cb4af5a3e873e0',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-link-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aDai',
+      currencyName: 'Aave Interest Bearing Dai',
+      denominations: [
+        {
+          name: 'aDai',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x028171bca77440897b824ca71d1c56cac55b68a',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-dai-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aBAT',
+      currencyName: 'Aave Interest Bearing BAT',
+      denominations: [
+        {
+          name: 'aBAT',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x05ec93c0365baaeabf7aeffb0972ea7ecdd39cf1',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-bat-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aETH',
+      currencyName: 'Aave Interest Bearing Wrapped ETH',
+      denominations: [
+        {
+          name: 'aETH',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x030ba81f1c18d280636f32af80b9aad02cf0854e',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-wrapped-eth-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aWBTC',
+      currencyName: 'Aave Interest Bearing Wrapped BTC',
+      denominations: [
+        {
+          name: 'aWBTC',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x9ff58f4ffb29fa2266ab25e75e2a8b3503311656',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-wrapped-btc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aSNX',
+      currencyName: 'Aave Interest Bearing SNX',
+      denominations: [
+        {
+          name: 'aSNX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x35f6b052c598d933d69a4eec4d04c73a191fe6c2',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-snx-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aREN',
+      currencyName: 'Aave Interest Bearing REN',
+      denominations: [
+        {
+          name: 'aREN',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xcc12abe4ff81c9378d670de1b57f8e0dd228d77a',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-ren-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aUSDT',
+      currencyName: 'Aave Interest Bearing USDT',
+      denominations: [
+        {
+          name: 'aUSDT',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0x3ed3b47dd13ec9a98b44e6204a523e766b225811',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-usdt-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aMKR',
+      currencyName: 'Aave Interest Bearing MKR',
+      denominations: [
+        {
+          name: 'aMKR',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xc713e5e149d5d0715dcd1c156a020976e7e56b88',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-mkr-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aMANA',
+      currencyName: 'Aave Interest Bearing MANA',
+      denominations: [
+        {
+          name: 'aMANA',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xa685a61171bb30d4072b338c80cb7b2c865c873e',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-mana-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aZRX',
+      currencyName: 'Aave Interest Bearing ZRX',
+      denominations: [
+        {
+          name: 'aZRX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xdf7ff54aacacbff42dfe29dd6144a69b629f8c9e',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-zrx-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aKNC',
+      currencyName: 'Aave Interest Bearing KNC',
+      denominations: [
+        {
+          name: 'aKNC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x39c6b3e42d6a679d7d776778fe880bc9487c2eda',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-knc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aUSDC',
+      currencyName: 'Aave Interest Bearing USDC',
+      denominations: [
+        {
+          name: 'aUSDC',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0xbcca60bb61934080951369a648fb03df4f96263c',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-usdc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aSUSD',
+      currencyName: 'Aave Interest Bearing SUSD',
+      denominations: [
+        {
+          name: 'aSUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x6c5024cd4f8a59110119c56f8933403a539555eb',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-susd-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'aUNI',
+      currencyName: 'Aave Interest Bearing UNI',
+      denominations: [
+        {
+          name: 'aUNI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xb9d7cb55f463405cdfbe4e90a6d2df01c2b92bf1',
+      symbolImage: `${imageServerUrl}/aave-interest-bearing-uni-logo-solo-64.png`
     }
   ]
 }
