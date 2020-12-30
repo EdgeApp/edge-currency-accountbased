@@ -225,6 +225,26 @@ export class FioEngine extends CurrencyEngine {
               )
               this.localDataDirty()
             }
+            try {
+              const edgeTransaction: EdgeTransaction = {
+                txid: res.transaction_id,
+                date: new Date().getTime(),
+                currencyCode: this.currencyInfo.currencyCode,
+                blockHeight: res.block_num,
+                nativeAmount: `-${res.fee_collected}`,
+                networkFee: `${res.fee_collected}`,
+                parentNetworkFee: '0',
+                signedTx: '',
+                ourReceiveAddresses: [],
+                otherParams: {},
+                metadata: {
+                  notes: res.transaction_id
+                }
+              }
+              this.saveTx(edgeTransaction)
+            } catch (e) {
+              this.log.error(e.message)
+            }
             return res
           }
         }
