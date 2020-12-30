@@ -181,10 +181,7 @@ export class FioEngine extends CurrencyEngine {
               })
               this.localDataDirty()
             }
-            return {
-              expiration: res.expiration,
-              feeCollected: res.fee_collected
-            }
+            return res
           }
           case 'renewFioDomain': {
             const { fee } = await this.multicastServers('getFee', {
@@ -199,10 +196,7 @@ export class FioEngine extends CurrencyEngine {
               renewedDomain.expiration = res.expiration
               this.localDataDirty()
             }
-            return {
-              expiration: res.expiration,
-              feeCollected: res.fee_collected
-            }
+            return res
           }
           case 'registerFioDomain': {
             const { fee } = await this.multicastServers('getFee', {
@@ -217,10 +211,7 @@ export class FioEngine extends CurrencyEngine {
                 tpid
               }
             })
-            return {
-              expiration: res.expiration,
-              feeCollected: res.fee_collected
-            }
+            return res
           }
           case 'transferFioDomain': {
             const res = await this.multicastServers(actionName, params)
@@ -234,10 +225,7 @@ export class FioEngine extends CurrencyEngine {
               )
               this.localDataDirty()
             }
-            return {
-              status: res.status,
-              feeCollected: res.fee_collected
-            }
+            return res
           }
         }
 
