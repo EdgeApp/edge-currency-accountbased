@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.40 (2020-12-31)
+
+- Add Aave ERC20 tokens
+- FIO: Add additional domain transfer transaction
+
 # 0.7.39 (2020-12-21)
 
 - Double gas estimate when sending ETH to a contract to reduce chance of failure
