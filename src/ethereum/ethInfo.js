@@ -739,11 +739,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-logo-solo-64.png`
     },
     {
-      currencyCode: 'aYFI',
+      currencyCode: 'AYFI',
       currencyName: 'Aave Interest Bearing YFI',
       denominations: [
         {
-          name: 'aYFI',
+          name: 'AYFI',
           multiplier: '1000000000000000000'
         }
       ],
@@ -751,11 +751,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-yfi-logo-solo-64.png`
     },
     {
-      currencyCode: 'aLINK',
+      currencyCode: 'ALINK',
       currencyName: 'Aave Interest Bearing LINK',
       denominations: [
         {
-          name: 'aLINK',
+          name: 'ALINK',
           multiplier: '1000000000000000000'
         }
       ],
@@ -763,11 +763,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-link-logo-solo-64.png`
     },
     {
-      currencyCode: 'aDai',
+      currencyCode: 'ADAI',
       currencyName: 'Aave Interest Bearing Dai',
       denominations: [
         {
-          name: 'aDai',
+          name: 'ADAI',
           multiplier: '1000000000000000000'
         }
       ],
@@ -775,11 +775,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-dai-logo-solo-64.png`
     },
     {
-      currencyCode: 'aBAT',
+      currencyCode: 'ABAT',
       currencyName: 'Aave Interest Bearing BAT',
       denominations: [
         {
-          name: 'aBAT',
+          name: 'ABAT',
           multiplier: '1000000000000000000'
         }
       ],
@@ -787,11 +787,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-bat-logo-solo-64.png`
     },
     {
-      currencyCode: 'aETH',
+      currencyCode: 'AETH',
       currencyName: 'Aave Interest Bearing Wrapped ETH',
       denominations: [
         {
-          name: 'aETH',
+          name: 'AETH',
           multiplier: '1000000000000000000'
         }
       ],
@@ -799,11 +799,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-wrapped-eth-logo-solo-64.png`
     },
     {
-      currencyCode: 'aWBTC',
+      currencyCode: 'AWBTC',
       currencyName: 'Aave Interest Bearing Wrapped BTC',
       denominations: [
         {
-          name: 'aWBTC',
+          name: 'AWBTC',
           multiplier: '100000000'
         }
       ],
@@ -811,11 +811,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-wrapped-btc-logo-solo-64.png`
     },
     {
-      currencyCode: 'aSNX',
+      currencyCode: 'ASNX',
       currencyName: 'Aave Interest Bearing SNX',
       denominations: [
         {
-          name: 'aSNX',
+          name: 'ASNX',
           multiplier: '1000000000000000000'
         }
       ],
@@ -823,11 +823,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-snx-logo-solo-64.png`
     },
     {
-      currencyCode: 'aREN',
+      currencyCode: 'AREN',
       currencyName: 'Aave Interest Bearing REN',
       denominations: [
         {
-          name: 'aREN',
+          name: 'AREN',
           multiplier: '1000000000000000000'
         }
       ],
@@ -835,11 +835,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-ren-logo-solo-64.png`
     },
     {
-      currencyCode: 'aUSDT',
+      currencyCode: 'AUSDT',
       currencyName: 'Aave Interest Bearing USDT',
       denominations: [
         {
-          name: 'aUSDT',
+          name: 'AUSDT',
           multiplier: '1000000'
         }
       ],
@@ -847,11 +847,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-usdt-logo-solo-64.png`
     },
     {
-      currencyCode: 'aMKR',
+      currencyCode: 'AMKR',
       currencyName: 'Aave Interest Bearing MKR',
       denominations: [
         {
-          name: 'aMKR',
+          name: 'AMKR',
           multiplier: '1000000000000000000'
         }
       ],
@@ -859,11 +859,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-mkr-logo-solo-64.png`
     },
     {
-      currencyCode: 'aMANA',
+      currencyCode: 'AMANA',
       currencyName: 'Aave Interest Bearing MANA',
       denominations: [
         {
-          name: 'aMANA',
+          name: 'AMANA',
           multiplier: '1000000000000000000'
         }
       ],
@@ -871,11 +871,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-mana-logo-solo-64.png`
     },
     {
-      currencyCode: 'aZRX',
+      currencyCode: 'AZRX',
       currencyName: 'Aave Interest Bearing ZRX',
       denominations: [
         {
-          name: 'aZRX',
+          name: 'AZRX',
           multiplier: '1000000000000000000'
         }
       ],
@@ -883,11 +883,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-zrx-logo-solo-64.png`
     },
     {
-      currencyCode: 'aKNC',
+      currencyCode: 'AKNC',
       currencyName: 'Aave Interest Bearing KNC',
       denominations: [
         {
-          name: 'aKNC',
+          name: 'AKNC',
           multiplier: '1000000000000000000'
         }
       ],
@@ -895,11 +895,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-knc-logo-solo-64.png`
     },
     {
-      currencyCode: 'aUSDC',
+      currencyCode: 'AUSDC',
       currencyName: 'Aave Interest Bearing USDC',
       denominations: [
         {
-          name: 'aUSDC',
+          name: 'AUSDC',
           multiplier: '1000000'
         }
       ],
@@ -907,11 +907,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-usdc-logo-solo-64.png`
     },
     {
-      currencyCode: 'aSUSD',
+      currencyCode: 'ASUSD',
       currencyName: 'Aave Interest Bearing SUSD',
       denominations: [
         {
-          name: 'aSUSD',
+          name: 'ASUSD',
           multiplier: '1000000000000000000'
         }
       ],
@@ -919,11 +919,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-susd-logo-solo-64.png`
     },
     {
-      currencyCode: 'aUNI',
+      currencyCode: 'AUNI',
       currencyName: 'Aave Interest Bearing UNI',
       denominations: [
         {
-          name: 'aUNI',
+          name: 'AUNI',
           multiplier: '1000000000000000000'
         }
       ],
