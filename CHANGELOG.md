@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.41 (2021-01-01)
+
+- Capitalize Aave token codes
+
 # 0.7.40 (2020-12-31)
 
 - Add Aave ERC20 tokens
