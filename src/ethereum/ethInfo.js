@@ -771,7 +771,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x028171bca77440897b824ca71d1c56cac55b68a',
+      contractAddress: '0x028171bCA77440897B824Ca71D1c56caC55b68A3',
       symbolImage: `${imageServerUrl}/aave-interest-bearing-dai-logo-solo-64.png`
     },
     {
@@ -787,11 +787,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbolImage: `${imageServerUrl}/aave-interest-bearing-bat-logo-solo-64.png`
     },
     {
-      currencyCode: 'AETH',
+      currencyCode: 'AWETH',
       currencyName: 'Aave Interest Bearing Wrapped ETH',
       denominations: [
         {
-          name: 'AETH',
+          name: 'AWETH',
           multiplier: '1000000000000000000'
         }
       ],
@@ -929,6 +929,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0xb9d7cb55f463405cdfbe4e90a6d2df01c2b92bf1',
       symbolImage: `${imageServerUrl}/aave-interest-bearing-uni-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'WBTC',
+      currencyName: 'Wrapped Bitcoin',
+      denominations: [
+        {
+          name: 'WBTC',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+      symbolImage: `${imageServerUrl}/wrapped-bitcoin-logo-solo-64.png`
     }
   ]
 }
