@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.42 (2021-01-02)
+
+- Add WBTC
+- Fix Aave token parameters
+
 # 0.7.41 (2021-01-01)
 
 - Capitalize Aave token codes
