@@ -309,6 +309,7 @@ export class TezosEngine extends CurrencyEngine {
     const balance = await this.multicastServers('getBalance', pkh)
     if (this.walletLocalData.totalBalances[currencyCode] !== balance) {
       this.walletLocalData.totalBalances[currencyCode] = balance
+      this.log.warn(`Updated ${currencyCode} balance ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
     this.tokenCheckBalanceStatus.XTZ = 1

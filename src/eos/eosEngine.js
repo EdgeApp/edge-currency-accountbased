@@ -743,6 +743,9 @@ export class EosEngine extends CurrencyEngine {
                         currencyCode,
                         nativeAmount
                       )
+                      this.log.warn(
+                        `Updated ${currencyCode} balance ${nativeAmount}`
+                      )
                     }
                   }
                 }
