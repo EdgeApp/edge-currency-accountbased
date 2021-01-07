@@ -262,7 +262,7 @@ export class FioEngine extends CurrencyEngine {
         return fee
       },
       getFioAddresses: async (): Promise<
-        { name: string, expiration: string }[]
+        Array<{ name: string, expiration: string }>
       > => {
         return this.walletLocalData.otherData.fioAddresses
       },
@@ -272,7 +272,7 @@ export class FioEngine extends CurrencyEngine {
         )
       },
       getFioDomains: async (): Promise<
-        { name: string, expiration: string, isPublic: boolean }[]
+        Array<{ name: string, expiration: string, isPublic: boolean }>
       > => {
         return this.walletLocalData.otherData.fioDomains
       },

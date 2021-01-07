@@ -129,7 +129,7 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async processTransaction(tx: StellarOperation): Promise<string> {
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
 
     let currencyCode = ''
     let exchangeAmount = ''

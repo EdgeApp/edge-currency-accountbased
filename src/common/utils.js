@@ -25,7 +25,7 @@ function addHexPrefix(value: string) {
   }
 }
 
-function shuffleArray(array: Array<any>) {
+function shuffleArray(array: any[]) {
   let currentIndex = array.length
   let temporaryValue, randomIndex
 
@@ -85,7 +85,7 @@ export function bufToHex(buf: any) {
 function getDenomInfo(
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
-  customTokens?: Array<EdgeMetaToken>
+  customTokens?: EdgeMetaToken[]
 ) {
   // Look in the primary currency denoms
   let edgeDenomination = currencyInfo.denominations.find(element => {
@@ -123,7 +123,7 @@ const snoozeReject: Function = (ms: number) =>
 const snooze: Function = (ms: number) =>
   new Promise((resolve: Function) => setTimeout(resolve, ms))
 
-function promiseAny(promises: Array<Promise<any>>): Promise<any> {
+function promiseAny(promises: Promise<any>[]): Promise<any> {
   return new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
@@ -142,11 +142,11 @@ function promiseAny(promises: Array<Promise<any>>): Promise<any> {
 type AsyncFunction = void => Promise<any>
 
 async function asyncWaterfall(
-  asyncFuncs: Array<AsyncFunction>,
+  asyncFuncs: AsyncFunction[],
   timeoutMs: number = 5000
 ): Promise<any> {
   let pending = asyncFuncs.length
-  const promises: Array<Promise<any>> = []
+  const promises: Promise<any>[] = []
   for (const func of asyncFuncs) {
     const index = promises.length
     promises.push(
@@ -184,7 +184,7 @@ async function asyncWaterfall(
   }
 }
 
-export function pickRandom<T>(list: Array<T>, count: number): Array<T> {
+export function pickRandom<T>(list: T[], count: number): T[] {
   if (list.length <= count) return list
 
   // Algorithm from https://stackoverflow.com/a/48089/1836596

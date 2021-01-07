@@ -17,7 +17,7 @@ import {
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
-  etherscanApiKey?: string | Array<string>,
+  etherscanApiKey?: string | string[],
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,
@@ -27,9 +27,9 @@ export type EthereumInitOptions = {
 }
 
 export type EthereumSettings = {
-  etherscanApiServers: Array<string>,
-  blockcypherApiServers: Array<string>,
-  blockbookServers: Array<string>,
+  etherscanApiServers: string[],
+  blockcypherApiServers: string[],
+  blockbookServers: string[],
   iosAllowedTokens: { [currencyCode: string]: boolean }
 }
 
@@ -134,8 +134,8 @@ export type EtherscanInternalTransaction = $Call<
 >
 
 export type EthereumTxOtherParams = {
-  from: Array<string>,
-  to: Array<string>,
+  from: string[],
+  to: string[],
   gas: string,
   gasPrice: string,
   gasUsed: string,
@@ -158,7 +158,7 @@ export type AlethioTokenTransferAttributes = {
   symbol: string,
   fee: string | void,
   value: string,
-  globalRank: Array<number>
+  globalRank: number[]
 }
 
 export type AlethioTransactionDataObj = {

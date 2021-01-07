@@ -3,7 +3,7 @@
 export const fioApiErrorCodes = [400, 403, 404]
 
 export class FioError extends Error {
-  list: { field: string, message: string }[]
+  list: Array<{ field: string, message: string }>
   labelCode: string
   errorCode: number
   json: any

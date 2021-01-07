@@ -20,8 +20,8 @@ import { currencyInfo } from './tezosInfo.js'
 import { type UriTransaction } from './tezosTypes.js'
 
 export class TezosPlugin extends CurrencyPlugin {
-  tezosRpcNodes: Array<Object>
-  tezosApiServers: Array<Object>
+  tezosRpcNodes: Object[]
+  tezosApiServers: Object[]
   constructor(io: EdgeIo, fetchCors: EdgeFetchFunction) {
     super(io, 'tezos', currencyInfo)
     this.tezosRpcNodes = []

@@ -298,7 +298,7 @@ describe('Test transaction list updating', () => {
   })
 
   it('Confirm transactions and check none dropped', () => {
-    const updatedTxs: Array<any> = [
+    const updatedTxs: any[] = [
       {
         txid: '001',
         date: 1555550000,
@@ -332,7 +332,7 @@ describe('Test transaction list updating', () => {
   })
 
   it('Confirm transactions and check dropped', () => {
-    const updatedTxs: Array<any> = [
+    const updatedTxs: any[] = [
       {
         txid: '001',
         date: 1555550000,
@@ -376,7 +376,7 @@ describe('Test transaction list updating', () => {
   })
 
   it('Confirm transactions and check dropped 2', () => {
-    const updatedTxs: Array<any> = [
+    const updatedTxs: any[] = [
       {
         txid: '001',
         date: 1555550000,

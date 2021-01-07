@@ -55,13 +55,13 @@ export class CurrencyEngine {
   walletLocalDataDirty: boolean
   transactionListDirty: boolean
   transactionsLoaded: boolean
-  transactionList: { [currencyCode: string]: Array<EdgeTransaction> }
+  transactionList: { [currencyCode: string]: EdgeTransaction[] }
   txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in
-  txIdList: { [currencyCode: string]: Array<string> } // Map of array of txids in chronological order
-  transactionsChangedArray: Array<EdgeTransaction> // Transactions that have changed and need to be added
+  txIdList: { [currencyCode: string]: string[] } // Map of array of txids in chronological order
+  transactionsChangedArray: EdgeTransaction[] // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
-  allTokens: Array<EdgeMetaToken>
-  customTokens: Array<EdgeMetaToken>
+  allTokens: EdgeMetaToken[]
+  customTokens: EdgeMetaToken[]
   currentSettings: any
   timers: any
   walletId: string
@@ -384,7 +384,7 @@ export class CurrencyEngine {
     // Sort
     this.transactionList[currencyCode].sort(this.sortTxByDate)
     // Add to txidMap
-    const txIdList: Array<string> = []
+    const txIdList: string[] = []
     let i = 0
     for (const tx of this.transactionList[currencyCode]) {
       if (!this.txIdMap[currencyCode]) {
@@ -634,7 +634,7 @@ export class CurrencyEngine {
     return parseInt(this.walletLocalData.blockHeight)
   }
 
-  enableTokensSync(tokens: Array<string>) {
+  enableTokensSync(tokens: string[]) {
     for (const token of tokens) {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
@@ -646,11 +646,11 @@ export class CurrencyEngine {
     }
   }
 
-  async enableTokens(tokens: Array<string>) {
+  async enableTokens(tokens: string[]) {
     this.enableTokensSync(tokens)
   }
 
-  disableTokensSync(tokens: Array<string>) {
+  disableTokensSync(tokens: string[]) {
     for (const token of tokens) {
       if (token === this.currencyInfo.currencyCode) {
         continue
@@ -666,11 +666,11 @@ export class CurrencyEngine {
     }
   }
 
-  async disableTokens(tokens: Array<string>) {
+  async disableTokens(tokens: string[]) {
     this.disableTokensSync(tokens)
   }
 
-  async getEnabledTokens(): Promise<Array<string>> {
+  async getEnabledTokens(): Promise<string[]> {
     return this.walletLocalData.enabledTokens
   }
 
@@ -765,7 +765,7 @@ export class CurrencyEngine {
 
   async getTransactions(
     options: EdgeGetTransactionsOptions
-  ): Promise<Array<EdgeTransaction>> {
+  ): Promise<EdgeTransaction[]> {
     const cleanOptions = asCurrencyCodeOptions(options)
     const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
@@ -815,7 +815,7 @@ export class CurrencyEngine {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
-  addGapLimitAddresses(addresses: Array<string>, options: any) {}
+  addGapLimitAddresses(addresses: string[], options: any) {}
 
   isAddressUsed(address: string, options: any) {
     return false

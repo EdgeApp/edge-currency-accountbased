@@ -4,7 +4,7 @@
 // @flow
 
 export type StellarSettings = {
-  stellarServers: Array<string>
+  stellarServers: string[]
 }
 
 export type StellarBalance = {
@@ -17,7 +17,7 @@ export type StellarBalance = {
 export type StellarAccount = {
   id: string,
   sequence: number,
-  balances: Array<StellarBalance>
+  balances: StellarBalance[]
 }
 
 export type StellarCustomToken = {

@@ -4,8 +4,8 @@
 // @flow
 
 export type EosSettings = {
-  eosHyperionNodes: Array<string>,
-  eosNodes: Array<string>
+  eosHyperionNodes: string[],
+  eosNodes: string[]
 }
 
 export type EosTransactionSuperNode = {
@@ -46,7 +46,7 @@ export type EosTransaction = {
   trx_id: string,
   parent: number,
   global_sequence: number,
-  notified: Array<string>
+  notified: string[]
 }
 
 export type EosAction = {
@@ -68,7 +68,7 @@ export type EosAction = {
   trx_id: string,
   parent: number,
   global_sequence: number,
-  notified: Array<string>
+  notified: string[]
 }
 
 export type EosParams = {}
@@ -81,7 +81,7 @@ export type EosWalletOtherData = {
 
 export type EosJsConfig = {
   chainId: string,
-  keyProvider: Array<any>,
+  keyProvider: any[],
   httpEndpoint: string,
   fetch: Function,
   verbose: boolean // verbose logging such as API activity

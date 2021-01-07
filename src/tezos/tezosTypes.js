@@ -2,7 +2,7 @@
 
 import { asNumber, asObject, asString } from 'cleaners'
 export type TezosSettings = {
-  tezosRpcNodes: Array<string>
+  tezosRpcNodes: string[]
 }
 
 export const asXtzGetTransaction = asObject({
@@ -98,7 +98,7 @@ export type TezosOperation =
   | TezosOrigination
   | TezosDelegation
 
-export type TezosOperations = Array<TezosOperation>
+export type TezosOperations = TezosOperation[]
 
 export type OperationsContainer = {
   opbytes: string,

@@ -150,7 +150,7 @@ export class EthereumPlugin extends CurrencyPlugin {
   async parseUri(
     uri: string,
     currencyCode?: string,
-    customTokens?: Array<EdgeMetaToken>
+    customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
     const networks = {}
     this.currencyInfo.defaultSettings.otherSettings.uriNetworks.forEach(
@@ -221,7 +221,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: Array<EdgeMetaToken>
+    customTokens?: EdgeMetaToken[]
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = EthereumUtil.isValidAddress(publicAddress)

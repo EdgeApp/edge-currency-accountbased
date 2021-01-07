@@ -72,7 +72,7 @@ type EthereumNeeds = {
 
 type EdgeTransactionsBlockHeightTuple = {
   blockHeight: number,
-  edgeTransactions: Array<EdgeTransaction>
+  edgeTransactions: EdgeTransaction[]
 }
 
 type EthereumNetworkUpdate = {
@@ -106,7 +106,7 @@ type GetEthscanAllTxsOptions = {
 }
 
 type GetEthscanAllTxsResponse = {
-  allTransactions: Array<EdgeTransaction>,
+  allTransactions: EdgeTransaction[],
   server: string
 }
 
@@ -173,7 +173,7 @@ export class EthereumNetwork {
     currencyCode: string
   ) {
     let netNativeAmount: string // Amount received into wallet
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string = '0'
 
     if (!tx.contractAddress && tx.gasPrice) {
@@ -245,7 +245,7 @@ export class EthereumNetwork {
     currencyCode: string
   ): EdgeTransaction | null {
     let netNativeAmount: string
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
 
@@ -326,7 +326,7 @@ export class EthereumNetwork {
   ): EdgeTransaction | null {
     const walletAddress = this.ethEngine.walletLocalData.publicKey
     let netNativeAmount: string = bns.add('0', amberdataTx.value)
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
 
     const value = amberdataTx.value
@@ -394,7 +394,7 @@ export class EthereumNetwork {
   ): EdgeTransaction | null {
     const walletAddress = this.ethEngine.walletLocalData.publicKey
     let netNativeAmount: string
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
 
@@ -600,7 +600,7 @@ export class EthereumNetwork {
     return this.fetchGet(url)
   }
 
-  async fetchPostAmberdataRpc(method: string, params: Array<string> = []) {
+  async fetchPostAmberdataRpc(method: string, params: string[] = []) {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const {
       amberdataRpcServers
@@ -1152,7 +1152,7 @@ export class EthereumNetwork {
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
 
-    const allTransactions: Array<EdgeTransaction> = []
+    const allTransactions: EdgeTransaction[] = []
     let server: string = ''
     const contractAddress = options.contractAddress
     const searchRegularTxs = options.searchRegularTxs
@@ -1282,7 +1282,7 @@ export class EthereumNetwork {
     } = this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
     let linkNext
     let cleanedResponseObj: FetchGetAlethio
-    const allTransactions: Array<EdgeTransaction> = []
+    const allTransactions: EdgeTransaction[] = []
     while (1) {
       let jsonObj
       try {
@@ -1389,11 +1389,11 @@ export class EthereumNetwork {
     startDate: number,
     currencyCode: string,
     searchRegularTxs: boolean
-  ): Promise<Array<EdgeTransaction>> {
+  ): Promise<EdgeTransaction[]> {
     const address = this.ethEngine.walletLocalData.publicKey
 
     let page = 0
-    const allTransactions: Array<EdgeTransaction> = []
+    const allTransactions: EdgeTransaction[] = []
     while (1) {
       let url = `/addresses/${address}/${
         searchRegularTxs ? 'transactions' : 'functions'
@@ -1494,14 +1494,14 @@ export class EthereumNetwork {
     startDate: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
-    const allTxsRegular: Array<EdgeTransaction> = await this.getAllTxsAmberdata(
+    const allTxsRegular: EdgeTransaction[] = await this.getAllTxsAmberdata(
       startBlock,
       startDate,
       currencyCode,
       true
     )
 
-    const allTxsInternal: Array<EdgeTransaction> = await this.getAllTxsAmberdata(
+    const allTxsInternal: EdgeTransaction[] = await this.getAllTxsAmberdata(
       startBlock,
       startDate,
       currencyCode,

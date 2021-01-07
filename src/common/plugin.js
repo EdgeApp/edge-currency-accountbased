@@ -62,7 +62,7 @@ export class CurrencyPlugin {
     uri: string,
     networks: { [network: string]: boolean },
     currencyCode?: string,
-    customTokens?: Array<EdgeMetaToken>
+    customTokens?: EdgeMetaToken[]
   ) {
     const parsedUri = parse(uri, {}, true)
     let address: string
