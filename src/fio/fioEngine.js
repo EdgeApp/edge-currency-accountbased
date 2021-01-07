@@ -372,7 +372,7 @@ export class FioEngine extends CurrencyEngine {
     }
 
     // Transfer funds transaction
-    if (trxName === 'trnsfiopubky') {
+    if (trxName === 'trnsfiopubky' && data.amount != null) {
       nativeAmount = data.amount.toString()
       actorSender = data.actor
       if (data.payee_public_key === this.walletInfo.keys.publicKey) {
@@ -425,7 +425,7 @@ export class FioEngine extends CurrencyEngine {
     }
 
     // Fee transaction
-    if (trxName === 'transfer') {
+    if (trxName === 'transfer' && data.quantity != null) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
