@@ -1,3 +1,5 @@
+// @flow
+
 import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
 
 export const asFioHistoryNodeAction = asObject({

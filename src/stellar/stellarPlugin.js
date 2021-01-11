@@ -26,7 +26,7 @@ import { currencyInfo } from './stellarInfo.js'
 const URI_PREFIX = 'web+stellar'
 
 export class StellarPlugin extends CurrencyPlugin {
-  stellarApiServers: Array<Object>
+  stellarApiServers: Object[]
   constructor(io: EdgeIo) {
     super(io, 'stellar', currencyInfo)
     stellarApi.Network.usePublicNetwork()

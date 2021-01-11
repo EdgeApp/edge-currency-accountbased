@@ -74,7 +74,7 @@ export class BinancePlugin extends CurrencyPlugin {
   async parseUri(
     uri: string,
     currencyCode?: string,
-    customTokens?: Array<EdgeMetaToken>
+    customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
 
@@ -101,7 +101,7 @@ export class BinancePlugin extends CurrencyPlugin {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: Array<EdgeMetaToken>
+    customTokens?: EdgeMetaToken[]
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = bnbCrypto.checkAddress(publicAddress, 'bnb')

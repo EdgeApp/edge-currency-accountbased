@@ -98,7 +98,7 @@ export class EthereumEngine extends CurrencyEngine {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
     const epochTime = Date.parse(tx.received) / 1000
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
 
     let nativeAmount: string
     if (

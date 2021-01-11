@@ -1,3 +1,5 @@
+// @flow
+
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 
 export const CurrencyInfoSchema = {

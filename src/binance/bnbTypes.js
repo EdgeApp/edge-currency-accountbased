@@ -4,7 +4,7 @@
 // @flow
 
 export type BinanceSettings = {
-  binanceApiServers: Array<string>
+  binanceApiServers: string[]
 }
 
 export type BinanceApiTransaction = {
@@ -26,8 +26,8 @@ export type BinanceApiTransaction = {
 }
 
 export type BinanceTxOtherParams = {
-  from: Array<string>,
-  to: Array<string>,
+  from: string[],
+  to: string[],
   // gas: string,
   // gasPrice: string,
   // gasUsed: string,

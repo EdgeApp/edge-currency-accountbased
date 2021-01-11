@@ -4,7 +4,7 @@
 // @flow
 
 export type XrpSettings = {
-  rippledServers: Array<string>
+  rippledServers: string[]
 }
 
 export type XrpCustomToken = {
@@ -28,11 +28,11 @@ export type XrpGetTransaction = {
     fee: string,
     ledgerVersion: number,
     balanceChanges: {
-      [address: string]: Array<XrpBalanceChange>
+      [address: string]: XrpBalanceChange[]
     }
   }
 }
 export type XrpWalletOtherData = {
   recommendedFee: string // Floating point value in full XRP value
 }
-export type XrpGetTransactions = Array<XrpGetTransaction>
+export type XrpGetTransactions = XrpGetTransaction[]

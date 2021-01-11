@@ -118,7 +118,7 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   processRippleTransaction(tx: XrpGetTransaction) {
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
 
     const balanceChanges =
       tx.outcome.balanceChanges[this.walletLocalData.publicKey]

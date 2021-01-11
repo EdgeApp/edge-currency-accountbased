@@ -188,7 +188,7 @@ export class BinanceEngine extends CurrencyEngine {
     currencyCode: string
   ) {
     let netNativeAmount: string // Amount received into wallet
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     const nativeNetworkFee: string = bns.mul(tx.txFee, NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
     const nativeValue = bns.mul(tx.value, NATIVE_UNIT_MULTIPLIER)
     if (

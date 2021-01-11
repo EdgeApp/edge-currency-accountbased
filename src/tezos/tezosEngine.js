@@ -223,7 +223,7 @@ export class TezosEngine extends CurrencyEngine {
   processTezosTransaction(tx: XtzGetTransaction) {
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
-    const ourReceiveAddresses: Array<string> = []
+    const ourReceiveAddresses: string[] = []
     const currencyCode = PRIMARY_CURRENCY
     const date = new Date(transaction.timestamp).getTime() / 1000
     const blockHeight = transaction.level
@@ -263,7 +263,7 @@ export class TezosEngine extends CurrencyEngine {
     }
     const num = await this.multicastServers('getNumberOfOperations', pkh)
     if (num !== this.otherData.numberTransactions) {
-      let txs: Array<XtzGetTransaction> = []
+      let txs: XtzGetTransaction[] = []
       let page = 0
       let transactions
       this.tokenCheckTransactionsStatus.XTZ = 0.5
