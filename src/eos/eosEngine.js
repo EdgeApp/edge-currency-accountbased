@@ -22,6 +22,7 @@ import parse from 'url-parse'
 import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
+  cleanTxLogs,
   getDenomInfo,
   getOtherParams,
   pickRandom,
@@ -159,7 +160,7 @@ export class EosEngine extends CurrencyEngine {
           )
           return out
         } catch (e) {
-          this.log(`getAccountActivationQuoteError: ${e}`)
+          this.log.error(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
         }
       }
@@ -196,16 +197,14 @@ export class EosEngine extends CurrencyEngine {
         )
       }
     } catch (e) {
-      this.log(`Error fetching height: ${JSON.stringify(e)}`)
-      this.log(`e.code: ${JSON.stringify(e.code)}`)
-      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      this.log.error(`Error fetching height: ${e}`)
     }
   }
 
   processIncomingTransaction(action: EosTransactionSuperNode): number {
     const result = validateObject(action, EosTransactionSuperNodeSchema)
     if (!result) {
-      this.log('Invalid supernode tx')
+      this.log.error('Invalid supernode tx')
       return 0
     }
 
@@ -218,7 +217,9 @@ export class EosEngine extends CurrencyEngine {
     const ourReceiveAddresses = []
     const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
     if (!denom) {
-      this.log(`Received unsupported currencyCode: ${currencyCode}`)
+      this.log.error(
+        `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
+      )
       return 0
     }
     let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
@@ -261,7 +262,7 @@ export class EosEngine extends CurrencyEngine {
     const date = Date.parse(action['@timestamp']) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
-      this.log(
+      this.log.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No tx block_num`
       )
       return 0
@@ -269,7 +270,7 @@ export class EosEngine extends CurrencyEngine {
     const txid = action.trx_id
 
     if (!action.act) {
-      this.log(
+      this.log.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act`
       )
       return 0
@@ -280,7 +281,7 @@ export class EosEngine extends CurrencyEngine {
     // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
       if (!action.act.data) {
-        this.log(
+        this.log.error(
           `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act.data`
         )
         return 0
@@ -296,7 +297,9 @@ export class EosEngine extends CurrencyEngine {
       )
       // if invalid currencyCode then don't count as valid transaction
       if (!denom) {
-        this.log(`Received unsupported currencyCode: ${currencyCode}`)
+        this.log.error(
+          `processOutgoingTransaction Received unsupported currencyCode: ${currencyCode}`
+        )
         return 0
       }
       let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
@@ -479,8 +482,11 @@ export class EosEngine extends CurrencyEngine {
         incomingResult = await this.checkIncomingTransactions(acct, token)
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
       } catch (e) {
-        this.log('checkTransactionsInnerLoop fetches failed with error: ')
-        this.log(e)
+        this.log.error(
+          `checkTransactionsInnerLoop fetches failed with error: ${JSON.stringify(
+            e
+          )}`
+        )
         return false
       }
 
@@ -510,7 +516,7 @@ export class EosEngine extends CurrencyEngine {
               const result = await this.eosJsConfig.fetch(url)
               const parsedUrl = parse(url, {}, true)
               if (!result.ok) {
-                this.log('multicast in / out tx server error: ', server)
+                this.log.error('multicast in / out tx server error: ', server)
                 throw new Error(
                   `The server returned error code ${result.status} for ${parsedUrl.hostname}`
                 )
@@ -577,7 +583,7 @@ export class EosEngine extends CurrencyEngine {
                   const response = await request.json()
                   const { accountName, transactionId } = response
                   if (!accountName) throw new Error(response)
-                  this.log(
+                  this.log.warn(
                     `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
                   )
                 }
@@ -737,6 +743,9 @@ export class EosEngine extends CurrencyEngine {
                         currencyCode,
                         nativeAmount
                       )
+                      this.log.warn(
+                        `Updated ${currencyCode} balance ${nativeAmount}`
+                      )
                     }
                   }
                 }
@@ -748,9 +757,7 @@ export class EosEngine extends CurrencyEngine {
       }
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log(`Error fetching account: ${JSON.stringify(e)}`)
-      this.log(`e.code: ${JSON.stringify(e.code)}`)
-      this.log(`e.message: ${JSON.stringify(e.message)}`)
+      this.log.error(`Error fetching account: ${e}`)
     }
   }
 
@@ -834,7 +841,7 @@ export class EosEngine extends CurrencyEngine {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
         } else {
-          this.log(e)
+          this.log.error(`makeSpend eosPlugin.getAccSystemStats Error ${e}`)
           throw e
         }
       }
@@ -919,7 +926,7 @@ export class EosEngine extends CurrencyEngine {
         transactionJson
       }
     }
-    this.log(
+    this.log.warn(
       `${this.currencyInfo.currencyCode} tx prepared: ${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
     return edgeTransaction
@@ -1030,14 +1037,15 @@ export class EosEngine extends CurrencyEngine {
       )
       edgeTransaction.date = Date.now() / 1000
       edgeTransaction.txid = signedTx.transaction_id
+      this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
     } catch (e) {
-      this.log('\nCaught exception: ' + e)
-      if (e instanceof RpcError) this.log(JSON.stringify(e.json, null, 2))
+      this.log.error('\nCaught exception: ' + e)
+      if (e instanceof RpcError) this.log.error(JSON.stringify(e.json, null, 2))
       let err = e
       if (err.error) {
-        this.log(`err.error= ${err.error}`)
-        this.log(`err.error.name= ${err.error.name}`)
+        this.log.error(`err.error= ${err.error}`)
+        this.log.error(`err.error.name= ${err.error.name}`)
       }
       try {
         err = JSON.parse(e)

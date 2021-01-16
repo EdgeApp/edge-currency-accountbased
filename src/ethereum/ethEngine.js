@@ -23,6 +23,7 @@ import { type CustomToken } from '../common/types'
 import {
   addHexPrefix,
   bufToHex,
+  cleanTxLogs,
   getEdgeInfoServer,
   getOtherParams,
   isHex,
@@ -87,7 +88,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.log(tk + ': token Address balance: ' + balance)
+      this.log.warn(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -159,13 +160,15 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
         }
       } else {
-        this.log('Error: Fetched invalid networkFees')
+        this.log.error(
+          `Error: Fetched invalid networkFees ${JSON.stringify(jsonObj)}`
+        )
       }
     } catch (err) {
-      this.log(
+      this.log.error(
         `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`
       )
-      this.log(err)
+      this.log.error(err)
     }
 
     try {
@@ -193,19 +196,19 @@ export class EthereumEngine extends CurrencyEngine {
 
         // Sanity checks
         if (safeLow < 1 || safeLow > GAS_PRICE_SANITY_CHECK) {
-          this.log('Invalid safeLow value from EthGasStation')
+          this.log.error('Invalid safeLow value from EthGasStation')
           return
         }
         if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
-          this.log('Invalid average value from EthGasStation')
+          this.log.error('Invalid average value from EthGasStation')
           return
         }
         if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
-          this.log('Invalid fastest value from EthGasStation')
+          this.log.error('Invalid fastest value from EthGasStation')
           return
         }
         if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
-          this.log('Invalid fastest value from EthGasStation')
+          this.log.error('Invalid fastest value from EthGasStation')
           return
         }
 
@@ -241,13 +244,17 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
         }
       } else {
-        this.log('Error: Fetched invalid networkFees from EthGasStation')
+        this.log.error(
+          `Error: Fetched invalid networkFees from EthGasStation ${JSON.stringify(
+            jsonObj
+          )}`
+        )
       }
     } catch (err) {
-      this.log(
+      this.log.error(
         `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
       )
-      this.log(err)
+      this.log.error(err)
     }
   }
 
@@ -460,7 +467,7 @@ export class EthereumEngine extends CurrencyEngine {
           gasLimit
         }
       } catch (err) {
-        this.log(err)
+        this.log.error(`makeSpend Error determining gas limit ${err}`)
       }
     } else if (useDefaults) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
@@ -622,9 +629,8 @@ export class EthereumEngine extends CurrencyEngine {
     )
     const wallet = ethWallet.fromPrivateKey(privKey)
 
-    this.log(wallet.getAddressString())
+    this.log.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
-    this.log('signTx txParams', txParams)
     const tx = new EthereumTx(txParams)
     tx.sign(privKey)
 
@@ -634,21 +640,17 @@ export class EthereumEngine extends CurrencyEngine {
     if (edgeTransaction.otherParams) {
       edgeTransaction.otherParams.nonceUsed = nonce
     }
-
+    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const result = await this.ethNetwork.multicastServers(
-      'broadcastTx',
-      edgeTransaction
-    )
+    await this.ethNetwork.multicastServers('broadcastTx', edgeTransaction)
 
     // Success
-    this.log(`SUCCESS broadcastTx\n${JSON.stringify(result)}`)
-    this.log('edgeTransaction = ', edgeTransaction)
+    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
     return edgeTransaction
   }

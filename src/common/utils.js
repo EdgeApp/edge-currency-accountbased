@@ -5,6 +5,7 @@
 
 import { bns } from 'biggystring'
 import { Buffer } from 'buffer'
+import { asArray, asObject, asOptional, asString } from 'cleaners'
 import {
   type EdgeCurrencyInfo,
   type EdgeMetaToken,
@@ -238,6 +239,25 @@ export function makeMutex(): Mutex {
       if (resolve != null) resolve()
     }
   }
+}
+
+const asCleanTxLogs = asObject({
+  txid: asString,
+  spendTargets: asOptional(
+    asArray(
+      asObject({
+        currencyCode: asString,
+        nativeAmount: asString,
+        publicAddress: asString,
+        uniqueIdentifier: asOptional(asString)
+      })
+    )
+  ),
+  signedTx: asString
+})
+
+export function cleanTxLogs(tx: EdgeTransaction) {
+  return JSON.stringify(asCleanTxLogs(tx), null, 2)
 }
 
 export {

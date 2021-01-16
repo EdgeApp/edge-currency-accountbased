@@ -36,7 +36,7 @@ import {
   TXID_MAP_FILE,
   WalletLocalData
 } from './types.js'
-import { getDenomInfo, normalizeAddress } from './utils.js'
+import { cleanTxLogs, getDenomInfo, normalizeAddress } from './utils.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -228,7 +228,6 @@ export class CurrencyEngine {
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
-        this.log(err)
         this.log('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = new WalletLocalData(
           null,
@@ -240,7 +239,9 @@ export class CurrencyEngine {
           JSON.stringify(this.walletLocalData)
         )
       } catch (e) {
-        this.log('Error writing to localDataStore. Engine not started:' + err)
+        this.log.error(
+          'Error writing to localDataStore. Engine not started:' + err
+        )
         throw e
       }
     }
@@ -477,8 +478,8 @@ export class CurrencyEngine {
             this.walletLocalDataDirty = false
           })
           .catch(e => {
-            this.log('Error saving walletLocalData')
-            this.log(e)
+            this.log.error('Error saving walletLocalData')
+            this.log.error(e)
           })
       )
     }
@@ -488,22 +489,22 @@ export class CurrencyEngine {
       let jsonString = JSON.stringify(this.transactionList)
       promises.push(
         disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
-          this.log('Error saving transactionList')
-          this.log(e)
+          this.log.error('Error saving transactionList')
+          this.log.error(e)
         })
       )
       jsonString = JSON.stringify(this.txIdList)
       promises.push(
         disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
-          this.log('Error saving txIdList')
-          this.log(e)
+          this.log.error('Error saving txIdList')
+          this.log.error(e)
         })
       )
       jsonString = JSON.stringify(this.txIdMap)
       promises.push(
         disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
-          this.log('Error saving txIdMap')
-          this.log(e)
+          this.log.error('Error saving txIdMap')
+          this.log.error(e)
         })
       )
       await Promise.all(promises)
@@ -521,7 +522,11 @@ export class CurrencyEngine {
           this.walletLocalData.totalBalances[currencyCode]
         )
       } catch (e) {
-        this.log('Error for currencyCode', currencyCode, e)
+        this.log.error(
+          'doInitialBalanceCallback Error for currencyCode',
+          currencyCode,
+          e
+        )
       }
     }
   }
@@ -533,7 +538,11 @@ export class CurrencyEngine {
           this.transactionList[currencyCode]
         )
       } catch (e) {
-        this.log('Error for currencyCode', currencyCode, e)
+        this.log.error(
+          'doInitialTransactionsCallback Error for currencyCode',
+          currencyCode,
+          e
+        )
       }
     }
   }
@@ -543,7 +552,7 @@ export class CurrencyEngine {
       // $FlowFixMe
       await this[func]()
     } catch (e) {
-      this.log('Error in Loop:', func, e)
+      this.log.error('Error in Loop:', func, e)
     }
     if (this.engineOn) {
       this.timers[func] = setTimeout(() => {
@@ -876,10 +885,14 @@ export class CurrencyEngine {
   async saveTx(edgeTransaction: EdgeTransaction) {
     // add the transaction to disk and fire off callback (alert in GUI)
     this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)
-    this.log(
-      'executing back in saveTx and this.transactionsChangedArray is: ',
-      this.transactionsChangedArray
+    this.transactionsChangedArray.forEach(tx =>
+      this.log.warn(
+        `executing back in saveTx and this.transactionsChangedArray is: ${cleanTxLogs(
+          tx
+        )}`
+      )
     )
+
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
