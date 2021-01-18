@@ -535,7 +535,7 @@ export class EosEngine extends CurrencyEngine {
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
               const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v2/state/get_key_accounts`,
+                `${server}/v1/history/get_key_accounts`,
                 {
                   method: 'POST',
                   body,
