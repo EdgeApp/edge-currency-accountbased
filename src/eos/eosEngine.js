@@ -29,7 +29,10 @@ import {
   validateObject
 } from '../common/utils.js'
 import { checkAddress, EosPlugin } from './eosPlugin.js'
-import { EosTransactionSuperNodeSchema } from './eosSchema.js'
+import {
+  asGetAccountActivationQuote,
+  EosTransactionSuperNodeSchema
+} from './eosSchema.js'
 import {
   type EosJsConfig,
   type EosTransaction,
@@ -158,7 +161,7 @@ export class EosEngine extends CurrencyEngine {
             ),
             15000
           )
-          return out
+          return asGetAccountActivationQuote(out)
         } catch (e) {
           this.log.error(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
