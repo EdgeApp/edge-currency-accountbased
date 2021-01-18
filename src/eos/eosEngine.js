@@ -483,9 +483,7 @@ export class EosEngine extends CurrencyEngine {
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
       } catch (e) {
         this.log.error(
-          `checkTransactionsInnerLoop fetches failed with error: ${JSON.stringify(
-            e
-          )}`
+          `checkTransactionsInnerLoop fetches failed with error: ${e.name} ${e.message}`
         )
         return false
       }

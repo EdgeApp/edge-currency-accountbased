@@ -1456,9 +1456,9 @@ export class EthereumNetwork {
             }
           } catch (e) {
             this.ethEngine.log.error(
-              `checkTxsAmberdata process regular ${JSON.stringify(
-                e
-              )}\n${JSON.stringify(amberdataTx)}`
+              `checkTxsAmberdata process regular ${e.message}\n${JSON.stringify(
+                amberdataTx
+              )}`
             )
             throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
           }
@@ -1494,9 +1494,9 @@ export class EthereumNetwork {
             }
           } catch (e) {
             this.ethEngine.log.error(
-              `checkTxsAmberdata process internal ${JSON.stringify(
-                e
-              )}\n${JSON.stringify(amberdataTx)}`
+              `checkTxsAmberdata process internal ${
+                e.message
+              }\n${JSON.stringify(amberdataTx)}`
             )
             throw new Error('checkTxsAmberdata internal amberdataTx is invalid')
           }
@@ -1811,9 +1811,9 @@ export class EthereumNetwork {
         }
       } catch (e) {
         this.ethEngine.log.error(
-          `checkTokenBalBlockchair tokenData ${JSON.stringify(
-            e
-          )}\n${JSON.stringify(tokenData)}`
+          `checkTokenBalBlockchair tokenData ${e.message}\n${JSON.stringify(
+            tokenData
+          )}`
         )
         throw new Error('checkTokenBalBlockchair tokenData is invalid')
       }
