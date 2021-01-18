@@ -270,7 +270,7 @@ export function makeEosBasedPluginInner(
       }
     },
     validateAccount: async (account: string): Promise<boolean> => {
-      const valid = checkAddress(account)
+      const valid = checkAddress(account) && account.length === 12
       const out = { result: '' }
       if (!valid) {
         const e = new Error('ErrorInvalidAccountName')
