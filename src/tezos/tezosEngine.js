@@ -159,7 +159,7 @@ export class TezosEngine extends CurrencyEngine {
             .inject(params[0], params[1])
             .catch((e: Error) => {
               this.log.error(
-                'Error when injection operation: ' + JSON.stringify(e)
+                'Error when injection operation: ' + e.name + e.message
               )
               const errorMessage = this.formatError(e)
               if (!preApplyError && errorMessage !== '') {
@@ -172,7 +172,7 @@ export class TezosEngine extends CurrencyEngine {
           return { server, result }
         })
         out = await asyncWaterfall(funcs).catch((e: Error) => {
-          this.log.error('Error from waterfall: ' + JSON.stringify(e))
+          this.log.error('Error from waterfall: ' + e.name + e.message)
           if (preApplyError !== '') {
             throw new Error(preApplyError)
           } else {
