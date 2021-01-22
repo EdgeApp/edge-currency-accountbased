@@ -24,6 +24,10 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { getFetchCors } from '../react-native-io.js'
 import { EosEngine } from './eosEngine'
+import {
+  asGetActivationCost,
+  asGetActivationSupportedCurrencies
+} from './eosSchema.js'
 import { type EosJsConfig } from './eosTypes'
 
 const validCharacters = '12345abcdefghijklmnopqrstuvwxyz.'
@@ -234,7 +238,7 @@ export function makeEosBasedPluginInner(
             }
           )
         )
-        return out
+        return asGetActivationSupportedCurrencies(out)
       } catch (e) {
         log.error('UnableToGetSupportedCurrencies error: ', e)
         throw new Error('UnableToGetSupportedCurrencies')
@@ -247,12 +251,14 @@ export function makeEosBasedPluginInner(
             server => async () => {
               const uri = `${server}/api/v1/eosPrices/${currencyCode}`
               const response = await fetch(uri)
-              const prices = await response.json()
+              const prices = asGetActivationCost(await response.json())
               const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
               const startingResourcesResponse = await fetch(
                 startingResourcesUri
               )
-              const startingResources = await startingResourcesResponse.json()
+              const startingResources = asGetActivationCost(
+                await startingResourcesResponse.json()
+              )
               const totalEos =
                 Number(prices.ram) * startingResources.ram +
                 Number(prices.net) * startingResources.net +
@@ -270,7 +276,7 @@ export function makeEosBasedPluginInner(
       }
     },
     validateAccount: async (account: string): Promise<boolean> => {
-      const valid = checkAddress(account)
+      const valid = checkAddress(account) && account.length === 12
       const out = { result: '' }
       if (!valid) {
         const e = new Error('ErrorInvalidAccountName')

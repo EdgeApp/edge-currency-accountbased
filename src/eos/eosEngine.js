@@ -29,7 +29,10 @@ import {
   validateObject
 } from '../common/utils.js'
 import { checkAddress, EosPlugin } from './eosPlugin.js'
-import { EosTransactionSuperNodeSchema } from './eosSchema.js'
+import {
+  asGetAccountActivationQuote,
+  EosTransactionSuperNodeSchema
+} from './eosSchema.js'
 import {
   type EosJsConfig,
   type EosTransaction,
@@ -158,7 +161,7 @@ export class EosEngine extends CurrencyEngine {
             ),
             15000
           )
-          return out
+          return asGetAccountActivationQuote(out)
         } catch (e) {
           this.log.error(`getAccountActivationQuoteError: ${e}`)
           throw new Error(`getAccountActivationQuoteError`)
@@ -533,7 +536,7 @@ export class EosEngine extends CurrencyEngine {
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
             server => async () => {
               const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v2/state/get_key_accounts`,
+                `${server}/v1/history/get_key_accounts`,
                 {
                   method: 'POST',
                   body,

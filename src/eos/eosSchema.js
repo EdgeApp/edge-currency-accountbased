@@ -2,6 +2,25 @@
  * Created by paul on 8/27/17.
  */
 
+import { asBoolean, asMap, asNumber, asObject, asString } from 'cleaners'
+
+export const asGetAccountActivationQuote = asObject({
+  amount: asString,
+  currencyCode: asString,
+  expireTime: asNumber,
+  paymentAddress: asString
+})
+
+export const asGetActivationSupportedCurrencies = asObject({
+  result: asMap(asBoolean)
+})
+
+export const asGetActivationCost = asObject({
+  cpu: asNumber,
+  net: asNumber,
+  ram: asNumber
+})
+
 // export const EosGetBalancesSchema = {
 //   type: 'array',
 //   items: {
