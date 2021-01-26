@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.43 (2021-01-25)
+
+- EOS: Fix get_key_accounts endpoint and enforce 12 character rule on new account names
+- Adjust log levels
+- Update to eslint-config-standard-kit to v0.15.1
+
 # 0.7.42 (2021-01-02)
 
 - Add WBTC
