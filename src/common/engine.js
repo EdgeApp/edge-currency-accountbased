@@ -172,6 +172,7 @@ export class CurrencyEngine {
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
     } catch (e) {
+      // TODO: get error if data doesn't exist. Other errors get reported to bugsnag and return this.clearEngineData()
       this.log(
         'Could not load transactionList file. Failure is ok on new device'
       )
@@ -188,6 +189,23 @@ export class CurrencyEngine {
         break
       }
     }
+    // TODO: if this.transactionList exists and Object.keys(this.transactionList) and transactionList[key].length is greater than 0
+    // TODO: if transactionList is undefined or Object.keys(transactionList).length < this.transactionList
+    for (const cc of Object.keys(this.transactionList)) {
+      if (
+        this.transactionList[cc] !== undefined &&
+        this.transactionList[cc].length > 0
+      ) {
+        if (
+          transactionList !== undefined &&
+          transactionList[cc] !== undefined &&
+          transactionList[cc].length < this.transactionList[cc].length
+        ) {
+          // TODO: report to bugsnag
+        }
+      }
+    }
+
     if (isEmptyTransactions) {
       // Easy, just copy everything over
       this.transactionList = transactionList || this.transactionList
@@ -619,6 +637,11 @@ export class CurrencyEngine {
   }
 
   async clearBlockchainCache(): Promise<void> {
+    this.clearEngineData()
+    await this.saveWalletLoop()
+  }
+
+  clearEngineData(): void {
     const temp = JSON.stringify({
       enabledTokens: this.walletLocalData.enabledTokens,
       publicKey: this.walletLocalData.publicKey
@@ -636,7 +659,6 @@ export class CurrencyEngine {
     this.txIdMap = {}
     this.transactionListDirty = true
     this.otherData = this.walletLocalData.otherData
-    await this.saveWalletLoop()
   }
 
   getBlockHeight(): number {
