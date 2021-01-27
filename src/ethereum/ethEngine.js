@@ -436,13 +436,7 @@ export class EthereumEngine extends CurrencyEngine {
             'eth_estimateGas',
             [estimateGasParams]
           )
-          // Check if successful http response was actually an error
-          if (estimateGasResult.error != null) {
-            this.lastEstimatedGasLimit.gasLimit = ''
-            throw new Error(
-              'Successful estimateGasResult response object included an error'
-            )
-          }
+
           gasLimit = bns.add(
             parseInt(estimateGasResult.result.result, 16).toString(),
             '0'

@@ -883,6 +883,10 @@ export class EthereumNetwork {
             chainId,
             baseUrl
           )
+          if (result.error)
+            throw new Error(
+              'Successful estimateGasResult response object included an error'
+            )
           return { server: parse(baseUrl).hostname, result }
         })
 
@@ -897,6 +901,10 @@ export class EthereumNetwork {
             chainId,
             baseUrl
           )
+          if (result.error)
+            throw new Error(
+              'Successful getCodeResult response object included an error'
+            )
           return { server: parse(baseUrl).hostname, result }
         })
 
