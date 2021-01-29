@@ -687,7 +687,7 @@ export class FioEngine extends CurrencyEngine {
       }
     }
 
-    return res
+    return { ...res, apiUrl }
   }
 
   async executePreparedTrx(
@@ -751,7 +751,11 @@ export class FioEngine extends CurrencyEngine {
     return res
   }
 
-  async multicastServers(actionName: string, params?: any): Promise<any> {
+  async multicastServers(
+    actionName: string,
+    params?: any,
+    excludedUrls: string[] = []
+  ): Promise<any> {
     let res
     if (BROADCAST_ACTIONS[actionName]) {
       this.log.warn(
@@ -793,9 +797,10 @@ export class FioEngine extends CurrencyEngine {
     } else {
       res = await asyncWaterfall(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
-            this.fioApiRequest(apiUrl, actionName, params)
-          )
+          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () => {
+            if (excludedUrls.indexOf(apiUrl) < 0)
+              return this.fioApiRequest(apiUrl, actionName, params)
+          })
         )
       )
     }
@@ -836,6 +841,23 @@ export class FioEngine extends CurrencyEngine {
     try {
       const result = await this.multicastServers('getFioNames', {
         fioPublicKey: this.walletInfo.keys.publicKey
+      })
+      const secondResult = await this.multicastServers(
+        'getFioNames',
+        {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        },
+        [result.apiUrl]
+      )
+
+      result.fio_addresses.forEach(name => {
+        for (const compareName of secondResult.fio_addresses) {
+          if (compareName.fio_address === name.fio_address) return
+        }
+        this.log.error(
+          `getFioNames response mismatch between ${result.apiUrl} and ${secondResult.apiUrl}`
+        )
+        throw new Error('getFioNames response mismatch')
       })
 
       let isChanged = false
