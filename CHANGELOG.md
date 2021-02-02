@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+# 0.7.44 (2021-02-02)
+
+- ETH: Bump max gas limit to 300000
+- ETH: Add additional estimateGas params that cloudflare requires
+- ETH: Put RPC error handling in multicastServers
+- ETH: Throw error when custom fee isn't valid or doesn't reach network minimums
+
 # 0.7.43 (2021-01-25)
 
 - EOS: Fix get_key_accounts endpoint and enforce 12 character rule on new account names
