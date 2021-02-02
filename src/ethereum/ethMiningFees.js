@@ -18,6 +18,8 @@ export const ES_FEE_STANDARD = 'standard'
 export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
+const WEI_MULTIPLIER = '1000000000'
+
 export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
@@ -32,15 +34,28 @@ export function calcMiningFee(
     const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
       const { gasLimit, gasPrice } = customNetworkFee
-      const gasPriceGwei = bns.mul(gasPrice, '1000000000')
+      const {
+        gasLimit: { minGasLimit },
+        gasPrice: { minGasPrice }
+      } = currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+      const minGasPriceGwei = bns.div(minGasPrice, WEI_MULTIPLIER)
       if (
-        gasLimit &&
-        bns.gt(gasLimit, '0') &&
-        gasPrice &&
-        bns.gt(gasPrice, '0')
+        bns.lt(gasLimit, minGasLimit) ||
+        bns.lt(gasPrice, minGasPriceGwei) ||
+        isNaN(gasLimit) ||
+        isNaN(gasPrice) ||
+        /^\s*$/.test(gasLimit) ||
+        /^\s*$/.test(gasPrice)
       ) {
-        return { gasLimit, gasPrice: gasPriceGwei, useDefaults: false }
+        const e = new Error(
+          `Gas Limit: ${minGasLimit} Gas Price (Gwei): ${minGasPriceGwei}`
+        )
+        e.name = 'ErrorBelowMinimumFee'
+        throw e
       }
+
+      const gasPriceWei = bns.mul(gasPrice, WEI_MULTIPLIER)
+      return { gasLimit, gasPrice: gasPriceWei, useDefaults: false }
     }
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
