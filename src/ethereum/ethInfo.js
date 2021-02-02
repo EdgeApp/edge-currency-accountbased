@@ -14,7 +14,7 @@ const defaultNetworkFees = {
   default: {
     gasLimit: {
       regularTransaction: '21000',
-      tokenTransaction: '200000'
+      tokenTransaction: '300000'
     },
     gasPrice: {
       lowFee: '1000000001',

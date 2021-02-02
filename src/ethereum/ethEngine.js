@@ -418,12 +418,16 @@ export class EthereumEngine extends CurrencyEngine {
         data = '0x' + Buffer.from(dataArray).toString('hex')
       }
 
-      const estimateGasParams = {
-        to: contractAddress || publicAddress,
-        gas: '0xffffff',
-        value,
-        data
-      }
+      const estimateGasParams = [
+        {
+          to: contractAddress || publicAddress,
+          from: this.walletLocalData.publicKey,
+          gas: '0xffffff',
+          value,
+          data
+        },
+        'latest'
+      ]
       try {
         // Determine if recipient is a normal or contract address
         const getCodeResult = await this.ethNetwork.multicastServers(
@@ -434,21 +438,18 @@ export class EthereumEngine extends CurrencyEngine {
         if (getCodeResult.result.result !== '0x') {
           const estimateGasResult = await this.ethNetwork.multicastServers(
             'eth_estimateGas',
-            [estimateGasParams]
+            estimateGasParams
           )
-          // Check if successful http response was actually an error
-          if (estimateGasResult.error != null) {
-            this.lastEstimatedGasLimit.gasLimit = ''
-            throw new Error(
-              'Successful estimateGasResult response object included an error'
-            )
-          }
           gasLimit = bns.add(
             parseInt(estimateGasResult.result.result, 16).toString(),
             '0'
           )
           // Overestimate gas limit to reduce chance of failure when sending to a contract
-          gasLimit = bns.mul(gasLimit, '2')
+          gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
+            ? bns.mul(gasLimit, '2')
+            : bns.lt(gasLimit, defaultGasLimit)
+            ? defaultGasLimit
+            : gasLimit
         } else {
           gasLimit = '21000'
         }

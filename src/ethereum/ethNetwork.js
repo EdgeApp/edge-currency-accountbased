@@ -866,6 +866,15 @@ export class EthereumNetwork {
               chainId,
               baseUrl
             )
+            // Check if successful http response was actually an error
+            if (result.error != null) {
+              this.ethEngine.log.error(
+                `Successful eth_blockNumber response object from ${baseUrl} included an error ${result.error}`
+              )
+              throw new Error(
+                'Successful eth_blockNumber response object included an error'
+              )
+            }
             return { server: parse(baseUrl).hostname, result }
           })
         )
@@ -883,6 +892,15 @@ export class EthereumNetwork {
             chainId,
             baseUrl
           )
+          // Check if successful http response was actually an error
+          if (result.error != null) {
+            this.ethEngine.log.error(
+              `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
+            )
+            throw new Error(
+              'Successful eth_estimateGas response object included an error'
+            )
+          }
           return { server: parse(baseUrl).hostname, result }
         })
 
@@ -897,6 +915,15 @@ export class EthereumNetwork {
             chainId,
             baseUrl
           )
+          // Check if successful http response was actually an error
+          if (result.error != null) {
+            this.ethEngine.log.error(
+              `Successful eth_getCode response object from ${baseUrl} included an error ${result.error}`
+            )
+            throw new Error(
+              'Successful eth_getCode response object included an error'
+            )
+          }
           return { server: parse(baseUrl).hostname, result }
         })
 
@@ -929,6 +956,15 @@ export class EthereumNetwork {
               chainId,
               baseUrl
             )
+            // Check if successful http response was actually an error
+            if (result.error != null) {
+              this.ethEngine.log.error(
+                `Successful eth_getTransactionCount response object from ${baseUrl} included an error ${result.error}`
+              )
+              throw new Error(
+                'Successful eth_getTransactionCount response object included an error'
+              )
+            }
             return { server: parse(baseUrl).hostname, result }
           })
         )
@@ -958,6 +994,15 @@ export class EthereumNetwork {
               chainId,
               baseUrl
             )
+            // Check if successful http response was actually an error
+            if (result.error != null) {
+              this.ethEngine.log.error(
+                `Successful eth_getBalance response object from ${baseUrl} included an error ${result.error}`
+              )
+              throw new Error(
+                'Successful eth_getBalance response object included an error'
+              )
+            }
             // Convert hex
             if (!isHex(result.result)) {
               throw new Error(
