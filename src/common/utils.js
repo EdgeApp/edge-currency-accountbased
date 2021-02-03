@@ -253,7 +253,14 @@ const asCleanTxLogs = asObject({
       })
     )
   ),
-  signedTx: asString
+  signedTx: asString,
+  otherParams: asOptional(
+    asObject({
+      gas: asOptional(asString),
+      gasPrice: asOptional(asString),
+      nonceUsed: asOptional(asString)
+    })
+  )
 })
 
 export function cleanTxLogs(tx: EdgeTransaction) {
