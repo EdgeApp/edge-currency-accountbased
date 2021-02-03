@@ -24,8 +24,7 @@ const defaultSettings: any = {
     'https://api.fio.currencyhub.io/v1/',
     'https://fio.eoscannon.io/v1/',
     'https://fio.eosdublin.io/v1/',
-    'https://api.fiosweden.org/v1/',
-    'https://fio.maltablock.org/v1/'
+    'https://api.fiosweden.org/v1/'
   ],
   historyNodeUrls: [
     'https://fio.greymass.com/v1/',
