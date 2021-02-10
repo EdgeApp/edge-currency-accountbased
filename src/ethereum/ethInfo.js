@@ -943,6 +943,318 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
       symbolImage: `${imageServerUrl}/wrapped-bitcoin-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'YFI',
+      currencyName: 'Yearn Finance',
+      denominations: [
+        {
+          name: 'YFI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e',
+      symbolImage: `${imageServerUrl}/yearn-finance-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CRV',
+      currencyName: 'Curve DAO Token',
+      denominations: [
+        {
+          name: 'CRV',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xD533a949740bb3306d119CC777fa900bA034cd52',
+      symbolImage: `${imageServerUrl}/curve-dao-token-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'BAL',
+      currencyName: 'Balancer',
+      denominations: [
+        {
+          name: 'BAL',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xba100000625a3754423978a60c9317c58a424e3d',
+      symbolImage: `${imageServerUrl}/balancer-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'SUSHI',
+      currencyName: 'Sushi Token',
+      denominations: [
+        {
+          name: 'SUSHI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x6b3595068778dd592e39a122f4f5a5cf09c90fe2',
+      symbolImage: `${imageServerUrl}/sushi-token-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'UMA',
+      currencyName: 'UMA',
+      denominations: [
+        {
+          name: 'UMA',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x04Fa0d235C4abf4BcF4787aF4CF447DE572eF828',
+      symbolImage: `${imageServerUrl}/uma-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'BADGER',
+      currencyName: 'Badger',
+      denominations: [
+        {
+          name: 'BADGER',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x3472A5A71965499acd81997a54BBA8D852C6E53d',
+      symbolImage: `${imageServerUrl}/badger-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'IDLE',
+      currencyName: 'Idle Finance',
+      denominations: [
+        {
+          name: 'IDLE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x875773784Af8135eA0ef43b5a374AaD105c5D39e',
+      symbolImage: `${imageServerUrl}/idle-finance-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'NXM',
+      currencyName: 'Nexus Mutual',
+      denominations: [
+        {
+          name: 'NXM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xd7c49cee7e9188cca6ad8ff264c1da2e69d4cf3b',
+      symbolImage: `${imageServerUrl}/nexus-mutual-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CREAM',
+      currencyName: 'Cream',
+      denominations: [
+        {
+          name: 'CREAM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x2ba592F78dB6436527729929AAf6c908497cB200',
+      symbolImage: `${imageServerUrl}/cream-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'PICKLE',
+      currencyName: 'PickleToken',
+      denominations: [
+        {
+          name: 'PICKLE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x429881672B9AE42b8EbA0E26cD9C73711b891Ca5',
+      symbolImage: `${imageServerUrl}/pickleToken-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'CVP',
+      currencyName: 'Concentrated Voting Power',
+      denominations: [
+        {
+          name: 'CVP',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x38e4adb44ef08f22f5b5b76a8f0c2d0dcbe7dca1',
+      symbolImage: `${imageServerUrl}/concentrated-voting-power-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'ROOK',
+      currencyName: 'Keeper DAO',
+      denominations: [
+        {
+          name: 'ROOK',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xfA5047c9c78B8877af97BDcb85Db743fD7313d4a',
+      symbolImage: `${imageServerUrl}/keeper-dao-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'DOUGH',
+      currencyName: 'PieDAO',
+      denominations: [
+        {
+          name: 'DOUGH',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xad32a8e6220741182940c5abf610bde99e737b2d',
+      symbolImage: `${imageServerUrl}/piedao-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'COMBO',
+      currencyName: 'COMBO',
+      denominations: [
+        {
+          name: 'COMBO',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xffffffff2ba8f66d4e51811c5190992176930278',
+      symbolImage: `${imageServerUrl}/combo-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'INDEX',
+      currencyName: 'INDEX COOP',
+      denominations: [
+        {
+          name: 'INDEX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x0954906da0Bf32d5479e25f46056d22f08464cab',
+      symbolImage: `${imageServerUrl}/index-coop-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'WETH',
+      currencyName: 'Wrapped ETH',
+      denominations: [
+        {
+          name: 'WETH',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+      symbolImage: `${imageServerUrl}/wrapped-eth-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'RENBTC',
+      currencyName: 'Ren BTC',
+      denominations: [
+        {
+          name: 'RENBTC',
+          multiplier: '100000000'
+        }
+      ],
+      ccontractAddress: '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d',
+      symbolImage: `${imageServerUrl}/ren-btc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'RENBCH',
+      currencyName: 'Ren BCH',
+      denominations: [
+        {
+          name: 'RENBCH',
+          multiplier: '100000000'
+        }
+      ],
+      ccontractAddress: '0x459086f2376525bdceba5bdda135e4e9d3fef5bf',
+      symbolImage: `${imageServerUrl}/ren-bch-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'RENZEC',
+      currencyName: 'Ren ZEC',
+      denominations: [
+        {
+          name: 'RENZEC',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0x1c5db575e2ff833e46a2e9864c22f4b22e0b37c2',
+      symbolImage: `${imageServerUrl}/ren-zec-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'TBTC',
+      currencyName: 'tBTC',
+      denominations: [
+        {
+          name: 'TBTC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x8dAEBADE922dF735c38C80C7eBD708Af50815fAa',
+      symbolImage: `${imageServerUrl}/tbtc-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'DPI',
+      currencyName: 'DefiPulse Index',
+      denominations: [
+        {
+          name: 'DPI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x1494ca1f11d487c2bbe4543e90080aeba4ba3c2b',
+      symbolImage: `${imageServerUrl}/defipulse-index-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'YETI',
+      currencyName: 'Yearn Ecosystem Token Index',
+      denominations: [
+        {
+          name: 'YETI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xb4bebd34f6daafd808f73de0d10235a92fbb6c3d',
+      symbolImage: `${imageServerUrl}/yearn-ecosystem-token-index-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'BAND',
+      currencyName: 'BAND',
+      denominations: [
+        {
+          name: 'BAND',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xba11d00c5f74255f56a5e366f4f77f5a186d7f55',
+      symbolImage: `${imageServerUrl}/band-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'REN',
+      currencyName: 'Ren',
+      denominations: [
+        {
+          name: 'REN',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x408e41876cccdc0f92210600ef50372656052a38',
+      symbolImage: `${imageServerUrl}/republic-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'AMPL',
+      currencyName: 'Ampleforth',
+      denominations: [
+        {
+          name: 'AMPL',
+          multiplier: '1000000000'
+        }
+      ],
+      contractAddress: '0xd46ba6d942050d489dbd938a2c909a5d5039a161',
+      symbolImage: `${imageServerUrl}/ampleforth-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'OCEAN',
+      currencyName: 'OCEAN',
+      denominations: [
+        {
+          name: 'OCEAN',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x967da4048cD07aB37855c090aAF366e4ce1b9F48',
+      symbolImage: `${imageServerUrl}/ocean-logo-solo-64.png`
     }
   ]
 }
