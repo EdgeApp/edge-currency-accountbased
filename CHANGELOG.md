@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.45 (2021-02-11)
+
+- Add DeFi ERC20 tokens
+- Update FIO server list
+- Add additional logging
+
 # 0.7.44 (2021-02-02)
 
 - ETH: Bump max gas limit to 300000
