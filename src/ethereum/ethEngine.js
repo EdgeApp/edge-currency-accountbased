@@ -677,7 +677,7 @@ export class EthereumEngine extends CurrencyEngine {
   async saveTx(edgeTransaction: EdgeTransaction) {
     // We must check if this transaction replaces another transaction
     if (edgeTransaction.otherParams && edgeTransaction.otherParams.rbfTxid) {
-      const { currencyCode } = this.currencyInfo
+      const { currencyCode } = edgeTransaction
 
       // Get the replaced transaction using the rbfTxid
       const txid = edgeTransaction.otherParams.rbfTxid
