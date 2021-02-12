@@ -1145,7 +1145,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '100000000'
         }
       ],
-      ccontractAddress: '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d',
+      contractAddress: '0xeb4c2781e4eba804ce9a9803c67d0893436bb27d',
       symbolImage: `${imageServerUrl}/ren-btc-logo-solo-64.png`
     },
     {
@@ -1157,7 +1157,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '100000000'
         }
       ],
-      ccontractAddress: '0x459086f2376525bdceba5bdda135e4e9d3fef5bf',
+      contractAddress: '0x459086f2376525bdceba5bdda135e4e9d3fef5bf',
       symbolImage: `${imageServerUrl}/ren-bch-logo-solo-64.png`
     },
     {

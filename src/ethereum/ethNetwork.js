@@ -1814,7 +1814,11 @@ export class EthereumNetwork {
       }
       cleanedResponseObj = asEtherscanGetAccountBalance(jsonObj)
     } catch (e) {
-      this.ethEngine.log.error(`checkTokenBalEthscan ${e.message}`)
+      this.ethEngine.log.error(
+        `checkTokenBalEthscan token ${tk} response ${response || ''} ${
+          e.message
+        }`
+      )
       throw new Error(
         `checkTokenBalEthscan invalid ${tk} response ${JSON.stringify(jsonObj)}`
       )
