@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.46 (2021-02-12)
+
+- Fix variable typo
+
 # 0.7.45 (2021-02-11)
 
 - Add DeFi ERC20 tokens
