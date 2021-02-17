@@ -248,6 +248,40 @@ export class FioEngine extends CurrencyEngine {
             }
             return res
           }
+          case 'transferFioAddress': {
+            const res = await this.multicastServers(actionName, params)
+            const transferredAddressIndex = this.walletLocalData.otherData.fioAddresses.findIndex(
+              ({ name }) => name === params.fioAddress
+            )
+            if (transferredAddressIndex) {
+              this.walletLocalData.otherData.fioAddresses.splice(
+                transferredAddressIndex,
+                1
+              )
+              this.localDataDirty()
+            }
+            try {
+              const edgeTransaction: EdgeTransaction = {
+                txid: res.transaction_id,
+                date: new Date().getTime(),
+                currencyCode: this.currencyInfo.currencyCode,
+                blockHeight: res.block_num,
+                nativeAmount: `-${res.fee_collected}`,
+                networkFee: `${res.fee_collected}`,
+                parentNetworkFee: '0',
+                signedTx: '',
+                ourReceiveAddresses: [],
+                otherParams: {},
+                metadata: {
+                  notes: res.transaction_id
+                }
+              }
+              this.saveTx(edgeTransaction)
+            } catch (e) {
+              this.log.error(`transferFioAddress saveTx Error ${e.message}`)
+            }
+            return res
+          }
         }
 
         return this.multicastServers(actionName, params)
