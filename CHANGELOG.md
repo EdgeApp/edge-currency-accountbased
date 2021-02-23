@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.47 (2021-02-23)
+
+- ETH: Fix RBF bug: Use correct currencyCode for tx lookup in ethEngine saveTx
+- FIO: Added transfer address action
+
 # 0.7.46 (2021-02-12)
 
 - Fix variable typo
