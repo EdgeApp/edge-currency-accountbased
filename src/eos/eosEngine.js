@@ -547,7 +547,9 @@ export class EosEngine extends CurrencyEngine {
             )
             if (!authorizersReply.ok) {
               throw new Error(
-                `${server} get_key_accounts failed with ${authorizersReply}`
+                `${server} get_key_accounts failed with ${JSON.stringify(
+                  authorizersReply
+                )}`
               )
             }
             const authorizersData = await authorizersReply.json()
