@@ -6,6 +6,7 @@
 import { bns } from 'biggystring'
 import { Buffer } from 'buffer'
 import { asArray, asObject, asOptional, asString } from 'cleaners'
+import { compare } from 'edge-core-js/lib/util/compare'
 import {
   type EdgeCurrencyInfo,
   type EdgeMetaToken,
@@ -136,6 +137,44 @@ function promiseAny(promises: Promise<any>[]): Promise<any> {
           return --pending || reject(error)
         }
       )
+    }
+  })
+}
+
+/**
+ * Resolves after a specified number of promises resolve.
+ * Rejects once there are enough failures that resolving isn't possible.
+ */
+function promiseNy(
+  promises: Promise<any>[],
+  n?: number = promises.length
+): Promise<any[]> {
+  if (n > promises.length) n = promises.length
+  const out: any[] = []
+  return new Promise((resolve, reject) => {
+    let failed = 0
+    for (const promise of promises) {
+      promise.then(
+        result => {
+          out.push(result)
+          if (out.length >= n) resolve(out)
+        },
+        error => {
+          if (++failed + out.length >= promises.length) {
+            reject(error)
+          }
+        }
+      )
+    }
+  })
+}
+
+function compareAndReduce<T>(array: T[]): T {
+  return array.reduce((a, b) => {
+    if (compare(a, b)) {
+      return b
+    } else {
+      throw Error('Object mismatch')
     }
   })
 }
@@ -272,11 +311,13 @@ export {
   addHexPrefix,
   validateObject,
   getDenomInfo,
+  compareAndReduce,
   asyncWaterfall,
   snooze,
   shuffleArray,
   snoozeReject,
   getEdgeInfoServer,
+  promiseNy,
   promiseAny,
   imageServerUrl
 }
