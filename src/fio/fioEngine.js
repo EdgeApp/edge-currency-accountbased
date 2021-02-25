@@ -18,8 +18,10 @@ import { CurrencyEngine } from '../common/engine.js'
 import {
   asyncWaterfall,
   cleanTxLogs,
+  compareAndReduce,
   getDenomInfo,
   promiseAny,
+  promiseNy,
   shuffleArray
 } from '../common/utils'
 import {
@@ -785,7 +787,11 @@ export class FioEngine extends CurrencyEngine {
     return res
   }
 
-  async multicastServers(actionName: string, params?: any): Promise<any> {
+  async multicastServers(
+    actionName: string,
+    params?: any,
+    numServers?: number
+  ): Promise<any> {
     let res
     if (BROADCAST_ACTIONS[actionName]) {
       this.log.warn(
@@ -824,6 +830,17 @@ export class FioEngine extends CurrencyEngine {
       if (!res) {
         throw new Error('Service is unavailable')
       }
+    } else if (actionName === 'getFioNames') {
+      res = compareAndReduce(
+        await promiseNy(
+          shuffleArray(
+            this.currencyInfo.defaultSettings.apiUrls.map(apiUrl =>
+              this.fioApiRequest(apiUrl, actionName, params)
+            )
+          ),
+          numServers
+        )
+      )
     } else {
       res = await asyncWaterfall(
         shuffleArray(
@@ -868,9 +885,13 @@ export class FioEngine extends CurrencyEngine {
 
     // Fio Addresses
     try {
-      const result = await this.multicastServers('getFioNames', {
-        fioPublicKey: this.walletInfo.keys.publicKey
-      })
+      const result = await this.multicastServers(
+        'getFioNames',
+        {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        },
+        2
+      )
 
       let isChanged = false
       let areAddressesChanged = false
