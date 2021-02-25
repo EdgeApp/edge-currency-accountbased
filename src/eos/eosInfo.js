@@ -58,6 +58,7 @@ const otherSettings: EosSettings = {
     'https://api.eosn.io'
   ],
   eosFuelServers: ['https://eos.greymass.com'],
+  eosDfuseServers: ['https://eos.dfuse.eosnation.io'],
   uriProtocol: 'eos',
   fuelActions: [GREYMASS_FUEL_ACTION]
 }

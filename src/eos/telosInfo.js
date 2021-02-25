@@ -54,6 +54,7 @@ const otherSettings: EosSettings = {
   // transaction
   eosNodes: ['https://telos.caleos.io'],
   eosFuelServers: [], // this will need to be fixed
+  eosDfuseServers: [],
   uriProtocol: 'telos'
 }
 

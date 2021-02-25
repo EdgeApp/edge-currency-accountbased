@@ -30,6 +30,7 @@ import {
 } from '../common/utils.js'
 import { checkAddress, EosPlugin } from './eosPlugin.js'
 import {
+  asDfuseGetKeyAccountsResponse,
   asGetAccountActivationQuote,
   EosTransactionSuperNodeSchema
 } from './eosSchema.js'
@@ -532,86 +533,113 @@ export class EosEngine extends CurrencyEngine {
         const body = JSON.stringify({
           public_key: params[0]
         })
-        out = await asyncWaterfall(
-          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-            server => async () => {
-              const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v1/history/get_key_accounts`,
-                {
-                  method: 'POST',
-                  body,
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
+        const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+          server => async () => {
+            const authorizersReply = await this.eosJsConfig.fetch(
+              `${server}/v1/history/get_key_accounts`,
+              {
+                method: 'POST',
+                body,
+                headers: {
+                  'Content-Type': 'application/json'
                 }
+              }
+            )
+            if (!authorizersReply.ok) {
+              throw new Error(
+                `${server} get_key_accounts failed with ${JSON.stringify(
+                  authorizersReply
+                )}`
               )
-              if (!authorizersReply.ok) {
-                throw new Error(
-                  `${server} get_key_accounts failed with ${authorizersReply}`
-                )
-              }
-              const authorizersData = await authorizersReply.json()
-              // verify array order (chronological)?
-              if (!authorizersData.account_names[0]) {
-                // indicates no activation has occurred
-                // set flag to indicate whether has hit activation API
-                // only do once per login (makeEngine)
-                if (
-                  this.currencyInfo.defaultSettings.otherSettings
-                    .createAccountViaSingleApiEndpoints &&
-                  this.currencyInfo.defaultSettings.otherSettings
-                    .createAccountViaSingleApiEndpoints.length > 0
-                ) {
-                  const { publicKey, ownerPublicKey } = this.walletInfo.keys
-
-                  const {
-                    createAccountViaSingleApiEndpoints
-                  } = this.currencyInfo.defaultSettings.otherSettings
-                  const request = await this.fetchCors(
-                    createAccountViaSingleApiEndpoints[0],
-                    {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        ownerPublicKey,
-                        activePublicKey: publicKey
-                      }),
-                      headers: {
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json'
-                      }
-                    }
-                  )
-                  const response = await request.json()
-                  const { accountName, transactionId } = response
-                  if (!accountName) throw new Error(response)
-                  this.log.warn(
-                    `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
-                  )
-                }
-                throw new Error(
-                  `${server} could not find account with public key: ${params[0]}`
-                )
-              }
-              const accountName = authorizersData.account_names[0]
-              const getAccountBody = JSON.stringify({
-                account_name: accountName
-              })
-              const accountReply = await this.eosJsConfig.fetch(
-                `${server}/v1/chain/get_account`,
-                {
-                  method: 'POST',
-                  body: getAccountBody
-                }
-              )
-              if (!accountReply.ok) {
-                throw new Error(
-                  `${server} get_account failed with ${authorizersReply}`
-                )
-              }
-              return { server, result: await accountReply.json() }
             }
-          )
+            const authorizersData = await authorizersReply.json()
+            // verify array order (chronological)?
+            if (!authorizersData.account_names[0]) {
+              // indicates no activation has occurred
+              // set flag to indicate whether has hit activation API
+              // only do once per login (makeEngine)
+              if (
+                this.currencyInfo.defaultSettings.otherSettings
+                  .createAccountViaSingleApiEndpoints &&
+                this.currencyInfo.defaultSettings.otherSettings
+                  .createAccountViaSingleApiEndpoints.length > 0
+              ) {
+                const { publicKey, ownerPublicKey } = this.walletInfo.keys
+
+                const {
+                  createAccountViaSingleApiEndpoints
+                } = this.currencyInfo.defaultSettings.otherSettings
+                const request = await this.fetchCors(
+                  createAccountViaSingleApiEndpoints[0],
+                  {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      ownerPublicKey,
+                      activePublicKey: publicKey
+                    }),
+                    headers: {
+                      Accept: 'application/json',
+                      'Content-Type': 'application/json'
+                    }
+                  }
+                )
+                const response = await request.json()
+                const { accountName, transactionId } = response
+                if (!accountName) throw new Error(response)
+                this.log.warn(
+                  `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+                )
+              }
+              throw new Error(
+                `${server} could not find account with public key: ${params[0]}`
+              )
+            }
+            const accountName = authorizersData.account_names[0]
+            const getAccountBody = JSON.stringify({
+              account_name: accountName
+            })
+            const accountReply = await this.eosJsConfig.fetch(
+              `${server}/v1/chain/get_account`,
+              {
+                method: 'POST',
+                body: getAccountBody
+              }
+            )
+            if (!accountReply.ok) {
+              throw new Error(
+                `${server} get_account failed with ${authorizersReply}`
+              )
+            }
+            return { server, result: await accountReply.json() }
+          }
         )
+        // dfuse API is EOS only
+        const dfuseFuncs = this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+          server => async () => {
+            if (this.currencyInfo.currencyCode !== 'EOS')
+              throw new Error('dfuse only supports EOS')
+            const response = await this.eosJsConfig.fetch(
+              `${server}/v0/state/key_accounts?public_key=${params[0]}`
+            )
+            if (!response.ok) {
+              throw new Error(
+                `${server} get_account failed with ${response.code}`
+              )
+            }
+            const responseJson = asDfuseGetKeyAccountsResponse(
+              await response.json()
+            )
+            if (responseJson.account_names.length === 0)
+              throw new Error('dfuse returned empty array')
+            return {
+              server,
+              result: {
+                account_name: responseJson.account_names[0]
+              }
+            }
+          }
+        )
+        out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
 

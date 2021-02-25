@@ -52,6 +52,7 @@ const otherSettings: EosSettings = {
   // transaction
   eosNodes: ['https://api.waxsweden.org'],
   eosFuelServers: [], // this will need to be fixed
+  eosDfuseServers: [],
   uriProtocol: 'wax',
   createAccountViaSingleApiEndpoints: [
     'https://edge.maltablock.org/api/v1/activateAccount'

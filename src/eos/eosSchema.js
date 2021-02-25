@@ -2,7 +2,14 @@
  * Created by paul on 8/27/17.
  */
 
-import { asBoolean, asMap, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asMap,
+  asNumber,
+  asObject,
+  asString
+} from 'cleaners'
 
 export const asGetAccountActivationQuote = asObject({
   amount: asString,
@@ -19,6 +26,10 @@ export const asGetActivationCost = asObject({
   cpu: asNumber,
   net: asNumber,
   ram: asNumber
+})
+
+export const asDfuseGetKeyAccountsResponse = asObject({
+  account_names: asArray(asString)
 })
 
 // export const EosGetBalancesSchema = {
