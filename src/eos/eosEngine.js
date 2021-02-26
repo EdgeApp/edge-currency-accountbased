@@ -2,6 +2,7 @@
 /* eslint-disable camelcase */
 
 import { bns } from 'biggystring'
+import { asEither } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyTools,
@@ -31,8 +32,12 @@ import {
 import { checkAddress, EosPlugin } from './eosPlugin.js'
 import {
   asDfuseGetKeyAccountsResponse,
+  asDfuseGetTransactionsErrorResponse,
+  asDfuseGetTransactionsResponse,
   asGetAccountActivationQuote,
   asHyperionGetTransactionResponse,
+  asHyperionTransaction,
+  dfuseGetTransactionsQueryString,
   EosTransactionSuperNodeSchema
 } from './eosSchema.js'
 import {
@@ -526,7 +531,7 @@ export class EosEngine extends CurrencyEngine {
     switch (func) {
       case 'getIncomingTransactions':
       case 'getOutgoingTransactions': {
-        const { direction, acct, currencyCode, skip, limit } = params[0]
+        const { direction, acct, currencyCode, skip, limit, low } = params[0]
         const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
           server => async () => {
             const url =
@@ -548,7 +553,66 @@ export class EosEngine extends CurrencyEngine {
             return { server, result }
           }
         )
-        out = await asyncWaterfall([...hyperionFuncs])
+        const dfuseFuncs = this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+          server => async () => {
+            if (this.currencyInfo.currencyCode !== 'EOS')
+              throw new Error('dfuse only supports EOS')
+            const response = await this.eosJsConfig.fetch(`${server}/graphql`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                query: dfuseGetTransactionsQueryString,
+                variables: {
+                  query: `${
+                    direction === 'outgoing' ? 'auth' : 'receiver'
+                  }:${acct} action:transfer`,
+                  limit,
+                  low
+                }
+              })
+            })
+            const responseJson = asEither(
+              asDfuseGetTransactionsResponse,
+              asDfuseGetTransactionsErrorResponse
+            )(await response.json())
+            if (responseJson.errors != null) {
+              this.log.warn(
+                `dfuse ${server} get transactions failed: ${JSON.stringify(
+                  responseJson.errors[0]
+                )}`
+              )
+              throw new Error(responseJson.errors[0].message)
+            }
+            // Convert txs to Hyperion
+            const actions = responseJson.data.searchTransactionsBackward.results.map(
+              tx =>
+                asHyperionTransaction({
+                  trx_id: tx.trace.id,
+                  '@timestamp': tx.trace.block.timestamp,
+                  block_num: tx.trace.block.num,
+                  act: {
+                    authorization: tx.trace.matchingActions[0].authorization[0],
+                    data: {
+                      from: tx.trace.matchingActions[0].json.from,
+                      to: tx.trace.matchingActions[0].json.to,
+                      // quantity: "0.0001 EOS"
+                      amount: Number(
+                        tx.trace.matchingActions[0].json.quantity.split(' ')[0]
+                      ),
+                      symbol: tx.trace.matchingActions[0].json.quantity.split(
+                        ' '
+                      )[1],
+                      memo: tx.trace.matchingActions[0].json.memo
+                    }
+                  }
+                })
+            )
+            return { server, result: { actions } }
+          }
+        )
+        out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
 
