@@ -445,11 +445,17 @@ export class EthereumEngine extends CurrencyEngine {
             '0'
           )
           // Overestimate gas limit to reduce chance of failure when sending to a contract
-          gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
-            ? bns.mul(gasLimit, '2')
-            : bns.lt(gasLimit, defaultGasLimit)
-            ? defaultGasLimit
-            : gasLimit
+          if (currencyCode === this.currencyInfo.currencyCode) {
+            // Double gas limit estimate when sending ETH to contract
+            gasLimit = bns.mul(gasLimit, '2')
+          } else {
+            // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
+            gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
+              ? bns.mul(gasLimit, '2')
+              : bns.lt(gasLimit, defaultGasLimit)
+              ? defaultGasLimit
+              : gasLimit
+          }
         } else {
           gasLimit = '21000'
         }
