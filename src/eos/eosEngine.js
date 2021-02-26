@@ -32,6 +32,7 @@ import { checkAddress, EosPlugin } from './eosPlugin.js'
 import {
   asDfuseGetKeyAccountsResponse,
   asGetAccountActivationQuote,
+  asHyperionGetTransactionResponse,
   EosTransactionSuperNodeSchema
 } from './eosSchema.js'
 import {
@@ -357,13 +358,19 @@ export class EosEngine extends CurrencyEngine {
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
     while (!finish) {
-      const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
       // query the server / node
-      const response = await this.multicastServers(
+      const params = {
+        direction: 'outgoing',
+        acct,
+        currencyCode,
+        skip,
+        limit,
+        low: newHighestTxHeight + 1
+      }
+      const actionsObject = await this.multicastServers(
         'getOutgoingTransactions',
-        url
+        params
       )
-      const actionsObject = await response.json()
       let actions = []
       // if the actions array is not empty, then set the actions variable
       if (actionsObject.actions && actionsObject.actions.length > 0) {
@@ -424,9 +431,18 @@ export class EosEngine extends CurrencyEngine {
       )
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
-      const url = `/v2/history/get_actions?transfer.to=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-      const result = await this.multicastServers('getIncomingTransactions', url)
-      const actionsObject = await result.json()
+      const params = {
+        direction: 'incoming',
+        acct,
+        currencyCode,
+        skip,
+        limit,
+        low: newHighestTxHeight + 1
+      }
+      const actionsObject = await this.multicastServers(
+        'getIncomingTransactions',
+        params
+      )
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
@@ -452,7 +468,6 @@ export class EosEngine extends CurrencyEngine {
           break
         }
       }
-
       if (!actions.length || actions.length < limit) {
         break
       }
@@ -510,24 +525,32 @@ export class EosEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
-      case 'getOutgoingTransactions':
-        out = await asyncWaterfall(
-          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-            server => async () => {
-              const url = server + params[0]
-              const result = await this.eosJsConfig.fetch(url)
-              const parsedUrl = parse(url, {}, true)
-              if (!result.ok) {
-                this.log.error('multicast in / out tx server error: ', server)
-                throw new Error(
-                  `The server returned error code ${result.status} for ${parsedUrl.hostname}`
-                )
-              }
-              return { server, result }
+      case 'getOutgoingTransactions': {
+        const { direction, acct, currencyCode, skip, limit } = params[0]
+        const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+          server => async () => {
+            const url =
+              server +
+              `/v2/history/get_actions?transfer.${
+                direction === 'outgoing' ? 'from' : 'to'
+              }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+            const response = await this.eosJsConfig.fetch(url)
+            const parsedUrl = parse(url, {}, true)
+            if (!response.ok) {
+              this.log.error('multicast in / out tx server error: ', server)
+              throw new Error(
+                `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+              )
             }
-          )
+            const result = asHyperionGetTransactionResponse(
+              await response.json()
+            )
+            return { server, result }
+          }
         )
+        out = await asyncWaterfall([...hyperionFuncs])
         break
+      }
 
       case 'getKeyAccounts': {
         const body = JSON.stringify({

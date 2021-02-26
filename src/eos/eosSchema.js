@@ -8,6 +8,7 @@ import {
   asMap,
   asNumber,
   asObject,
+  asOptional,
   asString
 } from 'cleaners'
 
@@ -26,6 +27,33 @@ export const asGetActivationCost = asObject({
   cpu: asNumber,
   net: asNumber,
   ram: asNumber
+})
+
+export const asHyperionTransaction = asObject({
+  trx_id: asString,
+  '@timestamp': asString,
+  block_num: asNumber,
+  act: asObject({
+    authorization: asOptional(
+      asArray(
+        asObject({
+          actor: asString,
+          permission: asString
+        })
+      )
+    ),
+    data: asObject({
+      from: asString,
+      to: asString,
+      amount: asNumber,
+      symbol: asString,
+      memo: asString
+    })
+  })
+})
+
+export const asHyperionGetTransactionResponse = asObject({
+  actions: asArray(asHyperionTransaction)
 })
 
 export const asDfuseGetKeyAccountsResponse = asObject({
