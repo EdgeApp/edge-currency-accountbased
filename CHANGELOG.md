@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.48 (2021-02-26)
+
+- EOS: Add dfuse API to getKeyAccounts method
+- ETH: Double gas limit estimates when sending ETH to a contract address
+
 # 0.7.47 (2021-02-23)
 
 - ETH: Fix RBF bug: Use correct currencyCode for tx lookup in ethEngine saveTx
