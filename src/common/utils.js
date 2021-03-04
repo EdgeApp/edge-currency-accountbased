@@ -140,6 +140,74 @@ function promiseAny(promises: Promise<any>[]): Promise<any> {
   })
 }
 
+/**
+ * Waits for the promises to resolve and uses a provided checkResult function
+ * to return a key to identify the result. The returned promise resolves when
+ * n number of promises resolve to identical keys.
+ */
+async function promiseNy<T>(
+  promises: Promise<T>[],
+  checkResult: T => string | void,
+  n?: number = promises.length
+): Promise<T> {
+  const map: { [key: string]: number } = {}
+  return new Promise((resolve, reject) => {
+    let resolved = 0
+    let failed = 0
+    let done = false
+    for (const promise of promises) {
+      promise.then(
+        result => {
+          const key = checkResult(result)
+          if (key !== undefined) {
+            resolved++
+            if (map[key] !== undefined) {
+              map[key]++
+            } else {
+              map[key] = 1
+            }
+            if (!done && map[key] >= n) {
+              done = true
+              resolve(result)
+            }
+          } else if (++failed + resolved === promises.length) {
+            reject(Error('Could not resolve n promises'))
+          }
+        },
+        error => {
+          if (++failed + resolved === promises.length) {
+            reject(error)
+          }
+        }
+      )
+    }
+  })
+}
+
+/**
+ * If the promise doesn't resolve in the given time,
+ * reject it with the provided error, or a generic error if none is provided.
+ */
+function timeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  error: Error = new Error(`Timeout of ${ms}ms exceeded`)
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(error), ms)
+    promise.then(
+      ok => {
+        resolve(ok)
+        clearTimeout(timer)
+      },
+      error => {
+        reject(error)
+        clearTimeout(timer)
+      }
+    )
+  })
+}
+
 type AsyncFunction = void => Promise<any>
 
 async function asyncWaterfall(
@@ -278,5 +346,7 @@ export {
   snoozeReject,
   getEdgeInfoServer,
   promiseAny,
+  promiseNy,
+  timeout,
   imageServerUrl
 }
