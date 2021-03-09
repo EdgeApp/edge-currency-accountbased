@@ -298,7 +298,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     },
     {
       currencyCode: 'GNT',
-      currencyName: 'Golem',
+      currencyName: 'Golem (old)',
       denominations: [
         {
           name: 'GNT',
@@ -1255,6 +1255,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x967da4048cD07aB37855c090aAF366e4ce1b9F48',
       symbolImage: `${imageServerUrl}/ocean-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'GLM',
+      currencyName: 'Golem',
+      denominations: [
+        {
+          name: 'GLM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429',
+      symbolImage: `${imageServerUrl}/golem-logo-solo-64.png`
     }
   ]
 }
