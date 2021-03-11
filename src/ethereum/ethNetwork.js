@@ -1465,18 +1465,17 @@ export class EthereumNetwork {
       let url = `/addresses/${address}/${
         searchRegularTxs ? 'transactions' : 'functions'
       }?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
+      const endDate = startDate + 2678400000 // Amberdata only supports searching 31 days at a time
 
       if (searchRegularTxs) {
         let cleanedResponseObj: FetchGetAmberdataApiResponse
         try {
           if (startDate) {
-            const newDateObj = new Date(startDate)
-            const now = new Date()
-            if (newDateObj) {
-              url =
-                url +
-                `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
-            }
+            url =
+              url +
+              `&startDate=${new Date(
+                startDate
+              ).toISOString()}&endDate=${new Date(endDate).toISOString()}`
           }
 
           const jsonObj = await this.fetchGetAmberdataApi(url)
@@ -1508,15 +1507,20 @@ export class EthereumNetwork {
             throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
           }
         }
-        if (amberdataTxs.length === 0) {
+        if (endDate > Date.now()) {
           break
         }
-        page++
+        if (amberdataTxs.length === NUM_TRANSACTIONS_TO_QUERY) {
+          page++
+        } else {
+          page = 0
+          startDate = endDate
+        }
       } else {
         let cleanedResponseObj: FetchGetAmberdataApiResponse
         try {
           if (startDate) {
-            url = url + `&startDate=${startDate}&endDate=${Date.now()}`
+            url = url + `&startDate=${startDate}&endDate=${endDate}`
           }
           const jsonObj = await this.fetchGetAmberdataApi(url)
           cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
@@ -1546,10 +1550,15 @@ export class EthereumNetwork {
             throw new Error('checkTxsAmberdata internal amberdataTx is invalid')
           }
         }
-        if (amberdataTxs.length === 0) {
+        if (endDate > Date.now()) {
           break
         }
-        page++
+        if (amberdataTxs.length === NUM_TRANSACTIONS_TO_QUERY) {
+          page++
+        } else {
+          page = 0
+          startDate = endDate
+        }
       }
     }
 

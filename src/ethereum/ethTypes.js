@@ -370,7 +370,7 @@ export type AmberdataAccountsTx = $Call<typeof asAmberdataAccountsTx>
 
 export const asAmberdataAccountsFuncs = asObject({
   transactionHash: asString,
-  timestamp: asString,
+  timestamp: asNumber,
   blockNumber: asString,
   value: asString,
   initialGas: asString,
@@ -393,7 +393,7 @@ export type FetchGetAmberdataApiResponse = $Call<
 
 export type AmberdataInternalTx = {|
   transactionHash: string,
-  timestamp: string,
+  timestamp: number,
   blockNumber: string,
   value: string,
   initialGas: string,
