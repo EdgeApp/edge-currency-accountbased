@@ -1687,9 +1687,14 @@ export class EthereumNetwork {
                 address === tokenTransfer.to.toLowerCase() ||
                 address === tokenTransfer.from.toLowerCase()
               ) {
-                transactionsArray.push(
-                  this.processBlockbookTx(tx, tokenTransfer)
-                )
+                try {
+                  transactionsArray.push(
+                    this.processBlockbookTx(tx, tokenTransfer)
+                  )
+                } catch (e) {
+                  if (e.message !== 'Unsupported contract address') throw e
+                  continue
+                }
               }
             }
           }
@@ -1753,9 +1758,22 @@ export class EthereumNetwork {
       // Send
       nativeAmount = bns.mul('-1', bns.add(nativeAmount, networkFee))
     }
-    // Override currencyCode and nativeAmount if token transaction
     if (tokenTx) {
-      const { symbol, value, to, from } = tokenTx
+      const { symbol, value, to, from, token } = tokenTx
+      // Ignore token transaction if the contract address isn't recognized
+      if (
+        !this.ethEngine.allTokens
+          .concat(this.ethEngine.customTokens)
+          .some(
+            metatoken =>
+              metatoken.contractAddress &&
+              metatoken.contractAddress.toLowerCase() === token.toLowerCase()
+          )
+      ) {
+        this.ethEngine.log(`processBlockbookTx unsupported token ${token}`)
+        throw new Error('Unsupported contract address')
+      }
+      // Override currencyCode and nativeAmount if token transaction
       toAddress = to.toLowerCase()
       fromAddress = from.toLowerCase()
       currencyCode = symbol
