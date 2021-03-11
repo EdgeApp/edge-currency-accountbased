@@ -1092,7 +1092,9 @@ export class EthereumNetwork {
           const result =
             server.indexOf('trezor') === -1
               ? await this.fetchGet(url)
-              : await this.ethEngine.fetchCors(url)
+              : await this.ethEngine
+                  .fetchCors(url)
+                  .then(response => response.json())
           return { server, result }
         })
         // Randomize array
