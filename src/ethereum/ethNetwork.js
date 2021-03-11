@@ -334,6 +334,22 @@ export class EthereumNetwork {
     const fromAddress = amberdataTx.from.address || ''
     const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
 
+    if (
+      !this.ethEngine.allTokens
+        .concat(this.ethEngine.customTokens)
+        .some(
+          metatoken =>
+            metatoken.contractAddress &&
+            metatoken.contractAddress.toLowerCase() ===
+              amberdataTx.contractCodeAddress.toLowerCase()
+        )
+    ) {
+      this.ethEngine.log(
+        `processAmberdataTxInternal unsupported token ${amberdataTx.contractCodeAddress}`
+      )
+      throw new Error('Unsupported contract address')
+    }
+
     if (fromAddress && toAddress) {
       nativeNetworkFee = '0'
 

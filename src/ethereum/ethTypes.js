@@ -376,7 +376,8 @@ export const asAmberdataAccountsFuncs = asObject({
   initialGas: asString,
   leftOverGas: asString,
   from: asObject({ address: asString }),
-  to: asArray(asObject({ address: asString }))
+  to: asArray(asObject({ address: asString })),
+  contractCodeAddress: asString
 })
 
 export type AmberdataAccountsFuncs = $Call<typeof asAmberdataAccountsFuncs>
@@ -399,7 +400,8 @@ export type AmberdataInternalTx = {|
   initialGas: string,
   leftOverGas: string,
   from: { address: string },
-  to: Array<{ address: string }>
+  to: Array<{ address: string }>,
+  contractCodeAddress: string
 |}
 
 export const asEtherscanGetAccountBalance = asObject({
