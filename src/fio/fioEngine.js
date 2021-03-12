@@ -1027,6 +1027,8 @@ export class FioEngine extends CurrencyEngine {
     await super.clearBlockchainCache()
     this.walletLocalData.otherData.highestTxHeight = 0
     this.walletLocalData.otherData.fioAddresses = []
+    this.walletLocalData.otherData.fioDomains = []
+    this.walletLocalData.otherData.fioRequestsToApprove = {}
   }
 
   // ****************************************************************************
