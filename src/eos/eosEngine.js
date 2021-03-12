@@ -269,7 +269,12 @@ export class EosEngine extends CurrencyEngine {
 
   processOutgoingTransaction(action: EosTransaction): number {
     const ourReceiveAddresses = []
-    const date = Date.parse(action['@timestamp']) / 1000
+    // Hyperion nodes return a UTC timestamp without the Z suffix. We need to add it to parse it accurately.
+    const timestamp =
+      action['@timestamp'].indexOf('Z') === -1
+        ? action['@timestamp'] + 'Z'
+        : action['@timestamp']
+    const date = Date.parse(timestamp) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
       this.log.error(
