@@ -20,7 +20,9 @@ import {
   cleanTxLogs,
   getDenomInfo,
   promiseAny,
-  shuffleArray
+  promiseNy,
+  shuffleArray,
+  timeout
 } from '../common/utils'
 import {
   ACTIONS_TO_END_POINT_KEYS,
@@ -32,7 +34,9 @@ import { fioApiErrorCodes, FioError } from './fioError'
 import { FioPlugin } from './fioPlugin.js'
 import {
   type FioHistoryNodeAction,
+  type GetFioName,
   asFioHistoryNodeAction,
+  asGetFioName,
   asHistoryResponse
 } from './fioSchema.js'
 
@@ -824,6 +828,22 @@ export class FioEngine extends CurrencyEngine {
       if (!res) {
         throw new Error('Service is unavailable')
       }
+    } else if (actionName === 'getFioNames') {
+      res = await promiseNy(
+        this.currencyInfo.defaultSettings.apiUrls.map(apiUrl =>
+          timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
+        ),
+        (result: GetFioName) => {
+          try {
+            return JSON.stringify(asGetFioName(result))
+          } catch (e) {
+            this.log.warn(
+              `getFioNames checkResult function returned error ${e.name} ${e.message}`
+            )
+          }
+        },
+        2
+      )
     } else {
       res = await asyncWaterfall(
         shuffleArray(
