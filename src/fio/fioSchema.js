@@ -2,6 +2,24 @@
 
 import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
 
+export const asGetFioName = asObject({
+  fio_domains: asArray(
+    asObject({
+      fio_domain: asString,
+      expiration: asString,
+      is_public: asNumber
+    })
+  ),
+  fio_addresses: asArray(
+    asObject({
+      fio_address: asString,
+      expiration: asString
+    })
+  )
+})
+
+export type GetFioName = $Call<typeof asGetFioName>
+
 export const asFioHistoryNodeAction = asObject({
   account_action_seq: asNumber,
   block_num: asNumber,
