@@ -191,7 +191,8 @@ export const asBlockbookTokenTransfer = asObject({
   from: asString,
   to: asString,
   symbol: asString,
-  value: asString
+  value: asString,
+  token: asString
 })
 
 export type BlockbookTokenTransfer = $Call<typeof asBlockbookTokenTransfer>
