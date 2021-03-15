@@ -2,6 +2,7 @@
 /* eslint-disable camelcase */
 
 import { bns } from 'biggystring'
+import { asEither } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyTools,
@@ -31,7 +32,12 @@ import {
 import { checkAddress, EosPlugin } from './eosPlugin.js'
 import {
   asDfuseGetKeyAccountsResponse,
+  asDfuseGetTransactionsErrorResponse,
+  asDfuseGetTransactionsResponse,
   asGetAccountActivationQuote,
+  asHyperionGetTransactionResponse,
+  asHyperionTransaction,
+  dfuseGetTransactionsQueryString,
   EosTransactionSuperNodeSchema
 } from './eosSchema.js'
 import {
@@ -263,7 +269,12 @@ export class EosEngine extends CurrencyEngine {
 
   processOutgoingTransaction(action: EosTransaction): number {
     const ourReceiveAddresses = []
-    const date = Date.parse(action['@timestamp']) / 1000
+    // Hyperion nodes return a UTC timestamp without the Z suffix. We need to add it to parse it accurately.
+    const timestamp =
+      action['@timestamp'].indexOf('Z') === -1
+        ? action['@timestamp'] + 'Z'
+        : action['@timestamp']
+    const date = Date.parse(timestamp) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
       this.log.error(
@@ -357,13 +368,19 @@ export class EosEngine extends CurrencyEngine {
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
     while (!finish) {
-      const url = `/v2/history/get_actions?transfer.from=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
       // query the server / node
-      const response = await this.multicastServers(
+      const params = {
+        direction: 'outgoing',
+        acct,
+        currencyCode,
+        skip,
+        limit,
+        low: newHighestTxHeight + 1
+      }
+      const actionsObject = await this.multicastServers(
         'getOutgoingTransactions',
-        url
+        params
       )
-      const actionsObject = await response.json()
       let actions = []
       // if the actions array is not empty, then set the actions variable
       if (actionsObject.actions && actionsObject.actions.length > 0) {
@@ -424,9 +441,18 @@ export class EosEngine extends CurrencyEngine {
       )
       // Use hyperion API with a block producer. "transfers" essentially mean transactions
       // may want to move to get_actions at the request of block producer
-      const url = `/v2/history/get_actions?transfer.to=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-      const result = await this.multicastServers('getIncomingTransactions', url)
-      const actionsObject = await result.json()
+      const params = {
+        direction: 'incoming',
+        acct,
+        currencyCode,
+        skip,
+        limit,
+        low: newHighestTxHeight + 1
+      }
+      const actionsObject = await this.multicastServers(
+        'getIncomingTransactions',
+        params
+      )
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
@@ -452,7 +478,6 @@ export class EosEngine extends CurrencyEngine {
           break
         }
       }
-
       if (!actions.length || actions.length < limit) {
         break
       }
@@ -510,24 +535,91 @@ export class EosEngine extends CurrencyEngine {
     let out = { result: '', server: 'no server' }
     switch (func) {
       case 'getIncomingTransactions':
-      case 'getOutgoingTransactions':
-        out = await asyncWaterfall(
-          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-            server => async () => {
-              const url = server + params[0]
-              const result = await this.eosJsConfig.fetch(url)
-              const parsedUrl = parse(url, {}, true)
-              if (!result.ok) {
-                this.log.error('multicast in / out tx server error: ', server)
-                throw new Error(
-                  `The server returned error code ${result.status} for ${parsedUrl.hostname}`
-                )
-              }
-              return { server, result }
+      case 'getOutgoingTransactions': {
+        const { direction, acct, currencyCode, skip, limit, low } = params[0]
+        const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+          server => async () => {
+            const url =
+              server +
+              `/v2/history/get_actions?transfer.${
+                direction === 'outgoing' ? 'from' : 'to'
+              }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+            const response = await this.eosJsConfig.fetch(url)
+            const parsedUrl = parse(url, {}, true)
+            if (!response.ok) {
+              this.log.error('multicast in / out tx server error: ', server)
+              throw new Error(
+                `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+              )
             }
-          )
+            const result = asHyperionGetTransactionResponse(
+              await response.json()
+            )
+            return { server, result }
+          }
         )
+        const dfuseFuncs = this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+          server => async () => {
+            if (this.currencyInfo.currencyCode !== 'EOS')
+              throw new Error('dfuse only supports EOS')
+            const response = await this.eosJsConfig.fetch(`${server}/graphql`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                query: dfuseGetTransactionsQueryString,
+                variables: {
+                  query: `${
+                    direction === 'outgoing' ? 'auth' : 'receiver'
+                  }:${acct} action:transfer`,
+                  limit,
+                  low
+                }
+              })
+            })
+            const responseJson = asEither(
+              asDfuseGetTransactionsResponse,
+              asDfuseGetTransactionsErrorResponse
+            )(await response.json())
+            if (responseJson.errors != null) {
+              this.log.warn(
+                `dfuse ${server} get transactions failed: ${JSON.stringify(
+                  responseJson.errors[0]
+                )}`
+              )
+              throw new Error(responseJson.errors[0].message)
+            }
+            // Convert txs to Hyperion
+            const actions = responseJson.data.searchTransactionsBackward.results.map(
+              tx =>
+                asHyperionTransaction({
+                  trx_id: tx.trace.id,
+                  '@timestamp': tx.trace.block.timestamp,
+                  block_num: tx.trace.block.num,
+                  act: {
+                    authorization: tx.trace.matchingActions[0].authorization[0],
+                    data: {
+                      from: tx.trace.matchingActions[0].json.from,
+                      to: tx.trace.matchingActions[0].json.to,
+                      // quantity: "0.0001 EOS"
+                      amount: Number(
+                        tx.trace.matchingActions[0].json.quantity.split(' ')[0]
+                      ),
+                      symbol: tx.trace.matchingActions[0].json.quantity.split(
+                        ' '
+                      )[1],
+                      memo: tx.trace.matchingActions[0].json.memo
+                    }
+                  }
+                })
+            )
+            return { server, result: { actions } }
+          }
+        )
+        out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
+      }
 
       case 'getKeyAccounts': {
         const body = JSON.stringify({
