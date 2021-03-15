@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+# 0.7.49 (2021-03-15)
+
+- EOS: Add dfuse graphql API to search for transactions
+- ETH: Add new Golem token GLM
+- Add promiseNy util to verify API responses from multiple sources
+- Add contract address checking to Blockbook
+
 # 0.7.48 (2021-02-26)
 
 - EOS: Add dfuse API to getKeyAccounts method
