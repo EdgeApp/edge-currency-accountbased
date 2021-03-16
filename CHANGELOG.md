@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.50 (2021-03-16)
+
+- FIO: Refactor FIO action to be passed in otherParams of edgeSpendInfo
+
 # 0.7.49 (2021-03-15)
 
 - EOS: Add dfuse graphql API to search for transactions
