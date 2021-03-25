@@ -410,3 +410,9 @@ export const asEtherscanGetAccountBalance = asObject({
 export type EtherscanGetAccountBalance = $Call<
   typeof asEtherscanGetAccountBalance
 >
+
+export const asCheckTokenBalRpc = asObject({
+  result: asString
+})
+
+export type CheckTokenBalRpc = $Call<typeof asCheckTokenBalRpc>
