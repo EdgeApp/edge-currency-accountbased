@@ -9,7 +9,7 @@ import type {
 import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
-export const imageServerUrl = 'https://developer.airbitz.co/content'
+export const imageServerUrl = 'https://content.edge.app'
 
 const defaultNetworkFees = {
   default: {
