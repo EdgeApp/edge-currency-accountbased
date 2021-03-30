@@ -555,7 +555,6 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     // Nonce:
-
     const nonceArg: string = otherParams.nonceArg
     let nonce: string = nonceArg
     if (!nonce) {
@@ -588,11 +587,7 @@ export class EthereumEngine extends CurrencyEngine {
           throw e
         }
       } else {
-        nonce = this.walletLocalData.otherData.nextNonce
-        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
-          this.walletLocalData.otherData.nextNonce,
-          '1'
-        )
+        nonce = otherParams.nonceArg
       }
     }
     // Convert nonce to hex for tsParams
