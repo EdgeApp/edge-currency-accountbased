@@ -3,9 +3,8 @@
 
 import type { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { imageServerUrl } from './../common/utils.js'
 import type { BinanceSettings } from './bnbTypes.js'
-
-export const imageServerUrl = 'https://developer.airbitz.co/content'
 
 const otherSettings: BinanceSettings = {
   binanceApiServers: ['https://dex.binance.org']

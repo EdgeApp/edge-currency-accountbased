@@ -269,7 +269,7 @@ function getEdgeInfoServer() {
   return 'https://info1.edgesecure.co:8444'
 }
 
-const imageServerUrl = 'https://developer.airbitz.co/content'
+const imageServerUrl = 'https://content.edge.app'
 
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
