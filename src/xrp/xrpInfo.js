@@ -15,7 +15,8 @@ const otherSettings: XrpSettings = {
 }
 
 const defaultSettings: any = {
-  otherSettings
+  otherSettings,
+  fee: '0.00001'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
