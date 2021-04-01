@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.51 (2021-04-01)
+
+- XRP: Use default fee of (0.00001 XRP) if SDK is unable to query for recommended fee
+- Update content URL
+
 # 0.7.50 (2021-03-16)
 
 - FIO: Refactor FIO action to be passed in otherParams of edgeSpendInfo
