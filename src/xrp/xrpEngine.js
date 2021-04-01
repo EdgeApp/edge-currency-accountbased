@@ -96,6 +96,14 @@ export class XrpEngine extends CurrencyEngine {
         this.otherData.recommendedFee = fee
         this.walletLocalDataDirty = true
       }
+    } catch (e) {
+      this.log.error(`Error fetching recommended fee: ${e}. Using default fee.`)
+      if (this.otherData.recommendedFee !== currencyInfo.defaultSettings.fee) {
+        this.otherData.recommendedFee = currencyInfo.defaultSettings.fee
+        this.walletLocalDataDirty = true
+      }
+    }
+    try {
       const jsonObj = await this.multicastServers('getServerInfo')
       const valid = validateObject(jsonObj, XrpGetServerInfoSchema)
       if (valid) {
