@@ -1129,16 +1129,12 @@ export class FioEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    if (
-      !edgeTransaction.otherParams ||
-      !edgeTransaction.otherParams.transactionJson
-    )
-      throw new Error(
-        'transactionJson not set. FIO transferTokens requires publicAddress'
-      )
-
     let trx
-    if (edgeTransaction.otherParams.transactionJson.fioAction) {
+    if (
+      edgeTransaction.otherParams &&
+      edgeTransaction.otherParams.transactionJson &&
+      edgeTransaction.otherParams.transactionJson.fioAction
+    ) {
       trx = await this.otherMethods.fioAction(
         edgeTransaction.otherParams.transactionJson.fioAction,
         edgeTransaction.otherParams.transactionJson.fioParams
@@ -1146,10 +1142,9 @@ export class FioEngine extends CurrencyEngine {
       edgeTransaction.metadata = {
         notes: trx.transaction_id
       }
-    } else {
+    } else if (edgeTransaction.spendTargets) {
       // do transfer
-      const publicAddress =
-        edgeTransaction.otherParams.transactionJson.actions[0].data.to
+      const publicAddress = edgeTransaction.spendTargets[0].publicAddress
       const amount = bns.abs(
         bns.add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
       )
@@ -1158,6 +1153,10 @@ export class FioEngine extends CurrencyEngine {
         amount,
         maxFee: edgeTransaction.networkFee
       })
+    } else {
+      throw new Error(
+        'transactionJson not set. FIO transferTokens requires publicAddress'
+      )
     }
 
     edgeTransaction.txid = trx.transaction_id
