@@ -77,6 +77,25 @@ export function hexToBuf(hex: string) {
   return buf
 }
 
+export function padHex(hex: string, bytes: number) {
+  if (2 * bytes - hex.length > 0) {
+    return hex.padStart(2 * bytes, '0')
+  }
+  return hex
+}
+
+export function removeHexPrefix(value: string) {
+  if (value.indexOf('0x') === 0) {
+    return value.substring(2)
+  } else {
+    return value
+  }
+}
+
+export function hexToDecimal(num: string) {
+  return bns.add(num, '0', 10)
+}
+
 export function bufToHex(buf: any) {
   const signedTxBuf = Buffer.from(buf)
   const hex = '0x' + signedTxBuf.toString('hex')

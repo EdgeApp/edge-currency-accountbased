@@ -9,9 +9,12 @@ import parse from 'url-parse'
 import {
   asyncWaterfall,
   cleanTxLogs,
+  hexToDecimal,
   isHex,
+  padHex,
   pickRandom,
   promiseAny,
+  removeHexPrefix,
   shuffleArray,
   snooze,
   validateObject
@@ -32,6 +35,7 @@ import {
   type BlockbookTokenTransfer,
   type BlockbookTx,
   type CheckTokenBalBlockchair,
+  type CheckTokenBalRpc,
   type EthereumTxOtherParams,
   type EtherscanGetAccountBalance,
   type EtherscanInternalTransaction,
@@ -47,6 +51,7 @@ import {
   asBlockbookTx,
   asBlockChairAddress,
   asCheckTokenBalBlockchair,
+  asCheckTokenBalRpc,
   asEtherscanGetAccountBalance,
   asEtherscanInternalTransaction,
   asEtherscanTokenTransaction,
@@ -87,6 +92,7 @@ type EthereumNetworkUpdate = {
 type EthFunction =
   | 'broadcastTx'
   | 'eth_blockNumber'
+  | 'eth_call'
   | 'eth_getTransactionCount'
   | 'eth_getBalance'
   | 'eth_estimateGas'
@@ -136,6 +142,7 @@ export class EthereumNetwork {
   checkTxs: (...any) => any
   checkTokenBalEthscan: (...any) => any
   checkTokenBalBlockchair: (...any) => any
+  checkTokenBalRpc: (...any) => any
   checkTokenBal: (...any) => any
   processEthereumNetworkUpdate: (...any) => any
   currencyInfo: EdgeCurrencyInfo
@@ -163,6 +170,7 @@ export class EthereumNetwork {
     this.checkTxs = this.checkTxs.bind(this)
     this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
     this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
+    this.checkTokenBalRpc = this.checkTokenBalRpc.bind(this)
     this.checkTokenBal = this.checkTokenBal.bind(this)
     this.processEthereumNetworkUpdate = this.processEthereumNetworkUpdate.bind(
       this
@@ -1101,6 +1109,28 @@ export class EthereumNetwork {
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+      case 'eth_call':
+        funcs = rpcServers.map(baseUrl => async () => {
+          const result = await this.fetchPostRPC(
+            'eth_call',
+            [params[0], 'latest'],
+            chainId,
+            baseUrl
+          )
+          // Check if successful http response was actually an error
+          if (result.error != null) {
+            this.ethEngine.log.error(
+              `Successful eth_call response object from ${baseUrl} included an error ${result.error}`
+            )
+            throw new Error(
+              'Successful eth_call response object included an error'
+            )
+          }
+          return { server: parse(baseUrl).hostname, result }
+        })
+
+        out = await asyncWaterfall(funcs)
+        break
     }
 
     return out
@@ -1890,12 +1920,53 @@ export class EthereumNetwork {
     return { tokenBal: response, server: 'blockchair' }
   }
 
+  async checkTokenBalRpc(tk: string): Promise<EthereumNetworkUpdate> {
+    if (tk === this.currencyInfo.currencyCode)
+      throw new Error('eth_call cannot be used to query ETH balance')
+    let cleanedResponseObj: CheckTokenBalRpc
+    let response
+    let jsonObj
+    let server
+    const address = this.ethEngine.walletLocalData.publicKey
+    try {
+      const tokenInfo = this.ethEngine.getTokenInfo(tk)
+      if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
+        const params = {
+          data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
+          to: tokenInfo.contractAddress
+        }
+
+        const response = await this.multicastServers('eth_call', params)
+        jsonObj = response.result
+        server = response.server
+      }
+
+      cleanedResponseObj = asCheckTokenBalRpc(jsonObj)
+    } catch (e) {
+      this.ethEngine.log.error(
+        `checkTokenBalRpc token ${tk} response ${response || ''} ${e.message}`
+      )
+      throw new Error(
+        `checkTokenBalRpc invalid ${tk} response ${JSON.stringify(jsonObj)}`
+      )
+    }
+    if (isHex(removeHexPrefix(cleanedResponseObj.result))) {
+      return {
+        tokenBal: { [tk]: hexToDecimal(cleanedResponseObj.result) },
+        server
+      }
+    } else {
+      throw new Error(`checkTokenBalRpc returned invalid JSON for ${tk}`)
+    }
+  }
+
   async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
     return asyncWaterfall([
       async () => this.checkTokenBalEthscan(tk),
-      this.checkTokenBalBlockchair
+      this.checkTokenBalBlockchair,
+      async () => this.checkTokenBalRpc(tk)
     ]).catch(err => {
-      this.ethEngine.log.error('checkTokenBal failed to update', err)
+      this.ethEngine.log.error('checkTokenBal failed to update', err.message)
       return {}
     })
   }
