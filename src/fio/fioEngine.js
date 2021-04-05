@@ -1018,7 +1018,7 @@ export class FioEngine extends CurrencyEngine {
 
     const { otherParams } = edgeSpendInfo
     let fee
-    if (otherParams.fioAction) {
+    if (otherParams && otherParams.fioAction) {
       let feeFioAddress = ''
       if (FEE_ACTION_MAP[otherParams.fioAction] && otherParams.fioParams) {
         feeFioAddress =
@@ -1050,7 +1050,7 @@ export class FioEngine extends CurrencyEngine {
       throw new InsufficientFundsError()
     }
 
-    if (otherParams.fioAction) {
+    if (otherParams && otherParams.fioAction) {
       if (
         ['transferFioAddress', 'transferFioDomain'].indexOf(
           otherParams.fioAction
