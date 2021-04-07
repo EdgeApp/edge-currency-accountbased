@@ -672,11 +672,12 @@ export class FioEngine extends CurrencyEngine {
             list: e.list
           }
         }
-        this.log.error(
-          `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
-            e.json
-          )}`
-        )
+        if (e.errorCode !== 404)
+          this.log.error(
+            `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
+              e.json
+            )}`
+          )
       } else {
         this.log.error(
           `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
@@ -841,7 +842,7 @@ export class FioEngine extends CurrencyEngine {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
     } catch (e) {
-      this.log.error('checkAccountInnerLoop error: ' + e)
+      this.log('checkAccountInnerLoop error: ' + e)
       nativeAmount = '0'
     }
     this.updateBalance(currencyCode, nativeAmount)
@@ -959,7 +960,7 @@ export class FioEngine extends CurrencyEngine {
 
       if (isChanged) this.localDataDirty()
     } catch (e) {
-      this.log.error('checkAccountInnerLoop getFioNames error: ' + e)
+      this.log.warn('checkAccountInnerLoop getFioNames error: ' + e)
     }
   }
 
