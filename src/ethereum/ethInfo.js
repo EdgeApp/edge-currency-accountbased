@@ -1267,6 +1267,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ],
       contractAddress: '0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429',
       symbolImage: `${imageServerUrl}/golem-logo-solo-64.png`
+    },
+    {
+      currencyCode: 'UNI',
+      currencyName: 'Uniswap',
+      denominations: [
+        {
+          name: 'UNI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
+      symbolImage: `${imageServerUrl}/uniswap-logo-solo-64.png`
     }
   ]
 }
