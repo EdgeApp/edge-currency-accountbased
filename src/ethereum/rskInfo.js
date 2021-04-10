@@ -48,7 +48,7 @@ const otherSettings: EthereumSettings = {
   hdPathCoinType: 137,
   pluginMnemonicKeyName: 'rskMnemonic',
   pluginRegularKeyName: 'rskKey',
-  ethGasStationUrl: '',
+  ethGasStationUrl: null,
   defaultNetworkFees
 }
 

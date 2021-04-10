@@ -175,6 +175,7 @@ export class EthereumEngine extends CurrencyEngine {
       const {
         ethGasStationUrl
       } = this.currencyInfo.defaultSettings.otherSettings
+      if (ethGasStationUrl == null) return
       const { ethGasStationApiKey } = this.initOptions
       const jsonObj = await this.ethNetwork.fetchGet(
         `${ethGasStationUrl}?api-key=${ethGasStationApiKey || ''}`
