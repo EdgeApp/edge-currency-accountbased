@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+# 0.7.52 (2021-04-12)
+
+- ETH: Add UNI ERC20 token
+- ETH: Add eth_call to token balance loop
+- FIO: Logging cleanup
+- FIO: Allow sending tokens without transactionJson or otherParams
+
 # 0.7.51 (2021-04-01)
 
 - XRP: Use default fee of (0.00001 XRP) if SDK is unable to query for recommended fee
