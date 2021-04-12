@@ -422,9 +422,9 @@ export class BinanceEngine extends CurrencyEngine {
   }
 
   async resyncBlockchain(): Promise<void> {
-    // await this.killEngine()
-    // await this.clearBlockchainCache()
-    // await this.startEngine()
+    await this.killEngine()
+    await this.clearBlockchainCache()
+    await this.startEngine()
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
