@@ -39,11 +39,11 @@ To run a local version of this repo inside the full Edge Wallet app, clone this 
 
 Run `npm run test` to run the unit tests.
 
-To use the local cloned version of this repo, `cd edge-react-gui` and run 
+To use the local cloned version of this repo, `cd edge-react-gui` and run
 
     npm run updot edge-currency-accountbased
-    npm run postinstall
-    
+    npm run prepare
+
 This will copy the necessary files from `edge-currency-accountbased` into the `edge-react-gui/node_modules/edge-currency-accountbased` replacing the npm installed version. This needs to be done after any modifications to `edge-currency-accountbased`
 
 ## Adding a New Blockchain / Currency
