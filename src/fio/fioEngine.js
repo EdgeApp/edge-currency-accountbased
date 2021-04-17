@@ -673,13 +673,13 @@ export class FioEngine extends CurrencyEngine {
           }
         }
         if (e.errorCode !== 404)
-          this.log.error(
+          this.log(
             `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${JSON.stringify(
               e.json
             )}`
           )
       } else {
-        this.log.error(
+        this.log(
           `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
         )
         throw e
@@ -719,7 +719,7 @@ export class FioEngine extends CurrencyEngine {
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
-        this.log.error(
+        this.log(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${JSON.stringify(
@@ -736,7 +736,7 @@ export class FioEngine extends CurrencyEngine {
         }
         throw e
       } else {
-        this.log.error(
+        this.log(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${
@@ -798,7 +798,7 @@ export class FioEngine extends CurrencyEngine {
           try {
             return JSON.stringify(asGetFioName(result))
           } catch (e) {
-            this.log.warn(
+            this.log(
               `getFioNames checkResult function returned error ${e.name} ${e.message}`
             )
           }
