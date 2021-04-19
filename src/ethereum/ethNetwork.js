@@ -903,7 +903,7 @@ export class EthereumNetwork {
           // Check if successful http response was actually an error
           if (result.error != null) {
             this.ethEngine.log.error(
-              `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
+              `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error.message}`
             )
             throw new Error(
               'Successful eth_estimateGas response object included an error'

@@ -20,7 +20,7 @@ const otherSettings: TezosSettings = {
   tezosRpcNodes: [
     'https://rpc.tzbeta.net',
     //  'https://teznode.letzbake.com',
-    'https://mainnet.tezrpc.me'
+    'https://mainnet-tezos.giganode.io'
   ],
   tezosApiServers: ['https://api.tzkt.io']
 }
