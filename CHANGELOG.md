@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.53 (2021-04-19)
+
+- FIO: Change some error logging levels from error to info to reduce log verbosity
+
 # 0.7.52 (2021-04-12)
 
 - ETH: Add UNI ERC20 token
