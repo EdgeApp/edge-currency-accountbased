@@ -16,7 +16,10 @@ const otherSettings: XrpSettings = {
 
 const defaultSettings: any = {
   otherSettings,
-  fee: '0.00001'
+  fee: '0.00001',
+  errorCodes: {
+    UNIQUE_IDENTIFIER_EXCEEDS_LENGTH: 'UNIQUE_IDENTIFIER_EXCEEDS_LENGTH'
+  }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

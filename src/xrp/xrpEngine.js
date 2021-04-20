@@ -15,6 +15,11 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import { cleanTxLogs, getOtherParams, validateObject } from '../common/utils.js'
+import {
+  PluginError,
+  pluginErrorCodes,
+  pluginErrorName
+} from '../pluginError.js'
 import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
 import {
@@ -34,6 +39,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
+const MAX_DESTINATION_TAG_LENGTH = 9
 
 type XrpParams = {
   preparedTx: Object
@@ -51,6 +57,7 @@ type XrpFunction =
   | 'preparePayment'
   | 'sign'
   | 'submit'
+
 export class XrpEngine extends CurrencyEngine {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
@@ -429,6 +436,18 @@ export class XrpEngine extends CurrencyEngine {
         )
       } else {
         throw new Error('Error invalid destinationtag')
+      }
+
+      if (
+        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier.length >
+        MAX_DESTINATION_TAG_LENGTH
+      ) {
+        throw new PluginError(
+          'XRP Destination Tag must be 9 characters or less',
+          pluginErrorName.XRP_ERROR,
+          pluginErrorCodes[0],
+          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
+        )
       }
     }
     const payment = {
