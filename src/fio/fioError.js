@@ -1,6 +1,19 @@
 // @flow
 
+import { currencyInfo } from './fioInfo.js'
+
 export const fioApiErrorCodes = [400, 403, 404]
+export const fioRegApiErrorCodes: { [string]: string } = {
+  INVALID_FIO_NAME: currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS,
+  DOMAIN_IS_NOT_REGISTERED:
+    currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST,
+  DOMAIN_IS_NOT_PUBLIC:
+    currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_PUBLIC,
+  SERVER_ERROR: currencyInfo.defaultSettings.errorCodes.SERVER_ERROR,
+  ALREADY_SENT_REGISTRATION_REQ_FOR_DOMAIN:
+    currencyInfo.defaultSettings.errorCodes
+      .ALREADY_SENT_REGISTRATION_REQ_FOR_DOMAIN
+}
 
 export class FioError extends Error {
   list: Array<{ field: string, message: string }>
