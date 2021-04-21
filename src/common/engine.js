@@ -172,13 +172,17 @@ export class CurrencyEngine {
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
     } catch (e) {
-      this.log(
-        'Could not load transactionList file. Failure is ok on new device'
-      )
-      await disklet.setText(
-        TRANSACTION_STORE_FILE,
-        JSON.stringify(this.transactionList)
-      )
+      if (e.code === 'ENOENT') {
+        this.log(
+          'Could not load transactionList file. Failure is ok on new device'
+        )
+        await disklet.setText(
+          TRANSACTION_STORE_FILE,
+          JSON.stringify(this.transactionList)
+        )
+      } else {
+        this.log.crash(e, this.walletLocalData)
+      }
     }
 
     let isEmptyTransactions = true
@@ -188,6 +192,31 @@ export class CurrencyEngine {
         break
       }
     }
+
+    for (const cc of Object.keys(this.transactionList)) {
+      if (
+        this.transactionList[cc] !== undefined &&
+        this.transactionList[cc].length > 0
+      ) {
+        if (
+          transactionList !== undefined &&
+          transactionList[cc] !== undefined &&
+          transactionList[cc].length < this.transactionList[cc].length
+        ) {
+          this.log.crash(
+            new Error(
+              `Transaction list length mismatch for ${cc}: on disk ${transactionList[cc].length} txs < in memory ${this.transactionList[cc].length} txs`
+            ),
+            {
+              ...transactionList,
+              ...this.transactionList,
+              ...this.walletLocalData
+            }
+          )
+        }
+      }
+    }
+
     if (isEmptyTransactions) {
       // Easy, just copy everything over
       this.transactionList = transactionList || this.transactionList
