@@ -19,7 +19,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
 import { FIO_REG_API_ENDPOINTS } from './fioConst.js'
 import { FioEngine } from './fioEngine'
-import { fioApiErrorCodes, fioRegApiErrorCodes, FioError } from './fioError.js'
+import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
 
 const FIO_CURRENCY_CODE = 'FIO'

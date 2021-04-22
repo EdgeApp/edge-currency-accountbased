@@ -2072,10 +2072,10 @@ cleaners@^0.3.1:
   resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.1.tgz#f8fe89d76b1731e07258148a1648ea251d72096d"
   integrity sha512-PIV0B/TVBnTJlcQtjkLtUOnzBlKUT9QTL/LVw4M22vlgrm+/858oNK3w2umc3Ll9Q9hT2oTCURUOsiSDOpT9bA==
 
-cleaners@^0.3.2:
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.2.tgz#e240a3837f5b2d59975f18d753dea7d1bab0fd4b"
-  integrity sha512-SOjd7UOrU/8CF6V7QKZsfJB8MIBylrZOso+eJWYFaOm2jamKj7Wxbihg8vasnHzqtagv1vpwhN8xkD3liX/dIg==
+cleaners@^0.3.8:
+  version "0.3.9"
+  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.9.tgz#e9d2b7ebbbf62c0ae9f7bf1f1cf0aa5544acb3fa"
+  integrity sha512-DAddE949KDyTFcb6LdVpEd4BBHa55wNfm63tE0AYT2hDZyg0IR6lwOqjPhP/6GwF1z9FWeKqjw20T27/UHjM+Q==
 
 cli-cursor@^3.1.0:
   version "3.1.0"
@@ -2591,15 +2591,15 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.17.16:
-  version "0.17.19"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.19.tgz#c0f52f66e95bcd6022c5f0d76550ee3888c18531"
-  integrity sha512-YGLeYCHVbtwHtsNlTpQ22hiGbCkSVA8NDMLh9lkZMYtXfJRSKspalNxnu8hSf/zD6gcR+6NNLOf2fSkGw0rX1A==
+edge-core-js@^0.17.31:
+  version "0.17.31"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.17.31.tgz#3527b17dfec456f9760ce5b299fad96fffec3b2f"
+  integrity sha512-ks5cE/sSeqSAoqwNilukVJRJ7NHO3HxLjver82Uyw0srU5ZqTFSpHbcWDoe0bc7j7YVLpTsZSisuyMcvLq8o/w==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
-    cleaners "^0.3.2"
+    cleaners "^0.3.8"
     currency-codes "^1.1.2"
     disklet "^0.4.5"
     elliptic "^6.4.0"
@@ -2616,6 +2616,7 @@ edge-core-js@^0.17.16:
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
     yaob "^0.3.6"
+    yavent "^0.1.1"
 
 eivindfjeldstad-dot@0.0.1:
   version "0.0.1"
@@ -7365,6 +7366,11 @@ yargs@^15.0.2:
     which-module "^2.0.0"
     y18n "^4.0.0"
     yargs-parser "^18.1.2"
+
+yavent@^0.1.1:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/yavent/-/yavent-0.1.2.tgz#eb826c8c5e344e86e1398a463a3d5092f919edeb"
+  integrity sha512-hd1tUDabbB6dUoOcHLB1rRlydNC9DGKGMMwotnEvWdNyFNgSN7k4djW6Db6MtGPctGgiJyhDr26PFF1APfqoqA==
 
 yocto-queue@^0.1.0:
   version "0.1.0"
