@@ -19,7 +19,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
 import { FIO_REG_API_ENDPOINTS } from './fioConst.js'
 import { FioEngine } from './fioEngine'
-import { fioApiErrorCodes, FioError } from './fioError.js'
+import { fioApiErrorCodes, fioRegApiErrorCodes, FioError } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
 
 const FIO_CURRENCY_CODE = 'FIO'
@@ -419,15 +419,26 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         )
         if (!result.ok) {
           const data = await result.json()
-          return {
-            error: true,
-            code: result.status,
-            ...data
+
+          if (fioRegApiErrorCodes[data.errorCode]) {
+            throw new FioError(
+              data.error,
+              result.status,
+              fioRegApiErrorCodes[data.errorCode],
+              data
+            )
           }
+
+          throw new Error(data.error)
         }
         return result.json()
       } catch (e) {
-        return { error: e }
+        if (e.labelCode) throw e
+        throw new FioError(
+          e.message,
+          500,
+          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        )
       }
     },
     async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
@@ -441,15 +452,25 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         )
         const json = await result.json()
         if (!result.ok) {
-          return {
-            error: true,
-            code: result.status,
-            ...json
+          if (fioRegApiErrorCodes[json.errorCode]) {
+            throw new FioError(
+              json.error,
+              result.status,
+              fioRegApiErrorCodes[json.errorCode],
+              json
+            )
           }
+
+          throw new Error(json.error)
         }
         return json.domains
       } catch (e) {
-        return { error: e }
+        if (e.labelCode) throw e
+        throw new FioError(
+          e.message,
+          500,
+          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        )
       }
     }
   }
