@@ -171,13 +171,14 @@ export class EthereumEngine extends CurrencyEngine {
       this.log.error(err)
     }
 
+    let jsonObj
     try {
       const {
         ethGasStationUrl
       } = this.currencyInfo.defaultSettings.otherSettings
       if (ethGasStationUrl == null) return
       const { ethGasStationApiKey } = this.initOptions
-      const jsonObj = await this.ethNetwork.fetchGet(
+      jsonObj = await this.ethNetwork.fetchGet(
         `${ethGasStationUrl}?api-key=${ethGasStationApiKey || ''}`
       )
       const valid = validateObject(jsonObj, EthGasStationSchema)
@@ -197,20 +198,16 @@ export class EthereumEngine extends CurrencyEngine {
 
         // Sanity checks
         if (safeLow < 1 || safeLow > GAS_PRICE_SANITY_CHECK) {
-          this.log.error('Invalid safeLow value from EthGasStation')
-          return
+          throw new Error('Invalid safeLow value from EthGasStation')
         }
         if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
-          this.log.error('Invalid average value from EthGasStation')
-          return
+          throw new Error('Invalid average value from EthGasStation')
         }
         if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
-          this.log.error('Invalid fastest value from EthGasStation')
-          return
+          throw new Error('Invalid fastest value from EthGasStation')
         }
         if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
-          this.log.error('Invalid fastest value from EthGasStation')
-          return
+          throw new Error('Invalid fastest value from EthGasStation')
         }
 
         // Correct inconsistencies
@@ -245,17 +242,14 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
         }
       } else {
-        this.log.error(
-          `Error: Fetched invalid networkFees from EthGasStation ${JSON.stringify(
-            jsonObj
-          )}`
-        )
+        throw new Error(`Error: Fetched invalid networkFees from EthGasStation`)
       }
     } catch (err) {
       this.log.error(
         `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
       )
       this.log.error(err)
+      this.log.crash(err, { rawData: jsonObj })
     }
   }
 
