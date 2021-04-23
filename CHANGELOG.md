@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+# 0.7.54 (2021-04-23)
+
+- ETH: Add error reporting to tx lists and gas price query for future debugging
+- FIO: Reduce logging verbosity
+- BNB: Enable resync
+- Upgrade edge-core-js to v0.17.31
+  - Add additional log types `crash` and `breadcrumb`
+
 # 0.7.53 (2021-04-19)
 
 - FIO: Change some error logging levels from error to info to reduce log verbosity
