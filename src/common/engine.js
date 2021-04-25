@@ -498,21 +498,6 @@ export class CurrencyEngine {
   async saveWalletLoop() {
     const disklet = this.walletLocalDisklet
     const promises = []
-    if (this.walletLocalDataDirty) {
-      this.log('walletLocalDataDirty. Saving...')
-      const jsonString = JSON.stringify(this.walletLocalData)
-      promises.push(
-        disklet
-          .setText(DATA_STORE_FILE, jsonString)
-          .then(() => {
-            this.walletLocalDataDirty = false
-          })
-          .catch(e => {
-            this.log.error('Error saving walletLocalData')
-            this.log.error(e)
-          })
-      )
-    }
     if (this.transactionListDirty) {
       await this.loadTransactions()
       this.log('transactionListDirty. Saving...')
@@ -539,8 +524,19 @@ export class CurrencyEngine {
       )
       await Promise.all(promises)
       this.transactionListDirty = false
-    } else {
-      await Promise.all(promises)
+    }
+    if (this.walletLocalDataDirty) {
+      this.log('walletLocalDataDirty. Saving...')
+      const jsonString = JSON.stringify(this.walletLocalData)
+      await disklet
+        .setText(DATA_STORE_FILE, jsonString)
+        .then(() => {
+          this.walletLocalDataDirty = false
+        })
+        .catch(e => {
+          this.log.error('Error saving walletLocalData')
+          this.log.error(e)
+        })
     }
   }
 
