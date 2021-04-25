@@ -311,7 +311,7 @@ export class CurrencyEngine {
     edgeTransaction: EdgeTransaction,
     lastSeenTime?: number
   ) {
-    this.log.warn('executing addTransaction: ', edgeTransaction.txid)
+    this.log('executing addTransaction: ', edgeTransaction.txid)
     // remove SPAM and proxy allowance transactions (ie DEX extra transaction)
     // this should reduce confusion for users
     if (
@@ -367,6 +367,7 @@ export class CurrencyEngine {
 
       this.transactionListDirty = true
       this.transactionsChangedArray.push(edgeTransaction)
+      this.log.warn('addTransaction new tx: ', edgeTransaction.txid)
     } else {
       // Already have this tx in the database. See if anything changed
       const transactionsArray = this.transactionList[currencyCode]
@@ -398,7 +399,7 @@ export class CurrencyEngine {
           needsReSort = true
         }
         this.log.warn(
-          `Update transaction: ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
+          `addTransaction: update ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
         )
         this.updateTransaction(currencyCode, edgeTransaction, idx)
       } else {
