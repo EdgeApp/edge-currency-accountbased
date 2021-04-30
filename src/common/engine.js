@@ -312,14 +312,6 @@ export class CurrencyEngine {
     lastSeenTime?: number
   ) {
     this.log.warn('executing addTransaction: ', edgeTransaction.txid)
-    // remove SPAM and proxy allowance transactions (ie DEX extra transaction)
-    // this should reduce confusion for users
-    if (
-      edgeTransaction.nativeAmount === '0' &&
-      edgeTransaction.networkFee === '0'
-    ) {
-      return
-    }
     // set otherParams if not already set
     if (!edgeTransaction.otherParams) {
       edgeTransaction.otherParams = {}
