@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.55 (2021-05-03)
+
+- Remove allowance transaction filtering from addTransaction
+
 # 0.7.54 (2021-04-23)
 
 - ETH: Add error reporting to tx lists and gas price query for future debugging
