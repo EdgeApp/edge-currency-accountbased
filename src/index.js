@@ -11,6 +11,7 @@ import { makeTelosPlugin } from './eos/telosInfo.js'
 import { makeWaxPlugin } from './eos/waxInfo.js'
 import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
+import { makeFantomPlugin } from './ethereum/ftminfo.js'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
@@ -23,6 +24,7 @@ const plugins = {
   wax: makeWaxPlugin,
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
+  fantom: makeFantomPlugin,
   fio: makeFioPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
