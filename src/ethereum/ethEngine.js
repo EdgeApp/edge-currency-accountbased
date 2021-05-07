@@ -685,11 +685,17 @@ export class EthereumEngine extends CurrencyEngine {
       const idx = this.findTransaction(currencyCode, txid)
       const replacedEdgeTransaction = this.transactionList[currencyCode][idx]
 
+      // Use the RBF metadata because metadata for replaced transaction is not
+      // present in edge-currency-accountbased state
+      const metadata = edgeTransaction.metadata
+
       // Update the transaction's blockHeight to -1 (drops the transaction)
       const updatedEdgeTransaction: EdgeTransaction = {
         ...replacedEdgeTransaction,
+        metadata,
         blockHeight: -1
       }
+
       this.addTransaction(currencyCode, updatedEdgeTransaction)
     }
 
