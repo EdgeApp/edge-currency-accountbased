@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.56 (2021-05-07)
+
+- Fix metadata issue for accelerated ETH txs (RBF tx)
+- Add Fantom
+
 # 0.7.55 (2021-05-03)
 
 - Remove allowance transaction filtering from addTransaction
