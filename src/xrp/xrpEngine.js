@@ -477,7 +477,7 @@ export class XrpEngine extends CurrencyEngine {
           'preparePayment',
           this.walletLocalData.publicKey,
           payment,
-          { maxLedgerVersionOffset: 300 }
+          { maxLedgerVersionOffset: 300, fee: this.otherData.recommendedFee }
         )
         break
       } catch (err) {
