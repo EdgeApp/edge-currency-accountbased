@@ -55,7 +55,6 @@ export const XrpGetTransactionsSchema = {
   items: {
     type: 'object',
     properties: {
-      type: { type: 'string' },
       address: { type: 'string' },
       id: { type: 'string' },
       outcome: {
