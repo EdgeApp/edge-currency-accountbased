@@ -81,6 +81,18 @@ export const currencyInfo: EdgeCurrencyInfo = {
   symbolImageDarkMono: `${imageServerUrl}/fantom-logo-solo-64.png`,
   metaTokens: [
     // Array of objects describing the supported metatokens
+    {
+      currencyCode: 'FUSDT',
+      currencyName: 'Frapped Tether',
+      denominations: [
+        {
+          name: 'FUSDT',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a',
+      symbolImage: `${imageServerUrl}/fusdt-logo-solo-64.png`
+    }
   ]
 }
 
