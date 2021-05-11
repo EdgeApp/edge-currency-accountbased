@@ -17,6 +17,7 @@ import { makeFioPlugin } from './fio/fioPlugin'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
+import { makeZcashPlugin } from './zcash/zecPlugin.js'
 
 const plugins = {
   eos: makeEosPlugin,
@@ -26,6 +27,7 @@ const plugins = {
   ethereumclassic: makeEthereumClassicPlugin,
   fantom: makeFantomPlugin,
   fio: makeFioPlugin,
+  zcash: makeZcashPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
   stellar: makeStellarPlugin,

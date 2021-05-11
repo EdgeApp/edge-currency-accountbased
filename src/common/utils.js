@@ -7,6 +7,7 @@ import { bns } from 'biggystring'
 import { Buffer } from 'buffer'
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 import {
+  type EdgeCorePluginOptions,
   type EdgeCurrencyInfo,
   type EdgeMetaToken,
   type EdgeTransaction,
@@ -354,6 +355,29 @@ export function cleanTxLogs(tx: EdgeTransaction) {
   return JSON.stringify(asCleanTxLogs(tx), null, 2)
 }
 
+/**
+ * Emulates the browser Fetch API more accurately than fetch JSON.
+ */
+function getFetchCors(opts: EdgeCorePluginOptions): Function {
+  const nativeIo = opts.nativeIo['edge-currency-accountbased']
+  if (nativeIo == null) return opts.io.fetch
+
+  return function fetch(uri: string, opts?: Object) {
+    return nativeIo.fetchText(uri, opts).then(reply => ({
+      ok: reply.ok,
+      status: reply.status,
+      statusText: reply.statusText,
+      url: reply.url,
+      json() {
+        return Promise.resolve().then(() => JSON.parse(reply.text))
+      },
+      text() {
+        return Promise.resolve(reply.text)
+      }
+    }))
+  }
+}
+
 export {
   normalizeAddress,
   addHexPrefix,
@@ -365,6 +389,7 @@ export {
   snoozeReject,
   getEdgeInfoServer,
   promiseAny,
+  getFetchCors,
   promiseNy,
   timeout,
   imageServerUrl

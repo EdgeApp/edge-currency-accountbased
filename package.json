@@ -96,7 +96,8 @@
     "stellar-sdk": "^0.11.0",
     "tezos-uri": "^1.0.3",
     "uri-js": "^3.0.2",
-    "url-parse": "^1.4.1"
+    "url-parse": "^1.4.1",
+    "yaob": "^0.3.6"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
@@ -133,6 +134,9 @@
       "parser": "babylon",
       "style": "module"
     }
+  },
+  "peerDependencies": {
+    "react-native-zcash": "file:../react-native-zcash"
   },
   "react-native": "./lib/react-native-accountbased.js"
 }
