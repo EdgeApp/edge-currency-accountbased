@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.57 (2021-05-11)
+
+- FTM: Add fUSDT support
+- XRP: Pass default fee to preparePayment
+- XRP: Remove unused 'type' field from transaction validation
+
 # 0.7.56 (2021-05-07)
 
 - Fix metadata issue for accelerated ETH txs (RBF tx)
