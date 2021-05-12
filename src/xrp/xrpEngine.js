@@ -39,7 +39,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
-const MAX_DESTINATION_TAG_LENGTH = 9
+const MAX_DESTINATION_TAG_LENGTH = 10
 
 type XrpParams = {
   preparedTx: Object
@@ -443,7 +443,7 @@ export class XrpEngine extends CurrencyEngine {
         MAX_DESTINATION_TAG_LENGTH
       ) {
         throw new PluginError(
-          'XRP Destination Tag must be 9 characters or less',
+          'XRP Destination Tag must be 10 characters or less',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
           currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
