@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.58 (2021-05-12)
+
+- XRP: Change destination tag limit to 10 digits and less than UINT32
+
 # 0.7.57 (2021-05-11)
 
 - FTM: Add fUSDT support
