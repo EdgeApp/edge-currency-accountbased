@@ -82,14 +82,18 @@ export class XrpPlugin extends CurrencyPlugin {
     }
   }
 
-  importPrivateKey(privateKey: string): Promise<{ rippleKey: string }> {
-    privateKey.replace(/ /g, '')
-    if (privateKey.length !== 29 && privateKey.length !== 31) {
-      throw new Error('Private key wrong length')
+  async importPrivateKey(privateKey: string): Promise<{ rippleKey: string }> {
+    privateKey = privateKey.replace(/\s/g, '')
+    try {
+      // Try deriving an address from the key:
+      const keypair = keypairs.deriveKeypair(privateKey)
+      keypairs.deriveAddress(keypair.publicKey)
+
+      // If that worked, return the key:
+      return { rippleKey: privateKey }
+    } catch (error) {
+      throw new Error('Invalid private key: ' + String(error))
     }
-    const keypair = keypairs.deriveKeypair(privateKey)
-    keypairs.deriveAddress(keypair.publicKey)
-    return Promise.resolve({ rippleKey: privateKey })
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
