@@ -39,7 +39,8 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
-const MAX_DESTINATION_TAG_LENGTH = 9
+const MAX_DESTINATION_TAG_LENGTH = 10
+const MAX_DESTINATION_TAG_LIMIT = 4294967295
 
 type XrpParams = {
   preparedTx: Object
@@ -438,15 +439,34 @@ export class XrpEngine extends CurrencyEngine {
         throw new Error('Error invalid destinationtag')
       }
 
-      if (
-        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier.length >
-        MAX_DESTINATION_TAG_LENGTH
-      ) {
+      // Destination Tag Checks
+      const destinationTag =
+        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+
+      if (Number.isNaN(parseInt(destinationTag))) {
         throw new PluginError(
-          'XRP Destination Tag must be 9 characters or less',
+          'Please enter a valid Destination Tag',
+          pluginErrorName.XRP_ERROR,
+          pluginErrorCodes[0],
+          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_FORMAT
+        )
+      }
+
+      if (destinationTag.length > MAX_DESTINATION_TAG_LENGTH) {
+        throw new PluginError(
+          'XRP Destination Tag must be 10 characters or less',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
           currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
+        )
+      }
+
+      if (destinationTag > MAX_DESTINATION_TAG_LIMIT) {
+        throw new PluginError(
+          'XRP Destination Tag is above its maximum limit',
+          pluginErrorName.XRP_ERROR,
+          pluginErrorCodes[0],
+          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
         )
       }
     }
