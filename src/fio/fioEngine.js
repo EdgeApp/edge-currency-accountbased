@@ -85,6 +85,7 @@ export class FioEngine extends CurrencyEngine {
   otherMethods: Object
   tpid: string
   recentFioFee: RecentFioFee
+  fiosdkByApiUrl: { string: FIOSDK }
 
   localDataDirty() {
     this.walletLocalDataDirty = true
@@ -102,6 +103,7 @@ export class FioEngine extends CurrencyEngine {
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
+    this.fiosdkByApiUrl = {}
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -311,6 +313,23 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
+  getFIOSDK(apiUrl: string, returnPreparedTrx: boolean = false): FIOSDK {
+    const fiosdkKey = `${returnPreparedTrx ? '_' : ''}${apiUrl}`
+    if (!this.fiosdkByApiUrl[fiosdkKey]) {
+      this.fiosdkByApiUrl[apiUrl] = new FIOSDK(
+        this.walletInfo.keys.fioKey,
+        this.walletInfo.keys.publicKey,
+        apiUrl,
+        this.fetchCors,
+        undefined,
+        this.tpid,
+        returnPreparedTrx
+      )
+    }
+
+    return this.fiosdkByApiUrl[fiosdkKey]
+  }
+
   // Poll on the blockheight
   async checkBlockchainInnerLoop() {
     try {
@@ -483,13 +502,8 @@ export class FioEngine extends CurrencyEngine {
       return false
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let lastActionSeqNumber = 0
-    const fioSDK = new FIOSDK(
-      '',
-      '',
-      this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex],
-      this.fetchCors,
-      undefined,
-      this.tpid
+    const fioSDK = this.getFIOSDK(
+      this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex]
     )
     const actor = fioSDK.transactions.getActor(this.walletInfo.keys.publicKey)
     try {
@@ -632,15 +646,7 @@ export class FioEngine extends CurrencyEngine {
     params?: any,
     returnPreparedTrx: boolean = false
   ): Promise<any | PreparedTrx> {
-    const fioSDK = new FIOSDK(
-      this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
-      apiUrl,
-      this.fetchCors,
-      undefined,
-      this.tpid,
-      returnPreparedTrx
-    )
+    const fioSDK = this.getFIOSDK(apiUrl, returnPreparedTrx)
 
     let res
 
@@ -694,14 +700,7 @@ export class FioEngine extends CurrencyEngine {
     endpoint: string,
     preparedTrx: PreparedTrx
   ) {
-    const fioSDK = new FIOSDK(
-      this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
-      apiUrl,
-      this.fetchCors,
-      undefined,
-      this.tpid
-    )
+    const fioSDK = this.getFIOSDK(apiUrl)
     let res
 
     this.log.warn(
