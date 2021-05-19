@@ -1593,6 +1593,13 @@ export class EthereumNetwork {
     startDate: number,
     currencyCode: string
   ): Promise<EthereumNetworkUpdate> {
+    const {
+      amberdataApiServers
+    } = this.currencyInfo.defaultSettings.otherSettings
+
+    if (!amberdataApiServers || amberdataApiServers.length < 1) {
+      throw new Error('No Amberdata servers')
+    }
     const allTxsRegular: EdgeTransaction[] = await this.getAllTxsAmberdata(
       startBlock,
       startDate,
@@ -1650,6 +1657,12 @@ export class EthereumNetwork {
   async checkTxsBlockbook(
     startBlock: number = 0
   ): Promise<EthereumNetworkUpdate> {
+    const { blockbookServers } = this.currencyInfo.defaultSettings.otherSettings
+
+    if (!blockbookServers || blockbookServers.length < 1) {
+      throw new Error('No Blockbook servers')
+    }
+
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     let page = 1
     let totalPages = 1
