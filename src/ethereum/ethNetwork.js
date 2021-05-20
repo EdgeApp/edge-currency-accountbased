@@ -1686,12 +1686,12 @@ export class EthereumNetwork {
         addressInfo = asBlockbookAddress(jsonObj)
       } catch (e) {
         this.ethEngine.log.error(
-          `checkTxsBlockbook ${server} BlockbookAddress ${JSON.stringify(
+          `checkTxsBlockbook ${server} error BlockbookAddress ${JSON.stringify(
             jsonObj
           )}`
         )
         throw new Error(
-          `Blockbook ${server} returned invalid JSON for BlockbookAddress`
+          `checkTxsBlockbook ${server} returned invalid JSON for BlockbookAddress`
         )
       }
       const { nonce, tokens, balance, transactions } = addressInfo
@@ -1713,7 +1713,7 @@ export class EthereumNetwork {
             )}`
           )
           throw new Error(
-            `Blockbook ${server} returned invalid JSON for BlockbookTokenBalance`
+            `checkTxsBlockbook ${server} returned invalid JSON for BlockbookTokenBalance`
           )
         }
       }
