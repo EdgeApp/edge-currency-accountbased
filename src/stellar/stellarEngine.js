@@ -247,9 +247,7 @@ export class StellarEngine extends CurrencyEngine {
         }
       } catch (e) {
         if (e.response && e.response.title === 'Resource Missing') {
-          this.log.warn(
-            'Account not found. Probably not activated w/minimum XLM'
-          )
+          this.log('Account not found. Probably not activated w/minimum XLM')
           this.tokenCheckTransactionsStatus.XLM = 1
           this.updateOnAddressesChecked()
         } else {
@@ -322,7 +320,7 @@ export class StellarEngine extends CurrencyEngine {
       this.updateOnAddressesChecked()
     } catch (e) {
       if (e.response && e.response.title === 'Resource Missing') {
-        this.log.warn('Account not found. Probably not activated w/minimum XLM')
+        this.log('Account not found. Probably not activated w/minimum XLM')
         this.tokenCheckBalanceStatus.XLM = 1
         this.updateOnAddressesChecked()
       } else {
