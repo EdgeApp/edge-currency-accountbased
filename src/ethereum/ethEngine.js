@@ -197,7 +197,7 @@ export class EthereumEngine extends CurrencyEngine {
         let fastest = jsonObj.fastest
 
         // Sanity checks
-        if (safeLow < 1 || safeLow > GAS_PRICE_SANITY_CHECK) {
+        if (safeLow <= 0 || safeLow > GAS_PRICE_SANITY_CHECK) {
           throw new Error('Invalid safeLow value from EthGasStation')
         }
         if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
