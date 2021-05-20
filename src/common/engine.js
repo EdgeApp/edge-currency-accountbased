@@ -385,7 +385,6 @@ export class CurrencyEngine {
           edgeTx.blockHeight === 0
         ) {
           this.walletLocalData.numUnconfirmedSpendTxs--
-          this.walletLocalDataDirty = true
         }
         if (edgeTx.date !== edgeTransaction.date) {
           needsReSort = true
@@ -393,6 +392,7 @@ export class CurrencyEngine {
         this.log.warn(
           `addTransaction: update ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
         )
+        this.walletLocalDataDirty = true
         this.updateTransaction(currencyCode, edgeTransaction, idx)
       } else {
         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
