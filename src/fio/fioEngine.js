@@ -316,7 +316,7 @@ export class FioEngine extends CurrencyEngine {
   getFIOSDK(apiUrl: string, returnPreparedTrx: boolean = false): FIOSDK {
     const fiosdkKey = `${returnPreparedTrx ? '_' : ''}${apiUrl}`
     if (!this.fiosdkByApiUrl[fiosdkKey]) {
-      this.fiosdkByApiUrl[apiUrl] = new FIOSDK(
+      this.fiosdkByApiUrl[fiosdkKey] = new FIOSDK(
         this.walletInfo.keys.fioKey,
         this.walletInfo.keys.publicKey,
         apiUrl,
