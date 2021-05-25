@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+# 0.7.60 (2021-05-25)
+
+- Fix a possible race condition where the last queried block height is saved but the actual transactions are not
+- Always set this.walletLocalDataDirty = true if any transactions have changed
+- ETH: Use the default token gas limit if getCode reveals the destination is a contract and estimateGas fails to return a gas value
+- ETH: Allow ethgasstation safeLow estimate less than 1
+- Update logging
+
 # 0.7.59 (2021-05-25)
 
 - XRP: Remove bogus length checks from the XRP key import
