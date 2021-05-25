@@ -430,29 +430,43 @@ export class EthereumEngine extends CurrencyEngine {
           [contractAddress || publicAddress, 'latest']
         )
 
-        if (getCodeResult.result.result !== '0x') {
-          const estimateGasResult = await this.ethNetwork.multicastServers(
-            'eth_estimateGas',
-            estimateGasParams
-          )
-          gasLimit = bns.add(
-            parseInt(estimateGasResult.result.result, 16).toString(),
-            '0'
-          )
-          // Overestimate gas limit to reduce chance of failure when sending to a contract
-          if (currencyCode === this.currencyInfo.currencyCode) {
-            // Double gas limit estimate when sending ETH to contract
-            gasLimit = bns.mul(gasLimit, '2')
+        try {
+          if (getCodeResult.result.result !== '0x') {
+            const estimateGasResult = await this.ethNetwork.multicastServers(
+              'eth_estimateGas',
+              estimateGasParams
+            )
+            this.log.warn(
+              'lookhere estimateGas estimateGasResult',
+              JSON.stringify(estimateGasResult)
+            )
+            gasLimit = bns.add(
+              parseInt(estimateGasResult.result.result, 16).toString(),
+              '0'
+            )
+            // Overestimate gas limit to reduce chance of failure when sending to a contract
+            if (currencyCode === this.currencyInfo.currencyCode) {
+              // Double gas limit estimate when sending ETH to contract
+              gasLimit = bns.mul(gasLimit, '2')
+            } else {
+              // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
+              gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
+                ? bns.mul(gasLimit, '2')
+                : bns.lt(gasLimit, defaultGasLimit)
+                ? defaultGasLimit
+                : gasLimit
+            }
           } else {
-            // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
-            gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
-              ? bns.mul(gasLimit, '2')
-              : bns.lt(gasLimit, defaultGasLimit)
-              ? defaultGasLimit
-              : gasLimit
+            gasLimit = '21000'
           }
-        } else {
-          gasLimit = '21000'
+        } catch (e) {
+          // If we know the address is a contract but estimateGas fails use the default token gas limit
+          if (
+            this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+              .default.gasLimit.tokenTransaction != null
+          )
+            gasLimit = this.currencyInfo.defaultSettings.otherSettings
+              .defaultNetworkFees.default.gasLimit.tokenTransaction
         }
 
         // Sanity check calculated value
