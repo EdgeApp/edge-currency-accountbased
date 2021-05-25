@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.59 (2021-05-25)
+
+- XRP: Remove bogus length checks from the XRP key import
+- FIO: Refactor SDK initialization so it's only started once per wallet
+
 # 0.7.58 (2021-05-12)
 
 - XRP: Change destination tag limit to 10 digits and less than UINT32
