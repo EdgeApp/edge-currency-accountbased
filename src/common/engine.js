@@ -311,7 +311,7 @@ export class CurrencyEngine {
     edgeTransaction: EdgeTransaction,
     lastSeenTime?: number
   ) {
-    this.log.warn('executing addTransaction: ', edgeTransaction.txid)
+    this.log('executing addTransaction: ', edgeTransaction.txid)
     // set otherParams if not already set
     if (!edgeTransaction.otherParams) {
       edgeTransaction.otherParams = {}
@@ -359,6 +359,7 @@ export class CurrencyEngine {
 
       this.transactionListDirty = true
       this.transactionsChangedArray.push(edgeTransaction)
+      this.log.warn('addTransaction new tx: ', edgeTransaction.txid)
     } else {
       // Already have this tx in the database. See if anything changed
       const transactionsArray = this.transactionList[currencyCode]
@@ -384,14 +385,14 @@ export class CurrencyEngine {
           edgeTx.blockHeight === 0
         ) {
           this.walletLocalData.numUnconfirmedSpendTxs--
-          this.walletLocalDataDirty = true
         }
         if (edgeTx.date !== edgeTransaction.date) {
           needsReSort = true
         }
         this.log.warn(
-          `Update transaction: ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
+          `addTransaction: update ${edgeTransaction.txid} height:${edgeTransaction.blockHeight}`
         )
+        this.walletLocalDataDirty = true
         this.updateTransaction(currencyCode, edgeTransaction, idx)
       } else {
         // this.log(sprintf('Old transaction. No Update: %s', tx.hash))
@@ -489,21 +490,6 @@ export class CurrencyEngine {
   async saveWalletLoop() {
     const disklet = this.walletLocalDisklet
     const promises = []
-    if (this.walletLocalDataDirty) {
-      this.log('walletLocalDataDirty. Saving...')
-      const jsonString = JSON.stringify(this.walletLocalData)
-      promises.push(
-        disklet
-          .setText(DATA_STORE_FILE, jsonString)
-          .then(() => {
-            this.walletLocalDataDirty = false
-          })
-          .catch(e => {
-            this.log.error('Error saving walletLocalData')
-            this.log.error(e)
-          })
-      )
-    }
     if (this.transactionListDirty) {
       await this.loadTransactions()
       this.log('transactionListDirty. Saving...')
@@ -530,8 +516,19 @@ export class CurrencyEngine {
       )
       await Promise.all(promises)
       this.transactionListDirty = false
-    } else {
-      await Promise.all(promises)
+    }
+    if (this.walletLocalDataDirty) {
+      this.log('walletLocalDataDirty. Saving...')
+      const jsonString = JSON.stringify(this.walletLocalData)
+      await disklet
+        .setText(DATA_STORE_FILE, jsonString)
+        .then(() => {
+          this.walletLocalDataDirty = false
+        })
+        .catch(e => {
+          this.log.error('Error saving walletLocalData')
+          this.log.error(e)
+        })
     }
   }
 
