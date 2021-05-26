@@ -58,7 +58,8 @@ export class EosPlugin extends CurrencyPlugin {
   ) {
     super(io, currencyInfo.pluginId, currencyInfo)
 
-    eosJsConfig.httpEndpoint = this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
+    eosJsConfig.httpEndpoint =
+      this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
     eosJsConfig.fetch = fetchCors
     this.eosServer = EosApi(eosJsConfig)
   }

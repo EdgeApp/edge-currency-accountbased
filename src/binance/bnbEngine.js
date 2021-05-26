@@ -347,8 +347,8 @@ export class BinanceEngine extends CurrencyEngine {
     switch (func) {
       case 'bnb_broadcastTx': {
         const promises = []
-        const broadcastServers = this.currencyInfo.defaultSettings.otherSettings
-          .binanceApiServers
+        const broadcastServers =
+          this.currencyInfo.defaultSettings.otherSettings.binanceApiServers
         for (const bnbServer of broadcastServers) {
           const endpoint = `${bnbServer}/api/v1/broadcast?sync=true`
           promises.push(
@@ -377,17 +377,18 @@ export class BinanceEngine extends CurrencyEngine {
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
       case 'bnb_getTransactions':
-        funcs = this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
-          server => async () => {
-            const result = await this.fetchGet(server + params[0])
-            if (typeof result !== 'object') {
-              const msg = `Invalid return value ${func} in ${server}`
-              this.log.error(msg)
-              throw new Error(msg)
+        funcs =
+          this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
+            server => async () => {
+              const result = await this.fetchGet(server + params[0])
+              if (typeof result !== 'object') {
+                const msg = `Invalid return value ${func} in ${server}`
+                this.log.error(msg)
+                throw new Error(msg)
+              }
+              return { server, result }
             }
-            return { server, result }
-          }
-        )
+          )
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
@@ -485,9 +486,8 @@ export class BinanceEngine extends CurrencyEngine {
     ErrorInsufficientFundsMoreBnb.name = 'ErrorInsufficientFundsMoreBnb'
 
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    const balanceBnb = this.walletLocalData.totalBalances[
-      this.currencyInfo.currencyCode
-    ]
+    const balanceBnb =
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
 
     let totalTxAmount = '0'
     totalTxAmount = bns.add(nativeAmount, nativeNetworkFee)

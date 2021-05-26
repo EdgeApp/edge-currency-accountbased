@@ -173,9 +173,8 @@ export class EthereumEngine extends CurrencyEngine {
 
     let jsonObj
     try {
-      const {
-        ethGasStationUrl
-      } = this.currencyInfo.defaultSettings.otherSettings
+      const { ethGasStationUrl } =
+        this.currencyInfo.defaultSettings.otherSettings
       if (ethGasStationUrl == null) return
       const { ethGasStationApiKey } = this.initOptions
       jsonObj = await this.ethNetwork.fetchGet(
@@ -465,8 +464,9 @@ export class EthereumEngine extends CurrencyEngine {
             this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
               .default.gasLimit.tokenTransaction != null
           )
-            gasLimit = this.currencyInfo.defaultSettings.otherSettings
-              .defaultNetworkFees.default.gasLimit.tokenTransaction
+            gasLimit =
+              this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+                .default.gasLimit.tokenTransaction
         }
 
         // Sanity check calculated value
@@ -491,9 +491,8 @@ export class EthereumEngine extends CurrencyEngine {
     }
     otherParams.gas = gasLimit
 
-    const nativeBalance = this.walletLocalData.totalBalances[
-      this.currencyInfo.currencyCode
-    ]
+    const nativeBalance =
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
 
     let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
     let totalTxAmount = '0'

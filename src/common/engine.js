@@ -231,9 +231,8 @@ export class CurrencyEngine {
       }
     }
     for (const currencyCode in this.transactionList) {
-      this.walletLocalData.numTransactions[currencyCode] = this.transactionList[
-        currencyCode
-      ].length
+      this.walletLocalData.numTransactions[currencyCode] =
+        this.transactionList[currencyCode].length
     }
   }
 
@@ -352,9 +351,8 @@ export class CurrencyEngine {
       }
       // add transaction to list of tx's, and array of changed transactions
       this.transactionList[currencyCode].push(edgeTransaction)
-      this.walletLocalData.numTransactions[currencyCode] = this.transactionList[
-        currencyCode
-      ].length
+      this.walletLocalData.numTransactions[currencyCode] =
+        this.transactionList[currencyCode].length
       this.walletLocalDataDirty = true
 
       this.transactionListDirty = true

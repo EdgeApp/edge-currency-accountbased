@@ -412,9 +412,8 @@ export class EosEngine extends CurrencyEngine {
       newHighestTxHeight >
       (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
-      this.walletLocalData.otherData.lastQueryActionSeq[
-        currencyCode
-      ] = newHighestTxHeight
+      this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] =
+        newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
@@ -487,9 +486,8 @@ export class EosEngine extends CurrencyEngine {
       newHighestTxHeight >
       (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
     ) {
-      this.walletLocalData.otherData.highestTxHeight[
-        currencyCode
-      ] = newHighestTxHeight
+      this.walletLocalData.otherData.highestTxHeight[currencyCode] =
+        newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
@@ -537,86 +535,95 @@ export class EosEngine extends CurrencyEngine {
       case 'getIncomingTransactions':
       case 'getOutgoingTransactions': {
         const { direction, acct, currencyCode, skip, limit, low } = params[0]
-        const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-          server => async () => {
-            const url =
-              server +
-              `/v2/history/get_actions?transfer.${
-                direction === 'outgoing' ? 'from' : 'to'
-              }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-            const response = await this.eosJsConfig.fetch(url)
-            const parsedUrl = parse(url, {}, true)
-            if (!response.ok) {
-              this.log.error('multicast in / out tx server error: ', server)
-              throw new Error(
-                `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+        const hyperionFuncs =
+          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+            server => async () => {
+              const url =
+                server +
+                `/v2/history/get_actions?transfer.${
+                  direction === 'outgoing' ? 'from' : 'to'
+                }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+              const response = await this.eosJsConfig.fetch(url)
+              const parsedUrl = parse(url, {}, true)
+              if (!response.ok) {
+                this.log.error('multicast in / out tx server error: ', server)
+                throw new Error(
+                  `The server returned error code ${response.status} for ${parsedUrl.hostname}`
+                )
+              }
+              const result = asHyperionGetTransactionResponse(
+                await response.json()
               )
+              return { server, result }
             }
-            const result = asHyperionGetTransactionResponse(
-              await response.json()
-            )
-            return { server, result }
-          }
-        )
-        const dfuseFuncs = this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
-          server => async () => {
-            if (this.currencyInfo.currencyCode !== 'EOS')
-              throw new Error('dfuse only supports EOS')
-            const response = await this.eosJsConfig.fetch(`${server}/graphql`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                query: dfuseGetTransactionsQueryString,
-                variables: {
-                  query: `${
-                    direction === 'outgoing' ? 'auth' : 'receiver'
-                  }:${acct} action:transfer`,
-                  limit,
-                  low
-                }
-              })
-            })
-            const responseJson = asEither(
-              asDfuseGetTransactionsResponse,
-              asDfuseGetTransactionsErrorResponse
-            )(await response.json())
-            if (responseJson.errors != null) {
-              this.log.warn(
-                `dfuse ${server} get transactions failed: ${JSON.stringify(
-                  responseJson.errors[0]
-                )}`
-              )
-              throw new Error(responseJson.errors[0].message)
-            }
-            // Convert txs to Hyperion
-            const actions = responseJson.data.searchTransactionsBackward.results.map(
-              tx =>
-                asHyperionTransaction({
-                  trx_id: tx.trace.id,
-                  '@timestamp': tx.trace.block.timestamp,
-                  block_num: tx.trace.block.num,
-                  act: {
-                    authorization: tx.trace.matchingActions[0].authorization[0],
-                    data: {
-                      from: tx.trace.matchingActions[0].json.from,
-                      to: tx.trace.matchingActions[0].json.to,
-                      // quantity: "0.0001 EOS"
-                      amount: Number(
-                        tx.trace.matchingActions[0].json.quantity.split(' ')[0]
-                      ),
-                      symbol: tx.trace.matchingActions[0].json.quantity.split(
-                        ' '
-                      )[1],
-                      memo: tx.trace.matchingActions[0].json.memo
+          )
+        const dfuseFuncs =
+          this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+            server => async () => {
+              if (this.currencyInfo.currencyCode !== 'EOS')
+                throw new Error('dfuse only supports EOS')
+              const response = await this.eosJsConfig.fetch(
+                `${server}/graphql`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    query: dfuseGetTransactionsQueryString,
+                    variables: {
+                      query: `${
+                        direction === 'outgoing' ? 'auth' : 'receiver'
+                      }:${acct} action:transfer`,
+                      limit,
+                      low
                     }
-                  }
-                })
-            )
-            return { server, result: { actions } }
-          }
-        )
+                  })
+                }
+              )
+              const responseJson = asEither(
+                asDfuseGetTransactionsResponse,
+                asDfuseGetTransactionsErrorResponse
+              )(await response.json())
+              if (responseJson.errors != null) {
+                this.log.warn(
+                  `dfuse ${server} get transactions failed: ${JSON.stringify(
+                    responseJson.errors[0]
+                  )}`
+                )
+                throw new Error(responseJson.errors[0].message)
+              }
+              // Convert txs to Hyperion
+              const actions =
+                responseJson.data.searchTransactionsBackward.results.map(tx =>
+                  asHyperionTransaction({
+                    trx_id: tx.trace.id,
+                    '@timestamp': tx.trace.block.timestamp,
+                    block_num: tx.trace.block.num,
+                    act: {
+                      authorization:
+                        tx.trace.matchingActions[0].authorization[0],
+                      data: {
+                        from: tx.trace.matchingActions[0].json.from,
+                        to: tx.trace.matchingActions[0].json.to,
+                        // quantity: "0.0001 EOS"
+                        amount: Number(
+                          tx.trace.matchingActions[0].json.quantity.split(
+                            ' '
+                          )[0]
+                        ),
+                        symbol:
+                          tx.trace.matchingActions[0].json.quantity.split(
+                            ' '
+                          )[1],
+                        memo: tx.trace.matchingActions[0].json.memo
+                      }
+                    }
+                  })
+                )
+              return { server, result: { actions } }
+            }
+          )
         out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
@@ -625,112 +632,113 @@ export class EosEngine extends CurrencyEngine {
         const body = JSON.stringify({
           public_key: params[0]
         })
-        const hyperionFuncs = this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-          server => async () => {
-            const authorizersReply = await this.eosJsConfig.fetch(
-              `${server}/v1/history/get_key_accounts`,
-              {
-                method: 'POST',
-                body,
-                headers: {
-                  'Content-Type': 'application/json'
+        const hyperionFuncs =
+          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+            server => async () => {
+              const authorizersReply = await this.eosJsConfig.fetch(
+                `${server}/v1/history/get_key_accounts`,
+                {
+                  method: 'POST',
+                  body,
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                }
+              )
+              if (!authorizersReply.ok) {
+                throw new Error(
+                  `${server} get_key_accounts failed with ${JSON.stringify(
+                    authorizersReply
+                  )}`
+                )
+              }
+              const authorizersData = await authorizersReply.json()
+              // verify array order (chronological)?
+              if (!authorizersData.account_names[0]) {
+                // indicates no activation has occurred
+                // set flag to indicate whether has hit activation API
+                // only do once per login (makeEngine)
+                if (
+                  this.currencyInfo.defaultSettings.otherSettings
+                    .createAccountViaSingleApiEndpoints &&
+                  this.currencyInfo.defaultSettings.otherSettings
+                    .createAccountViaSingleApiEndpoints.length > 0
+                ) {
+                  const { publicKey, ownerPublicKey } = this.walletInfo.keys
+
+                  const { createAccountViaSingleApiEndpoints } =
+                    this.currencyInfo.defaultSettings.otherSettings
+                  const request = await this.fetchCors(
+                    createAccountViaSingleApiEndpoints[0],
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        ownerPublicKey,
+                        activePublicKey: publicKey
+                      }),
+                      headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  )
+                  const response = await request.json()
+                  const { accountName, transactionId } = response
+                  if (!accountName) throw new Error(response)
+                  this.log.warn(
+                    `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
+                  )
+                }
+                throw new Error(
+                  `${server} could not find account with public key: ${params[0]}`
+                )
+              }
+              const accountName = authorizersData.account_names[0]
+              const getAccountBody = JSON.stringify({
+                account_name: accountName
+              })
+              const accountReply = await this.eosJsConfig.fetch(
+                `${server}/v1/chain/get_account`,
+                {
+                  method: 'POST',
+                  body: getAccountBody
+                }
+              )
+              if (!accountReply.ok) {
+                throw new Error(
+                  `${server} get_account failed with ${authorizersReply}`
+                )
+              }
+              return { server, result: await accountReply.json() }
+            }
+          )
+        // dfuse API is EOS only
+        const dfuseFuncs =
+          this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+            server => async () => {
+              if (this.currencyInfo.currencyCode !== 'EOS')
+                throw new Error('dfuse only supports EOS')
+              const response = await this.eosJsConfig.fetch(
+                `${server}/v0/state/key_accounts?public_key=${params[0]}`
+              )
+              if (!response.ok) {
+                throw new Error(
+                  `${server} get_account failed with ${response.code}`
+                )
+              }
+              const responseJson = asDfuseGetKeyAccountsResponse(
+                await response.json()
+              )
+              if (responseJson.account_names.length === 0)
+                throw new Error('dfuse returned empty array')
+              return {
+                server,
+                result: {
+                  account_name: responseJson.account_names[0]
                 }
               }
-            )
-            if (!authorizersReply.ok) {
-              throw new Error(
-                `${server} get_key_accounts failed with ${JSON.stringify(
-                  authorizersReply
-                )}`
-              )
             }
-            const authorizersData = await authorizersReply.json()
-            // verify array order (chronological)?
-            if (!authorizersData.account_names[0]) {
-              // indicates no activation has occurred
-              // set flag to indicate whether has hit activation API
-              // only do once per login (makeEngine)
-              if (
-                this.currencyInfo.defaultSettings.otherSettings
-                  .createAccountViaSingleApiEndpoints &&
-                this.currencyInfo.defaultSettings.otherSettings
-                  .createAccountViaSingleApiEndpoints.length > 0
-              ) {
-                const { publicKey, ownerPublicKey } = this.walletInfo.keys
-
-                const {
-                  createAccountViaSingleApiEndpoints
-                } = this.currencyInfo.defaultSettings.otherSettings
-                const request = await this.fetchCors(
-                  createAccountViaSingleApiEndpoints[0],
-                  {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      ownerPublicKey,
-                      activePublicKey: publicKey
-                    }),
-                    headers: {
-                      Accept: 'application/json',
-                      'Content-Type': 'application/json'
-                    }
-                  }
-                )
-                const response = await request.json()
-                const { accountName, transactionId } = response
-                if (!accountName) throw new Error(response)
-                this.log.warn(
-                  `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
-                )
-              }
-              throw new Error(
-                `${server} could not find account with public key: ${params[0]}`
-              )
-            }
-            const accountName = authorizersData.account_names[0]
-            const getAccountBody = JSON.stringify({
-              account_name: accountName
-            })
-            const accountReply = await this.eosJsConfig.fetch(
-              `${server}/v1/chain/get_account`,
-              {
-                method: 'POST',
-                body: getAccountBody
-              }
-            )
-            if (!accountReply.ok) {
-              throw new Error(
-                `${server} get_account failed with ${authorizersReply}`
-              )
-            }
-            return { server, result: await accountReply.json() }
-          }
-        )
-        // dfuse API is EOS only
-        const dfuseFuncs = this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
-          server => async () => {
-            if (this.currencyInfo.currencyCode !== 'EOS')
-              throw new Error('dfuse only supports EOS')
-            const response = await this.eosJsConfig.fetch(
-              `${server}/v0/state/key_accounts?public_key=${params[0]}`
-            )
-            if (!response.ok) {
-              throw new Error(
-                `${server} get_account failed with ${response.code}`
-              )
-            }
-            const responseJson = asDfuseGetKeyAccountsResponse(
-              await response.json()
-            )
-            if (responseJson.account_names.length === 0)
-              throw new Error('dfuse returned empty array')
-            return {
-              server,
-              result: {
-                account_name: responseJson.account_names[0]
-              }
-            }
-          }
-        )
+          )
         out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
@@ -752,10 +760,8 @@ export class EosEngine extends CurrencyEngine {
         break
       }
       case 'transact': {
-        const {
-          eosFuelServers,
-          eosNodes
-        } = this.currencyInfo.defaultSettings.otherSettings
+        const { eosFuelServers, eosNodes } =
+          this.currencyInfo.defaultSettings.otherSettings
         const randomNodes =
           eosFuelServers.length > 0
             ? pickRandom(eosFuelServers, 30)
@@ -856,9 +862,8 @@ export class EosEngine extends CurrencyEngine {
                         nativeAmount
                       )
                     ) {
-                      this.walletLocalData.totalBalances[
-                        currencyCode
-                      ] = nativeAmount
+                      this.walletLocalData.totalBalances[currencyCode] =
+                        nativeAmount
                       this.walletLocalDataDirty = true
                       this.currencyEngineCallbacks.onBalanceChanged(
                         currencyCode,
@@ -924,12 +929,8 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const {
-      edgeSpendInfo,
-      currencyCode,
-      nativeBalance,
-      denom
-    } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
+      super.makeSpend(edgeSpendInfoIn)
     const { defaultSettings } = this.currencyInfo
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (!tokenInfo) throw new Error('Unable to find token info')

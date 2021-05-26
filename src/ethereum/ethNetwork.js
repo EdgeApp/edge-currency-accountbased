@@ -172,9 +172,8 @@ export class EthereumNetwork {
     this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
     this.checkTokenBalRpc = this.checkTokenBalRpc.bind(this)
     this.checkTokenBal = this.checkTokenBal.bind(this)
-    this.processEthereumNetworkUpdate = this.processEthereumNetworkUpdate.bind(
-      this
-    )
+    this.processEthereumNetworkUpdate =
+      this.processEthereumNetworkUpdate.bind(this)
   }
 
   processEtherscanTransaction(
@@ -599,9 +598,8 @@ export class EthereumNetwork {
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     let keyParam = ''
     const { blockchairApiKey } = this.ethEngine.initOptions
-    const {
-      blockchairApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
+    const { blockchairApiServers } =
+      this.currencyInfo.defaultSettings.otherSettings
     if (includeKey && blockchairApiKey) {
       keyParam = `&key=${blockchairApiKey}`
     }
@@ -611,9 +609,8 @@ export class EthereumNetwork {
 
   async fetchPostAmberdataRpc(method: string, params: string[] = []) {
     const { amberdataApiKey } = this.ethEngine.initOptions
-    const {
-      amberdataRpcServers
-    } = this.currencyInfo.defaultSettings.otherSettings
+    const { amberdataRpcServers } =
+      this.currencyInfo.defaultSettings.otherSettings
     let apiKey = ''
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
@@ -627,8 +624,8 @@ export class EthereumNetwork {
     }
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
-        'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
-          .otherSettings.amberDataBlockchainId
+        'x-amberdata-blockchain-id':
+          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId
       },
       method: 'POST',
       body: JSON.stringify(body)
@@ -645,14 +642,13 @@ export class EthereumNetwork {
 
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey } = this.ethEngine.initOptions
-    const {
-      amberdataApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
+    const { amberdataApiServers } =
+      this.currencyInfo.defaultSettings.otherSettings
     const url = `${amberdataApiServers[0]}${path}`
     return this.fetchGetAmberdata(url, {
       headers: {
-        'x-amberdata-blockchain-id': this.currencyInfo.defaultSettings
-          .otherSettings.amberDataBlockchainId,
+        'x-amberdata-blockchain-id':
+          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
         'x-api-key': amberdataApiKey
       }
     })
@@ -673,9 +669,8 @@ export class EthereumNetwork {
     useApiKey: boolean
   ) {
     const { alethioApiKey } = this.ethEngine.initOptions
-    const {
-      alethioApiServers
-    } = this.currencyInfo.defaultSettings.otherSettings
+    const { alethioApiServers } =
+      this.currencyInfo.defaultSettings.otherSettings
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
     if (alethioApiKey && useApiKey) {
       return this.fetchGet(url, {
@@ -1373,10 +1368,8 @@ export class EthereumNetwork {
     useApiKey: boolean
   ): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
-    const {
-      native,
-      token
-    } = this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
+    const { native, token } =
+      this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
     let linkNext
     let cleanedResponseObj: FetchGetAlethio
     const allTransactions: EdgeTransaction[] = []
@@ -1413,9 +1406,8 @@ export class EthereumNetwork {
 
       for (const tokenTransfer of cleanedResponseObj.data) {
         try {
-          const cleanTokenTransfer = asAlethioAccountsTokenTransfer(
-            tokenTransfer
-          )
+          const cleanTokenTransfer =
+            asAlethioAccountsTokenTransfer(tokenTransfer)
           const txBlockheight = cleanTokenTransfer.attributes.globalRank[0]
           if (txBlockheight > startBlock) {
             let txCurrencyCode = this.currencyInfo.currencyCode
@@ -2138,9 +2130,8 @@ export class EthereumNetwork {
           for (const tx: EdgeTransaction of tuple.edgeTransactions) {
             this.ethEngine.addTransaction(tk, tx)
           }
-          this.ethEngine.walletLocalData.lastTransactionQueryHeight[
-            tk
-          ] = preUpdateBlockHeight
+          this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
+            preUpdateBlockHeight
           this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
         }
       }

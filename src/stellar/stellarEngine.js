@@ -376,12 +376,8 @@ export class StellarEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const {
-      edgeSpendInfo,
-      currencyCode,
-      nativeBalance,
-      denom
-    } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
+      super.makeSpend(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')

@@ -154,9 +154,10 @@ export class FioEngine extends CurrencyEngine {
             })
             params.maxFee = fee
             const res = await this.multicastServers(actionName, params)
-            const renewedAddress = this.walletLocalData.otherData.fioAddresses.find(
-              ({ name }) => name === params.fioAddress
-            )
+            const renewedAddress =
+              this.walletLocalData.otherData.fioAddresses.find(
+                ({ name }) => name === params.fioAddress
+              )
             if (renewedAddress) {
               renewedAddress.expiration = res.expiration
               this.localDataDirty()
@@ -178,9 +179,10 @@ export class FioEngine extends CurrencyEngine {
                 feeCollected: res.fee_collected
               }
             }
-            const addressAlreadyAdded = this.walletLocalData.otherData.fioAddresses.find(
-              ({ name }) => name === params.fioAddress
-            )
+            const addressAlreadyAdded =
+              this.walletLocalData.otherData.fioAddresses.find(
+                ({ name }) => name === params.fioAddress
+              )
             if (!addressAlreadyAdded) {
               this.walletLocalData.otherData.fioAddresses.push({
                 name: params.fioAddress,
@@ -196,9 +198,10 @@ export class FioEngine extends CurrencyEngine {
             })
             params.maxFee = fee
             const res = await this.multicastServers(actionName, params)
-            const renewedDomain = this.walletLocalData.otherData.fioDomains.find(
-              ({ name }) => name === params.fioDomain
-            )
+            const renewedDomain =
+              this.walletLocalData.otherData.fioDomains.find(
+                ({ name }) => name === params.fioDomain
+              )
             if (renewedDomain) {
               renewedDomain.expiration = res.expiration
               this.localDataDirty()
@@ -222,9 +225,10 @@ export class FioEngine extends CurrencyEngine {
           }
           case 'transferFioDomain': {
             const res = await this.multicastServers(actionName, params)
-            const transferredDomainIndex = this.walletLocalData.otherData.fioDomains.findIndex(
-              ({ name }) => name === params.fioDomain
-            )
+            const transferredDomainIndex =
+              this.walletLocalData.otherData.fioDomains.findIndex(
+                ({ name }) => name === params.fioDomain
+              )
             if (transferredDomainIndex) {
               this.walletLocalData.otherData.fioDomains.splice(
                 transferredDomainIndex,
@@ -236,9 +240,10 @@ export class FioEngine extends CurrencyEngine {
           }
           case 'transferFioAddress': {
             const res = await this.multicastServers(actionName, params)
-            const transferredAddressIndex = this.walletLocalData.otherData.fioAddresses.findIndex(
-              ({ name }) => name === params.fioAddress
-            )
+            const transferredAddressIndex =
+              this.walletLocalData.otherData.fioAddresses.findIndex(
+                ({ name }) => name === params.fioAddress
+              )
             if (transferredAddressIndex) {
               this.walletLocalData.otherData.fioAddresses.splice(
                 transferredAddressIndex,
@@ -759,8 +764,8 @@ export class FioEngine extends CurrencyEngine {
       )
       const preparedTrx = await asyncWaterfall(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
-            this.fioApiRequest(apiUrl, actionName, params, true)
+          this.currencyInfo.defaultSettings.apiUrls.map(
+            apiUrl => () => this.fioApiRequest(apiUrl, actionName, params, true)
           )
         )
       )
@@ -807,8 +812,8 @@ export class FioEngine extends CurrencyEngine {
     } else {
       res = await asyncWaterfall(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => () =>
-            this.fioApiRequest(apiUrl, actionName, params)
+          this.currencyInfo.defaultSettings.apiUrls.map(
+            apiUrl => () => this.fioApiRequest(apiUrl, actionName, params)
           )
         )
       )
@@ -864,10 +869,11 @@ export class FioEngine extends CurrencyEngine {
         areAddressesChanged = true
       } else {
         for (const fioAddress of result.fio_addresses) {
-          const existedFioAddress = this.walletLocalData.otherData.fioAddresses.find(
-            existedFioAddress =>
-              existedFioAddress.name === fioAddress.fio_address
-          )
+          const existedFioAddress =
+            this.walletLocalData.otherData.fioAddresses.find(
+              existedFioAddress =>
+                existedFioAddress.name === fioAddress.fio_address
+            )
           if (existedFioAddress) {
             if (existedFioAddress.expiration !== fioAddress.expiration) {
               areAddressesChanged = true
@@ -903,9 +909,10 @@ export class FioEngine extends CurrencyEngine {
         areDomainsChanged = true
       } else {
         for (const fioDomain of result.fio_domains) {
-          const existedFioDomain = this.walletLocalData.otherData.fioDomains.find(
-            existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
-          )
+          const existedFioDomain =
+            this.walletLocalData.otherData.fioDomains.find(
+              existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
+            )
           if (existedFioDomain) {
             if (existedFioDomain.expiration !== fioDomain.expiration) {
               areDomainsChanged = true
