@@ -9,7 +9,6 @@ import {
   type EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { type EosJsConfig, type EosSettings } from './eosTypes'
 
@@ -81,8 +80,6 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
   denominations,
-  symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
   metaTokens: [
     {
       name: 'EOS',

@@ -6,7 +6,6 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
@@ -77,8 +76,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'F'
     }
   ],
-  symbolImage: `${imageServerUrl}/fantom-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/fantom-logo-solo-64.png`,
   metaTokens: [
     // Array of objects describing the supported metatokens
     {
@@ -90,8 +87,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000'
         }
       ],
-      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a',
-      symbolImage: `${imageServerUrl}/fusdt-logo-solo-64.png`
+      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a'
     }
   ]
 }

@@ -9,7 +9,6 @@ import {
   type EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { type EosJsConfig, type EosSettings } from './eosTypes'
 
@@ -78,8 +77,6 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
   denominations,
-  symbolImage: `${imageServerUrl}/wax-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/wax-logo-solo-64.png`,
   metaTokens: [
     {
       name: 'WAX',

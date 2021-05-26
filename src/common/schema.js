@@ -28,7 +28,6 @@ export const CurrencyInfoSchema = {
         required: ['name', 'multiplier']
       }
     },
-    symbolImage: { type: 'string' },
     metaTokens: {
       type: 'array',
       items: {
@@ -48,8 +47,7 @@ export const CurrencyInfoSchema = {
               required: ['name', 'multiplier']
             }
           },
-          contractAddress: { type: 'string' },
-          symbolImage: { type: 'string' }
+          contractAddress: { type: 'string' }
         },
         required: ['currencyCode', 'currencyName', 'denominations']
       }
@@ -61,7 +59,6 @@ export const CurrencyInfoSchema = {
     'currencyName',
     'defaultSettings',
     'denominations',
-    'symbolImage',
     'addressExplorer',
     'transactionExplorer'
   ]
