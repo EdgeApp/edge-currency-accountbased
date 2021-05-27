@@ -427,6 +427,15 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
             )
           }
 
+          if (data.error === 'Already registered') {
+            throw new FioError(
+              data.error,
+              result.status,
+              fioRegApiErrorCodes.ALREADY_REGISTERED,
+              data
+            )
+          }
+
           throw new Error(data.error)
         }
         return result.json()
