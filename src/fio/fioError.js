@@ -5,6 +5,8 @@ import { currencyInfo } from './fioInfo.js'
 export const fioApiErrorCodes = [400, 403, 404]
 export const fioRegApiErrorCodes: { [string]: string } = {
   INVALID_FIO_NAME: currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS,
+  ALREADY_REGISTERED:
+    currencyInfo.defaultSettings.errorCodes.ALREADY_REGISTERED,
   DOMAIN_IS_NOT_REGISTERED:
     currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST,
   DOMAIN_IS_NOT_PUBLIC:
