@@ -1,6 +1,7 @@
 // @flow
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
+import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { bns } from 'biggystring'
 import { validateMnemonic } from 'bip39'
 import {
@@ -134,6 +135,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { fetchCors = io.fetch } = io
   const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
     initOptions
+  const connection = new FIOSDK('', '', '', fetchCors, undefined, tpid)
 
   let toolsPromise: Promise<FioPlugin>
   function makeCurrencyTools(): Promise<FioPlugin> {
@@ -151,14 +153,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
           let out
 
-          const connection = new FIOSDK(
-            '',
-            '',
-            apiUrl,
-            fetchCors,
-            undefined,
-            tpid
-          )
+          Transactions.baseUrl = apiUrl
 
           try {
             out = await connection.genericAction(actionName, params)
