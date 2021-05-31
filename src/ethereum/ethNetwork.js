@@ -611,6 +611,10 @@ export class EthereumNetwork {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const { amberdataRpcServers } =
       this.currencyInfo.defaultSettings.otherSettings
+    if (amberdataRpcServers.length === 0)
+      throw new Error(
+        `No amberdataRpcServers for ${this.currencyInfo.currencyCode}`
+      )
     let apiKey = ''
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
@@ -644,6 +648,10 @@ export class EthereumNetwork {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const { amberdataApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
+    if (amberdataApiServers.length === 0)
+      throw new Error(
+        `No amberdataApiServers for ${this.currencyInfo.currencyCode}`
+      )
     const url = `${amberdataApiServers[0]}${path}`
     return this.fetchGetAmberdata(url, {
       headers: {
