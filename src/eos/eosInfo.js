@@ -44,6 +44,15 @@ const denominations = [
 ]
 
 const otherSettings: EosSettings = {
+  nativeToken: {
+    name: 'EOS',
+    currencyName: 'EOS',
+    multiplier: '10000',
+    symbol: 'E',
+    currencyCode: 'EOS',
+    contractAddress: 'eosio.token',
+    denominations
+  },
   eosActivationServers: ['https://eospay.edge.app'],
   eosHyperionNodes: ['https://api.eossweden.org'],
   eosNodes: [
@@ -83,17 +92,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   denominations,
   symbolImage: `${imageServerUrl}/eos-logo-solo-64.png`,
   symbolImageDarkMono: `${imageServerUrl}/eos-logo-solo-64.png`,
-  metaTokens: [
-    {
-      name: 'EOS',
-      currencyName: 'EOS',
-      multiplier: '10000',
-      symbol: 'E',
-      currencyCode: 'EOS',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
