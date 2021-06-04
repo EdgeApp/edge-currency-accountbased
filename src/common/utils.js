@@ -288,8 +288,6 @@ function getEdgeInfoServer() {
   return 'https://info1.edgesecure.co:8444'
 }
 
-const imageServerUrl = 'https://content.edge.app'
-
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
@@ -366,6 +364,5 @@ export {
   getEdgeInfoServer,
   promiseAny,
   promiseNy,
-  timeout,
-  imageServerUrl
+  timeout
 }

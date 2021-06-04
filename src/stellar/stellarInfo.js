@@ -3,7 +3,6 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { type StellarSettings } from './stellarTypes.js'
 
 const otherSettings: StellarSettings = {
@@ -34,7 +33,5 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: '*'
     }
   ],
-  symbolImage: `${imageServerUrl}/stellar-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/stellar-logo-solo-64.png`,
   metaTokens: []
 }

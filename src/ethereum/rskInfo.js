@@ -6,7 +6,6 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { imageServerUrl } from './../common/utils.js'
 import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
@@ -77,8 +76,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'RBTC'
     }
   ],
-  symbolImage: `${imageServerUrl}/rsk-logo-solo-64.png`, // TODO: add logo
-  symbolImageDarkMono: `${imageServerUrl}/rsk-logo-solo-64.png`,
   metaTokens: [
     // Array of objects describing the supported metatokens
     {
@@ -90,8 +87,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5',
-      symbolImage: `${imageServerUrl}/rif-logo-solo-64.png` // TODO: add rif logo
+      contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
     }
   ]
 }

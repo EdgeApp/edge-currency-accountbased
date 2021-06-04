@@ -1,7 +1,6 @@
 // @flow
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { type TezosSettings } from './tezosTypes.js'
 
 const otherSettings: TezosSettings = {
@@ -57,7 +56,5 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 't'
     }
   ],
-  symbolImage: `${imageServerUrl}/tezos-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/tezos-logo-solo-64.png`,
   metaTokens: []
 }

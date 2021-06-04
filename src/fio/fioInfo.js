@@ -3,8 +3,6 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
-
 const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
@@ -70,7 +68,5 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'ᵮ'
     }
   ],
-  symbolImage: `${imageServerUrl}/fio-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/fio-logo-solo-64.png`,
   metaTokens: []
 }

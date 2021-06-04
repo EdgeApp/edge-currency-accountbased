@@ -6,7 +6,6 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { imageServerUrl } from '../common/utils'
 import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
@@ -102,8 +101,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mΞ'
     }
   ],
-  symbolImage: `${imageServerUrl}/ethereum-classic-logo-solo-64.png`,
-  symbolImageDarkMono: `${imageServerUrl}/ethereum-classic-logo-solo-64.png`,
   metaTokens: [
     // Array of objects describing the supported metatokens
   ]
