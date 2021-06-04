@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.61 (2021-06-03)
+
+- FIO: Add ALREADY_REGISTERED error rype
+- Prevent unnecessary fetch calls when amberdata server lists are empty
+- Remove icon URLs
+
 # 0.7.60 (2021-05-25)
 
 - Fix a possible race condition where the last queried block height is saved but the actual transactions are not
