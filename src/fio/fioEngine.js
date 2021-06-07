@@ -2,6 +2,8 @@
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
+import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
+import { Constants as FioConstants } from '@fioprotocol/fiosdk/lib/utils/constants'
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
@@ -85,7 +87,8 @@ export class FioEngine extends CurrencyEngine {
   otherMethods: Object
   tpid: string
   recentFioFee: RecentFioFee
-  fiosdkByApiUrl: { string: FIOSDK }
+  fioSdk: FIOSDK
+  fioSdkPreparedTrx: FIOSDK
 
   localDataDirty() {
     this.walletLocalDataDirty = true
@@ -103,7 +106,8 @@ export class FioEngine extends CurrencyEngine {
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
-    this.fiosdkByApiUrl = {}
+
+    this.fioSdkInit()
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -316,23 +320,57 @@ export class FioEngine extends CurrencyEngine {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
+
+    await this.checkAbiAccounts()
   }
 
-  getFIOSDK(apiUrl: string, returnPreparedTrx: boolean = false): FIOSDK {
-    const fiosdkKey = `${returnPreparedTrx ? '_' : ''}${apiUrl}`
-    if (!this.fiosdkByApiUrl[fiosdkKey]) {
-      this.fiosdkByApiUrl[fiosdkKey] = new FIOSDK(
-        this.walletInfo.keys.fioKey,
-        this.walletInfo.keys.publicKey,
-        apiUrl,
-        this.fetchCors,
-        undefined,
-        this.tpid,
-        returnPreparedTrx
-      )
-    }
+  fioSdkInit() {
+    const baseUrl = shuffleArray(
+      this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => apiUrl)
+    )[0]
 
-    return this.fiosdkByApiUrl[fiosdkKey]
+    this.fioSdk = new FIOSDK(
+      this.walletInfo.keys.fioKey,
+      this.walletInfo.keys.publicKey,
+      baseUrl,
+      this.fetchCors,
+      undefined,
+      this.tpid
+    )
+    this.fioSdkPreparedTrx = new FIOSDK(
+      this.walletInfo.keys.fioKey,
+      this.walletInfo.keys.publicKey,
+      '',
+      this.fetchCors,
+      undefined,
+      this.tpid,
+      true
+    )
+  }
+
+  async checkAbiAccounts(): Promise<void> {
+    if (Transactions.abiMap.size === FioConstants.rawAbiAccountName.length)
+      return
+    await asyncWaterfall(
+      shuffleArray(
+        this.currencyInfo.defaultSettings.apiUrls.map(
+          apiUrl => () => this.loadAbiAccounts(apiUrl)
+        )
+      )
+    )
+  }
+
+  async loadAbiAccounts(apiUrl: string) {
+    this.setFioSdkBaseUrl(apiUrl)
+    for (const accountName of FioConstants.rawAbiAccountName) {
+      if (Transactions.abiMap.get(accountName)) continue
+      const response = await this.fioSdk.getAbi(accountName)
+      Transactions.abiMap.set(response.account_name, response)
+    }
+  }
+
+  setFioSdkBaseUrl(apiUrl: string) {
+    Transactions.baseUrl = apiUrl
   }
 
   // Poll on the blockheight
@@ -507,10 +545,9 @@ export class FioEngine extends CurrencyEngine {
       return false
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let lastActionSeqNumber = 0
-    const fioSDK = this.getFIOSDK(
-      this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex]
+    const actor = this.fioSdk.transactions.getActor(
+      this.walletInfo.keys.publicKey
     )
-    const actor = fioSDK.transactions.getActor(this.walletInfo.keys.publicKey)
     try {
       const lastActionObject = await this.requestHistory(
         historyNodeIndex,
@@ -651,17 +688,18 @@ export class FioEngine extends CurrencyEngine {
     params?: any,
     returnPreparedTrx: boolean = false
   ): Promise<any | PreparedTrx> {
-    const fioSDK = this.getFIOSDK(apiUrl, returnPreparedTrx)
+    const fioSdk = returnPreparedTrx ? this.fioSdkPreparedTrx : this.fioSdk
+    this.setFioSdkBaseUrl(apiUrl)
 
     let res
 
     try {
       switch (actionName) {
         case 'getChainInfo':
-          res = await fioSDK.transactions.getChainInfo()
+          res = await fioSdk.transactions.getChainInfo()
           break
         default:
-          res = await fioSDK.genericAction(actionName, params)
+          res = await fioSdk.genericAction(actionName, params)
       }
     } catch (e) {
       // handle FIO API error
@@ -705,7 +743,7 @@ export class FioEngine extends CurrencyEngine {
     endpoint: string,
     preparedTrx: PreparedTrx
   ) {
-    const fioSDK = this.getFIOSDK(apiUrl)
+    this.setFioSdkBaseUrl(apiUrl)
     let res
 
     this.log.warn(
@@ -714,7 +752,7 @@ export class FioEngine extends CurrencyEngine {
       )} - apiUrl: ${apiUrl}`
     )
     try {
-      res = await fioSDK.executePreparedTrx(endpoint, preparedTrx)
+      res = await this.fioSdk.executePreparedTrx(endpoint, preparedTrx)
       this.log.warn(
         `executePreparedTrx. res: ${JSON.stringify(
           res
