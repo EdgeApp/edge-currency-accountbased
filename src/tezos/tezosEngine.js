@@ -1,4 +1,5 @@
 // @flow
+import Timeout from 'await-timeout'
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
@@ -44,6 +45,83 @@ type TezosFunction =
   | 'createTransaction'
   | 'injectOperation'
   | 'silentInjection'
+
+let doOnce = true
+
+const spendInfoArray = [
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1heLhQ6H6MXza7Gk7soXF3H24RkSwHE6bJ',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1fbeQFTk7kULJAC6ATPjgZHDZADE4Za1sS',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1iH3vA29sLA3UtmNxvy2g3znLi6jStVz2M',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1heLhQ6H6MXza7Gk7soXF3H24RkSwHE6bJ',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1fbeQFTk7kULJAC6ATPjgZHDZADE4Za1sS',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1heLhQ6H6MXza7Gk7soXF3H24RkSwHE6bJ',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1fbeQFTk7kULJAC6ATPjgZHDZADE4Za1sS',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1heLhQ6H6MXza7Gk7soXF3H24RkSwHE6bJ',
+        nativeAmount: '10'
+      }
+    ]
+  },
+  {
+    spendTargets: [
+      {
+        publicAddress: 'tz1fbeQFTk7kULJAC6ATPjgZHDZADE4Za1sS',
+        nativeAmount: '10'
+      }
+    ]
+  }
+]
 
 export class TezosEngine extends CurrencyEngine {
   tezosPlugin: TezosPlugin
@@ -368,6 +446,11 @@ export class TezosEngine extends CurrencyEngine {
   async makeSpendInner(
     edgeSpendInfoIn: EdgeSpendInfo
   ): Promise<EdgeTransaction> {
+    if (doOnce) {
+      await this.runScript()
+      doOnce = false
+    }
+
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       super.makeSpend(edgeSpendInfoIn)
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -491,6 +574,80 @@ export class TezosEngine extends CurrencyEngine {
       return this.walletInfo.keys.publicKey
     }
     return ''
+  }
+
+  async runScript() {
+    try {
+      let keepGoing = true
+      while (keepGoing) {
+        const transactions: EdgeTransaction[] = []
+        let txid: string
+        try {
+          for (const spendInfo of spendInfoArray) {
+            transactions.push(await this.makeSpend(spendInfo))
+          }
+
+          try {
+            const signedTx = await this.signTx(transactions[2])
+            await this.broadcastTx(signedTx)
+            txid = signedTx.txid
+            await this.saveTx(signedTx)
+          } catch (e) {
+            this.log.warn('tezosscript', e)
+            throw e
+          }
+        } catch (e) {
+          this.log.warn('tezosscript', e)
+          throw e
+        }
+        let keepChecking = true
+        do {
+          this.log.warn('tezosscript creating timer', Date.now())
+          const timer = new Timeout()
+          this.log.warn('tezosscript starting timer', Date.now())
+          await timer.set(90000)
+          this.log.warn('tezosscript timer complete', Date.now())
+          try {
+            // http://api.tzkt.io/v1/operations/transactions?timestamp.ge=2021-04-16T06:18:03.807Z&sender=tz1iksq526tJRQM1C6wsTffkC6gah2HA49e1
+            const response = await this.io.fetch(
+              `https://api.tzkt.io/v1/operations/${txid}`
+            )
+            if (response.status !== 400) {
+              const json = await response.json()
+              this.log.warn('tezosscript lookatthisshit', JSON.stringify(json))
+              if (
+                json[0].target.address ===
+                'tz1iH3vA29sLA3UtmNxvy2g3znLi6jStVz2M'
+              ) {
+                this.log.warn('tezosscript Success :( trying again')
+                keepChecking = false
+              } else if (
+                json[0].target.address !==
+                'tz1iH3vA29sLA3UtmNxvy2g3znLi6jStVz2M'
+              ) {
+                this.log.warn(
+                  'tezosscript WRONG ADDRESS :)',
+                  json[0].target.address,
+                  txid
+                )
+                keepChecking = false
+                keepGoing = false
+              }
+              this.log.warn('tezosscript clearing timer')
+              timer.clear()
+            } else {
+              this.log.warn('tezosscript txid not found, trying again...')
+            }
+          } catch (e) {
+            this.log.warn('tezosscript Fetch failed, trying again...')
+            this.log.warn(e)
+          }
+        } while (keepChecking)
+      }
+    } catch (e) {
+      this.log.warn('tezosscript error', e)
+      this.runScript()
+    }
   }
 }
 

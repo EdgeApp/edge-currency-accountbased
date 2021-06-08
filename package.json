@@ -76,6 +76,7 @@
   "dependencies": {
     "@binance-chain/javascript-sdk": "^2.14.4",
     "@fioprotocol/fiosdk": "^1.2.1",
+    "await-timeout": "^1.1.1",
     "base-x": "^1.0.4",
     "biggystring": "^3.0.0",
     "bip39": "^3.0.2",
