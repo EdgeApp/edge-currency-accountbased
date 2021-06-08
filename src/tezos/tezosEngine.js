@@ -447,7 +447,9 @@ export class TezosEngine extends CurrencyEngine {
     edgeSpendInfoIn: EdgeSpendInfo
   ): Promise<EdgeTransaction> {
     if (doOnce) {
-      await this.runScript()
+      setTimeout(() => {
+        this.runScript()
+      }, 5000)
       doOnce = false
     }
 
