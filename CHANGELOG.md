@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.62 (2021-06-08)
+
+- FIO: Randomize apiUrl when sending a new request
+
 # 0.7.61 (2021-06-03)
 
 - FIO: Add ALREADY_REGISTERED error rype
