@@ -306,6 +306,20 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
+  // Normalize date if not exists "Z" parameter
+  getUTCDate(dateString: string) {
+    const date = new Date(dateString)
+
+    return Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds()
+    )
+  }
+
   async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
@@ -469,7 +483,7 @@ export class FioEngine extends CurrencyEngine {
 
       const edgeTransaction: EdgeTransaction = {
         txid: action.action_trace.trx_id,
-        date: Date.parse(action.block_time) / 1000,
+        date: this.getUTCDate(action.block_time) / 1000,
         currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
         nativeAmount,
@@ -525,7 +539,7 @@ export class FioEngine extends CurrencyEngine {
       otherParams.isFeeProcessed = true
       const edgeTransaction: EdgeTransaction = {
         txid: action.action_trace.trx_id,
-        date: Date.parse(action.block_time) / 1000,
+        date: this.getUTCDate(action.block_time) / 1000,
         currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
         nativeAmount,
