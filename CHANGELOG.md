@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.63 (2021-06-21)
+
+- Add native fee amount to InsufficientFundsError
+- FIO: Fixed timestamps in get_actions
+
 # 0.7.62 (2021-06-08)
 
 - FIO: Randomize apiUrl when sending a new request
