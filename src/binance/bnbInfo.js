@@ -6,7 +6,12 @@ import type { EdgeCurrencyInfo } from 'edge-core-js/types'
 import type { BinanceSettings } from './bnbTypes.js'
 
 const otherSettings: BinanceSettings = {
-  binanceApiServers: ['https://dex.binance.org']
+  binanceApiServers: [
+    'https://dex.binance.org',
+    'https://dex-atlantic.binance.org',
+    'https://dex-asiapacific.binance.org',
+    'https://dex-european.binance.org'
+  ]
 }
 
 const defaultSettings: any = {
