@@ -21,8 +21,7 @@ import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
-import { getFetchCors } from '../react-native-io.js'
+import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils.js'
 import { EosEngine } from './eosEngine'
 import {
   asGetActivationCost,
