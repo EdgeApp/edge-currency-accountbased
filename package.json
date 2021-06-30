@@ -84,6 +84,7 @@
     "eosjs-api": "^7.0.4",
     "eosjs-ecc": "^4.0.7",
     "esm": "^3.2.4",
+    "ethereum-checksum-address": "^0.0.6",
     "ethereumjs-abi": "^0.6.4",
     "ethereumjs-tx": "^1.3.3",
     "ethereumjs-util": "^5.1.2",
