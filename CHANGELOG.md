@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.64 (2021-07-01)
+
+- BNB: Add additional API servers
+
 # 0.7.63 (2021-06-21)
 
 - Add native fee amount to InsufficientFundsError
