@@ -19,6 +19,7 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import { checkAddressChecksum } from 'ethereum-checksum-address'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
@@ -171,7 +172,11 @@ export class EthereumPlugin extends CurrencyPlugin {
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
     }
     address = contractAddress
-    // TODO: add chainId 30 to isValidAddress when included EIP-1191
+
+    if (checkAddressChecksum(address)) {
+      address = address.toLowerCase()
+    }
+
     const valid = EthereumUtil.isValidAddress(address || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
