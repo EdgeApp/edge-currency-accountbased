@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.65 (2021-07-06)
+
+- ETH: Add checksum support
+
 # 0.7.64 (2021-07-01)
 
 - BNB: Add additional API servers
