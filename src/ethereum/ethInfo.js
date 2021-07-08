@@ -1180,6 +1180,182 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'
+    },
+    {
+      currencyCode: 'ETH2X-FLI',
+      currencyName: 'ETH2x-Flexible Leverage Index',
+      denominations: [
+        {
+          name: 'ETH2X-FLI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xaa6e8127831c9de45ae56bb1b0d4d4da6e5665bd'
+    },
+    {
+      currencyCode: 'BTC2X-FLI',
+      currencyName: 'BTC2x-Flexible Leverage Index',
+      denominations: [
+        {
+          name: 'BTC2X-FLI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x0b498ff89709d3838a063f1dfa463091f9801c2b'
+    },
+    {
+      currencyCode: 'MVI',
+      currencyName: 'Metaverse Index',
+      denominations: [
+        {
+          name: 'MVI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x72e364f2abdc788b7e918bc238b21f109cd634d7'
+    },
+    {
+      currencyCode: 'PLAY',
+      currencyName: 'Metaverse NFT Index',
+      denominations: [
+        {
+          name: 'PLAY',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x33e18a092a93ff21ad04746c7da12e35d34dc7c4'
+    },
+    {
+      currencyCode: 'DEFI+L',
+      currencyName: 'DeFi Large Caps',
+      denominations: [
+        {
+          name: 'DEFI+L',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x78f225869c08d478c34e5f645d07a87d3fe8eb78'
+    },
+    {
+      currencyCode: 'YPIE',
+      currencyName: 'Yearn Ecosystem Pie',
+      denominations: [
+        {
+          name: 'YPIE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x17525e4f4af59fbc29551bc4ece6ab60ed49ce31'
+    },
+    {
+      currencyCode: 'BCP',
+      currencyName: 'Balanced Crypto Pie',
+      denominations: [
+        {
+          name: 'BCP',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xe4f726adc8e89c6a6017f01eada77865db22da14'
+    },
+    {
+      currencyCode: 'DEFI++',
+      currencyName: 'DeFi Large & Small Caps',
+      denominations: [
+        {
+          name: 'DEFI++',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x8d1ce361eb68e9e05573443c407d4a3bed23b033'
+    },
+    {
+      currencyCode: 'DEFI+S',
+      currencyName: 'DeFi Small Caps',
+      denominations: [
+        {
+          name: 'DEFI+S',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xad6a626ae2b43dcb1b39430ce496d2fa0365ba9c'
+    },
+    {
+      currencyCode: 'ASSY',
+      currencyName: 'ASSY Index',
+      denominations: [
+        {
+          name: 'ASSY',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xfa2562da1bba7b954f26c74725df51fb62646313'
+    },
+    {
+      currencyCode: 'TCAP',
+      currencyName: 'Total Crypto Market Cap',
+      denominations: [
+        {
+          name: 'TCAP',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x16c52CeeCE2ed57dAd87319D91B5e3637d50aFa4'
+    },
+    {
+      currencyCode: 'STETH',
+      currencyName: 'Lido Staked Ether',
+      denominations: [
+        {
+          name: 'STETH',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84'
+    },
+    {
+      currencyCode: 'RUNE',
+      currencyName: 'THORChain ETH.RUNE',
+      denominations: [
+        {
+          name: 'RUNE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x3155ba85d5f96b2d030a4966af206230e46849cb'
+    },
+    {
+      currencyCode: 'RENFIL',
+      currencyName: 'Ren Filecoin',
+      denominations: [
+        {
+          name: 'RENFIL',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xD5147bc8e386d91Cc5DBE72099DAC6C9b99276F5'
+    },
+    {
+      currencyCode: 'RENDOGE',
+      currencyName: 'Ren Dogecoin',
+      denominations: [
+        {
+          name: 'RENDOGE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x3832d2F059E55934220881F831bE501D180671A7'
+    },
+    {
+      currencyCode: 'BDI',
+      currencyName: 'BasketDAO DeFi Index',
+      denominations: [
+        {
+          name: 'BDI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x0309c98B1bffA350bcb3F9fB9780970CA32a5060'
     }
   ]
 }
