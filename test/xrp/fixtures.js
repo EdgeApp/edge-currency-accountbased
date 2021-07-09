@@ -20,6 +20,11 @@ export default [
         'https://ripple.co//sends?tos=rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn',
         'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn'
       ],
+      'x-address': [
+        'XV5sbjUmgPpvXv4ixFWZ5ptAYZ6PD28Sq49uo34VyjnmK5H',
+        'rPEPPER7kfTD9w2To4CQk6UCfuHM9c6GDY',
+        '12345'
+      ],
       'ripple.com uri address': [
         'https://ripple.com//send?to=rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn',
         'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn'
