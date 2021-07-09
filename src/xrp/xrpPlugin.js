@@ -15,6 +15,7 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
+import * as codec from 'ripple-address-codec'
 import keypairs from 'ripple-keypairs'
 import { RippleAPI } from 'ripple-lib'
 import parse from 'url-parse'
@@ -135,6 +136,15 @@ export class XrpPlugin extends CurrencyPlugin {
       'xrp-ledger': true
     }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
+
+    try {
+      const { classicAddress, tag } = codec.xAddressToClassicAddress(uri)
+      uri = `ripple:${classicAddress}?to=${classicAddress}${
+        tag !== false ? `&dt=${tag}` : ''
+      }`
+    } catch (e) {
+      //
+    }
 
     // Handle special case of https://ripple.com//send?to= URIs
     if (uri.includes(RIPPLE_DOT_COM_URI_PREFIX)) {
