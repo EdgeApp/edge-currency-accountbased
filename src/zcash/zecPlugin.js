@@ -125,7 +125,7 @@ export function makeZcashPlugin(
     throw new Error('Need opts')
   }
   const RNAccountbased = opts.nativeIo['edge-currency-accountbased']
-  const { KeyTool, AddressTool } = RNAccountbased
+  const { KeyTool, AddressTool, makeSynchronizer } = RNAccountbased
   let toolsPromise: Promise<ZcashPlugin>
   function makeCurrencyTools(): Promise<ZcashPlugin> {
     if (toolsPromise != null) return toolsPromise
@@ -138,7 +138,13 @@ export function makeZcashPlugin(
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new ZcashEngine(tools, walletInfo, initOptions, opts)
+    const currencyEngine = new ZcashEngine(
+      tools,
+      walletInfo,
+      initOptions,
+      opts,
+      makeSynchronizer
+    )
 
     // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(tools, walletInfo, opts)

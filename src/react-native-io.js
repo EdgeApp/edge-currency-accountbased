@@ -1,6 +1,10 @@
 // @flow
-import { AddressTool, KeyTool } from 'react-native-zcash'
+import { AddressTool, KeyTool, makeSynchronizer } from 'react-native-zcash'
 import { bridgifyObject } from 'yaob'
+
+export type ZcashSynchronizer = {
+  start: () => Promise<void>
+}
 
 // TODO: Remove this entire file in the next breaking change.
 export default function makePluginIo() {
@@ -20,6 +24,16 @@ export default function makePluginIo() {
       )
     },
     KeyTool,
-    AddressTool
+    AddressTool,
+    async makeSynchronizer(arg: any) {
+      const realSynchronizer = await makeSynchronizer(arg)
+
+      const out: ZcashSynchronizer = bridgifyObject({
+        start: () => {
+          return realSynchronizer.start()
+        }
+      })
+      return out
+    }
   }
 }
