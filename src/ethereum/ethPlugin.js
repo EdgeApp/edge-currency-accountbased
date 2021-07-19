@@ -19,7 +19,6 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import { checkAddressChecksum } from 'ethereum-checksum-address'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
@@ -173,12 +172,17 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
     address = contractAddress
 
-    if (checkAddressChecksum(address)) {
+    // Verify address is valid
+    const valid = EthereumUtil.isValidAddress(address || '')
+
+    // Verify checksum if it's present in the address
+    let verifiedChecksum = true
+    if (/[A-F]/.test(address)) {
+      verifiedChecksum = EthereumUtil.isValidChecksumAddress(address)
       address = address.toLowerCase()
     }
 
-    const valid = EthereumUtil.isValidAddress(address || '')
-    if (!valid) {
+    if (!valid || !verifiedChecksum) {
       throw new Error('InvalidPublicAddressError')
     }
 
