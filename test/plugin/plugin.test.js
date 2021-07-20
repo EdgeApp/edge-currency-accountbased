@@ -110,6 +110,22 @@ for (const fixture of fixtures) {
       assert.equal(parsedUri.nativeAmount, undefined)
       assert.equal(parsedUri.currencyCode, undefined)
     })
+    if (fixture.parseUri['checksum address only'])
+      it('checksum address only', async function () {
+        const parsedUri = await tools.parseUri(
+          fixture.parseUri['checksum address only'][0]
+        )
+        assert.equal(
+          parsedUri.publicAddress,
+          fixture.parseUri['checksum address only'][1]
+        )
+      })
+    if (fixture.parseUri['invalid checksum address only'])
+      it('invalid checksum address only', async function () {
+        return expectRejection(
+          tools.parseUri(fixture.parseUri['invalid checksum address only'][0])
+        )
+      })
     it('invalid address', function () {
       return expectRejection(
         tools.parseUri(fixture.parseUri['invalid address'][0])
