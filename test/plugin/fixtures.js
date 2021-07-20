@@ -379,6 +379,13 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
       ],
+      'checksum address only': [
+        '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1bf07',
+        '0x3c40cbb7f82a7e1bc83c4e3e98590b19e0e1bf07'
+      ],
+      'invalid checksum address only': [
+        '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1Bf07'
+      ],
       'invalid address': [
         '0x466d506cd7fbcd29a06015da03f0de814df050ez',
         '0466d506cd7fbcd29a06015da03f0de814df050ee',
