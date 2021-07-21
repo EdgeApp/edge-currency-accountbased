@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.66 (2021-07-20)
+
+- Throw error if there is a checksum present and it fails verification + tests
+
 # 0.7.65 (2021-07-06)
 
 - ETH: Add checksum support
