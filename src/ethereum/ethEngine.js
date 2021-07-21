@@ -3,6 +3,8 @@
  */
 // @flow
 
+import Common from '@ethereumjs/common'
+import { Transaction } from '@ethereumjs/tx'
 import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
@@ -14,7 +16,6 @@ import {
   InsufficientFundsError
 } from 'edge-core-js/types'
 import abi from 'ethereumjs-abi'
-import EthereumTx from 'ethereumjs-tx'
 import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
@@ -628,32 +629,37 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmountHex = '0x00'
     }
 
-    // Tx Parameters:
+    // Select the chain
+    const common = new Common({
+      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
+      chain: this.currencyInfo.defaultSettings.otherSettings.chainId
+    })
 
+    // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: nativeAmountHex,
-      data,
-      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
-      chainId: this.currencyInfo.defaultSettings.otherSettings.chainId
+      data
     }
 
     const privKey = Buffer.from(
       this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
       'hex'
     )
-    const wallet = ethWallet.fromPrivateKey(privKey)
 
+    // Log the private key address
+    const wallet = ethWallet.fromPrivateKey(privKey)
     this.log.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
-    const tx = new EthereumTx(txParams)
-    tx.sign(privKey)
+    // Create and sign transaction
+    const unsignedTx = Transaction.fromTxData(txParams, { common })
+    const signedTx = unsignedTx.sign(privKey)
 
-    edgeTransaction.signedTx = bufToHex(tx.serialize())
-    edgeTransaction.txid = bufToHex(tx.hash())
+    edgeTransaction.signedTx = bufToHex(signedTx.serialize())
+    edgeTransaction.txid = bufToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
     if (edgeTransaction.otherParams) {
       edgeTransaction.otherParams.nonceUsed = nonce
