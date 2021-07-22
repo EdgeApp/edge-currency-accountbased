@@ -9,6 +9,9 @@ import type {
 import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumSettings } from './ethTypes.js'
 
+// 1 mainnet, 3 ropsten, 4 rinkeby, 5 goerli, 42 kovan, etc
+const chainId = 1
+
 const defaultNetworkFees = {
   default: {
     gasLimit: {
@@ -49,25 +52,85 @@ const defaultNetworkFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: [
-    'https://eth-mainnet.alchemyapi.io',
-    'https://mainnet.infura.io/v3',
-    'https://cloudflare-eth.com'
-  ],
-  etherscanApiServers: [
-    'https://api.etherscan.io'
-    // 'https://blockscout.com/eth/mainnet' // not reliable enough...
-  ],
-  blockcypherApiServers: ['https://api.blockcypher.com'],
-  blockbookServers: [
-    'https://blockbook-ethereum.tronwallet.me',
-    'https://eth1.trezor.io',
-    'https://eth2.trezor.io',
-    'https://eth2.bcfn.ca'
-  ],
+  rpcServers: (() => {
+    // Mainnet | Ropsten | Rinkeby | Goerli | Kovan
+    switch (chainId) {
+      case 1:
+        return [
+          'https://eth-mainnet.alchemyapi.io',
+          'https://mainnet.infura.io/v3',
+          'https://cloudflare-eth.com'
+        ]
+      case 3:
+        return [
+          'https://eth-ropsten.alchemyapi.io',
+          'https://ropsten.infura.io/v3'
+        ]
+      case 4:
+        return [
+          'https://eth-rinkeby.alchemyapi.io',
+          'https://rinkeby.infura.io/v3'
+        ]
+      case 5:
+        return [
+          'https://eth-goerli.alchemyapi.io',
+          'https://goerli.infura.io/v3'
+        ]
+      case 42:
+        return ['https://eth-kovan.alchemyapi.io', 'https://kovan.infura.io/v3']
+      default:
+        return []
+    }
+  })(),
+
+  etherscanApiServers: (() => {
+    // Mainnet | Ropsten | Rinkeby | Goerli | Kovan
+    switch (chainId) {
+      case 1:
+        return [
+          'https://api.etherscan.io'
+          // 'https://blockscout.com/eth/mainnet' // not reliable enough...
+        ]
+      case 3:
+        return ['https://api-ropsten.etherscan.io']
+      case 4:
+        return ['https://api-rinkeby.etherscan.io']
+      case 5:
+        return ['https://api-goerli.etherscan.io']
+      case 42:
+        return ['https://api-kovan.etherscan.io']
+      default:
+        return []
+    }
+  })(),
+  blockcypherApiServers: (() => {
+    // Mainnet
+    switch (chainId) {
+      case 1:
+        return ['https://api.blockcypher.com']
+      default:
+        return []
+    }
+  })(),
+  blockbookServers: (() => {
+    // Mainnet | Ropsten
+    switch (chainId) {
+      case 1:
+        return [
+          'https://blockbook-ethereum.tronwallet.me',
+          'https://eth1.trezor.io',
+          'https://eth2.trezor.io',
+          'https://eth2.bcfn.ca'
+        ]
+      case 3:
+        return ['https://ropsten1.trezor.io', 'https://ropsten2.trezor.io']
+      default:
+        return []
+    }
+  })(),
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
-  chainId: 1,
+  chainId,
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: true,
   iosAllowedTokens: {
@@ -78,15 +141,47 @@ const otherSettings: EthereumSettings = {
     USDT: true,
     AGLD: true
   },
-  blockchairApiServers: ['https://api.blockchair.com'],
-  alethioApiServers: ['https://api.aleth.io/v1'],
+  blockchairApiServers: (() => {
+    // Mainnet
+    switch (chainId) {
+      case 1:
+        return ['https://api.blockchair.com']
+      default:
+        return []
+    }
+  })(),
+  alethioApiServers: (() => {
+    // Mainnet
+    switch (chainId) {
+      case 1:
+        return ['https://api.aleth.io/v1']
+      default:
+        return []
+    }
+  })(),
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: ['https://rpc.web3api.io'],
-  amberdataApiServers: ['https://web3api.io/api/v2'],
+  amberdataRpcServers: (() => {
+    // Mainnet
+    switch (chainId) {
+      case 1:
+        return ['https://rpc.web3api.io']
+      default:
+        return []
+    }
+  })(),
+  amberdataApiServers: (() => {
+    // Mainnet
+    switch (chainId) {
+      case 1:
+        return ['https://web3api.io/api/v2']
+      default:
+        return []
+    }
+  })(),
   amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
