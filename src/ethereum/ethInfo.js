@@ -62,6 +62,7 @@ const otherSettings: EthereumSettings = {
   blockbookServers: [
     'https://blockbook-ethereum.tronwallet.me',
     'https://eth1.trezor.io',
+    'https://eth2.trezor.io',
     'https://eth2.bcfn.ca'
   ],
   uriNetworks: ['ethereum', 'ether'],
