@@ -55,9 +55,19 @@ export const asEthereumFeesGasPrice = asObject({
 
 export type EthereumFeesGasPrice = $Call<typeof asEthereumFeesGasPrice>
 
+export const asEthereumBaseFeeMultiplier = asObject({
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
+  highFee: asString
+})
+
+export type EthereumBaseMultiplier = $Call<typeof asEthereumBaseFeeMultiplier>
+
 export const asEthereumFee = asObject({
   gasLimit: asEthereumFeesGasLimit,
-  gasPrice: asOptional(asEthereumFeesGasPrice)
+  gasPrice: asOptional(asEthereumFeesGasPrice),
+  baseFeeMultiplier: asOptional(asEthereumBaseFeeMultiplier)
 })
 
 export type EthereumFee = $Call<typeof asEthereumFee>

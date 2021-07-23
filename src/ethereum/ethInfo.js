@@ -7,12 +7,12 @@ import type {
 } from 'edge-core-js/types'
 
 import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumSettings } from './ethTypes.js'
+import type { EthereumFees, EthereumSettings } from './ethTypes.js'
 
 // 1 mainnet, 3 ropsten, 4 rinkeby, 5 goerli, 42 kovan, etc
 const chainId = 1
 
-const defaultNetworkFees = {
+const defaultNetworkFees: EthereumFees = {
   default: {
     gasLimit: {
       regularTransaction: '21000',
@@ -27,6 +27,12 @@ const defaultNetworkFees = {
       standardFeeHighAmount: '10000000000000000000',
       highFee: '40000000001',
       minGasPrice: '1000000000'
+    },
+    baseFeeMultiplier: {
+      lowFee: '1',
+      standardFeeLow: '1.25',
+      standardFeeHigh: '1.5',
+      highFee: '1.75'
     }
   },
   '1983987abc9837fbabc0982347ad828': {
@@ -41,13 +47,16 @@ const defaultNetworkFees = {
       standardFeeLowAmount: '200000000000000000',
       standardFeeHighAmount: '20000000000000000000',
       highFee: '40000000002'
-    }
+    },
+    baseFeeMultiplier: undefined
   },
   '2983987abc9837fbabc0982347ad828': {
     gasLimit: {
       regularTransaction: '21002',
       tokenTransaction: '37124'
-    }
+    },
+    gasPrice: undefined,
+    baseFeeMultiplier: undefined
   }
 }
 
