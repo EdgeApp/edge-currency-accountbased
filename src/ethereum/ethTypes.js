@@ -33,32 +33,38 @@ export type EthereumSettings = {
   iosAllowedTokens: { [currencyCode: string]: boolean }
 }
 
-type EthereumFeesGasLimit = {
-  regularTransaction: string,
-  tokenTransaction: string
-}
+export const asEthereumFeesGasLimit = asObject({
+  regularTransaction: asString,
+  tokenTransaction: asString
+})
 
-export type EthereumFeesGasPrice = {
-  lowFee: string,
-  standardFeeLow: string,
-  standardFeeHigh: string,
+export type EthereumFeesGasLimit = $Call<typeof asEthereumFeesGasLimit>
+
+export const asEthereumFeesGasPrice = asObject({
+  lowFee: asString,
+  standardFeeLow: asString,
+  standardFeeHigh: asString,
 
   // The amount of wei which will be charged the standardFeeLow
-  standardFeeLowAmount: string,
+  standardFeeLowAmount: asString,
 
   // The amount of wei which will be charged the standardFeeHigh
-  standardFeeHighAmount: string,
-  highFee: string
-}
+  standardFeeHighAmount: asString,
+  highFee: asString
+})
 
-export type EthereumFee = {
-  gasLimit: EthereumFeesGasLimit,
-  gasPrice?: EthereumFeesGasPrice
-}
+export type EthereumFeesGasPrice = $Call<typeof asEthereumFeesGasPrice>
 
-export type EthereumFees = {
-  [address: string]: EthereumFee
-}
+export const asEthereumFee = asObject({
+  gasLimit: asEthereumFeesGasLimit,
+  gasPrice: asOptional(asEthereumFeesGasPrice)
+})
+
+export type EthereumFee = $Call<typeof asEthereumFee>
+
+export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
+
+export type EthereumFees = $Call<typeof asEthereumFees>
 
 export type EthereumCalcedFees = {
   gasPrice: string,

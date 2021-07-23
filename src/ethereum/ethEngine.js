@@ -6,6 +6,7 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import { bns } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
@@ -35,14 +36,16 @@ import {
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
-import { EthGasStationSchema, NetworkFeesSchema } from './ethSchema.js'
+import { EthGasStationSchema } from './ethSchema.js'
 import {
   type EthereumFee,
+  type EthereumFees,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
-  type LastEstimatedGasLimit
+  type LastEstimatedGasLimit,
+  asEthereumFees
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
@@ -146,11 +149,12 @@ export class EthereumEngine extends CurrencyEngine {
 
   // curreently for Ethereum but should allow other currencies
   async checkUpdateNetworkFees() {
+    // Get the network fees from the info server
     try {
       const infoServer = getEdgeInfoServer()
       const url = `${infoServer}/v1/networkFees/${this.currencyInfo.currencyCode}`
-      const jsonObj = await this.ethNetwork.fetchGet(url)
-      const valid = validateObject(jsonObj, NetworkFeesSchema)
+      const jsonObj: EthereumFees = await this.ethNetwork.fetchGet(url)
+      const valid = asMaybe(asEthereumFees)(jsonObj) != null
 
       if (valid) {
         if (
