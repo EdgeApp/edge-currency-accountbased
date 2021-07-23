@@ -28,11 +28,12 @@ import {
   cleanTxLogs,
   getEdgeInfoServer,
   getOtherParams,
+  hexToDecimal,
   isHex,
   normalizeAddress,
   toHex,
   validateObject
-} from '../common/utils.js'
+} from '../common/utils'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
@@ -49,7 +50,7 @@ import {
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const WEI_MULTIPLIER = 100000000
+const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 
 export class EthereumEngine extends CurrencyEngine {
@@ -176,6 +177,82 @@ export class EthereumEngine extends CurrencyEngine {
       this.log.error(err)
     }
 
+    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+
+    // If base fee is not suppported, update network fees fromethgasstation.info
+    if (baseFeePerGas == null) {
+      this.log.warn(`Updating networkFees from ethgasstation.info`)
+      this.updateNetworkFeesFromEthGasStation()
+      return
+    }
+
+    // Update the network fees from network base fee
+    this.updateNetworkFeesFromBaseFeePerGas(hexToDecimal(baseFeePerGas))
+  }
+
+  async updateNetworkFeesFromBaseFeePerGas(baseFeePerGas: string) {
+    /*
+    This algorithm calculates fee amounts using the base multiplier from the
+    info server.
+
+    Formula:
+      fee = baseMultiplier * baseFee + minPriorityFee
+    
+    Where:
+      minPriorityFee = <minimum priority fee from info server>
+      baseFee = <latest block's base fee>
+      baseMultiplier = <multiplier from info server for low, standard, high, etc>
+
+    Reference analysis for choosing 2 gwei minimum priority fee: 
+      https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
+    */
+
+    const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
+
+    // Make sure there is a default network fee entry and gasPrice entry
+    if (networkFees.default == null || networkFees.default.gasPrice == null) {
+      return
+    }
+
+    const defaultNetworkFee: EthereumFee =
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+
+    // The minimum priority fee for slow transactions
+    const minPriorityFee =
+      networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
+    // This is how much we will multiply the base fee by
+    const baseMultiplier =
+      networkFees.default.baseFeeMultiplier ||
+      defaultNetworkFee.baseFeeMultiplier
+
+    // Make sure the properties exist
+    if (minPriorityFee == null || baseMultiplier == null) {
+      return
+    }
+
+    const { gasPrice } = networkFees.default
+
+    const formula = (baseMultiplier: string): string =>
+      bns.div(
+        bns.add(bns.mul(baseMultiplier, baseFeePerGas), minPriorityFee),
+        '1'
+      )
+
+    // Update default network fees
+    networkFees.default = {
+      ...networkFees.default,
+      gasPrice: {
+        ...gasPrice,
+        ...Object.keys(baseMultiplier).reduce(
+          (fees, key) => ({ ...fees, [key]: formula(baseMultiplier[key]) }),
+          {}
+        )
+      }
+    }
+  }
+
+  // deprecate after london hardfork because of EIP 1559
+  async updateNetworkFeesFromEthGasStation() {
     let jsonObj
     try {
       const { ethGasStationUrl } =
@@ -188,7 +265,7 @@ export class EthereumEngine extends CurrencyEngine {
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
-        const fees = this.walletLocalData.otherData.networkFees
+        const fees: EthereumFees = this.walletLocalData.otherData.networkFees
         const ethereumFee: EthereumFee = fees.default
         if (!ethereumFee.gasPrice) {
           return
@@ -224,14 +301,18 @@ export class EthereumEngine extends CurrencyEngine {
         let standardFeeHigh = (fast + fastest) * 0.75
         let highFee = fastest
 
-        lowFee = (Math.round(lowFee) * WEI_MULTIPLIER).toString()
+        lowFee = (
+          Math.round(lowFee) * ETH_GAS_STATION_WEI_MULTIPLIER
+        ).toString()
         standardFeeLow = (
-          Math.round(standardFeeLow) * WEI_MULTIPLIER
+          Math.round(standardFeeLow) * ETH_GAS_STATION_WEI_MULTIPLIER
         ).toString()
         standardFeeHigh = (
-          Math.round(standardFeeHigh) * WEI_MULTIPLIER
+          Math.round(standardFeeHigh) * ETH_GAS_STATION_WEI_MULTIPLIER
         ).toString()
-        highFee = (Math.round(highFee) * WEI_MULTIPLIER).toString()
+        highFee = (
+          Math.round(highFee) * ETH_GAS_STATION_WEI_MULTIPLIER
+        ).toString()
 
         if (
           gasPrice.lowFee !== lowFee ||

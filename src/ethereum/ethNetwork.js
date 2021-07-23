@@ -1139,6 +1139,36 @@ export class EthereumNetwork {
     return out
   }
 
+  async getBaseFeePerGas(): Promise<{ baseFeePerGas: string | void }> {
+    const { rpcServers, chainId } =
+      this.currencyInfo.defaultSettings.otherSettings
+
+    const funcs = rpcServers.map(
+      baseUrl => async () =>
+        await this.fetchPostRPC(
+          'eth_getBlockByNumber',
+          ['latest', false],
+          chainId,
+          baseUrl
+        ).then(response => {
+          if (response.error != null) {
+            this.ethEngine.log.error(
+              `multicast get_baseFeePerGas error response from ${baseUrl}: ${response.error}`
+            )
+            throw new Error(
+              `multicast get_baseFeePerGas error response from ${baseUrl}: ${response.error}`
+            )
+          }
+
+          const baseFeePerGas: string = response.result.baseFeePerGas
+
+          return { baseFeePerGas }
+        })
+    )
+
+    return await asyncWaterfall(funcs)
+  }
+
   async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_blockNumber'
