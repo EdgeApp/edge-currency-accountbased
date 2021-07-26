@@ -14,6 +14,12 @@ const chainId = 1
 
 const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFeeMultiplier: {
+      lowFee: '1',
+      standardFeeLow: '1.25',
+      standardFeeHigh: '1.5',
+      highFee: '1.75'
+    },
     gasLimit: {
       regularTransaction: '21000',
       tokenTransaction: '300000',
@@ -28,14 +34,10 @@ const defaultNetworkFees: EthereumFees = {
       highFee: '40000000001',
       minGasPrice: '1000000000'
     },
-    baseFeeMultiplier: {
-      lowFee: '1',
-      standardFeeLow: '1.25',
-      standardFeeHigh: '1.5',
-      highFee: '1.75'
-    }
+    minPriorityFee: '2'
   },
   '1983987abc9837fbabc0982347ad828': {
+    baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21002',
       tokenTransaction: '37124'
@@ -48,15 +50,16 @@ const defaultNetworkFees: EthereumFees = {
       standardFeeHighAmount: '20000000000000000000',
       highFee: '40000000002'
     },
-    baseFeeMultiplier: undefined
+    minPriorityFee: undefined
   },
   '2983987abc9837fbabc0982347ad828': {
+    baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21002',
       tokenTransaction: '37124'
     },
     gasPrice: undefined,
-    baseFeeMultiplier: undefined
+    minPriorityFee: undefined
   }
 }
 

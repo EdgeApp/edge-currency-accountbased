@@ -196,19 +196,17 @@ export class EthereumEngine extends CurrencyEngine {
     info server.
 
     Formula:
-      fee = baseMultiplier * baseFee + minimumPriorityFee
+      fee = baseMultiplier * baseFee + minPriorityFee
     
     Where:
-      minimumPriorityFee = 2 gwei
+      minPriorityFee = <minimum priority fee from info server>
       baseFee = <latest block's base fee>
       baseMultiplier = <multiplier from info server for low, standard, high, etc>
 
-    Reference analysis for choosing 2 gwei: 
+    Reference analysis for choosing 2 gwei minimum priority fee: 
       https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
     */
 
-    // The minimum priority fee for slow transactions
-    const minimumPriorityFee = '2'
     const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
 
     // Make sure there is a default network fee entry and gasPrice entry
@@ -216,16 +214,27 @@ export class EthereumEngine extends CurrencyEngine {
       return
     }
 
+    const defaultNetworkFee: EthereumFee =
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+
+    // The minimum priority fee for slow transactions
+    const minPriorityFee =
+      networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
+    // This is how much we will multiply the base fee by
     const baseMultiplier =
       networkFees.default.baseFeeMultiplier ||
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-        .baseFeeMultiplier
+      defaultNetworkFee.baseFeeMultiplier
+
+    // Make sure the properties exist
+    if (minPriorityFee == null || baseMultiplier == null) {
+      return
+    }
 
     const { gasPrice } = networkFees.default
 
     const formula = (baseMultiplier: string): string =>
       bns.div(
-        bns.add(bns.mul(baseMultiplier, baseFeePerGas), minimumPriorityFee),
+        bns.add(bns.mul(baseMultiplier, baseFeePerGas), minPriorityFee),
         '1'
       )
 
