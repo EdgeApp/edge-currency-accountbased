@@ -10,7 +10,7 @@ import { makeEthereumBasedPluginInner } from './ethPlugin'
 import type { EthereumFees, EthereumSettings } from './ethTypes.js'
 
 // 1 mainnet, 3 ropsten, 4 rinkeby, 5 goerli, 42 kovan, etc
-const chainId = 1
+const chainId = 4
 
 const defaultNetworkFees: EthereumFees = {
   default: {
