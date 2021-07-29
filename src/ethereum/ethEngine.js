@@ -51,6 +51,7 @@ import {
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
+const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 
 export class EthereumEngine extends CurrencyEngine {
@@ -609,6 +610,17 @@ export class EthereumEngine extends CurrencyEngine {
     // **********************************
     // Create the unsigned EdgeTransaction
 
+    // This is used for display purposes in the GUI
+    const feeRateUsed = {
+      // Convert gasPrice from wei to gwei
+      gasPrice: bns.div(
+        gasPrice,
+        WEI_MULTIPLIER.toString(),
+        WEI_MULTIPLIER.toString().length - 1
+      ),
+      gasLimit
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -616,10 +628,7 @@ export class EthereumEngine extends CurrencyEngine {
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed: {
-        gasLimit,
-        gasPrice: bns.div(gasPrice, '1000000000')
-      },
+      feeRateUsed,
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams // otherParams
