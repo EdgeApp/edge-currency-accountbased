@@ -3,7 +3,10 @@
  */
 // @flow
 
+import Common from '@ethereumjs/common'
+import { Transaction } from '@ethereumjs/tx'
 import { bns } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
@@ -14,7 +17,6 @@ import {
   InsufficientFundsError
 } from 'edge-core-js/types'
 import abi from 'ethereumjs-abi'
-import EthereumTx from 'ethereumjs-tx'
 import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
@@ -26,26 +28,30 @@ import {
   cleanTxLogs,
   getEdgeInfoServer,
   getOtherParams,
+  hexToDecimal,
   isHex,
   normalizeAddress,
   toHex,
   validateObject
-} from '../common/utils.js'
+} from '../common/utils'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
-import { EthGasStationSchema, NetworkFeesSchema } from './ethSchema.js'
+import { EthGasStationSchema } from './ethSchema.js'
 import {
   type EthereumFee,
+  type EthereumFees,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
-  type LastEstimatedGasLimit
+  type LastEstimatedGasLimit,
+  asEthereumFees
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const WEI_MULTIPLIER = 100000000
+const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
+const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 
 export class EthereumEngine extends CurrencyEngine {
@@ -145,11 +151,12 @@ export class EthereumEngine extends CurrencyEngine {
 
   // curreently for Ethereum but should allow other currencies
   async checkUpdateNetworkFees() {
+    // Get the network fees from the info server
     try {
       const infoServer = getEdgeInfoServer()
       const url = `${infoServer}/v1/networkFees/${this.currencyInfo.currencyCode}`
-      const jsonObj = await this.ethNetwork.fetchGet(url)
-      const valid = validateObject(jsonObj, NetworkFeesSchema)
+      const jsonObj: EthereumFees = await this.ethNetwork.fetchGet(url)
+      const valid = asMaybe(asEthereumFees)(jsonObj) != null
 
       if (valid) {
         if (
@@ -171,6 +178,82 @@ export class EthereumEngine extends CurrencyEngine {
       this.log.error(err)
     }
 
+    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+
+    // If base fee is not suppported, update network fees fromethgasstation.info
+    if (baseFeePerGas == null) {
+      this.log.warn(`Updating networkFees from ethgasstation.info`)
+      this.updateNetworkFeesFromEthGasStation()
+      return
+    }
+
+    // Update the network fees from network base fee
+    this.updateNetworkFeesFromBaseFeePerGas(hexToDecimal(baseFeePerGas))
+  }
+
+  async updateNetworkFeesFromBaseFeePerGas(baseFeePerGas: string) {
+    /*
+    This algorithm calculates fee amounts using the base multiplier from the
+    info server.
+
+    Formula:
+      fee = baseMultiplier * baseFee + minPriorityFee
+    
+    Where:
+      minPriorityFee = <minimum priority fee from info server>
+      baseFee = <latest block's base fee>
+      baseMultiplier = <multiplier from info server for low, standard, high, etc>
+
+    Reference analysis for choosing 2 gwei minimum priority fee: 
+      https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
+    */
+
+    const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
+
+    // Make sure there is a default network fee entry and gasPrice entry
+    if (networkFees.default == null || networkFees.default.gasPrice == null) {
+      return
+    }
+
+    const defaultNetworkFee: EthereumFee =
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+
+    // The minimum priority fee for slow transactions
+    const minPriorityFee =
+      networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
+    // This is how much we will multiply the base fee by
+    const baseMultiplier =
+      networkFees.default.baseFeeMultiplier ||
+      defaultNetworkFee.baseFeeMultiplier
+
+    // Make sure the properties exist
+    if (minPriorityFee == null || baseMultiplier == null) {
+      return
+    }
+
+    const { gasPrice } = networkFees.default
+
+    const formula = (baseMultiplier: string): string =>
+      bns.div(
+        bns.add(bns.mul(baseMultiplier, baseFeePerGas), minPriorityFee),
+        '1'
+      )
+
+    // Update default network fees
+    networkFees.default = {
+      ...networkFees.default,
+      gasPrice: {
+        ...gasPrice,
+        ...Object.keys(baseMultiplier).reduce(
+          (fees, key) => ({ ...fees, [key]: formula(baseMultiplier[key]) }),
+          {}
+        )
+      }
+    }
+  }
+
+  // deprecate after london hardfork because of EIP 1559
+  async updateNetworkFeesFromEthGasStation() {
     let jsonObj
     try {
       const { ethGasStationUrl } =
@@ -183,7 +266,7 @@ export class EthereumEngine extends CurrencyEngine {
       const valid = validateObject(jsonObj, EthGasStationSchema)
 
       if (valid) {
-        const fees = this.walletLocalData.otherData.networkFees
+        const fees: EthereumFees = this.walletLocalData.otherData.networkFees
         const ethereumFee: EthereumFee = fees.default
         if (!ethereumFee.gasPrice) {
           return
@@ -219,14 +302,18 @@ export class EthereumEngine extends CurrencyEngine {
         let standardFeeHigh = (fast + fastest) * 0.75
         let highFee = fastest
 
-        lowFee = (Math.round(lowFee) * WEI_MULTIPLIER).toString()
+        lowFee = (
+          Math.round(lowFee) * ETH_GAS_STATION_WEI_MULTIPLIER
+        ).toString()
         standardFeeLow = (
-          Math.round(standardFeeLow) * WEI_MULTIPLIER
+          Math.round(standardFeeLow) * ETH_GAS_STATION_WEI_MULTIPLIER
         ).toString()
         standardFeeHigh = (
-          Math.round(standardFeeHigh) * WEI_MULTIPLIER
+          Math.round(standardFeeHigh) * ETH_GAS_STATION_WEI_MULTIPLIER
         ).toString()
-        highFee = (Math.round(highFee) * WEI_MULTIPLIER).toString()
+        highFee = (
+          Math.round(highFee) * ETH_GAS_STATION_WEI_MULTIPLIER
+        ).toString()
 
         if (
           gasPrice.lowFee !== lowFee ||
@@ -523,6 +610,17 @@ export class EthereumEngine extends CurrencyEngine {
     // **********************************
     // Create the unsigned EdgeTransaction
 
+    // This is used for display purposes in the GUI
+    const feeRateUsed = {
+      // Convert gasPrice from wei to gwei
+      gasPrice: bns.div(
+        gasPrice,
+        WEI_MULTIPLIER.toString(),
+        WEI_MULTIPLIER.toString().length - 1
+      ),
+      gasLimit
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -530,10 +628,7 @@ export class EthereumEngine extends CurrencyEngine {
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed: {
-        gasLimit,
-        gasPrice: bns.div(gasPrice, '1000000000')
-      },
+      feeRateUsed,
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams // otherParams
@@ -628,32 +723,37 @@ export class EthereumEngine extends CurrencyEngine {
       nativeAmountHex = '0x00'
     }
 
-    // Tx Parameters:
+    // Select the chain
+    const common = new Common({
+      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
+      chain: this.currencyInfo.defaultSettings.otherSettings.chainId
+    })
 
+    // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: nativeAmountHex,
-      data,
-      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
-      chainId: this.currencyInfo.defaultSettings.otherSettings.chainId
+      data
     }
 
     const privKey = Buffer.from(
       this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
       'hex'
     )
-    const wallet = ethWallet.fromPrivateKey(privKey)
 
+    // Log the private key address
+    const wallet = ethWallet.fromPrivateKey(privKey)
     this.log.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
-    const tx = new EthereumTx(txParams)
-    tx.sign(privKey)
+    // Create and sign transaction
+    const unsignedTx = Transaction.fromTxData(txParams, { common })
+    const signedTx = unsignedTx.sign(privKey)
 
-    edgeTransaction.signedTx = bufToHex(tx.serialize())
-    edgeTransaction.txid = bufToHex(tx.hash())
+    edgeTransaction.signedTx = bufToHex(signedTx.serialize())
+    edgeTransaction.txid = bufToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
     if (edgeTransaction.otherParams) {
       edgeTransaction.otherParams.nonceUsed = nonce
