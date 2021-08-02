@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.7.68 (2021-08-02)
+
+- Add base fee multiplier ETH fee algorithm (EIP 1559)
+- Add Ethereum testnet server URIs to support testnets for development
+- Fix blockbook server URIs
+
 # 0.7.67 (2021-07-20)
 
 - Add x-address decode for xrp parse uri
