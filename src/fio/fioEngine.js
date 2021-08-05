@@ -302,6 +302,12 @@ export class FioEngine extends CurrencyEngine {
         }
       }> => {
         return this.walletLocalData.otherData.fioRequestsToApprove
+      },
+      getBalanceData: async (): Promise<{
+        locked: string,
+        available: string
+      }> => {
+        return this.walletLocalData.otherData.balances
       }
     }
   }
@@ -421,6 +427,14 @@ export class FioEngine extends CurrencyEngine {
     }
     this.tokenCheckBalanceStatus[tk] = 1
     this.updateOnAddressesChecked()
+  }
+
+  updateBalanceData(balances: {
+    all: string,
+    locked: string,
+    available: string
+  }) {
+    this.walletLocalData.otherData.balances = balances
   }
 
   processTransaction(action: FioHistoryNodeAction, actor: string): number {
@@ -885,6 +899,7 @@ export class FioEngine extends CurrencyEngine {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop() {
+    const balances = {}
     const currencyCode = this.currencyInfo.currencyCode
     let nativeAmount = '0'
     if (
@@ -895,13 +910,19 @@ export class FioEngine extends CurrencyEngine {
 
     // Balance
     try {
-      const { balance } = await this.multicastServers('getFioBalance')
-      nativeAmount = balance + ''
+      const { balance, available } = await this.multicastServers(
+        'getFioBalance'
+      )
+      nativeAmount = available + ''
+      balances.all = balance + ''
+      balances.available = nativeAmount
+      balances.locked = bns.sub(balances.all, nativeAmount)
     } catch (e) {
       this.log('checkAccountInnerLoop error: ' + e)
       nativeAmount = '0'
     }
     this.updateBalance(currencyCode, nativeAmount)
+    this.updateBalanceData(balances)
 
     // Fio Addresses
     try {
