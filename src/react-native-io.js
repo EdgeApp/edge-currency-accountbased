@@ -2,8 +2,13 @@
 import { AddressTool, KeyTool, makeSynchronizer } from 'react-native-zcash'
 import { bridgifyObject } from 'yaob'
 
+import {
+  type ZcashWalletBalance
+} from './zcash/zecTypes'
+
 export type ZcashSynchronizer = {
-  start: () => Promise<void>
+  start: () => Promise<void>,
+  getShieldedBalance: () => Promise<ZcashWalletBalance>
 }
 
 // TODO: Remove this entire file in the next breaking change.
@@ -31,6 +36,8 @@ export default function makePluginIo() {
       const out: ZcashSynchronizer = bridgifyObject({
         start: () => {
           return realSynchronizer.start()
+        getShieldedBalance: () => {
+          return realSynchronizer.getShieldedBalance()
         }
       })
       return out

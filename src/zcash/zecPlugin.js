@@ -22,6 +22,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { ZcashEngine } from './zecEngine.js'
 import { currencyInfo } from './zecInfo.js'
+import { type UnifiedViewingKey } from './zecTypes.js'
 
 export class ZcashPlugin extends CurrencyPlugin {
   KeyTool: any
@@ -63,14 +64,15 @@ export class ZcashPlugin extends CurrencyPlugin {
       if (typeof privateKey !== 'string') {
         throw new Error('InvalidSpendKey')
       }
-      const viewKey = await this.KeyTool.deriveViewingKey(privateKey)
+      const unifiedViewingKeys: UnifiedViewingKey =
+        await this.KeyTool.deriveViewingKey(privateKey)
       const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
-        viewKey
+        unifiedViewingKeys.extfvk
       )
       // publicKey = zecCrypto.getAddressFromPrivateKey(privateKey, 'zec')
       return {
         publicKey: shieldedAddress,
-        zcashViewKey: viewKey
+        unifiedViewingKeys
       }
     } else {
       throw new Error('InvalidWalletType')
