@@ -431,7 +431,43 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '12345678900000000000000',
         'ETH'
-      ]
+      ],
+      'uri eip681 payment address': {
+        args: ['ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541?value=123'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '123'
+        }
+      },
+      'uri eip681 payment address with pay prefix': {
+        args: [
+          'ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541?value=123'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '123'
+        }
+      },
+      'uri eip681 payment address using scientific notation': {
+        args: [
+          'ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541?value=2.014e18'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '2014000000000000000'
+        }
+      },
+      'uri eip681 transfer contract invocation': {
+        args: [
+          'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
+          'USDC'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '2014000',
+          currencyCode: 'USDC'
+        }
+      }
     },
     encodeUri: {
       'address only': [

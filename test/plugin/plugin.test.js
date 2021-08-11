@@ -257,6 +257,33 @@ for (const fixture of fixtures) {
         fixture.parseUri['uri address with amount & label'][3]
       )
     })
+
+    /*
+    interface TestCase {
+      args: any[],
+      output: {
+        [key: string]: any;
+      }
+    }
+    */
+    ;[
+      'uri eip681 payment address',
+      'uri eip681 payment address with pay prefix',
+      'uri eip681 payment address using scientific notation',
+      'uri eip681 transfer contract invocation'
+    ].forEach(function (caseName) {
+      const caseFixtures = fixture.parseUri[caseName]
+
+      if (caseFixtures == null) return
+
+      it(caseName, async function () {
+        const parsedUri = await tools.parseUri(...caseFixtures.args)
+
+        Object.entries(caseFixtures.output).forEach(([key, value]) => {
+          assert.equal(parsedUri[key], value)
+        })
+      })
+    })
   })
 
   describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {

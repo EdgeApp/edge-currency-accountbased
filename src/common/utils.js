@@ -352,6 +352,16 @@ export function cleanTxLogs(tx: EdgeTransaction) {
   return JSON.stringify(asCleanTxLogs(tx), null, 2)
 }
 
+// Convert number strings in scientific notation to decimal notation using biggystring
+export function biggyScience(num: string): string {
+  const [factor, exponent] = num.split('e')
+
+  // exit early if the number is not in scientific notation
+  if (exponent == null) return num
+
+  return bns.mul(factor, '1' + '0'.repeat(parseInt(exponent))).toString()
+}
+
 export {
   normalizeAddress,
   addHexPrefix,
