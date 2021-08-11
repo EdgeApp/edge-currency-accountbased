@@ -65,7 +65,6 @@ export class CurrencyPlugin {
     customTokens?: EdgeMetaToken[]
   ) {
     const parsedUri = parse(uri, {}, true)
-    let address: string
 
     // Remove ":" from protocol
     if (parsedUri.protocol) {
@@ -76,23 +75,24 @@ export class CurrencyPlugin {
       throw new Error('InvalidUriError') // possibly scanning wrong crypto type
     }
 
-    if (parsedUri.host) {
-      address = parsedUri.host
-    } else if (parsedUri.pathname) {
-      address = parsedUri.pathname
-    } else {
+    // If no host and no path, then it's not a valid URI
+    if (parsedUri.host === '' && parsedUri.pathname === '') {
       throw new Error('InvalidUriError')
     }
 
-    address = address.replace('/', '') // Remove any slashes
+    // Address uses the host if present to support URLs with double-slashes (//)
+    const publicAddress =
+      parsedUri.host !== '' ? parsedUri.host : parsedUri.pathname.split('/')[0]
 
+    const edgeParsedUri: EdgeParsedUri = {
+      publicAddress
+    }
+
+    // Metadata query parameters
     const label = parsedUri.query.label
     const message = parsedUri.query.message
     const category = parsedUri.query.category
 
-    const edgeParsedUri: EdgeParsedUri = {
-      publicAddress: address
-    }
     if (label || message || category) {
       edgeParsedUri.metadata = {}
       edgeParsedUri.metadata.name = label || undefined
