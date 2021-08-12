@@ -23,7 +23,7 @@ import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo } from '../common/utils.js'
+import { biggyScience, getDenomInfo } from '../common/utils.js'
 import { getFetchCors } from '../react-native-io.js'
 import { EthereumEngine } from './ethEngine.js'
 
@@ -187,6 +187,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
+    // Parse according to EIP-961
     if (prefix === 'token' || prefix === 'token_info') {
       if (!parsedUri.query) throw new Error('InvalidUriError')
 
@@ -219,7 +220,79 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       return edgeParsedUriToken
     }
-    return edgeParsedUri
+
+    // Parse according to EIP-681
+    if (prefix === 'pay') {
+      const targetAddress = address
+      const functionName = parsedUri.pathname.split('/')[1]
+      const parameters = parsedUri.query
+
+      // Handle contract function invocations
+      // This is a very important measure to prevent accidental payment to contract addresses
+      switch (functionName) {
+        // ERC-20 token transfer
+        case 'transfer': {
+          const publicAddress = parameters.address ?? ''
+          const contractAddress = targetAddress ?? ''
+          const nativeAmount =
+            parameters.uint256 != null
+              ? biggyScience(parameters.uint256)
+              : edgeParsedUri.nativeAmount
+
+          // Get meta token from contract address
+          const metaToken = this.currencyInfo.metaTokens.find(
+            metaToken => metaToken.contractAddress === contractAddress
+          )
+
+          // If there is a currencyCode param, the metaToken must be found
+          // and it's currency code must matching the currencyCode param.
+          if (
+            currencyCode != null &&
+            (metaToken == null || metaToken.currencyCode !== currencyCode)
+          ) {
+            throw new Error('InternalErrorInvalidCurrencyCode')
+          }
+
+          // Validate addresses
+          if (!EthereumUtil.isValidAddress(publicAddress)) {
+            throw new Error('InvalidPublicAddressError')
+          }
+          if (!EthereumUtil.isValidAddress(contractAddress)) {
+            throw new Error('InvalidContractAddressError')
+          }
+
+          return {
+            ...edgeParsedUri,
+            currencyCode: metaToken?.currencyCode,
+            nativeAmount,
+            publicAddress
+          }
+        }
+        // ETH payment
+        case undefined: {
+          const publicAddress = targetAddress
+          const nativeAmount =
+            parameters.value != null
+              ? biggyScience(parameters.value)
+              : edgeParsedUri.nativeAmount
+
+          // If currencyCode is not the same as the default currencyCode from the currencyInfo
+          if (
+            currencyCode != null &&
+            currencyCode !== this.currencyInfo.currencyCode
+          ) {
+            throw new Error('InternalErrorInvalidCurrencyCode')
+          }
+
+          return { ...edgeParsedUri, publicAddress, nativeAmount }
+        }
+        default: {
+          throw new Error('UnsupportedContractFunction')
+        }
+      }
+    }
+
+    throw new Error('InvalidUriError')
   }
 
   async encodeUri(
