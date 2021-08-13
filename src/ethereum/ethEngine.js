@@ -63,6 +63,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  otherMethods: Object
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -89,6 +90,10 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+
+    this.otherMethods = {
+      getTokenInfo: this.getTokenInfo.bind(this)
+    }
   }
 
   updateBalance(tk: string, balance: string) {
