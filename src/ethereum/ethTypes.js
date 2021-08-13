@@ -77,6 +77,20 @@ export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
 
 export type EthereumFees = $Call<typeof asEthereumFees>
 
+export const asMetaToken = asObject({
+  name: asString,
+  symbol: asString,
+  decimals: asNumber,
+  tradable: asBoolean,
+  iconUrl: asString
+})
+
+export type MetaToken = $Call<typeof asMetaToken>
+
+export const asMetaTokenMap = asObject<MetaToken>(asMetaToken)
+
+export type MetaTokenMap = $Call<typeof asMetaTokenMap>
+
 export type EthereumCalcedFees = {
   gasPrice: string,
   gasLimit: string,
