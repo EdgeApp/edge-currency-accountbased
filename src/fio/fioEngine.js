@@ -303,23 +303,6 @@ export class FioEngine extends CurrencyEngine {
       > => {
         return this.walletLocalData.otherData.fioDomains
       },
-      getApproveNeededFioRequests: async (): Promise<{
-        [fioRequestId: string]: {
-          payeeFioAddress: string,
-          payerFioAddress: string,
-          payerPublicAddress: string,
-          payeePublicAddress: string,
-          amount: string,
-          currencyCode: string,
-          chainCode: string,
-          tokenCode: string,
-          obtId: string,
-          memo: string,
-          fioRequestId: string
-        }
-      }> => {
-        return this.walletLocalData.otherData.fioRequestsToApprove
-      },
       getFioRequests: async (
         type: string,
         page: number,
