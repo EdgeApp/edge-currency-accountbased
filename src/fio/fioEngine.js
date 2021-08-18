@@ -27,8 +27,11 @@ import {
   timeout
 } from '../common/utils'
 import {
+  type FioRequest,
+  type RequestsLastPage,
   ACTIONS_TO_END_POINT_KEYS,
   BROADCAST_ACTIONS,
+  FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
 } from './fioConst.js'
@@ -45,6 +48,7 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
+const REQUEST_POLL_MILLISECONDS = 10000
 const FEE_ACTION_MAP = {
   addPublicAddress: {
     action: 'getFeeForAddPublicAddress',
@@ -89,6 +93,11 @@ export class FioEngine extends CurrencyEngine {
   recentFioFee: RecentFioFee
   fioSdk: FIOSDK
   fioSdkPreparedTrx: FIOSDK
+  requestsLastPage: RequestsLastPage
+  requests: {
+    PENDING: FioRequest[],
+    SENT: FioRequest[]
+  }
 
   localDataDirty() {
     this.walletLocalDataDirty = true
@@ -106,6 +115,14 @@ export class FioEngine extends CurrencyEngine {
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
+    this.requestsLastPage = {
+      [FIO_REQUESTS_TYPES.SENT]: 1,
+      [FIO_REQUESTS_TYPES.PENDING]: 1
+    }
+    this.requests = {
+      [FIO_REQUESTS_TYPES.SENT]: [],
+      [FIO_REQUESTS_TYPES.PENDING]: []
+    }
 
     this.fioSdkInit()
 
@@ -1022,6 +1039,67 @@ export class FioEngine extends CurrencyEngine {
     }
   }
 
+  async checkFioRequests(): Promise<void> {
+    await this.fetchFioRequests(FIO_REQUESTS_TYPES.PENDING)
+    await this.fetchFioRequests(FIO_REQUESTS_TYPES.SENT)
+  }
+
+  async fetchFioRequests(type: string): Promise<void> {
+    const ITEMS_PER_PAGE = 100
+    const ACTION_TYPE_MAP = {
+      [FIO_REQUESTS_TYPES.PENDING]: 'getPendingFioRequests',
+      [FIO_REQUESTS_TYPES.SENT]: 'getSentFioRequests'
+    }
+    const IS_PENDING = type === FIO_REQUESTS_TYPES.PENDING
+
+    let lastPageAmount = ITEMS_PER_PAGE
+    while (lastPageAmount === ITEMS_PER_PAGE) {
+      const nextFioRequests: FioRequest[] = []
+
+      try {
+        const { requests } = await this.multicastServers(
+          ACTION_TYPE_MAP[type],
+          {
+            fioPublicKey: this.walletInfo.keys.publicKey,
+            limit: ITEMS_PER_PAGE,
+            offset: (this.requestsLastPage[type] - 1) * ITEMS_PER_PAGE
+          }
+        )
+
+        if (requests) {
+          for (const fioRequest: FioRequest of requests) {
+            if (
+              IS_PENDING &&
+              this.walletLocalData.otherData.fioRequestsToApprove[
+                fioRequest.fio_request_id
+              ]
+            )
+              continue
+            if (
+              this.requests[type].findIndex(
+                (exFioRequest: FioRequest) =>
+                  exFioRequest.fio_request_id === fioRequest.fio_request_id
+              ) < 0 &&
+              nextFioRequests.findIndex(
+                (exFioRequest: FioRequest) =>
+                  exFioRequest.fio_request_id === fioRequest.fio_request_id
+              ) < 0
+            ) {
+              nextFioRequests.push(fioRequest)
+            }
+          }
+          this.requestsLastPage[type]++
+          this.requests[type].push(...nextFioRequests)
+          lastPageAmount = requests.length
+        }
+      } catch (e) {
+        lastPageAmount = 0
+        this.log.error(e.message)
+        //
+      }
+    }
+  }
+
   async approveErroredFioRequests(): Promise<void> {
     for (const fioRequestId in this.walletLocalData.otherData
       .fioRequestsToApprove) {
@@ -1061,6 +1139,7 @@ export class FioEngine extends CurrencyEngine {
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     this.addToLoop('approveErroredFioRequests', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkFioRequests', REQUEST_POLL_MILLISECONDS)
     super.startEngine()
   }
 
