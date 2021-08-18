@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.69 (2021-08-02)
+
+- Add: Improved support for EIP-681 URI parsing of payments and token transfers
+- Fix: Unable to send transactions on ETC, FTM, and RSK networks
+
 # 0.7.68 (2021-08-02)
 
 - Add base fee multiplier ETH fee algorithm (EIP 1559)
