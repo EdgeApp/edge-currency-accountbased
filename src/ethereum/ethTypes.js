@@ -26,12 +26,34 @@ export type EthereumInitOptions = {
   alchemyApiKey?: string
 }
 
-export type EthereumSettings = {
-  etherscanApiServers: string[],
-  blockcypherApiServers: string[],
+export type EthereumSettings = {|
+  alethioApiServers: string[],
+  alethioCurrencies: {
+    native: string,
+    token: string
+  } | null,
+  amberdataApiServers: string[],
+  amberDataBlockchainId: string,
+  amberdataRpcServers: string[],
   blockbookServers: string[],
-  iosAllowedTokens: { [currencyCode: string]: boolean }
-}
+  blockchairApiServers: string[],
+  blockcypherApiServers: string[],
+  chainId: number,
+  checkUnconfirmedTransactions: boolean,
+  // eslint-disable-next-line no-use-before-define
+  defaultNetworkFees: EthereumFees,
+  ercTokenStandard: string,
+  etherscanApiServers: string[],
+  ethGasStationUrl: string | null,
+  hdPathCoinType: number,
+  iosAllowedTokens: {
+    [currencyCode: string]: true
+  },
+  pluginMnemonicKeyName: string,
+  pluginRegularKeyName: string,
+  rpcServers: string[],
+  uriNetworks: string[]
+|}
 
 export const asEthereumFeesGasLimit = asObject({
   regularTransaction: asString,
