@@ -38,7 +38,10 @@ export type EthereumSettings = {|
   blockbookServers: string[],
   blockchairApiServers: string[],
   blockcypherApiServers: string[],
-  chainId: number,
+  chainParams: {
+    chainId: number,
+    name: string
+  },
   checkUnconfirmedTransactions: boolean,
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees,

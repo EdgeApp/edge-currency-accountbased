@@ -62,7 +62,10 @@ const otherSettings: EthereumSettings = {
   blockbookServers: [],
   uriNetworks: ['ethereumclassic', 'etherclass'],
   ercTokenStandard: 'ERC20',
-  chainId: 61,
+  chainParams: {
+    chainId: 61,
+    name: 'Ethereum Classic'
+  },
   hdPathCoinType: 61,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},

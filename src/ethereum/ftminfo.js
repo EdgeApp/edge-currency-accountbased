@@ -37,7 +37,10 @@ const otherSettings: EthereumSettings = {
   blockbookServers: [],
   uriNetworks: ['fantom'],
   ercTokenStandard: 'ERC20',
-  chainId: 250,
+  chainParams: {
+    chainId: 250,
+    name: 'Fantom Opera'
+  },
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},

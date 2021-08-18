@@ -142,7 +142,10 @@ const otherSettings: EthereumSettings = {
   })(),
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
-  chainId,
+  chainParams: {
+    chainId,
+    name: 'Ethereum Mainnet'
+  },
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: true,
   iosAllowedTokens: {

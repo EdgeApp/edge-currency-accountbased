@@ -43,7 +43,10 @@ const otherSettings: EthereumSettings = {
   amberDataBlockchainId: '', // Only used for ETH right now
   uriNetworks: ['rsk', 'rbtc'],
   ercTokenStandard: 'RRC20',
-  chainId: 30,
+  chainParams: {
+    chainId: 30,
+    name: 'RSK Mainnet'
+  },
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: { RIF: true },
   hdPathCoinType: 137,
