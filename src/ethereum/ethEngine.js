@@ -43,6 +43,7 @@ import {
   type EthereumFees,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
+  type EthereumSettings,
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
@@ -724,10 +725,10 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     // Select the chain
-    const common = new Common({
-      // EIP 155 chainId - ETH mainnet: 1, ETH ropsten: 3
-      chain: this.currencyInfo.defaultSettings.otherSettings.chainId
-    })
+    const otherSettings: EthereumSettings =
+      this.currencyInfo.defaultSettings.otherSettings
+    const { chainParams } = otherSettings
+    const common = Common.custom(chainParams)
 
     // Transaction Parameters
     const txParams = {

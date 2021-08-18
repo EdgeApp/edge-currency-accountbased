@@ -36,6 +36,7 @@ import {
   type BlockbookTx,
   type CheckTokenBalBlockchair,
   type CheckTokenBalRpc,
+  type EthereumSettings,
   type EthereumTxOtherParams,
   type EtherscanGetAccountBalance,
   type EtherscanInternalTransaction,
@@ -797,13 +798,16 @@ export class EthereumNetwork {
   }
 
   async multicastServers(func: EthFunction, ...params: any): Promise<any> {
+    const otherSettings: EthereumSettings =
+      this.currencyInfo.defaultSettings.otherSettings
     const {
       rpcServers,
       blockcypherApiServers,
       etherscanApiServers,
       blockbookServers,
-      chainId
-    } = this.currencyInfo.defaultSettings.otherSettings
+      chainParams
+    } = otherSettings
+    const { chainId } = chainParams
     let out = { result: '', server: 'no server' }
     let funcs, url
     switch (func) {

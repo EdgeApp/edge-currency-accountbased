@@ -7,10 +7,11 @@ import type {
 } from 'edge-core-js/types'
 
 import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumSettings } from './ethTypes.js'
+import type { EthereumFees, EthereumSettings } from './ethTypes.js'
 
-const defaultNetworkFees = {
+const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',
       tokenTransaction: '200000',
@@ -24,7 +25,8 @@ const defaultNetworkFees = {
       standardFeeHighAmount: '10000000000000000000',
       highFee: '40000000001',
       minGasPrice: '1000000000'
-    }
+    },
+    minPriorityFee: undefined
   }
 }
 
@@ -35,7 +37,10 @@ const otherSettings: EthereumSettings = {
   blockbookServers: [],
   uriNetworks: ['fantom'],
   ercTokenStandard: 'ERC20',
-  chainId: 250,
+  chainParams: {
+    chainId: 250,
+    name: 'Fantom Opera'
+  },
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
