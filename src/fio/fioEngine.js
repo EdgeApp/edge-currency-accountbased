@@ -319,6 +319,23 @@ export class FioEngine extends CurrencyEngine {
         }
       }> => {
         return this.walletLocalData.otherData.fioRequestsToApprove
+      },
+      getFioRequests: async (
+        type: string,
+        page: number,
+        itemsPerPage: number = 50,
+        newFirst: boolean = false
+      ): Promise<FioRequest[]> => {
+        const startIndex = itemsPerPage * (page - 1)
+        const endIndex = itemsPerPage * page - 1
+        if (newFirst) {
+          return this.requests[type]
+            .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
+            .slice(startIndex, endIndex)
+        }
+        return this.requests[type]
+          .sort((a, b) => (a.time_stamp < b.time_stamp ? -1 : 1))
+          .slice(startIndex, endIndex)
       }
     }
   }
