@@ -267,6 +267,7 @@ for (const fixture of fixtures) {
     }
     */
     ;[
+      'address only with provided currency code',
       'uri eip681 payment address',
       'uri eip681 payment address with pay prefix',
       'uri eip681 payment address using scientific notation',
@@ -280,6 +281,8 @@ for (const fixture of fixtures) {
         const parsedUri = await tools.parseUri(...caseFixtures.args)
 
         Object.entries(caseFixtures.output).forEach(([key, value]) => {
+          if (caseName === 'address only with provided currency code')
+            console.log(';;', parsedUri)
           assert.equal(parsedUri[key], value)
         })
       })

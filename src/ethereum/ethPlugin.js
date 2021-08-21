@@ -276,14 +276,6 @@ export class EthereumPlugin extends CurrencyPlugin {
               ? biggyScience(parameters.value)
               : edgeParsedUri.nativeAmount
 
-          // If currencyCode is not the same as the default currencyCode from the currencyInfo
-          if (
-            currencyCode != null &&
-            currencyCode !== this.currencyInfo.currencyCode
-          ) {
-            throw new Error('InternalErrorInvalidCurrencyCode')
-          }
-
           return { ...edgeParsedUri, publicAddress, nativeAmount }
         }
         default: {

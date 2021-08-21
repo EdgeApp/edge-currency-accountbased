@@ -379,6 +379,12 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
       ],
+      'address with provided currency code': {
+        args: ['0x04b6b3bcbc16a5fb6a20301d650f8def513122a8', 'USDC'],
+        output: {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+        }
+      },
       'checksum address only': [
         '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1bf07',
         '0x3c40cbb7f82a7e1bc83c4e3e98590b19e0e1bf07'
