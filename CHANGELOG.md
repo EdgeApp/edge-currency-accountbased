@@ -1,6 +1,10 @@
 # edge-currency-accountbased
 
-# 0.7.69 (2021-08-02)
+# 0.7.70 (2021-08-20)
+
+- Fix: Regression caused by EIP-681 parseUri implementation
+
+# 0.7.69 (2021-08-18)
 
 - Add: Improved support for EIP-681 URI parsing of payments and token transfers
 - Fix: Unable to send transactions on ETC, FTM, and RSK networks
