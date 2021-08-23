@@ -477,6 +477,7 @@ export class EthereumNetwork {
       const {
         blockcypherApiKey,
         etherscanApiKey,
+        ftmscanApiKey,
         infuraProjectId,
         blockchairApiKey
       } = this.ethEngine.initOptions
@@ -491,6 +492,7 @@ export class EthereumNetwork {
       if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
       if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
       if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
+      if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
       throw new Error(
         `The server returned error code ${response.status} for ${url}`
       )
@@ -499,16 +501,19 @@ export class EthereumNetwork {
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
-    const { etherscanApiKey } = this.ethEngine.initOptions
+    const { etherscanApiKey, ftmscanApiKey } = this.ethEngine.initOptions
     const chosenKey = Array.isArray(etherscanApiKey)
       ? pickRandom(etherscanApiKey, 1)[0]
       : etherscanApiKey
     const apiKey =
       chosenKey && chosenKey.length > 5 && server.includes('etherscan')
         ? '&apikey=' + chosenKey
+        : ftmscanApiKey != null && server.includes('ftmscan')
+        ? '&apikey=' + ftmscanApiKey
         : ''
 
     const url = `${server}/api${cmd}${apiKey}`
+    this.ethEngine.log.warn('invalid ftm url ', url)
     return this.fetchGet(url)
   }
 
