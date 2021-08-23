@@ -60,16 +60,17 @@ export class ZcashPlugin extends CurrencyPlugin {
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'zcash') {
-      const privateKey = walletInfo.keys.zcashSpendKey
-      if (typeof privateKey !== 'string') {
-        throw new Error('InvalidSpendKey')
+      const mnemonic = walletInfo.keys.zcashMnemonic
+      if (typeof mnemonic !== 'string') {
+        throw new Error('InvalidZcashMnemonic')
       }
+      const hexBuffer = await mnemonicToSeed(mnemonic)
+      const hex = hexBuffer.toString('hex')
       const unifiedViewingKeys: UnifiedViewingKey =
-        await this.KeyTool.deriveViewingKey(privateKey)
+        await this.KeyTool.deriveViewingKey(hex)
       const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
         unifiedViewingKeys.extfvk
       )
-      // publicKey = zecCrypto.getAddressFromPrivateKey(privateKey, 'zec')
       return {
         publicKey: shieldedAddress,
         unifiedViewingKeys
