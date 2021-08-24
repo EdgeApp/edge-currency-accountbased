@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.71 (2021-08-24)
+
+- FTM: Add apikey to ftmscan.com requests
+
 # 0.7.70 (2021-08-20)
 
 - Fix: Regression caused by EIP-681 parseUri implementation
