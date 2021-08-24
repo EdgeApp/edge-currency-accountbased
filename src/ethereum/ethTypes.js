@@ -18,6 +18,7 @@ import {
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
   etherscanApiKey?: string | string[],
+  ftmscanApiKey?: string,
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,
