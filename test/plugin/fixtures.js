@@ -379,12 +379,6 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
       ],
-      'address with provided currency code': {
-        args: ['0x04b6b3bcbc16a5fb6a20301d650f8def513122a8', 'USDC'],
-        output: {
-          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
-        }
-      },
       'checksum address only': [
         '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1bf07',
         '0x3c40cbb7f82a7e1bc83c4e3e98590b19e0e1bf07'
@@ -437,15 +431,34 @@ export default [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '12345678900000000000000',
         'ETH'
-      ],
-      'uri eip681 payment address': {
+      ]
+    },
+    // Expected output given some arguments as input
+    parseUriArgCases: [
+      {
+        name: 'Address with known currency code provided',
+        args: ['0x04b6b3bcbc16a5fb6a20301d650f8def513122a8', 'USDC'],
+        output: {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+        }
+      },
+      {
+        name: 'Address with unknown currency code provided',
+        args: ['0x04b6b3bcbc16a5fb6a20301d650f8def513122a8', 'ABCDEF'],
+        output: {
+          publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'
+        }
+      },
+      {
+        name: 'URI EIP-681 payment address',
         args: ['ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541?value=123'],
         output: {
           publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
           nativeAmount: '123'
         }
       },
-      'uri eip681 payment address with pay prefix': {
+      {
+        name: 'URI EIP-681 payment address with pay prefix',
         args: [
           'ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541?value=123'
         ],
@@ -454,7 +467,8 @@ export default [
           nativeAmount: '123'
         }
       },
-      'uri eip681 payment address using scientific notation': {
+      {
+        name: 'URI EIP-681 payment address using scientific notation',
         args: [
           'ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541?value=2.014e18'
         ],
@@ -463,7 +477,8 @@ export default [
           nativeAmount: '2014000000000000000'
         }
       },
-      'uri eip681 transfer contract invocation': {
+      {
+        name: 'URI EIP-681 transfer of known currency code and contract address',
         args: [
           'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
           'USDC'
@@ -473,8 +488,37 @@ export default [
           nativeAmount: '2014000',
           currencyCode: 'USDC'
         }
+      },
+      {
+        name: 'URI EIP-681 transfer of known contract address yet incorrect currency code',
+        args: [
+          'ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
+          'ABCDEF'
+        ],
+        error:
+          'Currency code ABCDEF and contract 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 must match known currency code USDC and contract 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+      },
+      {
+        name: 'URI EIP-681 transfer of known currency code yet incorrect contract address',
+        args: [
+          'ethereum:0xabcdef0000000000000000000000000000000000/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
+          'USDC'
+        ],
+        error:
+          'Currency code USDC and contract 0xabcdef0000000000000000000000000000000000 must match known currency code USDC and contract 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+      },
+      {
+        name: 'URI EIP-681 transfer of unknown currency code and contract address',
+        args: [
+          'ethereum:0xabcdef0000000000000000000000000000000000/transfer?address=0xf5d81254c269a1e984044e4d542adc07bf18c541&uint256=2.014e6',
+          'ABCDEF'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '2014000'
+        }
       }
-    },
+    ],
     encodeUri: {
       'address only': [
         { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
