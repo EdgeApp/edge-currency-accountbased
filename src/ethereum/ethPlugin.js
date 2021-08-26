@@ -239,18 +239,30 @@ export class EthereumPlugin extends CurrencyPlugin {
               ? biggyScience(parameters.uint256)
               : edgeParsedUri.nativeAmount
 
-          // Get meta token from contract address
-          const metaToken = this.currencyInfo.metaTokens.find(
-            metaToken => metaToken.contractAddress === contractAddress
+          // We know the token which is being used by either the URI contract
+          // address or the given currency code
+          const knownMetaToken = this.currencyInfo.metaTokens.find(
+            metaToken =>
+              metaToken.contractAddress === contractAddress ||
+              metaToken.currencyCode === currencyCode
           )
 
-          // If there is a currencyCode param, the metaToken must be found
-          // and it's currency code must matching the currencyCode param.
+          // Don't allow transfers to incorrect contract addresses.
+          // It would clearly be a user error to transfer some amount from a
+          // contract address that doesn't match the given currency code.
           if (
             currencyCode != null &&
-            (metaToken == null || metaToken.currencyCode !== currencyCode)
+            knownMetaToken != null &&
+            (knownMetaToken.currencyCode !== currencyCode ||
+              knownMetaToken.contractAddress !== contractAddress)
           ) {
-            throw new Error('InternalErrorInvalidCurrencyCode')
+            const {
+              currencyCode: knownCurrencyCode,
+              contractAddress: knownContractAddress = ''
+            } = knownMetaToken
+            throw new Error(
+              `Currency code ${currencyCode} and contract ${contractAddress} must match known currency code ${knownCurrencyCode} and contract ${knownContractAddress}`
+            )
           }
 
           // Validate addresses
@@ -263,7 +275,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
           return {
             ...edgeParsedUri,
-            currencyCode: metaToken?.currencyCode,
+            currencyCode: knownMetaToken?.currencyCode,
             nativeAmount,
             publicAddress
           }
