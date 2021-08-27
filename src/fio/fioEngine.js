@@ -27,6 +27,8 @@ import {
   timeout
 } from '../common/utils'
 import {
+  type FioAddress,
+  type FioDomain,
   type FioRequest,
   type RequestsLastPage,
   ACTIONS_TO_END_POINT_KEYS,
@@ -87,16 +89,21 @@ type PreparedTrx = {
 export class FioEngine extends CurrencyEngine {
   fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
-  otherData: any
   otherMethods: Object
   tpid: string
   recentFioFee: RecentFioFee
   fioSdk: FIOSDK
   fioSdkPreparedTrx: FIOSDK
-  requestsLastPage: RequestsLastPage
-  requests: {
-    PENDING: FioRequest[],
-    SENT: FioRequest[]
+  otherData: {
+    highestTxHeight: number,
+    fioAddresses: FioAddress[],
+    fioDomains: FioDomain[],
+    fioRequests: {
+      PENDING: FioRequest[],
+      SENT: FioRequest[]
+    },
+    requestsLastPage: RequestsLastPage,
+    fioRequestsToApprove: { [requestId: string]: any }
   }
 
   localDataDirty() {
@@ -115,14 +122,6 @@ export class FioEngine extends CurrencyEngine {
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
-    this.requestsLastPage = {
-      [FIO_REQUESTS_TYPES.SENT]: 1,
-      [FIO_REQUESTS_TYPES.PENDING]: 1
-    }
-    this.requests = {
-      [FIO_REQUESTS_TYPES.SENT]: [],
-      [FIO_REQUESTS_TYPES.PENDING]: []
-    }
 
     this.fioSdkInit()
 
@@ -288,9 +287,7 @@ export class FioEngine extends CurrencyEngine {
         })
         return fee
       },
-      getFioAddresses: async (): Promise<
-        Array<{ name: string, expiration: string }>
-      > => {
+      getFioAddresses: async (): Promise<FioAddress[]> => {
         return this.walletLocalData.otherData.fioAddresses
       },
       getFioAddressNames: async (): Promise<string[]> => {
@@ -298,9 +295,7 @@ export class FioEngine extends CurrencyEngine {
           fioAddress => fioAddress.name
         )
       },
-      getFioDomains: async (): Promise<
-        Array<{ name: string, expiration: string, isPublic: boolean }>
-      > => {
+      getFioDomains: async (): Promise<FioDomain[]> => {
         return this.walletLocalData.otherData.fioDomains
       },
       getFioRequests: async (
@@ -312,11 +307,11 @@ export class FioEngine extends CurrencyEngine {
         const startIndex = itemsPerPage * (page - 1)
         const endIndex = itemsPerPage * page - 1
         if (newFirst) {
-          return this.requests[type]
+          return this.walletLocalData.otherData.fioRequests[type]
             .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
             .slice(startIndex, endIndex)
         }
-        return this.requests[type]
+        return this.walletLocalData.otherData.fioRequests[type]
           .sort((a, b) => (a.time_stamp < b.time_stamp ? -1 : 1))
           .slice(startIndex, endIndex)
       }
@@ -1052,6 +1047,16 @@ export class FioEngine extends CurrencyEngine {
     }
     const IS_PENDING = type === FIO_REQUESTS_TYPES.PENDING
 
+    if (this.walletLocalData.otherData.fioRequests == null) {
+      this.walletLocalData.otherData.fioRequests = {
+        [FIO_REQUESTS_TYPES.SENT]: [],
+        [FIO_REQUESTS_TYPES.PENDING]: []
+      }
+      this.walletLocalData.otherData.requestsLastPage = {
+        [FIO_REQUESTS_TYPES.SENT]: 1,
+        [FIO_REQUESTS_TYPES.PENDING]: 1
+      }
+    }
     let lastPageAmount = ITEMS_PER_PAGE
     while (lastPageAmount === ITEMS_PER_PAGE) {
       const nextFioRequests: FioRequest[] = []
@@ -1062,7 +1067,9 @@ export class FioEngine extends CurrencyEngine {
           {
             fioPublicKey: this.walletInfo.keys.publicKey,
             limit: ITEMS_PER_PAGE,
-            offset: (this.requestsLastPage[type] - 1) * ITEMS_PER_PAGE
+            offset:
+              (this.walletLocalData.otherData.requestsLastPage[type] - 1) *
+              ITEMS_PER_PAGE
           }
         )
 
@@ -1076,7 +1083,7 @@ export class FioEngine extends CurrencyEngine {
             )
               continue
             if (
-              this.requests[type].findIndex(
+              this.walletLocalData.otherData.fioRequests[type].findIndex(
                 (exFioRequest: FioRequest) =>
                   exFioRequest.fio_request_id === fioRequest.fio_request_id
               ) < 0 &&
@@ -1088,14 +1095,16 @@ export class FioEngine extends CurrencyEngine {
               nextFioRequests.push(fioRequest)
             }
           }
-          this.requestsLastPage[type]++
-          this.requests[type].push(...nextFioRequests)
+          this.walletLocalData.otherData.requestsLastPage[type]++
+          this.walletLocalData.otherData.fioRequests[type].push(
+            ...nextFioRequests
+          )
+          this.localDataDirty()
           lastPageAmount = requests.length
         }
       } catch (e) {
         lastPageAmount = 0
         this.log.error(e.message)
-        //
       }
     }
   }
@@ -1125,6 +1134,14 @@ export class FioEngine extends CurrencyEngine {
     this.walletLocalData.otherData.highestTxHeight = 0
     this.walletLocalData.otherData.fioAddresses = []
     this.walletLocalData.otherData.fioDomains = []
+    this.walletLocalData.otherData.fioRequests = {
+      [FIO_REQUESTS_TYPES.SENT]: [],
+      [FIO_REQUESTS_TYPES.PENDING]: []
+    }
+    this.walletLocalData.otherData.requestsLastPage = {
+      [FIO_REQUESTS_TYPES.SENT]: 1,
+      [FIO_REQUESTS_TYPES.PENDING]: 1
+    }
     this.walletLocalData.otherData.fioRequestsToApprove = {}
   }
 

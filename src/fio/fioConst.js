@@ -61,3 +61,14 @@ export type FioRequest = {
   time_stamp: string,
   content: string
 }
+
+export type FioAddress = {
+  name: string,
+  expiration: string
+}
+
+export type FioDomain = {
+  name: string,
+  expiration: string,
+  isPublic: boolean
+}
