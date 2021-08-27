@@ -128,7 +128,18 @@ export class FioEngine extends CurrencyEngine {
         switch (actionName) {
           case 'addPublicAddresses':
           case 'addPublicAddress':
-          case 'requestFunds':
+          case 'requestFunds': {
+            const { fee } = await this.multicastServers(
+              FEE_ACTION_MAP[actionName].action,
+              {
+                [FEE_ACTION_MAP[actionName].propName]:
+                  params[FEE_ACTION_MAP[actionName].propName]
+              }
+            )
+            params.maxFee = fee
+
+            break
+          }
           case 'rejectFundsRequest': {
             const { fee } = await this.multicastServers(
               FEE_ACTION_MAP[actionName].action,
@@ -138,7 +149,21 @@ export class FioEngine extends CurrencyEngine {
               }
             )
             params.maxFee = fee
-            break
+            const res = await this.multicastServers(actionName, params)
+            this.removeFioRequest(
+              params.fioRequestId,
+              FIO_REQUESTS_TYPES.PENDING
+            )
+            this.localDataDirty()
+
+            return res
+          }
+          case 'cancelFundsRequest': {
+            const res = await this.multicastServers(actionName, params)
+            this.removeFioRequest(params.fioRequestId, FIO_REQUESTS_TYPES.SENT)
+            this.localDataDirty()
+
+            return res
           }
           case 'recordObtData': {
             const { fee } = await this.multicastServers(
@@ -160,6 +185,10 @@ export class FioEngine extends CurrencyEngine {
                 delete this.walletLocalData.otherData.fioRequestsToApprove[
                   params.fioRequestId
                 ]
+                this.removeFioRequest(
+                  params.fioRequestId,
+                  FIO_REQUESTS_TYPES.PENDING
+                )
                 this.localDataDirty()
               }
               return res
@@ -1132,6 +1161,22 @@ export class FioEngine extends CurrencyEngine {
     }
 
     return false
+  }
+
+  removeFioRequest = (fioRequestId: string | number, type: string): void => {
+    const fioRequestIndex = this.walletLocalData.otherData.fioRequests[
+      type
+    ].findIndex(
+      (fioRequest: FioRequest) =>
+        fioRequest.fio_request_id === `${fioRequestId}`
+    )
+
+    if (fioRequestIndex > -1) {
+      this.walletLocalData.otherData.fioRequests[type].splice(
+        fioRequestIndex,
+        1
+      )
+    }
   }
 
   async approveErroredFioRequests(): Promise<void> {
