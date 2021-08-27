@@ -44,11 +44,6 @@ export const FIO_REQUESTS_TYPES = {
   SENT: 'SENT'
 }
 
-export type RequestsLastPage = {
-  PENDING: number,
-  SENT: number
-}
-
 export type FioRequest = {
   fio_request_id: string,
   payer_fio_address: string,
