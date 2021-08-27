@@ -31,6 +31,7 @@ import {
 import {
   type CustomToken,
   DATA_STORE_FILE,
+  OTHER_DATA_STORE_FILE,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
   TXID_MAP_FILE,
@@ -53,6 +54,7 @@ export class CurrencyEngine {
   tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
+  otherLocalDataDirty: boolean
   transactionListDirty: boolean
   transactionsLoaded: boolean
   transactionList: { [currencyCode: string]: EdgeTransaction[] }
@@ -68,6 +70,7 @@ export class CurrencyEngine {
   io: EdgeIo
   log: EdgeLog
   otherData: Object
+  otherLocalData: Object
 
   constructor(
     currencyPlugin: CurrencyPlugin,
@@ -85,6 +88,7 @@ export class CurrencyEngine {
     this.tokenCheckBalanceStatus = {}
     this.tokenCheckTransactionsStatus = {}
     this.walletLocalDataDirty = false
+    this.otherLocalDataDirty = false
     this.transactionsChangedArray = []
     this.transactionList = {}
     this.transactionListDirty = false
@@ -265,6 +269,23 @@ export class CurrencyEngine {
         await disklet.setText(
           DATA_STORE_FILE,
           JSON.stringify(this.walletLocalData)
+        )
+      } catch (e) {
+        this.log.error(
+          'Error writing to localDataStore. Engine not started:' + err
+        )
+        throw e
+      }
+    }
+    try {
+      this.otherLocalData = await disklet.getText(OTHER_DATA_STORE_FILE)
+    } catch (err) {
+      try {
+        this.log('No otherLocalData setup yet: Failure is ok')
+        this.otherLocalData = {}
+        await disklet.setText(
+          OTHER_DATA_STORE_FILE,
+          JSON.stringify(this.otherLocalData)
         )
       } catch (e) {
         this.log.error(
@@ -528,6 +549,18 @@ export class CurrencyEngine {
           this.log.error(e)
         })
     }
+    if (this.otherLocalDataDirty) {
+      this.log('otherLocalDataDirty. Saving...')
+      await disklet
+        .setText(OTHER_DATA_STORE_FILE, JSON.stringify(this.otherLocalData))
+        .then(() => {
+          this.otherLocalDataDirty = false
+        })
+        .catch(e => {
+          this.log.error('Error saving otherLocalData')
+          this.log.error(e)
+        })
+    }
   }
 
   doInitialBalanceCallback() {
@@ -644,6 +677,7 @@ export class CurrencyEngine {
       this.currencyInfo.currencyCode
     )
     this.walletLocalDataDirty = true
+    this.otherLocalDataDirty = true
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}
     this.tokenCheckTransactionsStatus = {}
@@ -652,6 +686,7 @@ export class CurrencyEngine {
     this.txIdMap = {}
     this.transactionListDirty = true
     this.otherData = this.walletLocalData.otherData
+    this.otherLocalData = {}
     await this.saveWalletLoop()
   }
 
