@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.72 (2021-09-17)
+
+- Remove postinstall-postinstall dependency
+
 # 0.7.71 (2021-08-24)
 
 - FTM: Add apikey to ftmscan.com requests
