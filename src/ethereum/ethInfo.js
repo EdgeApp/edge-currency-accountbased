@@ -1291,6 +1291,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'
+    },
+    {
+      currencyCode: 'MATIC',
+      currencyName: 'Polygon',
+      denominations: [
+        {
+          name: 'MATIC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0'
     }
   ]
 }
