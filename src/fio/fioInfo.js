@@ -3,6 +3,8 @@
 
 import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { FIO_REQUESTS_TYPES } from './fioConst'
+
 const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
@@ -45,7 +47,8 @@ const defaultSettings: any = {
     IS_DOMAIN_PUBLIC_ERROR: 'IS_DOMAIN_PUBLIC_ERROR',
     FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED',
     SERVER_ERROR: 'SERVER_ERROR'
-  }
+  },
+  fioRequestsTypes: FIO_REQUESTS_TYPES
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

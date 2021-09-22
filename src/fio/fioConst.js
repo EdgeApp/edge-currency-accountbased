@@ -1,3 +1,5 @@
+// @flow
+
 export const FIO_REG_API_ENDPOINTS = {
   buyAddress: 'buy-address',
   getDomains: 'get-domains',
@@ -35,4 +37,33 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   pushTransaction: 'pushTransaction',
   transferFioAddress: 'transferFioAddress',
   transferFioDomain: 'transferFioDomain'
+}
+
+export const FIO_REQUESTS_TYPES = {
+  PENDING: 'PENDING',
+  SENT: 'SENT'
+}
+
+export type FioRequest = {
+  fio_request_id: string,
+  payer_fio_address: string,
+  payee_fio_address: string,
+  payee_fio_public_key: string,
+  payer_fio_public_key: string,
+  amount: string,
+  token_code: string,
+  metadata: string,
+  time_stamp: string,
+  content: string
+}
+
+export type FioAddress = {
+  name: string,
+  expiration: string
+}
+
+export type FioDomain = {
+  name: string,
+  expiration: string,
+  isPublic: boolean
 }
