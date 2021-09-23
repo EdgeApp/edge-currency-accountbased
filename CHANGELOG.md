@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.73 (2021-09-23)
+
+- FIO: Add request fetching to engine loop and save data locally
+
 # 0.7.72 (2021-09-17)
 
 - Remove postinstall-postinstall dependency
