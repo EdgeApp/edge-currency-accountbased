@@ -6,7 +6,6 @@
 import type { EdgeTransaction } from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
-export const OTHER_DATA_STORE_FILE = 'txEngineFolder/otherLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
 export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
 export const TRANSACTION_STORE_FILE = 'txEngineFolder/transactionList.json'

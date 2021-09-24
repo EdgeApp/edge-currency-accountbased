@@ -18,7 +18,7 @@ import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
-import { FIO_REG_API_ENDPOINTS } from './fioConst.js'
+import { FIO_REG_API_ENDPOINTS, FIO_REQUESTS_TYPES } from './fioConst.js'
 import { FioEngine } from './fioEngine'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
@@ -220,6 +220,12 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     }
     if (!currencyEngine.otherData.fioRequestsToApprove) {
       currencyEngine.otherData.fioRequestsToApprove = {}
+    }
+    if (!currencyEngine.otherData.fioRequests) {
+      currencyEngine.otherData.fioRequests = {
+        [FIO_REQUESTS_TYPES.SENT]: [],
+        [FIO_REQUESTS_TYPES.PENDING]: []
+      }
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
