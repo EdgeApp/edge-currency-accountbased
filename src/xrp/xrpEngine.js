@@ -15,7 +15,11 @@ import {
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { cleanTxLogs, getOtherParams } from '../common/utils.js'
+import {
+  cleanTxLogs,
+  getOtherParams,
+  safeErrorMessage
+} from '../common/utils.js'
 import {
   PluginError,
   pluginErrorCodes,
@@ -105,7 +109,11 @@ export class XrpEngine extends CurrencyEngine {
       this.otherData.recommendedFee = fee
       this.walletLocalDataDirty = true
     } catch (e) {
-      this.log.error(`Error fetching recommended fee: ${e}. Using default fee.`)
+      this.log.error(
+        `Error fetching recommended fee: ${safeErrorMessage(
+          e
+        )}. Using default fee.`
+      )
       if (this.otherData.recommendedFee !== this.xrpSettings.defaultFee) {
         this.otherData.recommendedFee = this.xrpSettings.defaultFee
         this.walletLocalDataDirty = true
@@ -125,8 +133,8 @@ export class XrpEngine extends CurrencyEngine {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (err) {
-      this.log.error(`Error fetching height: ${err}`)
+    } catch (e) {
+      this.log.error(`Error fetching height: `, e)
     }
   }
 
@@ -198,7 +206,7 @@ export class XrpEngine extends CurrencyEngine {
       this.tokenCheckTransactionsStatus.XRP = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log.error(`Error fetching transactions: ${e}`)
+      this.log.error(`Error fetching transactions: `, e)
     }
   }
 
@@ -241,7 +249,7 @@ export class XrpEngine extends CurrencyEngine {
         this.updateOnAddressesChecked()
         return
       }
-      this.log.error(`Error fetching address info: ${e}`)
+      this.log.error(`Error fetching address info: `, e)
     }
   }
 
@@ -254,7 +262,7 @@ export class XrpEngine extends CurrencyEngine {
     try {
       await this.xrpPlugin.connectApi(this.walletId)
     } catch (e) {
-      this.log.error(`Error connecting to server`, String(e))
+      this.log.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
           this.startEngine()
@@ -381,18 +389,19 @@ export class XrpEngine extends CurrencyEngine {
       try {
         preparedTx = await this.multicastServers('preparePayment', payment)
         break
-      } catch (err) {
-        if (typeof err?.message === 'string' && i > 0) {
-          if (err.message.includes('has too many decimal places')) {
-            // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
-            // Just retrying seems to resolve it. -paulvp
-            this.log.warn(
-              'Got "too many decimal places" error. Retrying... ' + i.toString()
-            )
-            continue
-          }
+      } catch (e) {
+        if (
+          safeErrorMessage(e).includes('has too many decimal places') &&
+          i > 0
+        ) {
+          // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
+          // Just retrying seems to resolve it. -paulvp
+          this.log.warn(
+            'Got "too many decimal places" error. Retrying... ' + i.toString()
+          )
+          continue
         }
-        this.log.error(`makeSpend Error ${err}`)
+        this.log.error(`makeSpend Error `, e)
         throw new Error('Error in preparePayment')
       }
     }

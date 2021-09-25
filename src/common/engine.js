@@ -36,7 +36,12 @@ import {
   TXID_MAP_FILE,
   WalletLocalData
 } from './types.js'
-import { cleanTxLogs, getDenomInfo, normalizeAddress } from './utils.js'
+import {
+  cleanTxLogs,
+  getDenomInfo,
+  normalizeAddress,
+  safeErrorMessage
+} from './utils.js'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -80,6 +85,9 @@ export class CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.io = currencyPlugin.io
     this.log = opts.log
+    this.log.warn = (message, e) => opts.log.warn(message + safeErrorMessage(e))
+    this.log.error = (message, e) =>
+      opts.log.error(message + safeErrorMessage(e))
     this.engineOn = false
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}
@@ -268,7 +276,8 @@ export class CurrencyEngine {
         )
       } catch (e) {
         this.log.error(
-          'Error writing to localDataStore. Engine not started:' + err
+          'Error writing to localDataStore. Engine not started: ',
+          e
         )
         throw e
       }
@@ -494,22 +503,19 @@ export class CurrencyEngine {
       let jsonString = JSON.stringify(this.transactionList)
       promises.push(
         disklet.setText(TRANSACTION_STORE_FILE, jsonString).catch(e => {
-          this.log.error('Error saving transactionList')
-          this.log.error(e)
+          this.log.error('Error saving transactionList ', e)
         })
       )
       jsonString = JSON.stringify(this.txIdList)
       promises.push(
         disklet.setText(TXID_LIST_FILE, jsonString).catch(e => {
-          this.log.error('Error saving txIdList')
-          this.log.error(e)
+          this.log.error('Error saving txIdList ', e)
         })
       )
       jsonString = JSON.stringify(this.txIdMap)
       promises.push(
         disklet.setText(TXID_MAP_FILE, jsonString).catch(e => {
-          this.log.error('Error saving txIdMap')
-          this.log.error(e)
+          this.log.error('Error saving txIdMap ', e)
         })
       )
       await Promise.all(promises)
@@ -524,8 +530,7 @@ export class CurrencyEngine {
           this.walletLocalDataDirty = false
         })
         .catch(e => {
-          this.log.error('Error saving walletLocalData')
-          this.log.error(e)
+          this.log.error('Error saving walletLocalData ', e)
         })
     }
   }
@@ -568,7 +573,7 @@ export class CurrencyEngine {
       // $FlowFixMe
       await this[func]()
     } catch (e) {
-      this.log.error('Error in Loop:', func, e)
+      this.log.error(`Error in Loop: ${func} `, e)
     }
     if (this.engineOn) {
       this.timers[func] = setTimeout(() => {

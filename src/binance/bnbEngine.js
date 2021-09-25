@@ -127,8 +127,8 @@ export class BinanceEngine extends CurrencyEngine {
           )
         }
       }
-    } catch (err) {
-      this.log.error('Error fetching height: ' + err)
+    } catch (e) {
+      this.log.error('Error fetching height: ', e)
     }
   }
 
@@ -323,7 +323,7 @@ export class BinanceEngine extends CurrencyEngine {
     try {
       resultArray = await Promise.all(promiseArray)
     } catch (e) {
-      this.log.error('Failed to query transactions', e.name, e.message)
+      this.log.error('Failed to query transactions ', e)
     }
     let successCount = 0
     for (const r of resultArray) {

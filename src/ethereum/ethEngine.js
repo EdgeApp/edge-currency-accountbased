@@ -369,9 +369,7 @@ export class EthereumEngine extends CurrencyEngine {
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e) {
-                  this.log.warn(
-                    `Wallet connect call_request ${e?.message ?? ''}`
-                  )
+                  this.log.warn(`Wallet connect call_request `, e)
                   throw e
                 }
               }
@@ -551,11 +549,11 @@ export class EthereumEngine extends CurrencyEngine {
           `Error: Fetched invalid networkFees ${JSON.stringify(jsonObj)}`
         )
       }
-    } catch (err) {
+    } catch (e) {
       this.log.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`,
+        e
       )
-      this.log.error(err)
     }
 
     try {
@@ -726,12 +724,12 @@ export class EthereumEngine extends CurrencyEngine {
       } else {
         throw new Error(`Error: Fetched invalid networkFees from EthGasStation`)
       }
-    } catch (err) {
+    } catch (e) {
       this.log.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`,
+        e
       )
-      this.log.error(err)
-      this.log.crash(err, { rawData: jsonObj })
+      this.log.crash(e, { rawData: jsonObj })
     }
   }
 
@@ -965,8 +963,8 @@ export class EthereumEngine extends CurrencyEngine {
           contractAddress,
           gasLimit
         }
-      } catch (err) {
-        this.log.error(`makeSpend Error determining gas limit ${err}`)
+      } catch (e) {
+        this.log.error(`makeSpend Error determining gas limit `, e)
       }
     } else if (useDefaults) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit

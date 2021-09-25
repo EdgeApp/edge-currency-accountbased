@@ -23,6 +23,7 @@ import {
   getDenomInfo,
   promiseAny,
   promiseNy,
+  safeErrorMessage,
   shuffleArray,
   timeout
 } from '../common/utils'
@@ -416,7 +417,7 @@ export class FioEngine extends CurrencyEngine {
         )
       }
     } catch (e) {
-      this.log.error(`checkBlockchainInnerLoop Error fetching height: ${e}`)
+      this.log.error(`checkBlockchainInnerLoop Error fetching height: `, e)
     }
   }
 
@@ -671,8 +672,10 @@ export class FioEngine extends CurrencyEngine {
     try {
       transactions = await this.checkTransactions()
     } catch (e) {
-      this.log.error('checkTransactionsInnerLoop fetches failed with error: ')
-      this.log.error(e)
+      this.log.error(
+        'checkTransactionsInnerLoop fetches failed with error: ',
+        e
+      )
       return false
     }
 
@@ -745,7 +748,7 @@ export class FioEngine extends CurrencyEngine {
           isError: true,
           data: {
             code: e.errorCode,
-            message: e.message,
+            message: e.message ?? safeErrorMessage(e),
             json: e.json,
             list: e.list
           }
@@ -758,7 +761,8 @@ export class FioEngine extends CurrencyEngine {
           )
       } else {
         this.log(
-          `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: ${e.message}`
+          `fioApiRequest error. actionName: ${actionName} - apiUrl: ${apiUrl} - message: `,
+          e
         )
         throw e
       }
@@ -810,9 +814,8 @@ export class FioEngine extends CurrencyEngine {
         this.log(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
-          )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${
-            e.message
-          }`
+          )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: `,
+          e
         )
         throw e
       }
@@ -869,9 +872,7 @@ export class FioEngine extends CurrencyEngine {
           try {
             return JSON.stringify(asGetFioName(result))
           } catch (e) {
-            this.log(
-              `getFioNames checkResult function returned error ${e.name} ${e.message}`
-            )
+            this.log(`getFioNames checkResult function returned error `, e)
           }
         },
         2
@@ -913,7 +914,7 @@ export class FioEngine extends CurrencyEngine {
       const { balance } = await this.multicastServers('getFioBalance')
       nativeAmount = balance + ''
     } catch (e) {
-      this.log('checkAccountInnerLoop error: ' + e)
+      this.log('checkAccountInnerLoop error: ', e)
       nativeAmount = '0'
     }
     this.updateBalance(currencyCode, nativeAmount)
@@ -1023,7 +1024,7 @@ export class FioEngine extends CurrencyEngine {
 
       if (isChanged) this.localDataDirty()
     } catch (e) {
-      this.log.warn('checkAccountInnerLoop getFioNames error: ' + e)
+      this.log.warn('checkAccountInnerLoop getFioNames error: ', e)
     }
   }
 
@@ -1068,7 +1069,7 @@ export class FioEngine extends CurrencyEngine {
         }
       } catch (e) {
         lastPageAmount = 0
-        this.log.error('fetchFioRequests error', e?.message ?? '')
+        this.log.error('fetchFioRequests error: ', e)
       }
     }
 
@@ -1130,7 +1131,7 @@ export class FioEngine extends CurrencyEngine {
         )
       } catch (e) {
         this.log.error(
-          `approveErroredFioRequests recordObtData error: ${JSON.stringify(
+          `approveErroredFioRequests recordObtData error: ${safeErrorMessage(
             e
           )} for ${this.otherData.fioRequestsToApprove[fioRequestId]}`
         )

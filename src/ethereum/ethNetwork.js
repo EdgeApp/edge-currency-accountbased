@@ -15,6 +15,7 @@ import {
   pickRandom,
   promiseAny,
   removeHexPrefix,
+  safeErrorMessage,
   shuffleArray,
   snooze,
   validateObject
@@ -1218,7 +1219,7 @@ export class EthereumNetwork {
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
       return { blockHeight, server }
     } catch (e) {
-      this.ethEngine.log(`checkBlockHeightBlockbook blockHeight ${e}`)
+      this.ethEngine.log('checkBlockHeightBlockbook blockHeight ', e)
       throw new Error(`checkBlockHeightBlockbook returned invalid JSON`)
     }
   }
@@ -1254,8 +1255,8 @@ export class EthereumNetwork {
       this.checkBlockHeightAmberdata,
       this.checkBlockHeightBlockchair,
       this.checkBlockHeightBlockbook
-    ]).catch(err => {
-      this.ethEngine.log.error('checkBlockHeight failed to update', err)
+    ]).catch(e => {
+      this.ethEngine.log.error('checkBlockHeight failed to update ', e)
       return {}
     })
   }
@@ -1294,8 +1295,8 @@ export class EthereumNetwork {
     return asyncWaterfall([
       this.checkNonceEthscan,
       this.checkNonceAmberdata
-    ]).catch(err => {
-      this.ethEngine.log.error('checkNonce failed to update', err)
+    ]).catch(e => {
+      this.ethEngine.log.error('checkNonce failed to update ', e)
       return {}
     })
   }
@@ -1333,9 +1334,9 @@ export class EthereumNetwork {
           allTransactions.push(tx)
         } catch (e) {
           this.ethEngine.log.error(
-            `getAllTxsEthscan ${cleanerFunc.name}\n${
-              e.message
-            }\n${JSON.stringify(transactions[i])}`
+            `getAllTxsEthscan ${cleanerFunc.name}\n${safeErrorMessage(
+              e
+            )}\n${JSON.stringify(transactions[i])}`
           )
           throw new Error(`getAllTxsEthscan ${cleanerFunc.name} is invalid`)
         }
@@ -1461,7 +1462,7 @@ export class EthereumNetwork {
         cleanedResponseObj = asFetchGetAlethio(jsonObj)
       } catch (e) {
         this.ethEngine.log.error(
-          `checkTxsAlethio \n${e.message}\n${linkNext || ''}`
+          `checkTxsAlethio \n${safeErrorMessage(e)}\n${linkNext || ''}`
         )
         throw new Error('checkTxsAlethio response is invalid')
       }
@@ -1495,7 +1496,7 @@ export class EthereumNetwork {
             break
           }
         } catch (e) {
-          this.ethEngine.log.error(`checkTxsAlethio tokenTransfer ${e.message}`)
+          this.ethEngine.log.error('checkTxsAlethio tokenTransfer ', e)
           throw new Error(
             `checkTxsAlethio tokenTransfer is invalid\n${JSON.stringify(
               tokenTransfer
@@ -1572,7 +1573,7 @@ export class EthereumNetwork {
           cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
         } catch (e) {
           this.ethEngine.log.error(
-            `checkTxsAmberdata fetch regular ${e.message}\n${url}`
+            `checkTxsAmberdata fetch regular ${safeErrorMessage(e)}\n${url}`
           )
           throw new Error('checkTxsAmberdata (regular tx) response is invalid')
         }
@@ -1590,9 +1591,9 @@ export class EthereumNetwork {
             }
           } catch (e) {
             this.ethEngine.log.error(
-              `checkTxsAmberdata process regular ${e.message}\n${JSON.stringify(
-                amberdataTx
-              )}`
+              `checkTxsAmberdata process regular ${safeErrorMessage(
+                e
+              )}\n${JSON.stringify(amberdataTx)}`
             )
             throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
           }
@@ -1611,7 +1612,7 @@ export class EthereumNetwork {
           cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
         } catch (e) {
           this.ethEngine.log.error(
-            `checkTxsAmberdata fetch internal ${e.message}\n${url}`
+            `checkTxsAmberdata fetch internal ${safeErrorMessage(e)}\n${url}`
           )
           throw new Error('checkTxsAmberdata (internal tx) response is invalid')
         }
@@ -1628,9 +1629,9 @@ export class EthereumNetwork {
             }
           } catch (e) {
             this.ethEngine.log.error(
-              `checkTxsAmberdata process internal ${
-                e.message
-              }\n${JSON.stringify(amberdataTx)}`
+              `checkTxsAmberdata process internal ${safeErrorMessage(
+                e
+              )}\n${JSON.stringify(amberdataTx)}`
             )
             throw new Error('checkTxsAmberdata internal amberdataTx is invalid')
           }
@@ -1698,8 +1699,8 @@ export class EthereumNetwork {
         async () => this.checkTxsEthscan(startBlock, currencyCode)
       ]
     }
-    return asyncWaterfall(checkTxsFuncs).catch(err => {
-      this.ethEngine.log.error('checkTxs failed to update', err)
+    return asyncWaterfall(checkTxsFuncs).catch(e => {
+      this.ethEngine.log.error('checkTxs failed to update ', e)
       return {}
     })
   }
@@ -1781,7 +1782,8 @@ export class EthereumNetwork {
                     this.processBlockbookTx(tx, tokenTransfer)
                   )
                 } catch (e) {
-                  if (e.message !== 'Unsupported contract address') throw e
+                  if (safeErrorMessage(e) !== 'Unsupported contract address')
+                    throw e
                   continue
                 }
               }
@@ -1794,7 +1796,8 @@ export class EthereumNetwork {
             transactionsArray.push(this.processBlockbookTx(tx))
         } catch (e) {
           this.ethEngine.log.error(
-            `checkTxsBlockbook ${server} BlockbookTx ${JSON.stringify(tx)}`
+            `checkTxsBlockbook ${server} BlockbookTx `,
+            e
           )
           throw new Error(
             `Blockbook ${server} returned invalid JSON for BlockbookTx`
@@ -1922,9 +1925,8 @@ export class EthereumNetwork {
       cleanedResponseObj = asEtherscanGetAccountBalance(jsonObj)
     } catch (e) {
       this.ethEngine.log.error(
-        `checkTokenBalEthscan token ${tk} response ${response || ''} ${
-          e.message
-        }`
+        `checkTokenBalEthscan token ${tk} response ${response || ''} `,
+        e
       )
       throw new Error(
         `checkTokenBalEthscan invalid ${tk} response ${JSON.stringify(jsonObj)}`
@@ -1946,7 +1948,7 @@ export class EthereumNetwork {
       const jsonObj = await this.fetchGetBlockchair(url, true)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
     } catch (e) {
-      this.ethEngine.log.error(`checkTokenBalBlockchair ${url} ${e.message}`)
+      this.ethEngine.log.error(`checkTokenBalBlockchair ${url} `, e)
       throw new Error('checkTokenBalBlockchair response is invalid')
     }
     const response = {
@@ -1967,9 +1969,9 @@ export class EthereumNetwork {
         }
       } catch (e) {
         this.ethEngine.log.error(
-          `checkTokenBalBlockchair tokenData ${e.message}\n${JSON.stringify(
-            tokenData
-          )}`
+          `checkTokenBalBlockchair tokenData ${safeErrorMessage(
+            e
+          )}\n${JSON.stringify(tokenData)}`
         )
         throw new Error('checkTokenBalBlockchair tokenData is invalid')
       }
@@ -2001,7 +2003,8 @@ export class EthereumNetwork {
       cleanedResponseObj = asCheckTokenBalRpc(jsonObj)
     } catch (e) {
       this.ethEngine.log.error(
-        `checkTokenBalRpc token ${tk} response ${response || ''} ${e.message}`
+        `checkTokenBalRpc token ${tk} response ${response || ''} `,
+        e
       )
       throw new Error(
         `checkTokenBalRpc invalid ${tk} response ${JSON.stringify(jsonObj)}`
@@ -2022,8 +2025,8 @@ export class EthereumNetwork {
       async () => this.checkTokenBalEthscan(tk),
       this.checkTokenBalBlockchair,
       async () => this.checkTokenBalRpc(tk)
-    ]).catch(err => {
-      this.ethEngine.log.error('checkTokenBal failed to update', err.message)
+    ]).catch(e => {
+      this.ethEngine.log.error('heckTokenBal failed to update ', e)
       return {}
     })
   }
@@ -2040,7 +2043,7 @@ export class EthereumNetwork {
         const ethUpdate = await checkFunc()
         this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
       } catch (e) {
-        this.ethEngine.log.error(e)
+        this.ethEngine.log.error('checkAndUpdate ', e)
       }
     }
   }

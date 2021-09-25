@@ -170,7 +170,7 @@ export class EosEngine extends CurrencyEngine {
           )
           return asGetAccountActivationQuote(out)
         } catch (e) {
-          this.log.error(`getAccountActivationQuoteError: ${e}`)
+          this.log.error(`getAccountActivationQuoteError: `, e)
           throw new Error(`getAccountActivationQuoteError`)
         }
       }
@@ -207,7 +207,7 @@ export class EosEngine extends CurrencyEngine {
         )
       }
     } catch (e) {
-      this.log.error(`Error fetching height: ${e}`)
+      this.log.error(`Error fetching height: `, e)
     }
   }
 
@@ -510,7 +510,8 @@ export class EosEngine extends CurrencyEngine {
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
       } catch (e) {
         this.log.error(
-          `checkTransactionsInnerLoop fetches failed with error: ${e.name} ${e.message}`
+          `checkTransactionsInnerLoop fetches failed with error: `,
+          e
         )
         return false
       }
@@ -883,7 +884,7 @@ export class EosEngine extends CurrencyEngine {
       }
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log.error(`Error fetching account: ${e}`)
+      this.log.error(`Error fetching account: `, e)
     }
   }
 
@@ -963,7 +964,7 @@ export class EosEngine extends CurrencyEngine {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
         } else {
-          this.log.error(`makeSpend eosPlugin.getAccSystemStats Error ${e}`)
+          this.log.error(`makeSpend eosPlugin.getAccSystemStats Error `, e)
           throw e
         }
       }
@@ -1162,7 +1163,7 @@ export class EosEngine extends CurrencyEngine {
       this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
     } catch (e) {
-      this.log.error('\nCaught exception: ' + e)
+      this.log.error('\nCaught exception: ', e)
       if (e instanceof RpcError) this.log.error(JSON.stringify(e.json, null, 2))
       let err = e
       if (err.error) {

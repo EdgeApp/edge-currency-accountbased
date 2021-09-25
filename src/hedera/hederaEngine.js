@@ -121,7 +121,7 @@ export class HederaEngine extends CurrencyEngine {
         } catch (e) {
           this.log.warn(
             'getAccountActivationQuote: error submitting account activation request',
-            e?.message ?? ''
+            e
           )
           throw new Error('ErrorActivationRequest')
         }
@@ -155,7 +155,7 @@ export class HederaEngine extends CurrencyEngine {
             throw new Error('ErrorActivationPayment')
           }
         } catch (e) {
-          this.log.warn('submitActivationPayment error: ', e?.message ?? '')
+          this.log.warn('submitActivationPayment error: ', e)
           throw e
         }
 
@@ -193,7 +193,7 @@ export class HederaEngine extends CurrencyEngine {
     } catch (e) {
       this.log.warn(
         `checkAccountCreationStatus ${this.mirrorNodes[0]} error`,
-        e?.message ?? ''
+        e
       )
     }
 
@@ -225,9 +225,8 @@ export class HederaEngine extends CurrencyEngine {
         }
       } catch (e) {
         this.log.warn(
-          `error checking Hedera account creation status, ID: ${activationRequestId} error ${
-            e?.message ?? ''
-          }`
+          `error checking Hedera account creation status, ID: ${activationRequestId} error `,
+          e
         )
         if (e?.message === 'ErrorAccountActivation') throw e
       }
@@ -281,10 +280,7 @@ export class HederaEngine extends CurrencyEngine {
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log.warn(
-        'getNewTransactions error getting transactions:',
-        e?.message ?? ''
-      )
+      this.log.warn('getNewTransactions error getting transactions:', e)
     }
   }
 
@@ -515,7 +511,7 @@ export class HederaEngine extends CurrencyEngine {
       )
       await txn.execute(this.client)
     } catch (e) {
-      this.log.warn('broadcastTx error', e?.message ?? '')
+      this.log.warn('broadcastTx error', e)
       throw e
     }
     // must be > 0 to not show "Synchronizing"

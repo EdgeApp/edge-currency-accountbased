@@ -165,7 +165,7 @@ export class StellarEngine extends CurrencyEngine {
       rawTx = await tx.transaction()
       networkFee = rawTx.fee_charged.toString()
     } catch (e) {
-      this.log.error(`processTransaction rawTx Error ${e}`)
+      this.log.error(`processTransaction rawTx Error `, e)
       throw e
     }
 
@@ -252,7 +252,8 @@ export class StellarEngine extends CurrencyEngine {
           this.updateOnAddressesChecked()
         } else {
           this.log.error(
-            `checkTransactionsInnerLoop Error fetching transaction info: ${e}`
+            'checkTransactionsInnerLoop Error fetching transaction info: ',
+            e
           )
         }
         return
@@ -324,9 +325,7 @@ export class StellarEngine extends CurrencyEngine {
         this.tokenCheckBalanceStatus.XLM = 1
         this.updateOnAddressesChecked()
       } else {
-        this.log.error(
-          `checkAccountInnerLoop Error fetching address info: ${e}`
-        )
+        this.log.error(`checkAccountInnerLoop Error fetching address info: `, e)
       }
     }
   }
@@ -345,7 +344,7 @@ export class StellarEngine extends CurrencyEngine {
         }
       })
       .catch(e => {
-        this.log.error(`checkBlockchainInnerLoop Error ${e}`)
+        this.log.error(`checkBlockchainInnerLoop Error `, e)
       })
   }
 
@@ -504,7 +503,8 @@ export class StellarEngine extends CurrencyEngine {
       await transaction.sign(keypair)
     } catch (e) {
       this.log.error(
-        `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} ${e}`
+        `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
       )
       throw e
     }
@@ -536,9 +536,8 @@ export class StellarEngine extends CurrencyEngine {
       this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e) {
       this.log.error(
-        `FAILURE broadcastTx\n${JSON.stringify(
-          cleanTxLogs(edgeTransaction)
-        )} ${e}`
+        `FAILURE broadcastTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
       )
       throw e
     }

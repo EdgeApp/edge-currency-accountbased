@@ -2,6 +2,8 @@
 
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 
+import { safeErrorMessage } from './utils'
+
 export const CurrencyInfoSchema = {
   type: 'object',
   properties: {
@@ -75,16 +77,16 @@ export const asCurrencyCodeOptions = asObject({
 export function checkEdgeSpendInfo(raw: any): void {
   try {
     asPartialSpendInfo(raw)
-  } catch (error) {
-    throw new TypeError('Invalid EdgeSpendInfo: ' + error.message)
+  } catch (e) {
+    throw new TypeError(`Invalid EdgeSpendInfo: ${safeErrorMessage(e)}`)
   }
 }
 
 export function checkCustomToken(raw: any): void {
   try {
     asCustomToken(raw)
-  } catch (error) {
-    throw new TypeError('Invalid CustomToken: ' + error.message)
+  } catch (e) {
+    throw new TypeError(`Invalid CustomToken: ${safeErrorMessage(e)}`)
   }
 }
 
