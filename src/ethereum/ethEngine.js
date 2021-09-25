@@ -916,10 +916,6 @@ export class EthereumEngine extends CurrencyEngine {
               'eth_estimateGas',
               estimateGasParams
             )
-            this.log.warn(
-              'lookhere estimateGas estimateGasResult',
-              JSON.stringify(estimateGasResult)
-            )
             gasLimit = bns.add(
               parseInt(estimateGasResult.result.result, 16).toString(),
               '0'

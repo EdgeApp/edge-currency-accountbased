@@ -1180,12 +1180,11 @@ export class EthereumNetwork {
           baseUrl
         ).then(response => {
           if (response.error != null) {
-            this.ethEngine.log.error(
-              `multicast get_baseFeePerGas error response from ${baseUrl}: ${response.error}`
-            )
-            throw new Error(
-              `multicast get_baseFeePerGas error response from ${baseUrl}: ${response.error}`
-            )
+            const errorMessage = `multicast get_baseFeePerGas error response from ${baseUrl}: ${JSON.stringify(
+              response.error
+            )}`
+            this.ethEngine.log.warn(errorMessage)
+            throw new Error(errorMessage)
           }
 
           const baseFeePerGas: string = response.result.baseFeePerGas
