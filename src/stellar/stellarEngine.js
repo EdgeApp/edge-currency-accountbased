@@ -165,7 +165,7 @@ export class StellarEngine extends CurrencyEngine {
       rawTx = await tx.transaction()
       networkFee = rawTx.fee_charged.toString()
     } catch (e) {
-      this.log.error(`processTransaction rawTx Error ${e}`)
+      this.error(`processTransaction rawTx Error `, e)
       throw e
     }
 
@@ -251,8 +251,9 @@ export class StellarEngine extends CurrencyEngine {
           this.tokenCheckTransactionsStatus.XLM = 1
           this.updateOnAddressesChecked()
         } else {
-          this.log.error(
-            `checkTransactionsInnerLoop Error fetching transaction info: ${e}`
+          this.error(
+            'checkTransactionsInnerLoop Error fetching transaction info: ',
+            e
           )
         }
         return
@@ -308,7 +309,7 @@ export class StellarEngine extends CurrencyEngine {
             this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
           ) {
             this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.log.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
+            this.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
             this.currencyEngineCallbacks.onBalanceChanged(
               currencyCode,
               nativeAmount
@@ -324,9 +325,7 @@ export class StellarEngine extends CurrencyEngine {
         this.tokenCheckBalanceStatus.XLM = 1
         this.updateOnAddressesChecked()
       } else {
-        this.log.error(
-          `checkAccountInnerLoop Error fetching address info: ${e}`
-        )
+        this.error(`checkAccountInnerLoop Error fetching address info: `, e)
       }
     }
   }
@@ -345,7 +344,7 @@ export class StellarEngine extends CurrencyEngine {
         }
       })
       .catch(e => {
-        this.log.error(`checkBlockchainInnerLoop Error ${e}`)
+        this.error(`checkBlockchainInnerLoop Error `, e)
       })
   }
 
@@ -479,9 +478,9 @@ export class StellarEngine extends CurrencyEngine {
       delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
     }
 
-    this.log.warn('Stellar transaction prepared')
-    this.log.warn(`idInternal: ${idInternal}`)
-    this.log.warn(
+    this.warn('Stellar transaction prepared')
+    this.warn(`idInternal: ${idInternal}`)
+    this.warn(
       `${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`
     )
     return edgeTransaction
@@ -497,18 +496,19 @@ export class StellarEngine extends CurrencyEngine {
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
-      this.log.warn('Signing...')
+      this.warn('Signing...')
       const keypair = this.stellarApi.Keypair.fromSecret(
         this.walletInfo.keys.stellarKey
       )
       await transaction.sign(keypair)
     } catch (e) {
-      this.log.error(
-        `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} ${e}`
+      this.error(
+        `FAILURE signTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
       )
       throw e
     }
-    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -523,7 +523,7 @@ export class StellarEngine extends CurrencyEngine {
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
-      this.log.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
+      this.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
       const result = await this.multicastServers(
         'submitTransaction',
         transaction
@@ -533,12 +533,11 @@ export class StellarEngine extends CurrencyEngine {
       this.activatedAccountsCache[otherParams.toAddress] = true
       this.otherData.accountSequence++
       this.walletLocalDataDirty = true
-      this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e) {
-      this.log.error(
-        `FAILURE broadcastTx\n${JSON.stringify(
-          cleanTxLogs(edgeTransaction)
-        )} ${e}`
+      this.error(
+        `FAILURE broadcastTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
       )
       throw e
     }

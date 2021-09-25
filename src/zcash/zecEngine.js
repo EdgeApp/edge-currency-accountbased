@@ -178,7 +178,7 @@ export class ZcashEngine extends CurrencyEngine {
         balances.totalZatoshi
       )
     } catch (e) {
-      this.log.warn('Failed to update balances', e?.message ?? '')
+      this.warn('Failed to update balances', e)
       this.updateBalance(`${this.currencyInfo.currencyCode}`, '0')
     }
   }
@@ -189,7 +189,7 @@ export class ZcashEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.log.warn(tk + ': token Address balance: ' + balance)
+      this.warn(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -234,10 +234,9 @@ export class ZcashEngine extends CurrencyEngine {
         this.walletLocalDataDirty = true
       }
     } catch (e) {
-      this.log.error(
-        `Error querying ${this.currencyInfo.currencyCode} transactions ${
-          e?.message ?? ''
-        }`
+      this.error(
+        `Error querying ${this.currencyInfo.currencyCode} transactions `,
+        e
       )
     }
   }
@@ -368,9 +367,9 @@ export class ZcashEngine extends CurrencyEngine {
       edgeTransaction.txid = signedTx.txId
       edgeTransaction.signedTx = signedTx.raw
       edgeTransaction.date = Date.now() / 1000
-      this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e) {
-      this.log.warn('FAILURE broadcastTx failed: ', e?.message ?? '')
+      this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }
     return edgeTransaction

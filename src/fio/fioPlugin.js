@@ -17,7 +17,12 @@ import {
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { asyncWaterfall, getDenomInfo, shuffleArray } from '../common/utils'
+import {
+  asyncWaterfall,
+  getDenomInfo,
+  safeErrorMessage,
+  shuffleArray
+} from '../common/utils'
 import { FIO_REG_API_ENDPOINTS, FIO_REQUESTS_TYPES } from './fioConst.js'
 import { FioEngine } from './fioEngine'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError.js'
@@ -164,7 +169,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
                 isError: true,
                 data: {
                   code: e.errorCode,
-                  message: e.message,
+                  message: safeErrorMessage(e),
                   json: e.json,
                   list: e.list
                 }
@@ -387,7 +392,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
         return isAvailableRes.is_registered
       } catch (e) {
-        this.log.error('doesAccountExist error: ' + e)
+        this.error('doesAccountExist error: ', e)
         return false
       }
     },
@@ -443,7 +448,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e) {
         if (e.labelCode) throw e
         throw new FioError(
-          e.message,
+          safeErrorMessage(e),
           500,
           currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
         )
@@ -475,7 +480,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e) {
         if (e.labelCode) throw e
         throw new FioError(
-          e.message,
+          safeErrorMessage(e),
           500,
           currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
         )

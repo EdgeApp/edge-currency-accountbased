@@ -390,6 +390,15 @@ function getFetchCors(opts: EdgeCorePluginOptions): Function {
   }
 }
 
+export function safeErrorMessage(e?: Error): string {
+  let sāfError = ''
+  if (e != null) {
+    if (e.name != null) sāfError += `${e.name} `
+    if (e.message != null) sāfError += e.message
+  }
+  return sāfError
+}
+
 export {
   normalizeAddress,
   addHexPrefix,

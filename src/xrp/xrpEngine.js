@@ -15,7 +15,11 @@ import {
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { cleanTxLogs, getOtherParams } from '../common/utils.js'
+import {
+  cleanTxLogs,
+  getOtherParams,
+  safeErrorMessage
+} from '../common/utils.js'
 import {
   PluginError,
   pluginErrorCodes,
@@ -105,7 +109,11 @@ export class XrpEngine extends CurrencyEngine {
       this.otherData.recommendedFee = fee
       this.walletLocalDataDirty = true
     } catch (e) {
-      this.log.error(`Error fetching recommended fee: ${e}. Using default fee.`)
+      this.error(
+        `Error fetching recommended fee: ${safeErrorMessage(
+          e
+        )}. Using default fee.`
+      )
       if (this.otherData.recommendedFee !== this.xrpSettings.defaultFee) {
         this.otherData.recommendedFee = this.xrpSettings.defaultFee
         this.walletLocalDataDirty = true
@@ -125,8 +133,8 @@ export class XrpEngine extends CurrencyEngine {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (err) {
-      this.log.error(`Error fetching height: ${err}`)
+    } catch (e) {
+      this.error(`Error fetching height: `, e)
     }
   }
 
@@ -198,7 +206,7 @@ export class XrpEngine extends CurrencyEngine {
       this.tokenCheckTransactionsStatus.XRP = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log.error(`Error fetching transactions: ${e}`)
+      this.error(`Error fetching transactions: `, e)
     }
   }
 
@@ -224,7 +232,7 @@ export class XrpEngine extends CurrencyEngine {
             this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
           ) {
             this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.log.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
+            this.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
             this.currencyEngineCallbacks.onBalanceChanged(
               currencyCode,
               nativeAmount
@@ -236,12 +244,12 @@ export class XrpEngine extends CurrencyEngine {
       }
     } catch (e) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
-        this.log.warn('Account not found. Probably not activated w/minimum XRP')
+        this.warn('Account not found. Probably not activated w/minimum XRP')
         this.tokenCheckBalanceStatus.XRP = 1
         this.updateOnAddressesChecked()
         return
       }
-      this.log.error(`Error fetching address info: ${e}`)
+      this.error(`Error fetching address info: `, e)
     }
   }
 
@@ -254,7 +262,7 @@ export class XrpEngine extends CurrencyEngine {
     try {
       await this.xrpPlugin.connectApi(this.walletId)
     } catch (e) {
-      this.log.error(`Error connecting to server`, String(e))
+      this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
           this.startEngine()
@@ -381,18 +389,19 @@ export class XrpEngine extends CurrencyEngine {
       try {
         preparedTx = await this.multicastServers('preparePayment', payment)
         break
-      } catch (err) {
-        if (typeof err?.message === 'string' && i > 0) {
-          if (err.message.includes('has too many decimal places')) {
-            // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
-            // Just retrying seems to resolve it. -paulvp
-            this.log.warn(
-              'Got "too many decimal places" error. Retrying... ' + i.toString()
-            )
-            continue
-          }
+      } catch (e) {
+        if (
+          safeErrorMessage(e).includes('has too many decimal places') &&
+          i > 0
+        ) {
+          // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
+          // Just retrying seems to resolve it. -paulvp
+          this.warn(
+            'Got "too many decimal places" error. Retrying... ' + i.toString()
+          )
+          continue
         }
-        this.log.error(`makeSpend Error ${err}`)
+        this.error(`makeSpend Error `, e)
         throw new Error('Error in preparePayment')
       }
     }
@@ -414,7 +423,7 @@ export class XrpEngine extends CurrencyEngine {
       otherParams
     }
 
-    this.log.warn('Payment transaction prepared...')
+    this.warn('Payment transaction prepared...')
     return edgeTransaction
   }
 
@@ -428,13 +437,13 @@ export class XrpEngine extends CurrencyEngine {
     const wallet = Wallet.fromSeed(privateKey)
     const { tx_blob: signedTransaction, hash: id } = wallet.sign(txJson)
 
-    this.log.warn('Payment transaction signed...')
+    this.warn('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
     edgeTransaction.txid = id.toLowerCase()
     edgeTransaction.date = Date.now() / 1000
 
-    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -442,7 +451,7 @@ export class XrpEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     await this.multicastServers('submit', edgeTransaction.signedTx)
-    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
