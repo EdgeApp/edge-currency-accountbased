@@ -94,10 +94,7 @@ export class FioEngine extends CurrencyEngine {
   fioSdk: FIOSDK
   fioSdkPreparedTrx: FIOSDK
   otherData: {
-    highestTxHeight: number
-  }
-
-  otherLocalData: {
+    highestTxHeight: number,
     fioAddresses: FioAddress[],
     fioDomains: FioDomain[],
     fioRequests: {
@@ -109,10 +106,6 @@ export class FioEngine extends CurrencyEngine {
 
   localDataDirty() {
     this.walletLocalDataDirty = true
-  }
-
-  setOtherLocalDataDirty() {
-    this.otherLocalDataDirty = true
   }
 
   constructor(
@@ -161,14 +154,14 @@ export class FioEngine extends CurrencyEngine {
               params.fioRequestId,
               FIO_REQUESTS_TYPES.PENDING
             )
-            this.setOtherLocalDataDirty()
+            this.localDataDirty()
 
             return res
           }
           case 'cancelFundsRequest': {
             const res = await this.multicastServers(actionName, params)
             this.removeFioRequest(params.fioRequestId, FIO_REQUESTS_TYPES.SENT)
-            this.setOtherLocalDataDirty()
+            this.localDataDirty()
 
             return res
           }
@@ -183,19 +176,16 @@ export class FioEngine extends CurrencyEngine {
             params.maxFee = fee
 
             if (params.fioRequestId) {
-              this.otherLocalData.fioRequestsToApprove[params.fioRequestId] =
-                params
-              this.setOtherLocalDataDirty()
+              this.otherData.fioRequestsToApprove[params.fioRequestId] = params
+              this.localDataDirty()
               const res = await this.multicastServers(actionName, params)
               if (res && res.status === 'sent_to_blockchain') {
-                delete this.otherLocalData.fioRequestsToApprove[
-                  params.fioRequestId
-                ]
+                delete this.otherData.fioRequestsToApprove[params.fioRequestId]
                 this.removeFioRequest(
                   params.fioRequestId,
                   FIO_REQUESTS_TYPES.PENDING
                 )
-                this.setOtherLocalDataDirty()
+                this.localDataDirty()
               }
               return res
             }
@@ -207,12 +197,12 @@ export class FioEngine extends CurrencyEngine {
             })
             params.maxFee = fee
             const res = await this.multicastServers(actionName, params)
-            const renewedAddress = this.otherLocalData.fioAddresses.find(
+            const renewedAddress = this.otherData.fioAddresses.find(
               ({ name }) => name === params.fioAddress
             )
             if (renewedAddress) {
               renewedAddress.expiration = res.expiration
-              this.setOtherLocalDataDirty()
+              this.localDataDirty()
             }
             return res
           }
@@ -231,15 +221,15 @@ export class FioEngine extends CurrencyEngine {
                 feeCollected: res.fee_collected
               }
             }
-            const addressAlreadyAdded = this.otherLocalData.fioAddresses.find(
+            const addressAlreadyAdded = this.otherData.fioAddresses.find(
               ({ name }) => name === params.fioAddress
             )
             if (!addressAlreadyAdded) {
-              this.otherLocalData.fioAddresses.push({
+              this.otherData.fioAddresses.push({
                 name: params.fioAddress,
                 expiration: res.expiration
               })
-              this.setOtherLocalDataDirty()
+              this.localDataDirty()
             }
             return res
           }
@@ -249,12 +239,12 @@ export class FioEngine extends CurrencyEngine {
             })
             params.maxFee = fee
             const res = await this.multicastServers(actionName, params)
-            const renewedDomain = this.otherLocalData.fioDomains.find(
+            const renewedDomain = this.otherData.fioDomains.find(
               ({ name }) => name === params.fioDomain
             )
             if (renewedDomain) {
               renewedDomain.expiration = res.expiration
-              this.setOtherLocalDataDirty()
+              this.localDataDirty()
             }
             return res
           }
@@ -275,28 +265,24 @@ export class FioEngine extends CurrencyEngine {
           }
           case 'transferFioDomain': {
             const res = await this.multicastServers(actionName, params)
-            const transferredDomainIndex =
-              this.otherLocalData.fioDomains.findIndex(
-                ({ name }) => name === params.fioDomain
-              )
+            const transferredDomainIndex = this.otherData.fioDomains.findIndex(
+              ({ name }) => name === params.fioDomain
+            )
             if (transferredDomainIndex) {
-              this.otherLocalData.fioDomains.splice(transferredDomainIndex, 1)
-              this.setOtherLocalDataDirty()
+              this.otherData.fioDomains.splice(transferredDomainIndex, 1)
+              this.localDataDirty()
             }
             return res
           }
           case 'transferFioAddress': {
             const res = await this.multicastServers(actionName, params)
             const transferredAddressIndex =
-              this.otherLocalData.fioAddresses.findIndex(
+              this.otherData.fioAddresses.findIndex(
                 ({ name }) => name === params.fioAddress
               )
             if (transferredAddressIndex) {
-              this.otherLocalData.fioAddresses.splice(
-                transferredAddressIndex,
-                1
-              )
-              this.setOtherLocalDataDirty()
+              this.otherData.fioAddresses.splice(transferredAddressIndex, 1)
+              this.localDataDirty()
             }
             return res
           }
@@ -315,15 +301,13 @@ export class FioEngine extends CurrencyEngine {
         return fee
       },
       getFioAddresses: async (): Promise<FioAddress[]> => {
-        return this.otherLocalData.fioAddresses
+        return this.otherData.fioAddresses
       },
       getFioAddressNames: async (): Promise<string[]> => {
-        return this.otherLocalData.fioAddresses.map(
-          fioAddress => fioAddress.name
-        )
+        return this.otherData.fioAddresses.map(fioAddress => fioAddress.name)
       },
       getFioDomains: async (): Promise<FioDomain[]> => {
-        return this.otherLocalData.fioDomains
+        return this.otherData.fioDomains
       },
       getFioRequests: async (
         type: string,
@@ -334,11 +318,11 @@ export class FioEngine extends CurrencyEngine {
         const startIndex = itemsPerPage * (page - 1)
         const endIndex = itemsPerPage * page - 1
         if (newFirst) {
-          return this.otherLocalData.fioRequests[type]
+          return this.otherData.fioRequests[type]
             .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
             .slice(startIndex, endIndex)
         }
-        return this.otherLocalData.fioRequests[type]
+        return this.otherData.fioRequests[type]
           .sort((a, b) => (a.time_stamp < b.time_stamp ? -1 : 1))
           .slice(startIndex, endIndex)
       }
@@ -953,13 +937,11 @@ export class FioEngine extends CurrencyEngine {
       let areDomainsChanged = false
 
       // check addresses
-      if (
-        result.fio_addresses.length !== this.otherLocalData.fioAddresses.length
-      ) {
+      if (result.fio_addresses.length !== this.otherData.fioAddresses.length) {
         areAddressesChanged = true
       } else {
         for (const fioAddress of result.fio_addresses) {
-          const existedFioAddress = this.otherLocalData.fioAddresses.find(
+          const existedFioAddress = this.otherData.fioAddresses.find(
             existedFioAddress =>
               existedFioAddress.name === fioAddress.fio_address
           )
@@ -991,11 +973,11 @@ export class FioEngine extends CurrencyEngine {
       }
 
       // check domains
-      if (result.fio_domains.length !== this.otherLocalData.fioDomains.length) {
+      if (result.fio_domains.length !== this.otherData.fioDomains.length) {
         areDomainsChanged = true
       } else {
         for (const fioDomain of result.fio_domains) {
-          const existedFioDomain = this.otherLocalData.fioDomains.find(
+          const existedFioDomain = this.otherData.fioDomains.find(
             existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
           )
           if (existedFioDomain) {
@@ -1015,7 +997,7 @@ export class FioEngine extends CurrencyEngine {
 
         // check for removed / transferred domains
         if (!areDomainsChanged) {
-          for (const fioDomain of this.otherLocalData.fioDomains) {
+          for (const fioDomain of this.otherData.fioDomains) {
             if (
               result.fio_domains.findIndex(
                 item => item.fio_domain === fioDomain.name
@@ -1030,24 +1012,22 @@ export class FioEngine extends CurrencyEngine {
 
       if (areAddressesChanged) {
         isChanged = true
-        this.otherLocalData.fioAddresses = result.fio_addresses.map(
-          fioAddress => ({
-            name: fioAddress.fio_address,
-            expiration: fioAddress.expiration
-          })
-        )
+        this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
+          name: fioAddress.fio_address,
+          expiration: fioAddress.expiration
+        }))
       }
 
       if (areDomainsChanged) {
         isChanged = true
-        this.otherLocalData.fioDomains = result.fio_domains.map(fioDomain => ({
+        this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
           name: fioDomain.fio_domain,
           expiration: fioDomain.expiration,
           isPublic: !!fioDomain.is_public
         }))
       }
 
-      if (isChanged) this.setOtherLocalDataDirty()
+      if (isChanged) this.localDataDirty()
     } catch (e) {
       this.log.warn('checkAccountInnerLoop getFioNames error: ' + e)
     }
@@ -1066,8 +1046,8 @@ export class FioEngine extends CurrencyEngine {
     }
     const IS_PENDING = type === FIO_REQUESTS_TYPES.PENDING
 
-    if (this.otherLocalData.fioRequests == null) {
-      this.otherLocalData.fioRequests = {
+    if (this.otherData.fioRequests == null) {
+      this.otherData.fioRequests = {
         [FIO_REQUESTS_TYPES.SENT]: [],
         [FIO_REQUESTS_TYPES.PENDING]: []
       }
@@ -1094,13 +1074,11 @@ export class FioEngine extends CurrencyEngine {
           for (const fioRequest: FioRequest of requests) {
             if (
               IS_PENDING &&
-              this.otherLocalData.fioRequestsToApprove[
-                fioRequest.fio_request_id
-              ]
+              this.otherData.fioRequestsToApprove[fioRequest.fio_request_id]
             )
               continue
             if (
-              this.otherLocalData.fioRequests[type].findIndex(
+              this.otherData.fioRequests[type].findIndex(
                 (exFioRequest: FioRequest) =>
                   exFioRequest.fio_request_id === fioRequest.fio_request_id
               ) < 0 &&
@@ -1124,16 +1102,13 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (
-      this.fioRequestsListChanged(
-        this.otherLocalData.fioRequests[type],
-        fioRequests
-      )
+      this.fioRequestsListChanged(this.otherData.fioRequests[type], fioRequests)
     ) {
-      this.otherLocalData.fioRequests[type] = [...fioRequests]
+      this.otherData.fioRequests[type] = [...fioRequests]
       isChanged = true
     }
 
-    if (isChanged) this.setOtherLocalDataDirty()
+    if (isChanged) this.localDataDirty()
   }
 
   fioRequestsListChanged = (
@@ -1156,13 +1131,13 @@ export class FioEngine extends CurrencyEngine {
   }
 
   removeFioRequest = (fioRequestId: string | number, type: string): void => {
-    const fioRequestIndex = this.otherLocalData.fioRequests[type].findIndex(
+    const fioRequestIndex = this.otherData.fioRequests[type].findIndex(
       (fioRequest: FioRequest) =>
         fioRequest.fio_request_id === `${fioRequestId}`
     )
 
     if (fioRequestIndex > -1) {
-      this.otherLocalData.fioRequests[type].splice(fioRequestIndex, 1)
+      this.otherData.fioRequests[type].splice(fioRequestIndex, 1)
     }
   }
 
@@ -1172,13 +1147,13 @@ export class FioEngine extends CurrencyEngine {
       try {
         await this.otherMethods.fioAction(
           'recordObtData',
-          this.otherLocalData.fioRequestsToApprove[fioRequestId]
+          this.otherData.fioRequestsToApprove[fioRequestId]
         )
       } catch (e) {
         this.log.error(
           `approveErroredFioRequests recordObtData error: ${JSON.stringify(
             e
-          )} for ${this.otherLocalData.fioRequestsToApprove[fioRequestId]}`
+          )} for ${this.otherData.fioRequestsToApprove[fioRequestId]}`
         )
       }
     }
@@ -1186,14 +1161,14 @@ export class FioEngine extends CurrencyEngine {
 
   async clearBlockchainCache(): Promise<void> {
     await super.clearBlockchainCache()
-    this.walletLocalData.otherData.highestTxHeight = 0
-    this.otherLocalData.fioAddresses = []
-    this.otherLocalData.fioDomains = []
-    this.otherLocalData.fioRequests = {
+    this.otherData.highestTxHeight = 0
+    this.otherData.fioAddresses = []
+    this.otherData.fioDomains = []
+    this.otherData.fioRequests = {
       [FIO_REQUESTS_TYPES.SENT]: [],
       [FIO_REQUESTS_TYPES.PENDING]: []
     }
-    this.otherLocalData.fioRequestsToApprove = {}
+    this.otherData.fioRequestsToApprove = {}
   }
 
   // ****************************************************************************
