@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.74 (2021-09-27)
+
+- FIO: Remove new otherLocalData cache and use existing walletLocalData cache
+
 # 0.7.73 (2021-09-23)
 
 - FIO: Add request fetching to engine loop and save data locally
