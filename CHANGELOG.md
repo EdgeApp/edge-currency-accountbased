@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.7.75 (2021-10-02)
+
+- FIO: Fix request query logic
+
 # 0.7.74 (2021-09-27)
 
 - FIO: Remove new otherLocalData cache and use existing walletLocalData cache
