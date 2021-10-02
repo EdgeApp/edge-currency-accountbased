@@ -1044,7 +1044,6 @@ export class FioEngine extends CurrencyEngine {
       [FIO_REQUESTS_TYPES.PENDING]: 'getPendingFioRequests',
       [FIO_REQUESTS_TYPES.SENT]: 'getSentFioRequests'
     }
-    const IS_PENDING = type === FIO_REQUESTS_TYPES.PENDING
 
     if (this.otherData.fioRequests == null) {
       this.otherData.fioRequests = {
@@ -1056,10 +1055,8 @@ export class FioEngine extends CurrencyEngine {
     let isChanged = false
     let lastPageAmount = ITEMS_PER_PAGE
     let requestsLastPage = 1
-    const fioRequests = []
+    const fioRequests: FioRequest[] = []
     while (lastPageAmount === ITEMS_PER_PAGE) {
-      const nextFioRequests: FioRequest[] = []
-
       try {
         const { requests } = await this.multicastServers(
           ACTION_TYPE_MAP[type],
@@ -1071,33 +1068,13 @@ export class FioEngine extends CurrencyEngine {
         )
 
         if (requests) {
-          for (const fioRequest: FioRequest of requests) {
-            if (
-              IS_PENDING &&
-              this.otherData.fioRequestsToApprove[fioRequest.fio_request_id]
-            )
-              continue
-            if (
-              this.otherData.fioRequests[type].findIndex(
-                (exFioRequest: FioRequest) =>
-                  exFioRequest.fio_request_id === fioRequest.fio_request_id
-              ) < 0 &&
-              nextFioRequests.findIndex(
-                (exFioRequest: FioRequest) =>
-                  exFioRequest.fio_request_id === fioRequest.fio_request_id
-              ) < 0
-            ) {
-              nextFioRequests.push(fioRequest)
-              isChanged = true
-            }
-          }
           requestsLastPage++
-          fioRequests.push(...nextFioRequests)
+          fioRequests.push(...requests)
           lastPageAmount = requests.length
         }
       } catch (e) {
         lastPageAmount = 0
-        this.log.error(e.message)
+        this.log.error('fetchFioRequests error', e?.message ?? '')
       }
     }
 
@@ -1115,16 +1092,24 @@ export class FioEngine extends CurrencyEngine {
     existingList: FioRequest[],
     newList: FioRequest[]
   ): boolean => {
-    if (existingList.length !== newList.length) return true
-    for (const fioRequest of existingList) {
-      if (
-        newList.findIndex(
-          (newFioRequest: FioRequest) =>
-            newFioRequest.fio_request_id === fioRequest.fio_request_id
-        ) < 0
-      ) {
-        return true
+    function compareArray(arrA, arrB) {
+      for (const fioRequest of arrA) {
+        if (
+          arrB.findIndex(
+            (newFioRequest: FioRequest) =>
+              newFioRequest.fio_request_id === fioRequest.fio_request_id
+          ) < 0
+        ) {
+          return true
+        }
       }
+      return false
+    }
+    if (
+      compareArray(existingList, newList) ||
+      compareArray(newList, existingList)
+    ) {
+      return true
     }
 
     return false
