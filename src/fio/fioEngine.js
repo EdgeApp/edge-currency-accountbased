@@ -312,18 +312,12 @@ export class FioEngine extends CurrencyEngine {
       getFioRequests: async (
         type: string,
         page: number,
-        itemsPerPage: number = 50,
-        newFirst: boolean = false
+        itemsPerPage: number = 50
       ): Promise<FioRequest[]> => {
         const startIndex = itemsPerPage * (page - 1)
-        const endIndex = itemsPerPage * page - 1
-        if (newFirst) {
-          return this.otherData.fioRequests[type]
-            .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
-            .slice(startIndex, endIndex)
-        }
+        const endIndex = itemsPerPage * page
         return this.otherData.fioRequests[type]
-          .sort((a, b) => (a.time_stamp < b.time_stamp ? -1 : 1))
+          .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
           .slice(startIndex, endIndex)
       }
     }
