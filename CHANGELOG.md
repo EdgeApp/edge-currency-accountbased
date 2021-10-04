@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.7.76 (2021-10-04)
+
+- FIO: Always return Requests with the newest first
+- FIO: Fix off-by-one error when using splice
+
 # 0.7.75 (2021-10-02)
 
 - FIO: Fix request query logic
