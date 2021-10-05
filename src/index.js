@@ -14,6 +14,7 @@ import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeFantomPlugin } from './ethereum/ftminfo.js'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
+import { makeOnePlugin } from './one/onePlugin.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
@@ -31,7 +32,8 @@ const plugins = {
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
   rsk: makeRskPlugin,
-  binance: makeBinancePlugin
+  binance: makeBinancePlugin,
+  one: makeOnePlugin
 }
 
 if (
