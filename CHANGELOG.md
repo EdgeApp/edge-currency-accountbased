@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.8.0 (2021-10-11)
+
+- Add Hedera
+
 # 0.7.76 (2021-10-04)
 
 - FIO: Always return Requests with the newest first
