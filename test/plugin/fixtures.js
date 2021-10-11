@@ -754,5 +754,126 @@ export default [
         'fio:FIO522SwA96CmFo2sZLuSUbhJmgHhb9reUheYCJd3JtrAnSsvGD5Z?amount=0.00000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
+  },
+  {
+    pluginId: 'hedera',
+    WALLET_TYPE: 'wallet:hedera',
+    'Test Currency code': 'HBAR',
+    key: [
+      39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150,
+      52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238
+    ],
+    xpub: '302a300506032b6570032100720c6934e5c1c79a0ec8c8de809071dd8142cad11bb299d1b711de1292259b69',
+    mnemonic:
+      'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot',
+    key_length: 96,
+    'invalid key name': {
+      type: 'wallet:hedera',
+      keys: {
+        hederaKeyz: '5KG4yxR4j1S1UFk4mGraAfGrWh7TS5uiJmhtkG4vPunFWg84wuP',
+        mnemonic:
+          'chicken valve parrot park animal proof youth detail glance review artwork spot'
+      }
+    },
+    'invalid wallet type': {
+      type: 'wallet:hederax',
+      keys: {
+        hederakey:
+          'ffd3dadf65d2fb2889f3a22de0aab48691ee8a3d3e0ea8a70c2b48482a08bb68'
+      }
+    },
+    parseUri: {
+      'address only': ['0.0.443395', '0.0.443395'],
+      'invalid address': [
+        'HBARHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL',
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD',
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5'
+      ],
+      'uri address': ['hedera:0.0.443395', '0.0.443395'],
+      'uri address with amount': [
+        'hedera:0.0.443395?amount=12345.6789',
+        '0.0.443395',
+        '1234567890000',
+        'HBAR'
+      ],
+      'uri address with unique identifier': [
+        'hedera:0.0.443395?memo=123456789&memo_type=MEMO_ID',
+        '0.0.443395',
+        'HBAR'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        '0.0.443395?memo=123456789&memo_type=MEMO_ID',
+        '0.0.443395',
+        'HBAR'
+      ],
+      'uri address with amount & label': [
+        'hedera:0.0.443395?amount=1234.56789&label=Johnny%20Ripple',
+        '0.0.443395',
+        '123456789000',
+        'HBAR',
+        'Johnny Ripple'
+      ],
+      'uri address with amount, label & message': [
+        'hedera:0.0.443395?amount=1234.56789&label=Johnny%20Ripple&msg=Hello%20World,%20I%20miss%20you%20!',
+        '0.0.443395',
+        '123456789000',
+        'HBAR',
+        'Johnny Ripple',
+        'Hello World, I miss you !'
+      ],
+      'uri address with unsupported param': [
+        'hedera:0.0.443395?unsupported=helloworld&amount=12345.6789',
+        '0.0.443395',
+        '1234567890000',
+        'HBAR'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: '0.0.443395'
+        },
+        '0.0.443395'
+      ],
+      'weird address': [
+        {
+          publicAddress: '0.0.443395'
+        },
+        '0.0.443395'
+      ],
+      'invalid address': [
+        { publicAddress: 'rf1GeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn' },
+        { publicAddress: 'sf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn' },
+        { publicAddress: 'rf1BiGeXwwQol8Z2ueFYTEXSwuJYfV2Jpn' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: '0.0.443395',
+          nativeAmount: '123456780000'
+        },
+        'hedera:0.0.443395?amount=1234.5678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: '0.0.443395',
+          nativeAmount: '1230',
+          currencyCode: 'HBAR',
+          label: 'Johnny Ripple'
+        },
+        'hedera:0.0.443395?amount=0.0000123&label=Johnny%20Ripple'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: '0.0.443395',
+          nativeAmount: '1230',
+          currencyCode: 'HBAR',
+          label: 'Johnny Ripple',
+          message: 'Hello World, I miss you !'
+        },
+        'hedera:0.0.443395?amount=0.0000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
   }
 ]
+// 302e020100300506032b657004220420ffd3dadf65d2fb2889f3a22de0aab48691ee8a3d3e0ea8a70c2b48482a08bb68
+// 302e020100300506032b657004220420906327db5cbe7ece6bf2478b907d668b99f7241c750413e4712237ee6fc68523
