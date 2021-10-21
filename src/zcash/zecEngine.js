@@ -3,16 +3,19 @@
  */
 // @flow
 
+import { bns } from 'biggystring'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyTools,
   type EdgeSpendInfo,
   type EdgeTransaction,
-  type EdgeWalletInfo
+  type EdgeWalletInfo,
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { type ZcashSynchronizer } from './../react-native-io'
+import { cleanTxLogs } from './../common/utils.js'
 import { ZcashPlugin } from './zecPlugin.js'
 import type {
   ZcashInitializerConfig,
@@ -24,8 +27,6 @@ import type {
   ZcashTransaction,
   ZcashUpdateEvent
 } from './zecTypes'
-
-const NETWORK_FEE = '1000' // hardcoded default ZEC fee
 
 export class ZcashEngine extends CurrencyEngine {
   otherData: ZcashOtherData
@@ -210,7 +211,10 @@ export class ZcashEngine extends CurrencyEngine {
     const ourReceiveAddresses = []
     if (tx.toAddress != null) {
       // check if tx is a spend
-      netNativeAmount = `-${bns.add(netNativeAmount, NETWORK_FEE)}`
+      netNativeAmount = `-${bns.add(
+        netNativeAmount,
+        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+      )}`
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
@@ -221,7 +225,8 @@ export class ZcashEngine extends CurrencyEngine {
       currencyCode: 'ZEC',
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
-      networkFee: NETWORK_FEE,
+      networkFee:
+        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       otherParams: {}
@@ -250,28 +255,85 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+
+    let nativeAmount = '0'
+    if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
+      nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
+    } else {
+      throw new NoAmountSpecifiedError()
+    }
+
+    if (bns.eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
+
+    const totalTxAmount = bns.add(
+      nativeAmount,
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+    )
+
+    if (
+      bns.gt(
+        totalTxAmount,
+        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+      )
+    ) {
+      throw new InsufficientFundsError()
+    }
+
+    if (bns.gt(totalTxAmount, this.availableZatoshi)) {
+      throw new InsufficientFundsError('Amount exceeds available balance')
+    }
+
+    const otherParams: ZcashSpendInfo = {
+      zatoshi: nativeAmount,
+      toAddress: edgeSpendInfo.spendTargets[0].publicAddress,
+      memo: edgeSpendInfo.spendTargets[0].uniqueIdentifier ?? '',
+      fromAccountIndex: 0
+    }
+
+    // **********************************
+    // Create the unsigned EdgeTransaction
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
-      currencyCode: 'ZEC', // currencyCode
+      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: '0', // nativeAmount
-      networkFee: '0', // networkFee, supposedly fixed
+      nativeAmount: `-${totalTxAmount}`, // nativeAmount
+      networkFee:
+        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams: {} // otherParams
+      otherParams // otherParams
     }
 
     return edgeTransaction
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    // Transaction is signed and broadcast at the same time
     return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
+    if (edgeTransaction.otherParams == null)
+      throw new Error('Need to provide otherParams')
+    edgeTransaction.otherParams.spendingKey = this.walletInfo.keys.zcashSpendKey
+
+    try {
+      const signedTx = await this.synchronizer.sendToAddress(
+        edgeTransaction.otherParams
+      )
+      edgeTransaction.txid = signedTx.txId
+      edgeTransaction.signedTx = signedTx.raw
+      edgeTransaction.date = Date.now() / 1000
+      this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    } catch (e) {
+      this.log.warn('FAILURE broadcastTx failed: ', e?.message ?? '')
+      throw e
+    }
     return edgeTransaction
   }
 

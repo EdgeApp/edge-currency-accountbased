@@ -62,6 +62,9 @@ export default function makePluginIo() {
         rescan: height => {
           return realSynchronizer.rescan(height)
         },
+        sendToAddress: spendInfo => {
+          return realSynchronizer.sendToAddress(spendInfo)
+        },
         getShieldedBalance: () => {
           return realSynchronizer.getShieldedBalance()
         },
