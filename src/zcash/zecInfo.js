@@ -12,7 +12,8 @@ const otherSettings: ZcashSettings = {
     defaultPort: 9067
   },
   blockchairServers: ['https://api.blockchair.com'],
-  defaultBirthday: 1310000
+  defaultBirthday: 1310000,
+  transactionQueryLimit: 999
 }
 
 const defaultSettings: any = {

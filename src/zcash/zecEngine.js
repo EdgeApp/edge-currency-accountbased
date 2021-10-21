@@ -14,14 +14,18 @@ import {
 import { CurrencyEngine } from '../common/engine.js'
 import { type ZcashSynchronizer } from './../react-native-io'
 import { ZcashPlugin } from './zecPlugin.js'
-import {
-  type UnifiedViewingKey,
-  type ZcashSpendInfo,
-  asZcashSpendInfo
+import type {
+  ZcashInitializerConfig,
+  ZcashOtherData,
+  ZcashSettings,
+  ZcashSpendInfo,
+  ZcashSynchronizer,
+  ZcashSynchronizerStatus,
+  ZcashTransaction,
+  ZcashUpdateEvent
 } from './zecTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const DEFAULT_BIRTHDAY = 1310000
+const NETWORK_FEE = '1000' // hardcoded default ZEC fee
 
 export class ZcashEngine extends CurrencyEngine {
   otherData: ZcashOtherData
@@ -63,12 +67,89 @@ export class ZcashEngine extends CurrencyEngine {
     this.availableZatoshi = '0'
   }
 
+  initSubscriptions() {
+    this.synchronizer.on('update', payload => {
+      this.onUpdate(payload)
+    })
+    this.synchronizer.on('statusChanged', payload => {
+      this.synchronizerStatus = payload.name
+    })
+  }
+
   async startEngine() {
     this.initData()
     this.synchronizer = await this.makeSynchronizer(this.initializer)
     await this.synchronizer.start()
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    this.initSubscriptions()
     super.startEngine()
+  }
+
+  isSynced() {
+    // Synchroniser status is updated regularly and should be checked before accessing the db to avoid errors
+    return this.synchronizerStatus === 'SYNCED'
+  }
+
+  async onUpdate(update: ZcashUpdateEvent) {
+    try {
+      const { lastDownloadedHeight, scanProgress, networkBlockHeight } = update
+
+      if (this.walletLocalData.blockHeight !== networkBlockHeight) {
+        this.walletLocalData.blockHeight = networkBlockHeight
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
+        )
+      }
+
+      if (!this.addressesChecked && !this.isSynced()) {
+        // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
+        // getting balance (0.5%), and querying transactions (10%).
+        this.tokenCheckBalanceStatus.ZEC = (scanProgress * 0.99) / 100
+
+        let downloadProgress = 0
+        if (lastDownloadedHeight > 0) {
+          // Initial lastDownloadedHeight value is -1
+          const currentNumBlocksToDownload =
+            networkBlockHeight - lastDownloadedHeight
+          if (this.initialNumBlocksToDownload < 0) {
+            this.initialNumBlocksToDownload = currentNumBlocksToDownload
+          }
+
+          downloadProgress =
+            currentNumBlocksToDownload === 0
+              ? 1
+              : 1 - currentNumBlocksToDownload / this.initialNumBlocksToDownload
+        }
+        this.tokenCheckTransactionsStatus.ZEC = downloadProgress * 0.8
+      }
+
+      await this.queryBalance()
+      await this.queryTransactions()
+
+      if (this.transactionsChangedArray.length > 0) {
+        this.currencyEngineCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      }
+
+      this.updateOnAddressesChecked()
+    } catch (e) {
+      this.log.error(`Error onUpdate ${e?.message ?? ''}`)
+    }
+  }
+
+  async queryBalance() {
+    if (!this.isSynced()) return
+    try {
+      const balances = await this.synchronizer.getShieldedBalance()
+      if (balances.totalZatoshi === '-1') return
+      this.availableZatoshi = balances.availableZatoshi
+      this.updateBalance('ZEC', balances.totalZatoshi)
+    } catch (e) {
+      this.log.warn('Failed to update balances', e?.message ?? '')
+      this.updateBalance('ZEC', '0')
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -81,18 +162,73 @@ export class ZcashEngine extends CurrencyEngine {
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
-  async checkAccountInnerLoop() {
+  async queryTransactions() {
     try {
-      const balances = await this.synchronizer.getShieldedBalance()
-      if (balances.totalZatoshi === -1) return
-      this.updateBalance('ZEC', balances.totalZatoshi)
+      let first = this.otherData.blockRange.first
+      let last = this.otherData.blockRange.last
+      while (this.isSynced() && last <= this.walletLocalData.blockHeight) {
+        const transactions = await this.synchronizer.getTransactions({
+          first,
+          last
+        })
+
+        transactions.forEach(tx => this.processZcashTransaction(tx))
+
+        if (last === this.walletLocalData.blockHeight) {
+          first = this.walletLocalData.blockHeight
+          this.walletLocalDataDirty = true
+          this.tokenCheckTransactionsStatus.ZEC = 1
+          break
+        }
+
+        first = last + 1
+        last =
+          last +
+            this.currencyInfo.defaultSettings.otherSettings
+              .transactionQueryLimit <
+          this.walletLocalData.blockHeight
+            ? last +
+              this.currencyInfo.defaultSettings.otherSettings
+                .transactionQueryLimit
+            : this.walletLocalData.blockHeight
+
+        this.otherData.blockRange = {
+          first,
+          last
+        }
+        this.walletLocalDataDirty = true
+      }
     } catch (e) {
-      this.updateBalance('ZEC', '0')
-      this.log.error(`Error checking ZEC address balance ${e.message}`)
+      this.log.error(`Error querying ZEC transactions ${e?.message ?? ''}`)
     }
+  }
+
+  processZcashTransaction(tx: ZcashTransaction) {
+    let netNativeAmount = tx.value
+    const ourReceiveAddresses = []
+    if (tx.toAddress != null) {
+      // check if tx is a spend
+      netNativeAmount = `-${bns.add(netNativeAmount, NETWORK_FEE)}`
+    } else {
+      ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.rawTransactionId,
+      date: tx.blockTimeInSeconds,
+      currencyCode: 'ZEC',
+      blockHeight: tx.minedHeight,
+      nativeAmount: netNativeAmount,
+      networkFee: NETWORK_FEE,
+      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      signedTx: '',
+      otherParams: {}
+    }
+    this.addTransaction('ZEC', edgeTransaction)
+  }
+
   }
 
   async resyncBlockchain(): Promise<void> {}
