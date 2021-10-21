@@ -5,7 +5,15 @@ import type { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import type { ZcashSettings } from './zecTypes.js'
 
-const otherSettings: ZcashSettings = {}
+const otherSettings: ZcashSettings = {
+  rpcNode: {
+    networkName: 'mainnet',
+    defaultHost: 'mainnet.lightwalletd.com',
+    defaultPort: 9067
+  },
+  blockchairServers: ['https://api.blockchair.com'],
+  defaultBirthday: 1310000
+}
 
 const defaultSettings: any = {
   otherSettings
@@ -20,9 +28,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: '',
-  transactionExplorer: '',
-  blockExplorer: '',
+  addressExplorer: 'https://blockchair.com/zcash/address/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/zcash/transaction/%s?from=edgeapp',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency

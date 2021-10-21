@@ -22,7 +22,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { ZcashEngine } from './zecEngine.js'
 import { currencyInfo } from './zecInfo.js'
-import { type UnifiedViewingKey } from './zecTypes.js'
+import { type UnifiedViewingKey, asZcashBlockchairInfo } from './zecTypes.js'
 
 export class ZcashPlugin extends CurrencyPlugin {
   KeyTool: any

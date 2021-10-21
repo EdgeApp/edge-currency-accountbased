@@ -128,10 +128,14 @@ export class ZcashEngine extends CurrencyEngine {
     const pubKeys = await plugin.derivePublicKey(this.walletInfo)
     this.walletInfo.keys.publicKey = pubKeys.publicKey
     this.walletInfo.keys.zcashViewKeys = pubKeys.unifiedViewingKeys
+    const { rpcNode, defaultBirthday }: ZcashSettings =
+      this.currencyInfo.defaultSettings.otherSettings
     this.initializer = {
       fullViewingKey: this.walletInfo.keys.zcashViewKeys,
-      birthdayHeight: DEFAULT_BIRTHDAY,
-      alias: this.walletInfo.keys.publicKey
+      birthdayHeight:
+        this.walletInfo.keys.zcashBirthdayHeight ?? defaultBirthday,
+      alias: this.walletInfo.keys.publicKey,
+      ...rpcNode
     }
   }
 }
