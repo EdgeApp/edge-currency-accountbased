@@ -33,6 +33,13 @@ export class ZcashPlugin extends CurrencyPlugin {
     this.AddressTool = AddressTool
   }
 
+  async isValidAddress(address: string): Promise<boolean> {
+    return (
+      (await this.AddressTool.isValidShieldedAddress(address)) ||
+      (await this.AddressTool.isValidTransparentAddress(address))
+    )
+  }
+
   // will actually use MNEMONIC version of private key
   async importPrivateKey(userInput: string): Promise<Object> {
     const isValid = validateMnemonic(userInput)
@@ -87,13 +94,20 @@ export class ZcashPlugin extends CurrencyPlugin {
   ): Promise<EdgeParsedUri> {
     const networks = { zcash: true }
 
-    const { edgeParsedUri } = this.parseUriCommon(
+    const {
+      edgeParsedUri,
+      edgeParsedUri: { publicAddress }
+    } = this.parseUriCommon(
       currencyInfo,
       uri,
       networks,
       currencyCode || 'ZEC',
       customTokens
     )
+
+    if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     return edgeParsedUri
   }
@@ -102,7 +116,12 @@ export class ZcashPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
-    const { nativeAmount, currencyCode } = obj
+    const { nativeAmount, currencyCode, publicAddress } = obj
+
+    if (!(await this.isValidAddress(publicAddress))) {
+      throw new Error('InvalidPublicAddressError')
+    }
+
     let amount
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
