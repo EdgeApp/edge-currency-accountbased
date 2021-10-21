@@ -33,6 +33,22 @@ export class ZcashPlugin extends CurrencyPlugin {
     this.AddressTool = AddressTool
   }
 
+  // TODO: Replace with RPC method
+  async getNewWalletBirthdayBlockheight(): Promise<number> {
+    let blockheight =
+      this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
+    try {
+      const response = await this.io.fetch(
+        `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/zcash/stats`
+      )
+      blockheight = asZcashBlockchairInfo(await response.json()).data
+        .best_block_height
+    } catch (e) {
+      // Failure is ok, use default
+    }
+    return blockheight
+  }
+
   async isValidAddress(address: string): Promise<boolean> {
     return (
       (await this.AddressTool.isValidShieldedAddress(address)) ||
@@ -49,7 +65,15 @@ export class ZcashPlugin extends CurrencyPlugin {
     const zcashSpendKey = await this.KeyTool.deriveSpendingKey(hex)
     if (typeof zcashSpendKey !== 'string')
       throw new Error('Invalid zcashSpendKey type')
-    return { zcashMnemonic: userInput, zcashSpendKey }
+
+    // Get current network height for the birthday height
+    const zcashBirthdayHeight = await this.getNewWalletBirthdayBlockheight()
+
+    return {
+      zcashMnemonic: userInput,
+      zcashSpendKey,
+      zcashBirthdayHeight
+    }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
