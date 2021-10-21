@@ -24,14 +24,16 @@ const ACCOUNT_POLL_MILLISECONDS = 20000
 const DEFAULT_BIRTHDAY = 1310000
 
 export class ZcashEngine extends CurrencyEngine {
-  zcashPlugin: ZcashPlugin
+  otherData: ZcashOtherData
   synchronizer: ZcashSynchronizer
-  makeSynchronizer: (arg: any) => Promise<ZcashSynchronizer>
-  initializer: {
-    fullViewingKey: UnifiedViewingKey,
-    birthdayHeight: number,
-    alias: string
-  }
+  synchronizerStatus: ZcashSynchronizerStatus
+  availableZatoshi: string
+  initialNumBlocksToDownload: number
+  initializer: ZcashInitializerConfig
+  alias: string
+  makeSynchronizer: (
+    config: ZcashInitializerConfig
+  ) => Promise<ZcashSynchronizer>
 
   constructor(
     currencyPlugin: ZcashPlugin,
@@ -43,7 +45,26 @@ export class ZcashEngine extends CurrencyEngine {
     this.makeSynchronizer = makeSynchronizer
   }
 
+  initData() {
+    const { birthdayHeight, alias } = this.initializer
+
+    // walletLocalData
+    if (this.otherData.blockRange == null) {
+      this.otherData.blockRange = {
+        first: birthdayHeight,
+        last: birthdayHeight
+      }
+    }
+
+    // Engine variables
+    this.alias = alias
+    this.initialNumBlocksToDownload = -1
+    this.synchronizerStatus = 'DISCONNECTED'
+    this.availableZatoshi = '0'
+  }
+
   async startEngine() {
+    this.initData()
     this.synchronizer = await this.makeSynchronizer(this.initializer)
     await this.synchronizer.start()
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
