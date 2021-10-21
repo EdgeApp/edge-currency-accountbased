@@ -36,8 +36,7 @@ export class ZcashEngine extends CurrencyEngine {
   constructor(
     currencyPlugin: ZcashPlugin,
     walletInfo: EdgeWalletInfo,
-    initOptions: any, // ZcashInitOptions,
-    opts: any, // EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
     makeSynchronizer: any
   ) {
     super(currencyPlugin, walletInfo, opts)

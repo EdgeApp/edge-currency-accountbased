@@ -166,7 +166,7 @@ export class ZcashPlugin extends CurrencyPlugin {
 export function makeZcashPlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
-  const { io, initOptions } = opts
+  const { io } = opts
   if (!opts.nativeIo['edge-currency-accountbased']) {
     throw new Error('Need opts')
   }
@@ -187,7 +187,6 @@ export function makeZcashPlugin(
     const currencyEngine = new ZcashEngine(
       tools,
       walletInfo,
-      initOptions,
       opts,
       makeSynchronizer
     )
