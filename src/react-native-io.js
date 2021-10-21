@@ -6,11 +6,6 @@ import {
   type ZcashWalletBalance
 } from './zcash/zecTypes'
 
-export type ZcashSynchronizer = {
-  start: () => Promise<void>,
-  getShieldedBalance: () => Promise<ZcashWalletBalance>
-}
-
 // TODO: Remove this entire file in the next breaking change.
 export default function makePluginIo() {
   bridgifyObject(KeyTool)
