@@ -229,9 +229,25 @@ export class ZcashEngine extends CurrencyEngine {
     this.addTransaction('ZEC', edgeTransaction)
   }
 
+  async killEngine(isResync: boolean = false) {
+    // Don't bother stopping and restarting the synchronizer for a resync
+    if (!isResync) await this.synchronizer.stop()
+    await super.killEngine()
   }
 
-  async resyncBlockchain(): Promise<void> {}
+  async clearBlockchainCache(): Promise<void> {
+    await super.clearBlockchainCache()
+  }
+
+  async resyncBlockchain(): Promise<void> {
+    await this.killEngine(true)
+    await this.clearBlockchainCache()
+    await this.startEngine()
+    this.synchronizer.rescan(
+      this.walletInfo.keys.zcashBirthdayHeight ??
+        this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
+    )
+  }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const edgeTransaction: EdgeTransaction = {

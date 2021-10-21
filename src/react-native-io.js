@@ -59,8 +59,14 @@ export default function makePluginIo() {
         getTransactions: blockRange => {
           return realSynchronizer.getTransactions(blockRange)
         },
+        rescan: height => {
+          return realSynchronizer.rescan(height)
+        },
         getShieldedBalance: () => {
           return realSynchronizer.getShieldedBalance()
+        },
+        stop: () => {
+          return realSynchronizer.stop()
         }
       })
       return out
