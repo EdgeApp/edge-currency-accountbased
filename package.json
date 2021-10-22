@@ -19,6 +19,7 @@
     "CHANGELOG.md",
     "index.js",
     "lib/*",
+    "bin/*",
     "LICENSE",
     "package.json",
     "postinstall.sh",
