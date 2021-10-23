@@ -29,6 +29,7 @@ import type {
 } from './zecTypes'
 
 export class ZcashEngine extends CurrencyEngine {
+  pluginId: string
   otherData: ZcashOtherData
   synchronizer: ZcashSynchronizer
   synchronizerStatus: ZcashSynchronizerStatus
@@ -47,6 +48,7 @@ export class ZcashEngine extends CurrencyEngine {
     makeSynchronizer: any
   ) {
     super(currencyPlugin, walletInfo, opts)
+    this.pluginId = currencyPlugin.pluginId
     this.makeSynchronizer = makeSynchronizer
   }
 
@@ -105,7 +107,8 @@ export class ZcashEngine extends CurrencyEngine {
       if (!this.addressesChecked && !this.isSynced()) {
         // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
         // getting balance (0.5%), and querying transactions (10%).
-        this.tokenCheckBalanceStatus.ZEC = (scanProgress * 0.99) / 100
+        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
+          (scanProgress * 0.99) / 100
 
         let downloadProgress = 0
         if (lastDownloadedHeight > 0) {
@@ -121,7 +124,8 @@ export class ZcashEngine extends CurrencyEngine {
               ? 1
               : 1 - currentNumBlocksToDownload / this.initialNumBlocksToDownload
         }
-        this.tokenCheckTransactionsStatus.ZEC = downloadProgress * 0.8
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          downloadProgress * 0.8
       }
 
       await this.queryBalance()
@@ -146,10 +150,13 @@ export class ZcashEngine extends CurrencyEngine {
       const balances = await this.synchronizer.getShieldedBalance()
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
-      this.updateBalance('ZEC', balances.totalZatoshi)
+      this.updateBalance(
+        `${this.currencyInfo.currencyCode}`,
+        balances.totalZatoshi
+      )
     } catch (e) {
       this.log.warn('Failed to update balances', e?.message ?? '')
-      this.updateBalance('ZEC', '0')
+      this.updateBalance(`${this.currencyInfo.currencyCode}`, '0')
     }
   }
 
@@ -175,12 +182,12 @@ export class ZcashEngine extends CurrencyEngine {
           last
         })
 
-        transactions.forEach(tx => this.processZcashTransaction(tx))
+        transactions.forEach(tx => this.processTransaction(tx))
 
         if (last === this.walletLocalData.blockHeight) {
           first = this.walletLocalData.blockHeight
           this.walletLocalDataDirty = true
-          this.tokenCheckTransactionsStatus.ZEC = 1
+          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
           break
         }
 
@@ -202,11 +209,15 @@ export class ZcashEngine extends CurrencyEngine {
         this.walletLocalDataDirty = true
       }
     } catch (e) {
-      this.log.error(`Error querying ZEC transactions ${e?.message ?? ''}`)
+      this.log.error(
+        `Error querying ${this.currencyInfo.currencyCode} transactions ${
+          e?.message ?? ''
+        }`
+      )
     }
   }
 
-  processZcashTransaction(tx: ZcashTransaction) {
+  processTransaction(tx: ZcashTransaction) {
     let netNativeAmount = tx.value
     const ourReceiveAddresses = []
     if (tx.toAddress != null) {
@@ -222,7 +233,7 @@ export class ZcashEngine extends CurrencyEngine {
     const edgeTransaction: EdgeTransaction = {
       txid: tx.rawTransactionId,
       date: tx.blockTimeInSeconds,
-      currencyCode: 'ZEC',
+      currencyCode: `${this.currencyInfo.currencyCode}`,
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
       networkFee:
@@ -231,7 +242,7 @@ export class ZcashEngine extends CurrencyEngine {
       signedTx: '',
       otherParams: {}
     }
-    this.addTransaction('ZEC', edgeTransaction)
+    this.addTransaction(`${this.currencyInfo.currencyCode}`, edgeTransaction)
   }
 
   async killEngine(isResync: boolean = false) {
@@ -249,7 +260,7 @@ export class ZcashEngine extends CurrencyEngine {
     await this.clearBlockchainCache()
     await this.startEngine()
     this.synchronizer.rescan(
-      this.walletInfo.keys.zcashBirthdayHeight ??
+      this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
         this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
     )
   }
@@ -320,7 +331,8 @@ export class ZcashEngine extends CurrencyEngine {
   ): Promise<EdgeTransaction> {
     if (edgeTransaction.otherParams == null)
       throw new Error('Need to provide otherParams')
-    edgeTransaction.otherParams.spendingKey = this.walletInfo.keys.zcashSpendKey
+    edgeTransaction.otherParams.spendingKey =
+      this.walletInfo.keys[`${this.pluginId}SpendKey`]
 
     try {
       const signedTx = await this.synchronizer.sendToAddress(
@@ -338,8 +350,11 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed() {
-    if (this.walletInfo.keys && this.walletInfo.keys.zcashMnemonic) {
-      return this.walletInfo.keys.zcashMnemonic
+    if (
+      this.walletInfo.keys &&
+      this.walletInfo.keys[`${this.pluginId}Mnemonic`]
+    ) {
+      return this.walletInfo.keys[`${this.pluginId}Mnemonic`]
     }
     return ''
   }
@@ -361,13 +376,15 @@ export class ZcashEngine extends CurrencyEngine {
 
     const pubKeys = await plugin.derivePublicKey(this.walletInfo)
     this.walletInfo.keys.publicKey = pubKeys.publicKey
-    this.walletInfo.keys.zcashViewKeys = pubKeys.unifiedViewingKeys
+    this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
+      pubKeys.unifiedViewingKeys
     const { rpcNode, defaultBirthday }: ZcashSettings =
       this.currencyInfo.defaultSettings.otherSettings
     this.initializer = {
-      fullViewingKey: this.walletInfo.keys.zcashViewKeys,
+      fullViewingKey: this.walletInfo.keys[`${this.pluginId}ViewKeys`],
       birthdayHeight:
-        this.walletInfo.keys.zcashBirthdayHeight ?? defaultBirthday,
+        this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
+        defaultBirthday,
       alias: this.walletInfo.keys.publicKey,
       ...rpcNode
     }

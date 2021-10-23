@@ -110,7 +110,7 @@ export type ZcashMakeSynchronizer = () => (
   config: ZcashInitializerConfig
 ) => Promise<ZcashSynchronizer>
 
-export const asZcashBlockchairInfo = asObject({
+export const asBlockchairInfo = asObject({
   data: asObject({
     best_block_height: asNumber
   })

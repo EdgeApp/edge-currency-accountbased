@@ -22,13 +22,19 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo } from '../common/utils.js'
 import { ZcashEngine } from './zecEngine.js'
 import { currencyInfo } from './zecInfo.js'
-import { type UnifiedViewingKey, asZcashBlockchairInfo } from './zecTypes.js'
+import { type UnifiedViewingKey, asBlockchairInfo } from './zecTypes.js'
 
 export class ZcashPlugin extends CurrencyPlugin {
+  pluginId: string
   KeyTool: any
   AddressTool: any
+  network: string
+
   constructor(io: EdgeIo, KeyTool: any, AddressTool: any) {
-    super(io, 'zcash', currencyInfo)
+    super(io, `${currencyInfo.pluginId}`, currencyInfo)
+    this.pluginId = currencyInfo.pluginId
+    this.network =
+      currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool
   }
@@ -39,9 +45,9 @@ export class ZcashPlugin extends CurrencyPlugin {
       this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
     try {
       const response = await this.io.fetch(
-        `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/zcash/stats`
+        `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${this.pluginId}/stats`
       )
-      blockheight = asZcashBlockchairInfo(await response.json()).data
+      blockheight = asBlockchairInfo(await response.json()).data
         .best_block_height
     } catch (e) {
       // Failure is ok, use default
@@ -59,30 +65,30 @@ export class ZcashPlugin extends CurrencyPlugin {
   // will actually use MNEMONIC version of private key
   async importPrivateKey(userInput: string): Promise<Object> {
     const isValid = validateMnemonic(userInput)
-    if (!isValid) throw new Error('Invalid ZEC mnemonic')
+    if (!isValid)
+      throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
     const hexBuffer = await mnemonicToSeed(userInput)
     const hex = hexBuffer.toString('hex')
-    const zcashSpendKey = await this.KeyTool.deriveSpendingKey(hex)
-    if (typeof zcashSpendKey !== 'string')
-      throw new Error('Invalid zcashSpendKey type')
+    const spendKey = await this.KeyTool.deriveSpendingKey(hex, this.network)
+    if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
-    const zcashBirthdayHeight = await this.getNewWalletBirthdayBlockheight()
+    const birthdayHeight = await this.getNewWalletBirthdayBlockheight()
 
     return {
-      zcashMnemonic: userInput,
-      zcashSpendKey,
-      zcashBirthdayHeight
+      [`${this.pluginId}Mnemonic`]: userInput,
+      [`${this.pluginId}SpendKey`]: spendKey,
+      [`${this.pluginId}BirthdayHeight`]: birthdayHeight
     }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
 
-    if (type === 'zcash') {
+    if (type === `${this.pluginId}`) {
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const zcashMnemonic = entropyToMnemonic(entropy)
-      return this.importPrivateKey(zcashMnemonic)
+      const mnemonic = entropyToMnemonic(entropy)
+      return this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -90,17 +96,18 @@ export class ZcashPlugin extends CurrencyPlugin {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
-    if (type === 'zcash') {
-      const mnemonic = walletInfo.keys.zcashMnemonic
+    if (type === `${this.pluginId}`) {
+      const mnemonic = walletInfo.keys[`${this.pluginId}Mnemonic`]
       if (typeof mnemonic !== 'string') {
-        throw new Error('InvalidZcashMnemonic')
+        throw new Error('InvalidMnemonic')
       }
       const hexBuffer = await mnemonicToSeed(mnemonic)
       const hex = hexBuffer.toString('hex')
       const unifiedViewingKeys: UnifiedViewingKey =
-        await this.KeyTool.deriveViewingKey(hex)
+        await this.KeyTool.deriveViewingKey(hex, this.network)
       const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
-        unifiedViewingKeys.extfvk
+        unifiedViewingKeys.extfvk,
+        this.network
       )
       return {
         publicKey: shieldedAddress,
@@ -116,7 +123,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { zcash: true }
+    const networks = { [this.pluginId]: true }
 
     const {
       edgeParsedUri,
@@ -125,7 +132,7 @@ export class ZcashPlugin extends CurrencyPlugin {
       currencyInfo,
       uri,
       networks,
-      currencyCode || 'ZEC',
+      currencyCode || `${this.currencyInfo.currencyCode}`,
       customTokens
     )
 
@@ -150,7 +157,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         currencyInfo,
-        currencyCode || 'ZEC',
+        currencyCode || `${this.currencyInfo.currencyCode}`,
         customTokens
       )
       if (!denom) {
@@ -158,7 +165,7 @@ export class ZcashPlugin extends CurrencyPlugin {
       }
       amount = bns.div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'zcash', amount)
+    const encodedUri = this.encodeUriCommon(obj, `${this.pluginId}`, amount)
     return encodedUri
   }
 }
