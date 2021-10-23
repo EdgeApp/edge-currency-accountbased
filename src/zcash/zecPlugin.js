@@ -41,18 +41,10 @@ export class ZcashPlugin extends CurrencyPlugin {
 
   // TODO: Replace with RPC method
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    let blockheight =
-      this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
-    try {
-      const response = await this.io.fetch(
-        `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${this.pluginId}/stats`
-      )
-      blockheight = asBlockchairInfo(await response.json()).data
-        .best_block_height
-    } catch (e) {
-      // Failure is ok, use default
-    }
-    return blockheight
+    const response = await this.io.fetch(
+      `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${this.pluginId}/stats`
+    )
+    return asBlockchairInfo(await response.json()).data.best_block_height
   }
 
   async isValidAddress(address: string): Promise<boolean> {
