@@ -77,7 +77,7 @@ export class FioPlugin extends CurrencyPlugin {
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
     if (type === FIO_TYPE) {
-      const buffer = this.io.random(32)
+      const buffer = Buffer.from(this.io.random(32))
       return FIOSDK.createPrivateKey(buffer)
     } else {
       throw new Error('InvalidWalletType')

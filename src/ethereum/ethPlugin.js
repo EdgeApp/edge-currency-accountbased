@@ -4,7 +4,7 @@
 // @flow
 
 import { bns } from 'biggystring'
-import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
@@ -84,7 +84,8 @@ export class EthereumPlugin extends CurrencyPlugin {
       throw new Error('InvalidWalletType')
     }
 
-    const mnemonicKey = generateMnemonic(128).split(',').join(' ')
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonicKey = entropyToMnemonic(entropy)
 
     const hexKey = await this._mnemonicToHex(mnemonicKey) // will not have 0x in it
     return {
