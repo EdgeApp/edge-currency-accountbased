@@ -47,10 +47,13 @@ import {
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
-  asEthereumFees
+  type MetaTokenMap,
+  asEthereumFees,
+  asMetaTokenMap
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
+const METATOKENS_UPDATE_MILLISECONDS = 24 * 60 * 60 * 1000 // 1 day
 const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
@@ -61,6 +64,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  otherMethods: Object
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -87,6 +91,10 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+
+    this.otherMethods = {
+      getTokenInfo: this.getTokenInfo.bind(this)
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -201,6 +209,27 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
+  async checkUpdateCustomMetaTokens() {
+    // Get the meta tokens from the info server
+    try {
+      const infoServer = getEdgeInfoServer()
+      const url = `${infoServer}/v1/knownContract/allContracts`
+      const jsonObj: MetaTokenMap = await this.ethNetwork.fetchGet(url)
+      const valid = asMaybe(asMetaTokenMap)(jsonObj) != null
+
+      if (valid) {
+        this.allTokens = jsonObj
+      } else {
+        this.log.error(
+          `Error: Fetched invalid metaTokens ${JSON.stringify(jsonObj)}`
+        )
+      }
+    } catch (err) {
+      this.log.error(`Error fetching metaTokens from Edge info server`)
+      this.log.error(err)
+    }
+  }
+
   async updateNetworkFeesFromBaseFeePerGas(baseFeePerGas: string) {
     /*
     This algorithm calculates fee amounts using the base multiplier from the
@@ -208,13 +237,13 @@ export class EthereumEngine extends CurrencyEngine {
 
     Formula:
       fee = baseMultiplier * baseFee + minPriorityFee
-    
+
     Where:
       minPriorityFee = <minimum priority fee from info server>
       baseFee = <latest block's base fee>
       baseMultiplier = <multiplier from info server for low, standard, high, etc>
 
-    Reference analysis for choosing 2 gwei minimum priority fee: 
+    Reference analysis for choosing 2 gwei minimum priority fee:
       https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
     */
 
@@ -362,6 +391,10 @@ export class EthereumEngine extends CurrencyEngine {
   async startEngine() {
     this.engineOn = true
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    this.addToLoop(
+      'checkUpdateCustomMetaTokens',
+      METATOKENS_UPDATE_MILLISECONDS
+    )
 
     this.ethNetwork.needsLoop()
 
