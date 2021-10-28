@@ -47,10 +47,14 @@ import {
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
-  asEthereumFees
+  type MetaToken,
+  type MetaTokenMap,
+  asEthereumFees,
+  asMetaTokenMap
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
+const METATOKENS_UPDATE_MILLISECONDS = 24 * 60 * 60 * 1000 // 1 day
 const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
@@ -61,6 +65,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  otherMethods: Object
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -87,6 +92,10 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+
+    this.otherMethods = {
+      getTokenInfo: this.getTokenInfo.bind(this)
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -198,6 +207,43 @@ export class EthereumEngine extends CurrencyEngine {
       this.updateNetworkFeesFromEthGasStation()
     } catch (error) {
       this.log.error(error)
+    }
+  }
+
+  async checkUpdateCustomMetaTokens() {
+    // Get the meta tokens from the info server
+    try {
+      const infoServer = getEdgeInfoServer()
+      const url = `${infoServer}/v1/knownContract/allContracts`
+      const jsonObj: MetaTokenMap = await this.ethNetwork.fetchGet(url)
+      const valid = asMaybe(asMetaTokenMap)(jsonObj) != null
+
+      if (valid) {
+        for (const contractAddress in jsonObj) {
+          const { name, symbol, decimals, iconUrl }: MetaToken =
+            jsonObj[contractAddress]
+
+          this.allTokens.push({
+            currencyCode: symbol,
+            currencyName: name,
+            denominations: [
+              {
+                name: symbol,
+                multiplier: Math.pow(10, decimals).toString()
+              }
+            ],
+            symbolImage: iconUrl,
+            contractAddress
+          })
+        }
+      } else {
+        this.log.error(
+          `Error: Fetched invalid metaTokens ${JSON.stringify(jsonObj)}`
+        )
+      }
+    } catch (err) {
+      this.log.error(`Error fetching metaTokens from Edge info server`)
+      this.log.error(err)
     }
   }
 
@@ -362,6 +408,10 @@ export class EthereumEngine extends CurrencyEngine {
   async startEngine() {
     this.engineOn = true
     this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    this.addToLoop(
+      'checkUpdateCustomMetaTokens',
+      METATOKENS_UPDATE_MILLISECONDS
+    )
 
     this.ethNetwork.needsLoop()
 
