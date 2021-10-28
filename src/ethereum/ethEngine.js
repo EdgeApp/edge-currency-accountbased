@@ -179,17 +179,26 @@ export class EthereumEngine extends CurrencyEngine {
       this.log.error(err)
     }
 
-    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+    try {
+      const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
 
-    // If base fee is not suppported, update network fees fromethgasstation.info
-    if (baseFeePerGas == null) {
-      this.log.warn(`Updating networkFees from ethgasstation.info`)
-      this.updateNetworkFeesFromEthGasStation()
-      return
+      if (baseFeePerGas == null) throw new Error('baseFeePerGas is null')
+
+      // Update the network fees from network base fee
+      return this.updateNetworkFeesFromBaseFeePerGas(
+        hexToDecimal(baseFeePerGas)
+      )
+    } catch (error) {
+      this.log.error(error)
     }
 
-    // Update the network fees from network base fee
-    this.updateNetworkFeesFromBaseFeePerGas(hexToDecimal(baseFeePerGas))
+    try {
+      // If base fee is not suppported, update network fees fromethgasstation.info
+      this.log.warn(`Updating networkFees from ethgasstation.info`)
+      this.updateNetworkFeesFromEthGasStation()
+    } catch (error) {
+      this.log.error(error)
+    }
   }
 
   async updateNetworkFeesFromBaseFeePerGas(baseFeePerGas: string) {

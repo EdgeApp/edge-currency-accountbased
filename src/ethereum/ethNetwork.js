@@ -1149,8 +1149,10 @@ export class EthereumNetwork {
   }
 
   async getBaseFeePerGas(): Promise<{ baseFeePerGas: string | void }> {
-    const { rpcServers, chainId } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const {
+      rpcServers,
+      chainParams: { chainId }
+    } = this.currencyInfo.defaultSettings.otherSettings
 
     const funcs = rpcServers.map(
       baseUrl => async () =>
