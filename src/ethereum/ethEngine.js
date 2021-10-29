@@ -142,16 +142,16 @@ export class EthereumEngine extends CurrencyEngine {
 
         // Subscribe to call requests
         connector.on('call_request', (error: Error, payload: WcRpcPayload) => {
-          this.log.warn('call_request START')
+          this.log.warn('call_request START, payload: ', payload)
           try {
             if (error) throw error
             this.currencyEngineCallbacks.onWcNewContractCall(
               // TODO: figure out this syntax (later)
-              // asWcContract({
-              //   ...payload,
-              //   currencyCode: this.currencyInfo.currencyCode
-              // })
-              payload
+              asWcContract({
+                ...payload,
+                currencyCode: this.currencyInfo.currencyCode
+              })
+              // payload
             )
           } catch (e) {
             this.log.error(

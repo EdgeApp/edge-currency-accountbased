@@ -102,6 +102,22 @@ for (const fixture of fixtures) {
         tools = result
       })
     })
+    if (fixture.parseUri['wallet connect'] != null) {
+      it('wallet connect', async function () {
+        const parsedUri: any = await tools.parseUri(
+          fixture.parseUri['wallet connect'][0]
+        )
+        const { walletConnect } = parsedUri
+        const { topic, version, bridge, key, uri } = walletConnect
+
+        assert.equal(uri, fixture.parseUri['wallet connect'][0])
+        assert.equal(topic, fixture.parseUri['wallet connect'][1])
+        assert.equal(version, fixture.parseUri['wallet connect'][2])
+        assert.equal(bridge, fixture.parseUri['wallet connect'][3])
+        assert.equal(key, fixture.parseUri['wallet connect'][4])
+      })
+    }
+
     it('address only', async function () {
       const parsedUri = await tools.parseUri(
         fixture.parseUri['address only'][0]
@@ -286,65 +302,6 @@ for (const fixture of fixtures) {
           assert.equal(parsedUri[key], value)
         })
       })
-    })
-  })
-
-  describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {
-    before('Tools', function () {
-      return plugin.makeCurrencyTools().then(result => {
-        tools = result
-      })
-    })
-    it('address only', async function () {
-      const encodedUri = await tools.encodeUri(
-        fixture.encodeUri['address only'][0]
-      )
-      assert.equal(encodedUri, fixture.encodeUri['address only'][1])
-    })
-    it('weird address', async function () {
-      const encodedUri = await tools.encodeUri(
-        fixture.encodeUri['weird address'][0]
-      )
-      assert.equal(encodedUri, fixture.encodeUri['weird address'][1])
-    })
-    it('invalid address 0', function () {
-      return expectRejection(
-        tools.encodeUri(fixture.encodeUri['invalid address'][0])
-      )
-    })
-    it('invalid address 1', function () {
-      return expectRejection(
-        tools.encodeUri(fixture.encodeUri['invalid address'][1])
-      )
-    })
-    it('invalid address 2', function () {
-      return expectRejection(
-        tools.encodeUri(fixture.encodeUri['invalid address'][2])
-      )
-    })
-    it('address & amount', async function () {
-      const encodedUri = await tools.encodeUri(
-        fixture.encodeUri['address & amount'][0]
-      )
-      assert.equal(encodedUri, fixture.encodeUri['address & amount'][1])
-    })
-    it('address, amount, and label', async function () {
-      const encodedUri = await tools.encodeUri(
-        fixture.encodeUri['address, amount, and label'][0]
-      )
-      assert.equal(
-        encodedUri,
-        fixture.encodeUri['address, amount, and label'][1]
-      )
-    })
-    it('address, amount, label, & message', async function () {
-      const encodedUri = await tools.encodeUri(
-        fixture.encodeUri['address, amount, label, & message'][0]
-      )
-      assert.equal(
-        encodedUri,
-        fixture.encodeUri['address, amount, label, & message'][1]
-      )
     })
   })
 }

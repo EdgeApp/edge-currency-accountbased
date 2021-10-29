@@ -68,6 +68,9 @@ for (const fixture of fixtures) {
     },
     onAddressChanged() {
       emitter.emit('addressChanged')
+    },
+    onWcNewContractCall(payload) {
+      emitter.emit('wcNewContractCall', payload)
     }
   }
 
@@ -211,6 +214,9 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
   onAddressChanged() {
     // console.log('onTransactionsChanged:', transactionList)
     emitter.emit('addressChanged')
+  },
+  onWcNewContractCall(payload) {
+    emitter.emit('wcNewContractCall', payload)
   }
 }
 

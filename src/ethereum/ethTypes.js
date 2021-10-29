@@ -482,8 +482,8 @@ export const asWcRpcPayload = asObject({
   params: asObject
 })
 
-export const asWcContract = item => {
-  //  const payload = asWcRpcPayload(item)
+export const asWcContract = (item: any) => {
+  const rpcPayload = asWcRpcPayload(item)
   return {} // TODO: convert payload to whatever is needed in GUI here
 }
 

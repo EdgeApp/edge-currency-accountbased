@@ -151,7 +151,6 @@ export class EthereumPlugin extends CurrencyPlugin {
         networks[network] = true
       }
     )
-    // TODO: look here. This stuff is specific to parsing for ETH-related stuff
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,
       uri,
