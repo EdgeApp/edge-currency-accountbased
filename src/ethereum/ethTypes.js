@@ -14,6 +14,7 @@ import {
   asString,
   asUnknown
 } from 'cleaners'
+import type { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
@@ -459,3 +460,37 @@ export const asCheckTokenBalRpc = asObject({
 })
 
 export type CheckTokenBalRpc = $Call<typeof asCheckTokenBalRpc>
+
+export type TxRpcParams = {
+  from?: string,
+  to: string,
+  data: string,
+  gas?: string,
+  gasPrice?: string,
+  value?: string,
+  nonce?: string
+}
+
+type EIP712TypeData = {
+  name: string,
+  type: string
+}
+
+export type EIP712TypedDataParam = {
+  types: {
+    EIP712Domain: [EIP712TypeData],
+    [type: string]: [EIP712TypeData]
+  },
+  primaryType: string,
+  domain: Object,
+  message: Object
+}
+
+export type EthereumUtils = {
+  signMessage: (message: string) => string,
+  signTypedData: (typedData: Object) => string,
+  txRpcParamsToSpendInfo: (
+    params: TxRpcParams,
+    currencyCode: string
+  ) => EdgeSpendInfo
+}

@@ -170,6 +170,22 @@ for (const fixture of fixtures) {
     })
   })
 
+  describe('Message signing', function () {
+    if (fixture.messages == null) return
+    it('Should sign a hashed message', async function () {
+      if (!engine) throw new Error('ErrorNoEngine')
+      // $FlowFixMe
+      const sig = engine.utils.signMessage(fixture.messages.eth_sign.param)
+      assert.equal(sig, fixture.messages.eth_sign.signature)
+    })
+    it('Should sign a typed message', function () {
+      if (!engine) throw new Error('ErrorNoEngine')
+      // $FlowFixMe
+      const sig = engine.utils.signTypedData(fixture.messages.eth_signTypedData.param)
+      assert.equal(sig, fixture.messages.eth_signTypedData.signature)
+    })
+  })
+
   describe('Stop the engine', function () {
     it('Should stop the engine', function (done) {
       if (!engine) throw new Error('ErrorNoEngine')
