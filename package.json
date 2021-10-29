@@ -111,7 +111,7 @@
     "babel-eslint": "^10.1.0",
     "babel-loader": "^8.1.0",
     "chai": "^4.2.0",
-    "edge-core-js": "file:../edge-core-js/",
+    "edge-core-js": "^0.18.2",
     "eslint": "^7.14.0",
     "eslint-config-standard-kit": "0.15.1",
     "eslint-plugin-flowtype": "^5.2.0",
