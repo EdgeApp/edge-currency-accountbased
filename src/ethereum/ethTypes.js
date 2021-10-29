@@ -8,11 +8,13 @@ import {
   asBoolean,
   asEither,
   asMap,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
-  asUnknown
+  asUnknown,
+  asValue
 } from 'cleaners'
 
 export type EthereumInitOptions = {
@@ -459,3 +461,30 @@ export const asCheckTokenBalRpc = asObject({
 })
 
 export type CheckTokenBalRpc = $Call<typeof asCheckTokenBalRpc>
+
+export const asWcProps = asObject({
+  uri: asString,
+  language: asMaybe(asString),
+  token: asMaybe(asString)
+})
+
+export type WcProps = $Call<typeof asWcProps>
+
+export const asWcRpcPayload = asObject({
+  id: asEither(asString, asNumber),
+  method: asValue(
+    'eth_sign',
+    'eth_signTypedData',
+    'eth_sendTransaction',
+    'eth_signTransaction',
+    'eth_sendRawTransaction'
+  ),
+  params: asObject
+})
+
+export const asWcContract = item => {
+  //  const payload = asWcRpcPayload(item)
+  return {} // TODO: convert payload to whatever is needed in GUI here
+}
+
+export type WcRpcPayload = $Call<typeof asWcRpcPayload>

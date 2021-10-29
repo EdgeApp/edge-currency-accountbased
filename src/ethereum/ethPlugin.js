@@ -151,7 +151,7 @@ export class EthereumPlugin extends CurrencyPlugin {
         networks[network] = true
       }
     )
-
+    // TODO: look here. This stuff is specific to parsing for ETH-related stuff
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,
       uri,
@@ -159,6 +159,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
+    if (edgeParsedUri.walletConnect != null) return edgeParsedUri
     let address = ''
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress

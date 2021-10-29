@@ -57,6 +57,7 @@ export class CurrencyPlugin {
     throw new Error('Must implement encodeUri')
   }
 
+  // TODO: look here. At least the parse will go here, maybe more.
   parseUriCommon(
     currencyInfo: EdgeCurrencyInfo,
     uri: string,
@@ -65,13 +66,17 @@ export class CurrencyPlugin {
     customTokens?: EdgeMetaToken[]
   ) {
     const parsedUri = parse(uri, {}, true)
-
+    console.log(parsedUri)
     // Remove ":" from protocol
     if (parsedUri.protocol) {
       parsedUri.protocol = parsedUri.protocol.replace(':', '')
     }
 
-    if (parsedUri.protocol && !networks[parsedUri.protocol]) {
+    if (
+      parsedUri.protocol &&
+      parsedUri.protocol !== 'wc' &&
+      !networks[parsedUri.protocol]
+    ) {
       throw new Error('InvalidUriError') // possibly scanning wrong crypto type
     }
 
@@ -114,6 +119,18 @@ export class CurrencyPlugin {
 
       edgeParsedUri.nativeAmount = nativeAmount || undefined
       edgeParsedUri.currencyCode = currencyCode || undefined
+    }
+
+    if (parsedUri.protocol === 'wc') {
+      if (parsedUri.query.bridge && parsedUri.query.key) {
+        edgeParsedUri.walletConnect = {
+          uri,
+          topic: parsedUri.pathname.split('@')[0],
+          version: parsedUri.pathname.split('@')[1],
+          bridge: parsedUri.query.bridge,
+          key: parsedUri.query.key
+        }
+      } else throw new Error('MissingWcBridgeKey')
     }
 
     return { edgeParsedUri, parsedUri }

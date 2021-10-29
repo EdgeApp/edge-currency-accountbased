@@ -375,6 +375,13 @@ export default [
       keys: { ethereumKey: '12345678abcd' }
     },
     parseUri: {
+      'wallet connect': [
+        'wc:07051b82-88c9-46ef-884e-86fef44208cb@1?bridge=https%3A%2F%2Fs.bridge.walletconnect.org&key=5ace917fbdda41616f7a134e128d4e1707608c432e3e82fc982c39d3ff278da7',
+        '07051b82-88c9-46ef-884e-86fef44208cb',
+        '1',
+        'https://s.bridge.walletconnect.org',
+        '5ace917fbdda41616f7a134e128d4e1707608c432e3e82fc982c39d3ff278da7'
+      ],
       'address only': [
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8'

@@ -5,6 +5,7 @@
 
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
+import WalletConnect from '@walletconnect/client'
 import { bns } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
@@ -47,20 +48,27 @@ import {
   type EthereumTxOtherParams,
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
-  asEthereumFees
+  type WcProps,
+  type WcRpcPayload,
+  asEthereumFees,
+  asWcContract
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
-
 export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  walletConnectors: {
+    [uri: string]: { connector: WalletConnect, wcProps: WcProps }
+  } // NOTE: WalletConnect needs to be typed in flow
+
+  otherMethods: Object
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -87,6 +95,82 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+
+    this.walletConnectors = {}
+
+    // TODO: call these new otherMethods in GUI
+    this.otherMethods = {
+      wcConnect: (wcProps: WcProps) => {
+        this.log.warn('wcConnect START')
+        const connector = new WalletConnect(
+          {
+            uri: wcProps.uri,
+            clientMeta: {
+              description: 'dummyDescription',
+              url: 'dummyUrl',
+              icons: ['https://example.walletconnect.org/favicon.ico'],
+              name: 'dummyName'
+            }
+          }
+          // ,
+          // {
+          //   language: wcProps.language,
+          //   token: wcProps.token
+          // }
+        )
+        this.log.warn('connector COMPLETE')
+
+        // Use cleaner and try/catch as in 'call_request'
+        connector.on(
+          'session_request',
+          (error: Error, payload: WcRpcPayload) => {
+            this.log.warn('session_request START')
+
+            if (error) {
+              this.log.error(
+                `WalletConnect Session Request error: ${error.stack}`
+              )
+            }
+            connector.approveSession({
+              accounts: [this.walletInfo.keys.publicKey],
+              chainId: this.currencyInfo.chainParams.chainId // required
+            })
+
+            this.log.warn('session_request END')
+          }
+        )
+
+        // Subscribe to call requests
+        connector.on('call_request', (error: Error, payload: WcRpcPayload) => {
+          this.log.warn('call_request START')
+          try {
+            if (error) throw error
+            this.currencyEngineCallbacks.onWcNewContractCall(
+              // TODO: figure out this syntax (later)
+              // asWcContract({
+              //   ...payload,
+              //   currencyCode: this.currencyInfo.currencyCode
+              // })
+              payload
+            )
+          } catch (e) {
+            this.log.error(
+              `WalletConnect Call Request error: ${JSON.stringify(e)}`
+            )
+          }
+          console.warn('call_request END')
+        })
+        this.walletConnectors[wcProps.uri] = { connector, wcProps }
+      },
+      wcDisconnect: (uri: string) => {
+        this.walletConnectors[uri].connector.killSession()
+        delete this.walletConnectors[uri]
+      },
+      wcGetConnections: () =>
+        Object.keys(this.walletConnectors).map(
+          uri => this.walletConnectors[uri].wcProps // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
+        )
+    }
   }
 
   updateBalance(tk: string, balance: string) {
