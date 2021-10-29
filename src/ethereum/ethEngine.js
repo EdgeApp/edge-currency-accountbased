@@ -133,7 +133,7 @@ export class EthereumEngine extends CurrencyEngine {
             }
             connector.approveSession({
               accounts: [this.walletInfo.keys.publicKey],
-              chainId: this.currencyInfo.chainParams.chainId // required
+              chainId: this.currencyInfo.defaultSettings.otherSettings.chainId // required
             })
 
             this.log.warn('session_request END')
