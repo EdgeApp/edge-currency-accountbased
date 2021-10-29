@@ -47,6 +47,7 @@ import {
   type EthereumFees,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
+  type EthereumOtherMethods,
   type EthereumSettings,
   type EthereumTxOtherParams,
   type EthereumUtils,
@@ -67,6 +68,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  otherMethods: EthereumOtherMethods
   utils: EthereumUtils
 
   constructor(
@@ -253,6 +255,38 @@ export class EthereumEngine extends CurrencyEngine {
         }
 
         return spendInfo
+      }
+    }
+
+    this.otherMethods = {
+      personal_sign: params => this.utils.signMessage(params[0]),
+      eth_sign: params => this.utils.signMessage(params[1]),
+      eth_signTypedData: params =>
+        this.utils.signTypedData(JSON.parse(params[1])),
+      eth_sendTransaction: async (params, cc) => {
+        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
+        const tx = await this.makeSpend(spendInfo)
+        const signedTx = await this.signTx(tx)
+        return this.broadcastTx(signedTx)
+      },
+      eth_signTransaction: async (params, cc) => {
+        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
+        const tx = await this.makeSpend(spendInfo)
+        return this.signTx(tx)
+      },
+      eth_sendRawTransaction: async params => {
+        const tx: EdgeTransaction = {
+          currencyCode: '',
+          nativeAmount: '',
+          networkFee: '',
+          blockHeight: 0,
+          date: Date.now(),
+          txid: '',
+          signedTx: params[0],
+          ourReceiveAddresses: []
+        }
+
+        return this.broadcastTx(tx)
       }
     }
   }

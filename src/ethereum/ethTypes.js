@@ -494,3 +494,18 @@ export type EthereumUtils = {
     currencyCode: string
   ) => EdgeSpendInfo
 }
+
+export type EthereumOtherMethods = {
+  personal_sign: (params: string[]) => string,
+  eth_sign: (params: string[]) => string,
+  eth_signTypedData: (params: string[]) => string,
+  eth_sendTransaction: (
+    params: TxRpcParams,
+    currencyCode: string
+  ) => Promise<EdgeTransaction>,
+  eth_signTransaction: (
+    params: TxRpcParams,
+    currencyCode: string
+  ) => Promise<EdgeTransaction>,
+  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
+}
