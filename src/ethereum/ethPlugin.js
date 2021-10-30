@@ -3,6 +3,7 @@
  */
 // @flow
 
+import { getLocalStorage } from '@walletconnect/browser-utils'
 import { bns } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -160,6 +161,20 @@ export class EthereumPlugin extends CurrencyPlugin {
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
+
+    if (parsedUri.protocol === 'wc') {
+      if (parsedUri.query.bridge != null && parsedUri.query.key != null) {
+        edgeParsedUri.walletConnect = {
+          uri,
+          topic: parsedUri.pathname.split('@')[0],
+          version: parsedUri.pathname.split('@')[1],
+          bridge: parsedUri.query.bridge,
+          key: parsedUri.query.key
+        }
+        return edgeParsedUri
+      } else throw new Error('MissingWcBridgeKey')
+    }
+
     let address = ''
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress
@@ -331,6 +346,13 @@ export function makeEthereumBasedPluginInner(
     toolsPromise = Promise.resolve(
       new EthereumPlugin(io, currencyInfo, fetchCors)
     )
+
+    // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
+    // a user from reconnecting to an "active" but invisible connection. Future enhancement
+    // will restore these active sessions to the GUI
+    const wcStorage = getLocalStorage()
+    if (wcStorage != null) wcStorage.clear()
+
     return toolsPromise
   }
 

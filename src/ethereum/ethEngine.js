@@ -5,6 +5,7 @@
 
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
+import WalletConnect from '@walletconnect/client'
 import { bns } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
@@ -34,6 +35,7 @@ import {
   isHex,
   normalizeAddress,
   removeHexPrefix,
+  timeout,
   toHex,
   validateObject
 } from '../common/utils'
@@ -54,7 +56,12 @@ import {
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
   type TxRpcParams,
-  asEthereumFees
+  type WalletConnectors,
+  type WcDappDetails,
+  type WcProps,
+  type WcRpcPayload,
+  asEthereumFees,
+  asWcSessionRequestParams
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
@@ -68,6 +75,7 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  walletConnectors: WalletConnectors
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
 
@@ -96,6 +104,8 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+    this.walletConnectors = {}
+
     this.utils = {
       signMessage: (message: string) => {
         if (!isHex(removeHexPrefix(message)))
@@ -287,7 +297,144 @@ export class EthereumEngine extends CurrencyEngine {
         }
 
         return this.broadcastTx(tx)
-      }
+      },
+
+      // Wallet Connect utils
+      wcInit: async (
+        wcProps: WcProps,
+        walletName: string = 'Edge'
+      ): Promise<WcDappDetails> => {
+        return timeout(
+          new Promise((resolve, reject) => {
+            const connector = new WalletConnect({
+              uri: wcProps.uri,
+              storageId: wcProps.uri,
+              clientMeta: {
+                description: 'Edge Wallet',
+                url: 'https://www.edge.app',
+                icons: ['https://content.edge.app/Edge_logo_Icon.png'],
+                name: walletName
+              }
+            })
+
+            connector.on(
+              'session_request',
+              (error: Error, payload: WcRpcPayload) => {
+                if (error) {
+                  this.log.error(
+                    `Wallet connect session_request ${error?.message ?? ''}`
+                  )
+                  throw error
+                }
+                const dApp = asWcSessionRequestParams(payload).params[0]
+                // Set connector in memory
+                this.walletConnectors[wcProps.uri] = {
+                  connector,
+                  wcProps,
+                  dApp
+                }
+                resolve(dApp)
+              }
+            )
+
+            // Subscribe to call requests
+            connector.on(
+              'call_request',
+              (error: Error, payload: WcRpcPayload) => {
+                try {
+                  if (error) throw error
+                  const out = {
+                    uri: connector.uri,
+                    dApp: this.walletConnectors[connector.uri].dApp,
+                    payload
+                  }
+                  this.currencyEngineCallbacks.onWcNewContractCall(out)
+                } catch (e) {
+                  this.log.warn(
+                    `Wallet connect call_request ${e?.message ?? ''}`
+                  )
+                  throw e
+                }
+              }
+            )
+          }),
+          5000
+        )
+      },
+      wcConnect: (wcProps: WcProps) => {
+        this.walletConnectors[wcProps.uri].connector.approveSession({
+          accounts: [this.walletInfo.keys.publicKey],
+          chainId:
+            this.currencyInfo.defaultSettings.otherSettings.chainParams.chainId // required
+        })
+      },
+      wcDisconnect: (uri: string) => {
+        this.walletConnectors[uri].connector.killSession()
+        delete this.walletConnectors[uri]
+      },
+      wcRequestResponse: async (
+        uri: string,
+        approve: boolean,
+        payload: WcRpcPayload
+      ) => {
+        const requestBody = (result: Object): Object => ({
+          id: payload.id,
+          jsonrpc: '2.0',
+          ...result
+        })
+
+        if (approve) {
+          try {
+            const result = await this.otherMethods[`${payload.method}`](
+              payload.params
+            )
+
+            switch (payload.method) {
+              case 'personal_sign':
+              case 'eth_sign':
+              case 'eth_signTypedData':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result })
+                )
+                break
+              case 'eth_signTransaction':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result.signedTx })
+                )
+                break
+              case 'eth_sendTransaction':
+              case 'eth_sendRawTransaction':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result.txid })
+                )
+            }
+          } catch (e) {
+            this.walletConnectors[uri].connector.rejectRequest(
+              requestBody({
+                error: {
+                  message: 'rejected'
+                }
+              })
+            )
+            throw e
+          }
+        } else {
+          this.walletConnectors[uri].connector.rejectRequest(
+            requestBody({
+              error: {
+                message: 'rejected'
+              }
+            })
+          )
+        }
+      },
+      wcGetConnections: () =>
+        Object.keys(this.walletConnectors).map(
+          uri => ({
+            ...this.walletConnectors[uri].dApp,
+            ...this.walletConnectors[uri].wcProps
+          }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
+        )
     }
   }
 

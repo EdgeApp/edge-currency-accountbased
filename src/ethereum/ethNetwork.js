@@ -513,7 +513,7 @@ export class EthereumNetwork {
         : ''
 
     const url = `${server}/api${cmd}${apiKey}`
-    this.ethEngine.log.warn('invalid ftm url ', url)
+    // this.ethEngine.log.warn('invalid ftm url ', url)
     return this.fetchGet(url)
   }
 

@@ -56,6 +56,9 @@ describe(`EOS activation`, function () {
     },
     onAddressChanged() {
       emitter.emit('addressChanged')
+    },
+    onWcNewContractCall(payload) {
+      emitter.emit('wcNewContractCall', payload)
     }
   }
 

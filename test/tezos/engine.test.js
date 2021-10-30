@@ -51,6 +51,9 @@ describe(`Tezos engine`, function () {
     },
     onAddressChanged() {
       emitter.emit('addressChanged')
+    },
+    onWcNewContractCall(payload) {
+      emitter.emit('wcNewContractCall', payload)
     }
   }
   // $FlowFixMe

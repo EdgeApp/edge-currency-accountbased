@@ -140,7 +140,7 @@ const otherSettings: EthereumSettings = {
         return []
     }
   })(),
-  uriNetworks: ['ethereum', 'ether'],
+  uriNetworks: ['ethereum', 'ether', 'wc'],
   ercTokenStandard: 'ERC20',
   chainParams: {
     chainId,

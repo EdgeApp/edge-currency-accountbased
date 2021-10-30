@@ -3,16 +3,19 @@
  */
 // @flow
 
+import WalletConnect from '@walletconnect/client'
 import {
   asArray,
   asBoolean,
   asEither,
   asMap,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
-  asUnknown
+  asUnknown,
+  asValue
 } from 'cleaners'
 import type { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
@@ -495,6 +498,61 @@ export type EthereumUtils = {
   ) => EdgeSpendInfo
 }
 
+export const asWcProps = asObject({
+  uri: asString,
+  language: asMaybe(asString),
+  token: asMaybe(asString)
+})
+
+export type WcProps = $Call<typeof asWcProps>
+
+export const asWcRpcPayload = asObject({
+  id: asEither(asString, asNumber),
+  method: asValue(
+    'personal_sign',
+    'eth_sign',
+    'eth_signTypedData',
+    'eth_sendTransaction',
+    'eth_signTransaction',
+    'eth_sendRawTransaction'
+  ),
+  params: asObject
+})
+
+export const asWcContract = (item: any) => {
+  // const rpcPayload = asWcRpcPayload(item)
+  return {} // TODO: convert payload to whatever is needed in GUI here
+}
+
+export type WcRpcPayload = $Call<typeof asWcRpcPayload>
+
+const asWcDappDetails = asObject({
+  peerId: asString,
+  peerMeta: asObject({
+    description: asString,
+    url: asString,
+    icons: asArray(asString),
+    name: asString
+  }),
+  chainId: asOptional(asNumber, 1)
+})
+
+export type WcDappDetails = $Call<typeof asWcDappDetails>
+
+export type Dapp = { ...WcProps, ...WcDappDetails }
+
+export type WalletConnectors = {
+  [uri: string]: {
+    connector: WalletConnect,
+    wcProps: WcProps,
+    dApp: WcDappDetails
+  }
+}
+
+export const asWcSessionRequestParams = asObject({
+  params: asArray(asWcDappDetails)
+})
+
 export type EthereumOtherMethods = {
   personal_sign: (params: string[]) => string,
   eth_sign: (params: string[]) => string,
@@ -507,5 +565,14 @@ export type EthereumOtherMethods = {
     params: TxRpcParams,
     currencyCode: string
   ) => Promise<EdgeTransaction>,
-  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
+  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>,
+  wcInit(wcProps: WcProps): Promise<WcDappDetails>,
+  wcConnect: (wcProps: WcProps) => void,
+  wcDisconnect: (uri: string) => void,
+  wcRequestResponse: (
+    uri: string,
+    approve: boolean,
+    payload: WcRpcPayload
+  ) => Promise<void>,
+  wcGetConnections: () => Dapp[]
 }
