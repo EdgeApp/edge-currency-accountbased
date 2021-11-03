@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.8.1 (2021-11-02)
+
+- Add Wallet Connect
+- ETH: Fix error handling in checkUpdateNetworkFees
+
 # 0.8.0 (2021-10-11)
 
 - Add Hedera
