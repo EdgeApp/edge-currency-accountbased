@@ -5,6 +5,7 @@
 
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
+import WalletConnect from '@walletconnect/client'
 import { bns } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
@@ -12,6 +13,7 @@ import {
   type EdgeCurrencyInfo,
   type EdgeFetchFunction,
   type EdgeSpendInfo,
+  type EdgeSpendTarget,
   type EdgeTransaction,
   type EdgeWalletInfo,
   InsufficientFundsError
@@ -28,26 +30,38 @@ import {
   cleanTxLogs,
   getEdgeInfoServer,
   getOtherParams,
+  hexToBuf,
   hexToDecimal,
   isHex,
   normalizeAddress,
+  removeHexPrefix,
+  timeout,
   toHex,
   validateObject
 } from '../common/utils'
 import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
-import { EthGasStationSchema } from './ethSchema.js'
+import { EIP712TypedDataSchema, EthGasStationSchema } from './ethSchema.js'
 import {
+  type EIP712TypedDataParam,
   type EthereumFee,
   type EthereumFees,
   type EthereumFeesGasPrice,
   type EthereumInitOptions,
+  type EthereumOtherMethods,
   type EthereumSettings,
   type EthereumTxOtherParams,
+  type EthereumUtils,
   type EthereumWalletOtherData,
   type LastEstimatedGasLimit,
-  asEthereumFees
+  type TxRpcParams,
+  type WalletConnectors,
+  type WcDappDetails,
+  type WcProps,
+  type WcRpcPayload,
+  asEthereumFees,
+  asWcSessionRequestParams
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
@@ -61,6 +75,9 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
+  walletConnectors: WalletConnectors
+  otherMethods: EthereumOtherMethods
+  utils: EthereumUtils
 
   constructor(
     currencyPlugin: EthereumPlugin,
@@ -87,6 +104,338 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+    this.walletConnectors = {}
+
+    this.utils = {
+      signMessage: (message: string) => {
+        if (!isHex(removeHexPrefix(message)))
+          throw new Error('ErrorInvalidMessage')
+        const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
+        const messageBuffer = hexToBuf(message)
+        const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
+        const { v, r, s } = EthereumUtil.ecsign(messageHash, privKey)
+
+        return EthereumUtil.toRpcSig(v, r, s)
+      },
+
+      signTypedData: (typedData: EIP712TypedDataParam) => {
+        // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
+        const valid = validateObject(typedData, EIP712TypedDataSchema)
+        if (!valid) throw new Error('ErrorInvalidTypedData')
+
+        const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
+        const types = typedData.types
+
+        // Recursively finds all the dependencies of a type
+        function dependencies(primaryType, found = []) {
+          if (found.includes(primaryType)) {
+            return found
+          }
+          if (types[primaryType] === undefined) {
+            return found
+          }
+          found.push(primaryType)
+          for (const field of types[primaryType]) {
+            for (const dep of dependencies(field.type, found)) {
+              if (!found.includes(dep)) {
+                found.push(dep)
+              }
+            }
+          }
+          return found
+        }
+
+        function encodeType(primaryType) {
+          // Get dependencies primary first, then alphabetical
+          let deps = dependencies(primaryType)
+          deps = deps.filter(t => t !== primaryType)
+          deps = [primaryType].concat(deps.sort())
+
+          // Format as a string with fields
+          let result = ''
+          for (const type of deps) {
+            result += `${type}(${types[type]
+              .map(({ name, type }) => `${type} ${name}`)
+              .join(',')})`
+          }
+          return result
+        }
+
+        function typeHash(primaryType) {
+          return EthereumUtil.keccak256(encodeType(primaryType))
+        }
+
+        function encodeData(primaryType, data) {
+          const encTypes = []
+          const encValues = []
+
+          // Add typehash
+          encTypes.push('bytes32')
+          encValues.push(typeHash(primaryType))
+
+          // Add field contents
+          for (const field of types[primaryType]) {
+            let value = data[field.name]
+            if (field.type === 'string' || field.type === 'bytes') {
+              encTypes.push('bytes32')
+              value = EthereumUtil.keccak256(value)
+              encValues.push(value)
+            } else if (types[field.type] !== undefined) {
+              encTypes.push('bytes32')
+              value = EthereumUtil.keccak256(encodeData(field.type, value))
+              encValues.push(value)
+            } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
+              throw new Error('Arrays currently unimplemented in encodeData')
+            } else {
+              encTypes.push(field.type)
+              encValues.push(value)
+            }
+          }
+
+          return abi.rawEncode(encTypes, encValues)
+        }
+
+        function structHash(primaryType, data) {
+          return EthereumUtil.keccak256(encodeData(primaryType, data))
+        }
+
+        function signHash() {
+          return EthereumUtil.keccak256(
+            Buffer.concat([
+              Buffer.from('1901', 'hex'),
+              structHash('EIP712Domain', typedData.domain),
+              structHash(typedData.primaryType, typedData.message)
+            ])
+          )
+        }
+
+        const sig = EthereumUtil.ecsign(signHash(), privKey)
+        const { v, r, s } = sig
+
+        return EthereumUtil.bufferToHex(
+          Buffer.concat([
+            EthereumUtil.setLengthLeft(r, 32),
+            EthereumUtil.setLengthLeft(s, 32),
+            EthereumUtil.toBuffer(v)
+          ])
+        )
+      },
+
+      txRpcParamsToSpendInfo: (params: TxRpcParams, currencyCode: string) => {
+        const spendTarget: EdgeSpendTarget = { otherParams: params }
+        if (params.to != null) {
+          spendTarget.publicAddress = params.to
+        }
+        if (params.value != null) {
+          spendTarget.nativeAmount = hexToDecimal(params.value)
+        }
+
+        const spendInfo: EdgeSpendInfo = {
+          currencyCode,
+          spendTargets: [spendTarget],
+          networkFeeOption: 'standard',
+          otherParams: params
+        }
+
+        const {
+          gasLimit,
+          gasPrice: { minGasPrice }
+        } =
+          this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+            .default
+
+        const customNetworkFee = {
+          gasLimit:
+            this.currencyInfo.currencyCode === currencyCode
+              ? gasLimit.regularTransaction
+              : gasLimit.tokenTransaction,
+          gasPrice: minGasPrice
+        }
+
+        if (params.gas != null) {
+          spendInfo.networkFeeOption = 'custom'
+          customNetworkFee.gasLimit = hexToDecimal(params.gas)
+        }
+        if (params.gasPrice != null) {
+          spendInfo.networkFeeOption = 'custom'
+          customNetworkFee.gasPrice = hexToDecimal(params.gasPrice)
+        }
+        if (spendInfo.networkFeeOption === 'custom') {
+          spendInfo.customNetworkFee = customNetworkFee
+        }
+
+        return spendInfo
+      }
+    }
+
+    this.otherMethods = {
+      personal_sign: params => this.utils.signMessage(params[0]),
+      eth_sign: params => this.utils.signMessage(params[1]),
+      eth_signTypedData: params =>
+        this.utils.signTypedData(JSON.parse(params[1])),
+      eth_sendTransaction: async (params, cc) => {
+        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
+        const tx = await this.makeSpend(spendInfo)
+        const signedTx = await this.signTx(tx)
+        return this.broadcastTx(signedTx)
+      },
+      eth_signTransaction: async (params, cc) => {
+        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
+        const tx = await this.makeSpend(spendInfo)
+        return this.signTx(tx)
+      },
+      eth_sendRawTransaction: async params => {
+        const tx: EdgeTransaction = {
+          currencyCode: '',
+          nativeAmount: '',
+          networkFee: '',
+          blockHeight: 0,
+          date: Date.now(),
+          txid: '',
+          signedTx: params[0],
+          ourReceiveAddresses: []
+        }
+
+        return this.broadcastTx(tx)
+      },
+
+      // Wallet Connect utils
+      wcInit: async (
+        wcProps: WcProps,
+        walletName: string = 'Edge'
+      ): Promise<WcDappDetails> => {
+        return timeout(
+          new Promise((resolve, reject) => {
+            const connector = new WalletConnect({
+              uri: wcProps.uri,
+              storageId: wcProps.uri,
+              clientMeta: {
+                description: 'Edge Wallet',
+                url: 'https://www.edge.app',
+                icons: ['https://content.edge.app/Edge_logo_Icon.png'],
+                name: walletName
+              }
+            })
+
+            connector.on(
+              'session_request',
+              (error: Error, payload: WcRpcPayload) => {
+                if (error) {
+                  this.log.error(
+                    `Wallet connect session_request ${error?.message ?? ''}`
+                  )
+                  throw error
+                }
+                const dApp = asWcSessionRequestParams(payload).params[0]
+                // Set connector in memory
+                this.walletConnectors[wcProps.uri] = {
+                  connector,
+                  wcProps,
+                  dApp
+                }
+                resolve(dApp)
+              }
+            )
+
+            // Subscribe to call requests
+            connector.on(
+              'call_request',
+              (error: Error, payload: WcRpcPayload) => {
+                try {
+                  if (error) throw error
+                  const out = {
+                    uri: connector.uri,
+                    dApp: this.walletConnectors[connector.uri].dApp,
+                    payload
+                  }
+                  this.currencyEngineCallbacks.onWcNewContractCall(out)
+                } catch (e) {
+                  this.log.warn(
+                    `Wallet connect call_request ${e?.message ?? ''}`
+                  )
+                  throw e
+                }
+              }
+            )
+          }),
+          5000
+        )
+      },
+      wcConnect: (wcProps: WcProps) => {
+        this.walletConnectors[wcProps.uri].connector.approveSession({
+          accounts: [this.walletInfo.keys.publicKey],
+          chainId:
+            this.currencyInfo.defaultSettings.otherSettings.chainParams.chainId // required
+        })
+      },
+      wcDisconnect: (uri: string) => {
+        this.walletConnectors[uri].connector.killSession()
+        delete this.walletConnectors[uri]
+      },
+      wcRequestResponse: async (
+        uri: string,
+        approve: boolean,
+        payload: WcRpcPayload
+      ) => {
+        const requestBody = (result: Object): Object => ({
+          id: payload.id,
+          jsonrpc: '2.0',
+          ...result
+        })
+
+        if (approve) {
+          try {
+            const result = await this.otherMethods[`${payload.method}`](
+              payload.params
+            )
+
+            switch (payload.method) {
+              case 'personal_sign':
+              case 'eth_sign':
+              case 'eth_signTypedData':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result })
+                )
+                break
+              case 'eth_signTransaction':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result.signedTx })
+                )
+                break
+              case 'eth_sendTransaction':
+              case 'eth_sendRawTransaction':
+                this.walletConnectors[uri].connector.approveRequest(
+                  requestBody({ result: result.txid })
+                )
+            }
+          } catch (e) {
+            this.walletConnectors[uri].connector.rejectRequest(
+              requestBody({
+                error: {
+                  message: 'rejected'
+                }
+              })
+            )
+            throw e
+          }
+        } else {
+          this.walletConnectors[uri].connector.rejectRequest(
+            requestBody({
+              error: {
+                message: 'rejected'
+              }
+            })
+          )
+        }
+      },
+      wcGetConnections: () =>
+        Object.keys(this.walletConnectors).map(
+          uri => ({
+            ...this.walletConnectors[uri].dApp,
+            ...this.walletConnectors[uri].wcProps
+          }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
+        )
+    }
   }
 
   updateBalance(tk: string, balance: string) {
