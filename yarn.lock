@@ -2439,15 +2439,10 @@ clean-stack@^2.0.0:
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
   integrity sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==
 
-cleaners@^0.3.12:
+cleaners@^0.3.11, cleaners@^0.3.12, cleaners@^0.3.9:
   version "0.3.12"
   resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.12.tgz#0e99ef2460a59ed87550a60bdfc441b1696ff9cb"
   integrity sha512-bK7IvvYyhfy30S3VKmWi/YVWp0MUH1pEYfdtbjCpQiIzy8gmP9GCXv6AVZENDHbpcRHqMnZONs3ieyJMh3zvVw==
-
-cleaners@^0.3.8:
-  version "0.3.9"
-  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.9.tgz#e9d2b7ebbbf62c0ae9f7bf1f1cf0aa5544acb3fa"
-  integrity sha512-DAddE949KDyTFcb6LdVpEd4BBHa55wNfm63tE0AYT2hDZyg0IR6lwOqjPhP/6GwF1z9FWeKqjw20T27/UHjM+Q==
 
 cli-cursor@^3.1.0:
   version "3.1.0"
@@ -2701,6 +2696,13 @@ create-hmac@1.1.6, create-hmac@1.1.7, create-hmac@^1.1.0, create-hmac@^1.1.2, cr
     ripemd160 "^2.0.0"
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
+
+cross-fetch@^3.1.4:
+  version "3.1.4"
+  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.1.4.tgz#9723f3a3a247bf8b89039f3a380a9244e8fa2f39"
+  integrity sha512-1eAtFWdIubi6T4XPy6ei9iUFoKpUkIF971QLN8lIvvvwueI65+Nw5haMNKUwfJxabqlIIDODJKGrQ66gxC0PbQ==
+  dependencies:
+    node-fetch "2.6.1"
 
 cross-spawn@^6.0.5:
   version "6.0.5"
@@ -2980,17 +2982,18 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^0.18.2:
-  version "0.18.2"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.18.2.tgz#665c5aef040e21167db767663af162f2e9123df0"
-  integrity sha512-gQ6YZMCgpCNrEsiSWNY9su2w9rst5b9g/YqtfS8GfKGIHPkItcCyQsYbyOSwetU5SNjwfwLA1Buriab3f5PZ8w==
+edge-core-js@^0.18.10:
+  version "0.18.10"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.18.10.tgz#9e8c4f736053d347cd43bba9bd677e77105fb9f7"
+  integrity sha512-98g55fDlJgM3bLiEweWg/TFETK1DPmIr08N9EFO+qQ6T50uaeS6dohuPCmtxyOl1sCJCeCZUEFQPLz/TFscYRw==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
     biggystring "^3.0.2"
-    cleaners "^0.3.8"
+    cleaners "^0.3.11"
     currency-codes "^1.1.2"
     disklet "^0.4.5"
+    edge-sync-client "^0.2.3"
     elliptic "^6.4.0"
     ethereumjs-tx "^1.3.7"
     ethereumjs-util "^5.2.0"
@@ -3002,8 +3005,21 @@ edge-core-js@^0.18.2:
     redux-pixies "^0.3.6"
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
+    serverlet "^0.1.0"
     yaob "^0.3.7"
-    yavent "^0.1.1"
+    yavent "^0.1.3"
+
+edge-sync-client@^0.2.3:
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.4.tgz#d2bae2cb8badad5a6c0b75bb9b68a5fcc580a339"
+  integrity sha512-AnvYylqCK8p3T0RWynGWLhMgxUu88JkxgNERhkjBqiUnzxha+doY0nz2JwIoIXx2qsC8MMlP2Fj+mqhAYLYGQw==
+  dependencies:
+    base-x "^1.0.4"
+    cleaners "^0.3.9"
+    cross-fetch "^3.1.4"
+    hash.js "^1.1.7"
+    rfc4648 "^1.5.0"
+    serverlet "^0.1.0"
 
 eivindfjeldstad-dot@0.0.1:
   version "0.0.1"
@@ -5295,6 +5311,11 @@ node-environment-flags@1.0.6:
     object.getownpropertydescriptors "^2.0.3"
     semver "^5.7.0"
 
+node-fetch@2.6.1, node-fetch@^2.6.0, node-fetch@^2.6.1:
+  version "2.6.1"
+  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
+  integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
+
 node-fetch@^1.0.1:
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-1.7.3.tgz#980f6f72d85211a5347c6b2bc18c5b84c3eb47ef"
@@ -5302,11 +5323,6 @@ node-fetch@^1.0.1:
   dependencies:
     encoding "^0.1.11"
     is-stream "^1.0.1"
-
-node-fetch@^2.6.0, node-fetch@^2.6.1:
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
-  integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
 
 node-hid@^0.7.9:
   version "0.7.9"
@@ -6545,6 +6561,11 @@ serialize-javascript@^4.0.0:
   integrity sha512-GaNA54380uFefWghODBWEGisLZFj00nS5ACs6yHa9nLqlLpVLO8ChDGeKRjZnV4Nh4n0Qi7nhYZD/9fCPzEqkw==
   dependencies:
     randombytes "^2.1.0"
+
+serverlet@^0.1.0:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/serverlet/-/serverlet-0.1.1.tgz#1f2f7347ad8411f785f2b7d1bbd7df9d3f1e5249"
+  integrity sha512-/AjpvNVeMNUKLq0K4gV4lSxSuGntF/e9O9YemvKSDSZaxB/Mr60JPSK+Do5u9UO4rS3iW0Xd1l+Gz/gyLz3dBA==
 
 set-blocking@^2.0.0, set-blocking@~2.0.0:
   version "2.0.0"
@@ -7866,10 +7887,10 @@ yargs@^15.0.2:
     y18n "^4.0.0"
     yargs-parser "^18.1.2"
 
-yavent@^0.1.1:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/yavent/-/yavent-0.1.2.tgz#eb826c8c5e344e86e1398a463a3d5092f919edeb"
-  integrity sha512-hd1tUDabbB6dUoOcHLB1rRlydNC9DGKGMMwotnEvWdNyFNgSN7k4djW6Db6MtGPctGgiJyhDr26PFF1APfqoqA==
+yavent@^0.1.3:
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/yavent/-/yavent-0.1.3.tgz#c86a5e1d013721eda9c732e820fb7d6aaf2ab4db"
+  integrity sha512-O6ZngnMCkiM1Bg/zP2XKgprjXUuHS0tSQjHxWhMc53avgNu6AT5zcmDm+oYxQLRXQ9ajlEQwQ+Rf7CghKt1u1A==
 
 yocto-queue@^0.1.0:
   version "0.1.0"
