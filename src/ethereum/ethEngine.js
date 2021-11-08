@@ -339,14 +339,14 @@ export class EthereumEngine extends CurrencyEngine {
                       {
                         // make sure transaction methods have fee
                         ...{
-                          gas: `0x${decimalToHex(
+                          gas: decimalToHex(
                             this.otherData.networkFees.default.gasLimit
                               .tokenTransaction
-                          )}`,
-                          gasPrice: `0x${decimalToHex(
+                          ),
+                          gasPrice: decimalToHex(
                             this.otherData.networkFees.default.gasPrice
                               .standardFeeHigh
-                          )}`
+                          )
                         },
                         ...payload.params[0]
                       }
