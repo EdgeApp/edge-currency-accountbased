@@ -26,6 +26,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZEC',
   displayName: 'Zcash',
   pluginId: 'zcash',
+  requiredConfirmations: 10,
   walletType: 'wallet:zcash',
 
   defaultSettings,
