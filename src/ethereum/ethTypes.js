@@ -537,9 +537,12 @@ const asWcDappDetails = asObject({
   chainId: asOptional(asNumber, 1)
 })
 
-export type WcDappDetails = $Call<typeof asWcDappDetails>
+export type WcDappDetails = {
+  ...$Call<typeof asWcDappDetails>,
+  timeConnected: number
+}
 
-export type Dapp = { ...WcProps, ...WcDappDetails }
+export type Dapp = { ...WcProps, ...WcDappDetails, timeConnected: number }
 
 export type WalletConnectors = {
   [uri: string]: {

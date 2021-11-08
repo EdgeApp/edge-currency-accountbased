@@ -308,7 +308,8 @@ export class EthereumEngine extends CurrencyEngine {
                   )
                   throw error
                 }
-                const dApp = asWcSessionRequestParams(payload).params[0]
+                const params = asWcSessionRequestParams(payload).params[0]
+                const dApp = { ...params, timeConnected: Date.now() / 1000 }
                 // Set connector in memory
                 this.walletConnectors[wcProps.uri] = {
                   connector,
