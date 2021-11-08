@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+
+# 0.8.2 (2021-11-08)
+- Wallet Connect Fix: Make sure that transaction methods have fee parameters
+- Wallet Connect Fix: Record the connection timestamp to include in the callback payload
+
 # 0.8.1 (2021-11-02)
 
 - Add Wallet Connect
