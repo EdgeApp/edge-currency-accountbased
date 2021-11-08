@@ -234,35 +234,16 @@ export class EthereumEngine extends CurrencyEngine {
         const spendInfo: EdgeSpendInfo = {
           currencyCode,
           spendTargets: [spendTarget],
-          networkFeeOption: 'standard',
+          networkFeeOption: 'custom',
+          customNetworkFee: {
+            gasLimit: hexToDecimal(params.gas),
+            gasPrice: bns.div(
+              hexToDecimal(removeHexPrefix(params.gasPrice)),
+              WEI_MULTIPLIER.toString(),
+              18
+            )
+          },
           otherParams: params
-        }
-
-        const {
-          gasLimit,
-          gasPrice: { minGasPrice }
-        } =
-          this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-            .default
-
-        const customNetworkFee = {
-          gasLimit:
-            this.currencyInfo.currencyCode === currencyCode
-              ? gasLimit.regularTransaction
-              : gasLimit.tokenTransaction,
-          gasPrice: minGasPrice
-        }
-
-        if (params.gas != null) {
-          spendInfo.networkFeeOption = 'custom'
-          customNetworkFee.gasLimit = hexToDecimal(params.gas)
-        }
-        if (params.gasPrice != null) {
-          spendInfo.networkFeeOption = 'custom'
-          customNetworkFee.gasPrice = hexToDecimal(params.gasPrice)
-        }
-        if (spendInfo.networkFeeOption === 'custom') {
-          spendInfo.customNetworkFee = customNetworkFee
         }
 
         return spendInfo
