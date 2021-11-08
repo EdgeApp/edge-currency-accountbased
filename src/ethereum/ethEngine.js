@@ -28,6 +28,7 @@ import {
   addHexPrefix,
   bufToHex,
   cleanTxLogs,
+  decimalToHex,
   getEdgeInfoServer,
   getOtherParams,
   hexToBuf,
@@ -233,35 +234,16 @@ export class EthereumEngine extends CurrencyEngine {
         const spendInfo: EdgeSpendInfo = {
           currencyCode,
           spendTargets: [spendTarget],
-          networkFeeOption: 'standard',
+          networkFeeOption: 'custom',
+          customNetworkFee: {
+            gasLimit: hexToDecimal(params.gas),
+            gasPrice: bns.div(
+              hexToDecimal(removeHexPrefix(params.gasPrice)),
+              WEI_MULTIPLIER.toString(),
+              18
+            )
+          },
           otherParams: params
-        }
-
-        const {
-          gasLimit,
-          gasPrice: { minGasPrice }
-        } =
-          this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-            .default
-
-        const customNetworkFee = {
-          gasLimit:
-            this.currencyInfo.currencyCode === currencyCode
-              ? gasLimit.regularTransaction
-              : gasLimit.tokenTransaction,
-          gasPrice: minGasPrice
-        }
-
-        if (params.gas != null) {
-          spendInfo.networkFeeOption = 'custom'
-          customNetworkFee.gasLimit = hexToDecimal(params.gas)
-        }
-        if (params.gasPrice != null) {
-          spendInfo.networkFeeOption = 'custom'
-          customNetworkFee.gasPrice = hexToDecimal(params.gasPrice)
-        }
-        if (spendInfo.networkFeeOption === 'custom') {
-          spendInfo.customNetworkFee = customNetworkFee
         }
 
         return spendInfo
@@ -326,7 +308,8 @@ export class EthereumEngine extends CurrencyEngine {
                   )
                   throw error
                 }
-                const dApp = asWcSessionRequestParams(payload).params[0]
+                const params = asWcSessionRequestParams(payload).params[0]
+                const dApp = { ...params, timeConnected: Date.now() / 1000 }
                 // Set connector in memory
                 this.walletConnectors[wcProps.uri] = {
                   connector,
@@ -347,6 +330,27 @@ export class EthereumEngine extends CurrencyEngine {
                     uri: connector.uri,
                     dApp: this.walletConnectors[connector.uri].dApp,
                     payload
+                  }
+                  if (
+                    payload.method === 'eth_sendTransaction' ||
+                    payload.method === 'eth_signTransaction'
+                  ) {
+                    payload.params = [
+                      {
+                        // make sure transaction methods have fee
+                        ...{
+                          gas: `0x${decimalToHex(
+                            this.otherData.networkFees.default.gasLimit
+                              .tokenTransaction
+                          )}`,
+                          gasPrice: `0x${decimalToHex(
+                            this.otherData.networkFees.default.gasPrice
+                              .standardFeeHigh
+                          )}`
+                        },
+                        ...payload.params[0]
+                      }
+                    ]
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e) {
