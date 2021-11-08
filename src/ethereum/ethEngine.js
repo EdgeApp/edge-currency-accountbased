@@ -28,6 +28,7 @@ import {
   addHexPrefix,
   bufToHex,
   cleanTxLogs,
+  decimalToHex,
   getEdgeInfoServer,
   getOtherParams,
   hexToBuf,
@@ -347,6 +348,27 @@ export class EthereumEngine extends CurrencyEngine {
                     uri: connector.uri,
                     dApp: this.walletConnectors[connector.uri].dApp,
                     payload
+                  }
+                  if (
+                    payload.method === 'eth_sendTransaction' ||
+                    payload.method === 'eth_signTransaction'
+                  ) {
+                    payload.params = [
+                      {
+                        // make sure transaction methods have fee
+                        ...{
+                          gas: `0x${decimalToHex(
+                            this.otherData.networkFees.default.gasLimit
+                              .tokenTransaction
+                          )}`,
+                          gasPrice: `0x${decimalToHex(
+                            this.otherData.networkFees.default.gasPrice
+                              .standardFeeHigh
+                          )}`
+                        },
+                        ...payload.params[0]
+                      }
+                    ]
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e) {

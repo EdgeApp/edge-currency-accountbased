@@ -96,6 +96,10 @@ export function hexToDecimal(num: string) {
   return bns.add(num, '0', 10)
 }
 
+export function decimalToHex(num: string) {
+  return bns.add(num, '0', 16)
+}
+
 export function bufToHex(buf: any) {
   const signedTxBuf = Buffer.from(buf)
   const hex = '0x' + signedTxBuf.toString('hex')

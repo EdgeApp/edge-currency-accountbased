@@ -468,8 +468,8 @@ export type TxRpcParams = {
   from?: string,
   to: string,
   data: string,
-  gas?: string,
-  gasPrice?: string,
+  gas: string,
+  gasPrice: string,
   value?: string,
   nonce?: string
 }
@@ -516,7 +516,7 @@ export const asWcRpcPayload = asObject({
     'eth_signTransaction',
     'eth_sendRawTransaction'
   ),
-  params: asObject
+  params: asArray(asUnknown)
 })
 
 export const asWcContract = (item: any) => {
