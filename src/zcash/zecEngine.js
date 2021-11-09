@@ -374,10 +374,15 @@ export class ZcashEngine extends CurrencyEngine {
     await super.loadEngine(plugin, walletInfo, opts)
     this.engineOn = true
 
-    const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-    this.walletInfo.keys.publicKey = pubKeys.publicKey
-    this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
-      pubKeys.unifiedViewingKeys
+    if (
+      this.walletInfo.keys.publicKey != null ||
+      this.walletInfo.keys.unifiedViewingKeys != null
+    ) {
+      const pubKeys = await plugin.derivePublicKey(this.walletInfo)
+      this.walletInfo.keys.publicKey = pubKeys.publicKey
+      this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
+        pubKeys.unifiedViewingKeys
+    }
     const { rpcNode, defaultBirthday }: ZcashSettings =
       this.currencyInfo.defaultSettings.otherSettings
     this.initializer = {
