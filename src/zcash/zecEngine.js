@@ -24,8 +24,7 @@ import type {
   ZcashSpendInfo,
   ZcashSynchronizer,
   ZcashSynchronizerStatus,
-  ZcashTransaction,
-  ZcashUpdateEvent
+  ZcashTransaction
 } from './zecTypes'
 
 export class ZcashEngine extends CurrencyEngine {
@@ -37,6 +36,7 @@ export class ZcashEngine extends CurrencyEngine {
   initialNumBlocksToDownload: number
   initializer: ZcashInitializerConfig
   alias: string
+  progressRatio: number
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>
@@ -68,15 +68,85 @@ export class ZcashEngine extends CurrencyEngine {
     this.initialNumBlocksToDownload = -1
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
+    this.progressRatio = 0
   }
 
   initSubscriptions() {
-    this.synchronizer.on('update', payload => {
-      this.onUpdate(payload)
+    this.synchronizer.on('update', async payload => {
+      const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
+      this.onUpdateBlockHeight(networkBlockHeight)
+      this.onUpdateProgress(
+        lastDownloadedHeight,
+        scanProgress,
+        networkBlockHeight
+      )
+      await this.queryBalance()
+      await this.queryTransactions()
+      this.onUpdateTransactions()
     })
     this.synchronizer.on('statusChanged', payload => {
       this.synchronizerStatus = payload.name
     })
+  }
+
+  onUpdateBlockHeight(networkBlockHeight: number) {
+    if (this.walletLocalData.blockHeight !== networkBlockHeight) {
+      this.walletLocalData.blockHeight = networkBlockHeight
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onBlockHeightChanged(
+        this.walletLocalData.blockHeight
+      )
+    }
+  }
+
+  onUpdateTransactions() {
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
+  }
+
+  onUpdateProgress(
+    lastDownloadedHeight: number,
+    scanProgress: number,
+    networkBlockHeight: number
+  ) {
+    if (!this.addressesChecked && !this.isSynced()) {
+      // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
+      // getting balance (0.5%), and querying transactions (10%).
+      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
+        (scanProgress * 0.99) / 100
+
+      let downloadProgress = 0
+      if (lastDownloadedHeight > 0) {
+        // Initial lastDownloadedHeight value is -1
+        const currentNumBlocksToDownload =
+          networkBlockHeight - lastDownloadedHeight
+        if (this.initialNumBlocksToDownload < 0) {
+          this.initialNumBlocksToDownload = currentNumBlocksToDownload
+        }
+
+        downloadProgress =
+          currentNumBlocksToDownload === 0 ||
+          this.initialNumBlocksToDownload === 0
+            ? 1
+            : 1 - currentNumBlocksToDownload / this.initialNumBlocksToDownload
+      }
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        downloadProgress * 0.8
+
+      const percent =
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] +
+        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode]
+      if (percent !== this.progressRatio) {
+        if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
+          this.progressRatio = percent
+          this.updateOnAddressesChecked()
+        }
+      }
+    }
   }
 
   async startEngine() {
@@ -90,58 +160,6 @@ export class ZcashEngine extends CurrencyEngine {
   isSynced() {
     // Synchroniser status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
-  }
-
-  async onUpdate(update: ZcashUpdateEvent) {
-    try {
-      const { lastDownloadedHeight, scanProgress, networkBlockHeight } = update
-
-      if (this.walletLocalData.blockHeight !== networkBlockHeight) {
-        this.walletLocalData.blockHeight = networkBlockHeight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
-
-      if (!this.addressesChecked && !this.isSynced()) {
-        // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
-        // getting balance (0.5%), and querying transactions (10%).
-        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-          (scanProgress * 0.99) / 100
-
-        let downloadProgress = 0
-        if (lastDownloadedHeight > 0) {
-          // Initial lastDownloadedHeight value is -1
-          const currentNumBlocksToDownload =
-            networkBlockHeight - lastDownloadedHeight
-          if (this.initialNumBlocksToDownload < 0) {
-            this.initialNumBlocksToDownload = currentNumBlocksToDownload
-          }
-
-          downloadProgress =
-            currentNumBlocksToDownload === 0
-              ? 1
-              : 1 - currentNumBlocksToDownload / this.initialNumBlocksToDownload
-        }
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-          downloadProgress * 0.8
-      }
-
-      await this.queryBalance()
-      await this.queryTransactions()
-
-      if (this.transactionsChangedArray.length > 0) {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
-        )
-        this.transactionsChangedArray = []
-      }
-
-      this.updateOnAddressesChecked()
-    } catch (e) {
-      this.log.error(`Error onUpdate ${e?.message ?? ''}`)
-    }
   }
 
   async queryBalance() {
@@ -170,6 +188,7 @@ export class ZcashEngine extends CurrencyEngine {
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
+    this.updateOnAddressesChecked()
   }
 
   async queryTransactions() {
@@ -188,6 +207,7 @@ export class ZcashEngine extends CurrencyEngine {
           first = this.walletLocalData.blockHeight
           this.walletLocalDataDirty = true
           this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+          this.updateOnAddressesChecked()
           break
         }
 
