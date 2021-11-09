@@ -95,8 +95,7 @@ export type ZcashOtherData = {
 export type ZcashSynchronizer = {
   on: Subscriber<{
     statusChanged: ZcashStatusEvent,
-    update: ZcashUpdateEvent,
-    shieldedBalanceChanged: ZcashWalletBalance
+    update: ZcashUpdateEvent
   }>,
   start: () => Promise<void>,
   stop: () => Promise<void>,

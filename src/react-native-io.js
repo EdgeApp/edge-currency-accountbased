@@ -4,11 +4,9 @@ import { bridgifyObject, emit, onMethod } from 'yaob'
 
 import type {
   ZcashInitializerConfig,
-  ZcashPendingTransaction,
   ZcashStatusEvent,
   ZcashSynchronizer,
-  ZcashUpdateEvent,
-  ZcashWalletBalance
+  ZcashUpdateEvent
 } from './zcash/zecTypes'
 
 // TODO: Remove this entire file in the next breaking change.
@@ -34,20 +32,11 @@ export default function makePluginIo() {
       const realSynchronizer = await makeSynchronizer(config)
 
       realSynchronizer.subscribe({
-        onShieldedBalanceChanged(walletBalance: ZcashWalletBalance): void {
-          emit(out, 'shieldedBalanceChanged', walletBalance)
-        },
         onStatusChanged(status: ZcashStatusEvent): void {
           emit(out, 'statusChanged', status)
         },
         onUpdate(event: ZcashUpdateEvent): void {
           emit(out, 'update', event)
-        },
-        onTransactionsChanged(count: number): void {
-          emit(out, 'transactionsChanged', count)
-        },
-        onPendingTransactionUpdated(tx: ZcashPendingTransaction): void {
-          emit(out, 'pendingTransactionUpdated', tx)
         }
       })
 
