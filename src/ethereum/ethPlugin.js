@@ -24,8 +24,7 @@ import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { biggyScience, getDenomInfo } from '../common/utils.js'
-import { getFetchCors } from '../react-native-io.js'
+import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils.js'
 import { EthereumEngine } from './ethEngine.js'
 
 export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK

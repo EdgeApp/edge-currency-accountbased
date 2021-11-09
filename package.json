@@ -19,6 +19,7 @@
     "CHANGELOG.md",
     "index.js",
     "lib/*",
+    "bin/*",
     "LICENSE",
     "package.json",
     "postinstall.sh",
@@ -101,7 +102,8 @@
     "stellar-sdk": "^0.11.0",
     "tezos-uri": "^1.0.3",
     "uri-js": "^3.0.2",
-    "url-parse": "^1.4.1"
+    "url-parse": "^1.4.1",
+    "yaob": "^0.3.6"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",
@@ -127,6 +129,7 @@
     "node-fetch": "^2.6.0",
     "nyc": "^15.0.1",
     "prettier": "^2.2.0",
+    "react-native-zcash": "^0.1.0",
     "rimraf": "^3.0.2",
     "sucrase": "^3.13.0",
     "updot": "^1.1.7",
@@ -138,6 +141,9 @@
       "parser": "babylon",
       "style": "module"
     }
+  },
+  "peerDependencies": {
+    "react-native-zcash": "^0.1.0"
   },
   "react-native": "./lib/react-native-accountbased.js"
 }

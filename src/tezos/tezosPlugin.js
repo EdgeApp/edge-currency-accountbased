@@ -14,7 +14,7 @@ import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getFetchCors } from '../react-native-io.js'
+import { getFetchCors } from './../common/utils.js'
 import { TezosEngine } from './tezosEngine.js'
 import { currencyInfo } from './tezosInfo.js'
 import { type UriTransaction } from './tezosTypes.js'
