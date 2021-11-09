@@ -161,7 +161,7 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
+    if (this.walletLocalData.totalBalances[tk] == null) {
       this.walletLocalData.totalBalances[tk] = '0'
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {

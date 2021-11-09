@@ -146,7 +146,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     }
 
     let amount
-    if (typeof nativeAmount === 'string') {
+    if (nativeAmount != null) {
       const denom = getDenomInfo(
         currencyInfo,
         currencyCode || `${this.currencyInfo.currencyCode}`,
