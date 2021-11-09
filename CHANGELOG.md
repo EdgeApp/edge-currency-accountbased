@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.9.0 (2021-11-09)
+
+- Zcash: Add Zcash plugin for Android
+
 # 0.8.3 (2021-11-08)
 
 - WalletConnect: Fix fee strings
