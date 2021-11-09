@@ -129,7 +129,7 @@
     "node-fetch": "^2.6.0",
     "nyc": "^15.0.1",
     "prettier": "^2.2.0",
-    "react-native-zcash": "git://github.com/EdgeApp/react-native-zcash#fd7dc6431bf44acbd4d4f5914ff154062fb075e8",
+    "react-native-zcash": "^0.1.0",
     "rimraf": "^3.0.2",
     "sucrase": "^3.13.0",
     "updot": "^1.1.7",
@@ -141,6 +141,9 @@
       "parser": "babylon",
       "style": "module"
     }
+  },
+  "peerDependencies": {
+    "react-native-zcash": "^0.1.0"
   },
   "react-native": "./lib/react-native-accountbased.js"
 }
