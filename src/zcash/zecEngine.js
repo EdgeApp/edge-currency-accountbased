@@ -265,9 +265,8 @@ export class ZcashEngine extends CurrencyEngine {
     this.addTransaction(`${this.currencyInfo.currencyCode}`, edgeTransaction)
   }
 
-  async killEngine(isResync: boolean = false) {
-    // Don't bother stopping and restarting the synchronizer for a resync
-    if (!isResync) await this.synchronizer.stop()
+  async killEngine() {
+    await this.synchronizer.stop()
     await super.killEngine()
   }
 
@@ -276,7 +275,8 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   async resyncBlockchain(): Promise<void> {
-    await this.killEngine(true)
+    // Don't bother stopping and restarting the synchronizer for a resync
+    await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
     this.synchronizer.rescan(
