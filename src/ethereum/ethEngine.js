@@ -432,13 +432,20 @@ export class EthereumEngine extends CurrencyEngine {
           )
         }
       },
-      wcGetConnections: () =>
-        Object.keys(this.walletConnectors).map(
+      wcGetConnections: () => {
+        // Kill unapproved sessions before returning connections
+        for (const uri of Object.keys(this.walletConnectors)) {
+          if (!this.walletConnectors[uri].connector.connected) {
+            this.otherMethods.wcDisconnect(uri)
+          }
+        }
+        return Object.keys(this.walletConnectors).map(
           uri => ({
             ...this.walletConnectors[uri].dApp,
             ...this.walletConnectors[uri].wcProps
           }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
         )
+      }
     }
   }
 
