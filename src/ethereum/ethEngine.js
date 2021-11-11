@@ -326,10 +326,10 @@ export class EthereumEngine extends CurrencyEngine {
                 try {
                   if (error) throw error
                   const out = {
-                    uri: connector.uri,
-                    dApp: walletConnectors[connector.uri].dApp,
+                    uri: wcProps.uri,
+                    dApp: walletConnectors[wcProps.uri].dApp,
                     payload,
-                    walletId: walletConnectors[connector.uri].walletId
+                    walletId: walletConnectors[wcProps.uri].walletId
                   }
                   if (
                     payload.method === 'eth_sendTransaction' ||
@@ -361,6 +361,13 @@ export class EthereumEngine extends CurrencyEngine {
                 }
               }
             )
+
+            connector.on('disconnect', (error, payload) => {
+              if (error) {
+                throw error
+              }
+              delete walletConnectors[wcProps.uri]
+            })
           }),
           5000
         )
