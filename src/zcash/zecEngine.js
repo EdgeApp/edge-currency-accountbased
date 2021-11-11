@@ -382,7 +382,7 @@ export class ZcashEngine extends CurrencyEngine {
 
   getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+      return this.walletInfo.keys.unifiedViewingKeys.extfvk
     }
     return ''
   }
