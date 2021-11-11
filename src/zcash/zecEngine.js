@@ -265,9 +265,8 @@ export class ZcashEngine extends CurrencyEngine {
     this.addTransaction(`${this.currencyInfo.currencyCode}`, edgeTransaction)
   }
 
-  async killEngine(isResync: boolean = false) {
-    // Don't bother stopping and restarting the synchronizer for a resync
-    if (!isResync) await this.synchronizer.stop()
+  async killEngine() {
+    await this.synchronizer.stop()
     await super.killEngine()
   }
 
@@ -276,7 +275,8 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   async resyncBlockchain(): Promise<void> {
-    await this.killEngine(true)
+    // Don't bother stopping and restarting the synchronizer for a resync
+    await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
     this.synchronizer.rescan(
@@ -315,13 +315,6 @@ export class ZcashEngine extends CurrencyEngine {
       throw new InsufficientFundsError('Amount exceeds available balance')
     }
 
-    const otherParams: ZcashSpendInfo = {
-      zatoshi: nativeAmount,
-      toAddress: edgeSpendInfo.spendTargets[0].publicAddress,
-      memo: edgeSpendInfo.spendTargets[0].uniqueIdentifier ?? '',
-      fromAccountIndex: 0
-    }
-
     // **********************************
     // Create the unsigned EdgeTransaction
 
@@ -335,7 +328,7 @@ export class ZcashEngine extends CurrencyEngine {
         this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams // otherParams
+      spendTargets: edgeSpendInfo.spendTargets
     }
 
     return edgeTransaction
@@ -349,15 +342,23 @@ export class ZcashEngine extends CurrencyEngine {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    if (edgeTransaction.otherParams == null)
-      throw new Error('Need to provide otherParams')
-    edgeTransaction.otherParams.spendingKey =
-      this.walletInfo.keys[`${this.pluginId}SpendKey`]
+    if (
+      edgeTransaction.spendTargets == null ||
+      edgeTransaction.spendTargets.length !== 1
+    )
+      throw new Error('Invalid spend targets')
+
+    const spendTarget = edgeTransaction.spendTargets[0]
+    const txParams: ZcashSpendInfo = {
+      zatoshi: bns.abs(edgeTransaction.nativeAmount),
+      toAddress: spendTarget.publicAddress,
+      memo: spendTarget.uniqueIdentifier ?? '',
+      fromAccountIndex: 0,
+      spendingKey: this.walletInfo.keys[`${this.pluginId}SpendKey`]
+    }
 
     try {
-      const signedTx = await this.synchronizer.sendToAddress(
-        edgeTransaction.otherParams
-      )
+      const signedTx = await this.synchronizer.sendToAddress(txParams)
       edgeTransaction.txid = signedTx.txId
       edgeTransaction.signedTx = signedTx.raw
       edgeTransaction.date = Date.now() / 1000
@@ -381,7 +382,7 @@ export class ZcashEngine extends CurrencyEngine {
 
   getDisplayPublicSeed() {
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+      return this.walletInfo.keys.unifiedViewingKeys.extfvk
     }
     return ''
   }
