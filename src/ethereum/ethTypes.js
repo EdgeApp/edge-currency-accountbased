@@ -519,11 +519,6 @@ export const asWcRpcPayload = asObject({
   params: asArray(asUnknown)
 })
 
-export const asWcContract = (item: any) => {
-  // const rpcPayload = asWcRpcPayload(item)
-  return {} // TODO: convert payload to whatever is needed in GUI here
-}
-
 export type WcRpcPayload = $Call<typeof asWcRpcPayload>
 
 const asWcDappDetails = asObject({
@@ -548,7 +543,8 @@ export type WalletConnectors = {
   [uri: string]: {
     connector: WalletConnect,
     wcProps: WcProps,
-    dApp: WcDappDetails
+    dApp: WcDappDetails,
+    walletId?: string
   }
 }
 
@@ -570,7 +566,7 @@ export type EthereumOtherMethods = {
   ) => Promise<EdgeTransaction>,
   eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>,
   wcInit(wcProps: WcProps): Promise<WcDappDetails>,
-  wcConnect: (wcProps: WcProps) => void,
+  wcConnect: (uri: string, publicKey: string, walletId: string) => void,
   wcDisconnect: (uri: string) => void,
   wcRequestResponse: (
     uri: string,

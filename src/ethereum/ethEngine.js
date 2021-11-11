@@ -69,6 +69,7 @@ const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
+const walletConnectors: WalletConnectors = {}
 
 export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
@@ -76,7 +77,6 @@ export class EthereumEngine extends CurrencyEngine {
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
-  walletConnectors: WalletConnectors
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
 
@@ -105,7 +105,6 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
-    this.walletConnectors = {}
 
     this.utils = {
       signMessage: (message: string) => {
@@ -311,7 +310,7 @@ export class EthereumEngine extends CurrencyEngine {
                 const params = asWcSessionRequestParams(payload).params[0]
                 const dApp = { ...params, timeConnected: Date.now() / 1000 }
                 // Set connector in memory
-                this.walletConnectors[wcProps.uri] = {
+                walletConnectors[wcProps.uri] = {
                   connector,
                   wcProps,
                   dApp
@@ -328,8 +327,9 @@ export class EthereumEngine extends CurrencyEngine {
                   if (error) throw error
                   const out = {
                     uri: connector.uri,
-                    dApp: this.walletConnectors[connector.uri].dApp,
-                    payload
+                    dApp: walletConnectors[connector.uri].dApp,
+                    payload,
+                    walletId: walletConnectors[connector.uri].walletId
                   }
                   if (
                     payload.method === 'eth_sendTransaction' ||
@@ -365,16 +365,17 @@ export class EthereumEngine extends CurrencyEngine {
           5000
         )
       },
-      wcConnect: (wcProps: WcProps) => {
-        this.walletConnectors[wcProps.uri].connector.approveSession({
-          accounts: [this.walletInfo.keys.publicKey],
+      wcConnect: (uri: string, publicKey: string, walletId: string) => {
+        walletConnectors[uri].connector.approveSession({
+          accounts: [publicKey],
           chainId:
             this.currencyInfo.defaultSettings.otherSettings.chainParams.chainId // required
         })
+        walletConnectors[uri].walletId = walletId
       },
       wcDisconnect: (uri: string) => {
-        this.walletConnectors[uri].connector.killSession()
-        delete this.walletConnectors[uri]
+        walletConnectors[uri].connector.killSession()
+        delete walletConnectors[uri]
       },
       wcRequestResponse: async (
         uri: string,
@@ -397,23 +398,23 @@ export class EthereumEngine extends CurrencyEngine {
               case 'personal_sign':
               case 'eth_sign':
               case 'eth_signTypedData':
-                this.walletConnectors[uri].connector.approveRequest(
+                walletConnectors[uri].connector.approveRequest(
                   requestBody({ result: result })
                 )
                 break
               case 'eth_signTransaction':
-                this.walletConnectors[uri].connector.approveRequest(
+                walletConnectors[uri].connector.approveRequest(
                   requestBody({ result: result.signedTx })
                 )
                 break
               case 'eth_sendTransaction':
               case 'eth_sendRawTransaction':
-                this.walletConnectors[uri].connector.approveRequest(
+                walletConnectors[uri].connector.approveRequest(
                   requestBody({ result: result.txid })
                 )
             }
           } catch (e) {
-            this.walletConnectors[uri].connector.rejectRequest(
+            walletConnectors[uri].connector.rejectRequest(
               requestBody({
                 error: {
                   message: 'rejected'
@@ -423,7 +424,7 @@ export class EthereumEngine extends CurrencyEngine {
             throw e
           }
         } else {
-          this.walletConnectors[uri].connector.rejectRequest(
+          walletConnectors[uri].connector.rejectRequest(
             requestBody({
               error: {
                 message: 'rejected'
@@ -433,12 +434,14 @@ export class EthereumEngine extends CurrencyEngine {
         }
       },
       wcGetConnections: () =>
-        Object.keys(this.walletConnectors).map(
-          uri => ({
-            ...this.walletConnectors[uri].dApp,
-            ...this.walletConnectors[uri].wcProps
-          }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
-        )
+        Object.keys(walletConnectors)
+          .filter(uri => walletConnectors[uri].walletId === this.walletInfo.id)
+          .map(
+            uri => ({
+              ...walletConnectors[uri].dApp,
+              ...walletConnectors[uri].wcProps
+            }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
+          )
     }
   }
 
