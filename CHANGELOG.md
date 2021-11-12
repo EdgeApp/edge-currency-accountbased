@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.8.4 (2021-11-11)
+
+- WalletConnect: Move connector map to global scope
+- WalletConnect: Add disconnect listener
+
 # 0.8.3 (2021-11-08)
 
 - WalletConnect: Fix fee strings
