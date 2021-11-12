@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.9.1 (2021-11-11)
+
+- WalletConnect: Move connector map to global scope
+- WalletConnect: Add disconnect listener
+- ZEC: Fix getDisplayPublicSeed
+
 # 0.9.0 (2021-11-09)
 
 - Zcash: Add Zcash plugin for Android
