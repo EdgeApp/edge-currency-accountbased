@@ -26,7 +26,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "rimraf lib && sucrase ./src -q -d ./lib -t flow && webpack",
+    "build": "rimraf lib && sucrase ./src -q -d ./lib -t flow && webpack && npm run checkpoints",
+    "checkpoints": "cp -R ./src/zcash/zecCheckpoints lib/zcash/",
     "fix": "npm run lint -- --fix",
     "flow": "flow",
     "postinstall": "sh ./postinstall.sh",

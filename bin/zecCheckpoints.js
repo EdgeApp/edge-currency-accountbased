@@ -1,44 +1,41 @@
 const fetch = require('node-fetch')
 const cleaners = require('cleaners')
 const fs = require('fs')
-const path = require('path')
 
 const { asObject, asString, asNumber } = cleaners
 
 const RPC_URL = 'https://zec.nownodes.io'
 const NUM_BLOCKS_BETWEEN_CHECKPOINTS = 10000
-const GUI_PATH = path.basename(path.resolve())
-const CHECKPOINT_DIR_READ_PATH = `../${GUI_PATH}/android/app/build/intermediates/merged_assets/debug/out/saplingtree/mainnet/`
 
-const CHECKPOINT_DIR_WRITE_PATH = `../${GUI_PATH}/android/app/src/main/assets/saplingtree/mainnet/`
+const CHECKPOINT_DIR_PATH = `./src/zcash/zecCheckpoints/`
 
 const API_KEY = process.argv[2]
 
 // file system
 
 const getMostRecentCheckpoint = () => {
-  const filenames = fs.readdirSync(CHECKPOINT_DIR_READ_PATH)
+  const filenames = fs.readdirSync(CHECKPOINT_DIR_PATH)
   const checkPointHeights = filenames.map(filename =>
     Number(filename.split('.')[0])
   )
   return checkPointHeights.reduce((a, b) => {
     return Math.max(a, b)
-  }, 0)
+  }, 1300000) // 1300000 is the most recent checkpoint provided by the sdk
 }
 
 const writeCheckpoint = json =>
   fs.writeFileSync(
-    `${CHECKPOINT_DIR_WRITE_PATH}${json.height}.json`,
+    `${CHECKPOINT_DIR_PATH}${json.height}.json`,
     JSON.stringify(json, null, 2) + '\n',
     () => {}
   )
 
 const createCheckpointDir = () => {
   try {
-    fs.accessSync(CHECKPOINT_DIR_WRITE_PATH)
+    fs.accessSync(CHECKPOINT_DIR_PATH)
   } catch (e) {
     console.log('Creating Zcash checkpoint directory...')
-    fs.mkdirSync(CHECKPOINT_DIR_WRITE_PATH, { recursive: true })
+    fs.mkdirSync(CHECKPOINT_DIR_PATH, { recursive: true })
   }
 }
 
@@ -112,10 +109,11 @@ const run = async () => {
     return
   }
 
+  createCheckpointDir()
+
   // get most recent checkpoint
   let checkpoint = getMostRecentCheckpoint()
   console.log(`Most recent checkpoint is ${checkpoint}`)
-  createCheckpointDir()
 
   // get height
   const currentNetworkHeight = await rpcFetch(
