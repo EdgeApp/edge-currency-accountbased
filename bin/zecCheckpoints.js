@@ -12,7 +12,7 @@ const CHECKPOINT_DIR_READ_PATH = `../${GUI_PATH}/android/app/build/intermediates
 
 const CHECKPOINT_DIR_WRITE_PATH = `../${GUI_PATH}/android/app/src/main/assets/saplingtree/mainnet/`
 
-const API_KEY = JSON.parse(fs.readFileSync('env.json'))?.ZEC_NODE ?? ''
+const API_KEY = process.argv[2]
 
 // file system
 
@@ -107,6 +107,11 @@ const asTreeStateResponse = json => {
 }
 
 const run = async () => {
+  if (API_KEY == null) {
+    console.log('No apikey')
+    return
+  }
+
   // get most recent checkpoint
   let checkpoint = getMostRecentCheckpoint()
   console.log(`Most recent checkpoint is ${checkpoint}`)
