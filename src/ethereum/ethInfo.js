@@ -153,8 +153,7 @@ const otherSettings: EthereumSettings = {
     WINGS: true,
     HUR: true,
     IND: true,
-    USDT: true,
-    AGLD: true
+    USDT: true
   },
   blockchairApiServers: (() => {
     // Mainnet
@@ -268,17 +267,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x2e91E3e54C5788e9FdD6A181497FDcEa1De1bcc1'
-    },
-    {
-      currencyCode: 'AGLD',
-      currencyName: 'Anthem Gold',
-      denominations: [
-        {
-          name: 'AGLD',
-          multiplier: '1000000000'
-        }
-      ],
-      contractAddress: '0xd668dab892f1b702a6b9ee01342508b14d4e62c5'
     },
     {
       currencyCode: 'DAI',
