@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.9.2 (2021-11-16)
+
+- ZEC: Commit Zcash checkpoints to repo
+- ETH: Remove AGLD
+
 # 0.9.1 (2021-11-11)
 
 - WalletConnect: Move connector map to global scope
