@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.9.3 (2021-12-10)
+
+- ZEC: Update checkpoints
+
 # 0.9.2 (2021-11-16)
 
 - ZEC: Commit Zcash checkpoints to repo
