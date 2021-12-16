@@ -11,6 +11,7 @@ import {
   type EdgeFetchFunction,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
+  type EdgeStakingStatus,
   type EdgeTransaction,
   type EdgeWalletInfo,
   InsufficientFundsError
@@ -85,7 +86,10 @@ export class FioEngine extends CurrencyEngine {
       PENDING: FioRequest[],
       SENT: FioRequest[]
     },
-    fioRequestsToApprove: { [requestId: string]: any }
+    fioRequestsToApprove: { [requestId: string]: any },
+    srps: number,
+    stakingRoe: string,
+    stakingStatus: EdgeStakingStatus
   }
 
   localDataDirty() {
@@ -953,6 +957,9 @@ export class FioEngine extends CurrencyEngine {
       )
       balances.accrued =
         srps != null && roe != null ? bns.mul(String(srps), roe) : '0'
+
+      this.otherData.srps = srps
+      this.otherData.stakingRoe = roe
     } catch (e) {
       this.log('checkAccountInnerLoop error: ', e)
       nativeAmount = '0'
