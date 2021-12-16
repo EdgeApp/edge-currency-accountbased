@@ -59,4 +59,12 @@ export const asHistoryResponse = asObject({
   actions: asArray(asFioHistoryNodeAction)
 })
 
+export const asGetFioBalanceResponse = asObject({
+  balance: asNumber,
+  available: asNumber,
+  staked: asNumber,
+  srps: asNumber,
+  roe: asString
+})
+
 export type FioHistoryNodeAction = $Call<typeof asFioHistoryNodeAction>

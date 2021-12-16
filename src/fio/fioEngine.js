@@ -48,6 +48,7 @@ import {
   type FioHistoryNodeAction,
   type GetFioName,
   asFioHistoryNodeAction,
+  asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse
 } from './fioSchema.js'
@@ -752,6 +753,13 @@ export class FioEngine extends CurrencyEngine {
         case 'getChainInfo':
           res = await fioSdk.transactions.getChainInfo()
           break
+        case 'getFioBalance':
+          res = await fioSdk.genericAction(actionName, params)
+          asGetFioBalanceResponse(res)
+          if (res.balance != null && res.balance < 0)
+            throw new Error('Invalid balance')
+
+          break
         default:
           res = await fioSdk.genericAction(actionName, params)
       }
@@ -924,7 +932,9 @@ export class FioEngine extends CurrencyEngine {
   // Check all account balance and other relevant info
   async checkAccountInnerLoop() {
     const currencyCode = this.currencyInfo.currencyCode
-    let nativeAmount = '0'
+    const balanceCurrencyCodes =
+      this.currencyInfo.defaultSettings.balanceCurrencyCodes
+
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
     ) {
@@ -933,13 +943,23 @@ export class FioEngine extends CurrencyEngine {
 
     // Balance
     try {
-      const { balance } = await this.multicastServers('getFioBalance')
-      nativeAmount = balance + ''
+      const balances: {
+        staked: string,
+        locked: string
+      } = {}
+      const { balance, available, staked } = await this.multicastServers(
+        'getFioBalance'
+      )
+      const nativeAmount = String(balance)
+      balances.staked = String(staked)
+      balances.locked = bns.sub(nativeAmount, String(available))
+
+      this.updateBalance(currencyCode, nativeAmount)
+      this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
+      this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
     } catch (e) {
-      this.log('checkAccountInnerLoop error: ', e)
-      nativeAmount = '0'
+      this.log('checkAccountInnerLoop getFioBalance error: ', e)
     }
-    this.updateBalance(currencyCode, nativeAmount)
 
     // Fio Addresses
     try {
@@ -1198,6 +1218,11 @@ export class FioEngine extends CurrencyEngine {
     const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
       edgeSpendInfoIn
     )
+    const lockedBalance =
+      this.walletLocalData.totalBalances[
+        this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
+      ] || '0'
+    const availableBalance = bns.sub(nativeBalance, lockedBalance)
 
     // Set common vars
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
@@ -1240,7 +1265,11 @@ export class FioEngine extends CurrencyEngine {
       this.recentFioFee = { publicAddress, fee }
     }
 
-    if (bns.gt(bns.add(quantity, `${fee}`), nativeBalance)) {
+    // We don't need to check the available balance for an unstake action (because that's handled separately below).
+    if (
+      name !== ACTIONS.unStakeFioTokens &&
+      bns.gt(bns.add(quantity, `${fee}`), availableBalance)
+    ) {
       throw new InsufficientFundsError()
     }
 
