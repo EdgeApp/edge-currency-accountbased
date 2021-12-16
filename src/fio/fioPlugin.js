@@ -485,6 +485,41 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
         )
       }
+    },
+    async getStakeEstReturn(): Promise<number | { error: any }> {
+      try {
+        const result = await fetchCors(
+          `${currencyInfo.defaultSettings.fioStakingApyUrl}`,
+          {
+            method: 'GET'
+          }
+        )
+        const json: {
+          staked_token_pool: number,
+          outstanding_srps: number,
+          rewards_token_pool: number,
+          combined_token_pool: number,
+          staking_rewards_reserves_minted: number,
+          roe: number,
+          activated: boolean,
+          historical_apr: {
+            '1day': number,
+            '7day': number | null,
+            '30day': number | null
+          }
+        } = await result.json()
+        if (!result.ok) {
+          throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
+        }
+        return json.historical_apr['1day']
+      } catch (e) {
+        if (e.labelCode) throw e
+        throw new FioError(
+          e.message,
+          500,
+          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        )
+      }
     }
   }
 
