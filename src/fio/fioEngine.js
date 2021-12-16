@@ -11,6 +11,7 @@ import {
   type EdgeFetchFunction,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
+  type EdgeStakingStatus,
   type EdgeTransaction,
   type EdgeWalletInfo,
   InsufficientFundsError
@@ -86,7 +87,10 @@ export class FioEngine extends CurrencyEngine {
       PENDING: FioRequest[],
       SENT: FioRequest[]
     },
-    fioRequestsToApprove: { [requestId: string]: any }
+    fioRequestsToApprove: { [requestId: string]: any },
+    srps: number,
+    stakingRoe: string,
+    stakingStatus: EdgeStakingStatus
   }
 
   localDataDirty() {
@@ -948,12 +952,14 @@ export class FioEngine extends CurrencyEngine {
         staked: string,
         locked: string
       } = {}
-      const { balance, available, staked } = await this.multicastServers(
-        'getFioBalance'
-      )
+      const { balance, available, staked, srps, roe } =
+        await this.multicastServers('getFioBalance')
       const nativeAmount = String(balance)
       balances.staked = String(staked)
       balances.locked = bns.sub(nativeAmount, String(available))
+
+      this.otherData.srps = srps
+      this.otherData.stakingRoe = roe
 
       this.updateBalance(currencyCode, nativeAmount)
       this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
