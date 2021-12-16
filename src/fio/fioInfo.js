@@ -48,7 +48,13 @@ const defaultSettings: any = {
     FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED',
     SERVER_ERROR: 'SERVER_ERROR'
   },
-  fioRequestsTypes: FIO_REQUESTS_TYPES
+  fioRequestsTypes: FIO_REQUESTS_TYPES,
+  balanceCurrencyCodes: {
+    staked: 'FIO:STAKED',
+    available: 'FIO:AVAILABLE',
+    locked: 'FIO:LOCKED',
+    accrued: 'FIO:ACCRUED'
+  }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
