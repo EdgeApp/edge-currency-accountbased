@@ -158,5 +158,6 @@ export type TxOtherParams = {
   meta: {
     isTransferProcessed?: boolean,
     isFeeProcessed?: boolean
-  }
+  },
+  ui?: any
 }
