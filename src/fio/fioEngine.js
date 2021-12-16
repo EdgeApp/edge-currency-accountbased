@@ -1277,6 +1277,27 @@ export class FioEngine extends CurrencyEngine {
       params.newOwnerKey = publicAddress // todo: move this to the gui
     }
 
+    if (name === ACTIONS.stakeFioTokens) {
+      params.amount = quantity
+    }
+
+    if (name === ACTIONS.unStakeFioTokens) {
+      params.amount = quantity
+      const stakedBalance =
+        this.walletLocalData.totalBalances[
+          this.currencyInfo.defaultSettings.balanceCurrencyCodes.staked
+        ]
+      otherParams.ui = {
+        accrued: bns.mul(
+          bns.mul(
+            bns.div(bns.sub(stakedBalance, quantity), stakedBalance),
+            `${this.otherData.srps}`
+          ),
+          this.otherData.stakingRoe
+        )
+      }
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: '',
       date: 0,
