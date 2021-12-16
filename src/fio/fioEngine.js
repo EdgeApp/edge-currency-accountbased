@@ -31,8 +31,12 @@ import {
   type FioAddress,
   type FioDomain,
   type FioRequest,
+  type TxOtherParams,
+  ACTIONS,
   ACTIONS_TO_END_POINT_KEYS,
+  ACTIONS_TO_FEE_END_POINT_KEYS,
   BROADCAST_ACTIONS,
+  FEE_ACTION_MAP,
   DEFAULT_BUNDLED_TXS_AMOUNT,
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
@@ -52,28 +56,6 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
 const REQUEST_POLL_MILLISECONDS = 10000
-const FEE_ACTION_MAP = {
-  addPublicAddress: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  addPublicAddresses: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  rejectFundsRequest: {
-    action: 'getFeeForRejectFundsRequest',
-    propName: 'payerFioAddress'
-  },
-  requestFunds: {
-    action: 'getFeeForNewFundsRequest',
-    propName: 'payeeFioAddress'
-  },
-  recordObtData: {
-    action: 'getFeeForRecordObtData',
-    propName: 'payerFioAddress'
-  }
-}
 
 type RecentFioFee = {
   publicAddress: string,
@@ -238,6 +220,7 @@ export class FioEngine extends CurrencyEngine {
               endPoint: EndPoint.registerFioDomain
             })
             params.max_fee = fee
+            // todo: why we use pushTransaction here?
             const res = await this.multicastServers('pushTransaction', {
               action: 'regdomain',
               account: '',
@@ -294,7 +277,7 @@ export class FioEngine extends CurrencyEngine {
         fioAddress: string = ''
       ): Promise<number> => {
         const { fee } = await this.multicastServers('getFee', {
-          endPoint: EndPoint[actionName],
+          endPoint: EndPoint[ACTIONS_TO_FEE_END_POINT_KEYS[actionName]],
           fioAddress
         })
         return fee
@@ -441,35 +424,38 @@ export class FioEngine extends CurrencyEngine {
 
   processTransaction(action: FioHistoryNodeAction, actor: string): number {
     const {
-      act: { name: trxName, data }
+      act: { name: trxName, data, account, authorization }
     } = action.action_trace
     let nativeAmount
     let actorSender
     let networkFee = '0'
-    let otherParams: {
-      isTransferProcessed?: boolean,
-      isFeeProcessed?: boolean
-    } = {}
+    let otherParams: TxOtherParams = {
+      account,
+      name: trxName,
+      authorization,
+      data,
+      meta: {}
+    }
     const currencyCode = this.currencyInfo.currencyCode
     const ourReceiveAddresses = []
     if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
       return action.block_num
     }
-    if (trxName !== 'trnsfiopubky' && trxName !== 'transfer') {
-      return action.block_num
-    }
 
     // Transfer funds transaction
-    if (trxName === 'trnsfiopubky' && data.amount != null) {
-      nativeAmount = data.amount.toString()
-      actorSender = data.actor
-      if (data.payee_public_key === this.walletInfo.keys.publicKey) {
-        ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
-        if (actorSender === actor) {
-          nativeAmount = '0'
+    if (trxName !== 'transfer') {
+      nativeAmount = '0'
+      if (trxName === 'trnsfiopubky' && data.amount != null) {
+        nativeAmount = data.amount.toString()
+        actorSender = data.actor
+        if (data.payee_public_key === this.walletInfo.keys.publicKey) {
+          ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+          if (actorSender === actor) {
+            nativeAmount = '0'
+          }
+        } else {
+          nativeAmount = `-${nativeAmount}`
         }
-      } else {
-        nativeAmount = `-${nativeAmount}`
       }
 
       const index = this.findTransaction(
@@ -479,23 +465,43 @@ export class FioEngine extends CurrencyEngine {
       // Check if fee transaction have already added
       if (index > -1) {
         const existingTrx = this.transactionList[currencyCode][index]
-        otherParams = { ...existingTrx.otherParams }
-        if (bns.gte(nativeAmount, '0')) {
+        otherParams = {
+          ...existingTrx.otherParams,
+          ...otherParams,
+          data: {
+            ...(existingTrx.otherParams != null &&
+            existingTrx.otherParams.data != null
+              ? existingTrx.otherParams.data
+              : {}),
+            ...otherParams.data
+          },
+          meta: {
+            ...(existingTrx.otherParams != null &&
+            existingTrx.otherParams.meta != null
+              ? existingTrx.otherParams.meta
+              : {}),
+            ...otherParams.meta
+          }
+        }
+
+        if (otherParams.meta.isTransferProcessed) {
           return action.block_num
         }
-        if (otherParams.isTransferProcessed) {
-          return action.block_num
-        }
-        if (otherParams.isFeeProcessed) {
-          nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
-          networkFee = existingTrx.networkFee
+        if (otherParams.meta.isFeeProcessed) {
+          if (trxName === 'trnsfiopubky') {
+            nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
+            networkFee = existingTrx.networkFee
+          } else {
+            nativeAmount = existingTrx.nativeAmount
+            networkFee = '0'
+          }
         } else {
           this.error(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
           )
         }
       }
-      otherParams.isTransferProcessed = true
+      otherParams.meta.isTransferProcessed = true
 
       const edgeTransaction: EdgeTransaction = {
         txid: action.action_trace.trx_id,
@@ -524,6 +530,7 @@ export class FioEngine extends CurrencyEngine {
       const fioAmount = bns.mul(exchangeAmount, denom.multiplier)
       if (data.to === actor) {
         nativeAmount = `${fioAmount}`
+        networkFee = `-${fioAmount}`
       } else {
         nativeAmount = `-${fioAmount}`
         networkFee = fioAmount
@@ -536,15 +543,33 @@ export class FioEngine extends CurrencyEngine {
       // Check if transfer transaction have already added
       if (index > -1) {
         const existingTrx = this.transactionList[currencyCode][index]
-        otherParams = { ...existingTrx.otherParams }
-        if (bns.gte(existingTrx.nativeAmount, '0')) {
+        otherParams = {
+          ...otherParams,
+          ...existingTrx.otherParams,
+          data: {
+            ...otherParams.data,
+            ...(existingTrx.otherParams != null &&
+            existingTrx.otherParams.data != null
+              ? existingTrx.otherParams.data
+              : {})
+          },
+          meta: {
+            ...otherParams.meta,
+            ...(existingTrx.otherParams != null &&
+            existingTrx.otherParams.meta != null
+              ? existingTrx.otherParams.meta
+              : {})
+          }
+        }
+        if (otherParams.meta.isFeeProcessed) {
           return action.block_num
         }
-        if (otherParams.isFeeProcessed) {
-          return action.block_num
-        }
-        if (otherParams.isTransferProcessed) {
-          nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
+        if (otherParams.meta.isTransferProcessed) {
+          if (data.to !== actor) {
+            nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
+          } else {
+            networkFee = '0'
+          }
         } else {
           this.error(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
@@ -552,7 +577,7 @@ export class FioEngine extends CurrencyEngine {
         }
       }
 
-      otherParams.isFeeProcessed = true
+      otherParams.meta.isFeeProcessed = true
       const edgeTransaction: EdgeTransaction = {
         txid: action.action_trace.trx_id,
         date: this.getUTCDate(action.block_time) / 1000,
@@ -1174,109 +1199,72 @@ export class FioEngine extends CurrencyEngine {
       edgeSpendInfoIn
     )
 
-    const { otherParams } = edgeSpendInfo
-    let fee
-    if (otherParams?.fioAction) {
-      let feeFioAddress = ''
-      if (FEE_ACTION_MAP[otherParams.fioAction] && otherParams.fioParams) {
-        feeFioAddress =
-          otherParams.fioParams[FEE_ACTION_MAP[otherParams.fioAction].propName]
-      }
-      const feeResponse = await this.multicastServers('getFee', {
-        endPoint: EndPoint[otherParams.fioAction],
-        fioAddress: feeFioAddress
-      })
-      fee = feeResponse.fee
-    } else {
-      // Only query FIO fee if the public address is different from last makeSpend()
-      if (
-        edgeSpendInfo.spendTargets[0].publicAddress ===
-        this.recentFioFee.publicAddress
-      ) {
-        fee = this.recentFioFee.fee
-      } else {
-        const feeResponse = await this.multicastServers('getFee', {
-          endPoint: EndPoint.transferTokens
-        })
-        fee = feeResponse.fee
-      }
-    }
-
+    // Set common vars
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
+    const { otherParams = {} }: { otherParams: TxOtherParams } = edgeSpendInfo
+
+    // Set default action if not specified
+    if (!otherParams.action) {
+      otherParams.action = {
+        name: ACTIONS.transferTokens,
+        params: {
+          payeeFioPublicKey: publicAddress,
+          amount: quantity,
+          maxFee: 0
+        }
+      }
+    }
+    otherParams.meta = { isTransferProcessed: true }
+
+    const { name, params }: { name: string, params: any } = otherParams.action
+
+    // Only query FIO fee if the public address is different from last makeSpend()
+    let fee
+    if (
+      name === ACTIONS.transferTokens &&
+      publicAddress === this.recentFioFee.publicAddress // todo: ask why such condition
+    ) {
+      fee = this.recentFioFee.fee
+    } else {
+      let feeFioAddress = ''
+      if (FEE_ACTION_MAP[name] != null && params) {
+        feeFioAddress = params[FEE_ACTION_MAP[name].propName]
+      }
+      fee = await this.otherMethods.getFee(name, feeFioAddress)
+    }
+    params.maxFee = fee
+
+    // Set recent fee for transferTokens action
+    if (name === ACTIONS.transferTokens) {
+      this.recentFioFee = { publicAddress, fee }
+    }
+
     if (bns.gt(bns.add(quantity, `${fee}`), nativeBalance)) {
       throw new InsufficientFundsError()
     }
 
-    if (otherParams?.fioAction) {
-      if (
-        ['transferFioAddress', 'transferFioDomain'].indexOf(
-          otherParams.fioAction
-        ) > -1
-      ) {
-        otherParams.fioParams.newOwnerKey = publicAddress
-      }
-      const edgeTransaction: EdgeTransaction = {
-        txid: '',
-        date: 0,
-        currencyCode: this.currencyInfo.currencyCode,
-        blockHeight: 0,
-        nativeAmount: `-${fee}`,
-        networkFee: `${fee}`,
-        parentNetworkFee: '0',
-        signedTx: '',
-        ourReceiveAddresses: [],
-        otherParams: {
-          transactionJson: otherParams
-        },
-        metadata: {
-          notes: ''
-        }
-      }
-
-      return edgeTransaction
-    } else {
-      const memo = ''
-      const actor = ''
-      const transactionJson = {
-        actions: [
-          {
-            account: 'fio.token',
-            name: 'trnsfiopubky',
-            authorization: [
-              {
-                actor: actor,
-                permission: 'active'
-              }
-            ],
-            data: {
-              from: this.walletInfo.keys.publicKey,
-              to: publicAddress,
-              quantity,
-              memo
-            }
-          }
-        ]
-      }
-
-      const edgeTransaction: EdgeTransaction = {
-        txid: '', // txid
-        date: 0, // date
-        currencyCode, // currencyCode
-        blockHeight: 0, // blockHeight
-        nativeAmount: bns.sub(`-${quantity}`, `${fee}`), // nativeAmount
-        networkFee: `${fee}`, // networkFee
-        ourReceiveAddresses: [], // ourReceiveAddresses
-        signedTx: '0', // signedTx
-        otherParams: {
-          transactionJson
-        }
-      }
-
-      this.recentFioFee = { publicAddress, fee }
-
-      return edgeTransaction
+    if (
+      [ACTIONS.transferFioAddress, ACTIONS.transferFioDomain].indexOf(name) > -1
+    ) {
+      params.newOwnerKey = publicAddress // todo: move this to the gui
     }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode,
+      blockHeight: 0,
+      nativeAmount: bns.sub(`-${quantity}`, `${fee}`),
+      networkFee: `${fee}`,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: {
+        ...otherParams
+      }
+    }
+
+    return edgeTransaction
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
@@ -1288,32 +1276,18 @@ export class FioEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     let trx
-    if (
-      edgeTransaction.otherParams &&
-      edgeTransaction.otherParams.transactionJson &&
-      edgeTransaction.otherParams.transactionJson.fioAction
-    ) {
+    const { otherParams } = edgeTransaction
+    if (otherParams != null && otherParams.action && otherParams.action.name) {
       trx = await this.otherMethods.fioAction(
-        edgeTransaction.otherParams.transactionJson.fioAction,
-        edgeTransaction.otherParams.transactionJson.fioParams
+        otherParams.action.name,
+        otherParams.action.params
       )
       edgeTransaction.metadata = {
         notes: trx.transaction_id
       }
-    } else if (edgeTransaction.spendTargets) {
-      // do transfer
-      const publicAddress = edgeTransaction.spendTargets[0].publicAddress
-      const amount = bns.abs(
-        bns.add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
-      )
-      trx = await this.multicastServers('transferTokens', {
-        payeeFioPublicKey: publicAddress,
-        amount,
-        maxFee: edgeTransaction.networkFee
-      })
     } else {
       throw new Error(
-        'transactionJson not set. FIO transferTokens requires publicAddress'
+        'Action is not set, "action" prop of otherParams is required for FIO actions'
       )
     }
 
