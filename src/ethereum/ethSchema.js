@@ -23,9 +23,10 @@ export const EthGasStationSchema = {
   properties: {
     safeLow: { type: 'number' },
     average: { type: 'number' },
+    standard: { type: 'number' },
     fastest: { type: 'number' }
   },
-  required: ['safeLow', 'average', 'fastest']
+  required: ['safeLow', 'fastest']
 }
 
 export const CustomTokenSchema = {

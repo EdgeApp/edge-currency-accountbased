@@ -71,16 +71,19 @@ export const asEthereumFeesGasLimit = asObject({
 export type EthereumFeesGasLimit = $Call<typeof asEthereumFeesGasLimit>
 
 export const asEthereumFeesGasPrice = asObject({
+  highFee: asString,
   lowFee: asString,
+
+  // Represents the default "Optimized" standard fee option where
+  // standardFeeLow is the fee for a transaction with a small
+  // quantity and standardFeeHigh is the fee for a large transaction.
   standardFeeLow: asString,
   standardFeeHigh: asString,
 
-  // The amount of wei which will be charged the standardFeeLow
+  // Defines what is considered a "small" and "large" transaction
+  // for the above two fee options.
   standardFeeLowAmount: asString,
-
-  // The amount of wei which will be charged the standardFeeHigh
-  standardFeeHighAmount: asString,
-  highFee: asString
+  standardFeeHighAmount: asString
 })
 
 export type EthereumFeesGasPrice = $Call<typeof asEthereumFeesGasPrice>
