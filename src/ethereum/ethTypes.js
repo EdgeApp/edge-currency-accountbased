@@ -23,6 +23,7 @@ export type EthereumInitOptions = {
   blockcypherApiKey?: string,
   etherscanApiKey?: string | string[],
   ftmscanApiKey?: string,
+  polygonscanApiKey?: string,
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,

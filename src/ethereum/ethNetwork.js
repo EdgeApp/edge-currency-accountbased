@@ -475,12 +475,14 @@ export class EthereumNetwork {
     const response = await this.ethEngine.io.fetch(url, options)
     if (!response.ok) {
       const {
+        blockchairApiKey,
         blockcypherApiKey,
         etherscanApiKey,
         ftmscanApiKey,
         infuraProjectId,
-        blockchairApiKey
+        polygonscanApiKey
       } = this.ethEngine.initOptions
+      // remove API keys from error messages
       if (typeof etherscanApiKey === 'string')
         url = url.replace(etherscanApiKey, 'private')
       if (Array.isArray(etherscanApiKey)) {
@@ -488,11 +490,11 @@ export class EthereumNetwork {
           url = url.replace(key, 'private')
         }
       }
-      // removes API keys from error messages
-      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
-      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
       if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
+      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
       if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
+      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
+      if (polygonscanApiKey) url = url.replace(polygonscanApiKey, 'private')
       throw new Error(
         `The server returned error code ${response.status} for ${url}`
       )
@@ -501,7 +503,8 @@ export class EthereumNetwork {
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
-    const { etherscanApiKey, ftmscanApiKey } = this.ethEngine.initOptions
+    const { etherscanApiKey, ftmscanApiKey, polygonscanApiKey } =
+      this.ethEngine.initOptions
     const chosenKey = Array.isArray(etherscanApiKey)
       ? pickRandom(etherscanApiKey, 1)[0]
       : etherscanApiKey
@@ -510,10 +513,11 @@ export class EthereumNetwork {
         ? '&apikey=' + chosenKey
         : ftmscanApiKey != null && server.includes('ftmscan')
         ? '&apikey=' + ftmscanApiKey
+        : polygonscanApiKey != null && server.includes('polygonscan')
+        ? '&apikey=' + polygonscanApiKey
         : ''
 
     const url = `${server}/api${cmd}${apiKey}`
-    // this.ethEngine.log.warn('invalid ftm url ', url)
     return this.fetchGet(url)
   }
 
