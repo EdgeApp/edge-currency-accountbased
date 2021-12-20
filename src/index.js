@@ -12,6 +12,7 @@ import { makeWaxPlugin } from './eos/waxInfo.js'
 import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeFantomPlugin } from './ethereum/ftminfo.js'
+import { makePolygonPlugin } from './ethereum/maticInfo'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeHederaPlugin } from './hedera/hederaInfo.js'
@@ -35,7 +36,8 @@ const plugins = {
   tezos: makeTezosPlugin,
   rsk: makeRskPlugin,
   binance: makeBinancePlugin,
-  hedera: makeHederaPlugin
+  hedera: makeHederaPlugin,
+  polygon: makePolygonPlugin
 }
 
 if (

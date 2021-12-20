@@ -16,3 +16,4 @@ stats.json
 .DS_Store
 .idea/
 .vscode/
+.vscode/settings.json

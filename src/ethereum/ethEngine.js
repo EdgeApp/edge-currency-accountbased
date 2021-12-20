@@ -66,7 +66,7 @@ import {
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const ETH_GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
+const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 const walletConnectors: WalletConnectors = {}
@@ -556,8 +556,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     try {
-      // If base fee is not suppported, update network fees fromethgasstation.info
-      this.log.warn(`Updating networkFees from ethgasstation.info`)
+      // If base fee is not suppported, update network fees from gas station
       this.updateNetworkFeesFromEthGasStation()
     } catch (error) {
       this.log.error(error)
@@ -625,19 +624,22 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  // deprecate after london hardfork because of EIP 1559
+  // Deprecated for ETH and other chains that hard forked to EIP 1559
   async updateNetworkFeesFromEthGasStation() {
     let jsonObj
     try {
       const { ethGasStationUrl } =
         this.currencyInfo.defaultSettings.otherSettings
       if (ethGasStationUrl == null) return
+      this.log(`Updating networkFees from ${ethGasStationUrl} `)
       const { ethGasStationApiKey } = this.initOptions
+      const apiKeyParams = ethGasStationApiKey
+        ? `?api-key=${ethGasStationApiKey || ''}`
+        : ''
       jsonObj = await this.ethNetwork.fetchGet(
-        `${ethGasStationUrl}?api-key=${ethGasStationApiKey || ''}`
+        `${ethGasStationUrl}${apiKeyParams}`
       )
       const valid = validateObject(jsonObj, EthGasStationSchema)
-
       if (valid) {
         const fees: EthereumFees = this.walletLocalData.otherData.networkFees
         const ethereumFee: EthereumFee = fees.default
@@ -651,21 +653,27 @@ export class EthereumEngine extends CurrencyEngine {
         let fast = jsonObj.fast
         let fastest = jsonObj.fastest
 
-        // Sanity checks
-        if (safeLow <= 0 || safeLow > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid safeLow value from EthGasStation')
-        }
-        if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid average value from EthGasStation')
-        }
-        if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid fastest value from EthGasStation')
-        }
-        if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid fastest value from EthGasStation')
+        // Special case for MATIC fast and fastest being equivalent from gas station
+        if (this.currencyInfo.currencyCode === 'MATIC') {
+          fast = jsonObj.standard
+          average = (jsonObj.fast + jsonObj.safeLow) / 2
         }
 
-        // Correct inconsistencies
+        // Sanity checks
+        if (safeLow <= 0 || safeLow > GAS_PRICE_SANITY_CHECK) {
+          throw new Error('Invalid safeLow value from Gas Station')
+        }
+        if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
+          throw new Error('Invalid average value from Gas Station')
+        }
+        if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
+          throw new Error('Invalid fastest value from Gas Station')
+        }
+        if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
+          throw new Error('Invalid fastest value from Gas Station')
+        }
+
+        // Correct inconsistencies, set gas prices
         if (average <= safeLow) average = safeLow + 1
         if (fast <= average) fast = average + 1
         if (fastest <= fast) fastest = fast + 1
@@ -673,20 +681,16 @@ export class EthereumEngine extends CurrencyEngine {
         let lowFee = safeLow
         let standardFeeLow = fast
         let standardFeeHigh = (fast + fastest) * 0.75
-        let highFee = fastest
+        let highFee = standardFeeHigh > fastest ? standardFeeHigh : fastest
 
-        lowFee = (
-          Math.round(lowFee) * ETH_GAS_STATION_WEI_MULTIPLIER
-        ).toString()
+        lowFee = (Math.round(lowFee) * GAS_STATION_WEI_MULTIPLIER).toString()
         standardFeeLow = (
-          Math.round(standardFeeLow) * ETH_GAS_STATION_WEI_MULTIPLIER
+          Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
         ).toString()
         standardFeeHigh = (
-          Math.round(standardFeeHigh) * ETH_GAS_STATION_WEI_MULTIPLIER
+          Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
         ).toString()
-        highFee = (
-          Math.round(highFee) * ETH_GAS_STATION_WEI_MULTIPLIER
-        ).toString()
+        highFee = (Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER).toString()
 
         if (
           gasPrice.lowFee !== lowFee ||
