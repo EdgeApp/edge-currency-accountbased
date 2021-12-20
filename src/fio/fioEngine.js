@@ -922,7 +922,12 @@ export class FioEngine extends CurrencyEngine {
             existedFioAddress =>
               existedFioAddress.name === fioAddress.fio_address
           )
-          if (!existedFioAddress) {
+          if (existedFioAddress) {
+            if (existedFioAddress.bundles !== fioAddress.remaining_bundled_tx) {
+              areAddressesChanged = true
+              break
+            }
+          } else {
             areAddressesChanged = true
             break
           }
@@ -985,7 +990,8 @@ export class FioEngine extends CurrencyEngine {
       if (areAddressesChanged) {
         isChanged = true
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
-          name: fioAddress.fio_address
+          name: fioAddress.fio_address,
+          bundles: fioAddress.remaining_bundled_tx
         }))
       }
 

@@ -12,7 +12,8 @@ export const asGetFioName = asObject({
   ),
   fio_addresses: asArray(
     asObject({
-      fio_address: asString
+      fio_address: asString,
+      remaining_bundled_tx: asNumber
     })
   )
 })
