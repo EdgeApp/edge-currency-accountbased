@@ -15,7 +15,6 @@ export const BROADCAST_ACTIONS = {
   requestFunds: true,
   registerFioAddress: true,
   registerFioDomain: true,
-  renewFioAddress: true,
   renewFioDomain: true,
   transferTokens: true,
   addPublicAddresses: true,
@@ -28,7 +27,6 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   registerFioAddress: 'registerFioAddress',
   registerFioDomain: 'registerFioDomain',
   renewFioDomain: 'renewFioDomain',
-  renewFioAddress: 'renewFioAddress',
   addPublicAddresses: 'addPubAddress',
   setFioDomainPublic: 'setFioDomainPublic',
   rejectFundsRequest: 'rejectFundsRequest',
@@ -58,8 +56,7 @@ export type FioRequest = {
 }
 
 export type FioAddress = {
-  name: string,
-  expiration: string
+  name: string
 }
 
 export type FioDomain = {

@@ -12,8 +12,7 @@ export const asGetFioName = asObject({
   ),
   fio_addresses: asArray(
     asObject({
-      fio_address: asString,
-      expiration: asString
+      fio_address: asString
     })
   )
 })
