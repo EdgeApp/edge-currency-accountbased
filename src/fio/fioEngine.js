@@ -191,21 +191,6 @@ export class FioEngine extends CurrencyEngine {
             }
             break
           }
-          case 'renewFioAddress': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint[actionName]
-            })
-            params.maxFee = fee
-            const res = await this.multicastServers(actionName, params)
-            const renewedAddress = this.otherData.fioAddresses.find(
-              ({ name }) => name === params.fioAddress
-            )
-            if (renewedAddress) {
-              renewedAddress.expiration = res.expiration
-              this.localDataDirty()
-            }
-            return res
-          }
           case 'registerFioAddress': {
             const { fee } = await this.multicastServers('getFee', {
               endPoint: EndPoint[actionName]
@@ -217,7 +202,6 @@ export class FioEngine extends CurrencyEngine {
               params.ownerPublicKey !== this.walletInfo.keys.publicKey
             ) {
               return {
-                expiration: res.expiration,
                 feeCollected: res.fee_collected
               }
             }
@@ -226,8 +210,7 @@ export class FioEngine extends CurrencyEngine {
             )
             if (!addressAlreadyAdded) {
               this.otherData.fioAddresses.push({
-                name: params.fioAddress,
-                expiration: res.expiration
+                name: params.fioAddress
               })
               this.localDataDirty()
             }
@@ -940,7 +923,7 @@ export class FioEngine extends CurrencyEngine {
               existedFioAddress.name === fioAddress.fio_address
           )
           if (existedFioAddress) {
-            if (existedFioAddress.expiration !== fioAddress.expiration) {
+            if (existedFioAddress.bundles !== fioAddress.remaining_bundled_tx) {
               areAddressesChanged = true
               break
             }
@@ -1008,7 +991,7 @@ export class FioEngine extends CurrencyEngine {
         isChanged = true
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
-          expiration: fioAddress.expiration
+          bundles: fioAddress.remaining_bundled_tx
         }))
       }
 
