@@ -76,6 +76,8 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 256,
+
   addressExplorer: 'https://bloks.io/account/%s',
   transactionExplorer: 'https://bloks.io/transaction/%s',
 

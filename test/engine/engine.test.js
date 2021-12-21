@@ -184,7 +184,9 @@ for (const fixture of fixtures) {
     it('Should sign a typed message', function () {
       if (!engine) throw new Error('ErrorNoEngine')
       // $FlowFixMe
-      const sig = engine.utils.signTypedData(fixture.messages.eth_signTypedData.param)
+      const sig = engine.utils.signTypedData(
+        fixture.messages.eth_signTypedData.param
+      )
       assert.equal(sig, fixture.messages.eth_signTypedData.signature)
     })
   })

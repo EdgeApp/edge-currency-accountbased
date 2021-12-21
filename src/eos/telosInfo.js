@@ -72,6 +72,8 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 256,
+
   addressExplorer: 'https://telos.bloks.io/account/%s',
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
