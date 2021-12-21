@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.10.1 (2021-12-21)
+
+- Add memoMaxLength parameter to currencyInfos
+- Upgrade edge-core-js to v0.18.13
+
 # 0.10.0 (2021-12-21)
 
 - Add Polygon
