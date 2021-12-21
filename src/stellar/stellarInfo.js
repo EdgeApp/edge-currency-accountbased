@@ -22,6 +22,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 19,
+
   addressExplorer: 'https://stellarchain.io/address/%s',
   transactionExplorer: 'https://stellarchain.io/tx/%s',
 

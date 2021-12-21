@@ -73,6 +73,8 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 256,
+
   addressExplorer: 'https://wax.bloks.io/account/%s',
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 

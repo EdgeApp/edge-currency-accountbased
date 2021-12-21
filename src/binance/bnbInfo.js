@@ -27,6 +27,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 128,
+
   addressExplorer: 'https://explorer.binance.org/address/%s',
   transactionExplorer: 'https://explorer.binance.org/tx/%s',
   blockExplorer: 'https://explorer.binance.org/block/%s',

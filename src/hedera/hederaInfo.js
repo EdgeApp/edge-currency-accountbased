@@ -30,6 +30,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
+  memoMaxLength: 100,
+
   addressExplorer: `https://explorer.kabuto.sh/mainnet/id/%s`,
   transactionExplorer: `https://explorer.kabuto.sh/mainnet/transaction/%s`,
 
