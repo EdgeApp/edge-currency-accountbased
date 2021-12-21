@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+# 0.10.0 (2021-12-21)
+
+- Add Polygon
+- Remove FIO name expiration
+- Update ZEC checkpoints
+
 # 0.9.3 (2021-12-10)
 
 - ZEC: Update checkpoints
