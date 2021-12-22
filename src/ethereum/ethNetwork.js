@@ -490,11 +490,17 @@ export class EthereumNetwork {
           url = url.replace(key, 'private')
         }
       }
+      if (typeof polygonscanApiKey === 'string')
+        url = url.replace(polygonscanApiKey, 'private')
+      if (Array.isArray(polygonscanApiKey)) {
+        for (const key of polygonscanApiKey) {
+          url = url.replace(key, 'private')
+        }
+      }
       if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
       if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
       if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
       if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
-      if (polygonscanApiKey) url = url.replace(polygonscanApiKey, 'private')
       throw new Error(
         `The server returned error code ${response.status} for ${url}`
       )
@@ -505,17 +511,23 @@ export class EthereumNetwork {
   async fetchGetEtherscan(server: string, cmd: string) {
     const { etherscanApiKey, ftmscanApiKey, polygonscanApiKey } =
       this.ethEngine.initOptions
-    const chosenKey = Array.isArray(etherscanApiKey)
-      ? pickRandom(etherscanApiKey, 1)[0]
-      : etherscanApiKey
-    const apiKey =
-      chosenKey && chosenKey.length > 5 && server.includes('etherscan')
-        ? '&apikey=' + chosenKey
-        : ftmscanApiKey != null && server.includes('ftmscan')
-        ? '&apikey=' + ftmscanApiKey
-        : polygonscanApiKey != null && server.includes('polygonscan')
-        ? '&apikey=' + polygonscanApiKey
-        : ''
+    let apiKey = ''
+
+    if (server.includes('etherscan')) {
+      apiKey = `&apikey=${
+        Array.isArray(etherscanApiKey)
+          ? pickRandom(etherscanApiKey, 1)[0]
+          : etherscanApiKey ?? ''
+      }`
+    } else if (server.includes('ftmscan')) {
+      apiKey = `&apikey=${ftmscanApiKey ?? ''}`
+    } else if (server.includes('polygonscan')) {
+      apiKey = `&apikey=${
+        Array.isArray(polygonscanApiKey)
+          ? pickRandom(polygonscanApiKey, 1)[0]
+          : polygonscanApiKey ?? ''
+      }`
+    }
 
     const url = `${server}/api${cmd}${apiKey}`
     return this.fetchGet(url)
