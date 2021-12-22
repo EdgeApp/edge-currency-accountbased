@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.10.2 (2021-12-22)
+
+- Add support for multiple polygonscan api keys
+
 # 0.10.1 (2021-12-21)
 
 - Add memoMaxLength parameter to currencyInfos
