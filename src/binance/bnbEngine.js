@@ -175,7 +175,7 @@ export class BinanceEngine extends CurrencyEngine {
         }
       }
     } catch (e) {
-      // fetching of account balances for uninitiate accounts returns 404 (throws error)
+      // fetching of account balances for uninitiated accounts returns 404 (throws error)
       if (
         this.tokenCheckTransactionsStatus.BNB === 1 &&
         this.transactionList.BNB.length === 0
@@ -269,7 +269,7 @@ export class BinanceEngine extends CurrencyEngine {
           )
           if (valid) {
             for (const transaction of transactionsResults.tx) {
-              // shuold we process extra transaction for native BNB fees?
+              // should we process extra transaction for native BNB fees?
               this.processBinanceApiTransaction(transaction, currencyCode)
             }
             if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
