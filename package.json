@@ -11,6 +11,11 @@
   "author": "Edge (Airbitz, Inc)",
   "contributors": [
     "Paul Puey <paul@edge.app>",
+    "William Swanson <william@edge.app>",
+    "Eliran Zach <eliran@edge.app>",
+    "Matthew Piché <matthew@edge.app>",
+    "Sam Holmes <sam@edge.app>",
+    "Jonathan Tzeng <jon@edge.app>",
     "Austin Bonander <austin@launchbadge.com>"
   ],
   "main": "./index.js",
