@@ -341,7 +341,7 @@ export class CurrencyEngine {
     // if transaction doesn't exist in database
     if (idx === -1) {
       if (
-        // if unconfirmed spend then increment # uncofirmed spend TX's
+        // if unconfirmed spend then increment # unconfirmed spend TX's
         this.isSpendTx(edgeTransaction) &&
         edgeTransaction.blockHeight === 0
       ) {

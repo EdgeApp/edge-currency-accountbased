@@ -68,7 +68,7 @@ import {
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
+const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgasstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 const walletConnectors: WalletConnectors = {}
@@ -1059,7 +1059,7 @@ export class EthereumEngine extends CurrencyEngine {
       // 1. We have unconfirmed spending txs in the transaction list
       // 2. It is greater than the confirmed nonce
       // 3. Is no more than 5 higher than confirmed nonce
-      // Othewise, use the next nonce
+      // Otherwise, use the next nonce
       if (
         this.walletLocalData.numUnconfirmedSpendTxs &&
         bns.gt(

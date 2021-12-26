@@ -160,7 +160,7 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   isSynced() {
-    // Synchroniser status is updated regularly and should be checked before accessing the db to avoid errors
+    // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
   }
 
