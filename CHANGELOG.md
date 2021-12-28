@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.10.3 (2021-12-27)
+
+- MATIC: Fix fee calculation from polygongasstation
+- MATIC: Fix default fees
+
 # 0.10.2 (2021-12-22)
 
 - Add support for multiple polygonscan api keys
