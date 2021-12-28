@@ -15,17 +15,17 @@ const defaultNetworkFees: EthereumFees = {
     baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',
-      tokenTransaction: '200000',
+      tokenTransaction: '300000',
       minGasLimit: '21000'
     },
     gasPrice: {
-      lowFee: '1000000001',
+      lowFee: '30000000001',
       standardFeeLow: '36000000000',
-      standardFeeHigh: '216000000000',
+      standardFeeHigh: '100000000000',
       standardFeeLowAmount: '100000000000000000',
       standardFeeHighAmount: '10000000000000000000',
-      highFee: '36000000000',
-      minGasPrice: '3000000000'
+      highFee: '216000000000',
+      minGasPrice: '30000000000'
     },
     minPriorityFee: undefined
   }
