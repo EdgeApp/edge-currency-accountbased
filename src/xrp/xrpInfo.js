@@ -32,7 +32,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  memoMaxLength: 1000,
+  memoMaxLength: 10,
 
   addressExplorer: 'https://bithomp.com/explorer/%s',
   transactionExplorer: 'https://bithomp.com/explorer/%s',

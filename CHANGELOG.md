@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.10.4 (2021-12-28)
+
+- XRP: Set memoMaxLength to 10
+
 # 0.10.3 (2021-12-27)
 
 - MATIC: Fix fee calculation from polygongasstation
