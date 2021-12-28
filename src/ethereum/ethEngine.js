@@ -648,15 +648,18 @@ export class EthereumEngine extends CurrencyEngine {
         }
         const gasPrice: EthereumFeesGasPrice = ethereumFee.gasPrice
 
-        const safeLow = jsonObj.safeLow
+        let safeLow = jsonObj.safeLow
         let average = jsonObj.average
         let fast = jsonObj.fast
         let fastest = jsonObj.fastest
 
         // Special case for MATIC fast and fastest being equivalent from gas station
         if (this.currencyInfo.currencyCode === 'MATIC') {
-          fast = jsonObj.standard
-          average = (jsonObj.fast + jsonObj.safeLow) / 2
+          // Since the later code assumes EthGasStation's greater-by-a-factor-of-ten gas prices, we need to multiply the GWEI from Polygon Gas Station by 10 so they conform.
+          safeLow *= 10
+          average = ((jsonObj.fast + jsonObj.safeLow) / 2) * 10
+          fast = jsonObj.standard * 10
+          fastest *= 10
         }
 
         // Sanity checks
