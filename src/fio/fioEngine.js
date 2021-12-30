@@ -269,6 +269,31 @@ export class FioEngine extends CurrencyEngine {
             }
             return res
           }
+          case 'addBundledTransactions': {
+            const res = await this.multicastServers(actionName, params)
+            const fioAddress = this.otherData.fioAddresses.find(
+              ({ name }) => name === params.fioAddress
+            )
+
+            if (!fioAddress) return res
+
+            try {
+              const { fio_addresses: fetchedFioAddresses } =
+                await this.multicastServers('getFioAddresses', {
+                  fioPublicKey: this.walletInfo.keys.publicKey
+                })
+              const updatedBundlesValue = fetchedFioAddresses.find(
+                ({ fio_address: name }) => name === params.fioAddress
+              ).remaining_bundled_tx
+              fioAddress.bundles = updatedBundlesValue
+              this.localDataDirty()
+              return { bundles: updatedBundlesValue, ...res }
+            } catch (e) {
+              //
+            }
+
+            return { bundles: fioAddress.bundles, ...res }
+          }
         }
 
         return this.multicastServers(actionName, params)
