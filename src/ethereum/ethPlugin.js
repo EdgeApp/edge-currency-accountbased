@@ -146,7 +146,8 @@ export class EthereumPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = {}
+    // By default, all EVM clones should be WalletConnect compatible.
+    const networks = { wc: true }
     this.currencyInfo.defaultSettings.otherSettings.uriNetworks.forEach(
       network => {
         networks[network] = true
