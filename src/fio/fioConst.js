@@ -19,7 +19,8 @@ export const BROADCAST_ACTIONS = {
   transferTokens: true,
   addPublicAddresses: true,
   transferFioAddress: true,
-  transferFioDomain: true
+  transferFioDomain: true,
+  addBundledTransactions: true
 }
 
 export const ACTIONS_TO_END_POINT_KEYS = {
@@ -34,7 +35,8 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   transferTokens: 'transferTokens',
   pushTransaction: 'pushTransaction',
   transferFioAddress: 'transferFioAddress',
-  transferFioDomain: 'transferFioDomain'
+  transferFioDomain: 'transferFioDomain',
+  addBundledTransactions: 'addBundledTransactions'
 }
 
 export const FIO_REQUESTS_TYPES = {
@@ -57,7 +59,7 @@ export type FioRequest = {
 
 export type FioAddress = {
   name: string,
-  bundles?: number
+  bundledTxs?: number
 }
 
 export type FioDomain = {

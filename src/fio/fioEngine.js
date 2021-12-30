@@ -269,6 +269,33 @@ export class FioEngine extends CurrencyEngine {
             }
             return res
           }
+          case 'addBundledTransactions': {
+            const fioAddress = this.otherData.fioAddresses.find(
+              ({ name }) => name === params.fioAddress
+            )
+
+            if (fioAddress == null)
+              throw new FioError('Fio Address is not found in engine')
+
+            const res = await this.multicastServers(actionName, params)
+
+            try {
+              const { fio_addresses: fetchedFioAddresses } =
+                await this.multicastServers('getFioAddresses', {
+                  fioPublicKey: this.walletInfo.keys.publicKey
+                })
+              const updatedBundledTxsValue = fetchedFioAddresses.find(
+                ({ fio_address: name }) => name === params.fioAddress
+              ).remaining_bundled_tx
+              fioAddress.bundledTxs = updatedBundledTxsValue
+              this.localDataDirty()
+              return { bundledTxs: updatedBundledTxsValue, ...res }
+            } catch (e) {
+              //
+            }
+
+            return { bundledTxs: fioAddress.bundledTxs, ...res }
+          }
         }
 
         return this.multicastServers(actionName, params)
@@ -923,7 +950,9 @@ export class FioEngine extends CurrencyEngine {
               existedFioAddress.name === fioAddress.fio_address
           )
           if (existedFioAddress) {
-            if (existedFioAddress.bundles !== fioAddress.remaining_bundled_tx) {
+            if (
+              existedFioAddress.bundledTxs !== fioAddress.remaining_bundled_tx
+            ) {
               areAddressesChanged = true
               break
             }
@@ -991,7 +1020,7 @@ export class FioEngine extends CurrencyEngine {
         isChanged = true
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
-          bundles: fioAddress.remaining_bundled_tx
+          bundledTxs: fioAddress.remaining_bundled_tx
         }))
       }
 
