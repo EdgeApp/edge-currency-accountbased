@@ -71,13 +71,16 @@ export class CurrencyPlugin {
       parsedUri.protocol = parsedUri.protocol.replace(':', '')
     }
 
+    // Wrong crypto type or protocol is not supported
     if (parsedUri.protocol && !networks[parsedUri.protocol]) {
-      throw new Error('InvalidUriError') // possibly scanning wrong crypto type
+      throw new Error(
+        `Uri protocol '${parsedUri.protocol}' is not supported for ${currencyInfo.pluginId}.`
+      )
     }
 
     // If no host and no path, then it's not a valid URI
     if (parsedUri.host === '' && parsedUri.pathname === '') {
-      throw new Error('InvalidUriError')
+      throw new Error('Path and host not found in uri.')
     }
 
     // Address uses the host if present to support URLs with double-slashes (//)
