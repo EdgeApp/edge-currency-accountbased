@@ -6,16 +6,12 @@ import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {
-  rippledServers: [
-    'wss://s2.ripple.com',
-    'wss://rippled.xrptipbot.com',
-    'wss://s1.ripple.com'
-  ]
+  rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com']
 }
 
 const defaultSettings: any = {
   otherSettings,
-  fee: '0.00001',
+  fee: '10', // in drops
   errorCodes: {
     UNIQUE_IDENTIFIER_EXCEEDS_LENGTH: 'UNIQUE_IDENTIFIER_EXCEEDS_LENGTH',
     UNIQUE_IDENTIFIER_EXCEEDS_LIMIT: 'UNIQUE_IDENTIFIER_EXCEEDS_LIMIT',

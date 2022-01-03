@@ -12,6 +12,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine.js'
 import { cleanTxLogs, getOtherParams, validateObject } from '../common/utils.js'
@@ -22,15 +23,13 @@ import {
 } from '../pluginError.js'
 import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
+import { XrpGetBalancesSchema } from './xrpSchema.js'
 import {
-  XrpGetBalancesSchema,
-  XrpGetServerInfoSchema,
-  XrpGetTransactionsSchema
-} from './xrpSchema.js'
-import {
-  type XrpGetTransaction,
-  type XrpGetTransactions,
-  type XrpWalletOtherData
+  type XrpTransaction,
+  type XrpWalletOtherData,
+  asFee,
+  asGetTransactionsResponse,
+  asServerInfo
 } from './xrpTypes.js'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -41,6 +40,15 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const MAX_DESTINATION_TAG_LENGTH = 10
 const MAX_DESTINATION_TAG_LIMIT = 4294967295
+
+type PaymentJson = {
+  Amount: string,
+  TransactionType: string,
+  Account: string,
+  Destination: string,
+  Fee: string,
+  DestinationTag?: number
+}
 
 type XrpParams = {
   preparedTx: Object
@@ -56,7 +64,6 @@ type XrpFunction =
   | 'connect'
   | 'disconnect'
   | 'preparePayment'
-  | 'sign'
   | 'submit'
 
 export class XrpEngine extends CurrencyEngine {
@@ -75,22 +82,21 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
-    let out = { result: '', server: '' }
+    let method = 'request'
+    // Request is most commonly used SDK method for funcs but some are special
     switch (func) {
-      // Functions that should waterfall from top to low priority servers
-      case 'getFee':
-      case 'getServerInfo':
       case 'getBalances':
-      case 'getTransactions':
       case 'disconnect':
       case 'submit':
-      case 'preparePayment':
-      case 'sign':
-        out = {
-          result: await this.xrpPlugin.rippleApi[func](...params),
-          server: this.xrpPlugin.rippleApi.serverName
-        }
+        method = func
         break
+      case 'preparePayment':
+        method = 'autofill'
+        break
+    }
+    const out = {
+      result: await this.xrpPlugin.rippleApi[method](...params),
+      server: this.xrpPlugin.rippleApi.serverName
     }
     this.log(`multicastServers ${func} ${out.server} won`)
     return out.result
@@ -99,11 +105,11 @@ export class XrpEngine extends CurrencyEngine {
   // Poll on the blockheight
   async checkServerInfoInnerLoop() {
     try {
-      const fee = await this.multicastServers('getFee')
-      if (typeof fee === 'string') {
-        this.otherData.recommendedFee = fee
-        this.walletLocalDataDirty = true
-      }
+      const options = { command: 'fee' }
+      const response = await this.multicastServers('getFee', options)
+      const fee = asFee(response).result.drops.minimum_fee
+      this.otherData.recommendedFee = fee
+      this.walletLocalDataDirty = true
     } catch (e) {
       this.log.error(`Error fetching recommended fee: ${e}. Using default fee.`)
       if (this.otherData.recommendedFee !== currencyInfo.defaultSettings.fee) {
@@ -112,24 +118,17 @@ export class XrpEngine extends CurrencyEngine {
       }
     }
     try {
-      const jsonObj = await this.multicastServers('getServerInfo')
-      const valid = validateObject(jsonObj, XrpGetServerInfoSchema)
-      if (valid) {
-        const blockHeight: number = jsonObj.validatedLedger.ledgerVersion
-        this.log(`Got block height ${blockHeight}`)
-        if (this.walletLocalData.blockHeight !== blockHeight) {
-          this.checkDroppedTransactionsThrottled()
-          this.walletLocalData.blockHeight = blockHeight // Convert to decimal
-          this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onBlockHeightChanged(
-            this.walletLocalData.blockHeight
-          )
-        }
-      } else {
-        this.log.error(
-          `Invalid data returned from rippleApi.getServerInfo ${JSON.stringify(
-            jsonObj
-          )}`
+      const options = { command: 'server_info' }
+      const response = await this.multicastServers('getServerInfo', options)
+      const blockHeight =
+        asServerInfo(response).result.info.validated_ledger.seq
+      this.log(`Got block height ${blockHeight}`)
+      if (this.walletLocalData.blockHeight !== blockHeight) {
+        this.checkDroppedTransactionsThrottled()
+        this.walletLocalData.blockHeight = blockHeight // Convert to decimal
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
         )
       }
     } catch (err) {
@@ -137,52 +136,33 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  processRippleTransaction(tx: XrpGetTransaction) {
-    const ourReceiveAddresses: string[] = []
-
-    const balanceChanges =
-      tx.outcome.balanceChanges[this.walletLocalData.publicKey]
-    if (balanceChanges) {
-      for (const bc of balanceChanges) {
-        const currencyCode: string = bc.currency
-        const date: number = Date.parse(tx.outcome.timestamp) / 1000
-        const blockHeight: number =
-          tx.outcome.ledgerVersion > 0 ? tx.outcome.ledgerVersion : 0
-        const exchangeAmount: string = bc.value
-        if (exchangeAmount.slice(0, 1) !== '-') {
-          ourReceiveAddresses.push(this.walletLocalData.publicKey)
-        }
-        const nativeAmount: string = bns.mul(exchangeAmount, '1000000')
-        let networkFee: string
-        let parentNetworkFee: string
-        if (currencyCode === PRIMARY_CURRENCY) {
-          networkFee = bns.mul(tx.outcome.fee, '1000000')
-        } else {
-          networkFee = '0'
-          parentNetworkFee = bns.mul(tx.outcome.fee, '1000000')
-        }
-
-        const edgeTransaction: EdgeTransaction = {
-          txid: tx.id.toLowerCase(),
-          date,
-          currencyCode,
-          blockHeight,
-          nativeAmount,
-          networkFee,
-          parentNetworkFee,
-          ourReceiveAddresses,
-          signedTx: '',
-          otherParams: {}
-        }
-        this.addTransaction(currencyCode, edgeTransaction)
-      }
+  processRippleTransaction(tx: XrpTransaction) {
+    const ourReceiveAddresses = []
+    let nativeAmount = tx.Amount
+    if (tx.Destination === this.walletLocalData.publicKey) {
+      ourReceiveAddresses.push(this.walletLocalData.publicKey)
+    } else {
+      nativeAmount = `-${bns.add(nativeAmount, tx.Fee)}`
     }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: tx.hash.toLowerCase(),
+      date: rippleTimeToUnixTime(tx.date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
+      currencyCode: PRIMARY_CURRENCY,
+      blockHeight: tx.ledger_index,
+      nativeAmount,
+      networkFee: tx.Fee,
+      ourReceiveAddresses,
+      signedTx: '',
+      otherParams: {}
+    }
+    this.addTransaction(PRIMARY_CURRENCY, edgeTransaction)
   }
 
   async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
-    let startBlock: number = 0
+    let startBlock: number = -1 // A value of -1 instructs the server to use the earliest validated ledger version available
     if (
       this.walletLocalData.lastAddressQueryHeight >
       ADDRESS_QUERY_LOOKBACK_BLOCKS
@@ -194,43 +174,32 @@ export class XrpEngine extends CurrencyEngine {
     }
 
     try {
-      let options
-      if (startBlock > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-        options = { minLedgerVersion: startBlock }
+      const options = {
+        command: 'account_tx',
+        account: address,
+        forward: true, // returns oldest to newest
+        ledger_index_min: startBlock
       }
-      const transactions: XrpGetTransactions = await this.multicastServers(
-        'getTransactions',
-        address,
-        options
+      const response = await this.multicastServers('getTransactions', options)
+      const transactions =
+        asGetTransactionsResponse(response).result.transactions
+      this.log(
+        `Fetched transactions count: ${transactions.length} startBlock:${startBlock}`
       )
-      const valid = validateObject(transactions, XrpGetTransactionsSchema)
-      if (valid) {
-        this.log(
-          `Fetched transactions count: ${transactions.length} startBlock:${startBlock}`
-        )
-
-        // Get transactions
-        // Iterate over transactions in address
-        for (let i = 0; i < transactions.length; i++) {
-          const tx = transactions[i]
-          this.processRippleTransaction(tx)
-        }
-        if (this.transactionsChangedArray.length > 0) {
-          this.currencyEngineCallbacks.onTransactionsChanged(
-            this.transactionsChangedArray
-          )
-          this.transactionsChangedArray = []
-        }
-        this.walletLocalData.lastAddressQueryHeight = blockHeight
-        this.tokenCheckTransactionsStatus.XRP = 1
-        this.updateOnAddressesChecked()
-      } else {
-        this.log.error(
-          `Invalid data returned from rippleApi.getTransactions ${JSON.stringify(
-            transactions
-          )}`
-        )
+      // Get transactions
+      // Iterate over transactions in address
+      for (const transaction of transactions) {
+        this.processRippleTransaction(transaction.tx)
       }
+      if (this.transactionsChangedArray.length > 0) {
+        this.currencyEngineCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      }
+      this.walletLocalData.lastAddressQueryHeight = blockHeight
+      this.tokenCheckTransactionsStatus.XRP = 1
+      this.updateOnAddressesChecked()
     } catch (e) {
       this.log.error(`Error fetching transactions: ${e}`)
     }
@@ -389,8 +358,9 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
-      super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, nativeBalance } = super.makeSpend(
+      edgeSpendInfoIn
+    )
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -408,17 +378,15 @@ export class XrpEngine extends CurrencyEngine {
       throw new NoAmountSpecifiedError()
     }
 
-    const nativeNetworkFee = bns.mul(this.otherData.recommendedFee, '1000000')
+    const nativeNetworkFee = this.otherData.recommendedFee
 
     if (currencyCode === PRIMARY_CURRENCY) {
-      const totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      const virtualTxAmount = bns.add(totalTxAmount, '20000000')
+      const virtualTxAmount = bns.add(nativeAmount, '20000000')
       if (bns.gt(virtualTxAmount, nativeBalance)) {
         throw new InsufficientFundsError()
       }
     }
 
-    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 6)
     let uniqueIdentifier
     if (
       edgeSpendInfo.spendTargets[0].otherParams &&
@@ -466,22 +434,17 @@ export class XrpEngine extends CurrencyEngine {
         )
       }
     }
-    const payment = {
-      source: {
-        address: this.walletLocalData.publicKey,
-        maxAmount: {
-          value: exchangeAmount,
-          currency: currencyCode
-        }
-      },
-      destination: {
-        address: publicAddress,
-        amount: {
-          value: exchangeAmount,
-          currency: currencyCode
-        },
-        tag: uniqueIdentifier
-      }
+
+    const payment: PaymentJson = {
+      Amount: nativeAmount,
+      TransactionType: 'Payment',
+      Account: this.walletLocalData.publicKey,
+      Destination: publicAddress,
+      Fee: nativeNetworkFee
+    }
+
+    if (uniqueIdentifier != null) {
+      payment.DestinationTag = uniqueIdentifier
     }
 
     let preparedTx = {}
@@ -489,12 +452,7 @@ export class XrpEngine extends CurrencyEngine {
     while (true) {
       i--
       try {
-        preparedTx = await this.multicastServers(
-          'preparePayment',
-          this.walletLocalData.publicKey,
-          payment,
-          { maxLedgerVersionOffset: 300, fee: this.otherData.recommendedFee }
-        )
+        preparedTx = await this.multicastServers('preparePayment', payment)
         break
       } catch (err) {
         if (typeof err.message === 'string' && i) {
@@ -515,9 +473,7 @@ export class XrpEngine extends CurrencyEngine {
     const otherParams: XrpParams = {
       preparedTx
     }
-
-    nativeAmount = bns.add(nativeAmount, nativeNetworkFee)
-    nativeAmount = '-' + nativeAmount
+    nativeAmount = `-${bns.add(nativeAmount, nativeNetworkFee)}`
 
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
@@ -539,14 +495,12 @@ export class XrpEngine extends CurrencyEngine {
     const otherParams = getOtherParams(edgeTransaction)
 
     // Do signing
-    const txJson = otherParams.preparedTx.txJSON
+    const txJson = otherParams.preparedTx
     const privateKey = this.walletInfo.keys.rippleKey
 
-    const { signedTransaction, id } = await this.multicastServers(
-      'sign',
-      txJson,
-      privateKey
-    )
+    const wallet = Wallet.fromSeed(privateKey)
+    const { tx_blob: signedTransaction, hash: id } = wallet.sign(txJson)
+
     this.log.warn('Payment transaction signed...')
 
     edgeTransaction.signedTx = signedTransaction
