@@ -28,17 +28,12 @@ import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { XrpEngine } from './xrpEngine.js'
 import { currencyInfo } from './xrpInfo.js'
 
-// import RippledWsClientPool from 'rippled-ws-client-pool'
 export class XrpPlugin extends CurrencyPlugin {
   rippleApi: Object
   rippleApiSubscribers: { [walletId: string]: boolean }
-  // connectionPool: Object
-  connectionClients: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo) {
     super(io, 'ripple', currencyInfo)
-    // this.connectionPool = new RippledWsClientPool()
-    this.connectionClients = {}
     this.rippleApi = {}
     this.rippleApiSubscribers = {}
   }

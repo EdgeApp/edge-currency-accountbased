@@ -52,8 +52,6 @@ type PaymentJson = {
 
 type XrpParams = {
   preparedTx: Object
-  // publicAddress?: string,
-  // contractAddress?: string
 }
 
 type XrpFunction =
@@ -69,7 +67,6 @@ type XrpFunction =
 export class XrpEngine extends CurrencyEngine {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
-  // callbacksSetup: boolean
 
   constructor(
     currencyPlugin: XrpPlugin,
@@ -78,7 +75,6 @@ export class XrpEngine extends CurrencyEngine {
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
-    // this.callbacksSetup = false
   }
 
   async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
@@ -261,74 +257,12 @@ export class XrpEngine extends CurrencyEngine {
     }
   }
 
-  async clearBlockchainCache() {
-    await super.clearBlockchainCache()
-  }
-
   // ****************************************************************************
   // Public methods
   // ****************************************************************************
 
-  // setupCallbacks () {
-  //   // Callbacks are persistent so only do once
-  //   if (!this.callbacksSetup) {
-  //     this.currencyPlugin.connectionPool.on('ledger', (ledger) => {
-  //       this.log('Ledger A closed', ledger)
-  //     })
-  //     this.currencyPlugin.connectionPool.on('transaction', (tx) => {
-  //       const valid = validateObject(tx, XrpOnTransactionSchema)
-  //       if (valid) {
-  //         if (
-  //           tx.Data.transaction.Account.toLowerCase() === this.walletLocalData.publicKey.toLowerCase() ||
-  //           tx.Data.transaction.Destination.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
-  //         ) {
-  //           this.checkTransactionsInnerLoop()
-  //         }
-  //       } else {
-  //         this.log('Invalid data from connectionPool on Transaction')
-  //       }
-  //     })
-  //     this.callbacksSetup = true
-  //   }
-  // }
-
-  // joinPool () {
-  //   this.setupCallbacks()
-  //   this.currencyPlugin.connectionPool.subscribeAccount(this.walletLocalData.publicKey)
-  //   if (isEmpty(this.currencyPlugin.connectionClients)) {
-  //     for (const s of this.currencyInfo.defaultSettings.otherSettings.rippledServers) {
-  //       this.currencyPlugin.connectionPool.addServer(s)
-  //     }
-  //   }
-  //   this.currencyPlugin.connectionClients[this.walletId] = true
-  // }
-
-  // leavePool () {
-  //   this.currencyPlugin.connectionPool.unsubscribeAccount(this.walletLocalData.publicKey)
-  //   const t = this.currencyPlugin.connectionPool.getRanking()
-  //   this.log(t)
-  //   delete this.currencyPlugin.connectionClients[this.walletId]
-  //   if (isEmpty(this.currencyPlugin.connectionClients)) {
-  //     for (const s of this.currencyInfo.defaultSettings.otherSettings.rippledServers) {
-  //       this.currencyPlugin.connectionPool.removeServer(s)
-  //     }
-  //   }
-  // }
   async startEngine() {
     this.engineOn = true
-    // this.joinPool()
-    // try {
-    //   const result = await this.currencyPlugin.connectionPool.send({
-    //     command: 'account_info',
-    //     account: this.walletLocalData.publicKey
-    //   }, {
-    //     serverTimeout: 1500,
-    //     overallTimeout: 10000
-    //   })
-    //   console.log(result)
-    // } catch (e) {
-    //   console.log('Error', e.message)
-    // }
     try {
       await this.xrpPlugin.connectApi(this.walletId)
     } catch (e) {
