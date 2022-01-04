@@ -6,7 +6,9 @@
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 
 export type XrpSettings = {
-  rippledServers: string[]
+  rippledServers: string[],
+  defaultFee: string,
+  baseReserve: string
 }
 
 export type XrpCustomToken = {

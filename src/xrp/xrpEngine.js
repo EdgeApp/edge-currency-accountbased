@@ -21,9 +21,9 @@ import {
   pluginErrorCodes,
   pluginErrorName
 } from '../pluginError.js'
-import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
 import {
+  type XrpSettings,
   type XrpTransaction,
   type XrpWalletOtherData,
   asBalance,
@@ -36,10 +36,6 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
-
-const PRIMARY_CURRENCY = currencyInfo.currencyCode
-const MAX_DESTINATION_TAG_LENGTH = 10
-const MAX_DESTINATION_TAG_LIMIT = 4294967295
 
 type PaymentJson = {
   Amount: string,
@@ -67,6 +63,7 @@ type XrpFunction =
 export class XrpEngine extends CurrencyEngine {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
+  xrpSettings: XrpSettings
 
   constructor(
     currencyPlugin: XrpPlugin,
@@ -75,6 +72,7 @@ export class XrpEngine extends CurrencyEngine {
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.xrpPlugin = currencyPlugin
+    this.xrpSettings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
   }
 
   async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
@@ -108,8 +106,8 @@ export class XrpEngine extends CurrencyEngine {
       this.walletLocalDataDirty = true
     } catch (e) {
       this.log.error(`Error fetching recommended fee: ${e}. Using default fee.`)
-      if (this.otherData.recommendedFee !== currencyInfo.defaultSettings.fee) {
-        this.otherData.recommendedFee = currencyInfo.defaultSettings.fee
+      if (this.otherData.recommendedFee !== this.xrpSettings.defaultFee) {
+        this.otherData.recommendedFee = this.xrpSettings.defaultFee
         this.walletLocalDataDirty = true
       }
     }
@@ -144,7 +142,7 @@ export class XrpEngine extends CurrencyEngine {
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash.toLowerCase(),
       date: rippleTimeToUnixTime(tx.date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-      currencyCode: PRIMARY_CURRENCY,
+      currencyCode: this.xrpPlugin.currencyInfo.currencyCode,
       blockHeight: tx.ledger_index,
       nativeAmount,
       networkFee: tx.Fee,
@@ -152,7 +150,10 @@ export class XrpEngine extends CurrencyEngine {
       signedTx: '',
       otherParams: {}
     }
-    this.addTransaction(PRIMARY_CURRENCY, edgeTransaction)
+    this.addTransaction(
+      this.xrpPlugin.currencyInfo.currencyCode,
+      edgeTransaction
+    )
   }
 
   async checkTransactionsInnerLoop() {
@@ -308,57 +309,49 @@ export class XrpEngine extends CurrencyEngine {
 
     const nativeNetworkFee = this.otherData.recommendedFee
 
-    if (currencyCode === PRIMARY_CURRENCY) {
-      const virtualTxAmount = bns.add(nativeAmount, '20000000')
-      if (bns.gt(virtualTxAmount, nativeBalance)) {
-        throw new InsufficientFundsError()
-      }
-    }
-
-    let uniqueIdentifier
+    // Make sure amount doesn't drop the balance below the reserve amount otherwise the
+    // transaction is invalid. It is not necessary to consider the fee in this
+    // calculation because the transaction fee can be taken out of the reserve balance.
     if (
-      edgeSpendInfo.spendTargets[0].otherParams &&
-      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    ) {
-      if (
-        typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier ===
-        'string'
-      ) {
-        uniqueIdentifier = parseInt(
-          edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-        )
-      } else {
-        throw new Error('Error invalid destinationtag')
-      }
+      bns.gt(bns.add(nativeAmount, this.xrpSettings.baseReserve), nativeBalance)
+    )
+      throw new InsufficientFundsError()
 
+    const uniqueIdentifier =
+      edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier ?? ''
+
+    if (uniqueIdentifier !== '') {
       // Destination Tag Checks
-      const destinationTag =
-        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+      const {
+        memoMaxLength = Infinity,
+        memoMaxValue,
+        defaultSettings: { errorCodes }
+      } = this.xrpPlugin.currencyInfo
 
-      if (Number.isNaN(parseInt(destinationTag))) {
+      if (Number.isNaN(parseInt(uniqueIdentifier))) {
         throw new PluginError(
           'Please enter a valid Destination Tag',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_FORMAT
+          errorCodes.UNIQUE_IDENTIFIER_FORMAT
         )
       }
 
-      if (destinationTag.length > MAX_DESTINATION_TAG_LENGTH) {
+      if (uniqueIdentifier.length > memoMaxLength) {
         throw new PluginError(
-          'XRP Destination Tag must be 10 characters or less',
+          `Destination Tag must be ${memoMaxLength} characters or less`,
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
+          errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
         )
       }
 
-      if (destinationTag > MAX_DESTINATION_TAG_LIMIT) {
+      if (memoMaxValue != null && bns.gt(uniqueIdentifier, memoMaxValue)) {
         throw new PluginError(
           'XRP Destination Tag is above its maximum limit',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          currencyInfo.defaultSettings.errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
+          errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
         )
       }
     }
@@ -371,8 +364,8 @@ export class XrpEngine extends CurrencyEngine {
       Fee: nativeNetworkFee
     }
 
-    if (uniqueIdentifier != null) {
-      payment.DestinationTag = uniqueIdentifier
+    if (uniqueIdentifier !== '') {
+      payment.DestinationTag = parseInt(uniqueIdentifier)
     }
 
     let preparedTx = {}
