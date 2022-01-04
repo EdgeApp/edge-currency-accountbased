@@ -39,7 +39,7 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   async connectApi(walletId: string): Promise<void> {
-    if (!this.rippleApi.serverName) {
+    if (this.rippleApi.serverName == null) {
       const funcs =
         this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(
           server => async () => {
@@ -51,7 +51,7 @@ export class XrpPlugin extends CurrencyPlugin {
           }
         )
       const result = await asyncWaterfall(funcs)
-      if (!this.rippleApi.serverName) {
+      if (this.rippleApi.serverName == null) {
         this.rippleApi = result.api
       }
     }
@@ -123,7 +123,7 @@ export class XrpPlugin extends CurrencyPlugin {
     if (uri.includes(RIPPLE_DOT_COM_URI_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
       const addr = parsedUri.query.to
-      if (addr) {
+      if (addr != null) {
         uri = uri.replace(RIPPLE_DOT_COM_URI_PREFIX, `ripple:${addr}`)
       }
     }
@@ -152,7 +152,7 @@ export class XrpPlugin extends CurrencyPlugin {
       const currencyCode: string = 'XRP'
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
       amount = bns.div(nativeAmount, denom.multiplier, 6)
@@ -186,7 +186,7 @@ export function makeRipplePlugin(
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    if (!currencyEngine.otherData.recommendedFee) {
+    if (currencyEngine.otherData.recommendedFee == null) {
       currencyEngine.otherData.recommendedFee = '0'
     }
 

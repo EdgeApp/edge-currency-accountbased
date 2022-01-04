@@ -216,10 +216,7 @@ export class XrpEngine extends CurrencyEngine {
           const exchangeAmount = value
           const nativeAmount = bns.mul(exchangeAmount, '1000000')
 
-          if (
-            typeof this.walletLocalData.totalBalances[currencyCode] ===
-            'undefined'
-          ) {
+          if (this.walletLocalData.totalBalances[currencyCode] == null) {
             this.walletLocalData.totalBalances[currencyCode] = '0'
           }
 
@@ -238,15 +235,11 @@ export class XrpEngine extends CurrencyEngine {
         this.updateOnAddressesChecked()
       }
     } catch (e) {
-      if (e.data) {
-        if (e.data.error === 'actNotFound' || e.data.error_code === 19) {
-          this.log.warn(
-            'Account not found. Probably not activated w/minimum XRP'
-          )
-          this.tokenCheckBalanceStatus.XRP = 1
-          this.updateOnAddressesChecked()
-          return
-        }
+      if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
+        this.log.warn('Account not found. Probably not activated w/minimum XRP')
+        this.tokenCheckBalanceStatus.XRP = 1
+        this.updateOnAddressesChecked()
+        return
       }
       this.log.error(`Error fetching address info: ${e}`)
     }
@@ -376,7 +369,7 @@ export class XrpEngine extends CurrencyEngine {
         preparedTx = await this.multicastServers('preparePayment', payment)
         break
       } catch (err) {
-        if (typeof err.message === 'string' && i) {
+        if (typeof err?.message === 'string' && i > 0) {
           if (err.message.includes('has too many decimal places')) {
             // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
             // Just retrying seems to resolve it. -paulvp
@@ -441,17 +434,11 @@ export class XrpEngine extends CurrencyEngine {
   }
 
   getDisplayPrivateSeed() {
-    if (this.walletInfo.keys && this.walletInfo.keys.rippleKey) {
-      return this.walletInfo.keys.rippleKey
-    }
-    return ''
+    return this.walletInfo.keys?.rippleKey ?? ''
   }
 
   getDisplayPublicSeed() {
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+    return this.walletInfo.keys?.publicKey ?? ''
   }
 }
 
