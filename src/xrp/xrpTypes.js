@@ -59,3 +59,5 @@ export const asGetTransactionsResponse = asObject({
     )
   })
 })
+
+export const asBalance = asObject({ currency: asString, value: asString })

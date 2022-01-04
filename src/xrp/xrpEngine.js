@@ -15,7 +15,7 @@ import {
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { cleanTxLogs, getOtherParams, validateObject } from '../common/utils.js'
+import { cleanTxLogs, getOtherParams } from '../common/utils.js'
 import {
   PluginError,
   pluginErrorCodes,
@@ -23,10 +23,10 @@ import {
 } from '../pluginError.js'
 import { currencyInfo } from './xrpInfo.js'
 import { XrpPlugin } from './xrpPlugin.js'
-import { XrpGetBalancesSchema } from './xrpSchema.js'
 import {
   type XrpTransaction,
   type XrpWalletOtherData,
+  asBalance,
   asFee,
   asGetTransactionsResponse,
   asServerInfo
@@ -208,11 +208,11 @@ export class XrpEngine extends CurrencyEngine {
     const address = this.walletLocalData.publicKey
     try {
       const jsonObj = await this.multicastServers('getBalances', address)
-      const valid = validateObject(jsonObj, XrpGetBalancesSchema)
-      if (valid) {
+      if (Array.isArray(jsonObj)) {
         for (const bal of jsonObj) {
-          const currencyCode = bal.currency
-          const exchangeAmount = bal.value
+          const { currency, value } = asBalance(bal)
+          const currencyCode = currency
+          const exchangeAmount = value
           const nativeAmount = bns.mul(exchangeAmount, '1000000')
 
           if (
@@ -235,12 +235,6 @@ export class XrpEngine extends CurrencyEngine {
         }
         this.tokenCheckBalanceStatus.XRP = 1
         this.updateOnAddressesChecked()
-      } else {
-        this.log.error(
-          `Invalid data returned from rippleApi.getBalances ${JSON.stringify(
-            jsonObj
-          )}`
-        )
       }
     } catch (e) {
       if (e.data) {
