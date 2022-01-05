@@ -69,7 +69,31 @@ export default [
         'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
         '1234567000',
         'BNB'
-      ]
+      ],
+      'RenBrige Gateway uri address': {
+        args: ['binance://bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv'],
+        output: {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+          metadata: {
+            gateway: true
+          }
+        }
+      },
+      'RenBrige Gateway uri address with amount, label & message': {
+        args: [
+          'binance://bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv?amount=12.34567&label=Johnny%20Binance&message=Hello%20World,%20I%20miss%20you%20!'
+        ],
+        output: {
+          publicAddress: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
+          metadata: {
+            name: 'Johnny Binance',
+            notes: 'Hello World, I miss you !',
+            gateway: true
+          },
+          nativeAmount: '1234567000',
+          currencyCode: 'BNB'
+        }
+      }
     },
     encodeUri: {
       'address only': [
@@ -472,6 +496,30 @@ export default [
           publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
           nativeAmount: '2014000',
           currencyCode: 'USDC'
+        }
+      },
+      'RenBrige Gateway uri address': {
+        args: ['ethereum://0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'],
+        output: {
+          publicAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+          metadata: {
+            gateway: true
+          }
+        }
+      },
+      'RenBrige Gateway uri address with amount, label & message': {
+        args: [
+          'ethereum://0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48?amount=12345.6789&label=Johnny%20Ethereum&message=Hello%20World,%20I%20miss%20you%20!'
+        ],
+        output: {
+          publicAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+          metadata: {
+            name: 'Johnny Ethereum',
+            notes: 'Hello World, I miss you !',
+            gateway: true
+          },
+          nativeAmount: '12345678900000000000000',
+          currencyCode: 'ETH'
         }
       }
     },
