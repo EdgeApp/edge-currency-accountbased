@@ -59,7 +59,7 @@ export type FioRequest = {
 
 export type FioAddress = {
   name: string,
-  bundles?: number
+  bundledTxs?: number
 }
 
 export type FioDomain = {

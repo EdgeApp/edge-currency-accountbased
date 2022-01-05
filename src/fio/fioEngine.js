@@ -284,17 +284,17 @@ export class FioEngine extends CurrencyEngine {
                 await this.multicastServers('getFioAddresses', {
                   fioPublicKey: this.walletInfo.keys.publicKey
                 })
-              const updatedBundlesValue = fetchedFioAddresses.find(
+              const updatedBundledTxsValue = fetchedFioAddresses.find(
                 ({ fio_address: name }) => name === params.fioAddress
               ).remaining_bundled_tx
-              fioAddress.bundles = updatedBundlesValue
+              fioAddress.bundledTxs = updatedBundledTxsValue
               this.localDataDirty()
-              return { bundles: updatedBundlesValue, ...res }
+              return { bundledTxs: updatedBundledTxsValue, ...res }
             } catch (e) {
               //
             }
 
-            return { bundles: fioAddress.bundles, ...res }
+            return { bundledTxs: fioAddress.bundledTxs, ...res }
           }
         }
 
@@ -950,7 +950,9 @@ export class FioEngine extends CurrencyEngine {
               existedFioAddress.name === fioAddress.fio_address
           )
           if (existedFioAddress) {
-            if (existedFioAddress.bundles !== fioAddress.remaining_bundled_tx) {
+            if (
+              existedFioAddress.bundledTxs !== fioAddress.remaining_bundled_tx
+            ) {
               areAddressesChanged = true
               break
             }
@@ -1018,7 +1020,7 @@ export class FioEngine extends CurrencyEngine {
         isChanged = true
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
-          bundles: fioAddress.remaining_bundled_tx
+          bundledTxs: fioAddress.remaining_bundled_tx
         }))
       }
 
