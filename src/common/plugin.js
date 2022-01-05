@@ -66,6 +66,9 @@ export class CurrencyPlugin {
   ) {
     const parsedUri = parse(uri, {}, true)
 
+    // Add support for renproject Gateway URI type
+    const isGateway = uri.startsWith(`${currencyInfo.pluginId}://`)
+
     // Remove ":" from protocol
     if (parsedUri.protocol) {
       parsedUri.protocol = parsedUri.protocol.replace(':', '')
@@ -96,11 +99,12 @@ export class CurrencyPlugin {
     const message = parsedUri.query.message
     const category = parsedUri.query.category
 
-    if (label || message || category) {
+    if (label || message || category || isGateway) {
       edgeParsedUri.metadata = {}
       edgeParsedUri.metadata.name = label || undefined
       edgeParsedUri.metadata.notes = message || undefined
       edgeParsedUri.metadata.category = category || undefined
+      edgeParsedUri.metadata.gateway = isGateway || undefined
     }
 
     const amountStr = parsedUri.query.amount

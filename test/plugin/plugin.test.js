@@ -271,19 +271,29 @@ for (const fixture of fixtures) {
       'uri eip681 payment address',
       'uri eip681 payment address with pay prefix',
       'uri eip681 payment address using scientific notation',
-      'uri eip681 transfer contract invocation'
+      'uri eip681 transfer contract invocation',
+      'RenBrige Gateway uri address with amount, label & message',
+      'RenBrige Gateway uri address'
     ].forEach(function (caseName) {
       const caseFixtures = fixture.parseUri[caseName]
 
       if (caseFixtures == null) return
 
       it(caseName, async function () {
+        // $FlowFixMe
         const parsedUri = await tools.parseUri(...caseFixtures.args)
 
         Object.entries(caseFixtures.output).forEach(([key, value]) => {
           if (caseName === 'address only with provided currency code')
             console.log(';;', parsedUri)
-          assert.equal(parsedUri[key], value)
+
+          if (key === 'metadata') {
+            Object.keys(parsedUri[key]).forEach(metaKey => {
+              if (parsedUri[key][metaKey] === undefined)
+                delete parsedUri[key][metaKey]
+            })
+          }
+          assert.deepEqual(parsedUri[key], value)
         })
       })
     })
