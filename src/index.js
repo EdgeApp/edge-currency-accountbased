@@ -9,6 +9,7 @@ import { makeBinancePlugin } from './binance/bnbPlugin.js'
 import { makeEosPlugin } from './eos/eosInfo.js'
 import { makeTelosPlugin } from './eos/telosInfo.js'
 import { makeWaxPlugin } from './eos/waxInfo.js'
+import { makeAvalanchePlugin } from './ethereum/avaxInfo'
 import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeFantomPlugin } from './ethereum/ftminfo.js'
@@ -37,7 +38,8 @@ const plugins = {
   rsk: makeRskPlugin,
   binance: makeBinancePlugin,
   hedera: makeHederaPlugin,
-  polygon: makePolygonPlugin
+  polygon: makePolygonPlugin,
+  avalanche: makeAvalanchePlugin
 }
 
 if (
