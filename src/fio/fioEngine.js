@@ -270,12 +270,14 @@ export class FioEngine extends CurrencyEngine {
             return res
           }
           case 'addBundledTransactions': {
-            const res = await this.multicastServers(actionName, params)
             const fioAddress = this.otherData.fioAddresses.find(
               ({ name }) => name === params.fioAddress
             )
 
-            if (!fioAddress) return res
+            if (fioAddress == null)
+              throw new FioError('Fio Address is not found in engine')
+
+            const res = await this.multicastServers(actionName, params)
 
             try {
               const { fio_addresses: fetchedFioAddresses } =
