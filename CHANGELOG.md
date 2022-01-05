@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.10.5 (2022-01-05)
+
+- Support Wallet Connect across all ETH-like currencies
+- Add support for RenBridge Gateway address URI
+
 # 0.10.4 (2021-12-28)
 
 - XRP: Set memoMaxLength to 10
