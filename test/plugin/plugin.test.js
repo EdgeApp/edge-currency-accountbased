@@ -260,33 +260,37 @@ for (const fixture of fixtures) {
 
     /*
     interface TestCase {
-      args: any[],
-      output: {
-        [key: string]: any;
+      name: string
+      args: any[]
+      output?: {
+        [key: string]: any
       }
+      error?: string
     }
     */
-    ;[
-      'address only with provided currency code',
-      'uri eip681 payment address',
-      'uri eip681 payment address with pay prefix',
-      'uri eip681 payment address using scientific notation',
-      'uri eip681 transfer contract invocation'
-    ].forEach(function (caseName) {
-      const caseFixtures = fixture.parseUri[caseName]
+    if (fixture.parseUriArgCases && fixture.parseUriArgCases.length) {
+      fixture.parseUriArgCases.forEach(function (testCase) {
+        const { name: caseName, args, output, error } = testCase
 
-      if (caseFixtures == null) return
+        it(caseName, async function () {
+          await tools.parseUri(...args).then(
+            parsedUri => {
+              if (error != null) assert.fail('Reject expected: ' + error)
 
-      it(caseName, async function () {
-        const parsedUri = await tools.parseUri(...caseFixtures.args)
+              Object.entries(output).forEach(([key, value]) => {
+                assert.equal(parsedUri[key], value)
+              })
+            },
+            err => {
+              if (output != null)
+                assert.fail('Reject unexpected:' + err.message)
 
-        Object.entries(caseFixtures.output).forEach(([key, value]) => {
-          if (caseName === 'address only with provided currency code')
-            console.log(';;', parsedUri)
-          assert.equal(parsedUri[key], value)
+              assert.equal(error, err.message)
+            }
+          )
         })
       })
-    })
+    }
   })
 
   describe(`encodeUri for Wallet type ${WALLET_TYPE}`, function () {
