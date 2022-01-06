@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.11.1 (2022-01-06)
+
+- FIO: Replace additional network call with bundle constant
+
 # 0.11.0 (2022-01-06)
 
 - Add Avalanche (AVAX)
