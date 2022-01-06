@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.11.0 (2022-01-06)
+
+- Add Avalanche (AVAX)
+- FIO: Add addBundledTransactions action
+
 # 0.10.5 (2022-01-05)
 
 - Support Wallet Connect across all ETH-like currencies
