@@ -44,6 +44,8 @@ export const FIO_REQUESTS_TYPES = {
   SENT: 'SENT'
 }
 
+export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
+
 export type FioRequest = {
   fio_request_id: string,
   payer_fio_address: string,
