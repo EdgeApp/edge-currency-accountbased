@@ -482,16 +482,47 @@ type EIP712TypeData = {
   name: string,
   type: string
 }
+type MessageTypeProperty = {
+  name: string,
+  type: string
+}
 
+type MessageTypes = {
+  EIP712Domain: MessageTypeProperty[],
+  [additionalProperties: string]: MessageTypeProperty[]
+}
+
+export type TypedMessage<T: MessageTypes> = {
+  types: T,
+  primaryType: $Keys<T>,
+  domain: {
+    name?: string,
+    version?: string,
+    chainId?: number,
+    verifyingContract?: string
+  },
+  message: { [key: string]: any }
+}
+
+// signTypedData()
 export type EIP712TypedDataParam = {
   types: {
-    EIP712Domain: EIP712TypeData[],
-    [additionalProperties: string]: EIP712TypeData[]
+    EIP712Domain: [EIP712TypeData],
+    [type: string]: [EIP712TypeData]
   },
   primaryType: string,
   domain: Object,
   message: Object
 }
+// export type EIP712TypedDataParam = {
+//   types: {
+//     EIP712Domain: EIP712TypeData[],
+//     [additionalProperties: string]: EIP712TypeData[]
+//   },
+//   primaryType: string,
+//   domain: Object,
+//   message: Object
+// }
 
 export type EthereumUtils = {
   signMessage: (message: string) => string,

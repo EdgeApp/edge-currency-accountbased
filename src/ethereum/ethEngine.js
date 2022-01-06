@@ -131,6 +131,7 @@ export class EthereumEngine extends CurrencyEngine {
           // types: Record<string, MessageTypeProperty[]>,
           results: string[] = []
         ): string[] {
+          console.log('findTypeDependencies')
           const primaryTypeMatches = primaryType.match(/^\w*/u)
           const firstMatch = primaryTypeMatches ? primaryTypeMatches[0] : ''
           if (
@@ -157,6 +158,7 @@ export class EthereumEngine extends CurrencyEngine {
           primaryType: string,
           types: any // Record<string, MessageTypeProperty[]>
         ): string {
+          console.log('encodeType')
           let result = ''
           let deps = findTypeDependencies(primaryType, types).filter(
             dep => dep !== primaryType
@@ -175,7 +177,8 @@ export class EthereumEngine extends CurrencyEngine {
         }
 
         function hashType(primaryType, types) {
-          const encodeResult = encodeType(primaryType)
+          console.log('hashType')
+          const encodeResult = encodeType(primaryType, types)
           console.log('encodeResult: ', JSON.stringify(encodeResult))
           // test
           const keccak = EthereumUtil.keccak(encodeType(primaryType, types))
@@ -189,6 +192,7 @@ export class EthereumEngine extends CurrencyEngine {
           types: any, // Record<string, MessageTypeProperty[]>,
           useV4: boolean = true
         ): Buffer {
+          console.log('encodeData')
           const encodedTypes = ['bytes32']
           const encodedValues = [hashType(primaryType, types)]
 
@@ -289,21 +293,22 @@ export class EthereumEngine extends CurrencyEngine {
           return abi.rawEncode(encodedTypes, encodedValues)
         }
 
-        function structHash(primaryType, data) {
-          return EthereumUtil.keccak256(encodeData(primaryType, data))
+        function structHash(primaryType, data, types) {
+          return EthereumUtil.keccak256(encodeData(primaryType, data, types))
         }
 
-        function signHash() {
+        function signHash(types) {
           return EthereumUtil.keccak256(
             Buffer.concat([
               Buffer.from('1901', 'hex'),
-              structHash('EIP712Domain', typedData.domain),
-              structHash(typedData.primaryType, typedData.message)
+              structHash('EIP712Domain', typedData.domain, types),
+              structHash(typedData.primaryType, typedData.message, types)
             ])
           )
         }
 
-        const sig = EthereumUtil.ecsign(signHash(), privKey)
+        this.log.warn(`$=====pre sign======`)
+        const sig = EthereumUtil.ecsign(signHash(types), privKey)
         const { v, r, s } = sig
 
         this.log.warn(`$=====sign end======`)
