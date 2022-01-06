@@ -32,6 +32,7 @@ import {
   type FioRequest,
   ACTIONS_TO_END_POINT_KEYS,
   BROADCAST_ACTIONS,
+  DEFAULT_BUNDLED_TXS_AMOUNT,
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
@@ -279,21 +280,8 @@ export class FioEngine extends CurrencyEngine {
 
             const res = await this.multicastServers(actionName, params)
 
-            try {
-              const { fio_addresses: fetchedFioAddresses } =
-                await this.multicastServers('getFioAddresses', {
-                  fioPublicKey: this.walletInfo.keys.publicKey
-                })
-              const updatedBundledTxsValue = fetchedFioAddresses.find(
-                ({ fio_address: name }) => name === params.fioAddress
-              ).remaining_bundled_tx
-              fioAddress.bundledTxs = updatedBundledTxsValue
-              this.localDataDirty()
-              return { bundledTxs: updatedBundledTxsValue, ...res }
-            } catch (e) {
-              //
-            }
-
+            fioAddress.bundledTxs += DEFAULT_BUNDLED_TXS_AMOUNT
+            this.localDataDirty()
             return { bundledTxs: fioAddress.bundledTxs, ...res }
           }
         }
