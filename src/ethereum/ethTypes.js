@@ -485,8 +485,8 @@ type EIP712TypeData = {
 
 export type EIP712TypedDataParam = {
   types: {
-    EIP712Domain: [EIP712TypeData],
-    [type: string]: [EIP712TypeData]
+    EIP712Domain: EIP712TypeData[],
+    [additionalProperties: string]: EIP712TypeData[]
   },
   primaryType: string,
   domain: Object,
@@ -516,6 +516,7 @@ export const asWcRpcPayload = asObject({
     'personal_sign',
     'eth_sign',
     'eth_signTypedData',
+    'eth_signTypedData_v4',
     'eth_sendTransaction',
     'eth_signTransaction',
     'eth_sendRawTransaction'

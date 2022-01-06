@@ -14,25 +14,25 @@ const defaultNetworkFees: EthereumFees = {
   default: {
     baseFeeMultiplier: undefined,
     gasLimit: {
-      regularTransaction: '21000',
-      tokenTransaction: '300000',
-      minGasLimit: '21000'
+      regularTransaction: '210',
+      tokenTransaction: '30',
+      minGasLimit: '210'
     },
     gasPrice: {
-      lowFee: '30000000001',
-      standardFeeLow: '36000000000',
-      standardFeeHigh: '100000000000',
-      standardFeeLowAmount: '100000000000000000',
-      standardFeeHighAmount: '10000000000000000000',
-      highFee: '216000000000',
-      minGasPrice: '30000000000'
+      lowFee: '300',
+      standardFeeLow: '360',
+      standardFeeHigh: '100',
+      standardFeeLowAmount: '100',
+      standardFeeHighAmount: '100',
+      highFee: '216',
+      minGasPrice: '300'
     },
     minPriorityFee: undefined
   }
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://rpc-mainnet.maticvigil.com'],
+  rpcServers: ['https://polygon-rpc.com'],
   etherscanApiServers: ['https://api.polygonscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
@@ -53,7 +53,7 @@ const otherSettings: EthereumSettings = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
-  ethGasStationUrl: 'https://gasstation-mainnet.matic.network/',
+  ethGasStationUrl: '',
   defaultNetworkFees
 }
 

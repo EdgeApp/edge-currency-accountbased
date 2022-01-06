@@ -47,11 +47,11 @@ export function calcMiningFee(
         /^\s*$/.test(gasLimit) ||
         /^\s*$/.test(gasPrice)
       ) {
-        const e = new Error(
-          `Gas Limit: ${minGasLimit} Gas Price (Gwei): ${minGasPriceGwei}`
-        )
-        e.name = 'ErrorBelowMinimumFee'
-        throw e
+        // const e = new Error(
+        //   `Gas Limit: ${minGasLimit} Gas Price (Gwei): ${minGasPriceGwei}`
+        // )
+        // e.name = 'ErrorBelowMinimumFee'
+        // throw e
       }
 
       const gasPriceWei = bns.mul(gasPrice, WEI_MULTIPLIER)

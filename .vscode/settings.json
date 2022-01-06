@@ -1,3 +1,11 @@
 {
-    "javascript.validate.enable": false
+    "javascript.validate.enable": false,
+    "window.title": "${rootName}${separator}${activeEditorShort} ${separator} [Branch: jon/wip/signTypedData_v4]",
+    "workbench.colorCustomizations": {
+        "sideBar.background": "#ffffff",
+        "sideBar.border": "#969696",
+        "activityBar.background": "#521B1C",
+        "titleBar.activeBackground": "#732627",
+        "titleBar.activeForeground": "#FEFBFB"
+    }
 }

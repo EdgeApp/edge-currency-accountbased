@@ -64,13 +64,11 @@ import {
   asEthereumFees,
   asWcSessionRequestParams
 } from './ethTypes.js'
-
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 const walletConnectors: WalletConnectors = {}
-
 export class EthereumEngine extends CurrencyEngine {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
@@ -119,6 +117,7 @@ export class EthereumEngine extends CurrencyEngine {
       },
 
       signTypedData: (typedData: EIP712TypedDataParam) => {
+        this.log.warn('=====sign begin======')
         // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
         const valid = validateObject(typedData, EIP712TypedDataSchema)
         if (!valid) throw new Error('ErrorInvalidTypedData')
@@ -127,72 +126,167 @@ export class EthereumEngine extends CurrencyEngine {
         const types = typedData.types
 
         // Recursively finds all the dependencies of a type
-        function dependencies(primaryType, found = []) {
-          if (found.includes(primaryType)) {
-            return found
+        function findTypeDependencies(
+          primaryType: string,
+          // types: Record<string, MessageTypeProperty[]>,
+          results: string[] = []
+        ): string[] {
+          const primaryTypeMatches = primaryType.match(/^\w*/u)
+          const firstMatch = primaryTypeMatches ? primaryTypeMatches[0] : ''
+          if (
+            results.includes(firstMatch) ||
+            types[firstMatch] === undefined ||
+            types[firstMatch] === ''
+          ) {
+            return results
           }
-          if (types[primaryType] === undefined) {
-            return found
-          }
-          found.push(primaryType)
-          for (const field of types[primaryType]) {
-            for (const dep of dependencies(field.type, found)) {
-              if (!found.includes(dep)) {
-                found.push(dep)
-              }
+          results.push(firstMatch)
+          for (const field of types[firstMatch]) {
+            for (const dep of findTypeDependencies(
+              field.type,
+              // types,
+              results
+            )) {
+              !results.includes(dep) && results.push(dep)
             }
           }
-          return found
+          return results
         }
 
-        function encodeType(primaryType) {
-          // Get dependencies primary first, then alphabetical
-          let deps = dependencies(primaryType)
-          deps = deps.filter(t => t !== primaryType)
-          deps = [primaryType].concat(deps.sort())
-
-          // Format as a string with fields
+        function encodeType(
+          primaryType: string,
+          types: any // Record<string, MessageTypeProperty[]>
+        ): string {
           let result = ''
+          let deps = findTypeDependencies(primaryType, types).filter(
+            dep => dep !== primaryType
+          )
+          deps = [primaryType].concat(deps.sort())
           for (const type of deps) {
+            const children = types[type]
+            if (!children) {
+              throw new Error(`No type definition specified: ${type}`)
+            }
             result += `${type}(${types[type]
-              .map(({ name, type }) => `${type} ${name}`)
+              .map(({ name, type: t }) => `${t} ${name}`)
               .join(',')})`
           }
           return result
         }
 
-        function typeHash(primaryType) {
-          return EthereumUtil.keccak256(encodeType(primaryType))
+        function hashType(primaryType, types) {
+          const encodeResult = encodeType(primaryType)
+          console.log('encodeResult: ', JSON.stringify(encodeResult))
+          // test
+          const keccak = EthereumUtil.keccak(encodeType(primaryType, types))
+          console.log('keccak: ', JSON.stringify(keccak))
+          return keccak
         }
 
-        function encodeData(primaryType, data) {
-          const encTypes = []
-          const encValues = []
+        function encodeData(
+          primaryType: string,
+          data: any, // Record<string, any>,
+          types: any, // Record<string, MessageTypeProperty[]>,
+          useV4: boolean = true
+        ): Buffer {
+          const encodedTypes = ['bytes32']
+          const encodedValues = [hashType(primaryType, types)]
 
-          // Add typehash
-          encTypes.push('bytes32')
-          encValues.push(typeHash(primaryType))
+          if (useV4) {
+            const encodeField = (name, type, value) => {
+              if (types[type] !== undefined) {
+                return [
+                  'bytes32',
+                  value == null // eslint-disable-line no-eq-null
+                    ? '0x0000000000000000000000000000000000000000000000000000000000000000'
+                    : EthereumUtil.keccak(encodeData(type, value, types, useV4))
+                ]
+              }
 
-          // Add field contents
-          for (const field of types[primaryType]) {
-            let value = data[field.name]
-            if (field.type === 'string' || field.type === 'bytes') {
-              encTypes.push('bytes32')
-              value = EthereumUtil.keccak256(value)
-              encValues.push(value)
-            } else if (types[field.type] !== undefined) {
-              encTypes.push('bytes32')
-              value = EthereumUtil.keccak256(encodeData(field.type, value))
-              encValues.push(value)
-            } else if (field.type.lastIndexOf(']') === field.type.length - 1) {
-              throw new Error('Arrays currently unimplemented in encodeData')
-            } else {
-              encTypes.push(field.type)
-              encValues.push(value)
+              if (value === undefined) {
+                throw new Error(
+                  `missing value for field ${name} of type ${type}`
+                )
+              }
+
+              if (type === 'bytes') {
+                return ['bytes32', EthereumUtil.keccak(value)]
+              }
+
+              if (type === 'string') {
+                // convert string to buffer - prevents EthereumUtil from interpreting strings like '0xabcd' as hex
+                if (typeof value === 'string') {
+                  value = Buffer.from(value, 'utf8')
+                }
+                return ['bytes32', EthereumUtil.keccak(value)]
+              }
+
+              if (type.lastIndexOf(']') === type.length - 1) {
+                const parsedType = type.slice(0, type.lastIndexOf('['))
+                const typeValuePairs = value.map(item =>
+                  encodeField(name, parsedType, item)
+                )
+                return [
+                  'bytes32',
+                  EthereumUtil.keccak(
+                    abi.rawEncode(
+                      typeValuePairs.map(([t]) => t),
+                      typeValuePairs.map(([, v]) => v)
+                    )
+                  )
+                ]
+              }
+
+              return [type, value]
+            }
+
+            for (const field of types[primaryType]) {
+              const [type, value] = encodeField(
+                field.name,
+                field.type,
+                data[field.name]
+              )
+              encodedTypes.push(type)
+              encodedValues.push(value)
+            }
+          } else {
+            for (const field of types[primaryType]) {
+              let value = data[field.name]
+              if (value !== undefined) {
+                if (field.type === 'bytes') {
+                  encodedTypes.push('bytes32')
+                  value = EthereumUtil.keccak(value)
+                  encodedValues.push(value)
+                } else if (field.type === 'string') {
+                  encodedTypes.push('bytes32')
+                  // convert string to buffer - prevents EthereumUtil from interpreting strings like '0xabcd' as hex
+                  if (typeof value === 'string') {
+                    value = Buffer.from(value, 'utf8')
+                  }
+                  value = EthereumUtil.keccak(value)
+                  encodedValues.push(value)
+                } else if (types[field.type] !== undefined) {
+                  encodedTypes.push('bytes32')
+                  value = EthereumUtil.keccak(
+                    encodeData(field.type, value, types, useV4)
+                  )
+                  encodedValues.push(value)
+                } else if (
+                  field.type.lastIndexOf(']') ===
+                  field.type.length - 1
+                ) {
+                  throw new Error(
+                    'Arrays are unimplemented in encodeData; use V4 extension'
+                  )
+                } else {
+                  encodedTypes.push(field.type)
+                  encodedValues.push(value)
+                }
+              }
             }
           }
 
-          return abi.rawEncode(encTypes, encValues)
+          return abi.rawEncode(encodedTypes, encodedValues)
         }
 
         function structHash(primaryType, data) {
@@ -212,6 +306,7 @@ export class EthereumEngine extends CurrencyEngine {
         const sig = EthereumUtil.ecsign(signHash(), privKey)
         const { v, r, s } = sig
 
+        this.log.warn(`$=====sign end======`)
         return EthereumUtil.bufferToHex(
           Buffer.concat([
             EthereumUtil.setLengthLeft(r, 32),
@@ -253,6 +348,8 @@ export class EthereumEngine extends CurrencyEngine {
       personal_sign: params => this.utils.signMessage(params[0]),
       eth_sign: params => this.utils.signMessage(params[1]),
       eth_signTypedData: params =>
+        this.utils.signTypedData(JSON.parse(params[1])),
+      eth_signTypedData_v4: params =>
         this.utils.signTypedData(JSON.parse(params[1])),
       eth_sendTransaction: async (params, cc) => {
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
@@ -324,6 +421,7 @@ export class EthereumEngine extends CurrencyEngine {
               'call_request',
               (error: Error, payload: WcRpcPayload) => {
                 try {
+                  // # 1 (init call)
                   if (error) throw error
                   const out = {
                     uri: wcProps.uri,
@@ -345,13 +443,15 @@ export class EthereumEngine extends CurrencyEngine {
                           ),
                           gasPrice: decimalToHex(
                             this.otherData.networkFees.default.gasPrice
-                              .standardFeeHigh
+                              .standardFeeLow
                           )
                         },
                         ...payload.params[0]
                       }
                     ]
                   }
+
+                  // # 2 (init call)
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e) {
                   this.log.warn(
@@ -396,7 +496,9 @@ export class EthereumEngine extends CurrencyEngine {
         })
 
         if (approve) {
+          this.log.warn('===wcRequestResponse approve')
           try {
+            // # 1 conf
             const result = await this.otherMethods[`${payload.method}`](
               payload.params
             )
@@ -405,6 +507,7 @@ export class EthereumEngine extends CurrencyEngine {
               case 'personal_sign':
               case 'eth_sign':
               case 'eth_signTypedData':
+              case 'eth_signTypedData_v4':
                 walletConnectors[uri].connector.approveRequest(
                   requestBody({ result: result })
                 )
