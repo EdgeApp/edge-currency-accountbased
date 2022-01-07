@@ -18,6 +18,8 @@ import {
   type EdgeWalletInfo,
   InsufficientFundsError
 } from 'edge-core-js/types'
+// eslint-disable-next-line camelcase
+import { signTypedData_v4 } from 'eth-sig-util'
 import abi from 'ethereumjs-abi'
 import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
@@ -228,6 +230,8 @@ export class EthereumEngine extends CurrencyEngine {
         }
         if (params.value != null) {
           spendTarget.nativeAmount = hexToDecimal(params.value)
+        } else {
+          spendTarget.nativeAmount = '0'
         }
 
         const spendInfo: EdgeSpendInfo = {
@@ -254,6 +258,10 @@ export class EthereumEngine extends CurrencyEngine {
       eth_sign: params => this.utils.signMessage(params[1]),
       eth_signTypedData: params =>
         this.utils.signTypedData(JSON.parse(params[1])),
+      eth_signTypedData_v4: params =>
+        signTypedData_v4(Buffer.from(this.getDisplayPrivateSeed(), 'hex'), {
+          data: JSON.parse(params[1])
+        }),
       eth_sendTransaction: async (params, cc) => {
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
         const tx = await this.makeSpend(spendInfo)
@@ -405,6 +413,7 @@ export class EthereumEngine extends CurrencyEngine {
               case 'personal_sign':
               case 'eth_sign':
               case 'eth_signTypedData':
+              case 'eth_signTypedData_v4':
                 walletConnectors[uri].connector.approveRequest(
                   requestBody({ result: result })
                 )
