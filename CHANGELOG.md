@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# Unreleased
+
+- MATIC: Add 5 more RPC servers
+
 # 0.11.2 (2022-01-06)
 
 - ETH: Add eth_signTypedData_v4 support

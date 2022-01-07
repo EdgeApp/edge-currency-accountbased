@@ -32,7 +32,14 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://rpc-mainnet.maticvigil.com'],
+  rpcServers: [
+    'https://polygon-rpc.com/',
+    'https://rpc.polycat.finance',
+    'https://rpc-mainnet.maticvigil.com',
+    'https://matic-mainnet.chainstacklabs.com',
+    'https://matic-mainnet-full-rpc.bwarelabs.com',
+    'https://rpc-mainnet.matic.quiknode.pro'
+  ],
   etherscanApiServers: ['https://api.polygonscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
