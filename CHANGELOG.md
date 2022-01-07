@@ -1,6 +1,6 @@
 # edge-currency-accountbased
 
-# Unreleased
+# 0.11.3 (2022-01-07)
 
 - MATIC: Add 5 more RPC servers
 
