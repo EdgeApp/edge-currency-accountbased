@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.11.4 (2022-01-07)
+
+- Fixed WalletConnect Rarible bug
+
 # 0.11.3 (2022-01-07)
 
 - MATIC: Add 5 more RPC servers
