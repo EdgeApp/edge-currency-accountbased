@@ -256,8 +256,15 @@ export class EthereumEngine extends CurrencyEngine {
     this.otherMethods = {
       personal_sign: params => this.utils.signMessage(params[0]),
       eth_sign: params => this.utils.signMessage(params[1]),
-      eth_signTypedData: params =>
-        this.utils.signTypedData(JSON.parse(params[1])),
+      eth_signTypedData: params => {
+        try {
+          return this.utils.signTypedData(JSON.parse(params[1]))
+        } catch (e) {
+          // It's possible that the dApp makes the wrong call.
+          // Try to sign using the latest signTypedData_v4 method.
+          return this.otherMethods.eth_signTypedData_v4(params)
+        }
+      },
       eth_signTypedData_v4: params =>
         signTypedData_v4(Buffer.from(this.getDisplayPrivateSeed(), 'hex'), {
           data: JSON.parse(params[1])
