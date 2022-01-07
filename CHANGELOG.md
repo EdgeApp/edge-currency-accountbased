@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.11.2 (2022-01-06)
+
+- ETH: Add eth_signTypedData_v4 support
+
 # 0.11.1 (2022-01-06)
 
 - FIO: Replace additional network call with bundle constant
