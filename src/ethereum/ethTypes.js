@@ -560,6 +560,7 @@ export type EthereumOtherMethods = {
   personal_sign: (params: string[]) => string,
   eth_sign: (params: string[]) => string,
   eth_signTypedData: (params: string[]) => string,
+  eth_signTypedData_v4: (params: string[]) => string,
   eth_sendTransaction: (
     params: TxRpcParams,
     currencyCode: string
