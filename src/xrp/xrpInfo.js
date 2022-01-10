@@ -6,16 +6,13 @@ import { type EdgeCurrencyInfo } from 'edge-core-js/types'
 import { type XrpSettings } from './xrpTypes.js'
 
 const otherSettings: XrpSettings = {
-  rippledServers: [
-    'wss://s2.ripple.com',
-    'wss://rippled.xrptipbot.com',
-    'wss://s1.ripple.com'
-  ]
+  rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],
+  defaultFee: '10', // in drops
+  baseReserve: '10000000'
 }
 
 const defaultSettings: any = {
   otherSettings,
-  fee: '0.00001',
   errorCodes: {
     UNIQUE_IDENTIFIER_EXCEEDS_LENGTH: 'UNIQUE_IDENTIFIER_EXCEEDS_LENGTH',
     UNIQUE_IDENTIFIER_EXCEEDS_LIMIT: 'UNIQUE_IDENTIFIER_EXCEEDS_LIMIT',
@@ -33,6 +30,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings,
 
   memoMaxLength: 10,
+  memoMaxValue: '4294967295',
 
   addressExplorer: 'https://bithomp.com/explorer/%s',
   transactionExplorer: 'https://bithomp.com/explorer/%s',

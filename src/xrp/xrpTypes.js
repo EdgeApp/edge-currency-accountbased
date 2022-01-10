@@ -3,8 +3,12 @@
  */
 // @flow
 
+import { asArray, asNumber, asObject, asString } from 'cleaners'
+
 export type XrpSettings = {
-  rippledServers: string[]
+  rippledServers: string[],
+  defaultFee: string,
+  baseReserve: string
 }
 
 export type XrpCustomToken = {
@@ -14,25 +18,48 @@ export type XrpCustomToken = {
   contractAddress: string
 }
 
-export type XrpBalanceChange = {
-  currency: string,
-  value: string
-}
-export type XrpGetTransaction = {
-  type: string,
-  address: string,
-  id: string,
-  outcome: {
-    result: string,
-    timestamp: string,
-    fee: string,
-    ledgerVersion: number,
-    balanceChanges: {
-      [address: string]: XrpBalanceChange[]
-    }
-  }
-}
 export type XrpWalletOtherData = {
   recommendedFee: string // Floating point value in full XRP value
 }
-export type XrpGetTransactions = XrpGetTransaction[]
+
+export const asFee = asObject({
+  result: asObject({
+    drops: asObject({
+      minimum_fee: asString
+    })
+  })
+})
+
+export const asServerInfo = asObject({
+  result: asObject({
+    info: asObject({
+      validated_ledger: asObject({
+        seq: asNumber
+      })
+    })
+  })
+})
+
+export const asXrpTransaction = asObject({
+  Account: asString,
+  Amount: asString,
+  Destination: asString,
+  Fee: asString,
+  date: asNumber,
+  hash: asString,
+  ledger_index: asNumber
+})
+
+export type XrpTransaction = $Call<typeof asXrpTransaction>
+
+export const asGetTransactionsResponse = asObject({
+  result: asObject({
+    transactions: asArray(
+      asObject({
+        tx: asXrpTransaction
+      })
+    )
+  })
+})
+
+export const asBalance = asObject({ currency: asString, value: asString })

@@ -3,7 +3,6 @@
  */
 // @flow
 
-import baseX from 'base-x'
 import { bns } from 'biggystring'
 import {
   type EdgeCorePluginOptions,
@@ -15,61 +14,44 @@ import {
   type EdgeParsedUri,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
-import { xAddressToClassicAddress } from 'ripple-address-codec'
-import keypairs from 'ripple-keypairs'
-import { RippleAPI } from 'ripple-lib'
 import parse from 'url-parse'
+import {
+  Client,
+  decodeSeed,
+  isValidAddress,
+  Wallet,
+  xAddressToClassicAddress
+} from 'xrpl'
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
 import { XrpEngine } from './xrpEngine.js'
 import { currencyInfo } from './xrpInfo.js'
 
-// import RippledWsClientPool from 'rippled-ws-client-pool'
-
-const base58Codec = baseX(
-  '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-)
-
-function checkAddress(address: string): boolean {
-  let data: Uint8Array
-  try {
-    data = base58Codec.decode(address)
-  } catch (e) {
-    return false
-  }
-
-  return data.length === 25 && address.charAt(0) === 'r'
-}
-
 export class XrpPlugin extends CurrencyPlugin {
   rippleApi: Object
   rippleApiSubscribers: { [walletId: string]: boolean }
-  // connectionPool: Object
-  connectionClients: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo) {
     super(io, 'ripple', currencyInfo)
-    // this.connectionPool = new RippledWsClientPool()
-    this.connectionClients = {}
     this.rippleApi = {}
     this.rippleApiSubscribers = {}
   }
 
   async connectApi(walletId: string): Promise<void> {
-    if (!this.rippleApi.serverName) {
+    if (this.rippleApi.serverName == null) {
       const funcs =
         this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(
           server => async () => {
-            const api = new RippleAPI({ server })
+            const api = new Client(server)
             api.serverName = server
-            const result = await api.connect()
-            const out = { server, result, api }
+            await api.connect()
+            const out = { server, api }
             return out
           }
         )
       const result = await asyncWaterfall(funcs)
-      if (!this.rippleApi.serverName) {
+      if (this.rippleApi.serverName == null) {
         this.rippleApi = result.api
       }
     }
@@ -87,9 +69,8 @@ export class XrpPlugin extends CurrencyPlugin {
   async importPrivateKey(privateKey: string): Promise<{ rippleKey: string }> {
     privateKey = privateKey.replace(/\s/g, '')
     try {
-      // Try deriving an address from the key:
-      const keypair = keypairs.deriveKeypair(privateKey)
-      keypairs.deriveAddress(keypair.publicKey)
+      // Try decoding seed
+      decodeSeed(privateKey)
 
       // If that worked, return the key:
       return { rippleKey: privateKey }
@@ -105,15 +86,8 @@ export class XrpPlugin extends CurrencyPlugin {
       const algorithm =
         type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
       const entropy = Array.from(this.io.random(32))
-      const server =
-        this.currencyInfo.defaultSettings.otherSettings.rippledServers[0]
-      const api = new RippleAPI({ server })
-      const address = api.generateAddress({
-        algorithm,
-        entropy
-      })
-
-      return { rippleKey: address.secret }
+      const keys = Wallet.fromEntropy(entropy, { algorithm })
+      return { rippleKey: keys.seed }
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -122,9 +96,8 @@ export class XrpPlugin extends CurrencyPlugin {
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'ripple' || type === 'ripple-secp256k1') {
-      const keypair = keypairs.deriveKeypair(walletInfo.keys.rippleKey)
-      const publicKey = keypairs.deriveAddress(keypair.publicKey)
-      return { publicKey }
+      const wallet = Wallet.fromSeed(walletInfo.keys.rippleKey)
+      return { publicKey: wallet.classicAddress }
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -150,7 +123,7 @@ export class XrpPlugin extends CurrencyPlugin {
     if (uri.includes(RIPPLE_DOT_COM_URI_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
       const addr = parsedUri.query.to
-      if (addr) {
+      if (addr != null) {
         uri = uri.replace(RIPPLE_DOT_COM_URI_PREFIX, `ripple:${addr}`)
       }
     }
@@ -160,7 +133,7 @@ export class XrpPlugin extends CurrencyPlugin {
       uri,
       networks
     )
-    const valid = checkAddress(edgeParsedUri.publicAddress || '')
+    const valid = isValidAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -170,7 +143,7 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   async encodeUri(obj: EdgeEncodeUri): Promise<string> {
-    const valid = checkAddress(obj.publicAddress)
+    const valid = isValidAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -179,7 +152,7 @@ export class XrpPlugin extends CurrencyPlugin {
       const currencyCode: string = 'XRP'
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
       amount = bns.div(nativeAmount, denom.multiplier, 6)
@@ -213,7 +186,7 @@ export function makeRipplePlugin(
     // This is just to make sure otherData is Flow type checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    if (!currencyEngine.otherData.recommendedFee) {
+    if (currencyEngine.otherData.recommendedFee == null) {
       currencyEngine.otherData.recommendedFee = '0'
     }
 
