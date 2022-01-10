@@ -80,13 +80,18 @@ export class ZcashEngine extends CurrencyEngine {
         scanProgress,
         networkBlockHeight
       )
-      await this.queryBalance()
-      await this.queryTransactions()
-      this.onUpdateTransactions()
+      await this.queryAll()
     })
-    this.synchronizer.on('statusChanged', payload => {
+    this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
+      await this.queryAll()
     })
+  }
+
+  async queryAll() {
+    await this.queryBalance()
+    await this.queryTransactions()
+    this.onUpdateTransactions()
   }
 
   onUpdateBlockHeight(networkBlockHeight: number) {
