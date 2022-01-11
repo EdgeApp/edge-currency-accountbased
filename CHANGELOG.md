@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.11.5 (2022-01-10)
+
+- XRP: Migrate from ripple-lib to xrpl
+- ZEC: Upgrade to react-native-zcash v0.2.0
+
 # 0.11.4 (2022-01-07)
 
 - Fixed WalletConnect Rarible bug
