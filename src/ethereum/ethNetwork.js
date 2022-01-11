@@ -151,6 +151,7 @@ export class EthereumNetwork {
   checkTokenBalBlockchair: (...any) => any
   checkTokenBalRpc: (...any) => any
   processEthereumNetworkUpdate: (...any) => any
+  checkTxsAmberdata: (...any) => any
   currencyInfo: EdgeCurrencyInfo
   queryFuncs: { [service: string]: { [method: string]: Function } }
 
@@ -177,6 +178,7 @@ export class EthereumNetwork {
     this.checkTokenBalRpc = this.checkTokenBalRpc.bind(this)
     this.processEthereumNetworkUpdate =
       this.processEthereumNetworkUpdate.bind(this)
+    this.checkTxsAmberdata = this.checkTxsAmberdata.bind(this)
     this.queryFuncs = {
       amberdata: {
         blockheight: this.checkBlockHeightAmberdata,
@@ -1218,8 +1220,17 @@ export class EthereumNetwork {
     return await asyncWaterfall(funcs)
   }
 
-  get(method: string, service: string, ...args: any) {
-    return this.queryFuncs[service][method](...args) ?? (() => {})
+  async get(
+    method: GetMethods,
+    service: string,
+    ...args: any
+  ): Promise<EthereumNetworkUpdate> {
+    if (this.queryFuncs[service][method] != null) {
+      return this.queryFuncs[service][method](...args)
+    } else {
+      // If service doesn't provide requested method, skip it in asyncWaterfall
+      throw new Error('Function does not exist')
+    }
   }
 
   async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
@@ -1309,8 +1320,8 @@ export class EthereumNetwork {
     ...args: any
   ): Promise<EthereumNetworkUpdate> {
     return asyncWaterfall(
-      Object.keys(this.queryFuncs).map(service =>
-        this.get(method, service, ...args)
+      Object.keys(this.queryFuncs).map(
+        service => async () => this.get(method, service, ...args)
       )
     ).catch(e => {
       this.ethEngine.log.error(`check${method} failed to update `, e)
