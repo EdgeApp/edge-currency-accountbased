@@ -85,6 +85,7 @@ export class CurrencyEngine {
     this.currencyPlugin = currencyPlugin
     this.io = currencyPlugin.io
     this.log = opts.log
+    // need addHiddenProperties magic here for edge log
     this.log.warn = (message, e) => opts.log.warn(message + safeErrorMessage(e))
     this.log.error = (message, e) =>
       opts.log.error(message + safeErrorMessage(e))
