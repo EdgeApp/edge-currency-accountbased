@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.11.6 (2022-01-11)
+
+- Fix git URLs for dependencies
+
 # 0.11.5 (2022-01-10)
 
 - XRP: Migrate from ripple-lib to xrpl

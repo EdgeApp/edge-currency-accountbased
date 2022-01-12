@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "0.11.5",
+  "version": "0.11.6",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
