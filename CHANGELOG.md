@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+# 0.11.7 (2022-01-14)
+
+- ZEC: Prevent spending until engine is fully synced
+
 # 0.11.6 (2022-01-11)
 
 - Fix git URLs for dependencies
