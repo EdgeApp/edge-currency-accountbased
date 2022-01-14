@@ -291,6 +291,7 @@ export class ZcashEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    if (!this.isSynced) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     let nativeAmount = '0'
