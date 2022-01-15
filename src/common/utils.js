@@ -195,7 +195,7 @@ async function promiseNy<T>(
               resolve(result)
             }
           } else if (++failed + resolved === promises.length) {
-            reject(Error('Could not resolve n promises'))
+            reject(Error(`Could not resolve ${n} promises`))
           }
         },
         error => {
