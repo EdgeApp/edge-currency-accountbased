@@ -127,6 +127,18 @@ async function broadcastWrapper(promise: Promise<Object>, server: string) {
   return out
 }
 
+type GetTxsParams = {
+  startBlock: number,
+  startDate: number,
+  currencyCode: string
+}
+
+type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'txs'
+
+type QueryFuncs = {
+  [method: UpdateMethods]: (...args: any) => Promise<EthereumNetworkUpdate>[]
+}
+
 export class EthereumNetwork {
   ethNeeds: EthereumNeeds
   ethEngine: EthereumEngine
@@ -135,19 +147,18 @@ export class EthereumNetwork {
   checkBlockHeightEthscan: (...any) => any
   checkBlockHeightBlockchair: (...any) => any
   checkBlockHeightAmberdata: (...any) => any
-  checkBlockHeight: (...any) => any
   checkBlockHeightBlockbook: (...any) => any
   checkTxsBlockbook: (...any) => any
   checkNonceEthscan: (...any) => any
   checkNonceAmberdata: (...any) => any
-  checkNonce: (...any) => any
-  checkTxs: (...any) => any
   checkTokenBalEthscan: (...any) => any
   checkTokenBalBlockchair: (...any) => any
   checkTokenBalRpc: (...any) => any
-  checkTokenBal: (...any) => any
+  checkTxsEthscan: (...any) => any
   processEthereumNetworkUpdate: (...any) => any
+  checkTxsAmberdata: (...any) => any
   currencyInfo: EdgeCurrencyInfo
+  queryFuncs: QueryFuncs
 
   constructor(ethEngine: EthereumEngine, currencyInfo: EdgeCurrencyInfo) {
     this.ethEngine = ethEngine
@@ -165,17 +176,18 @@ export class EthereumNetwork {
     this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
     this.checkBlockHeightBlockbook = this.checkBlockHeightBlockbook.bind(this)
     this.checkTxsBlockbook = this.checkTxsBlockbook.bind(this)
-    this.checkBlockHeight = this.checkBlockHeight.bind(this)
     this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
     this.checkNonceAmberdata = this.checkNonceAmberdata.bind(this)
-    this.checkNonce = this.checkNonce.bind(this)
-    this.checkTxs = this.checkTxs.bind(this)
     this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
     this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
     this.checkTokenBalRpc = this.checkTokenBalRpc.bind(this)
-    this.checkTokenBal = this.checkTokenBal.bind(this)
+    this.checkTxsEthscan = this.checkTxsEthscan.bind(this)
     this.processEthereumNetworkUpdate =
       this.processEthereumNetworkUpdate.bind(this)
+    this.checkTxsAmberdata = this.checkTxsAmberdata.bind(this)
+    this.queryFuncs = this.buildQueryFuncs(
+      currencyInfo.defaultSettings.otherSettings
+    )
   }
 
   processEtherscanTransaction(
@@ -634,10 +646,6 @@ export class EthereumNetwork {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const { amberdataRpcServers } =
       this.currencyInfo.defaultSettings.otherSettings
-    if (amberdataRpcServers.length === 0)
-      throw new Error(
-        `No amberdataRpcServers for ${this.currencyInfo.currencyCode}`
-      )
     let apiKey = ''
     if (amberdataApiKey) {
       apiKey = '?x-api-key=' + amberdataApiKey
@@ -671,10 +679,6 @@ export class EthereumNetwork {
     const { amberdataApiKey } = this.ethEngine.initOptions
     const { amberdataApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
-    if (amberdataApiServers.length === 0)
-      throw new Error(
-        `No amberdataApiServers for ${this.currencyInfo.currencyCode}`
-      )
     const url = `${amberdataApiServers[0]}${path}`
     return this.fetchGetAmberdata(url, {
       headers: {
@@ -1248,18 +1252,6 @@ export class EthereumNetwork {
     }
   }
 
-  async checkBlockHeight(): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      this.checkBlockHeightEthscan,
-      this.checkBlockHeightAmberdata,
-      this.checkBlockHeightBlockchair,
-      this.checkBlockHeightBlockbook
-    ]).catch(e => {
-      this.ethEngine.log.error('checkBlockHeight failed to update ', e)
-      return {}
-    })
-  }
-
   async checkNonceEthscan(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
     const { result: jsonObj, server } = await this.multicastServers(
@@ -1290,12 +1282,13 @@ export class EthereumNetwork {
     }
   }
 
-  async checkNonce(): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      this.checkNonceEthscan,
-      this.checkNonceAmberdata
-    ]).catch(e => {
-      this.ethEngine.log.error('checkNonce failed to update ', e)
+  async check(
+    method: UpdateMethods,
+    ...args: any
+  ): Promise<EthereumNetworkUpdate> {
+    return asyncWaterfall(
+      this.queryFuncs[method].map(func => async () => await func(...args))
+    ).catch(e => {
       return {}
     })
   }
@@ -1349,10 +1342,8 @@ export class EthereumNetwork {
     return { allTransactions, server }
   }
 
-  async checkTxsEthscan(
-    startBlock: number,
-    currencyCode: string
-  ): Promise<EthereumNetworkUpdate> {
+  async checkTxsEthscan(params: GetTxsParams): Promise<EthereumNetworkUpdate> {
+    const { startBlock, currencyCode } = params
     let server
     let allTransactions
 
@@ -1646,10 +1637,9 @@ export class EthereumNetwork {
   }
 
   async checkTxsAmberdata(
-    startBlock: number,
-    startDate: number,
-    currencyCode: string
+    params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
+    const { startBlock, startDate, currencyCode } = params
     const allTxsRegular: EdgeTransaction[] = await this.getAllTxsAmberdata(
       startBlock,
       startDate,
@@ -1675,38 +1665,10 @@ export class EthereumNetwork {
     }
   }
 
-  async checkTxs(
-    startBlock: number,
-    startDate: number,
-    currencyCode: string
-  ): Promise<EthereumNetworkUpdate> {
-    let checkTxsFuncs = []
-    // const useApiKey = true
-    if (currencyCode === this.currencyInfo.currencyCode) {
-      checkTxsFuncs = [
-        async () => this.checkTxsAmberdata(startBlock, startDate, currencyCode),
-        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
-        async () => this.checkTxsBlockbook(startBlock),
-        async () => this.checkTxsEthscan(startBlock, currencyCode)
-      ]
-    } else {
-      checkTxsFuncs = [
-        // async () => this.checkTxsAlethio(startBlock, currencyCode, useApiKey),
-        // async () => this.checkTxsAlethio(startBlock, currencyCode, !useApiKey),
-        async () => this.checkTxsBlockbook(startBlock),
-        async () => this.checkTxsEthscan(startBlock, currencyCode)
-      ]
-    }
-    return asyncWaterfall(checkTxsFuncs).catch(e => {
-      this.ethEngine.log.error('checkTxs failed to update ', e)
-      return {}
-    })
-  }
-
   async checkTxsBlockbook(
-    startBlock: number = 0
+    params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
+    const { startBlock = 0 } = params
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     let page = 1
     let totalPages = 1
@@ -2019,22 +1981,11 @@ export class EthereumNetwork {
     }
   }
 
-  async checkTokenBal(tk: string): Promise<EthereumNetworkUpdate> {
-    return asyncWaterfall([
-      async () => this.checkTokenBalEthscan(tk),
-      this.checkTokenBalBlockchair,
-      async () => this.checkTokenBalRpc(tk)
-    ]).catch(e => {
-      this.ethEngine.log.error('heckTokenBal failed to update ', e)
-      return {}
-    })
-  }
-
   async checkAndUpdate(
     lastChecked: number = 0,
     pollMillisec: number,
     preUpdateBlockHeight: number,
-    checkFunc: () => EthereumNetworkUpdate
+    checkFunc: () => Promise<EthereumNetworkUpdate>
   ) {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
@@ -2072,14 +2023,14 @@ export class EthereumNetwork {
         this.ethNeeds.blockHeightLastChecked,
         BLOCKHEIGHT_POLL_MILLISECONDS,
         preUpdateBlockHeight,
-        this.checkBlockHeight
+        async () => this.check('blockheight')
       )
 
       await this.checkAndUpdate(
         this.ethNeeds.nonceLastChecked,
         NONCE_POLL_MILLISECONDS,
         preUpdateBlockHeight,
-        this.checkNonce
+        async () => this.check('nonce')
       )
 
       let currencyCodes
@@ -2099,7 +2050,7 @@ export class EthereumNetwork {
           this.ethNeeds.tokenBalLastChecked[tk],
           BAL_POLL_MILLISECONDS,
           preUpdateBlockHeight,
-          async () => this.checkTokenBal(tk)
+          async () => this.check('tokenBal', tk)
         )
 
         await this.checkAndUpdate(
@@ -2107,15 +2058,15 @@ export class EthereumNetwork {
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
           async () =>
-            this.checkTxs(
-              this.getQueryHeightWithLookback(
+            this.check('txs', {
+              startBlock: this.getQueryHeightWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
               ),
-              this.getQueryDateWithLookback(
+              startDate: this.getQueryDateWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionDate[tk]
               ),
-              tk
-            )
+              currencyCode: tk
+            })
         )
       }
 
@@ -2211,5 +2162,47 @@ export class EthereumNetwork {
       )
       this.ethEngine.transactionsChangedArray = []
     }
+  }
+
+  buildQueryFuncs(settings: EthereumSettings): QueryFuncs {
+    const {
+      rpcServers,
+      etherscanApiServers,
+      blockbookServers,
+      blockchairApiServers,
+      amberdataRpcServers,
+      amberdataApiServers
+    } = settings
+    const blockheight = []
+    const nonce = []
+    const txs = []
+    const tokenBal = []
+
+    if (etherscanApiServers.length > 0) {
+      blockheight.push(this.checkBlockHeightEthscan)
+      nonce.push(this.checkNonceEthscan)
+      txs.push(this.checkTxsEthscan)
+      tokenBal.push(this.checkTokenBalEthscan)
+    }
+    if (blockbookServers.length > 0) {
+      blockheight.push(this.checkBlockHeightBlockbook)
+      txs.push(this.checkTxsBlockbook)
+    }
+    if (blockchairApiServers.length > 0) {
+      blockheight.push(this.checkBlockHeightBlockchair)
+      tokenBal.push(this.checkTokenBalBlockchair)
+    }
+    if (amberdataRpcServers.length > 0) {
+      blockheight.push(this.checkBlockHeightAmberdata)
+      nonce.push(this.checkNonceAmberdata)
+    }
+    if (amberdataApiServers.length > 0) {
+      txs.push(this.checkTxsAmberdata)
+    }
+    if (rpcServers.length > 0) {
+      tokenBal.push(this.checkTokenBalRpc)
+    }
+    // $FlowFixMe // Flow doesn't like that the arrays start empty
+    return { blockheight, nonce, txs, tokenBal }
   }
 }
