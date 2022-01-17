@@ -836,17 +836,17 @@ export class CurrencyEngine {
     return returnArray
   }
 
-  getFreshAddress(options: any): EdgeFreshAddress {
+  async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
-  addGapLimitAddresses(addresses: string[], options: any) {}
+  async addGapLimitAddresses(addresses: string[], options: any) {}
 
-  isAddressUsed(address: string, options: any) {
+  async isAddressUsed(address: string, options: any) {
     return false
   }
 
-  dumpData(): EdgeDataDump {
+  async dumpData(): Promise<EdgeDataDump> {
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],
       walletType: this.walletInfo.type,

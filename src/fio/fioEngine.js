@@ -1327,7 +1327,7 @@ export class FioEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getFreshAddress(options: any): EdgeFreshAddress {
+  async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletInfo.keys.publicKey }
   }
 

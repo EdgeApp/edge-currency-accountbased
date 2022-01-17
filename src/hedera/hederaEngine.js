@@ -523,7 +523,7 @@ export class HederaEngine extends CurrencyEngine {
     return edgeTransaction
   }
 
-  getFreshAddress(options: Object): EdgeFreshAddress {
+  async getFreshAddress(options: Object): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletLocalData.otherData.hederaAccount }
   }
 
