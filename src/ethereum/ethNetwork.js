@@ -660,7 +660,8 @@ export class EthereumNetwork {
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id':
-          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId
+          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
+        'Content-Type': 'application/json'
       },
       method: 'POST',
       body: JSON.stringify(body)
