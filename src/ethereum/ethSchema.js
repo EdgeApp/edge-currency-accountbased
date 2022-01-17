@@ -29,17 +29,6 @@ export const EthGasStationSchema = {
   required: ['safeLow', 'fastest']
 }
 
-export const CustomTokenSchema = {
-  type: 'object',
-  properties: {
-    currencyCode: { type: 'string' },
-    currencyName: { type: 'string' },
-    multiplier: { type: 'string' },
-    contractAddress: { type: 'string' }
-  },
-  required: ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
-}
-
 export const EIP712TypedDataSchema = {
   type: 'object',
   properties: {
