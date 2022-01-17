@@ -40,27 +40,6 @@ export const CustomTokenSchema = {
   required: ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
 }
 
-export const BlockChairStatsSchema = {
-  type: 'object',
-  properties: {
-    data: {
-      type: 'object',
-      properties: {
-        blocks: { type: 'number' }
-      }
-    }
-  },
-  required: ['data']
-}
-
-export const AmberdataRpcSchema = {
-  type: 'object',
-  properties: {
-    result: { type: 'string' }
-  },
-  required: ['result']
-}
-
 export const EIP712TypedDataSchema = {
   type: 'object',
   properties: {

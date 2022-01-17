@@ -4,6 +4,7 @@ import type {
   EdgeCurrencyInfo,
   EdgeTransaction
 } from 'edge-core-js/src/types/types'
+import { type FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
 import {
@@ -21,12 +22,7 @@ import {
   validateObject
 } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
-import {
-  AmberdataRpcSchema,
-  BlockChairStatsSchema,
-  EtherscanGetAccountNonce,
-  EtherscanGetBlockHeight
-} from './ethSchema'
+import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
 import {
   type AlethioTokenTransfer,
   type AmberdataInternalTx,
@@ -36,14 +32,13 @@ import {
   type BlockbookTokenTransfer,
   type BlockbookTx,
   type CheckTokenBalBlockchair,
-  type CheckTokenBalRpc,
   type EthereumSettings,
   type EthereumTxOtherParams,
-  type EtherscanGetAccountBalance,
   type EtherscanInternalTransaction,
   type EtherscanTransaction,
   type FetchGetAlethio,
   type FetchGetAmberdataApiResponse,
+  type RpcResultString,
   asAlethioAccountsTokenTransfer,
   asAmberdataAccountsFuncs,
   asAmberdataAccountsTx,
@@ -52,14 +47,14 @@ import {
   asBlockbookTokenBalance,
   asBlockbookTx,
   asBlockChairAddress,
+  asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
-  asCheckTokenBalRpc,
-  asEtherscanGetAccountBalance,
   asEtherscanInternalTransaction,
   asEtherscanTokenTransaction,
   asEtherscanTransaction,
   asFetchGetAlethio,
-  asFetchGetAmberdataApiResponse
+  asFetchGetAmberdataApiResponse,
+  asRpcResultString
 } from './ethTypes'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
@@ -514,9 +509,7 @@ export class EthereumNetwork {
       if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
       if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
       if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
-      throw new Error(
-        `The server returned error code ${response.status} for ${url}`
-      )
+      this.throwError(response, 'fetchGet', url)
     }
     return response.json()
   }
@@ -551,9 +544,7 @@ export class EthereumNetwork {
     options.method = 'GET'
     const response = await this.ethEngine.fetchCors(url, options)
     if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${url}`
-      )
+      this.throwError(response, 'fetchGetAmberdata', url)
     }
     return response.json()
   }
@@ -598,9 +589,7 @@ export class EthereumNetwork {
 
     const parsedUrl = parse(url, {}, true)
     if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
-      )
+      this.throwError(response, 'fetchPostRPC', parsedUrl.hostname)
     }
     return response.json()
   }
@@ -623,9 +612,7 @@ export class EthereumNetwork {
     })
     const parsedUrl = parse(url, {}, true)
     if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
-      )
+      this.throwError(response, 'fetchPostBlockcypher', parsedUrl.hostname)
     }
     return response.json()
   }
@@ -668,9 +655,7 @@ export class EthereumNetwork {
     })
     const parsedUrl = parse(url, {}, true)
     if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${parsedUrl.hostname}`
-      )
+      this.throwError(response, 'fetchPostAmberdataRpc', parsedUrl)
     }
     const jsonObj = await response.json()
     return jsonObj
@@ -1229,27 +1214,30 @@ export class EthereumNetwork {
   }
 
   async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
-    const jsonObj = await this.fetchGetBlockchair(
-      `/${this.currencyInfo.pluginId}/stats`,
-      false
-    )
-    const valid = validateObject(jsonObj, BlockChairStatsSchema)
-    if (valid) {
-      const blockHeight = parseInt(jsonObj.data.blocks, 10)
+    try {
+      const jsonObj = await this.fetchGetBlockchair(
+        `/${this.currencyInfo.pluginId}/stats`,
+        false
+      )
+      const blockHeight = parseInt(
+        asCheckBlockHeightBlockchair(jsonObj).data.blocks,
+        10
+      )
       return { blockHeight, server: 'blockchair' }
-    } else {
-      throw new Error('Blockchair returned invalid JSON')
+    } catch (e) {
+      this.logError(e)
+      throw new Error('checkBlockHeightBlockchair returned invalid JSON')
     }
   }
 
   async checkBlockHeightAmberdata(): Promise<EthereumNetworkUpdate> {
-    const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
-    const valid = validateObject(jsonObj, AmberdataRpcSchema)
-    if (valid) {
-      const blockHeight = parseInt(jsonObj.result, 16)
+    try {
+      const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
+      const blockHeight = parseInt(asRpcResultString(jsonObj).result, 16)
       return { blockHeight, server: 'amberdata' }
-    } else {
-      throw new Error('Amberdata returned invalid JSON')
+    } catch (e) {
+      this.logError('checkBlockHeightAmberdata', e)
+      throw new Error('checkTxsAmberdata (regular tx) response is invalid')
     }
   }
 
@@ -1270,15 +1258,15 @@ export class EthereumNetwork {
 
   async checkNonceAmberdata(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey
-    const jsonObj = await this.fetchPostAmberdataRpc(
-      'eth_getTransactionCount',
-      [address, 'latest']
-    )
-    const valid = validateObject(jsonObj, AmberdataRpcSchema)
-    if (valid) {
-      const newNonce = `${parseInt(jsonObj.result, 16)}`
+    try {
+      const jsonObj = await this.fetchPostAmberdataRpc(
+        'eth_getTransactionCount',
+        [address, 'latest']
+      )
+      const newNonce = `${parseInt(asRpcResultString(jsonObj).result, 16)}`
       return { newNonce, server: 'amberdata' }
-    } else {
+    } catch (e) {
+      this.logError('checkNonceAmberdata', e)
       throw new Error('Amberdata returned invalid JSON')
     }
   }
@@ -1563,9 +1551,7 @@ export class EthereumNetwork {
           const jsonObj = await this.fetchGetAmberdataApi(url)
           cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
         } catch (e) {
-          this.ethEngine.error(
-            `checkTxsAmberdata fetch regular ${safeErrorMessage(e)}\n${url}`
-          )
+          this.logError('checkTxsAmberdata regular txs', e)
           throw new Error('checkTxsAmberdata (regular tx) response is invalid')
         }
         const amberdataTxs = cleanedResponseObj.payload.records
@@ -1602,9 +1588,7 @@ export class EthereumNetwork {
           const jsonObj = await this.fetchGetAmberdataApi(url)
           cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
         } catch (e) {
-          this.ethEngine.error(
-            `checkTxsAmberdata fetch internal ${safeErrorMessage(e)}\n${url}`
-          )
+          this.logError('checkTxsAmberdata internal txs', e)
           throw new Error('checkTxsAmberdata (internal tx) response is invalid')
         }
         const amberdataTxs = cleanedResponseObj.payload.records
@@ -1862,7 +1846,7 @@ export class EthereumNetwork {
     let response
     let jsonObj
     let server
-    let cleanedResponseObj: EtherscanGetAccountBalance
+    let cleanedResponseObj: RpcResultString
     try {
       if (tk === this.currencyInfo.currencyCode) {
         response = await this.multicastServers('eth_getBalance', address)
@@ -1881,7 +1865,7 @@ export class EthereumNetwork {
           server = response.server
         }
       }
-      cleanedResponseObj = asEtherscanGetAccountBalance(jsonObj)
+      cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e) {
       this.ethEngine.error(
         `checkTokenBalEthscan token ${tk} response ${response || ''} `,
@@ -1907,7 +1891,7 @@ export class EthereumNetwork {
       const jsonObj = await this.fetchGetBlockchair(url, true)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
     } catch (e) {
-      this.ethEngine.error(`checkTokenBalBlockchair ${url} `, e)
+      this.logError('checkTokenBalBlockchair', e)
       throw new Error('checkTokenBalBlockchair response is invalid')
     }
     const response = {
@@ -1959,7 +1943,7 @@ export class EthereumNetwork {
         server = response.server
       }
 
-      cleanedResponseObj = asCheckTokenBalRpc(jsonObj)
+      cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e) {
       this.ethEngine.error(
         `checkTokenBalRpc token ${tk} response ${response || ''} `,
@@ -2202,5 +2186,24 @@ export class EthereumNetwork {
     }
     // $FlowFixMe // Flow doesn't like that the arrays start empty
     return { blockheight, nonce, txs, tokenBal }
+  }
+
+  throwError(res: FetchResponse, funcName: string, url: string) {
+    switch (res.status) {
+      case 402: // blockchair
+      case 429: // amberdata
+      case 432: // blockchair
+        throw new Error('rateLimited')
+      default:
+        throw new Error(
+          `${funcName} The server returned error code ${res.status} for ${url}`
+        )
+    }
+  }
+
+  logError(funcName: string, e?: Error) {
+    safeErrorMessage(e).includes('rateLimited')
+      ? this.ethEngine.log(funcName, e)
+      : this.ethEngine.error(funcName, e)
   }
 }

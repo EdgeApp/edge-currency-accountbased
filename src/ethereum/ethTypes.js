@@ -382,6 +382,12 @@ export const asCheckTokenBalBlockchair = asObject({
 
 export type CheckTokenBalBlockchair = $Call<typeof asCheckTokenBalBlockchair>
 
+export const asCheckBlockHeightBlockchair = asObject({
+  data: asObject({
+    blocks: asNumber
+  })
+})
+
 export type AmberdataTx = {|
   hash: string,
   timestamp: string,
@@ -454,19 +460,11 @@ export type AmberdataInternalTx = {|
   to: Array<{ address: string }>
 |}
 
-export const asEtherscanGetAccountBalance = asObject({
+export const asRpcResultString = asObject({
   result: asString
 })
 
-export type EtherscanGetAccountBalance = $Call<
-  typeof asEtherscanGetAccountBalance
->
-
-export const asCheckTokenBalRpc = asObject({
-  result: asString
-})
-
-export type CheckTokenBalRpc = $Call<typeof asCheckTokenBalRpc>
+export type RpcResultString = $Call<typeof asRpcResultString>
 
 export type TxRpcParams = {
   from?: string,
