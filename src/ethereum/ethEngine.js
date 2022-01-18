@@ -317,9 +317,7 @@ export class EthereumEngine extends CurrencyEngine {
               'session_request',
               (error: Error, payload: WcRpcPayload) => {
                 if (error) {
-                  this.error(
-                    `Wallet connect session_request ${error?.message ?? ''}`
-                  )
+                  this.error(`Wallet connect session_request`, error)
                   throw error
                 }
                 const params = asWcSessionRequestParams(payload).params[0]
@@ -472,7 +470,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.warn(tk + ': token Address balance: ' + balance)
+      this.warn(`${tk}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -566,14 +564,14 @@ export class EthereumEngine extends CurrencyEngine {
         hexToDecimal(baseFeePerGas)
       )
     } catch (error) {
-      this.error(error)
+      this.error('getBaseFeePerGas', error)
     }
 
     try {
       // If base fee is not suppported, update network fees from gas station
       this.updateNetworkFeesFromEthGasStation()
     } catch (error) {
-      this.error(error)
+      this.error('updateNetworkFeesFromEthGasStation', error)
     }
   }
 

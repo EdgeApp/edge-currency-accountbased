@@ -138,7 +138,7 @@ export class BinanceEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.warn(tk + ': token Address balance: ' + balance)
+      this.warn(`${tk}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -370,7 +370,7 @@ export class BinanceEngine extends CurrencyEngine {
             server: 'irrelevant'
           }
         } else {
-          throw new Error('send fail with error: ' + result.message)
+          throw new Error(`send fail with error: ${result.message}`)
         }
       }
 

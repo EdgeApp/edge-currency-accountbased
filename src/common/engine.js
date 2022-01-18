@@ -364,7 +364,7 @@ export class CurrencyEngine {
 
       this.transactionListDirty = true
       this.transactionsChangedArray.push(edgeTransaction)
-      this.warn('addTransaction new tx: ' + edgeTransaction.txid)
+      this.warn(`addTransaction new tx: ${edgeTransaction.txid}`)
     } else {
       // Already have this tx in the database. See if anything changed
       const transactionsArray = this.transactionList[currencyCode]
@@ -486,7 +486,7 @@ export class CurrencyEngine {
     this.transactionList[currencyCode][idx] = edgeTransaction
     this.transactionListDirty = true
     this.transactionsChangedArray.push(edgeTransaction)
-    this.warn('updateTransaction:' + edgeTransaction.txid)
+    this.warn(`updateTransaction: ${edgeTransaction.txid}`)
   }
 
   // *************************************
@@ -542,7 +542,7 @@ export class CurrencyEngine {
         )
       } catch (e) {
         this.error(
-          'doInitialBalanceCallback Error for currencyCode' + currencyCode,
+          `doInitialBalanceCallback Error for currencyCode ${currencyCode}`,
           e
         )
       }
@@ -557,7 +557,7 @@ export class CurrencyEngine {
         )
       } catch (e) {
         this.error(
-          'doInitialTransactionsCallback Error for currencyCode' + currencyCode,
+          `doInitialTransactionsCallback Error for currencyCode ${currencyCode}`,
           e
         )
       }

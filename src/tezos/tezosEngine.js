@@ -189,7 +189,7 @@ export class TezosEngine extends CurrencyEngine {
           remainingRpcNodes.map(async server => {
             eztz.node.setProvider(server)
             const result = await eztz.rpc.silentInject(params[1])
-            this.warn('Injected silently to: ' + server)
+            this.warn(`Injected silently to: ${server}`)
             return { server, result }
           })
         )

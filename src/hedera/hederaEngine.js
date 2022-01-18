@@ -105,7 +105,7 @@ export class HederaEngine extends CurrencyEngine {
           const json = asGetAccountActivationQuote(await response.json())
 
           const { request_id: requestId, address, amount } = json
-          this.warn('activationRequestId: ' + requestId)
+          this.warn(`activationRequestId: ${requestId}`)
 
           this.walletLocalData.otherData.activationRequestId = requestId
           this.walletLocalData.otherData.accountActivationQuoteAddress = address
@@ -149,8 +149,8 @@ export class HederaEngine extends CurrencyEngine {
           const response = await this.io.fetch(paymentUrl, options)
           if (!response.ok) {
             this.warn(
-              'submitActivationPayment failed to submit payment' +
-                (await response.text())
+              `submitActivationPayment failed to submit payment
+                ${await response.text()}`
             )
             throw new Error('ErrorActivationPayment')
           }
@@ -211,8 +211,9 @@ export class HederaEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
           clearTimeout(this.timers.checkAccountCreationStatus)
           this.warn(
-            'hederaEngine error from account activation status' +
-              JSON.stringify(json)
+            `hederaEngine error from account activation status ${JSON.stringify(
+              json
+            )}`
           )
           throw new Error('ErrorAccountActivation')
         }
