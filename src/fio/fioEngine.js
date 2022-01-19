@@ -412,6 +412,29 @@ export class FioEngine extends CurrencyEngine {
     return super.getBalance(options)
   }
 
+  doInitialBalanceCallback() {
+    super.doInitialBalanceCallback()
+
+    const balanceCurrencyCodes =
+      this.currencyInfo.defaultSettings.balanceCurrencyCodes
+    for (const currencyCodeKey in balanceCurrencyCodes) {
+      try {
+        this.currencyEngineCallbacks.onBalanceChanged(
+          balanceCurrencyCodes[currencyCodeKey],
+          this.walletLocalData.totalBalances[
+            balanceCurrencyCodes[currencyCodeKey]
+          ] ?? '0'
+        )
+      } catch (e) {
+        this.log.error(
+          'doInitialBalanceCallback Error for currencyCode',
+          balanceCurrencyCodes[currencyCodeKey],
+          e
+        )
+      }
+    }
+  }
+
   updateBalance(tk: string, balance: string) {
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
