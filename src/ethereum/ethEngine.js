@@ -760,6 +760,37 @@ export class EthereumEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    // For mainnet currency, starting with 1 ensures we get past makeSpend's checks so
+    // we can calculate the spendable amount. For tokens, makeSpend will throw regardless
+    // of the amount entered if there isn't enough mainnet currency to pay the fee.
+    const maxSpendTarget = {
+      ...spendInfo.spendTargets[0],
+      nativeAmount: '1'
+    }
+    const edgeTx = await this.makeSpend({
+      ...spendInfo,
+      spendTargets: [maxSpendTarget]
+    })
+    if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
+      const mainnetBalance = this.getBalance({
+        currencyCode: this.currencyInfo.currencyCode
+      })
+      const { networkFee } = edgeTx
+      const spendableMainnetBalance = bns.sub(mainnetBalance, networkFee)
+      if (bns.lte(spendableMainnetBalance, '0'))
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee
+        })
+      return spendableMainnetBalance
+    } else {
+      return this.getBalance({
+        currencyCode: spendInfo.currencyCode
+      })
+    }
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
