@@ -36,8 +36,8 @@ import {
   ACTIONS_TO_END_POINT_KEYS,
   ACTIONS_TO_FEE_END_POINT_KEYS,
   BROADCAST_ACTIONS,
-  FEE_ACTION_MAP,
   DEFAULT_BUNDLED_TXS_AMOUNT,
+  FEE_ACTION_MAP,
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET
@@ -409,6 +409,29 @@ export class FioEngine extends CurrencyEngine {
 
   getBalance(options: any): string {
     return super.getBalance(options)
+  }
+
+  doInitialBalanceCallback() {
+    super.doInitialBalanceCallback()
+
+    const balanceCurrencyCodes =
+      this.currencyInfo.defaultSettings.balanceCurrencyCodes
+    for (const currencyCodeKey in balanceCurrencyCodes) {
+      try {
+        this.currencyEngineCallbacks.onBalanceChanged(
+          balanceCurrencyCodes[currencyCodeKey],
+          this.walletLocalData.totalBalances[
+            balanceCurrencyCodes[currencyCodeKey]
+          ] ?? '0'
+        )
+      } catch (e) {
+        this.log.error(
+          'doInitialBalanceCallback Error for currencyCode',
+          balanceCurrencyCodes[currencyCodeKey],
+          e
+        )
+      }
+    }
   }
 
   updateBalance(tk: string, balance: string) {
