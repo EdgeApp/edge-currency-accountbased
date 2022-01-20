@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+# 0.11.8 (2022-01-20)
+
+- ZEC: Fix to enable max spend
+- Miscellaneous cleanup: improvem logging, general refactoring and removal of dead code
+
 # 0.11.7 (2022-01-14)
 
 - ZEC: Prevent spending until engine is fully synced
@@ -85,6 +90,7 @@
 # 0.8.3 (2021-11-08)
 
 - WalletConnect: Fix fee strings
+
 # 0.8.2 (2021-11-08)
 
 - Wallet Connect Fix: Make sure that transaction methods have fee parameters
