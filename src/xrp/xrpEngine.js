@@ -279,7 +279,7 @@ export class XrpEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  getMaxSpendable = async (spendInfo: EdgeSpendInfo): Promise<string> => {
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     const { currencyCode } = spendInfo
     let spendableBalance = this.getBalance({
       currencyCode
@@ -287,7 +287,7 @@ export class XrpEngine extends CurrencyEngine {
     if (currencyCode === this.xrpPlugin.currencyInfo.currencyCode) {
       spendableBalance = bns.sub(spendableBalance, this.xrpSettings.baseReserve)
     }
-    if (bns.lt(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (bns.lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
     return spendableBalance
   }

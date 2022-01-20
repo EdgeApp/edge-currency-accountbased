@@ -915,7 +915,7 @@ export class EosEngine extends CurrencyEngine {
     await this.startEngine()
   }
 
-  getFreshAddress(options: any): EdgeFreshAddress {
+  async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     if (this.walletLocalData.otherData.accountName) {
       return { publicAddress: this.walletLocalData.otherData.accountName }
     } else {

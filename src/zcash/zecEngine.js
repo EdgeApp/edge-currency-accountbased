@@ -290,6 +290,16 @@ export class ZcashEngine extends CurrencyEngine {
     )
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const spendableBalance = bns.sub(
+      this.availableZatoshi,
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+    )
+    if (bns.lte(spendableBalance, '0')) throw new InsufficientFundsError()
+
+    return spendableBalance
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     if (!this.isSynced) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
