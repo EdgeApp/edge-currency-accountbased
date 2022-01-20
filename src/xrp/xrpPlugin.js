@@ -24,7 +24,11 @@ import {
 } from 'xrpl'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { asyncWaterfall, getDenomInfo } from '../common/utils.js'
+import {
+  asyncWaterfall,
+  getDenomInfo,
+  safeErrorMessage
+} from '../common/utils.js'
 import { XrpEngine } from './xrpEngine.js'
 import { currencyInfo } from './xrpInfo.js'
 
@@ -74,8 +78,8 @@ export class XrpPlugin extends CurrencyPlugin {
 
       // If that worked, return the key:
       return { rippleKey: privateKey }
-    } catch (error) {
-      throw new Error('Invalid private key: ' + String(error))
+    } catch (e) {
+      throw new Error(`Invalid private key: ${safeErrorMessage(e)}`)
     }
   }
 

@@ -195,7 +195,7 @@ async function promiseNy<T>(
               resolve(result)
             }
           } else if (++failed + resolved === promises.length) {
-            reject(Error('Could not resolve n promises'))
+            reject(Error(`Could not resolve ${n} promises`))
           }
         },
         error => {
@@ -388,6 +388,15 @@ function getFetchCors(opts: EdgeCorePluginOptions): Function {
       }
     }))
   }
+}
+
+export function safeErrorMessage(e?: Error): string {
+  let sāfError = ''
+  if (e != null) {
+    if (e.name != null) sāfError += `${e.name} `
+    if (e.message != null) sāfError += e.message
+  }
+  return sāfError
 }
 
 export {

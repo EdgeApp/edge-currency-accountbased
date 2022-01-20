@@ -70,14 +70,3 @@ export const BinanceApiGetTransactions = {
   },
   required: ['tx']
 }
-
-export const CustomTokenSchema = {
-  type: 'object',
-  properties: {
-    currencyCode: { type: 'string' },
-    currencyName: { type: 'string' },
-    multiplier: { type: 'string' },
-    contractAddress: { type: 'string' }
-  },
-  required: ['currencyCode', 'currencyName', 'multiplier', 'contractAddress']
-}

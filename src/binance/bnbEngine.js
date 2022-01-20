@@ -127,8 +127,8 @@ export class BinanceEngine extends CurrencyEngine {
           )
         }
       }
-    } catch (err) {
-      this.log.error('Error fetching height: ' + err)
+    } catch (e) {
+      this.error('Error fetching height: ', e)
     }
   }
 
@@ -138,7 +138,7 @@ export class BinanceEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.log.warn(tk + ': token Address balance: ' + balance)
+      this.warn(`${tk}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -163,7 +163,7 @@ export class BinanceEngine extends CurrencyEngine {
             if (balance.symbol === tk) {
               const denom = getDenomInfo(this.currencyInfo, tk)
               if (!denom) {
-                this.log.error(
+                this.error(
                   `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
                 )
                 break
@@ -175,14 +175,14 @@ export class BinanceEngine extends CurrencyEngine {
         }
       }
     } catch (e) {
-      // fetching of account balances for uninitiate accounts returns 404 (throws error)
+      // fetching of account balances for uninitiated accounts returns 404 (throws error)
       if (
         this.tokenCheckTransactionsStatus.BNB === 1 &&
         this.transactionList.BNB.length === 0
       ) {
         this.updateBalance('BNB', '0')
       }
-      this.log.error(`Error checking BNB address balance`)
+      this.error(`Error checking BNB address balance`)
     }
   }
 
@@ -269,7 +269,7 @@ export class BinanceEngine extends CurrencyEngine {
           )
           if (valid) {
             for (const transaction of transactionsResults.tx) {
-              // shuold we process extra transaction for native BNB fees?
+              // should we process extra transaction for native BNB fees?
               this.processBinanceApiTransaction(transaction, currencyCode)
             }
             if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
@@ -277,7 +277,7 @@ export class BinanceEngine extends CurrencyEngine {
             }
           } else {
             checkAddressSuccess = false
-            this.log.error(
+            this.error(
               'checkTransactionsFetch inner loop invalid query results'
             )
             break
@@ -286,7 +286,7 @@ export class BinanceEngine extends CurrencyEngine {
         start = end
       }
     } catch (e) {
-      this.log.error(
+      this.error(
         `Error checkTransactionsFetch ${currencyCode}: ${this.walletLocalData.publicKey}`,
         e
       )
@@ -323,7 +323,7 @@ export class BinanceEngine extends CurrencyEngine {
     try {
       resultArray = await Promise.all(promiseArray)
     } catch (e) {
-      this.log.error('Failed to query transactions', e.name, e.message)
+      this.error('Failed to query transactions ', e)
     }
     let successCount = 0
     for (const r of resultArray) {
@@ -370,7 +370,7 @@ export class BinanceEngine extends CurrencyEngine {
             server: 'irrelevant'
           }
         } else {
-          throw new Error('send fail with error: ' + result.message)
+          throw new Error(`send fail with error: ${result.message}`)
         }
       }
 
@@ -383,7 +383,7 @@ export class BinanceEngine extends CurrencyEngine {
               const result = await this.fetchGet(server + params[0])
               if (typeof result !== 'object') {
                 const msg = `Invalid return value ${func} in ${server}`
-                this.log.error(msg)
+                this.error(msg)
                 throw new Error(msg)
               }
               return { server, result }
@@ -532,9 +532,7 @@ export class BinanceEngine extends CurrencyEngine {
     const amount = spendAmount.replace('-', '')
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
     if (!denom) {
-      this.log.error(
-        `signTx Received unsupported currencyCode: ${currencyCode}`
-      )
+      this.error(`signTx Received unsupported currencyCode: ${currencyCode}`)
       throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
     }
     const nativeAmountString = parseInt(amount) / parseInt(denom.multiplier)
@@ -552,7 +550,7 @@ export class BinanceEngine extends CurrencyEngine {
       otherParams.memo
     )
     otherParams.serializedTx = signedTx.serialize()
-    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -567,7 +565,7 @@ export class BinanceEngine extends CurrencyEngine {
       bnbSignedTransaction
     )
     if (response.result[0] && response.result[0].ok) {
-      this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       edgeTransaction.txid = response.result[0].hash
     }
     return edgeTransaction

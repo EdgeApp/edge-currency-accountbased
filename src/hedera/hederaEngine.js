@@ -105,7 +105,7 @@ export class HederaEngine extends CurrencyEngine {
           const json = asGetAccountActivationQuote(await response.json())
 
           const { request_id: requestId, address, amount } = json
-          this.log.warn('activationRequestId: ', requestId)
+          this.warn(`activationRequestId: ${requestId}`)
 
           this.walletLocalData.otherData.activationRequestId = requestId
           this.walletLocalData.otherData.accountActivationQuoteAddress = address
@@ -119,9 +119,9 @@ export class HederaEngine extends CurrencyEngine {
             exchangeAmount: '0'
           }
         } catch (e) {
-          this.log.warn(
+          this.warn(
             'getAccountActivationQuote: error submitting account activation request',
-            e?.message ?? ''
+            e
           )
           throw new Error('ErrorActivationRequest')
         }
@@ -148,14 +148,14 @@ export class HederaEngine extends CurrencyEngine {
         try {
           const response = await this.io.fetch(paymentUrl, options)
           if (!response.ok) {
-            this.log.warn(
-              'submitActivationPayment failed to submit payment',
-              await response.text()
+            this.warn(
+              `submitActivationPayment failed to submit payment
+                ${await response.text()}`
             )
             throw new Error('ErrorActivationPayment')
           }
         } catch (e) {
-          this.log.warn('submitActivationPayment error: ', e?.message ?? '')
+          this.warn('submitActivationPayment error: ', e)
           throw e
         }
 
@@ -191,10 +191,7 @@ export class HederaEngine extends CurrencyEngine {
         }
       }
     } catch (e) {
-      this.log.warn(
-        `checkAccountCreationStatus ${this.mirrorNodes[0]} error`,
-        e?.message ?? ''
-      )
+      this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
     }
 
     // Double check with activation server
@@ -213,9 +210,10 @@ export class HederaEngine extends CurrencyEngine {
             undefined
           this.walletLocalDataDirty = true
           clearTimeout(this.timers.checkAccountCreationStatus)
-          this.log.warn(
-            'hederaEngine error from account activation status',
-            JSON.stringify(json)
+          this.warn(
+            `hederaEngine error from account activation status ${JSON.stringify(
+              json
+            )}`
           )
           throw new Error('ErrorAccountActivation')
         }
@@ -224,10 +222,9 @@ export class HederaEngine extends CurrencyEngine {
           accountId = json.account_id
         }
       } catch (e) {
-        this.log.warn(
-          `error checking Hedera account creation status, ID: ${activationRequestId} error ${
-            e?.message ?? ''
-          }`
+        this.warn(
+          `error checking Hedera account creation status, ID: ${activationRequestId} error `,
+          e
         )
         if (e?.message === 'ErrorAccountActivation') throw e
       }
@@ -281,10 +278,7 @@ export class HederaEngine extends CurrencyEngine {
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
     } catch (e) {
-      this.log.warn(
-        'getNewTransactions error getting transactions:',
-        e?.message ?? ''
-      )
+      this.warn('getNewTransactions error getting transactions:', e)
     }
   }
 
@@ -326,7 +320,7 @@ export class HederaEngine extends CurrencyEngine {
     const response = await this.io.fetch(url)
 
     if (!response.ok) {
-      this.log.warn(
+      this.warn(
         `getTransactionsMirrorNode error fetching MirrorNode transactions: ${url}`
       )
 
@@ -515,7 +509,7 @@ export class HederaEngine extends CurrencyEngine {
       )
       await txn.execute(this.client)
     } catch (e) {
-      this.log.warn('broadcastTx error', e?.message ?? '')
+      this.warn('broadcastTx error', e)
       throw e
     }
     // must be > 0 to not show "Synchronizing"

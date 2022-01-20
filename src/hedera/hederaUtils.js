@@ -24,7 +24,7 @@ export const getOtherMethods = (
     } catch (e) {
       opts.log.warn(
         'getActivationCost error unable to get account activation cost',
-        e?.message ?? ''
+        e
       )
       throw new Error('ErrorUnableToGetCost')
     }

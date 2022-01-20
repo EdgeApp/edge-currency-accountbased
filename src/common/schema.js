@@ -2,67 +2,7 @@
 
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 
-export const CurrencyInfoSchema = {
-  type: 'object',
-  properties: {
-    walletTypes: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    currencyCode: { type: 'string' },
-    currencyName: { type: 'string' },
-    addressExplorer: { type: 'string' },
-    transactionExplorer: { type: 'string' },
-    defaultSettings: {
-      type: 'object'
-    },
-    denominations: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          multiplier: { type: 'string' },
-          symbol: { type: 'string' }
-        },
-        required: ['name', 'multiplier']
-      }
-    },
-    metaTokens: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          currencyCode: { type: 'string' },
-          currencyName: { type: 'string' },
-          denominations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                name: { type: 'string' },
-                multiplier: { type: 'string' },
-                symbol: { type: 'string' }
-              },
-              required: ['name', 'multiplier']
-            }
-          },
-          contractAddress: { type: 'string' }
-        },
-        required: ['currencyCode', 'currencyName', 'denominations']
-      }
-    }
-  },
-  required: [
-    'walletTypes',
-    'currencyCode',
-    'currencyName',
-    'defaultSettings',
-    'denominations',
-    'addressExplorer',
-    'transactionExplorer'
-  ]
-}
+import { safeErrorMessage } from './utils'
 
 export const asCurrencyCodeOptions = asObject({
   currencyCode: asOptional(asString)
@@ -75,16 +15,16 @@ export const asCurrencyCodeOptions = asObject({
 export function checkEdgeSpendInfo(raw: any): void {
   try {
     asPartialSpendInfo(raw)
-  } catch (error) {
-    throw new TypeError('Invalid EdgeSpendInfo: ' + error.message)
+  } catch (e) {
+    throw new TypeError(`Invalid EdgeSpendInfo: ${safeErrorMessage(e)}`)
   }
 }
 
 export function checkCustomToken(raw: any): void {
   try {
     asCustomToken(raw)
-  } catch (error) {
-    throw new TypeError('Invalid CustomToken: ' + error.message)
+  } catch (e) {
+    throw new TypeError(`Invalid CustomToken: ${safeErrorMessage(e)}`)
   }
 }
 

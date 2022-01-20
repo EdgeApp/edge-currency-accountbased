@@ -68,7 +68,7 @@ import {
 } from './ethTypes.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgassstation because it uses 10x gwei
+const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgasstation because it uses 10x gwei
 const WEI_MULTIPLIER = 1000000000
 const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 const walletConnectors: WalletConnectors = {}
@@ -317,9 +317,7 @@ export class EthereumEngine extends CurrencyEngine {
               'session_request',
               (error: Error, payload: WcRpcPayload) => {
                 if (error) {
-                  this.log.error(
-                    `Wallet connect session_request ${error?.message ?? ''}`
-                  )
+                  this.error(`Wallet connect session_request`, error)
                   throw error
                 }
                 const params = asWcSessionRequestParams(payload).params[0]
@@ -369,9 +367,7 @@ export class EthereumEngine extends CurrencyEngine {
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e) {
-                  this.log.warn(
-                    `Wallet connect call_request ${e?.message ?? ''}`
-                  )
+                  this.warn(`Wallet connect call_request `, e)
                   throw e
                 }
               }
@@ -474,7 +470,7 @@ export class EthereumEngine extends CurrencyEngine {
     }
     if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
-      this.log.warn(tk + ': token Address balance: ' + balance)
+      this.warn(`${tk}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
@@ -547,15 +543,15 @@ export class EthereumEngine extends CurrencyEngine {
           this.walletLocalDataDirty = true
         }
       } else {
-        this.log.error(
+        this.error(
           `Error: Fetched invalid networkFees ${JSON.stringify(jsonObj)}`
         )
       }
-    } catch (err) {
-      this.log.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`
+    } catch (e) {
+      this.error(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`,
+        e
       )
-      this.log.error(err)
     }
 
     try {
@@ -568,14 +564,14 @@ export class EthereumEngine extends CurrencyEngine {
         hexToDecimal(baseFeePerGas)
       )
     } catch (error) {
-      this.log.error(error)
+      this.error('getBaseFeePerGas', error)
     }
 
     try {
       // If base fee is not suppported, update network fees from gas station
       this.updateNetworkFeesFromEthGasStation()
     } catch (error) {
-      this.log.error(error)
+      this.error('updateNetworkFeesFromEthGasStation', error)
     }
   }
 
@@ -726,12 +722,12 @@ export class EthereumEngine extends CurrencyEngine {
       } else {
         throw new Error(`Error: Fetched invalid networkFees from EthGasStation`)
       }
-    } catch (err) {
-      this.log.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`
+    } catch (e) {
+      this.error(
+        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`,
+        e
       )
-      this.log.error(err)
-      this.log.crash(err, { rawData: jsonObj })
+      this.log.crash(e, { rawData: jsonObj })
     }
   }
 
@@ -949,10 +945,6 @@ export class EthereumEngine extends CurrencyEngine {
               'eth_estimateGas',
               estimateGasParams
             )
-            this.log.warn(
-              'lookhere estimateGas estimateGasResult',
-              JSON.stringify(estimateGasResult)
-            )
             gasLimit = bns.add(
               parseInt(estimateGasResult.result.result, 16).toString(),
               '0'
@@ -996,8 +988,8 @@ export class EthereumEngine extends CurrencyEngine {
           contractAddress,
           gasLimit
         }
-      } catch (err) {
-        this.log.error(`makeSpend Error determining gas limit ${err}`)
+      } catch (e) {
+        this.error(`makeSpend Error determining gas limit `, e)
       }
     } else if (useDefaults) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
@@ -1096,7 +1088,7 @@ export class EthereumEngine extends CurrencyEngine {
       // 1. We have unconfirmed spending txs in the transaction list
       // 2. It is greater than the confirmed nonce
       // 3. Is no more than 5 higher than confirmed nonce
-      // Othewise, use the next nonce
+      // Otherwise, use the next nonce
       if (
         this.walletLocalData.numUnconfirmedSpendTxs &&
         bns.gt(
@@ -1173,7 +1165,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     // Log the private key address
     const wallet = ethWallet.fromPrivateKey(privKey)
-    this.log.warn(`signTx getAddressString ${wallet.getAddressString()}`)
+    this.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
     // Create and sign transaction
     const unsignedTx = Transaction.fromTxData(txParams, { common })
@@ -1185,7 +1177,7 @@ export class EthereumEngine extends CurrencyEngine {
     if (edgeTransaction.otherParams) {
       edgeTransaction.otherParams.nonceUsed = nonce
     }
-    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -1195,7 +1187,7 @@ export class EthereumEngine extends CurrencyEngine {
     await this.ethNetwork.multicastServers('broadcastTx', edgeTransaction)
 
     // Success
-    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
     return edgeTransaction
   }

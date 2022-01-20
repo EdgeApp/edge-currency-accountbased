@@ -158,9 +158,7 @@ export class TezosEngine extends CurrencyEngine {
           const result = await eztz.rpc
             .inject(params[0], params[1])
             .catch((e: Error) => {
-              this.log.error(
-                'Error when injection operation: ' + e.name + e.message
-              )
+              this.error('Error when injection operation: ', e)
               const errorMessage = this.formatError(e)
               if (!preApplyError && errorMessage !== '') {
                 preApplyError = errorMessage
@@ -172,7 +170,7 @@ export class TezosEngine extends CurrencyEngine {
           return { server, result }
         })
         out = await asyncWaterfall(funcs).catch((e: Error) => {
-          this.log.error('Error from waterfall: ' + e.name + e.message)
+          this.error('Error from waterfall: ', e)
           if (preApplyError !== '') {
             throw new Error(preApplyError)
           } else {
@@ -191,7 +189,7 @@ export class TezosEngine extends CurrencyEngine {
           remainingRpcNodes.map(async server => {
             eztz.node.setProvider(server)
             const result = await eztz.rpc.silentInject(params[1])
-            this.log.warn('Injected silently to: ' + server)
+            this.warn(`Injected silently to: ${server}`)
             return { server, result }
           })
         )
@@ -309,7 +307,7 @@ export class TezosEngine extends CurrencyEngine {
     const balance = await this.multicastServers('getBalance', pkh)
     if (this.walletLocalData.totalBalances[currencyCode] !== balance) {
       this.walletLocalData.totalBalances[currencyCode] = balance
-      this.log.warn(`Updated ${currencyCode} balance ${balance}`)
+      this.warn(`Updated ${currencyCode} balance ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
     this.tokenCheckBalanceStatus.XTZ = 1
@@ -461,7 +459,7 @@ export class TezosEngine extends CurrencyEngine {
       otherParams.fullOp.opOb.signature = signed.edsig
       edgeTransaction.signedTx = signed.sbytes
     }
-    this.log.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 
@@ -475,7 +473,7 @@ export class TezosEngine extends CurrencyEngine {
     const result = await this.multicastServers('injectOperation', opOb, opBytes)
     edgeTransaction.txid = result.hash
     edgeTransaction.date = Date.now() / 1000
-    this.log.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
 

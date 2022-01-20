@@ -1,6 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
 // @flow
 
 import { bns } from 'biggystring'
