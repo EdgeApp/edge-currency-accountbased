@@ -42,6 +42,7 @@ import {
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET,
+  STAKING_LOCK_PERIOD,
   STAKING_REWARD_MEMO
 } from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
@@ -435,6 +436,15 @@ export class FioEngine extends CurrencyEngine {
         )
       }
     }
+
+    try {
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        stakedAmounts: [],
+        ...this.otherData.stakingStatus
+      })
+    } catch (e) {
+      this.error(`doInitialBalanceCallback onStakingStatusChanged`, e)
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -457,6 +467,92 @@ export class FioEngine extends CurrencyEngine {
       (otherParams.data != null &&
         otherParams.data.memo === STAKING_REWARD_MEMO)
     )
+  }
+
+  updateStakingStatus(
+    nativeAmount: string,
+    blockTime: string,
+    txId: string
+  ): void {
+    // Might not be necessary, but better to be safe than sorry
+    if (
+      this.otherData.stakingStatus == null ||
+      this.otherData.stakingStatus.stakedAmounts == null
+    ) {
+      this.otherData.stakingStatus = {
+        stakedAmounts: []
+      }
+    }
+
+    const stakedAmountIndex =
+      this.otherData.stakingStatus.stakedAmounts.findIndex(
+        ({ otherParams }) => {
+          if (otherParams == null || otherParams.date == null) return false
+
+          return (
+            new Date(otherParams.date).toDateString() ===
+            new Date(blockTime).toDateString()
+          )
+        }
+      )
+
+    if (stakedAmountIndex < 0) {
+      this.otherData.stakingStatus.stakedAmounts.push({
+        nativeAmount,
+        unlockDate: new Date(
+          new Date(blockTime).getTime() + STAKING_LOCK_PERIOD
+        ),
+        otherParams: {
+          date: new Date(blockTime),
+          txs: [{ txId, nativeAmount, blockTime }]
+        }
+      })
+    } else {
+      const stakedAmount = {
+        ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
+        nativeAmount: '0'
+      }
+      const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
+        ({ txId: itemTxId }) => itemTxId === txId
+      )
+
+      if (addedTxIndex < 0) {
+        stakedAmount.otherParams.txs.push({
+          txId,
+          nativeAmount,
+          blockTime
+        })
+      } else {
+        stakedAmount.otherParams.txs[addedTxIndex] = {
+          txId,
+          nativeAmount,
+          blockTime
+        }
+      }
+
+      for (const tx of stakedAmount.otherParams.txs) {
+        stakedAmount.nativeAmount = bns.add(
+          stakedAmount.nativeAmount,
+          tx.nativeAmount
+        )
+      }
+
+      this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
+        stakedAmount
+    }
+
+    this.localDataDirty()
+    try {
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        ...this.otherData.stakingStatus
+      })
+    } catch (e) {
+      this.error('onStakingStatusChanged error')
+    }
+  }
+
+  async getStakingStatus(): Promise<EdgeStakingStatus> {
+    return { ...this.otherData.stakingStatus }
   }
 
   processTransaction(
@@ -498,6 +594,10 @@ export class FioEngine extends CurrencyEngine {
         } else {
           nativeAmount = `-${nativeAmount}`
         }
+      }
+
+      if (currencyCode === lockedTokenCode) {
+        nativeAmount = data.amount != null ? data.amount.toString() : '0'
       }
 
       const index = this.findTransaction(
@@ -655,12 +755,18 @@ export class FioEngine extends CurrencyEngine {
       this.addTransaction(currencyCode, edgeTransaction)
     }
 
-    if (
-      currencyCode === this.currencyInfo.currencyCode &&
-      this.checkUnStakeTx(otherParams)
-    ) {
-      this.processTransaction(action, actor, lockedTokenCode)
+    if (this.checkUnStakeTx(otherParams)) {
+      if (currencyCode === this.currencyInfo.currencyCode)
+        this.processTransaction(action, actor, lockedTokenCode)
+
+      if (currencyCode === lockedTokenCode)
+        this.updateStakingStatus(
+          nativeAmount || '0',
+          action.block_time,
+          action.action_trace.trx_id
+        )
     }
+
     return action.block_num
   }
 
@@ -1262,6 +1368,9 @@ export class FioEngine extends CurrencyEngine {
       [FIO_REQUESTS_TYPES.PENDING]: []
     }
     this.otherData.fioRequestsToApprove = {}
+    this.otherData.stakingStatus = {
+      stakedAmounts: []
+    }
   }
 
   // ****************************************************************************
