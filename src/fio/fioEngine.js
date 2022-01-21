@@ -11,6 +11,7 @@ import {
   type EdgeFetchFunction,
   type EdgeFreshAddress,
   type EdgeSpendInfo,
+  type EdgeStakingStatus,
   type EdgeTransaction,
   type EdgeWalletInfo,
   InsufficientFundsError
@@ -41,6 +42,7 @@ import {
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET,
+  STAKING_LOCK_PERIOD,
   STAKING_REWARD_MEMO
 } from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
@@ -457,6 +459,82 @@ export class FioEngine extends CurrencyEngine {
     )
   }
 
+  updateStakingStatus(
+    nativeAmount: string,
+    blockTime: string,
+    txId: string
+  ): void {
+    const stakedAmountIndex =
+      this.otherData.stakingStatus.stakedAmounts.findIndex(
+        ({ otherParams }) => {
+          if (otherParams.date == null) return false
+
+          return (
+            new Date(otherParams.date).toDateString() ===
+            new Date(blockTime).toDateString()
+          )
+        }
+      )
+
+    if (stakedAmountIndex < 0) {
+      this.otherData.stakingStatus.stakedAmounts.push({
+        nativeAmount,
+        unlockDate: new Date(
+          new Date(blockTime).getTime() + STAKING_LOCK_PERIOD
+        ),
+        otherParams: {
+          date: new Date(blockTime),
+          txs: [{ txId, nativeAmount, blockTime }]
+        }
+      })
+    } else {
+      const stakedAmount = {
+        ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
+        nativeAmount: '0'
+      }
+      const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
+        ({ txId: itemTxId }) => itemTxId === txId
+      )
+
+      if (addedTxIndex < 0) {
+        stakedAmount.otherParams.txs.push({
+          txId,
+          nativeAmount,
+          blockTime
+        })
+      } else {
+        stakedAmount.otherParams.txs[addedTxIndex] = {
+          txId,
+          nativeAmount,
+          blockTime
+        }
+      }
+
+      for (const tx of stakedAmount.otherParams.txs) {
+        stakedAmount.nativeAmount = bns.add(
+          stakedAmount.nativeAmount,
+          tx.nativeAmount
+        )
+      }
+
+      this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
+        stakedAmount
+    }
+
+    this.localDataDirty()
+    try {
+      this.currencyEngineCallbacks.onStakingStatusChanged(
+        this.otherData.stakingStatus
+      )
+    } catch (e) {
+      this.error('onStakingStatusChanged error')
+    }
+  }
+
+  async getStakingStatus(): Promise<EdgeStakingStatus> {
+    return this.otherData.stakingStatus
+  }
+
   processTransaction(
     action: FioHistoryNodeAction,
     actor: string,
@@ -465,7 +543,7 @@ export class FioEngine extends CurrencyEngine {
     const {
       act: { name: trxName, data, account, authorization }
     } = action.action_trace
-    const lockerTokenCode =
+    const lockedTokenCode =
       this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
     let nativeAmount
     let actorSender
@@ -535,7 +613,7 @@ export class FioEngine extends CurrencyEngine {
             nativeAmount = existingTrx.nativeAmount
             networkFee = '0'
 
-            if (currencyCode === lockerTokenCode) {
+            if (currencyCode === lockedTokenCode) {
               nativeAmount = bns.add(
                 nativeAmount,
                 data.amount != null ? data.amount.toString() : '0'
@@ -621,7 +699,7 @@ export class FioEngine extends CurrencyEngine {
           } else {
             networkFee = '0'
 
-            if (currencyCode === lockerTokenCode) {
+            if (currencyCode === lockedTokenCode) {
               nativeAmount = bns.add(
                 nativeAmount,
                 existingTrx.otherParams != null &&
@@ -653,12 +731,18 @@ export class FioEngine extends CurrencyEngine {
       this.addTransaction(currencyCode, edgeTransaction)
     }
 
-    if (
-      currencyCode === this.currencyInfo.currencyCode &&
-      this.checkUnStakeTx(otherParams)
-    ) {
-      this.processTransaction(action, actor, lockerTokenCode)
+    if (this.checkUnStakeTx(otherParams)) {
+      if (currencyCode === this.currencyInfo.currencyCode)
+        this.processTransaction(action, actor, lockedTokenCode)
+
+      if (currencyCode === lockedTokenCode)
+        this.updateStakingStatus(
+          nativeAmount || '0',
+          action.block_time,
+          action.action_trace.trx_id
+        )
     }
+
     return action.block_num
   }
 
