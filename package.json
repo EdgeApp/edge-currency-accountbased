@@ -115,7 +115,7 @@
     "babel-eslint": "^10.1.0",
     "babel-loader": "^8.1.0",
     "chai": "^4.2.0",
-    "edge-core-js": "^0.19.1",
+    "edge-core-js": "https://github.com/EdgeApp/edge-core-js.git#william/staking-status",
     "eslint": "^7.14.0",
     "eslint-config-standard-kit": "0.15.1",
     "eslint-plugin-flowtype": "^5.2.0",
