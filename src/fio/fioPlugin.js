@@ -232,6 +232,11 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         [FIO_REQUESTS_TYPES.PENDING]: []
       }
     }
+    if (currencyEngine.otherData.stakingStatus == null) {
+      currencyEngine.otherData.stakingStatus = {
+        stakedAmounts: []
+      }
+    }
 
     const out: EdgeCurrencyEngine = currencyEngine
     return out
