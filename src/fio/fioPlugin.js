@@ -23,7 +23,11 @@ import {
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
-import { FIO_REG_API_ENDPOINTS, FIO_REQUESTS_TYPES } from './fioConst.js'
+import {
+  DEFAULT_APR,
+  FIO_REG_API_ENDPOINTS,
+  FIO_REQUESTS_TYPES
+} from './fioConst'
 import { FioEngine } from './fioEngine'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
@@ -508,7 +512,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           roe: number,
           activated: boolean,
           historical_apr: {
-            '1day': number,
+            '1day': number | null,
             '7day': number | null,
             '30day': number | null
           }
@@ -516,7 +520,10 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         if (!result.ok) {
           throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
         }
-        return json.historical_apr['1day']
+        const apr = json.historical_apr['7day']
+        return (apr != null && apr > DEFAULT_APR) || apr == null
+          ? DEFAULT_APR
+          : apr
       } catch (e) {
         if (e.labelCode) throw e
         throw new FioError(

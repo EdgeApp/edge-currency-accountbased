@@ -117,6 +117,7 @@ export const FEE_ACTION_MAP = {
 export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
 export const STAKING_REWARD_MEMO = 'Paying Staking Rewards'
 export const STAKING_LOCK_PERIOD = 1000 * 60 * 60 * 24 * 7 // 7 days
+export const DEFAULT_APR = 450 // 7 days
 
 export type FioRequest = {
   fio_request_id: string,
