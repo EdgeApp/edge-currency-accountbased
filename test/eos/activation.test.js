@@ -50,6 +50,7 @@ describe(`EOS activation`, function () {
       // console.log('onBlockHeightChange:', height)
       emitter.emit('onBlockHeightChange', height)
     },
+    onStakingStatusChanged() {},
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)

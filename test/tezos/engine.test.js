@@ -46,6 +46,7 @@ describe(`Tezos engine`, function () {
     onBlockHeightChanged(height) {
       emitter.emit('onBlockHeightChange', height)
     },
+    onStakingStatusChanged() {},
     onTransactionsChanged(transactionList) {
       emitter.emit('onTransactionsChanged', transactionList)
     },
