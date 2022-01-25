@@ -83,7 +83,7 @@
     "@binance-chain/javascript-sdk": "^2.14.4",
     "@ethereumjs/common": "^2.4.0",
     "@ethereumjs/tx": "^3.3.0",
-    "@fioprotocol/fiosdk": "^1.4.0",
+    "@fioprotocol/fiosdk": "^1.5.0",
     "@hashgraph/sdk": "^1.1.9",
     "@walletconnect/client": "1.6.6",
     "biggystring": "^3.0.0",
