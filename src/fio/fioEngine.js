@@ -1095,14 +1095,15 @@ export class FioEngine extends CurrencyEngine {
     try {
       const { balance, available, staked, srps, roe } =
         await this.multicastServers('getFioBalance')
-      nativeAmount = balance + ''
-      balances.available = available + ''
-      balances.staked = staked + ''
+      nativeAmount = balance != null ? String(balance) : '0'
+      balances.available = available != null ? String(available) : '0'
+      balances.staked = staked != null ? String(staked) : '0'
       balances.locked = bns.sub(
         bns.sub(nativeAmount, balances.available),
         balances.staked
       )
-      balances.accrued = bns.mul(srps + '', roe)
+      balances.accrued =
+        srps != null && roe != null ? bns.mul(String(srps), roe) : '0'
 
       this.otherData.srps = srps
       this.otherData.stakingRoe = roe
