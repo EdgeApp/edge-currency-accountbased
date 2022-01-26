@@ -41,8 +41,9 @@ import {
   FEE_ACTION_MAP,
   FIO_REQUESTS_TYPES,
   HISTORY_NODE_ACTIONS,
-  HISTORY_NODE_OFFSET
-} from './fioConst.js'
+  HISTORY_NODE_OFFSET,
+  STAKING_REWARD_MEMO
+} from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
 import { FioPlugin } from './fioPlugin.js'
 import {
@@ -449,10 +450,24 @@ export class FioEngine extends CurrencyEngine {
     this.updateOnAddressesChecked()
   }
 
-  processTransaction(action: FioHistoryNodeAction, actor: string): number {
+  checkUnStakeTx(otherParams: TxOtherParams): boolean {
+    return (
+      otherParams.name === 'unstakefio' ||
+      (otherParams.data != null &&
+        otherParams.data.memo === STAKING_REWARD_MEMO)
+    )
+  }
+
+  processTransaction(
+    action: FioHistoryNodeAction,
+    actor: string,
+    currencyCode: string = this.currencyInfo.currencyCode
+  ): number {
     const {
       act: { name: trxName, data, account, authorization }
     } = action.action_trace
+    const lockedTokenCode =
+      this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
     let nativeAmount
     let actorSender
     let networkFee = '0'
@@ -463,7 +478,6 @@ export class FioEngine extends CurrencyEngine {
       data,
       meta: {}
     }
-    const currencyCode = this.currencyInfo.currencyCode
     const ourReceiveAddresses = []
     if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
       return action.block_num
@@ -521,6 +535,13 @@ export class FioEngine extends CurrencyEngine {
           } else {
             nativeAmount = existingTrx.nativeAmount
             networkFee = '0'
+
+            if (currencyCode === lockedTokenCode) {
+              nativeAmount = bns.add(
+                nativeAmount,
+                data.amount != null ? data.amount.toString() : '0'
+              )
+            }
           }
         } else {
           this.error(
@@ -549,11 +570,15 @@ export class FioEngine extends CurrencyEngine {
     if (trxName === 'transfer' && data.quantity != null) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
-      const denom = getDenomInfo(this.currencyInfo, currencyCode)
+      let denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (!denom) {
-        this.error(`Received unsupported currencyCode: ${currencyCode}`)
-        return 0
+        denom = getDenomInfo(this.currencyInfo, this.currencyInfo.currencyCode)
+        if (!denom) {
+          this.error(`Received unsupported currencyCode: ${currencyCode}`)
+          return 0
+        }
       }
+
       const fioAmount = bns.mul(exchangeAmount, denom.multiplier)
       if (data.to === actor) {
         nativeAmount = `${fioAmount}`
@@ -596,6 +621,16 @@ export class FioEngine extends CurrencyEngine {
             nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
           } else {
             networkFee = '0'
+
+            if (currencyCode === lockedTokenCode) {
+              nativeAmount = bns.add(
+                nativeAmount,
+                existingTrx.otherParams != null &&
+                  existingTrx.otherParams.data != null
+                  ? existingTrx.otherParams.data.amount.toString()
+                  : '0'
+              )
+            }
           }
         } else {
           this.error(
@@ -619,6 +654,12 @@ export class FioEngine extends CurrencyEngine {
       this.addTransaction(currencyCode, edgeTransaction)
     }
 
+    if (
+      currencyCode === this.currencyInfo.currencyCode &&
+      this.checkUnStakeTx(otherParams)
+    ) {
+      this.processTransaction(action, actor, lockedTokenCode)
+    }
     return action.block_num
   }
 
