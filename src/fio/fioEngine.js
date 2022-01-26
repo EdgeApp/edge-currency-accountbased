@@ -523,9 +523,9 @@ export class FioEngine extends CurrencyEngine {
 
     this.localDataDirty()
     try {
-      this.currencyEngineCallbacks.onStakingStatusChanged(
-        { ...this.otherData.stakingStatus }
-      )
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        ...this.otherData.stakingStatus
+      })
     } catch (e) {
       this.error('onStakingStatusChanged error')
     }
