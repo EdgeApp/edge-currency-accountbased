@@ -35,6 +35,7 @@ const defaultSettings: any = {
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
   fioAddressRegUrl: 'https://reg.fioprotocol.io/address/',
+  fioStakingApyUrl: 'https://fioprotocol.io/staking',
   defaultRef: 'edge',
   fallbackRef: 'edge',
   freeAddressRef: 'edgefree',

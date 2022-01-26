@@ -23,7 +23,11 @@ import {
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
-import { FIO_REG_API_ENDPOINTS, FIO_REQUESTS_TYPES } from './fioConst.js'
+import {
+  DEFAULT_APR,
+  FIO_REG_API_ENDPOINTS,
+  FIO_REQUESTS_TYPES
+} from './fioConst'
 import { FioEngine } from './fioEngine'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError.js'
 import { currencyInfo } from './fioInfo.js'
@@ -481,6 +485,44 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         if (e.labelCode) throw e
         throw new FioError(
           safeErrorMessage(e),
+          500,
+          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        )
+      }
+    },
+    async getStakeEstReturn(): Promise<number | { error: any }> {
+      try {
+        const result = await fetchCors(
+          `${currencyInfo.defaultSettings.fioStakingApyUrl}`,
+          {
+            method: 'GET'
+          }
+        )
+        const json: {
+          staked_token_pool: number,
+          outstanding_srps: number,
+          rewards_token_pool: number,
+          combined_token_pool: number,
+          staking_rewards_reserves_minted: number,
+          roe: number,
+          activated: boolean,
+          historical_apr: {
+            '1day': number | null,
+            '7day': number | null,
+            '30day': number | null
+          }
+        } = await result.json()
+        if (!result.ok) {
+          throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
+        }
+        const apr = json.historical_apr['7day']
+        return (apr != null && apr > DEFAULT_APR) || apr == null
+          ? DEFAULT_APR
+          : apr
+      } catch (e) {
+        if (e.labelCode) throw e
+        throw new FioError(
+          e.message,
           500,
           currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
         )
