@@ -1098,10 +1098,7 @@ export class FioEngine extends CurrencyEngine {
       nativeAmount = balance != null ? String(balance) : '0'
       balances.available = available != null ? String(available) : '0'
       balances.staked = staked != null ? String(staked) : '0'
-      balances.locked = bns.sub(
-        bns.sub(nativeAmount, balances.available),
-        balances.staked
-      )
+      balances.locked = bns.sub(nativeAmount, balances.available)
       balances.accrued =
         srps != null && roe != null ? bns.mul(String(srps), roe) : '0'
 
