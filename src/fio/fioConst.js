@@ -115,6 +115,7 @@ export const FEE_ACTION_MAP = {
 }
 
 export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
+export const DEFAULT_APR = 450
 
 export type FioRequest = {
   fio_request_id: string,
