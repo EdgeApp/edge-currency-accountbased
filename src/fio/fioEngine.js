@@ -1395,6 +1395,11 @@ export class FioEngine extends CurrencyEngine {
     const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
       edgeSpendInfoIn
     )
+    const lockedBalance =
+      this.walletLocalData.totalBalances[
+        this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
+      ] || '0'
+    const availableBalance = bns.sub(nativeBalance, lockedBalance)
 
     // Set common vars
     const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
@@ -1437,7 +1442,11 @@ export class FioEngine extends CurrencyEngine {
       this.recentFioFee = { publicAddress, fee }
     }
 
-    if (bns.gt(bns.add(quantity, `${fee}`), nativeBalance)) {
+    // We don't need to check the available balance for an unstake action (because that's handled separately below).
+    if (
+      name !== ACTIONS.unStakeFioTokens &&
+      bns.gt(bns.add(quantity, `${fee}`), availableBalance)
+    ) {
       throw new InsufficientFundsError()
     }
 
