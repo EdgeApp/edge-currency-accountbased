@@ -49,10 +49,9 @@ const defaultSettings: any = {
   },
   fioRequestsTypes: FIO_REQUESTS_TYPES,
   balanceCurrencyCodes: {
+    // TODO: Remove these currencyCodes in favor of adding a dedicated locked balances field to the API
     staked: 'FIO:STAKED',
-    available: 'FIO:AVAILABLE',
-    locked: 'FIO:LOCKED',
-    accrued: 'FIO:ACCRUED'
+    locked: 'FIO:LOCKED'
   }
 }
 
