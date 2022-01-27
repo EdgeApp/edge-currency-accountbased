@@ -14,13 +14,10 @@ const defaultSettings: any = {
     'https://fio.acherontrading.com/v1/',
     'https://fio.eos.barcelona/v1/',
     'https://api.fio.eosdetroit.io/v1/',
-    'https://fio.zenblocks.io/v1/',
     'https://api.fio.alohaeos.com/v1/',
     'https://fio.greymass.com/v1/',
-    'https://fio.eosusa.news/v1/',
     'https://fio.eosargentina.io/v1/',
     'https://fio.cryptolions.io/v1/',
-    'https://fio-mainnet.eosblocksmith.io/v1/',
     'https://api.fio.currencyhub.io/v1/',
     'https://fio.eoscannon.io/v1/',
     'https://fio.eosdublin.io/v1/',
@@ -29,8 +26,7 @@ const defaultSettings: any = {
   historyNodeUrls: [
     'https://fio.greymass.com/v1/',
     'https://fio.greymass.com/v1/',
-    'https://fio.eosphere.io/v1/',
-    'https://fio.eossweden.org/v1/'
+    'https://fio.eosphere.io/v1/'
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
