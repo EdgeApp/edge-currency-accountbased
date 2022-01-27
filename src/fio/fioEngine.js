@@ -474,6 +474,16 @@ export class FioEngine extends CurrencyEngine {
     blockTime: string,
     txId: string
   ): void {
+    // Might not be necessary, but better to be safe than sorry
+    if (
+      this.otherData.stakingStatus == null ||
+      this.otherData.stakingStatus.stakedAmounts == null
+    ) {
+      this.otherData.stakingStatus = {
+        stakedAmounts: []
+      }
+    }
+
     const stakedAmountIndex =
       this.otherData.stakingStatus.stakedAmounts.findIndex(
         ({ otherParams }) => {
