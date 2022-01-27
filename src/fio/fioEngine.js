@@ -1465,9 +1465,10 @@ export class FioEngine extends CurrencyEngine {
         bns.mul(bns.div(quantity, stakedBalance, 18), `${this.otherData.srps}`),
         this.otherData.stakingRoe
       )
+      const estReward = bns.max(bns.sub(accrued, quantity), '0')
       otherParams.ui = {
         accrued,
-        estReward: bns.sub(accrued, quantity)
+        estReward
       }
     }
 
