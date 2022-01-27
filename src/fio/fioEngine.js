@@ -436,6 +436,15 @@ export class FioEngine extends CurrencyEngine {
         )
       }
     }
+
+    try {
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        stakedAmounts: [],
+        ...this.otherData.stakingStatus
+      })
+    } catch (e) {
+      this.error(`doInitialBalanceCallback onStakingStatusChanged`, e)
+    }
   }
 
   updateBalance(tk: string, balance: string) {
@@ -1356,6 +1365,9 @@ export class FioEngine extends CurrencyEngine {
       [FIO_REQUESTS_TYPES.PENDING]: []
     }
     this.otherData.fioRequestsToApprove = {}
+    this.otherData.stakingStatus = {
+      stakedAmounts: []
+    }
   }
 
   // ****************************************************************************
