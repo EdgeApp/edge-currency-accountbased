@@ -17,7 +17,6 @@ const defaultSettings: any = {
     'https://fio.zenblocks.io/v1/',
     'https://api.fio.alohaeos.com/v1/',
     'https://fio.greymass.com/v1/',
-    'https://fio.eosusa.news/v1/',
     'https://fio.eosargentina.io/v1/',
     'https://fio.cryptolions.io/v1/',
     'https://fio-mainnet.eosblocksmith.io/v1/',
@@ -29,8 +28,7 @@ const defaultSettings: any = {
   historyNodeUrls: [
     'https://fio.greymass.com/v1/',
     'https://fio.greymass.com/v1/',
-    'https://fio.eosphere.io/v1/',
-    'https://fio.eossweden.org/v1/'
+    'https://fio.eosphere.io/v1/'
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
