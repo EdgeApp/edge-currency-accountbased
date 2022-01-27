@@ -664,6 +664,12 @@ export class CurrencyEngine {
     for (const token of tokens) {
       if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
         this.walletLocalData.enabledTokens.push(token)
+        // Initialize balance
+        this.walletLocalData.totalBalances[token] = '0'
+        this.currencyEngineCallbacks.onBalanceChanged(
+          token,
+          this.walletLocalData.totalBalances[token]
+        )
         this.walletLocalDataDirty = true
       }
     }
