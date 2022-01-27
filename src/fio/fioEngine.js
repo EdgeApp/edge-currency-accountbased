@@ -51,6 +51,7 @@ import {
   type FioHistoryNodeAction,
   type GetFioName,
   asFioHistoryNodeAction,
+  asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse
 } from './fioSchema.js'
@@ -902,6 +903,13 @@ export class FioEngine extends CurrencyEngine {
       switch (actionName) {
         case 'getChainInfo':
           res = await fioSdk.transactions.getChainInfo()
+          break
+        case 'getFioBalance':
+          res = await fioSdk.genericAction(actionName, params)
+          asGetFioBalanceResponse(res)
+          if (res.balance != null && res.balance < 0)
+            throw new Error('Invalid balance')
+
           break
         default:
           res = await fioSdk.genericAction(actionName, params)
