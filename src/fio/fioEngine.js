@@ -533,7 +533,7 @@ export class FioEngine extends CurrencyEngine {
   }
 
   async getStakingStatus(): Promise<EdgeStakingStatus> {
-    return this.otherData.stakingStatus
+    return { ...this.otherData.stakingStatus }
   }
 
   processTransaction(
@@ -575,6 +575,10 @@ export class FioEngine extends CurrencyEngine {
         } else {
           nativeAmount = `-${nativeAmount}`
         }
+      }
+
+      if (currencyCode === lockedTokenCode) {
+        nativeAmount = data.amount != null ? data.amount.toString() : '0'
       }
 
       const index = this.findTransaction(
