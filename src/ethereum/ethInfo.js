@@ -1279,6 +1279,50 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'
+    },
+    {
+      currencyCode: 'MATIC',
+      currencyName: 'Polygon',
+      denominations: [
+        {
+          name: 'MATIC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0'
+    },
+    {
+      currencyCode: 'BNB',
+      currencyName: 'Binance',
+      denominations: [
+        {
+          name: 'BNB',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xB8c77482e45F1F44dE1745F52C74426C631bDD52'
+    },
+    {
+      currencyCode: 'FTM',
+      currencyName: 'Fantom',
+      denominations: [
+        {
+          name: 'FTM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x4e15361fd6b4bb609fa63c81a2be19d873717870'
+    },
+    {
+      currencyCode: '1INCH',
+      currencyName: '1inch',
+      denominations: [
+        {
+          name: '1INCH',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x111111111117dc0aa78b770fa6a738034120c302'
     }
   ]
 }
