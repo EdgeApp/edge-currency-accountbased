@@ -166,28 +166,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x6e84a6216eA6dACC71eE8E6b0a5B7322EEbC0fDd'
     },
     {
-      currencyCode: 'TIME',
-      currencyName: 'Wonderland',
-      denominations: [
-        {
-          name: 'TIME',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0xb54f16fB19478766A268F172C9480f8da1a7c9C3'
-    },
-    {
-      currencyCode: 'SPELL',
-      currencyName: 'Spell Token',
-      denominations: [
-        {
-          name: 'SPELL',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0xCE1bFFBD5374Dac86a2893119683F4911a2F7814'
-    },
-    {
       currencyCode: 'FXS',
       currencyName: 'Frax Share',
       denominations: [
@@ -197,17 +175,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x214DB107654fF987AD859F34125307783fC8e387'
-    },
-    {
-      currencyCode: 'MIM',
-      currencyName: 'Magic Internet Money',
-      denominations: [
-        {
-          name: 'MIM',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0x130966628846bfd36ff31a822705796e8cb8c18d'
     },
     {
       currencyCode: 'BUSD.e',
