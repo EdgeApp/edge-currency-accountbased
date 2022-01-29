@@ -29,6 +29,12 @@ export const asFioHistoryNodeAction = asObject({
     act: asObject({
       account: asString,
       name: asString,
+      authorization: asArray(
+        asObject({
+          actor: asString,
+          permission: asString
+        })
+      ),
       data: asObject({
         payee_public_key: asOptional(asString),
         amount: asOptional(asNumber),
@@ -51,6 +57,14 @@ export const asFioHistoryNodeAction = asObject({
 
 export const asHistoryResponse = asObject({
   actions: asArray(asFioHistoryNodeAction)
+})
+
+export const asGetFioBalanceResponse = asObject({
+  balance: asNumber,
+  available: asNumber,
+  staked: asNumber,
+  srps: asNumber,
+  roe: asString
 })
 
 export type FioHistoryNodeAction = $Call<typeof asFioHistoryNodeAction>
