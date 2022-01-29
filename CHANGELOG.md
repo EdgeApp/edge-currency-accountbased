@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.11.9 (2022-01-28)
+
+- FIO: Add edge-core-js staking API support
+- Add ETH, FTM, MATIC and AVAX EVM-based tokens
+- Initialize walletLocalData balance when enabling tokens
+
 # 0.11.8 (2022-01-20)
 
 - ZEC: Fix to enable max spend
