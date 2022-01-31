@@ -474,7 +474,7 @@ export class FioEngine extends CurrencyEngine {
     nativeAmount: string,
     blockTime: string,
     txId: string,
-    txName
+    txName: string
   ): void {
     // Might not be necessary, but better to be safe than sorry
     if (
