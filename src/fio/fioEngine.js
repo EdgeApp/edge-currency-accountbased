@@ -1424,7 +1424,6 @@ export class FioEngine extends CurrencyEngine {
         }
       }
     }
-    otherParams.meta = { isTransferProcessed: true }
 
     const { name, params }: { name: string, params: any } = otherParams.action
 
