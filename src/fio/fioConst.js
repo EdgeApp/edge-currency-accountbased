@@ -80,6 +80,13 @@ export const ACTIONS_TO_FEE_END_POINT_KEYS = {
   [ACTIONS.unStakeFioTokens]: 'unStakeFioTokens'
 }
 
+export const ACTIONS_TO_TX_ACTION_NAME = {
+  [ACTIONS.transferTokens]: 'trnsfiopubky',
+  [ACTIONS.stakeFioTokens]: 'stakefio',
+  [ACTIONS.unStakeFioTokens]: 'unstakefio',
+  transfer: 'transfer'
+}
+
 export const FIO_REQUESTS_TYPES = {
   PENDING: 'PENDING',
   SENT: 'SENT'
