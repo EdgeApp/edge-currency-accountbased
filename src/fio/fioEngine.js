@@ -62,6 +62,10 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
 const REQUEST_POLL_MILLISECONDS = 10000
+const PROCESS_TX_NAME_LIST = [
+  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
+  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
+]
 
 type RecentFioFee = {
   publicAddress: string,
@@ -589,9 +593,12 @@ export class FioEngine extends CurrencyEngine {
     }
 
     // Transfer funds transaction
-    if (trxName !== 'transfer') {
+    if (PROCESS_TX_NAME_LIST.includes(trxName)) {
       nativeAmount = '0'
-      if (trxName === 'trnsfiopubky' && data.amount != null) {
+      if (
+        trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens] &&
+        data.amount != null
+      ) {
         nativeAmount = data.amount.toString()
         actorSender = data.actor
         if (data.payee_public_key === this.walletInfo.keys.publicKey) {
@@ -634,7 +641,7 @@ export class FioEngine extends CurrencyEngine {
           return action.block_num
         }
         if (otherParams.meta.isFeeProcessed) {
-          if (trxName === 'trnsfiopubky') {
+          if (trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens]) {
             nativeAmount = bns.sub(nativeAmount, existingTrx.networkFee)
             networkFee = existingTrx.networkFee
           } else {
@@ -674,8 +681,11 @@ export class FioEngine extends CurrencyEngine {
       this.addTransaction(currencyCode, edgeTransaction)
     }
 
-    // Fee transaction
-    if (trxName === 'transfer' && data.quantity != null) {
+    // Fee / Reward transaction
+    if (
+      trxName === ACTIONS_TO_TX_ACTION_NAME.transfer &&
+      data.quantity != null
+    ) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
       let denom = getDenomInfo(this.currencyInfo, currencyCode)
