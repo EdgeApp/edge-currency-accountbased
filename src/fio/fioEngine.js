@@ -36,6 +36,7 @@ import {
   ACTIONS,
   ACTIONS_TO_END_POINT_KEYS,
   ACTIONS_TO_FEE_END_POINT_KEYS,
+  ACTIONS_TO_TX_ACTION_NAME,
   BROADCAST_ACTIONS,
   DAY_INTERVAL,
   DEFAULT_BUNDLED_TXS_AMOUNT,
@@ -464,7 +465,8 @@ export class FioEngine extends CurrencyEngine {
 
   checkUnStakeTx(otherParams: TxOtherParams): boolean {
     return (
-      otherParams.name === 'unstakefio' ||
+      otherParams.name ===
+        ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens] ||
       (otherParams.data != null &&
         otherParams.data.memo === STAKING_REWARD_MEMO)
     )
