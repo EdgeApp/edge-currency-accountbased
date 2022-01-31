@@ -473,7 +473,8 @@ export class FioEngine extends CurrencyEngine {
   updateStakingStatus(
     nativeAmount: string,
     blockTime: string,
-    txId: string
+    txId: string,
+    txName
   ): void {
     // Might not be necessary, but better to be safe than sorry
     if (
@@ -508,7 +509,7 @@ export class FioEngine extends CurrencyEngine {
         unlockDate,
         otherParams: {
           date: new Date(blockTime),
-          txs: [{ txId, nativeAmount, blockTime }]
+          txs: [{ txId, nativeAmount, blockTime, txName }]
         }
       })
     } else {
@@ -517,20 +518,23 @@ export class FioEngine extends CurrencyEngine {
         nativeAmount: '0'
       }
       const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
-        ({ txId: itemTxId }) => itemTxId === txId
+        ({ txId: itemTxId, txName: itemTxName }) =>
+          itemTxId === txId && itemTxName === txName
       )
 
       if (addedTxIndex < 0) {
         stakedAmount.otherParams.txs.push({
           txId,
           nativeAmount,
-          blockTime
+          blockTime,
+          txName
         })
       } else {
         stakedAmount.otherParams.txs[addedTxIndex] = {
           txId,
           nativeAmount,
-          blockTime
+          blockTime,
+          txName
         }
       }
 
@@ -567,8 +571,6 @@ export class FioEngine extends CurrencyEngine {
     const {
       act: { name: trxName, data, account, authorization }
     } = action.action_trace
-    const lockedTokenCode =
-      this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
     let nativeAmount
     let actorSender
     let networkFee = '0'
@@ -598,10 +600,6 @@ export class FioEngine extends CurrencyEngine {
         } else {
           nativeAmount = `-${nativeAmount}`
         }
-      }
-
-      if (currencyCode === lockedTokenCode) {
-        nativeAmount = data.amount != null ? data.amount.toString() : '0'
       }
 
       const index = this.findTransaction(
@@ -640,13 +638,6 @@ export class FioEngine extends CurrencyEngine {
           } else {
             nativeAmount = existingTrx.nativeAmount
             networkFee = '0'
-
-            if (currencyCode === lockedTokenCode) {
-              nativeAmount = bns.add(
-                nativeAmount,
-                data.amount != null ? data.amount.toString() : '0'
-              )
-            }
           }
         } else {
           this.error(
@@ -654,6 +645,16 @@ export class FioEngine extends CurrencyEngine {
           )
         }
       }
+
+      if (this.checkUnStakeTx(otherParams)) {
+        this.updateStakingStatus(
+          data.amount != null ? data.amount.toString() : '0',
+          action.block_time,
+          action.action_trace.trx_id,
+          trxName
+        )
+      }
+
       otherParams.meta.isTransferProcessed = true
 
       const edgeTransaction: EdgeTransaction = {
@@ -726,22 +727,21 @@ export class FioEngine extends CurrencyEngine {
             nativeAmount = bns.sub(existingTrx.nativeAmount, networkFee)
           } else {
             networkFee = '0'
-
-            if (currencyCode === lockedTokenCode) {
-              nativeAmount = bns.add(
-                nativeAmount,
-                existingTrx.otherParams != null &&
-                  existingTrx.otherParams.data != null
-                  ? existingTrx.otherParams.data.amount.toString()
-                  : '0'
-              )
-            }
           }
         } else {
           this.error(
             'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
           )
         }
+      }
+
+      if (this.checkUnStakeTx(otherParams)) {
+        this.updateStakingStatus(
+          fioAmount,
+          action.block_time,
+          action.action_trace.trx_id,
+          trxName
+        )
       }
 
       otherParams.meta.isFeeProcessed = true
@@ -757,18 +757,6 @@ export class FioEngine extends CurrencyEngine {
         otherParams
       }
       this.addTransaction(currencyCode, edgeTransaction)
-    }
-
-    if (this.checkUnStakeTx(otherParams)) {
-      if (currencyCode === this.currencyInfo.currencyCode)
-        this.processTransaction(action, actor, lockedTokenCode)
-
-      if (currencyCode === lockedTokenCode)
-        this.updateStakingStatus(
-          nativeAmount || '0',
-          action.block_time,
-          action.action_trace.trx_id
-        )
     }
 
     return action.block_num
@@ -1424,7 +1412,6 @@ export class FioEngine extends CurrencyEngine {
         }
       }
     }
-    otherParams.meta = { isTransferProcessed: true }
 
     const { name, params }: { name: string, params: any } = otherParams.action
 
