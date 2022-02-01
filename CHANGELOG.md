@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.11.10 (2022-02-01)
+
+- FIO: Fix bugs with unlock dates
+- FIO: Fix bug by removing zero-amount transactions for staking actions
+
 ## 0.11.9 (2022-01-28)
 
 - FIO: Add edge-core-js staking API support
