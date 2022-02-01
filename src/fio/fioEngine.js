@@ -492,25 +492,41 @@ export class FioEngine extends CurrencyEngine {
       }
     }
 
+    /*
+    Unstaked FIO is locked until 7 days after the start of the GMT day for when
+    the transaction occurred (block-time).
+    */
+    const blockTimeBeginingOfGmtDay =
+      Math.floor(new Date(blockTime).getTime() / DAY_INTERVAL) * DAY_INTERVAL
+    const unlockDate = new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
+
+    /*
+    Compare each stakedAmount's unlockDate with the transaction's unlockDate to
+    find the correct stakedAmount object to place where the transaction.
+    */
     const stakedAmountIndex =
-      this.otherData.stakingStatus.stakedAmounts.findIndex(
-        ({ otherParams }) => {
-          if (otherParams == null || otherParams.date == null) return false
+      this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
+        return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
+      })
 
-          return (
-            new Date(otherParams.date).toDateString() ===
-            new Date(blockTime).toDateString()
-          )
-        }
-      )
-
+    /*
+    If no stakedAmount object was found, then insert a new object into the 
+    stakedAmounts array. Insert into the array at the correct index maintaining
+    a sorting by unlockDate in descending order.
+    */
     if (stakedAmountIndex < 0) {
-      const blockTimeBeginingOfGmtDay =
-        Math.floor(new Date(blockTime).getTime() / DAY_INTERVAL) * DAY_INTERVAL
-      const unlockDate = new Date(
-        blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD
+      // Search for the correct index to insert the new stakedAmount object
+      const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
+        (stakedAmount, index) =>
+          unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
       )
-      this.otherData.stakingStatus.stakedAmounts.push({
+      // If needleIndex is -1 (not found), then insert into the end of the array
+      const index =
+        needleIndex < 0
+          ? this.otherData.stakingStatus.stakedAmounts.length
+          : needleIndex
+      // Insert the new stakedAmount object
+      this.otherData.stakingStatus.stakedAmounts.splice(index, 0, {
         nativeAmount,
         unlockDate,
         otherParams: {
