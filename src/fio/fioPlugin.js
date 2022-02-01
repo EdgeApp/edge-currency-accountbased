@@ -520,10 +520,13 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         if (!result.ok) {
           throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
         }
-        const apr = json.historical_apr['7day']
-        return (apr != null && apr > DEFAULT_APR) || apr == null
-          ? DEFAULT_APR
-          : apr
+        const sevenDayApr = json.historical_apr['7day']
+        const apy =
+          (sevenDayApr != null && sevenDayApr > DEFAULT_APR) ||
+          sevenDayApr == null
+            ? DEFAULT_APR
+            : sevenDayApr
+        return parseFloat(apy.toFixed(2))
       } catch (e) {
         if (e.labelCode) throw e
         throw new FioError(
