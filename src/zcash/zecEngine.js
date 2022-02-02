@@ -362,7 +362,10 @@ export class ZcashEngine extends CurrencyEngine {
 
     const spendTarget = edgeTransaction.spendTargets[0]
     const txParams: ZcashSpendInfo = {
-      zatoshi: bns.abs(edgeTransaction.nativeAmount),
+      zatoshi: bns.sub(
+        bns.abs(edgeTransaction.nativeAmount),
+        edgeTransaction.networkFee
+      ),
       toAddress: spendTarget.publicAddress,
       memo: spendTarget.uniqueIdentifier ?? '',
       fromAccountIndex: 0,
