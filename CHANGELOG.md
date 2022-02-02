@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.11.11 (2022-02-02)
+
+- ZEC: Fix send amount
+
 ## 0.11.10 (2022-02-01)
 
 - FIO: Fix bugs with unlock dates
