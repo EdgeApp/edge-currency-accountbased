@@ -17,6 +17,7 @@ import { makePolygonPlugin } from './ethereum/maticInfo'
 import { makeRskPlugin } from './ethereum/rskInfo.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeHederaPlugin } from './hedera/hederaInfo.js'
+import { makeSolanaPlugin } from './solana/solanaInfo.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
 import { makeRipplePlugin } from './xrp/xrpPlugin.js'
@@ -39,6 +40,7 @@ const plugins = {
   binance: makeBinancePlugin,
   hedera: makeHederaPlugin,
   polygon: makePolygonPlugin,
+  solana: makeSolanaPlugin,
   avalanche: makeAvalanchePlugin
 }
 
