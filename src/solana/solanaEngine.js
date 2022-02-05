@@ -19,6 +19,7 @@ import {
   type RpcGetTransaction,
   type RpcSignatureForAddress,
   type SolanaOtherData,
+  type SolanaSettings,
   asRecentBlockHash,
   asRpcBalance,
   asRpcGetTransaction
@@ -37,6 +38,7 @@ export class SolanaEngine extends CurrencyEngine {
   chainCode: string
   otherData: SolanaOtherData
   fetchCors: EdgeFetchFunction
+  settings: SolanaSettings
 
   constructor(
     currencyPlugin: SolanaPlugin,
@@ -51,7 +53,8 @@ export class SolanaEngine extends CurrencyEngine {
     this.chainCode = currencyPlugin.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
-    this.recentBlockhash = '' // must be < ~2min old
+    this.recentBlockhash = '' // must be < ~2min old to send tx
+    this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
   }
 
   async fetchRpc(method: string, params: any = []) {
@@ -70,22 +73,15 @@ export class SolanaEngine extends CurrencyEngine {
       body: JSON.stringify(body)
     }
 
-    const funcs =
-      this.currencyPlugin.currencyInfo.defaultSettings.otherSettings.rpcNodes.map(
-        serverUrl => async () => {
-          const res = await this.fetchCors(
-            this.currencyPlugin.currencyInfo.defaultSettings.otherSettings
-              .rpcNodes[0],
-            options
-          )
-          if (!res.ok) {
-            throw new Error(
-              `fetchRpc ${options.method} failed error: ${res.status}`
-            )
-          }
-          return res.json()
-        }
-      )
+    const funcs = this.settings.rpcNodes.map(serverUrl => async () => {
+      const res = await this.fetchCors(serverUrl, options)
+      if (!res.ok) {
+        throw new Error(
+          `fetchRpc ${options.method} failed error: ${res.status}`
+        )
+      }
+      return res.json()
+    })
 
     const response = await asyncWaterfall(funcs)
     return response.result
@@ -186,7 +182,15 @@ export class SolanaEngine extends CurrencyEngine {
     try {
       // Gather all transaction IDs since we last updated
       while (1) {
-        const params = [this.keypair.publicKey.toBase58(), { until, before }]
+        const params = [
+          this.keypair.publicKey.toBase58(),
+          {
+            until,
+            before,
+            limit: this.settings.txQueryLimit,
+            Commitment: this.settings.commitment
+          }
+        ]
         const response: RpcSignatureForAddress[] = await this.fetchRpc(
           'getSignaturesForAddress',
           params
@@ -197,8 +201,8 @@ export class SolanaEngine extends CurrencyEngine {
           response.filter(data => data.err == null && data.signature != null)
         )
 
-        if (response.length < 1000) break // RPC limit
-        before = response[1000 - 1].signature
+        if (response.length < this.settings.txQueryLimit) break // RPC limit
+        before = response[this.settings.txQueryLimit - 1].signature
       }
     } catch (e) {
       this.error('getTransactionSignatures failed with error: ', e)
@@ -215,7 +219,10 @@ export class SolanaEngine extends CurrencyEngine {
     for (let i = 0; i < txids.length; i++) {
       try {
         const tx = asRpcGetTransaction(
-          await this.fetchRpc('getTransaction', [txids[i].signature, 'json'])
+          await this.fetchRpc('getTransaction', [
+            txids[i].signature,
+            { encoding: 'json', Commitment: this.settings.commitment }
+          ])
         )
 
         // From testing, getSignaturesForAddress always returns a blocktime but it is optional in the RPC docs so we should be prepared to get it if it isn't present

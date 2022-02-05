@@ -2,7 +2,9 @@
 import { asArray, asNumber, asObject, asString, asUnknown } from 'cleaners'
 
 export type SolanaSettings = {
-  rpcNodes: string[]
+  rpcNodes: string[],
+  commitment: 'confirmed' | 'finalized',
+  txQueryLimit: number
 }
 
 export type SolanaOtherData = {
@@ -39,17 +41,6 @@ export const asRpcGetTransaction = asObject({
 })
 
 export type RpcGetTransaction = $Call<typeof asRpcGetTransaction>
-
-// export const asRpcGetFee = asObject({
-//   value: asObject({
-//     feeRateGovernor: asObject({
-//       maxLamportsPerSignature: asNumber,
-//       minLamportsPerSignature: asNumber,
-//       targetLamportsPerSignature: asNumber,
-//       targetSignaturesPerSlot: asNumber
-//     })
-//   })
-// })
 
 export const asRecentBlockHash = asObject({
   value: asObject({
