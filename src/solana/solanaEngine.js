@@ -27,7 +27,7 @@ import {
 
 const { PublicKey, Keypair, SystemProgram, Transaction } = solanaWeb3
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
+const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
@@ -103,7 +103,8 @@ export class SolanaEngine extends CurrencyEngine {
   async queryBalance() {
     try {
       const response = await this.fetchRpc('getBalance', [
-        this.keypair.publicKey.toBase58()
+        this.keypair.publicKey.toBase58(),
+        { commitment: this.settings.commitment }
       ])
       const balance = asRpcBalance(response)
       this.updateBalance(this.chainCode, balance.value.toString())
@@ -188,7 +189,7 @@ export class SolanaEngine extends CurrencyEngine {
             until,
             before,
             limit: this.settings.txQueryLimit,
-            Commitment: this.settings.commitment
+            commitment: this.settings.commitment
           }
         ]
         const response: RpcSignatureForAddress[] = await this.fetchRpc(
@@ -221,7 +222,7 @@ export class SolanaEngine extends CurrencyEngine {
         const tx = asRpcGetTransaction(
           await this.fetchRpc('getTransaction', [
             txids[i].signature,
-            { encoding: 'json', Commitment: this.settings.commitment }
+            { encoding: 'json', commitment: this.settings.commitment }
           ])
         )
 
