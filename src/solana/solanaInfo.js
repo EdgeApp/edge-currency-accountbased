@@ -33,7 +33,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings,
 
   addressExplorer: 'https://solanabeach.io/address/%s',
-  transactionExplorer: 'solanabeach.io/transaction/%s',
+  transactionExplorer: 'https://solanabeach.io/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
