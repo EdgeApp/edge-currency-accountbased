@@ -15,7 +15,7 @@ export const asRpcBalance = asObject({
 
 export type RpcSignatureForAddress = {
   signature: string,
-  blocktime?: string,
+  blocktime?: number,
   err?: any
 }
 

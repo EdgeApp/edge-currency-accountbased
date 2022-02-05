@@ -217,12 +217,13 @@ export class SolanaEngine extends CurrencyEngine {
         const tx = asRpcGetTransaction(
           await this.fetchRpc('getTransaction', [txids[i].signature, 'json'])
         )
-        // If getSignaturesForAddress didn't return the block time let's try again
+
+        // From testing, getSignaturesForAddress always returns a blocktime but it is optional in the RPC docs so we should be prepared to get it if it isn't present
         let timestamp = txids[i].blocktime
         if (timestamp == null || isNaN(timestamp))
           timestamp = asNumber(await this.fetchRpc('getBlockTime', [tx.slot]))
 
-        this.processSolanaTransaction(tx, Number(timestamp))
+        this.processSolanaTransaction(tx, timestamp)
       } catch (e) {
         // Note the oldest failed tx query so we try again next loop
         newestTxid = i
@@ -237,6 +238,13 @@ export class SolanaEngine extends CurrencyEngine {
     this.walletLocalDataDirty = true
     this.tokenCheckTransactionsStatus[this.chainCode] = 1
     this.updateOnAddressesChecked()
+
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
   }
 
   initOtherData() {
