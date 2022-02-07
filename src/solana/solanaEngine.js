@@ -110,13 +110,13 @@ export class SolanaEngine extends CurrencyEngine {
       const balance = asRpcBalance(response)
       this.updateBalance(this.chainCode, balance.value.toString())
     } catch (e) {
-      // fetching of account balances for uninitiated accounts throws error
       if (
         this.tokenCheckTransactionsStatus[this.chainCode] === 1 &&
         this.transactionList[this.chainCode].length === 0
       ) {
         this.updateBalance(this.chainCode, '0')
       }
+      // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
       this.error(`Error checking ${this.chainCode} address balance`, e)
     }
   }
