@@ -33,6 +33,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class SolanaEngine extends CurrencyEngine {
   keypair: Keypair
+  base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
@@ -55,6 +56,7 @@ export class SolanaEngine extends CurrencyEngine {
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    this.base58PublicKey = walletInfo.keys.publicKey
   }
 
   async fetchRpc(method: string, params: any = []) {
@@ -103,7 +105,7 @@ export class SolanaEngine extends CurrencyEngine {
   async queryBalance() {
     try {
       const response = await this.fetchRpc('getBalance', [
-        this.keypair.publicKey.toBase58(),
+        this.base58PublicKey,
         { commitment: this.settings.commitment }
       ])
       const balance = asRpcBalance(response)
@@ -152,7 +154,7 @@ export class SolanaEngine extends CurrencyEngine {
   processSolanaTransaction(tx: RpcGetTransaction, timestamp: number) {
     const ourReceiveAddresses = []
     const index = tx.transaction.message.accountKeys.findIndex(
-      account => account === this.keypair.publicKey.toBase58()
+      account => account === this.base58PublicKey
     )
     if (index < 0 || tx.meta == null) return
     let amount = tx.meta.postBalances[index] - tx.meta.preBalances[index]
@@ -160,7 +162,7 @@ export class SolanaEngine extends CurrencyEngine {
     if (amount < 0) {
       amount -= fee
     } else {
-      ourReceiveAddresses.push(this.keypair.publicKey.toBase58())
+      ourReceiveAddresses.push(this.base58PublicKey)
     }
     const edgeTransaction: EdgeTransaction = {
       txid: tx.transaction.signatures[0],
@@ -184,7 +186,7 @@ export class SolanaEngine extends CurrencyEngine {
       // Gather all transaction IDs since we last updated
       while (1) {
         const params = [
-          this.keypair.publicKey.toBase58(),
+          this.base58PublicKey,
           {
             until,
             before,
@@ -298,13 +300,14 @@ export class SolanaEngine extends CurrencyEngine {
       throw new InsufficientFundsError()
     }
     // Create Solana transaction
+    const payerPublicKey = new PublicKey(this.base58PublicKey)
     const txOpts = {
       recentBlockhash: this.recentBlockhash,
-      feePayer: this.keypair.publicKey
+      feePayer: payerPublicKey
     }
     const solTx = new Transaction(txOpts).add(
       SystemProgram.transfer({
-        fromPubkey: this.keypair.publicKey,
+        fromPubkey: payerPublicKey,
         toPubkey: new PublicKey(publicAddress),
         lamports: parseInt(nativeAmount)
       })
