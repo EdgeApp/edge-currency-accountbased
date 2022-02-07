@@ -2,7 +2,7 @@
 
 import * as solanaWeb3 from '@solana/web3.js'
 import { bns } from 'biggystring'
-import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
@@ -32,8 +32,8 @@ export class SolanaPlugin extends CurrencyPlugin {
     this.pluginId = currencyInfo.pluginId
   }
 
-  createKeyPair(mnemonic: string): Keypair {
-    const buffer = mnemonicToSeedSync(mnemonic)
+  async createKeyPair(mnemonic: string): Promise<Keypair> {
+    const buffer = await mnemonicToSeed(mnemonic)
     const array = new Uint8Array(buffer.toJSON().data.slice(0, 32))
     return Keypair.fromSeed(array)
   }
@@ -41,12 +41,12 @@ export class SolanaPlugin extends CurrencyPlugin {
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
-    const keypair = this.createKeyPair(mnemonic)
+    const keypair = await this.createKeyPair(mnemonic)
 
     return {
       [`${this.pluginId}Mnemonic`]: mnemonic,
       [`${this.pluginId}Key`]: keypair.secretKey.toString(),
-      publicKey: keypair.publicKey.toString()
+      publicKey: keypair.publicKey.toBase58()
     }
   }
 

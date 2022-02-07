@@ -33,6 +33,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class SolanaEngine extends CurrencyEngine {
   keypair: Keypair
+  createKeyPair: (seed: string) => Promise<Keypair>
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -48,9 +49,7 @@ export class SolanaEngine extends CurrencyEngine {
     fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
-    this.keypair = currencyPlugin.createKeyPair(
-      this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
-    )
+    this.createKeyPair = currencyPlugin.createKeyPair
     this.chainCode = currencyPlugin.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
@@ -341,6 +340,12 @@ export class SolanaEngine extends CurrencyEngine {
     const { unsignedSerializedSolTx } = getOtherParams(edgeTransaction)
     if (unsignedSerializedSolTx == null)
       throw new Error('Missing unsignedSerializedSolTx')
+
+    if (this.keypair == null) {
+      this.keypair = await this.createKeyPair(
+        this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      )
+    }
 
     const solTx = Transaction.from(unsignedSerializedSolTx)
     solTx.recentBlockhash = this.recentBlockhash
