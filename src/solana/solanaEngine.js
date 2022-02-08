@@ -217,7 +217,7 @@ export class SolanaEngine extends CurrencyEngine {
       return
     }
 
-    let newestTxid = 0
+    let newestTxIndex = 0
     for (let i = 0; i < txids.length; i++) {
       try {
         const tx = asRpcGetTransaction(
@@ -235,14 +235,14 @@ export class SolanaEngine extends CurrencyEngine {
         this.processSolanaTransaction(tx, timestamp)
       } catch (e) {
         // Note the oldest failed tx query so we try again next loop
-        newestTxid = i
+        newestTxIndex = i
       }
     }
 
     // Don't update the newestTxid if the txids array length is length 1 or the oldest failed query is the end of the array.
     // The previously saved value is the best to use in those cases
-    if (txids.length > 1 && txids.length > newestTxid + 1)
-      this.otherData.newestTxid = txids[newestTxid + 1].signature
+    if (txids.length > 1 && txids.length > newestTxIndex + 1)
+      this.otherData.newestTxid = txids[newestTxIndex + 1].signature
 
     this.walletLocalDataDirty = true
     this.tokenCheckTransactionsStatus[this.chainCode] = 1
