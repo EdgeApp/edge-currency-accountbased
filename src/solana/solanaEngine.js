@@ -25,7 +25,13 @@ import {
   asRpcGetTransaction
 } from './solanaTypes.js'
 
-const { PublicKey, Keypair, SystemProgram, Transaction } = solanaWeb3
+const {
+  PublicKey,
+  Keypair,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction
+} = solanaWeb3
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
@@ -313,6 +319,23 @@ export class SolanaEngine extends CurrencyEngine {
         lamports: parseInt(nativeAmount)
       })
     )
+
+    if (edgeSpendInfo.spendTargets[0]?.otherParams?.uniqueIdentifier != null) {
+      const memoOpts = new TransactionInstruction({
+        keys: [
+          {
+            pubkey: payerPublicKey,
+            isSigner: true,
+            isWritable: true
+          }
+        ],
+        programId: new PublicKey(this.settings.memoPublicKey),
+        data: Buffer.from(
+          edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
+        )
+      })
+      solTx.add(memoOpts)
+    }
 
     const otherParams: JsonObject = {
       unsignedSerializedSolTx: solTx.serialize({

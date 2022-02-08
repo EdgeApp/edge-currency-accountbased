@@ -11,7 +11,8 @@ import {
 export type SolanaSettings = {
   rpcNodes: string[],
   commitment: 'confirmed' | 'finalized',
-  txQueryLimit: number
+  txQueryLimit: number,
+  memoPublicKey: string
 }
 
 export type SolanaOtherData = {
