@@ -14,7 +14,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils.js'
-import { createKeyPair, SolanaPlugin } from './solanaPlugin.js'
+import { SolanaPlugin } from './solanaPlugin.js'
 import {
   type RpcGetTransaction,
   type RpcSignatureForAddress,
@@ -38,7 +38,6 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class SolanaEngine extends CurrencyEngine {
-  keypair: Keypair
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -358,17 +357,22 @@ export class SolanaEngine extends CurrencyEngine {
     if (unsignedSerializedSolTx == null)
       throw new Error('Missing unsignedSerializedSolTx')
 
-    if (this.keypair == null) {
-      this.keypair = await createKeyPair(
-        this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+    const keypair = Keypair.fromSecretKey(
+      Uint8Array.from(
+        Buffer.from(
+          this.walletInfo.keys[
+            `${this.currencyPlugin.currencyInfo.pluginId}Key`
+          ],
+          'hex'
+        )
       )
-    }
+    )
 
     const solTx = Transaction.from(unsignedSerializedSolTx)
     solTx.recentBlockhash = this.recentBlockhash
     solTx.sign({
-      publicKey: this.keypair.publicKey,
-      secretKey: this.keypair.secretKey
+      publicKey: keypair.publicKey,
+      secretKey: keypair.secretKey
     })
     edgeTransaction.signedTx = solTx.serialize().toString('base64')
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
