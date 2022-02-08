@@ -24,6 +24,12 @@ import { SolanaEngine } from './solanaEngine.js'
 
 const { Keypair, PublicKey } = solanaWeb3
 
+export const createKeyPair = async (mnemonic: string): Promise<Keypair> => {
+  const buffer = await mnemonicToSeed(mnemonic)
+  const array = new Uint8Array(buffer.toJSON().data.slice(0, 32))
+  return Keypair.fromSeed(array)
+}
+
 export class SolanaPlugin extends CurrencyPlugin {
   pluginId: string
 
@@ -32,16 +38,10 @@ export class SolanaPlugin extends CurrencyPlugin {
     this.pluginId = currencyInfo.pluginId
   }
 
-  async createKeyPair(mnemonic: string): Promise<Keypair> {
-    const buffer = await mnemonicToSeed(mnemonic)
-    const array = new Uint8Array(buffer.toJSON().data.slice(0, 32))
-    return Keypair.fromSeed(array)
-  }
-
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
-    const keypair = await this.createKeyPair(mnemonic)
+    const keypair = await createKeyPair(mnemonic)
 
     return {
       [`${this.pluginId}Mnemonic`]: mnemonic,

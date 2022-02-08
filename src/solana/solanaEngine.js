@@ -14,7 +14,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine.js'
 import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils.js'
-import { SolanaPlugin } from './solanaPlugin.js'
+import { createKeyPair, SolanaPlugin } from './solanaPlugin.js'
 import {
   type RpcGetTransaction,
   type RpcSignatureForAddress,
@@ -39,7 +39,6 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class SolanaEngine extends CurrencyEngine {
   keypair: Keypair
-  createKeyPair: (seed: string) => Promise<Keypair>
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -55,7 +54,6 @@ export class SolanaEngine extends CurrencyEngine {
     fetchCors: EdgeFetchFunction
   ) {
     super(currencyPlugin, walletInfo, opts)
-    this.createKeyPair = currencyPlugin.createKeyPair
     this.chainCode = currencyPlugin.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
@@ -116,12 +114,6 @@ export class SolanaEngine extends CurrencyEngine {
       const balance = asRpcBalance(response)
       this.updateBalance(this.chainCode, balance.value.toString())
     } catch (e) {
-      if (
-        this.tokenCheckTransactionsStatus[this.chainCode] === 1 &&
-        this.transactionList[this.chainCode].length === 0
-      ) {
-        this.updateBalance(this.chainCode, '0')
-      }
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
       this.error(`Error checking ${this.chainCode} address balance`, e)
     }
@@ -367,7 +359,7 @@ export class SolanaEngine extends CurrencyEngine {
       throw new Error('Missing unsignedSerializedSolTx')
 
     if (this.keypair == null) {
-      this.keypair = await this.createKeyPair(
+      this.keypair = await createKeyPair(
         this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
       )
     }
