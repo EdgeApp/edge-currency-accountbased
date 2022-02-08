@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.12.0 (2022-02-08)
+
+- Add Solana (SOL)
+
 ## 0.11.11 (2022-02-02)
 
 - ZEC: Fix send amount
