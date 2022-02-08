@@ -236,10 +236,15 @@ export class SolanaEngine extends CurrencyEngine {
       }
     }
 
-    // Don't update the newestTxid if the txids array length is length 1 or the oldest failed query is the end of the array.
-    // The previously saved value is the best to use in those cases
-    if (txids.length > 1 && txids.length > newestTxIndex + 1)
+    if (newestTxIndex === 0) {
+      // all queries were successful so we can update the index to the latest txid
+      this.otherData.newestTxid = txids[newestTxIndex].signature
+    } else if (txids.length > newestTxIndex + 1) {
+      // If any queries failed, set newestTxId to the txid immediately preceding the oldest failed query
       this.otherData.newestTxid = txids[newestTxIndex + 1].signature
+    } else {
+      // If the newestTxIndex is the end of the array then we don't update newestTxid
+    }
 
     this.walletLocalDataDirty = true
     this.tokenCheckTransactionsStatus[this.chainCode] = 1
