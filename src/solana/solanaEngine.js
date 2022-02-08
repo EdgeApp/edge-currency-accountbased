@@ -45,6 +45,7 @@ export class SolanaEngine extends CurrencyEngine {
   otherData: SolanaOtherData
   fetchCors: EdgeFetchFunction
   settings: SolanaSettings
+  progressRatio: number
 
   constructor(
     currencyPlugin: SolanaPlugin,
@@ -59,6 +60,7 @@ export class SolanaEngine extends CurrencyEngine {
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
     this.base58PublicKey = walletInfo.keys.publicKey
+    this.progressRatio = 0
   }
 
   async fetchRpc(method: string, params: any = []) {
@@ -228,6 +230,17 @@ export class SolanaEngine extends CurrencyEngine {
           timestamp = asNumber(await this.fetchRpc('getBlockTime', [tx.slot]))
 
         this.processSolanaTransaction(tx, timestamp)
+
+        // Update progress
+        const percent = 1 - i / txids.length
+        if (percent !== this.progressRatio) {
+          if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
+            this.progressRatio = percent
+            this.tokenCheckTransactionsStatus[this.chainCode] =
+              this.progressRatio
+            this.updateOnAddressesChecked()
+          }
+        }
       } catch (e) {
         // Note the oldest failed tx query so we try again next loop
         failedTxQueryIndex = i
