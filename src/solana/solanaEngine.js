@@ -211,8 +211,9 @@ export class SolanaEngine extends CurrencyEngine {
       return
     }
 
-    let newestTxIndex = 0
-    for (let i = 0; i < txids.length; i++) {
+    let failedTxQueryIndex = -1
+    for (let i = txids.length - 1; i >= 0; i--) {
+      // Process the transactions from oldest to newest
       try {
         const tx = asRpcGetTransaction(
           await this.fetchRpc('getTransaction', [
@@ -229,18 +230,20 @@ export class SolanaEngine extends CurrencyEngine {
         this.processSolanaTransaction(tx, timestamp)
       } catch (e) {
         // Note the oldest failed tx query so we try again next loop
-        newestTxIndex = i
+        failedTxQueryIndex = i
+        break
       }
     }
 
-    if (newestTxIndex === 0) {
-      // all queries were successful so we can update the index to the latest txid
-      this.otherData.newestTxid = txids[newestTxIndex].signature
-    } else if (txids.length > newestTxIndex + 1) {
-      // If any queries failed, set newestTxId to the txid immediately preceding the oldest failed query
-      this.otherData.newestTxid = txids[newestTxIndex + 1].signature
+    if (failedTxQueryIndex === -1) {
+      // all queries were successful so we can update the newestTxid the latest txid
+      this.otherData.newestTxid = txids[0].signature
+    } else if (txids.length > failedTxQueryIndex + 1) {
+      // If a query failed, set newestTxId to the txid immediately preceding the failed query
+      // so we try to get it again next time
+      this.otherData.newestTxid = txids[failedTxQueryIndex + 1].signature
     } else {
-      // If the newestTxIndex is the end of the array then we don't update newestTxid
+      // If the failedTxQueryIndex is the end of the array then we don't update newestTxid
     }
 
     this.walletLocalDataDirty = true
