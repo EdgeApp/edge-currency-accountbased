@@ -96,7 +96,7 @@ export class SolanaPlugin extends CurrencyPlugin {
       address = edgeParsedUri.publicAddress
     }
 
-    if (!PublicKey.isOnCurve(new Uint8Array(Buffer.from(address))))
+    if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
@@ -109,7 +109,7 @@ export class SolanaPlugin extends CurrencyPlugin {
   ): Promise<string> {
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!PublicKey.isOnCurve(new Uint8Array(Buffer.from(publicAddress))))
+    if (!PublicKey.isOnCurve(new PublicKey(publicAddress).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
     let amount
