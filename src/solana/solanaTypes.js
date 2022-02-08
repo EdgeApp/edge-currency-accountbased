@@ -1,5 +1,12 @@
 // @flow
-import { asArray, asNumber, asObject, asString, asUnknown } from 'cleaners'
+import {
+  asArray,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown
+} from 'cleaners'
 
 export type SolanaSettings = {
   rpcNodes: string[],
@@ -23,6 +30,7 @@ export type RpcSignatureForAddress = {
 
 export const asRpcGetTransaction = asObject({
   meta: asObject({
+    err: asOptional(asUnknown),
     fee: asNumber,
     innerInstructions: asArray(asUnknown),
     postBalances: asArray(asNumber),

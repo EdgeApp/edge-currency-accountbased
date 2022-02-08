@@ -156,11 +156,13 @@ export class SolanaEngine extends CurrencyEngine {
       account => account === this.base58PublicKey
     )
     if (index < 0 || tx.meta == null) return
-    let amount = tx.meta.postBalances[index] - tx.meta.preBalances[index]
+    const amount = tx.meta.postBalances[index] - tx.meta.preBalances[index]
     const fee = tx.meta.fee
-    if (amount < 0) {
-      amount -= fee
-    } else {
+
+    // Failed outgoing transactions can go through the normal flow since the payload returns pre- and post- balances which account for burned fees.
+    // Failed incoming transactions need to be ignored
+    if (amount >= 0) {
+      if (tx.meta.err != null) return // ignore these
       ourReceiveAddresses.push(this.base58PublicKey)
     }
     const edgeTransaction: EdgeTransaction = {
@@ -197,12 +199,7 @@ export class SolanaEngine extends CurrencyEngine {
           'getSignaturesForAddress',
           params
         )
-
-        // remove failed transactions from list
-        txids = txids.concat(
-          response.filter(data => data.err == null && data.signature != null)
-        )
-
+        txids = txids.concat(response)
         if (response.length < this.settings.txQueryLimit) break // RPC limit
         before = response[this.settings.txQueryLimit - 1].signature
       }
