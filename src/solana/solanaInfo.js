@@ -33,8 +33,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://solanabeach.io/address/%s',
-  transactionExplorer: 'https://solanabeach.io/transaction/%s',
+  addressExplorer: 'https://blockchair.com/solana/address/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/solana/transaction/%s?from=edgeapp',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
