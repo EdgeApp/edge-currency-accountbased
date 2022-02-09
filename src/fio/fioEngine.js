@@ -332,6 +332,16 @@ export class FioEngine extends CurrencyEngine {
     )
   }
 
+  /*
+  Unstaked FIO is locked until 7 days after the start of the GMT day for when
+  the transaction occurred (block-time).
+  */
+  getUnlockDate(txDate: Date) {
+    const blockTimeBeginingOfGmtDay =
+      Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
+    return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
+  }
+
   async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
@@ -492,13 +502,7 @@ export class FioEngine extends CurrencyEngine {
       }
     }
 
-    /*
-    Unstaked FIO is locked until 7 days after the start of the GMT day for when
-    the transaction occurred (block-time).
-    */
-    const blockTimeBeginingOfGmtDay =
-      Math.floor(new Date(blockTime).getTime() / DAY_INTERVAL) * DAY_INTERVAL
-    const unlockDate = new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
+    const unlockDate = this.getUnlockDate(new Date(this.getUTCDate(blockTime)))
 
     /*
     Compare each stakedAmount's unlockDate with the transaction's unlockDate to
@@ -1483,6 +1487,7 @@ export class FioEngine extends CurrencyEngine {
     }
 
     if (name === ACTIONS.unStakeFioTokens) {
+      const unlockDate = this.getUnlockDate(new Date())
       const stakedBalance =
         this.walletLocalData.totalBalances[
           this.currencyInfo.defaultSettings.balanceCurrencyCodes.staked
@@ -1499,7 +1504,8 @@ export class FioEngine extends CurrencyEngine {
       const estReward = bns.max(bns.sub(accrued, quantity), '0')
       otherParams.ui = {
         accrued,
-        estReward
+        estReward,
+        unlockDate
       }
     }
 
