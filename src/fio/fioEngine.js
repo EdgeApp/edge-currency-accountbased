@@ -510,6 +510,7 @@ export class FioEngine extends CurrencyEngine {
     */
     const stakedAmountIndex =
       this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
+        // $FlowFixMe
         return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
       })
 
@@ -522,6 +523,7 @@ export class FioEngine extends CurrencyEngine {
       // Search for the correct index to insert the new stakedAmount object
       const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
         (stakedAmount, index) =>
+          // $FlowFixMe
           unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
       )
       // If needleIndex is -1 (not found), then insert into the end of the array
