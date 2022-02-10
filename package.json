@@ -91,6 +91,7 @@
     "biggystring": "^3.0.0",
     "bip39": "^3.0.2",
     "cleaners": "^0.3.12",
+    "ed25519-hd-key": "^1.2.0",
     "eosjs": "^21.0.3",
     "eosjs-api": "https://github.com/EdgeApp/eosjs-api.git#3676348b6a7443389b28d21c98067760c51e02fb",
     "eosjs-ecc": "^4.0.7",

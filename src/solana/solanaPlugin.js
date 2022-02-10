@@ -4,6 +4,7 @@ import * as solanaWeb3 from '@solana/web3.js'
 import { bns } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
+import * as ed25519 from 'ed25519-hd-key'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -24,10 +25,13 @@ import { SolanaEngine } from './solanaEngine.js'
 
 const { Keypair, PublicKey } = solanaWeb3
 
-const createKeyPair = async (mnemonic: string): Promise<Keypair> => {
+const createKeyPair = async (
+  mnemonic: string,
+  path: string
+): Promise<Keypair> => {
   const buffer = await mnemonicToSeed(mnemonic)
-  const array = new Uint8Array(buffer.toJSON().data.slice(0, 32))
-  return Keypair.fromSeed(array)
+  const deriveSeed = ed25519.derivePath(path, buffer.toString('hex')).key
+  return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
 }
 
 export class SolanaPlugin extends CurrencyPlugin {
@@ -41,7 +45,11 @@ export class SolanaPlugin extends CurrencyPlugin {
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
-    const keypair = await createKeyPair(mnemonic)
+
+    const keypair = await createKeyPair(
+      mnemonic,
+      this.currencyInfo.defaultSettings.otherSettings.derivationPath
+    )
 
     return {
       [`${this.pluginId}Mnemonic`]: mnemonic,

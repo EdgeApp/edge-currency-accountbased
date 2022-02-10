@@ -17,6 +17,7 @@ const otherSettings: SolanaSettings = {
   ],
   commitment: 'confirmed', // confirmed is faster, finalized is safer. Even faster processed is unsupported for tx querys
   txQueryLimit: 1000, // RPC default is 1000
+  derivationPath: "m/44'/501'/0'/0'",
   memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 }
 
