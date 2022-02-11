@@ -327,7 +327,8 @@ export class SolanaEngine extends CurrencyEngine {
       })
     )
 
-    if (edgeSpendInfo.spendTargets[0]?.otherParams?.uniqueIdentifier != null) {
+    const memo = edgeSpendInfo.spendTargets[0]?.otherParams?.uniqueIdentifier
+    if (memo != null && memo !== '') {
       const memoOpts = new TransactionInstruction({
         keys: [
           {
@@ -337,9 +338,7 @@ export class SolanaEngine extends CurrencyEngine {
           }
         ],
         programId: new PublicKey(this.settings.memoPublicKey),
-        data: Buffer.from(
-          edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-        )
+        data: Buffer.from(memo)
       })
       solTx.add(memoOpts)
     }

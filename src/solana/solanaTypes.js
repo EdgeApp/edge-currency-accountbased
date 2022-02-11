@@ -12,6 +12,7 @@ export type SolanaSettings = {
   rpcNodes: string[],
   commitment: 'confirmed' | 'finalized',
   txQueryLimit: number,
+  derivationPath: string,
   memoPublicKey: string
 }
 

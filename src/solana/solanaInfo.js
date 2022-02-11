@@ -17,6 +17,7 @@ const otherSettings: SolanaSettings = {
   ],
   commitment: 'confirmed', // confirmed is faster, finalized is safer. Even faster processed is unsupported for tx querys
   txQueryLimit: 1000, // RPC default is 1000
+  derivationPath: "m/44'/501'/0'/0'",
   memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 }
 
@@ -33,8 +34,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings,
 
-  addressExplorer: 'https://solanabeach.io/address/%s',
-  transactionExplorer: 'https://solanabeach.io/transaction/%s',
+  addressExplorer: 'https://blockchair.com/solana/address/%s?from=edgeapp',
+  transactionExplorer:
+    'https://blockchair.com/solana/transaction/%s?from=edgeapp',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
