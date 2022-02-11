@@ -1,10 +1,14 @@
 # edge-currency-accountbased
 
-## 0.12.1 (2022-02-10)
+## 0.12.2 (2022-02-10)
 
 - SOL: Use industry standard derivation path
 - SOL: Prevent sending empty memo
 - SOL: Update explorer links
+
+## 0.12.1 (2022-02-10)
+
+- FIO: Abstract unlockDate calculation into a `getUnlockDate` method
 
 ## 0.12.0 (2022-02-08)
 
