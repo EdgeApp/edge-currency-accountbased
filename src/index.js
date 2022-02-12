@@ -10,6 +10,7 @@ import { makeEosPlugin } from './eos/eosInfo.js'
 import { makeTelosPlugin } from './eos/telosInfo.js'
 import { makeWaxPlugin } from './eos/waxInfo.js'
 import { makeAvalanchePlugin } from './ethereum/avaxInfo'
+import { makeCeloPlugin } from './ethereum/celoInfo.js'
 import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
 import { makeEthereumPlugin } from './ethereum/ethInfo.js'
 import { makeFantomPlugin } from './ethereum/ftminfo.js'
@@ -41,6 +42,7 @@ const plugins = {
   hedera: makeHederaPlugin,
   polygon: makePolygonPlugin,
   solana: makeSolanaPlugin,
+  celo: makeCeloPlugin,
   avalanche: makeAvalanchePlugin
 }
 
