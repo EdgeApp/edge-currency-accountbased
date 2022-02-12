@@ -757,30 +757,44 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    // For mainnet currency, starting with 1 ensures we get past makeSpend's checks so
-    // we can calculate the spendable amount. For tokens, makeSpend will throw regardless
-    // of the amount entered if there isn't enough mainnet currency to pay the fee.
-    const maxSpendTarget = {
-      ...spendInfo.spendTargets[0],
-      nativeAmount: '1'
-    }
-    const edgeTx = await this.makeSpend({
-      ...spendInfo,
-      spendTargets: [maxSpendTarget]
+    const balance = this.getBalance({
+      currencyCode: spendInfo.currencyCode
     })
+
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
-      const mainnetBalance = this.getBalance({
-        currencyCode: this.currencyInfo.currencyCode
-      })
-      const { networkFee } = edgeTx
-      const spendableMainnetBalance = bns.sub(mainnetBalance, networkFee)
-      if (bns.lte(spendableMainnetBalance, '0'))
-        throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee
-        })
-      return spendableMainnetBalance
+      // For mainnet currency, the fee can scale with the amount sent so we should find the
+      // appropriate amount by recursively calling calcMiningFee. This is adapted from the
+      // same function in edge-core-js.
+
+      const getMax = (min: string, max: string): string => {
+        const diff = bns.sub(max, min)
+        if (bns.lte(diff, '1')) {
+          return min
+        }
+        const mid = bns.add(min, bns.div(diff, '2'))
+
+        // Try the average:
+        spendInfo.spendTargets[0].nativeAmount = mid
+        const { gasPrice, gasLimit } = calcMiningFee(
+          spendInfo,
+          this.walletLocalData.otherData.networkFees,
+          this.currencyInfo
+        )
+        const fee = bns.mul(gasPrice, gasLimit)
+        const totalAmount = bns.add(mid, fee)
+        if (bns.gt(totalAmount, balance)) {
+          return getMax(min, mid)
+        } else {
+          return getMax(mid, max)
+        }
+      }
+
+      return getMax('0', bns.add(balance, '1'))
     } else {
+      // For tokens, the max amount is the balance but we should call makeSpend to make sure there's
+      // enough mainnet currency to pay the fee
+      spendInfo.spendTargets[0].nativeAmount = balance
+      await this.makeSpend(spendInfo)
       return this.getBalance({
         currencyCode: spendInfo.currencyCode
       })
