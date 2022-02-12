@@ -1953,7 +1953,7 @@ export class EthereumNetwork {
         `checkTokenBalRpc invalid ${tk} response ${JSON.stringify(jsonObj)}`
       )
     }
-    if (isHex(removeHexPrefix(cleanedResponseObj.result))) {
+    if (isHex(cleanedResponseObj.result)) {
       return {
         tokenBal: { [tk]: hexToDecimal(cleanedResponseObj.result) },
         server

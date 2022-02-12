@@ -110,8 +110,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     this.utils = {
       signMessage: (message: string) => {
-        if (!isHex(removeHexPrefix(message)))
-          throw new Error('ErrorInvalidMessage')
+        if (!isHex(message)) throw new Error('ErrorInvalidMessage')
         const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
         const messageBuffer = hexToBuf(message)
         const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
@@ -1252,12 +1251,11 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async addCustomToken(obj: CustomToken) {
-    let contractAddress = obj.contractAddress.replace('0x', '').toLowerCase()
+    const { contractAddress } = obj
     if (!isHex(contractAddress) || contractAddress.length !== 40) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    contractAddress = '0x' + contractAddress
-    super.addCustomToken(obj, contractAddress)
+    super.addCustomToken(obj, contractAddress.toLowerCase())
   }
 }
 
