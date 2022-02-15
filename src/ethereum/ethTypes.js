@@ -516,7 +516,8 @@ export const asWcRpcPayload = asObject({
     'eth_signTypedData',
     'eth_sendTransaction',
     'eth_signTransaction',
-    'eth_sendRawTransaction'
+    'eth_sendRawTransaction',
+    'swapExactETHForTokens'
   ),
   params: asArray(asUnknown)
 })

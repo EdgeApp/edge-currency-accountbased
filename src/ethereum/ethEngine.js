@@ -788,7 +788,9 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    this.log('ETH SPEND')
+    const { currencyCode = 'NONEE' } = edgeSpendInfoIn
+    const edgeSpendInfo = edgeSpendInfoIn
 
     /**
     For RBF transactions, get the gas price and limit (fees) of the existing
@@ -1128,16 +1130,24 @@ export class EthereumEngine extends CurrencyEngine {
     let data
     if (otherParams.data != null) {
       data = otherParams.data
-    } else if (
-      edgeTransaction.currencyCode === this.currencyInfo.currencyCode
-    ) {
-      data = ''
-    } else {
+    } 
+    else if ( edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
       const dataArray = abi.simpleEncode(
         'transfer(address,uint256):(uint256)',
         otherParams.tokenRecipientAddress,
         nativeAmountHex
-      )
+      ) // TODO: here
+      data = '0x' + Buffer.from(dataArray).toString('hex')
+      nativeAmountHex = '0x64'
+
+      console.log('\x1b[30m\x1b[42m' + `Test data: ${JSON.stringify(data, null, 2)}` + '\x1b[0m') 
+    } 
+    else {
+      const dataArray = abi.simpleEncode(
+        'transfer(address,uint256):(uint256)',
+        otherParams.tokenRecipientAddress,
+        nativeAmountHex
+      ) // TODO: here
       data = '0x' + Buffer.from(dataArray).toString('hex')
       nativeAmountHex = '0x00'
     }

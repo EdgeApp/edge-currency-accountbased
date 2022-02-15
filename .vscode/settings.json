@@ -1,3 +1,32 @@
 {
-    "javascript.validate.enable": false
+    "javascript.validate.enable": false,
+    "workbench.colorCustomizations": {
+        "sideBar.background": "#ffffff",
+        "sideBar.border": "#969696",
+        "diffEditor.removedTextBackground": "#ffb7b746",
+        "diffEditor.insertedTextBackground": "#dae9b68f",
+        "terminal.background": "#131212",
+        "terminal.foreground": "#dddad6",
+        "terminal.ansiBlack": "#1D2021",
+        "terminal.ansiBrightBlack": "#665C54",
+        "terminal.ansiBrightBlue": "#0D6678",
+        "terminal.ansiBrightCyan": "#8BA59B",
+        "terminal.ansiBrightGreen": "#237e02",
+        "terminal.ansiBrightMagenta": "#8F4673",
+        "terminal.ansiBrightRed": "#FB543F",
+        "terminal.ansiBrightWhite": "#FDF4C1",
+        "terminal.ansiBrightYellow": "#FAC03B",
+        "terminal.ansiBlue": "#00a1f9",
+        "terminal.ansiCyan": "#8BA59B",
+        "terminal.ansiGreen": "#95C085",
+        "terminal.ansiMagenta": "#8F4673",
+        "terminal.ansiRed": "#FB543F",
+        "terminal.ansiWhite": "#A89984",
+        "terminal.ansiYellow": "#FAC03B",
+        "activityBar.background": "#237E02",
+        "titleBar.activeBackground": "#2EA403",
+        "titleBar.activeForeground": "#EDFFE7"
+    },
+    "windowColors.🌈 BaseColor": "#237e02",
+    "window.title": "${rootName}${separator}${activeEditorShort} ${separator} [Branch: master]"
 }

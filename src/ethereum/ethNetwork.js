@@ -486,7 +486,7 @@ export class EthereumNetwork {
         blockchairApiKey,
         blockcypherApiKey,
         etherscanApiKey,
-        ftmscanApiKey,
+        ftmscanApiKey = '4PHFYTIN2ZFV7G26E1HKW49CT23WGQKUEH',
         infuraProjectId,
         polygonscanApiKey
       } = this.ethEngine.initOptions
@@ -526,7 +526,7 @@ export class EthereumNetwork {
           : etherscanApiKey ?? ''
       }`
     } else if (server.includes('ftmscan')) {
-      apiKey = `&apikey=${ftmscanApiKey ?? ''}`
+      apiKey = `&apikey=4PHFYTIN2ZFV7G26E1HKW49CT23WGQKUEH`
     } else if (server.includes('polygonscan')) {
       apiKey = `&apikey=${
         Array.isArray(polygonscanApiKey)
@@ -1088,7 +1088,7 @@ export class EthereumNetwork {
             typeof result.result !== 'object' ||
             typeof result.result.length !== 'number'
           ) {
-            const msg = `Invalid return value getTransactions in ${server}`
+            const msg = `ftmscanapi err: ${JSON.stringify(result)}`
             this.ethEngine.error(msg)
             throw new Error(msg)
           }

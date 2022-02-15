@@ -1421,6 +1421,7 @@ export class FioEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    this.log('FTM SPEND BEGIN: ' + JSON.stringify(edgeSpendInfoIn))
     const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
       edgeSpendInfoIn
     )

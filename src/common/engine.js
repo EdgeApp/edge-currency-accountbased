@@ -866,6 +866,7 @@ export class CurrencyEngine {
   }
 
   makeSpend(edgeSpendInfo: EdgeSpendInfo): Object {
+    this.log('COMMON SPEND')
     checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {

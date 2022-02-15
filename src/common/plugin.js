@@ -64,6 +64,7 @@ export class CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ) {
+    console.log('hello worlddddddddddddd')
     const parsedUri = parse(uri, {}, true)
 
     // Add support for renproject Gateway URI type
