@@ -1,6 +1,6 @@
 # edge-currency-accountbased
 
-## 0.13.0 (2022-02-15)
+## 0.13.1 (2022-02-15)
 
 - Add Celo support
 - Use binary search in ethEngine's `getMaxSpendable` for main chain currency code
