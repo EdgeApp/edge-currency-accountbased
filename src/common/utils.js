@@ -64,7 +64,7 @@ export function isEmpty(map: Object) {
 }
 
 export function isHex(h: string) {
-  const out = /^[0-9A-F]+$/i.test(h)
+  const out = /^[0-9A-F]+$/i.test(removeHexPrefix(h))
   return out
 }
 
