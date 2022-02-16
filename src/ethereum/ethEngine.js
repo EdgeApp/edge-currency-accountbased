@@ -288,6 +288,7 @@ export class EthereumEngine extends CurrencyEngine {
           date: Date.now(),
           txid: '',
           signedTx: params[0],
+          unsignedTx: '',
           ourReceiveAddresses: []
         }
 
@@ -1070,15 +1071,6 @@ export class EthereumEngine extends CurrencyEngine {
       edgeTransaction.parentNetworkFee = parentNetworkFee
     }
 
-    return edgeTransaction
-  }
-
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
-
-    // Do signing
-    const gasLimitHex = toHex(otherParams.gas)
-    const gasPriceHex = toHex(otherParams.gasPrice)
     let nativeAmountHex
 
     if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
@@ -1093,9 +1085,8 @@ export class EthereumEngine extends CurrencyEngine {
     }
 
     // Nonce:
-
-    const nonceArg: string = otherParams.nonceArg
-    let nonce: string = nonceArg
+    // $FlowFixMe
+    let nonce: string
     if (!nonce) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
@@ -1132,13 +1123,15 @@ export class EthereumEngine extends CurrencyEngine {
           '1'
         )
       }
+    } else {
+      nonce = rbfNonce
     }
-    // Convert nonce to hex for tsParams
+    // Convert nonce to hex for txParams
+    // $FlowFixMe
     const nonceHex = toHex(nonce)
 
     // Data:
 
-    let data
     if (otherParams.data != null) {
       data = otherParams.data
     } else if (
@@ -1164,12 +1157,28 @@ export class EthereumEngine extends CurrencyEngine {
     // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
-      gasPrice: gasPriceHex,
-      gasLimit: gasLimitHex,
+      gasPrice: toHex(otherParams.gas),
+      gasLimit: toHex(otherParams.gasPrice),
       to: otherParams.to[0],
       value: nativeAmountHex,
       data
     }
+
+    // Store the unsigned tx
+    const unsignedTx = Transaction.fromTxData(txParams, {
+      common
+    })
+
+    // Store the unsigned hex for BitPay usage
+    const txJson = { hex: bufToHex(unsignedTx.serialize()) }
+    edgeTransaction.otherParams = { ...otherParams, unsignedTx, txJson }
+
+    return edgeTransaction
+  }
+
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    // Ensure otherParams are in the edgeTransaction
+    const otherParams = getOtherParams(edgeTransaction)
 
     const privKey = Buffer.from(
       this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
@@ -1180,15 +1189,16 @@ export class EthereumEngine extends CurrencyEngine {
     const wallet = ethWallet.fromPrivateKey(privKey)
     this.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
-    // Create and sign transaction
-    const unsignedTx = Transaction.fromTxData(txParams, { common })
+    // Sign transaction
+    const unsignedTx = otherParams.unsignedTx
     const signedTx = unsignedTx.sign(privKey)
 
     edgeTransaction.signedTx = bufToHex(signedTx.serialize())
     edgeTransaction.txid = bufToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
     if (edgeTransaction.otherParams) {
-      edgeTransaction.otherParams.nonceUsed = nonce
+      edgeTransaction.otherParams.nonceUsed =
+        edgeTransaction.otherParams.nonceArg
     }
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
