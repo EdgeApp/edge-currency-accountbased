@@ -6,16 +6,8 @@
 import 'regenerator-runtime/runtime'
 
 import { makeBinancePlugin } from './binance/bnbPlugin.js'
-import { makeEosPlugin } from './eos/eosInfo.js'
-import { makeTelosPlugin } from './eos/telosInfo.js'
-import { makeWaxPlugin } from './eos/waxInfo.js'
-import { makeAvalanchePlugin } from './ethereum/avaxInfo'
-import { makeCeloPlugin } from './ethereum/celoInfo.js'
-import { makeEthereumClassicPlugin } from './ethereum/etcInfo.js'
-import { makeEthereumPlugin } from './ethereum/ethInfo.js'
-import { makeFantomPlugin } from './ethereum/ftminfo.js'
-import { makePolygonPlugin } from './ethereum/maticInfo'
-import { makeRskPlugin } from './ethereum/rskInfo.js'
+import { eosPlugins } from './eos/index.js'
+import { ethPlugins } from './ethereum/index.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeHederaPlugin } from './hedera/hederaInfo.js'
 import { makeSolanaPlugin } from './solana/solanaInfo.js'
@@ -25,25 +17,17 @@ import { makeRipplePlugin } from './xrp/xrpPlugin.js'
 import { makeZcashPlugin } from './zcash/zecPlugin.js'
 
 const plugins = {
-  eos: makeEosPlugin,
-  telos: makeTelosPlugin,
-  wax: makeWaxPlugin,
-  ethereum: makeEthereumPlugin,
-  ethereumclassic: makeEthereumClassicPlugin,
-  fantom: makeFantomPlugin,
+  ...eosPlugins,
+  ...ethPlugins,
   fio: makeFioPlugin,
   zcash: makeZcashPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
-  rsk: makeRskPlugin,
   binance: makeBinancePlugin,
   hedera: makeHederaPlugin,
-  polygon: makePolygonPlugin,
-  solana: makeSolanaPlugin,
-  celo: makeCeloPlugin,
-  avalanche: makeAvalanchePlugin
+  solana: makeSolanaPlugin
 }
 
 if (
