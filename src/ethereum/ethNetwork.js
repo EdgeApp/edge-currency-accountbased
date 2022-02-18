@@ -486,6 +486,7 @@ export class EthereumNetwork {
         blockchairApiKey,
         blockcypherApiKey,
         etherscanApiKey,
+        bscscanApiKey,
         ftmscanApiKey,
         infuraProjectId,
         polygonscanApiKey
@@ -505,6 +506,13 @@ export class EthereumNetwork {
           url = url.replace(key, 'private')
         }
       }
+      if (typeof bscscanApiKey === 'string')
+        url = url.replace(bscscanApiKey, 'private')
+      if (Array.isArray(bscscanApiKey)) {
+        for (const key of bscscanApiKey) {
+          url = url.replace(key, 'private')
+        }
+      }
       if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
       if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
       if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
@@ -515,7 +523,7 @@ export class EthereumNetwork {
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
-    const { etherscanApiKey, ftmscanApiKey, polygonscanApiKey } =
+    const { etherscanApiKey, bscscanApiKey, ftmscanApiKey, polygonscanApiKey } =
       this.ethEngine.initOptions
     let apiKey = ''
 
@@ -524,6 +532,12 @@ export class EthereumNetwork {
         Array.isArray(etherscanApiKey)
           ? pickRandom(etherscanApiKey, 1)[0]
           : etherscanApiKey ?? ''
+      }`
+    } else if (server.includes('bscscan')) {
+      apiKey = `&apikey=${
+        Array.isArray(bscscanApiKey)
+          ? pickRandom(bscscanApiKey, 1)[0]
+          : bscscanApiKey ?? ''
       }`
     } else if (server.includes('ftmscan')) {
       apiKey = `&apikey=${ftmscanApiKey ?? ''}`

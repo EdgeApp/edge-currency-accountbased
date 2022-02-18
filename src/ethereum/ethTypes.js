@@ -22,6 +22,7 @@ import type { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
   etherscanApiKey?: string | string[],
+  bscscanApiKey?: string | string[],
   ftmscanApiKey?: string,
   polygonscanApiKey?: string,
   infuraProjectId?: string,
