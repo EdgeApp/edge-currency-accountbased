@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.14.0 (2022-02-18)
+
+- Add Binance Smart Chain (BNB) support
+- Add getSplittableTypes method to ethEngine
+
 ## 0.13.1 (2022-02-15)
 
 - Add Celo support
