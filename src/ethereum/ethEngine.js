@@ -1252,7 +1252,10 @@ export class EthereumEngine extends CurrencyEngine {
 
   async addCustomToken(obj: CustomToken) {
     const { contractAddress } = obj
-    if (!isHex(contractAddress) || contractAddress.length !== 40) {
+    if (
+      !isHex(contractAddress) ||
+      removeHexPrefix(contractAddress).length !== 40
+    ) {
       throw new Error('ErrorInvalidContractAddress')
     }
     super.addCustomToken(obj, contractAddress.toLowerCase())
