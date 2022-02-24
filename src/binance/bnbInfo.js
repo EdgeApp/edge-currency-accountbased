@@ -21,7 +21,7 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'BNB',
-  displayName: 'Binance Chain',
+  displayName: 'BNB Beacon Chain',
   pluginId: 'binance',
   walletType: 'wallet:binance',
 
