@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.14.1 (2022-02-23)
+
+- Update BNB chain display names
+- Update ZEC checkpoints
+
 ## 0.14.0 (2022-02-18)
 
 - Add Binance Smart Chain (BNB) support
