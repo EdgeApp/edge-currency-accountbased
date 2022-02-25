@@ -132,19 +132,6 @@ export class BinanceEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
-  }
-
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
 
