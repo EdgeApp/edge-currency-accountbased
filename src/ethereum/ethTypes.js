@@ -185,6 +185,35 @@ export type EtherscanInternalTransaction = $Call<
   typeof asEtherscanInternalTransaction
 >
 
+export const asEtherscanGasResponseResult = asObject({
+  LastBlock: asString,
+  SafeGasPrice: asString,
+  ProposeGasPrice: asString,
+  FastGasPrice: asString,
+
+  // Etherscan
+  suggestBaseFee: asMaybe(asString),
+  gasUsedRatio: asMaybe(asArray(asString)),
+
+  // Ftmscan
+  UsdPrice: asMaybe(asString)
+})
+
+export type EtherscanGasResponseResult = $Call<
+  typeof asEtherscanGasResponseResult
+>
+
+export const asEtherscanGasResponse = asObject({
+  status: asString,
+  message: asString,
+  result: asEither(
+    asString,
+    asObject<EtherscanGasResponseResult>(asEtherscanGasResponseResult)
+  )
+})
+
+export type EtherscanGasResponse = $Call<typeof asEtherscanGasResponse>
+
 export type EthereumTxOtherParams = {
   from: string[],
   to: string[],
