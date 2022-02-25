@@ -74,6 +74,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://snowtrace.io/address/%s',

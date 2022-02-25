@@ -93,6 +93,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ethereumclassic',
   walletType: 'wallet:ethereumclassic',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://blockscout.com/etc/mainnet/address/%s',

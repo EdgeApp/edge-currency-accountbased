@@ -68,6 +68,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'fantom',
   walletType: 'wallet:fantom',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://ftmscan.com/address/%s',
