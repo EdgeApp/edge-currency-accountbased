@@ -57,6 +57,8 @@ import {
   type EthereumTxOtherParams,
   type EthereumUtils,
   type EthereumWalletOtherData,
+  type EtherscanGasResponse,
+  type EtherscanGasResponseResult,
   type LastEstimatedGasLimit,
   type TxRpcParams,
   type WalletConnectors,
@@ -64,6 +66,8 @@ import {
   type WcProps,
   type WcRpcPayload,
   asEthereumFees,
+  asEtherscanGasResponse,
+  asEtherscanGasResponseResult,
   asWcSessionRequestParams
 } from './ethTypes.js'
 
@@ -524,8 +528,74 @@ export class EthereumEngine extends CurrencyEngine {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
-  // curreently for Ethereum but should allow other currencies
+  /**
+   * Check network fee providers, prioritizing results from etherscan and
+   * its forks for other chains and save the data in the wallet/engine.
+   */
   async checkUpdateNetworkFees() {
+    // Get network fees from etherscan
+    try {
+      // TODO: refactor copy/paste, update to support ETH
+      if (this.currencyInfo.currencyCode === 'FTM') {
+        const esGasResponse: EtherscanGasResponse =
+          await this.ethNetwork.fetchGetEtherscan(
+            this.currencyInfo.defaultSettings.otherSettings.etherscanApiServers,
+            'api?module=gastracker&action=gasoracle'
+          )
+        const valid =
+          asMaybe(asEtherscanGasResponse)(esGasResponse) != null &&
+          !esGasResponse.message.includes('NOTOK') // rate limited
+
+        if (valid) {
+          const prevFees: EthereumFees =
+            this.walletLocalData.otherData.networkFees
+          const prevEthereumFee: EthereumFee = prevFees.default
+          if (!prevEthereumFee.gasPrice) {
+            return
+          }
+          const prevGasPrice: EthereumFeesGasPrice = prevEthereumFee.gasPrice
+
+          const esGasResponseResult: EtherscanGasResponseResult =
+            asEtherscanGasResponseResult(esGasResponse.result)
+          const newSafeLow = esGasResponseResult.SafeGasPrice
+          let newAverage = esGasResponseResult.ProposeGasPrice
+          let newFast = esGasResponseResult.FastGasPrice
+          let newFastest = esGasResponseResult.FastGasPrice
+
+          // Correct inconsistencies, set gas prices
+          if (newAverage <= newSafeLow) newAverage = newSafeLow + 1
+          if (newFast <= newAverage) newFast = newAverage + 1
+          if (newFastest <= newFast) newFastest = newFast + 1
+
+          // Convert values
+          const lowFee = newSafeLow
+          const standardFeeLow = newFast
+          const standardFeeHigh = (newFast + newFastest) * 0.75
+          const highFee =
+            standardFeeHigh > newFastest ? standardFeeHigh : newFastest
+          if (
+            prevGasPrice.lowFee !== lowFee ||
+            prevGasPrice.standardFeeLow !== standardFeeLow ||
+            prevGasPrice.highFee !== highFee ||
+            prevGasPrice.standardFeeHigh !== standardFeeHigh
+          ) {
+            prevGasPrice.lowFee = lowFee
+            prevGasPrice.standardFeeLow = standardFeeLow
+            prevGasPrice.highFee = highFee.toString()
+            prevGasPrice.standardFeeHigh = standardFeeHigh.toString()
+            this.walletLocalDataDirty = true
+            return
+          }
+        }
+      }
+    } catch (e) {
+      // TODO: Type errors, remove logging calls from this file
+      this.error(
+        `Error fetching ${this.currencyInfo.currencyCode} Etherscan fees`,
+        e
+      )
+    }
+
     // Get the network fees from the info server
     try {
       const infoServer = getEdgeInfoServer()
@@ -801,10 +871,11 @@ export class EthereumEngine extends CurrencyEngine {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    // TODO: ethEngine.makeSpend: add otherparams, ACTIONS, params, etc.
     const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
 
     /**
-    For RBF transactions, get the gas price and limit (fees) of the existing
+    For RBF transactions, get the gas price and limit (fees) of the prev
     transaction as well as the current nonce. The fees and the nonce will be
     used instead of the calculated equivalents.
     */
@@ -872,6 +943,7 @@ export class EthereumEngine extends CurrencyEngine {
 
     let contractAddress
     let value
+    // TODO: Need to provide the same currencyCode as the wallet in the EdgeSpendInfo?
     if (currencyCode === this.currencyInfo.currencyCode) {
       const ethParams: EthereumTxOtherParams = {
         from: [this.walletLocalData.publicKey],
