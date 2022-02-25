@@ -71,6 +71,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'binancesmartchain',
   walletType: 'wallet:binancesmartchain',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://bscscan.com/address/%s',

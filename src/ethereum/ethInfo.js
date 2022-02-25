@@ -215,6 +215,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ethereum',
   walletType: 'wallet:ethereum',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://etherscan.io/address/%s',

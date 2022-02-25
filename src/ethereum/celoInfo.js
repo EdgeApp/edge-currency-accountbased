@@ -74,6 +74,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'celo',
   walletType: 'wallet:celo',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://explorer.celo.org/address/%s',
