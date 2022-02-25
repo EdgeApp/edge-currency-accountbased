@@ -180,19 +180,6 @@ export class ZcashEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance(tk: string, balance: string) {
-    if (this.walletLocalData.totalBalances[tk] == null) {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
-  }
-
   async queryTransactions() {
     try {
       let first = this.otherData.blockRange.first

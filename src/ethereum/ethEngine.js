@@ -472,19 +472,6 @@ export class EthereumEngine extends CurrencyEngine {
     }
   }
 
-  updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
-  }
-
   processUnconfirmedTransaction(tx: Object) {
     const fromAddress = '0x' + tx.inputs[0].addresses[0]
     const toAddress = '0x' + tx.outputs[0].addresses[0]
