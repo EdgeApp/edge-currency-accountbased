@@ -32,7 +32,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const otherSettings: EthereumSettings = {
   rpcServers: ['https://rpcapi.fantom.network', 'https://rpc.ftm.tools'],
-  etherscanApiServers: ['https://api.ftmscan.com/'],
+  etherscanApiServers: ['https://api.ftmscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['fantom'],
