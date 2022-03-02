@@ -9,7 +9,10 @@ import type {
 import { makePolkadotPluginInner } from './polkadotPlugin.js'
 import type { PolkadotSettings } from './polkadotTypes.js'
 
-const otherSettings: PolkadotSettings = {}
+const otherSettings: PolkadotSettings = {
+  subscanBaseUrl: 'https://polkadot.api.subscan.io/api',
+  subscanQueryLimit: 100
+}
 
 const defaultSettings: any = {
   otherSettings
