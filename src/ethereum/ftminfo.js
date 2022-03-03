@@ -126,6 +126,72 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x658b0c7613e890ee50b8c4bc6a3f41ef411208ad'
+    },
+    {
+      currencyCode: 'WFTM',
+      currencyName: 'Wrapped Fantom',
+      denominations: [
+        {
+          name: 'WFTM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83'
+    },
+    {
+      currencyCode: 'BOO',
+      currencyName: 'SpookyToken',
+      denominations: [
+        {
+          name: 'BOO',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x841fad6eae12c286d1fd18d1d525dffa75c7effe'
+    },
+    {
+      currencyCode: 'xBOO',
+      currencyName: 'Boo MirrorWorld',
+      denominations: [
+        {
+          name: 'xBOO',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598'
+    },
+    {
+      currencyCode: 'TOMB',
+      currencyName: 'Tomb',
+      denominations: [
+        {
+          name: 'TOMB',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7'
+    },
+    {
+      currencyCode: 'TBOND',
+      currencyName: 'Tomb Bonds',
+      denominations: [
+        {
+          name: 'TBOND',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x24248CD1747348bDC971a5395f4b3cd7feE94ea0'
+    },
+    {
+      currencyCode: 'TSHARE',
+      currencyName: 'Tomb Shares',
+      denominations: [
+        {
+          name: 'TSHARE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x4cdf39285d7ca8eb3f090fda0c069ba5f4145b37'
     }
   ]
 }
