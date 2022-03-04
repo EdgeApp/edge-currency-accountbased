@@ -68,6 +68,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'rsk',
   walletType: 'wallet:rsk',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://explorer.rsk.co/address/%s',

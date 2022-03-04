@@ -76,6 +76,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'polygon', // matching mnemonic here
   walletType: 'wallet:polygon',
 
+  canReplaceByFee: true,
   defaultSettings,
 
   addressExplorer: 'https://polygonscan.com/address/%s',
