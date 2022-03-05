@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 // 1 mainnet, 3 ropsten, 4 rinkeby, 5 goerli, 42 kovan, etc
 const chainId = 1
@@ -95,7 +95,7 @@ const otherSettings: EthereumSettings = {
     }
   })(),
 
-  etherscanApiServers: (() => {
+  evmScanApiServers: (() => {
     // Mainnet | Ropsten | Rinkeby | Goerli | Kovan
     switch (chainId) {
       case 1:
@@ -146,6 +146,7 @@ const otherSettings: EthereumSettings = {
     chainId,
     name: 'Ethereum Mainnet'
   },
+  supportsEIP1559: true,
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: true,
   iosAllowedTokens: {

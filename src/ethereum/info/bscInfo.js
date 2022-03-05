@@ -5,8 +5,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -35,7 +35,7 @@ const otherSettings: EthereumSettings = {
     'https://bsc-dataseed1.defibit.io',
     'https://bsc-dataseed1.ninicoin.io'
   ],
-  etherscanApiServers: ['https://api.bscscan.com'],
+  evmScanApiServers: ['https://api.bscscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['smartchain'],

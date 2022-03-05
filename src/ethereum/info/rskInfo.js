@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -32,7 +32,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const otherSettings: EthereumSettings = {
   rpcServers: ['https://public-node.rsk.co'],
-  etherscanApiServers: ['https://blockscout.com/rsk/mainnet'],
+  evmScanApiServers: ['https://blockscout.com/rsk/mainnet'],
   blockcypherApiServers: [],
   blockbookServers: [],
   blockchairApiServers: [],

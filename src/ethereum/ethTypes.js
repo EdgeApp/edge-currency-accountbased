@@ -21,10 +21,7 @@ import type { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
-  etherscanApiKey?: string | string[],
-  bscscanApiKey?: string | string[],
-  ftmscanApiKey?: string,
-  polygonscanApiKey?: string,
+  evmScanApiKey?: string | string[],
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,
@@ -49,11 +46,12 @@ export type EthereumSettings = {|
     chainId: number,
     name: string
   },
+  supportsEIP1559?: boolean,
   checkUnconfirmedTransactions: boolean,
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees,
   ercTokenStandard: string,
-  etherscanApiServers: string[],
+  evmScanApiServers: string[],
   ethGasStationUrl: string | null,
   hdPathCoinType: number,
   iosAllowedTokens: {

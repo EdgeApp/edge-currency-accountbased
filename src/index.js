@@ -7,7 +7,7 @@ import 'regenerator-runtime/runtime'
 
 import { makeBinancePlugin } from './binance/bnbPlugin.js'
 import { eosPlugins } from './eos/index.js'
-import { ethPlugins } from './ethereum/index.js'
+import { ethPlugins } from './ethereum/ethInfos.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeHederaPlugin } from './hedera/hederaInfo.js'
 import { makeSolanaPlugin } from './solana/solanaInfo.js'
