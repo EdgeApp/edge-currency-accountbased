@@ -34,8 +34,8 @@ import {
   type CheckTokenBalBlockchair,
   type EthereumSettings,
   type EthereumTxOtherParams,
-  type EtherscanInternalTransaction,
-  type EtherscanTransaction,
+  type EvmScanInternalTransaction,
+  type EvmScanTransaction,
   type FetchGetAlethio,
   type FetchGetAmberdataApiResponse,
   type RpcResultString,
@@ -49,9 +49,9 @@ import {
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
-  asEtherscanInternalTransaction,
-  asEtherscanTokenTransaction,
-  asEtherscanTransaction,
+  asEvmScancanTokenTransaction,
+  asEvmScanInternalTransaction,
+  asEvmScanTransaction,
   asFetchGetAlethio,
   asFetchGetAmberdataApiResponse,
   asRpcResultString
@@ -185,8 +185,8 @@ export class EthereumNetwork {
     )
   }
 
-  processEtherscanTransaction(
-    tx: EtherscanTransaction | EtherscanInternalTransaction,
+  processEvmScanTransaction(
+    tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string
   ) {
     let netNativeAmount: string // Amount received into wallet
@@ -477,89 +477,17 @@ export class EthereumNetwork {
     }
   }
 
-  async fetchGet(url: string, _options: Object = {}) {
-    const options = { ..._options }
-    options.method = 'GET'
-    const response = await this.ethEngine.io.fetch(url, options)
-    if (!response.ok) {
-      const {
-        blockchairApiKey,
-        blockcypherApiKey,
-        etherscanApiKey,
-        bscscanApiKey,
-        ftmscanApiKey,
-        infuraProjectId,
-        polygonscanApiKey
-      } = this.ethEngine.initOptions
-      // remove API keys from error messages
-      if (typeof etherscanApiKey === 'string')
-        url = url.replace(etherscanApiKey, 'private')
-      if (Array.isArray(etherscanApiKey)) {
-        for (const key of etherscanApiKey) {
-          url = url.replace(key, 'private')
-        }
-      }
-      if (typeof polygonscanApiKey === 'string')
-        url = url.replace(polygonscanApiKey, 'private')
-      if (Array.isArray(polygonscanApiKey)) {
-        for (const key of polygonscanApiKey) {
-          url = url.replace(key, 'private')
-        }
-      }
-      if (typeof bscscanApiKey === 'string')
-        url = url.replace(bscscanApiKey, 'private')
-      if (Array.isArray(bscscanApiKey)) {
-        for (const key of bscscanApiKey) {
-          url = url.replace(key, 'private')
-        }
-      }
-      if (blockchairApiKey) url = url.replace(blockchairApiKey, 'private')
-      if (blockcypherApiKey) url = url.replace(blockcypherApiKey, 'private')
-      if (ftmscanApiKey) url = url.replace(ftmscanApiKey, 'private')
-      if (infuraProjectId) url = url.replace(infuraProjectId, 'private')
-      this.throwError(response, 'fetchGet', url)
-    }
-    return response.json()
-  }
-
   async fetchGetEtherscan(server: string, cmd: string) {
-    const { etherscanApiKey, bscscanApiKey, ftmscanApiKey, polygonscanApiKey } =
-      this.ethEngine.initOptions
-    let apiKey = ''
+    const scanApiKey = this.ethEngine.initOptions.evmScanApiKey
+    const apiKey = `&apikey=${
+      Array.isArray(scanApiKey)
+        ? pickRandom(scanApiKey, 1)[0]
+        : scanApiKey ?? ''
+    }`
 
-    if (server.includes('etherscan')) {
-      apiKey = `&apikey=${
-        Array.isArray(etherscanApiKey)
-          ? pickRandom(etherscanApiKey, 1)[0]
-          : etherscanApiKey ?? ''
-      }`
-    } else if (server.includes('bscscan')) {
-      apiKey = `&apikey=${
-        Array.isArray(bscscanApiKey)
-          ? pickRandom(bscscanApiKey, 1)[0]
-          : bscscanApiKey ?? ''
-      }`
-    } else if (server.includes('ftmscan')) {
-      apiKey = `&apikey=${ftmscanApiKey ?? ''}`
-    } else if (server.includes('polygonscan')) {
-      apiKey = `&apikey=${
-        Array.isArray(polygonscanApiKey)
-          ? pickRandom(polygonscanApiKey, 1)[0]
-          : polygonscanApiKey ?? ''
-      }`
-    }
-
-    const url = `${server}/api${cmd}${apiKey}`
-    return this.fetchGet(url)
-  }
-
-  async fetchGetAmberdata(url: string, _options: Object = {}) {
-    const options = { ..._options }
-    options.method = 'GET'
-    const response = await this.ethEngine.fetchCors(url, options)
-    if (!response.ok) {
-      this.throwError(response, 'fetchGetAmberdata', url)
-    }
+    const url = `${server}/api${cmd}`
+    const response = await this.ethEngine.io.fetch(`${url}${apiKey}`)
+    if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
     return response.json()
   }
 
@@ -632,26 +560,24 @@ export class EthereumNetwork {
   }
 
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
-    let keyParam = ''
     const { blockchairApiKey } = this.ethEngine.initOptions
     const { blockchairApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
-    if (includeKey && blockchairApiKey) {
-      keyParam = `&key=${blockchairApiKey}`
-    }
-    const url = `${blockchairApiServers[0]}${path}${keyParam}`
-    return this.fetchGet(url)
+
+    const keyParam =
+      includeKey && blockchairApiKey ? `&key=${blockchairApiKey}` : ''
+    const url = `${blockchairApiServers[0]}${path}`
+    const response = await this.ethEngine.io.fetch(`${url}${keyParam}`)
+    if (!response.ok) this.throwError(response, 'fetchGetBlockchair', url)
+    return response.json()
   }
 
   async fetchPostAmberdataRpc(method: string, params: string[] = []) {
-    const { amberdataApiKey } = this.ethEngine.initOptions
+    const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataRpcServers } =
       this.currencyInfo.defaultSettings.otherSettings
-    let apiKey = ''
-    if (amberdataApiKey) {
-      apiKey = '?x-api-key=' + amberdataApiKey
-    }
-    const url = `${amberdataRpcServers[0]}${apiKey}`
+
+    const url = `${amberdataRpcServers[0]}`
     const body = {
       jsonrpc: '2.0',
       method: method,
@@ -662,6 +588,7 @@ export class EthereumNetwork {
       headers: {
         'x-amberdata-blockchain-id':
           this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
+        'x-api-key': amberdataApiKey,
         'Content-Type': 'application/json'
       },
       method: 'POST',
@@ -676,17 +603,21 @@ export class EthereumNetwork {
   }
 
   async fetchGetAmberdataApi(path: string) {
-    const { amberdataApiKey } = this.ethEngine.initOptions
+    const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
     const url = `${amberdataApiServers[0]}${path}`
-    return this.fetchGetAmberdata(url, {
+    const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id':
           this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
         'x-api-key': amberdataApiKey
       }
     })
+    if (!response.ok) {
+      this.throwError(response, 'fetchGetAmberdata', url)
+    }
+    return response.json()
   }
 
   /*
@@ -703,19 +634,19 @@ export class EthereumNetwork {
     isPath: boolean = true,
     useApiKey: boolean
   ) {
-    const { alethioApiKey } = this.ethEngine.initOptions
+    const { alethioApiKey = '' } = this.ethEngine.initOptions
     const { alethioApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
-    if (alethioApiKey && useApiKey) {
-      return this.fetchGet(url, {
-        headers: {
-          Authorization: `Bearer ${alethioApiKey}`
-        }
-      })
-    } else {
-      return this.fetchGet(url)
-    }
+
+    const response = await this.ethEngine.io.fetch(
+      url,
+      alethioApiKey
+        ? { headers: { Authorization: `Bearer ${alethioApiKey}` } }
+        : undefined
+    )
+    if (!response.ok) this.throwError(response, 'fetchGetAlethio', url)
+    return await response.json()
   }
 
   async broadcastEtherscan(
@@ -829,7 +760,7 @@ export class EthereumNetwork {
     const {
       rpcServers,
       blockcypherApiServers,
-      etherscanApiServers,
+      evmScanApiServers,
       blockbookServers,
       chainParams
     } = otherSettings
@@ -850,7 +781,7 @@ export class EthereumNetwork {
           )
         })
 
-        etherscanApiServers.forEach(baseUrl => {
+        evmScanApiServers.forEach(baseUrl => {
           promises.push(
             broadcastWrapper(
               this.broadcastEtherscan(params[0], baseUrl),
@@ -877,7 +808,7 @@ export class EthereumNetwork {
       }
 
       case 'eth_blockNumber':
-        funcs = etherscanApiServers.map(server => async () => {
+        funcs = evmScanApiServers.map(server => async () => {
           if (!server.includes('etherscan') && !server.includes('blockscout')) {
             throw new Error(`Unsupported command eth_blockNumber in ${server}`)
           }
@@ -973,7 +904,7 @@ export class EthereumNetwork {
 
       case 'eth_getTransactionCount':
         url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
-        funcs = etherscanApiServers.map(server => async () => {
+        funcs = evmScanApiServers.map(server => async () => {
           // if falsy URL then error thrown
           if (!server.includes('etherscan') && !server.includes('blockscout')) {
             throw new Error(
@@ -1017,7 +948,7 @@ export class EthereumNetwork {
 
       case 'eth_getBalance':
         url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-        funcs = etherscanApiServers.map(server => async () => {
+        funcs = evmScanApiServers.map(server => async () => {
           const result = await this.fetchGetEtherscan(server, url)
           if (!result.result || typeof result.result !== 'string') {
             const msg = `Invalid return value eth_getBalance in ${server}`
@@ -1063,7 +994,7 @@ export class EthereumNetwork {
 
       case 'getTokenBalance':
         url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
-        funcs = etherscanApiServers.map(server => async () => {
+        funcs = evmScanApiServers.map(server => async () => {
           const result = await this.fetchGetEtherscan(server, url)
           if (!result.result || typeof result.result !== 'string') {
             const msg = `Invalid return value getTokenBalance in ${server}`
@@ -1096,7 +1027,7 @@ export class EthereumNetwork {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
         url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-        funcs = etherscanApiServers.map(server => async () => {
+        funcs = evmScanApiServers.map(server => async () => {
           const result = await this.fetchGetEtherscan(server, url)
           if (
             typeof result.result !== 'object' ||
@@ -1116,10 +1047,11 @@ export class EthereumNetwork {
 
       case 'blockbookBlockHeight':
         funcs = blockbookServers.map(server => async () => {
-          const result =
+          const resultRaw =
             server.indexOf('trezor') === -1
-              ? await this.fetchGet(server + '/api/v2')
+              ? await this.ethEngine.io.fetch(server + '/api/v2')
               : await this.ethEngine.fetchCors(server + '/api/v2')
+          const result = await resultRaw.json()
           return { server, result }
         })
         // Randomize array
@@ -1130,12 +1062,11 @@ export class EthereumNetwork {
       case 'blockbookTxs':
         funcs = blockbookServers.map(server => async () => {
           const url = server + params[0]
-          const result =
+          const resultRaw =
             server.indexOf('trezor') === -1
-              ? await this.fetchGet(url)
-              : await this.ethEngine
-                  .fetchCors(url)
-                  .then(response => response.json())
+              ? await this.ethEngine.io.fetch(url)
+              : await this.ethEngine.fetchCors(url)
+          const result = await resultRaw.json()
           return { server, result }
         })
         // Randomize array
@@ -1325,7 +1256,7 @@ export class EthereumNetwork {
       for (let i = 0; i < transactions.length; i++) {
         try {
           const cleanedTx = cleanerFunc(transactions[i])
-          const tx = this.processEtherscanTransaction(cleanedTx, currencyCode)
+          const tx = this.processEvmScanTransaction(cleanedTx, currencyCode)
           allTransactions.push(tx)
         } catch (e) {
           this.ethEngine.error(
@@ -1354,13 +1285,13 @@ export class EthereumNetwork {
       const txsRegularResp = await this.getAllTxsEthscan(
         startBlock,
         currencyCode,
-        asEtherscanTransaction,
+        asEvmScanTransaction,
         { searchRegularTxs: true }
       )
       const txsInternalResp = await this.getAllTxsEthscan(
         startBlock,
         currencyCode,
-        asEtherscanInternalTransaction,
+        asEvmScanInternalTransaction,
         { searchRegularTxs: false }
       )
       server = txsRegularResp.server || txsInternalResp.server
@@ -1375,7 +1306,7 @@ export class EthereumNetwork {
         const resp = await this.getAllTxsEthscan(
           startBlock,
           currencyCode,
-          asEtherscanTokenTransaction,
+          asEvmScancanTokenTransaction,
           { contractAddress }
         )
         server = resp.server
@@ -1900,9 +1831,9 @@ export class EthereumNetwork {
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
-    const url = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
+    const path = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
     try {
-      const jsonObj = await this.fetchGetBlockchair(url, true)
+      const jsonObj = await this.fetchGetBlockchair(path, true)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
     } catch (e) {
       this.logError('checkTokenBalBlockchair', e)
@@ -2163,7 +2094,7 @@ export class EthereumNetwork {
   buildQueryFuncs(settings: EthereumSettings): QueryFuncs {
     const {
       rpcServers,
-      etherscanApiServers,
+      evmScanApiServers,
       blockbookServers,
       blockchairApiServers,
       amberdataRpcServers,
@@ -2174,7 +2105,7 @@ export class EthereumNetwork {
     const txs = []
     const tokenBal = []
 
-    if (etherscanApiServers.length > 0) {
+    if (evmScanApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightEthscan)
       nonce.push(this.checkNonceEthscan)
       txs.push(this.checkTxsEthscan)
@@ -2202,6 +2133,7 @@ export class EthereumNetwork {
     return { blockheight, nonce, txs, tokenBal }
   }
 
+  // TODO: Convert to error types
   throwError(res: FetchResponse, funcName: string, url: string) {
     switch (res.status) {
       case 402: // blockchair

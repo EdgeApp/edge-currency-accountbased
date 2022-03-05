@@ -122,7 +122,7 @@ export type LastEstimatedGasLimit = {
   gasLimit: string
 }
 
-export const asEtherscanTokenTransaction = asObject({
+export const asEvmScancanTokenTransaction = asObject({
   blockNumber: asString,
   timeStamp: asString,
   hash: asOptional(asString),
@@ -142,11 +142,9 @@ export const asEtherscanTokenTransaction = asObject({
   tokenDecimal: asString
 })
 
-export type EtherscanTokenTransaction = $Call<
-  typeof asEtherscanTokenTransaction
->
+export type EvmScanTokenTransaction = $Call<typeof asEvmScancanTokenTransaction>
 
-export const asEtherscanTransaction = asObject({
+export const asEvmScanTransaction = asObject({
   hash: asOptional(asString),
   transactionHash: asOptional(asString),
   blockNumber: asString,
@@ -163,9 +161,9 @@ export const asEtherscanTransaction = asObject({
   confirmations: asOptional(asString)
 })
 
-export type EtherscanTransaction = $Call<typeof asEtherscanTransaction>
+export type EvmScanTransaction = $Call<typeof asEvmScanTransaction>
 
-export const asEtherscanInternalTransaction = asObject({
+export const asEvmScanInternalTransaction = asObject({
   hash: asOptional(asString),
   transactionHash: asOptional(asString),
   blockNumber: asString,
@@ -179,8 +177,8 @@ export const asEtherscanInternalTransaction = asObject({
   contractAddress: asOptional(asString)
 })
 
-export type EtherscanInternalTransaction = $Call<
-  typeof asEtherscanInternalTransaction
+export type EvmScanInternalTransaction = $Call<
+  typeof asEvmScanInternalTransaction
 >
 
 export type EthereumTxOtherParams = {
