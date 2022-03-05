@@ -26,7 +26,7 @@ export type EthereumInitOptions = {
   blockchairApiKey?: string,
   alethioApiKey?: string,
   amberdataApiKey?: string,
-  ethGasStationApiKey?: string,
+  gasStationApiKey?: string,
   alchemyApiKey?: string
 }
 
@@ -180,6 +180,25 @@ export const asEvmScanInternalTransaction = asObject({
 export type EvmScanInternalTransaction = $Call<
   typeof asEvmScanInternalTransaction
 >
+
+export const asEvmScanGasResponseResult = asObject({
+  LastBlock: asString,
+  SafeGasPrice: asString,
+  ProposeGasPrice: asString,
+  FastGasPrice: asString,
+
+  // Etherscan
+  suggestBaseFee: asMaybe(asString),
+  gasUsedRatio: asMaybe(asArray(asString))
+})
+
+export const asEvmScanGasResponse = asObject({
+  status: asString,
+  message: asString,
+  result: asEither(asString, asObject(asEvmScanGasResponseResult))
+})
+
+export type EvmScanGasResponse = $Call<typeof asEvmScanGasResponse>
 
 export type EthereumTxOtherParams = {
   from: string[],

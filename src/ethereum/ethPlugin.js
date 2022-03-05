@@ -28,7 +28,7 @@ import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils.js'
 import { EthereumEngine } from './ethEngine.js'
 import { ethPlugins } from './ethInfos.js'
 
-export { calcMiningFee } from './ethMiningFees.js' // may be tricky for RSK
+export { calcMiningFee } from './fees/ethMiningFees.js' // may be tricky for RSK
 
 export class EthereumPlugin extends CurrencyPlugin {
   constructor(

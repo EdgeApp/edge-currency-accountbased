@@ -42,7 +42,6 @@ import {
   toHex,
   validateObject
 } from '../common/utils'
-import { calcMiningFee } from './ethMiningFees.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
 import { EIP712TypedDataSchema, EthGasStationSchema } from './ethSchema.js'
@@ -66,6 +65,7 @@ import {
   asEthereumFees,
   asWcSessionRequestParams
 } from './ethTypes.js'
+import { calcMiningFee } from './fees/ethMiningFees.js'
 
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgasstation because it uses 10x gwei
