@@ -1,5 +1,21 @@
 # edge-currency-accountbased
 
+## 0.15.0 (2022-03-08)
+
+This is a breaking release that changes EthereumInitOptions variable names:
+
+- Api keys for etherscan-like data sources are now called `evmScanApiKey` (was `bscscanApiKey`, `ftmscanApiKey`, etc.)
+- Api keys for ethgasstation-like data sources are now called `gasStationApiKey` (was `ethGasStationApiKey`)
+
+Other updates:
+
+- Add etherscan fee sources across EVM chains
+- FTM: Add new tokens WFTM, TSHARE, TOMB, TBOND, and xBOO
+- FTM: Add additional rpc servers
+- Update ZEC checkpoints
+- Upgrade edge-core-js to v0.19.10
+  - added: `EdgeCurrencyInfo.canReplaceByFee`
+
 ## 0.14.1 (2022-02-23)
 
 - Update BNB chain display names
