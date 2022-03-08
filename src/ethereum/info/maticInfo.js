@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
@@ -40,7 +40,7 @@ const otherSettings: EthereumSettings = {
     'https://matic-mainnet-full-rpc.bwarelabs.com',
     'https://rpc-mainnet.matic.quiknode.pro'
   ],
-  etherscanApiServers: ['https://api.polygonscan.com'],
+  evmScanApiServers: ['https://api.polygonscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['polygon'],
@@ -49,6 +49,7 @@ const otherSettings: EthereumSettings = {
     chainId: 137,
     name: 'MATIC Mainnet'
   },
+  supportsEIP1559: true,
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},

@@ -7,7 +7,6 @@ import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
 import { bns } from 'biggystring'
-import { asMaybe } from 'cleaners'
 import {
   type EdgeCurrencyEngineOptions,
   type EdgeCurrencyInfo,
@@ -31,7 +30,6 @@ import {
   bufToHex,
   cleanTxLogs,
   decimalToHex,
-  getEdgeInfoServer,
   getOtherParams,
   hexToBuf,
   hexToDecimal,
@@ -42,15 +40,15 @@ import {
   toHex,
   validateObject
 } from '../common/utils'
-import { calcMiningFee } from './ethMiningFees.js'
+import { NETWORK_FEES_POLL_MILLISECONDS, WEI_MULTIPLIER } from './ethConsts.js'
 import { EthereumNetwork } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
-import { EIP712TypedDataSchema, EthGasStationSchema } from './ethSchema.js'
+import { EIP712TypedDataSchema } from './ethSchema.js'
 import {
   type EIP712TypedDataParam,
+  type EthereumBaseMultiplier,
   type EthereumFee,
   type EthereumFees,
-  type EthereumFeesGasPrice,
   type EthereumInitOptions,
   type EthereumOtherMethods,
   type EthereumSettings,
@@ -63,14 +61,11 @@ import {
   type WcDappDetails,
   type WcProps,
   type WcRpcPayload,
-  asEthereumFees,
   asWcSessionRequestParams
 } from './ethTypes.js'
+import { calcMiningFee } from './fees/ethMiningFees.js'
+import { type FeeProviderFunction, FeeProviders } from './fees/feeProviders.js'
 
-const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
-const GAS_STATION_WEI_MULTIPLIER = 100000000 // 100 million is the multiplier for ethgasstation because it uses 10x gwei
-const WEI_MULTIPLIER = 1000000000
-const GAS_PRICE_SANITY_CHECK = 30000 // 3000 Gwei (ethgasstation api reports gas prices with additional decimal place)
 const walletConnectors: WalletConnectors = {}
 
 export class EthereumEngine extends CurrencyEngine {
@@ -81,7 +76,8 @@ export class EthereumEngine extends CurrencyEngine {
   fetchCors: EdgeFetchFunction
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
-
+  infoFeeProvider: () => Promise<EthereumFee>
+  externalFeeProviders: FeeProviderFunction[]
   constructor(
     currencyPlugin: EthereumPlugin,
     walletInfo: EdgeWalletInfo,
@@ -107,6 +103,18 @@ export class EthereumEngine extends CurrencyEngine {
       gasLimit: ''
     }
     this.fetchCors = fetchCors
+
+    // Update network fees from other providers
+    const { infoFeeProvider, externalFeeProviders } = FeeProviders(
+      this.io.fetch,
+      this.currencyInfo,
+      this.initOptions
+    )
+    this.infoFeeProvider = infoFeeProvider
+    this.externalFeeProviders = [
+      this.updateNetworkFeesFromBaseFeePerGas,
+      ...externalFeeProviders
+    ]
 
     this.utils = {
       signMessage: (message: string) => {
@@ -524,72 +532,56 @@ export class EthereumEngine extends CurrencyEngine {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
-  // curreently for Ethereum but should allow other currencies
-  async checkUpdateNetworkFees() {
-    // Get the network fees from the info server
-    try {
-      const infoServer = getEdgeInfoServer()
-      const url = `${infoServer}/v1/networkFees/${this.currencyInfo.currencyCode}`
-      const jsonObj: EthereumFees = await this.ethNetwork.fetchGet(url)
-      const valid = asMaybe(asEthereumFees)(jsonObj) != null
-
-      if (valid) {
-        if (
-          JSON.stringify(this.walletLocalData.otherData.networkFees) !==
-          JSON.stringify(jsonObj)
-        ) {
-          this.walletLocalData.otherData.networkFees = jsonObj
-          this.walletLocalDataDirty = true
+  /**
+   *  Fetch network fees from various providers in order of priority, stopping
+   *  and writing upon successful result.
+   */
+  async updateNetworkFees() {
+    for (const externalFeeProvider of this.externalFeeProviders) {
+      try {
+        const ethereumFee = await externalFeeProvider()
+        if (ethereumFee == null) continue
+        this.walletLocalData.otherData.networkFees.default.gasPrice = {
+          ...this.walletLocalData.otherData.networkFees.default.gasPrice,
+          ethereumFee
         }
-      } else {
+        this.walletLocalDataDirty = true
+        break
+      } catch (e) {
         this.error(
-          `Error: Fetched invalid networkFees ${JSON.stringify(jsonObj)}`
+          `Error fetching fees from ${
+            externalFeeProvider.name
+          }. ${JSON.stringify(e)}`
         )
       }
-    } catch (e) {
-      this.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from Edge info server`,
-        e
-      )
-    }
-
-    try {
-      const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
-
-      if (baseFeePerGas == null) throw new Error('baseFeePerGas is null')
-
-      // Update the network fees from network base fee
-      return this.updateNetworkFeesFromBaseFeePerGas(
-        hexToDecimal(baseFeePerGas)
-      )
-    } catch (error) {
-      this.error('getBaseFeePerGas', error)
-    }
-
-    try {
-      // If base fee is not suppported, update network fees from gas station
-      this.updateNetworkFeesFromEthGasStation()
-    } catch (error) {
-      this.error('updateNetworkFeesFromEthGasStation', error)
     }
   }
 
-  async updateNetworkFeesFromBaseFeePerGas(baseFeePerGas: string) {
-    /*
-    This algorithm calculates fee amounts using the base multiplier from the
-    info server.
+  /*
+  This algorithm calculates fee amounts using the base multiplier from the
+  info server.
 
-    Formula:
-      fee = baseMultiplier * baseFee + minPriorityFee
-    
-    Where:
-      minPriorityFee = <minimum priority fee from info server>
-      baseFee = <latest block's base fee>
-      baseMultiplier = <multiplier from info server for low, standard, high, etc>
+  Formula:
+    fee = baseMultiplier * baseFee + minPriorityFee
 
-    Reference analysis for choosing 2 gwei minimum priority fee: 
-      https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
-    */
+  Where:
+    minPriorityFee = <minimum priority fee from info server>
+    baseFee = <latest block's base fee>
+    baseMultiplier = <multiplier from info server for low, standard, high, etc>
+
+  Reference analysis for choosing 2 gwei minimum priority fee:
+    https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
+  */
+  async updateNetworkFeesFromBaseFeePerGas(): Promise<EthereumBaseMultiplier | void> {
+    // Get base fees from 'rpcServers' and convert to our network fees format.
+    // * Supported for post EIP-1559 chains only
+    const { supportsEIP1559 = false } =
+      this.currencyInfo.defaultSettings.otherSettings
+    if (!supportsEIP1559) return
+
+    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+    if (baseFeePerGas == null) return
+    const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
     const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
 
@@ -605,129 +597,20 @@ export class EthereumEngine extends CurrencyEngine {
     const minPriorityFee =
       networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
     // This is how much we will multiply the base fee by
-    const baseMultiplier =
+    const baseMultiplier: EthereumBaseMultiplier =
       networkFees.default.baseFeeMultiplier ||
       defaultNetworkFee.baseFeeMultiplier
 
     // Make sure the properties exist
-    if (minPriorityFee == null || baseMultiplier == null) {
-      return
+    if (minPriorityFee == null || baseMultiplier == null) return
+
+    for (const feeType of Object.keys(baseMultiplier)) {
+      const baseFee = bns.mul(baseMultiplier[feeType], baseFeePerGasDecimal)
+      const totalFee = bns.add(baseFee, minPriorityFee)
+      baseMultiplier[feeType] = bns.div(totalFee, '1')
     }
 
-    const { gasPrice } = networkFees.default
-
-    const formula = (baseMultiplier: string): string =>
-      bns.div(
-        bns.add(bns.mul(baseMultiplier, baseFeePerGas), minPriorityFee),
-        '1'
-      )
-
-    // Update default network fees
-    networkFees.default = {
-      ...networkFees.default,
-      gasPrice: {
-        ...gasPrice,
-        ...Object.keys(baseMultiplier).reduce(
-          (fees, key) => ({ ...fees, [key]: formula(baseMultiplier[key]) }),
-          {}
-        )
-      }
-    }
-  }
-
-  // Deprecated for ETH and other chains that hard forked to EIP 1559
-  async updateNetworkFeesFromEthGasStation() {
-    let jsonObj
-    try {
-      const { ethGasStationUrl } =
-        this.currencyInfo.defaultSettings.otherSettings
-      if (ethGasStationUrl == null) return
-      this.log(`Updating networkFees from ${ethGasStationUrl} `)
-      const { ethGasStationApiKey } = this.initOptions
-      const apiKeyParams = ethGasStationApiKey
-        ? `?api-key=${ethGasStationApiKey || ''}`
-        : ''
-      jsonObj = await this.ethNetwork.fetchGet(
-        `${ethGasStationUrl}${apiKeyParams}`
-      )
-      const valid = validateObject(jsonObj, EthGasStationSchema)
-      if (valid) {
-        const fees: EthereumFees = this.walletLocalData.otherData.networkFees
-        const ethereumFee: EthereumFee = fees.default
-        if (!ethereumFee.gasPrice) {
-          return
-        }
-        const gasPrice: EthereumFeesGasPrice = ethereumFee.gasPrice
-
-        let safeLow = jsonObj.safeLow
-        let average = jsonObj.average
-        let fast = jsonObj.fast
-        let fastest = jsonObj.fastest
-
-        // Special case for MATIC fast and fastest being equivalent from gas station
-        if (this.currencyInfo.currencyCode === 'MATIC') {
-          // Since the later code assumes EthGasStation's greater-by-a-factor-of-ten gas prices, we need to multiply the GWEI from Polygon Gas Station by 10 so they conform.
-          safeLow *= 10
-          average = ((jsonObj.fast + jsonObj.safeLow) / 2) * 10
-          fast = jsonObj.standard * 10
-          fastest *= 10
-        }
-
-        // Sanity checks
-        if (safeLow <= 0 || safeLow > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid safeLow value from Gas Station')
-        }
-        if (average < 1 || average > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid average value from Gas Station')
-        }
-        if (fast < 1 || fast > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid fastest value from Gas Station')
-        }
-        if (fastest < 1 || fastest > GAS_PRICE_SANITY_CHECK) {
-          throw new Error('Invalid fastest value from Gas Station')
-        }
-
-        // Correct inconsistencies, set gas prices
-        if (average <= safeLow) average = safeLow + 1
-        if (fast <= average) fast = average + 1
-        if (fastest <= fast) fastest = fast + 1
-
-        let lowFee = safeLow
-        let standardFeeLow = fast
-        let standardFeeHigh = (fast + fastest) * 0.75
-        let highFee = standardFeeHigh > fastest ? standardFeeHigh : fastest
-
-        lowFee = (Math.round(lowFee) * GAS_STATION_WEI_MULTIPLIER).toString()
-        standardFeeLow = (
-          Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
-        ).toString()
-        standardFeeHigh = (
-          Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
-        ).toString()
-        highFee = (Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER).toString()
-
-        if (
-          gasPrice.lowFee !== lowFee ||
-          gasPrice.standardFeeLow !== standardFeeLow ||
-          gasPrice.highFee !== highFee ||
-          gasPrice.standardFeeHigh !== standardFeeHigh
-        ) {
-          gasPrice.lowFee = lowFee
-          gasPrice.standardFeeLow = standardFeeLow
-          gasPrice.highFee = highFee
-          gasPrice.standardFeeHigh = standardFeeHigh
-          this.walletLocalDataDirty = true
-        }
-      } else {
-        throw new Error(`Error: Fetched invalid networkFees from EthGasStation`)
-      }
-    } catch (e) {
-      this.error(
-        `Error fetching ${this.currencyInfo.currencyCode} networkFees from EthGasStation`,
-        e
-      )
-      this.log.crash(e, { rawData: jsonObj })
-    }
+    return baseMultiplier
   }
 
   async clearBlockchainCache() {
@@ -742,10 +625,18 @@ export class EthereumEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
-    this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    // Fetch the static fees from the info server only once to avoid overwriting live values.
+    this.infoFeeProvider()
+      .then(info => {
+        Object.assign(this.walletLocalData.otherData.networkFees.default, info)
+        this.walletLocalDataDirty = true
+      })
+      .catch(() => this.warn('Error fetching fees from Info Server'))
+      .finally(() =>
+        this.addToLoop('updateNetworkFees', NETWORK_FEES_POLL_MILLISECONDS)
+      )
 
     this.ethNetwork.needsLoop()
-
     super.startEngine()
   }
 

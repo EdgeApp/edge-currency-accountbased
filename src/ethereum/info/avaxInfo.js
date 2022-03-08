@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
@@ -38,7 +38,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const otherSettings: EthereumSettings = {
   rpcServers: ['https://api.avax.network/ext/bc/C/rpc'],
-  etherscanApiServers: ['https://api.snowtrace.io'],
+  evmScanApiServers: ['https://api.snowtrace.io'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['avalanche'],
@@ -47,6 +47,7 @@ const otherSettings: EthereumSettings = {
     chainId: 43114,
     name: 'AVAX Mainnet'
   },
+  supportsEIP1559: true,
   hdPathCoinType: 9000,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},

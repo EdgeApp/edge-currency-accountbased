@@ -21,15 +21,12 @@ import type { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
 export type EthereumInitOptions = {
   blockcypherApiKey?: string,
-  etherscanApiKey?: string | string[],
-  bscscanApiKey?: string | string[],
-  ftmscanApiKey?: string,
-  polygonscanApiKey?: string,
+  evmScanApiKey?: string | string[],
   infuraProjectId?: string,
   blockchairApiKey?: string,
   alethioApiKey?: string,
   amberdataApiKey?: string,
-  ethGasStationApiKey?: string,
+  gasStationApiKey?: string,
   alchemyApiKey?: string
 }
 
@@ -49,11 +46,12 @@ export type EthereumSettings = {|
     chainId: number,
     name: string
   },
+  supportsEIP1559?: boolean,
   checkUnconfirmedTransactions: boolean,
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees,
   ercTokenStandard: string,
-  etherscanApiServers: string[],
+  evmScanApiServers: string[],
   ethGasStationUrl: string | null,
   hdPathCoinType: number,
   iosAllowedTokens: {
@@ -124,7 +122,7 @@ export type LastEstimatedGasLimit = {
   gasLimit: string
 }
 
-export const asEtherscanTokenTransaction = asObject({
+export const asEvmScancanTokenTransaction = asObject({
   blockNumber: asString,
   timeStamp: asString,
   hash: asOptional(asString),
@@ -144,11 +142,9 @@ export const asEtherscanTokenTransaction = asObject({
   tokenDecimal: asString
 })
 
-export type EtherscanTokenTransaction = $Call<
-  typeof asEtherscanTokenTransaction
->
+export type EvmScanTokenTransaction = $Call<typeof asEvmScancanTokenTransaction>
 
-export const asEtherscanTransaction = asObject({
+export const asEvmScanTransaction = asObject({
   hash: asOptional(asString),
   transactionHash: asOptional(asString),
   blockNumber: asString,
@@ -165,9 +161,9 @@ export const asEtherscanTransaction = asObject({
   confirmations: asOptional(asString)
 })
 
-export type EtherscanTransaction = $Call<typeof asEtherscanTransaction>
+export type EvmScanTransaction = $Call<typeof asEvmScanTransaction>
 
-export const asEtherscanInternalTransaction = asObject({
+export const asEvmScanInternalTransaction = asObject({
   hash: asOptional(asString),
   transactionHash: asOptional(asString),
   blockNumber: asString,
@@ -181,9 +177,28 @@ export const asEtherscanInternalTransaction = asObject({
   contractAddress: asOptional(asString)
 })
 
-export type EtherscanInternalTransaction = $Call<
-  typeof asEtherscanInternalTransaction
+export type EvmScanInternalTransaction = $Call<
+  typeof asEvmScanInternalTransaction
 >
+
+export const asEvmScanGasResponseResult = asObject({
+  LastBlock: asString,
+  SafeGasPrice: asString,
+  ProposeGasPrice: asString,
+  FastGasPrice: asString,
+
+  // Etherscan
+  suggestBaseFee: asMaybe(asString),
+  gasUsedRatio: asMaybe(asArray(asString))
+})
+
+export const asEvmScanGasResponse = asObject({
+  status: asString,
+  message: asString,
+  result: asEither(asString, asObject(asEvmScanGasResponseResult))
+})
+
+export type EvmScanGasResponse = $Call<typeof asEvmScanGasResponse>
 
 export type EthereumTxOtherParams = {
   from: string[],

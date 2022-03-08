@@ -6,12 +6,12 @@
 import { bns } from 'biggystring'
 import type { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
-import { normalizeAddress } from '../common/utils.js'
+import { normalizeAddress } from '../../common/utils.js'
 import type {
   EthereumCalcedFees,
   EthereumFee,
   EthereumFees
-} from './ethTypes.js'
+} from '../ethTypes.js'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'

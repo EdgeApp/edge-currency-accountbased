@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -39,7 +39,7 @@ const otherSettings: EthereumSettings = {
     'https://rpc3.fantom.network',
     'https://rpc.ftm.tools'
   ],
-  etherscanApiServers: ['https://api.ftmscan.com/'],
+  evmScanApiServers: ['https://api.ftmscan.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['fantom'],
@@ -49,6 +49,7 @@ const otherSettings: EthereumSettings = {
     name: 'Fantom Opera'
   },
   hdPathCoinType: 60,
+  supportsEIP1559: true,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
   blockchairApiServers: [],

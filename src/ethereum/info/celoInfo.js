@@ -6,8 +6,8 @@ import type {
   EdgeCurrencyInfo
 } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from './ethPlugin'
-import type { EthereumFees, EthereumSettings } from './ethTypes.js'
+import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import type { EthereumFees, EthereumSettings } from '../ethTypes.js'
 
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
@@ -38,7 +38,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const otherSettings: EthereumSettings = {
   rpcServers: ['https://forno.celo.org'],
-  etherscanApiServers: ['https://explorer.celo.org/api'],
+  evmScanApiServers: ['https://explorer.celo.org/api'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['celo'],
