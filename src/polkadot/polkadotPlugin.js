@@ -1,11 +1,17 @@
 // @flow
 
-import {
-  ed25519PairFromSeed, // FIXME: Is this a good default?
-  encodeAddress,
-  isAddress,
-  mnemonicToMiniSecret
-} from '@polkadot/util-crypto'
+// import dotCrypto from '@polkadot/util-crypto/bundle.cjs'
+// import {
+//   ed25519PairFromSeed, // FIXME: Is this a good default?
+//   encodeAddress,
+//   isAddress,
+//   mnemonicToMiniSecret
+// } from '@polkadot/util-crypto'
+// import { isAddress } from '@polkadot/util-crypto'
+// import { encodeAddress } from '@polkadot/util-crypto/address/encode'
+// import { isAddress } from '@polkadot/util-crypto/address/is'
+// import { ed25519PairFromSeed } from '@polkadot/util-crypto/ed25519/pair/fromSeed'
+// import { mnemonicToMiniSecret } from '@polkadot/util-crypto/mnemonic/toMiniSecret'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -27,6 +33,17 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, isHex } from '../common/utils.js'
 import { PolkadotEngine } from './polkadotEngine.js'
 
+// $FlowFixMe
+// const encodeAddress = require('@polkadot/util-crypto/address/encode')
+const dotAddress = require('@polkadot/util-crypto')
+const { isAddress } = dotAddress
+
+// const {
+//   // ed25519PairFromSeed, // FIXME: Is this a good default?
+//   // isAddress
+//   // mnemonicToMiniSecret
+// } = dotCrypto
+
 export class PolkadotPlugin extends CurrencyPlugin {
   pluginId: string
 
@@ -37,12 +54,13 @@ export class PolkadotPlugin extends CurrencyPlugin {
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
     if (validateMnemonic(userInput)) {
-      const miniSecret = mnemonicToMiniSecret(userInput)
-      const { secretKey } = ed25519PairFromSeed(miniSecret)
-      return {
-        [`${this.pluginId}Mnemonic`]: userInput,
-        [`${this.pluginId}Key`]: Buffer.from(secretKey).toString('hex')
-      }
+      // const miniSecret = mnemonicToMiniSecret(userInput)
+      // const { secretKey } = ed25519PairFromSeed(miniSecret)
+      // return {
+      //   [`${this.pluginId}Mnemonic`]: userInput,
+      //   [`${this.pluginId}Key`]: Buffer.from(secretKey).toString('hex')
+      // }
+      return {}
     } else if (isHex(userInput)) {
       return {
         [`${this.pluginId}Key`]: userInput
@@ -65,9 +83,10 @@ export class PolkadotPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    const secret = new Uint8Array(walletInfo.keys[`${this.pluginId}Key`])
-    const { publicKey } = ed25519PairFromSeed(secret)
-    return encodeAddress(publicKey)
+    // const secret = new Uint8Array(walletInfo.keys[`${this.pluginId}Key`])
+    // const { publicKey } = ed25519PairFromSeed(secret)
+    // return encodeAddress(publicKey)
+    return {}
   }
 
   async parseUri(

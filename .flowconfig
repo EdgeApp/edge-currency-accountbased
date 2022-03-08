@@ -1,5 +1,6 @@
 [ignore]
 <PROJECT_ROOT>/lib/.*
+node_modules/@polkadot/keyring
 
 [include]
 

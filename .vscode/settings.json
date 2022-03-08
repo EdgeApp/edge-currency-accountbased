@@ -1,3 +1,8 @@
 {
-    "javascript.validate.enable": false
+    "javascript.validate.enable": false,
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#0E3512",
+        "titleBar.activeBackground": "#134A19",
+        "titleBar.activeForeground": "#F3FCF4"
+    }
 }

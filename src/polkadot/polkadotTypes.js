@@ -13,6 +13,8 @@ import {
 } from 'cleaners'
 
 export type PolkadotSettings = {
+  rpcNodes: string[],
+  genesisHash: string,
   subscanBaseUrl: string,
   subscanQueryLimit: number
 }
@@ -28,6 +30,7 @@ export const asSubscanResponse = asObject({
 // https://docs.api.subscan.io/#v2-api
 export const asBalance = asObject({
   account: asObject({
+    nonce: asNumber,
     balance: asString
   })
 })
@@ -36,6 +39,7 @@ export const asBalance = asObject({
 export const asBlockheight = asObject({
   blocks: asTuple(
     asObject({
+      hash: asString,
       block_num: asNumber
     })
   )
@@ -59,4 +63,10 @@ export type SubscanTx = $Call<typeof asTransfer>
 export const asTransactions = asObject({
   count: asNumber,
   transfers: asEither(asArray(asUnknown), asNull)
+})
+
+export const asGetRuntimeVersion = asObject({
+  specName: asString,
+  specVersion: asNumber,
+  transactionVersion: asNumber
 })
