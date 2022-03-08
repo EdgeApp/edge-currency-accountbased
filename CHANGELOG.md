@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.1 (2022-03-08)
+
+- Add backwards-compatible apikey helper function
+
 ## 0.15.0 (2022-03-08)
 
 This is a breaking release that changes EthereumInitOptions variable names:
