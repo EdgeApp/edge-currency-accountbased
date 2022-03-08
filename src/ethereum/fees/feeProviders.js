@@ -1,6 +1,10 @@
 // @flow
 
-import { type EdgeCurrencyInfo, type EdgeFetchFunction } from 'edge-core-js'
+import {
+  type EdgeCurrencyInfo,
+  type EdgeFetchFunction,
+  type JsonObject
+} from 'edge-core-js'
 
 import {
   getEdgeInfoServer,
@@ -52,7 +56,7 @@ export const fetchFeesFromEvmScan = async (
 ): Promise<EthereumBaseMultiplier | void> => {
   const evmScanApiServers =
     currencyInfo.defaultSettings.otherSettings.evmScanApiServers
-  const scanApiKey = initOptions.evmScanApiKey
+  const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo)
   if (evmScanApiServers == null || scanApiKey == null) return
 
   const apiKey = `&apikey=${
@@ -100,7 +104,7 @@ export const fetchFeesFromEvmGasStation = async (
   initOptions: EthereumInitOptions
 ): Promise<EthereumBaseMultiplier | void> => {
   const { ethGasStationUrl } = currencyInfo.defaultSettings.otherSettings
-  const { gasStationApiKey } = initOptions
+  const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo)
   if (ethGasStationUrl == null || gasStationApiKey == null) return
 
   const apiKeyParams = gasStationApiKey
@@ -169,4 +173,37 @@ export const fetchFeesFromInfoServer = async (
   const url = `${infoServer}/v1/networkFees/${currencyCode}`
   const result = await fetch(url)
   return asEthereumFees(await result.json())
+}
+
+// Backwards compatibility with deprecated etherscan api keys
+export const getEvmScanApiKey = (
+  initOptions: JsonObject,
+  info: EdgeCurrencyInfo
+): string | string[] | void => {
+  const {
+    evmScanApiKey,
+    etherscanApiKey,
+    ftmscanApiKey,
+    bscscanApiKey,
+    polygonscanApiKey
+  } = initOptions
+  if (evmScanApiKey != null) return evmScanApiKey
+  const { currencyCode } = info
+  if (currencyCode === 'ETH' && etherscanApiKey != null) return etherscanApiKey
+  if (currencyCode === 'FTM' && ftmscanApiKey != null) return ftmscanApiKey
+  if (currencyCode === 'BNB' && bscscanApiKey != null) return bscscanApiKey
+  if (currencyCode === 'MATIC' && polygonscanApiKey != null)
+    return polygonscanApiKey
+}
+
+// Backwards compatibility with deprecated ethgasstation api keys
+export const getGasStationApiKey = (
+  initOptions: JsonObject,
+  info: EdgeCurrencyInfo
+): string | void => {
+  const { gasStationApiKey, ethGasStationApiKey } = initOptions
+  if (gasStationApiKey != null) return gasStationApiKey
+  const { currencyCode } = info
+  if (currencyCode === 'ETH' && ethGasStationApiKey != null)
+    return ethGasStationApiKey
 }

@@ -56,6 +56,7 @@ import {
   asFetchGetAmberdataApiResponse,
   asRpcResultString
 } from './ethTypes'
+import { getEvmScanApiKey } from './fees/feeProviders.js'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
 const NONCE_POLL_MILLISECONDS = 20000
@@ -478,7 +479,10 @@ export class EthereumNetwork {
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
-    const scanApiKey = this.ethEngine.initOptions.evmScanApiKey
+    const scanApiKey = getEvmScanApiKey(
+      this.ethEngine.initOptions,
+      this.currencyInfo
+    )
     const apiKey = `&apikey=${
       Array.isArray(scanApiKey)
         ? pickRandom(scanApiKey, 1)[0]
