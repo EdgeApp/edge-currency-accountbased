@@ -108,7 +108,8 @@ export class EthereumEngine extends CurrencyEngine {
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
       this.io.fetch,
       this.currencyInfo,
-      this.initOptions
+      this.initOptions,
+      this.log
     )
     this.infoFeeProvider = infoFeeProvider
     this.externalFeeProviders = [

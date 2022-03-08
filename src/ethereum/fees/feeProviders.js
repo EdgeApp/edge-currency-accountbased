@@ -1,9 +1,10 @@
 // @flow
 
-import {
-  type EdgeCurrencyInfo,
-  type EdgeFetchFunction,
-  type JsonObject
+import type {
+  EdgeCurrencyInfo,
+  EdgeFetchFunction,
+  EdgeLog,
+  JsonObject
 } from 'edge-core-js'
 
 import {
@@ -36,14 +37,15 @@ type FeeProviderMap = {
 export const FeeProviders = (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
-  initOptions: EthereumInitOptions
+  initOptions: EthereumInitOptions,
+  log: EdgeLog
 ): FeeProviderMap => {
   const providerFns = [fetchFeesFromEvmGasStation, fetchFeesFromEvmScan]
 
   return {
     infoFeeProvider: () => fetchFeesFromInfoServer(fetch, currencyInfo),
     externalFeeProviders: providerFns.map(
-      provider => () => provider(fetch, currencyInfo, initOptions)
+      provider => () => provider(fetch, currencyInfo, initOptions, log)
     )
   }
 }
@@ -52,11 +54,12 @@ export const FeeProviders = (
 export const fetchFeesFromEvmScan = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
-  initOptions: EthereumInitOptions
+  initOptions: EthereumInitOptions,
+  log: EdgeLog
 ): Promise<EthereumBaseMultiplier | void> => {
   const evmScanApiServers =
     currencyInfo.defaultSettings.otherSettings.evmScanApiServers
-  const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo)
+  const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log)
   if (evmScanApiServers == null || scanApiKey == null) return
 
   const apiKey = `&apikey=${
@@ -101,10 +104,11 @@ export const fetchFeesFromEvmScan = async (
 export const fetchFeesFromEvmGasStation = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
-  initOptions: EthereumInitOptions
+  initOptions: EthereumInitOptions,
+  log: EdgeLog
 ): Promise<EthereumBaseMultiplier | void> => {
   const { ethGasStationUrl } = currencyInfo.defaultSettings.otherSettings
-  const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo)
+  const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
   if (ethGasStationUrl == null || gasStationApiKey == null) return
 
   const apiKeyParams = gasStationApiKey
@@ -178,7 +182,8 @@ export const fetchFeesFromInfoServer = async (
 // Backwards compatibility with deprecated etherscan api keys
 export const getEvmScanApiKey = (
   initOptions: JsonObject,
-  info: EdgeCurrencyInfo
+  info: EdgeCurrencyInfo,
+  log: EdgeLog
 ): string | string[] | void => {
   const {
     evmScanApiKey,
@@ -189,21 +194,45 @@ export const getEvmScanApiKey = (
   } = initOptions
   if (evmScanApiKey != null) return evmScanApiKey
   const { currencyCode } = info
-  if (currencyCode === 'ETH' && etherscanApiKey != null) return etherscanApiKey
-  if (currencyCode === 'FTM' && ftmscanApiKey != null) return ftmscanApiKey
-  if (currencyCode === 'BNB' && bscscanApiKey != null) return bscscanApiKey
-  if (currencyCode === 'MATIC' && polygonscanApiKey != null)
+  if (currencyCode === 'ETH' && etherscanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+    )
+    return etherscanApiKey
+  }
+  if (currencyCode === 'FTM' && ftmscanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'ftmscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+    )
+    return ftmscanApiKey
+  }
+  if (currencyCode === 'BNB' && bscscanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'bscscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+    )
+    return bscscanApiKey
+  }
+  if (currencyCode === 'MATIC' && polygonscanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+    )
     return polygonscanApiKey
+  }
 }
 
 // Backwards compatibility with deprecated ethgasstation api keys
 export const getGasStationApiKey = (
   initOptions: JsonObject,
-  info: EdgeCurrencyInfo
+  info: EdgeCurrencyInfo,
+  log: EdgeLog
 ): string | void => {
   const { gasStationApiKey, ethGasStationApiKey } = initOptions
   if (gasStationApiKey != null) return gasStationApiKey
   const { currencyCode } = info
-  if (currencyCode === 'ETH' && ethGasStationApiKey != null)
+  if (currencyCode === 'ETH' && ethGasStationApiKey != null) {
+    log.warn(
+      "INIT OPTION 'ethGasStationApiKey' IS DEPRECATED. USE 'gasStationApiKey' INSTEAD"
+    )
     return ethGasStationApiKey
+  }
 }

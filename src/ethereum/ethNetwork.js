@@ -481,7 +481,8 @@ export class EthereumNetwork {
   async fetchGetEtherscan(server: string, cmd: string) {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
-      this.currencyInfo
+      this.currencyInfo,
+      this.ethEngine.log
     )
     const apiKey = `&apikey=${
       Array.isArray(scanApiKey)
