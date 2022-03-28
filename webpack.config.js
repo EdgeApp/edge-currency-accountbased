@@ -26,7 +26,8 @@ module.exports = {
     path: path.join(path.resolve(__dirname), 'lib/react-native')
   },
   plugins: [
-    new webpack.IgnorePlugin({ resourceRegExp: /^https-proxy-agent$/ })
+    new webpack.IgnorePlugin({ resourceRegExp: /^https-proxy-agent$/ }),
+    new webpack.ContextReplacementPlugin(/(binance-chain|polkadot\/bundles)/)
   ],
   resolve: {
     fallback: {
