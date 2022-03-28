@@ -20,6 +20,7 @@ import {
 
 import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, isHex } from '../common/utils.js'
+import { PolkadotEngine } from './polkadotEngine.js'
 import {
   ed25519PairFromSeed, // FIXME: Is this a good default?
   encodeAddress,
@@ -137,7 +138,18 @@ export function makePolkadotPluginInner(
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
-    throw new Error('Must implement makeEngine')
+    const tools = await makeCurrencyTools()
+    const currencyEngine = new PolkadotEngine(tools, walletInfo, opts)
+
+    // Do any async initialization necessary for the engine
+    await currencyEngine.loadEngine(tools, walletInfo, opts)
+
+    // This is just to make sure otherData is Flow type checked
+    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+
+    const out: EdgeCurrencyEngine = currencyEngine
+
+    return out
   }
 
   return {
