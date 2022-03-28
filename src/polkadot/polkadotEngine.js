@@ -1,15 +1,31 @@
 // @flow
 
-import { add, div, mul } from 'biggystring'
+import {
+  construct,
+  createMetadata,
+  deriveAddress,
+  getRegistry,
+  methods,
+  PolkadotSS58Format
+} from '@substrate/txwrapper-polkadot'
+import { add, div, gt, mul } from 'biggystring'
 import {
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
-  type JsonObject
+  type JsonObject,
+  InsufficientFundsError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getDenomInfo } from '../common/utils.js'
+import {
+  asyncWaterfall,
+  cleanTxLogs,
+  decimalToHex,
+  getDenomInfo,
+  getOtherParams,
+  isHex
+} from '../common/utils.js'
 import { PolkadotPlugin } from './polkadotPlugin.js'
 import {
   type PolkadotOtherData,
@@ -17,6 +33,7 @@ import {
   type SubscanTx,
   asBalance,
   asBlockheight,
+  asGetRuntimeVersion,
   asSubscanResponse,
   asTransactions,
   asTransfer
@@ -26,9 +43,20 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
+// $FlowFixMe
+const { Keyring } = require('@polkadot/keyring')
+
 export class PolkadotEngine extends CurrencyEngine {
   settings: PolkadotSettings
   otherData: PolkadotOtherData
+
+  // For transactions:
+  recentBlockhash: string
+  nonce: number
+  metadataRpc: string
+  transactionVersion: number
+  specName: string
+  specVersion: number
 
   constructor(
     currencyPlugin: PolkadotPlugin,
@@ -37,6 +65,10 @@ export class PolkadotEngine extends CurrencyEngine {
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    this.recentBlockhash = this.settings.genesisHash
+    this.nonce = 0
+    this.metadataRpc = ''
+    this.transactionVersion = 0
   }
 
   async fetchSubscan(endpoint: string, body: JsonObject): Promise<JsonObject> {
@@ -62,7 +94,8 @@ export class PolkadotEngine extends CurrencyEngine {
     try {
       const payload = { key: this.walletInfo.keys.publicKey }
       const response = await this.fetchSubscan('/v2/scan/search', payload)
-      const { balance } = asBalance(response).account
+      const { balance, nonce } = asBalance(response).account
+      this.nonce = nonce
       const denom = getDenomInfo(
         this.currencyInfo,
         this.currencyInfo.currencyCode
@@ -82,7 +115,7 @@ export class PolkadotEngine extends CurrencyEngine {
         page: 0
       }
       const response = await this.fetchSubscan('/scan/blocks', payload)
-      const { block_num: blockheight } = asBlockheight(response).blocks[0]
+      const { block_num: blockheight, hash } = asBlockheight(response).blocks[0]
       if (blockheight > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = blockheight
         this.walletLocalDataDirty = true
@@ -90,9 +123,58 @@ export class PolkadotEngine extends CurrencyEngine {
           this.walletLocalData.blockHeight
         )
       }
+      this.recentBlockhash = hash
     } catch (e) {
       this.warn('queryBlockheight failed with error: ', e)
     }
+  }
+
+  async fetchPostRPC(method: string, params: any = []) {
+    const body = {
+      jsonrpc: '2.0',
+      id: 1,
+      method,
+      params
+    }
+    const options = {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+
+    const funcs = this.settings.rpcNodes.map(serverUrl => async () => {
+      const res = await this.io.fetch(serverUrl, options)
+      if (!res.ok) {
+        throw new Error(
+          `fetchRpc ${options.method} failed error: ${res.status}`
+        )
+      }
+      return res.json()
+    })
+
+    const response = await asyncWaterfall(funcs)
+    return response.result
+  }
+
+  async queryChainstate() {
+    // state_getMetadata
+    const metadataResponse = await this.fetchPostRPC('state_getMetadata')
+    if (isHex(metadataResponse)) {
+      this.metadataRpc = metadataResponse
+    } else {
+      this.warn(`Invalid state_getMetadata response ${metadataResponse}`)
+    }
+
+    // state_getRuntimeVersion
+    const { specName, specVersion, transactionVersion } = asGetRuntimeVersion(
+      await this.fetchPostRPC('state_getRuntimeVersion')
+    )
+    this.transactionVersion = transactionVersion
+    this.specName = specName
+    this.specVersion = specVersion
   }
 
   async queryFee() {}
@@ -193,6 +275,7 @@ export class PolkadotEngine extends CurrencyEngine {
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryChainstate', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     super.startEngine()
   }
@@ -209,25 +292,93 @@ export class PolkadotEngine extends CurrencyEngine {
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    // **********************************
-    // Create the unsigned EdgeTransaction
-
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
+    const nativeAmount: string = edgeSpendInfo.spendTargets[0].nativeAmount
+    const nativeNetworkFee = '0' // TODO:
+    const balance = this.walletLocalData.totalBalances[currencyCode]
+    const totalTxAmount = add(nativeAmount, nativeNetworkFee)
+    if (gt(totalTxAmount, balance)) {
+      throw new InsufficientFundsError()
+    }
+    // Create Solana transaction
+    const registry = getRegistry({
+      chainName: this.currencyInfo.displayName,
+      specName: this.specName,
+      specVersion: this.specVersion,
+      metadataRpc: this.metadataRpc
+    })
+    // transfer all you to send entire balance. transferKeepAlive provides some kind of protection from spending all but 1 where the network wil consume the last 1 DOT
+    const unsignedTx = methods.balances.transferKeepAlive(
+      {
+        value: nativeAmount,
+        dest: publicAddress
+      },
+      {
+        address: deriveAddress(
+          new Uint8Array(this.walletInfo.keys.publicKey),
+          PolkadotSS58Format.polkadot
+        ),
+        blockHash: this.recentBlockhash,
+        blockNumber: decimalToHex(this.walletLocalData.blockHeight.toString()),
+        eraPeriod: 64,
+        genesisHash: this.settings.genesisHash,
+        metadataRpc: this.metadataRpc,
+        nonce: this.nonce,
+        specVersion: this.specVersion,
+        tip: 0,
+        transactionVersion: this.transactionVersion
+      },
+      {
+        metadataRpc: this.metadataRpc,
+        registry: registry,
+        asCallsOnlyArg: true // this is some kind of space saving flag
+      }
+    )
+    const otherParams: JsonObject = {
+      unsignedTx: construct.signingPayload(unsignedTx, { registry })
+    }
+    // // **********************************
+    // // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
       txid: '',
       date: 0,
-      currencyCode,
+      currencyCode: '',
       blockHeight: 0,
-      nativeAmount: '0',
+      nativeAmount: `-${0}`,
       networkFee: '0',
       ourReceiveAddresses: [],
-      signedTx: ''
+      signedTx: '',
+      otherParams
     }
 
     return edgeTransaction
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    const { unsignedTx } = getOtherParams(edgeTransaction)
+
+    const keyring = new Keyring()
+    const keypair = keyring.addFromSeed(
+      new Uint8Array(this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`])
+    )
+
+    const registry = getRegistry({
+      chainName: this.currencyInfo.displayName,
+      specName: this.specName,
+      specVersion: this.specVersion,
+      metadataRpc: this.metadataRpc
+    })
+    const signingPayload = construct.signingPayload(unsignedTx, { registry })
+    registry.setMetadata(createMetadata(registry, this.metadataRpc))
+    const signature = registry
+      .createType('ExtrinsicPayload', signingPayload, {
+        version: 4 // EXTRINSIC_VERSION
+      })
+      .sign(keypair)
+    edgeTransaction.signedTx = construct.signedTx(unsignedTx, signature, {
+      metadataRpc: this.metadataRpc,
+      registry
+    })
     return edgeTransaction
   }
 
@@ -235,6 +386,17 @@ export class PolkadotEngine extends CurrencyEngine {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
+
+    try {
+      const payload = [edgeTransaction.signedTx]
+      const txid = await this.fetchPostRPC('author_submitExtrinsic', payload)
+      edgeTransaction.txid = txid
+      edgeTransaction.date = Date.now() / 1000
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    } catch (e) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
 
     return edgeTransaction
   }
