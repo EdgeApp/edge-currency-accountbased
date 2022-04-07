@@ -544,7 +544,7 @@ export class EthereumEngine extends CurrencyEngine {
         if (ethereumFee == null) continue
         this.walletLocalData.otherData.networkFees.default.gasPrice = {
           ...this.walletLocalData.otherData.networkFees.default.gasPrice,
-          ethereumFee
+          ...ethereumFee
         }
         this.walletLocalDataDirty = true
         break
