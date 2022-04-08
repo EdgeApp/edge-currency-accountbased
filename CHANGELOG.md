@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.2 (2022-04-08)
+
+- Fix Bug in EVM fees
+
 ## 0.15.1 (2022-03-08)
 
 - Add backwards-compatible apikey helper function
