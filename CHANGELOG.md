@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.3 (2022-04-08)
+
+- Use a reliable FTM RPC-nodes
+
 ## 0.15.2 (2022-04-08)
 
 - Fix Bug in EVM fees
