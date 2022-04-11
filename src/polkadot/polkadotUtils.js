@@ -1,5 +1,7 @@
 // @flow
+import '@polkadot/wasm-crypto/initOnlyAsm'
 
+// import 'jsbi'
 // $FlowFixMe
 import { Keyring } from '../../lib/polkadot/bundles/keyring.js'
 // $FlowFixMe

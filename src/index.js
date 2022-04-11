@@ -28,7 +28,6 @@ const plugins = {
   tezos: makeTezosPlugin,
   binance: makeBinancePlugin,
   hedera: makeHederaPlugin,
-  polkadot: makePolkadotPlugin,
   solana: makeSolanaPlugin
 }
 
@@ -37,6 +36,10 @@ if (
   typeof window.addEdgeCorePlugins === 'function'
 ) {
   window.addEdgeCorePlugins(plugins)
+}
+
+if (typeof window !== 'undefined' && window.bigInt != null) {
+  window.addEdgeCorePlugins({ polkadot: makePolkadotPlugin })
 }
 
 export default plugins

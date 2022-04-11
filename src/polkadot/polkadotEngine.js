@@ -1,13 +1,16 @@
 // @flow
 
-import {
-  construct,
-  createMetadata,
-  deriveAddress,
-  getRegistry,
-  methods,
-  PolkadotSS58Format
-} from '@substrate/txwrapper-polkadot'
+import '@polkadot/wasm-crypto/initOnlyAsm'
+
+// import { Keyring } from '@polkadot/keyring'
+// import {
+//   construct,
+//   createMetadata,
+//   deriveAddress,
+//   getRegistry,
+//   methods,
+//   PolkadotSS58Format
+// } from '@substrate/txwrapper-polkadot'
 import { add, div, gt, mul } from 'biggystring'
 import {
   type EdgeSpendInfo,
@@ -38,13 +41,22 @@ import {
   asTransactions,
   asTransfer
 } from './polkadotTypes.js'
+import {
+  construct,
+  createMetadata,
+  deriveAddress,
+  getRegistry,
+  Keyring,
+  methods,
+  PolkadotSS58Format
+} from './polkadotUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
 // $FlowFixMe
-const { Keyring } = require('@polkadot/keyring')
+// const { Keyring } = require('@polkadot/keyring')
 
 export class PolkadotEngine extends CurrencyEngine {
   settings: PolkadotSettings

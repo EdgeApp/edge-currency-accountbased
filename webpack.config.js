@@ -38,7 +38,9 @@ module.exports = {
       https: 'https-browserify',
       http: 'stream-http',
       os: 'os-browserify/browser',
-      path: 'path-browserify'
+      path: 'path-browserify',
+      zlib: 'browserify-zlib',
+      tty: 'tty-browserify'
     }
   }
 }

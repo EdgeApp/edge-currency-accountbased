@@ -1,5 +1,6 @@
 import babel from '@rollup/plugin-babel'
 import commonJs from '@rollup/plugin-commonjs'
+import json from '@rollup/plugin-json'
 import nodeResolve from '@rollup/plugin-node-resolve'
 
 const files = [
@@ -24,26 +25,32 @@ const files = [
     output: {
       file: './lib/polkadot/bundles/txwrapper.js',
       format: 'esm',
-      exports: 'auto'
+      exports: 'named'
     }
   }
 ]
 
 const options = {
-  external: ['jsbi'],
+  external: ['jsbi', '@polkadot/x-ws', '@polkadot/x-fetch'],
+  // external: ['jsbi'],
   plugins: [
+    json(),
     // Fix JSBI import
     {
       name: 'fix-jsbi',
       resolveId(source) {
         if (/jsbi\.mjs/.test(source)) return 'jsbi'
+        // if (/jsbi\.mjs/.test(source))
+        //   return './node_modules/jsbi/dist/jsbi-umd.js'
       }
     },
-    nodeResolve({ browser: true, preferBuiltins: true }), // 'preferBuiltins: true' to suppress warning
+    nodeResolve({ exportConditions: ['node'], preferBuiltins: false }), // 'preferBuiltins: true' to suppress warning
     commonJs({
       dynamicRequireTargets: [
         'node_modules/@substrate/txwrapper-core/lib/core/index.js'
-      ]
+      ],
+      // esmExternals: true
+      esmExternals: ['@polkadot/x-ws', '@polkadot/x-fetch']
     }),
     babel({
       presets: [
@@ -54,7 +61,7 @@ const options = {
           }
         ]
       ],
-      plugins: ['babel-plugin-transform-bigint'],
+      plugins: ['@babel/plugin-syntax-bigint', 'babel-plugin-transform-bigint'],
       babelHelpers: 'bundled'
     })
   ],
