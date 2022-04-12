@@ -618,6 +618,8 @@ export class EthereumEngine extends CurrencyEngine {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
     this.otherData.unconfirmedNextNonce = '0'
+    this.otherData.networkFees =
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
   }
 
   // ****************************************************************************
