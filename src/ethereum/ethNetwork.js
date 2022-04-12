@@ -1039,7 +1039,8 @@ export class EthereumNetwork {
             typeof result.result.length !== 'number'
           ) {
             const msg = `Invalid return value getTransactions in ${server}`
-            this.ethEngine.error(msg)
+            if (result.result !== 'Max rate limit reached')
+              this.ethEngine.error(msg)
             throw new Error(msg)
           }
           return { server, result }
