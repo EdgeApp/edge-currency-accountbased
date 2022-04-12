@@ -522,6 +522,12 @@ export class EthereumNetwork {
         throw new Error('Need Alchemy API key')
       }
       addOnUrl = `/v2/-${alchemyApiKey}`
+    } else if (url.includes('quiknode')) {
+      const { quiknodeApiKey } = this.ethEngine.initOptions
+      if (!quiknodeApiKey || quiknodeApiKey.length < 6) {
+        throw new Error('Need Quiknode API key')
+      }
+      addOnUrl = `/${quiknodeApiKey}/`
     }
     url += addOnUrl
 
