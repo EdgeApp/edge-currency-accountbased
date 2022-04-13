@@ -298,9 +298,9 @@ export const asBlockbookAddress = asObject({
   balance: asString,
   unconfirmedBalance: asString,
   unconfirmedTxs: asNumber,
-  transactions: asUnknown,
+  transactions: asMaybe(asArray(asBlockbookTx), []),
   nonce: asString,
-  tokens: asUnknown
+  tokens: asMaybe(asArray(asBlockbookTokenBalance), [])
 })
 
 export type BlockbookAddress = $Call<typeof asBlockbookAddress>

@@ -1617,7 +1617,12 @@ export class EthereumNetwork {
     const out = {
       newNonce: '0',
       tokenBal: {},
-      tokenTxs: {},
+      tokenTxs: {
+        [this.currencyInfo.currencyCode]: {
+          blockHeight: startBlock,
+          edgeTransactions: []
+        }
+      },
       server: ''
     }
     while (page <= totalPages) {
@@ -1644,7 +1649,7 @@ export class EthereumNetwork {
       }
       const { nonce, tokens, balance, transactions } = addressInfo
       out.newNonce = nonce
-      out.tokenBal.ETH = balance
+      out.tokenBal[this.currencyInfo.currencyCode] = balance
       out.server = server
       totalPages = addressInfo.totalPages
       page++
@@ -1734,7 +1739,7 @@ export class EthereumNetwork {
     const ourAddress = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     let toAddress = vout[0].addresses[0].toLowerCase()
     let fromAddress = vin[0].addresses[0].toLowerCase()
-    let currencyCode = 'ETH'
+    let currencyCode = this.currencyInfo.currencyCode
     let nativeAmount = value
     let tokenRecipientAddress = null
     let networkFee = bns.mul(gasPrice, gasUsed.toString())

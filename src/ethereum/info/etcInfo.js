@@ -59,7 +59,7 @@ const otherSettings: EthereumSettings = {
   rpcServers: ['https://www.ethercluster.com/etc'],
   evmScanApiServers: ['https://blockscout.com/etc/mainnet'],
   blockcypherApiServers: [],
-  blockbookServers: [],
+  blockbookServers: ['https://etcbook.guarda.co', 'https://etc1.trezor.io'],
   uriNetworks: ['ethereumclassic', 'etherclass'],
   ercTokenStandard: 'ERC20',
   chainParams: {
