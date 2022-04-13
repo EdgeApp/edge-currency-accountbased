@@ -497,6 +497,15 @@ export class EthereumNetwork {
     return response.json()
   }
 
+  async fetchGetBlockbook(server: string, param: string) {
+    const url = server + param
+    const resultRaw =
+      server.indexOf('trezor') === -1
+        ? await this.ethEngine.io.fetch(url)
+        : await this.ethEngine.fetchCors(url)
+    return resultRaw.json()
+  }
+
   async fetchPostRPC(
     method: string,
     params: Object,
@@ -1017,11 +1026,7 @@ export class EthereumNetwork {
 
       case 'blockbookBlockHeight':
         funcs = blockbookServers.map(server => async () => {
-          const resultRaw =
-            server.indexOf('trezor') === -1
-              ? await this.ethEngine.io.fetch(server + '/api/v2')
-              : await this.ethEngine.fetchCors(server + '/api/v2')
-          const result = await resultRaw.json()
+          const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
         })
         // Randomize array
@@ -1031,18 +1036,14 @@ export class EthereumNetwork {
 
       case 'blockbookTxs':
         funcs = blockbookServers.map(server => async () => {
-          const url = server + params[0]
-          const resultRaw =
-            server.indexOf('trezor') === -1
-              ? await this.ethEngine.io.fetch(url)
-              : await this.ethEngine.fetchCors(url)
-          const result = await resultRaw.json()
+          const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
         })
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+
       case 'eth_call':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(
@@ -1117,7 +1118,8 @@ export class EthereumNetwork {
   async checkBlockHeightBlockbook(): Promise<EthereumNetworkUpdate> {
     try {
       const { result: jsonObj, server } = await this.multicastServers(
-        'blockbookBlockHeight'
+        'blockbookBlockHeight',
+        '/api/v2'
       )
 
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
