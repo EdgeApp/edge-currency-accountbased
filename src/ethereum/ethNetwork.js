@@ -708,6 +708,18 @@ export class EthereumNetwork {
     return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
   }
 
+  async broadcastBlockbook(
+    edgeTransaction: EdgeTransaction,
+    baseUrl: string
+  ): Promise<BroadcastResults> {
+    const jsonObj = await this.fetchGetBlockbook(
+      baseUrl,
+      `/api/v2/sendtx/${edgeTransaction.signedTx}`
+    )
+
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+  }
+
   broadcastResponseHandler(
     res: JsonObject,
     server: string,
@@ -764,6 +776,15 @@ export class EthereumNetwork {
             broadcastWrapper(
               this.broadcastEtherscan(params[0], baseUrl),
               'etherscan'
+            )
+          )
+        })
+
+        blockbookServers.forEach(baseUrl => {
+          promises.push(
+            broadcastWrapper(
+              this.broadcastBlockbook(params[0], baseUrl),
+              'blockbook'
             )
           )
         })
