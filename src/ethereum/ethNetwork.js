@@ -2,7 +2,8 @@
 import { bns } from 'biggystring'
 import type {
   EdgeCurrencyInfo,
-  EdgeTransaction
+  EdgeTransaction,
+  JsonObject
 } from 'edge-core-js/src/types/types'
 import { type FetchResponse } from 'serverlet'
 import parse from 'url-parse'
@@ -667,28 +668,7 @@ export class EthereumNetwork {
     // RSK also uses the "eth_sendRaw" syntax
     const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
     const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
-
-    if (typeof jsonObj.error !== 'undefined') {
-      this.ethEngine.error(
-        `FAILURE broadcastEtherscan\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw jsonObj.error
-    } else if (typeof jsonObj.result === 'string') {
-      // Success!!
-      this.ethEngine.warn(
-        `SUCCESS broadcastEtherscan\n${cleanTxLogs(edgeTransaction)}`
-      )
-      return jsonObj
-    } else {
-      this.ethEngine.error(
-        `FAILURE broadcastEtherscan invalid return value\n${JSON.stringify(
-          jsonObj
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw new Error('Invalid return value on transaction send')
-    }
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
   }
 
   async broadcastRPC(
@@ -702,32 +682,7 @@ export class EthereumNetwork {
     const jsonObj = await this.fetchPostRPC(method, params, networkId, baseUrl)
 
     const parsedUrl = parse(baseUrl, {}, true)
-
-    if (typeof jsonObj.error !== 'undefined') {
-      this.ethEngine.error(
-        `FAILURE broadcastRPC ${parsedUrl.host}\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw jsonObj.error
-    } else if (typeof jsonObj.result === 'string') {
-      // Success!!
-      this.ethEngine.warn(
-        `SUCCESS broadcastRPC ${parsedUrl.host}\n${cleanTxLogs(
-          edgeTransaction
-        )}`
-      )
-      return jsonObj
-    } else {
-      this.ethEngine.error(
-        `FAILURE broadcastRPC ${
-          parsedUrl.host
-        }\nInvalid return value ${JSON.stringify(jsonObj)}\n${cleanTxLogs(
-          edgeTransaction
-        )}`
-      )
-      throw new Error('Invalid return value on transaction send')
-    }
+    return this.broadcastResponseHandler(jsonObj, parsedUrl, edgeTransaction)
   }
 
   async broadcastBlockCypher(
@@ -741,25 +696,28 @@ export class EthereumNetwork {
       { tx: hexTx },
       baseUrl
     )
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+  }
 
-    if (typeof jsonObj.error !== 'undefined') {
+  broadcastResponseHandler(
+    res: JsonObject,
+    server: string,
+    tx: EdgeTransaction
+  ): BroadcastResults {
+    if (typeof res.error !== 'undefined') {
       this.ethEngine.error(
-        `FAILURE broadcastBlockCypher\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
+        `FAILURE ${server}\n${JSON.stringify(res.error)}\n${cleanTxLogs(tx)}`
       )
-      throw jsonObj.error
-    } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
-      this.ethEngine.error(
-        `SUCCESS broadcastBlockCypher\n${cleanTxLogs(edgeTransaction)}`
-      )
+      throw res.error
+    } else if (typeof res.result === 'string') {
       // Success!!
-      return jsonObj
+      this.ethEngine.warn(`SUCCESS ${server}\n${cleanTxLogs(tx)}`)
+      return res
     } else {
       this.ethEngine.error(
-        `FAILURE broadcastBlockCypher\nInvalid return data ${JSON.stringify(
-          jsonObj
-        )}\n${cleanTxLogs(edgeTransaction)}`
+        `FAILURE ${server}\nInvalid return value ${JSON.stringify(
+          res
+        )}\n${cleanTxLogs(tx)}`
       )
       throw new Error('Invalid return value on transaction send')
     }
