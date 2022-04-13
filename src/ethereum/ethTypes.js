@@ -27,6 +27,7 @@ export type EthereumInitOptions = {
   alethioApiKey?: string,
   amberdataApiKey?: string,
   gasStationApiKey?: string,
+  quiknodeApiKey?: string,
   alchemyApiKey?: string
 }
 

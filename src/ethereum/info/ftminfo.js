@@ -32,7 +32,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const otherSettings: EthereumSettings = {
   rpcServers: [
-    'https://polished-empty-cloud.fantom.quiknode.pro/1c86703ec1eb3d515877a16a9823508a612c035d',
+    'https://polished-empty-cloud.fantom.quiknode.pro',
     'https://rpc.ftm.tools'
   ],
   evmScanApiServers: ['https://api.ftmscan.com'],

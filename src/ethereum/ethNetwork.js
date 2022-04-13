@@ -522,6 +522,12 @@ export class EthereumNetwork {
         throw new Error('Need Alchemy API key')
       }
       addOnUrl = `/v2/-${alchemyApiKey}`
+    } else if (url.includes('quiknode')) {
+      const { quiknodeApiKey } = this.ethEngine.initOptions
+      if (!quiknodeApiKey || quiknodeApiKey.length < 6) {
+        throw new Error('Need Quiknode API key')
+      }
+      addOnUrl = `/${quiknodeApiKey}/`
     }
     url += addOnUrl
 
@@ -1039,7 +1045,8 @@ export class EthereumNetwork {
             typeof result.result.length !== 'number'
           ) {
             const msg = `Invalid return value getTransactions in ${server}`
-            this.ethEngine.error(msg)
+            if (result.result !== 'Max rate limit reached')
+              this.ethEngine.error(msg)
             throw new Error(msg)
           }
           return { server, result }
