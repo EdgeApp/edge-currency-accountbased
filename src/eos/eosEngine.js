@@ -121,6 +121,14 @@ export class EosEngine extends CurrencyEngine {
     this.eosJsConfig = eosJsConfig
     this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
+    const { currencyCode, denominations } = this.currencyInfo
+    this.allTokens.push({
+      ...denominations[0],
+      currencyCode,
+      currencyName: currencyCode,
+      contractAddress: 'eosio.token',
+      denominations
+    })
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
         const {

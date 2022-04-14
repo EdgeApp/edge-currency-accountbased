@@ -78,17 +78,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: [
-    {
-      name: 'TLOS',
-      currencyName: 'TLOS',
-      multiplier: '10000',
-      symbol: 'T',
-      currencyCode: 'TLOS',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeTelosPlugin = (opts: EdgeCorePluginOptions) => {

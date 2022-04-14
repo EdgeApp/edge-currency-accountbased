@@ -82,17 +82,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: [
-    {
-      name: 'EOS',
-      currencyName: 'EOS',
-      multiplier: '10000',
-      symbol: 'E',
-      currencyCode: 'EOS',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
