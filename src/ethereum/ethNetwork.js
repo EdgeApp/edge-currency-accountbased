@@ -2,7 +2,8 @@
 import { bns } from 'biggystring'
 import type {
   EdgeCurrencyInfo,
-  EdgeTransaction
+  EdgeTransaction,
+  JsonObject
 } from 'edge-core-js/src/types/types'
 import { type FetchResponse } from 'serverlet'
 import parse from 'url-parse'
@@ -496,6 +497,15 @@ export class EthereumNetwork {
     return response.json()
   }
 
+  async fetchGetBlockbook(server: string, param: string) {
+    const url = server + param
+    const resultRaw =
+      server.indexOf('trezor') === -1
+        ? await this.ethEngine.io.fetch(url)
+        : await this.ethEngine.fetchCors(url)
+    return resultRaw.json()
+  }
+
   async fetchPostRPC(
     method: string,
     params: Object,
@@ -667,28 +677,7 @@ export class EthereumNetwork {
     // RSK also uses the "eth_sendRaw" syntax
     const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
     const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
-
-    if (typeof jsonObj.error !== 'undefined') {
-      this.ethEngine.error(
-        `FAILURE broadcastEtherscan\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw jsonObj.error
-    } else if (typeof jsonObj.result === 'string') {
-      // Success!!
-      this.ethEngine.warn(
-        `SUCCESS broadcastEtherscan\n${cleanTxLogs(edgeTransaction)}`
-      )
-      return jsonObj
-    } else {
-      this.ethEngine.error(
-        `FAILURE broadcastEtherscan invalid return value\n${JSON.stringify(
-          jsonObj
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw new Error('Invalid return value on transaction send')
-    }
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
   }
 
   async broadcastRPC(
@@ -702,32 +691,7 @@ export class EthereumNetwork {
     const jsonObj = await this.fetchPostRPC(method, params, networkId, baseUrl)
 
     const parsedUrl = parse(baseUrl, {}, true)
-
-    if (typeof jsonObj.error !== 'undefined') {
-      this.ethEngine.error(
-        `FAILURE broadcastRPC ${parsedUrl.host}\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
-      )
-      throw jsonObj.error
-    } else if (typeof jsonObj.result === 'string') {
-      // Success!!
-      this.ethEngine.warn(
-        `SUCCESS broadcastRPC ${parsedUrl.host}\n${cleanTxLogs(
-          edgeTransaction
-        )}`
-      )
-      return jsonObj
-    } else {
-      this.ethEngine.error(
-        `FAILURE broadcastRPC ${
-          parsedUrl.host
-        }\nInvalid return value ${JSON.stringify(jsonObj)}\n${cleanTxLogs(
-          edgeTransaction
-        )}`
-      )
-      throw new Error('Invalid return value on transaction send')
-    }
+    return this.broadcastResponseHandler(jsonObj, parsedUrl, edgeTransaction)
   }
 
   async broadcastBlockCypher(
@@ -741,25 +705,40 @@ export class EthereumNetwork {
       { tx: hexTx },
       baseUrl
     )
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+  }
 
-    if (typeof jsonObj.error !== 'undefined') {
+  async broadcastBlockbook(
+    edgeTransaction: EdgeTransaction,
+    baseUrl: string
+  ): Promise<BroadcastResults> {
+    const jsonObj = await this.fetchGetBlockbook(
+      baseUrl,
+      `/api/v2/sendtx/${edgeTransaction.signedTx}`
+    )
+
+    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+  }
+
+  broadcastResponseHandler(
+    res: JsonObject,
+    server: string,
+    tx: EdgeTransaction
+  ): BroadcastResults {
+    if (typeof res.error !== 'undefined') {
       this.ethEngine.error(
-        `FAILURE broadcastBlockCypher\n${JSON.stringify(
-          jsonObj.error
-        )}\n${cleanTxLogs(edgeTransaction)}`
+        `FAILURE ${server}\n${JSON.stringify(res.error)}\n${cleanTxLogs(tx)}`
       )
-      throw jsonObj.error
-    } else if (jsonObj.tx && typeof jsonObj.tx.hash === 'string') {
-      this.ethEngine.error(
-        `SUCCESS broadcastBlockCypher\n${cleanTxLogs(edgeTransaction)}`
-      )
+      throw res.error
+    } else if (typeof res.result === 'string') {
       // Success!!
-      return jsonObj
+      this.ethEngine.warn(`SUCCESS ${server}\n${cleanTxLogs(tx)}`)
+      return res
     } else {
       this.ethEngine.error(
-        `FAILURE broadcastBlockCypher\nInvalid return data ${JSON.stringify(
-          jsonObj
-        )}\n${cleanTxLogs(edgeTransaction)}`
+        `FAILURE ${server}\nInvalid return value ${JSON.stringify(
+          res
+        )}\n${cleanTxLogs(tx)}`
       )
       throw new Error('Invalid return value on transaction send')
     }
@@ -797,6 +776,15 @@ export class EthereumNetwork {
             broadcastWrapper(
               this.broadcastEtherscan(params[0], baseUrl),
               'etherscan'
+            )
+          )
+        })
+
+        blockbookServers.forEach(baseUrl => {
+          promises.push(
+            broadcastWrapper(
+              this.broadcastBlockbook(params[0], baseUrl),
+              'blockbook'
             )
           )
         })
@@ -1059,11 +1047,7 @@ export class EthereumNetwork {
 
       case 'blockbookBlockHeight':
         funcs = blockbookServers.map(server => async () => {
-          const resultRaw =
-            server.indexOf('trezor') === -1
-              ? await this.ethEngine.io.fetch(server + '/api/v2')
-              : await this.ethEngine.fetchCors(server + '/api/v2')
-          const result = await resultRaw.json()
+          const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
         })
         // Randomize array
@@ -1073,18 +1057,14 @@ export class EthereumNetwork {
 
       case 'blockbookTxs':
         funcs = blockbookServers.map(server => async () => {
-          const url = server + params[0]
-          const resultRaw =
-            server.indexOf('trezor') === -1
-              ? await this.ethEngine.io.fetch(url)
-              : await this.ethEngine.fetchCors(url)
-          const result = await resultRaw.json()
+          const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
         })
         // Randomize array
         funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
+
       case 'eth_call':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(
@@ -1159,7 +1139,8 @@ export class EthereumNetwork {
   async checkBlockHeightBlockbook(): Promise<EthereumNetworkUpdate> {
     try {
       const { result: jsonObj, server } = await this.multicastServers(
-        'blockbookBlockHeight'
+        'blockbookBlockHeight',
+        '/api/v2'
       )
 
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
@@ -1617,7 +1598,12 @@ export class EthereumNetwork {
     const out = {
       newNonce: '0',
       tokenBal: {},
-      tokenTxs: {},
+      tokenTxs: {
+        [this.currencyInfo.currencyCode]: {
+          blockHeight: startBlock,
+          edgeTransactions: []
+        }
+      },
       server: ''
     }
     while (page <= totalPages) {
@@ -1644,7 +1630,7 @@ export class EthereumNetwork {
       }
       const { nonce, tokens, balance, transactions } = addressInfo
       out.newNonce = nonce
-      out.tokenBal.ETH = balance
+      out.tokenBal[this.currencyInfo.currencyCode] = balance
       out.server = server
       totalPages = addressInfo.totalPages
       page++
@@ -1734,7 +1720,7 @@ export class EthereumNetwork {
     const ourAddress = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     let toAddress = vout[0].addresses[0].toLowerCase()
     let fromAddress = vin[0].addresses[0].toLowerCase()
-    let currencyCode = 'ETH'
+    let currencyCode = this.currencyInfo.currencyCode
     let nativeAmount = value
     let tokenRecipientAddress = null
     let networkFee = bns.mul(gasPrice, gasUsed.toString())
