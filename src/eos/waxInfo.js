@@ -79,17 +79,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: [
-    {
-      name: 'WAX',
-      currencyName: 'WAX',
-      multiplier: '100000000',
-      symbol: 'W',
-      currencyCode: 'WAX',
-      contractAddress: 'eosio.token',
-      denominations
-    }
-  ]
+  metaTokens: []
 }
 
 export const makeWaxPlugin = (opts: EdgeCorePluginOptions) => {
