@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+## 0.15.4 (2022-04-13)
+
+- Add blockbook broadcast method
+- Fix networkFees object initialization on resync
+- Fix `checkTxsBlockbook` so it doesn't break on unused addresses
+- Reduce some duplicate blockbook code
+- Update ZEC checkpoints
+
 ## 0.15.3 (2022-04-08)
 
 - Use a reliable FTM RPC-nodes
