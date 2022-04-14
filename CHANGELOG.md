@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.5 (2022-04-14)
+
+- EOS/TLOS/WAX: Remove parent currency from metaTokens array
+
 ## 0.15.4 (2022-04-13)
 
 - Add blockbook broadcast method
