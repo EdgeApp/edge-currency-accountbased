@@ -166,6 +166,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598'
     },
     {
+      currencyCode: 'MAI',
+      currencyName: 'miMATIC',
+      denominations: [
+        {
+          name: 'MAI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xfB98B335551a418cD0737375a2ea0ded62Ea213b'
+    },
+    {
       currencyCode: 'TOMB',
       currencyName: 'Tomb',
       denominations: [
