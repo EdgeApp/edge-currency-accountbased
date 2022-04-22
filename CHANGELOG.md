@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.6 (2022-04-22)
+
+- Add MAI token (miMATIC) to FTM (Fantom)
+
 ## 0.15.5 (2022-04-14)
 
 - EOS/TLOS/WAX: Remove parent currency from metaTokens array
