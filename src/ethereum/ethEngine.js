@@ -641,7 +641,7 @@ export class EthereumEngine extends CurrencyEngine {
     // Fetch the static fees from the info server only once to avoid overwriting live values.
     this.infoFeeProvider()
       .then(info => {
-        Object.assign(this.walletLocalData.otherData.networkFees.default, info)
+        Object.assign(this.walletLocalData.otherData.networkFees, info)
         this.walletLocalDataDirty = true
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
