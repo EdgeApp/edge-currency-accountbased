@@ -573,53 +573,56 @@ export class EthereumEngine extends CurrencyEngine {
   Reference analysis for choosing 2 gwei minimum priority fee:
     https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
   */
-  async updateNetworkFeesFromBaseFeePerGas(): Promise<EthereumBaseMultiplier | void> {
-    // Get base fees from 'rpcServers' and convert to our network fees format.
-    // * Supported for post EIP-1559 chains only
-    const { supportsEIP1559 = false } =
-      this.currencyInfo.defaultSettings.otherSettings
-    if (!supportsEIP1559) return
+  updateNetworkFeesFromBaseFeePerGas =
+    async (): Promise<EthereumBaseMultiplier | void> => {
+      // Get base fees from 'rpcServers' and convert to our network fees format.
+      // * Supported for post EIP-1559 chains only
+      const { supportsEIP1559 = false } =
+        this.currencyInfo.defaultSettings.otherSettings
+      if (!supportsEIP1559) return
 
-    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
-    if (baseFeePerGas == null) return
-    const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
+      const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+      if (baseFeePerGas == null) return
+      const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-    const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
+      const networkFees: EthereumFees =
+        this.walletLocalData.otherData.networkFees
 
-    // Make sure there is a default network fee entry and gasPrice entry
-    if (networkFees.default == null || networkFees.default.gasPrice == null) {
-      return
+      // Make sure there is a default network fee entry and gasPrice entry
+      if (networkFees.default == null || networkFees.default.gasPrice == null) {
+        return
+      }
+
+      const defaultNetworkFee: EthereumFee =
+        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+          .default
+
+      // The minimum priority fee for slow transactions
+      const minPriorityFee =
+        networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
+      // This is how much we will multiply the base fee by
+      const baseMultiplier: EthereumBaseMultiplier =
+        networkFees.default.baseFeeMultiplier ||
+        defaultNetworkFee.baseFeeMultiplier
+
+      // Make sure the properties exist
+      if (minPriorityFee == null || baseMultiplier == null) return
+
+      const out: EthereumBaseMultiplier = {
+        lowFee: '',
+        standardFeeLow: '',
+        standardFeeHigh: '',
+        highFee: ''
+      }
+
+      for (const feeType of Object.keys(baseMultiplier)) {
+        const baseFee = bns.mul(baseMultiplier[feeType], baseFeePerGasDecimal)
+        const totalFee = bns.add(baseFee, minPriorityFee)
+        out[feeType] = bns.div(totalFee, '1')
+      }
+
+      return out
     }
-
-    const defaultNetworkFee: EthereumFee =
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-
-    // The minimum priority fee for slow transactions
-    const minPriorityFee =
-      networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
-    // This is how much we will multiply the base fee by
-    const baseMultiplier: EthereumBaseMultiplier =
-      networkFees.default.baseFeeMultiplier ||
-      defaultNetworkFee.baseFeeMultiplier
-
-    // Make sure the properties exist
-    if (minPriorityFee == null || baseMultiplier == null) return
-
-    const out: EthereumBaseMultiplier = {
-      lowFee: '',
-      standardFeeLow: '',
-      standardFeeHigh: '',
-      highFee: ''
-    }
-
-    for (const feeType of Object.keys(baseMultiplier)) {
-      const baseFee = bns.mul(baseMultiplier[feeType], baseFeePerGasDecimal)
-      const totalFee = bns.add(baseFee, minPriorityFee)
-      out[feeType] = bns.div(totalFee, '1')
-    }
-
-    return out
-  }
 
   async clearBlockchainCache() {
     await super.clearBlockchainCache()
