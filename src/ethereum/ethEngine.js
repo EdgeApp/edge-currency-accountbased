@@ -605,13 +605,20 @@ export class EthereumEngine extends CurrencyEngine {
     // Make sure the properties exist
     if (minPriorityFee == null || baseMultiplier == null) return
 
+    const out: EthereumBaseMultiplier = {
+      lowFee: '',
+      standardFeeLow: '',
+      standardFeeHigh: '',
+      highFee: ''
+    }
+
     for (const feeType of Object.keys(baseMultiplier)) {
       const baseFee = bns.mul(baseMultiplier[feeType], baseFeePerGasDecimal)
       const totalFee = bns.add(baseFee, minPriorityFee)
-      baseMultiplier[feeType] = bns.div(totalFee, '1')
+      out[feeType] = bns.div(totalFee, '1')
     }
 
-    return baseMultiplier
+    return out
   }
 
   async clearBlockchainCache() {
