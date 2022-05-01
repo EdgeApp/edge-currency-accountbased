@@ -64,7 +64,11 @@ import {
   asWcSessionRequestParams
 } from './ethTypes.js'
 import { calcMiningFee } from './fees/ethMiningFees.js'
-import { type FeeProviderFunction, FeeProviders } from './fees/feeProviders.js'
+import {
+  type FeeProviderFunction,
+  FeeProviders,
+  printFees
+} from './fees/feeProviders.js'
 
 const walletConnectors: WalletConnectors = {}
 
@@ -621,6 +625,10 @@ export class EthereumEngine extends CurrencyEngine {
         out[feeType] = bns.div(totalFee, '1')
       }
 
+      this.log.warn(
+        `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
+      )
+      printFees(this.log, out)
       return out
     }
 
@@ -641,6 +649,8 @@ export class EthereumEngine extends CurrencyEngine {
     // Fetch the static fees from the info server only once to avoid overwriting live values.
     this.infoFeeProvider()
       .then(info => {
+        this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
+
         Object.assign(this.walletLocalData.otherData.networkFees, info)
         this.walletLocalDataDirty = true
       })

@@ -48,7 +48,7 @@ export function calcMiningFee(
         /^\s*$/.test(gasPrice)
       ) {
         const e = new Error(
-          `Gas Limit: ${minGasLimit} Gas Price (Gwei): ${minGasPriceGwei}`
+          `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
         )
         e.name = 'ErrorBelowMinimumFee'
         throw e
