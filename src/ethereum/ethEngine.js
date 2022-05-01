@@ -113,8 +113,8 @@ export class EthereumEngine extends CurrencyEngine {
     )
     this.infoFeeProvider = infoFeeProvider
     this.externalFeeProviders = [
-      this.updateNetworkFeesFromBaseFeePerGas,
-      ...externalFeeProviders
+      ...externalFeeProviders,
+      this.updateNetworkFeesFromBaseFeePerGas
     ]
 
     this.utils = {

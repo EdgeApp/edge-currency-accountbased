@@ -40,7 +40,7 @@ export const FeeProviders = (
   initOptions: EthereumInitOptions,
   log: EdgeLog
 ): FeeProviderMap => {
-  const providerFns = [fetchFeesFromEvmGasStation, fetchFeesFromEvmScan]
+  const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
 
   return {
     infoFeeProvider: () => fetchFeesFromInfoServer(fetch, currencyInfo),
