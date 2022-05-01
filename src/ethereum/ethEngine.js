@@ -249,7 +249,7 @@ export class EthereumEngine extends CurrencyEngine {
           customNetworkFee: {
             gasLimit: hexToDecimal(params.gas),
             gasPrice: bns.div(
-              hexToDecimal(removeHexPrefix(params.gasPrice)),
+              hexToDecimal(params.gasPrice),
               WEI_MULTIPLIER.toString(),
               18
             )
