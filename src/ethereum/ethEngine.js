@@ -646,6 +646,9 @@ export class EthereumEngine extends CurrencyEngine {
 
   async startEngine() {
     this.engineOn = true
+    const feeUpdateFrequencyMs =
+      this.currencyInfo.defaultSettings.otherSettings.feeUpdateFrequencyMs ??
+      NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
     this.infoFeeProvider()
       .then(info => {
@@ -655,9 +658,7 @@ export class EthereumEngine extends CurrencyEngine {
         this.walletLocalDataDirty = true
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
-      .finally(() =>
-        this.addToLoop('updateNetworkFees', NETWORK_FEES_POLL_MILLISECONDS)
-      )
+      .finally(() => this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs))
 
     this.ethNetwork.needsLoop()
     super.startEngine()

@@ -33,6 +33,7 @@ export type EthereumInitOptions = {
 
 export type EthereumSettings = {|
   alethioApiServers: string[],
+  feeUpdateFrequencyMs?: number,
   alethioCurrencies: {
     native: string,
     token: string
