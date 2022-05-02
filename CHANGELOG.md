@@ -1,5 +1,15 @@
 # edge-currency-accountbased
 
+## 0.15.7 (2022-05-02)
+
+- Fix assignment of network fees from info server
+- Add logging of fees
+- Add feeUpdateFrequency override and change FTM to 1 min
+- Change preference of fee providers
+- Do not overwrite baseFeeMultiplier coming from settings
+- Fix hex number handling
+- Update ZEC checkpoints
+
 ## 0.15.6 (2022-04-22)
 
 - Add MAI token (miMATIC) to FTM (Fantom)
