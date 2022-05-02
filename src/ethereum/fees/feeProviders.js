@@ -1,5 +1,6 @@
 // @flow
 
+import { div } from 'biggystring'
 import type {
   EdgeCurrencyInfo,
   EdgeFetchFunction,
@@ -28,6 +29,15 @@ import {
   asEvmScanGasResponseResult
 } from '../ethTypes.js'
 
+export const printFees = (log: EdgeLog, fees: Object) => {
+  const keys = Object.keys(fees)
+  for (const key of keys) {
+    const value = fees[key]
+    if (typeof value === 'string')
+      log.warn(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
+  }
+}
+
 export type FeeProviderFunction = () => Promise<EthereumBaseMultiplier | void>
 type FeeProviderMap = {
   infoFeeProvider: () => Promise<EthereumFee>,
@@ -40,7 +50,7 @@ export const FeeProviders = (
   initOptions: EthereumInitOptions,
   log: EdgeLog
 ): FeeProviderMap => {
-  const providerFns = [fetchFeesFromEvmGasStation, fetchFeesFromEvmScan]
+  const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
 
   return {
     infoFeeProvider: () => fetchFeesFromInfoServer(fetch, currencyInfo),
@@ -98,7 +108,10 @@ export const fetchFeesFromEvmScan = async (
   const standardFeeHigh = `${newFast * WEI_MULTIPLIER}`
   const highFee = `${(newFast * WEI_MULTIPLIER) / OPTIMAL_FEE_HIGH_MULTIPLIER}`
 
-  return { lowFee, standardFeeLow, standardFeeHigh, highFee }
+  const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
+  log.warn(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
+  printFees(log, out)
+  return out
 }
 
 export const fetchFeesFromEvmGasStation = async (
@@ -166,7 +179,10 @@ export const fetchFeesFromEvmGasStation = async (
   ).toString()
   highFee = (Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER).toString()
 
-  return { lowFee, standardFeeLow, standardFeeHigh, highFee }
+  const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
+  log.warn(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
+  printFees(log, out)
+  return out
 }
 
 export const fetchFeesFromInfoServer = async (
