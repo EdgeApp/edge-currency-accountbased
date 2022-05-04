@@ -34,6 +34,7 @@ import {
   hexToBuf,
   hexToDecimal,
   isHex,
+  mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
   timeout,
@@ -654,7 +655,10 @@ export class EthereumEngine extends CurrencyEngine {
       .then(info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
-        Object.assign(this.walletLocalData.otherData.networkFees, info)
+        this.walletLocalData.otherData.networkFees = mergeDeeply(
+          this.walletLocalData.otherData.networkFees,
+          info
+        )
         this.walletLocalDataDirty = true
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))

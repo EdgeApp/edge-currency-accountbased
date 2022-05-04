@@ -399,6 +399,29 @@ export function safeErrorMessage(e?: Error): string {
   return sāfError
 }
 
+/**
+ * Merges several Javascript objects deeply,
+ * preferring the items from later objects.
+ */
+export function mergeDeeply(...objects: any[]): any {
+  const out = {}
+
+  for (const o of objects) {
+    if (o == null) continue
+
+    for (const key of Object.keys(o)) {
+      if (o[key] == null) continue
+
+      out[key] =
+        out[key] != null && typeof o[key] === 'object'
+          ? mergeDeeply(out[key], o[key])
+          : o[key]
+    }
+  }
+
+  return out
+}
+
 export {
   normalizeAddress,
   addHexPrefix,
