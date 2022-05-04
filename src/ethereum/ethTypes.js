@@ -66,6 +66,7 @@ export type EthereumSettings = {|
 |}
 
 export const asEthereumFeesGasLimit = asObject({
+  minGasLimit: asOptional(asString),
   regularTransaction: asString,
   tokenTransaction: asString
 })
@@ -75,6 +76,7 @@ export type EthereumFeesGasLimit = $Call<typeof asEthereumFeesGasLimit>
 export const asEthereumFeesGasPrice = asObject({
   highFee: asString,
   lowFee: asString,
+  minGasPrice: asOptional(asString),
 
   // Represents the default "Optimized" standard fee option where
   // standardFeeLow is the fee for a transaction with a small
