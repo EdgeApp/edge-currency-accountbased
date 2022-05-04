@@ -422,6 +422,13 @@ export function mergeDeeply(...objects: any[]): any {
   return out
 }
 
+export function biggyRoundToNearestInt(float: string): string {
+  const [int, dec] = float.split('.')
+  if (dec == null) return int
+  if (parseInt(dec[0]) >= 5) return bns.add(int, '1')
+  return int
+}
+
 export {
   normalizeAddress,
   addHexPrefix,
