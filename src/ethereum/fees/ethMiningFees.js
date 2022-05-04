@@ -34,10 +34,14 @@ export function calcMiningFee(
     const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
       const { gasLimit, gasPrice } = customNetworkFee
-      const {
-        gasLimit: { minGasLimit },
-        gasPrice: { minGasPrice }
-      } = currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+      const minGasLimit =
+        networkFees.default?.gasLimit?.minGasLimit ??
+        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+          .gasLimit.minGasLimit
+      const minGasPrice =
+        networkFees.default?.gasPrice?.minGasPrice ??
+        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+          .gasPrice.minGasPrice
       const minGasPriceGwei = bns.div(minGasPrice, WEI_MULTIPLIER)
       if (
         bns.lt(gasLimit, minGasLimit) ||
