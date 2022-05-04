@@ -389,8 +389,9 @@ export function makeEthereumBasedPluginInner(
       currencyEngine.otherData.unconfirmedNextNonce = '0'
     }
     if (!currencyEngine.otherData.networkFees) {
-      currencyEngine.otherData.networkFees =
-        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+      currencyEngine.otherData.networkFees = {
+        ...currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+      }
     }
 
     const out: EdgeCurrencyEngine = currencyEngine
