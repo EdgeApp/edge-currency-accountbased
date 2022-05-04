@@ -27,6 +27,7 @@ import { CurrencyEngine } from '../common/engine.js'
 import { type CustomToken } from '../common/types'
 import {
   addHexPrefix,
+  biggyRoundToNearestInt,
   bufToHex,
   cleanTxLogs,
   decimalToHex,
@@ -547,9 +548,13 @@ export class EthereumEngine extends CurrencyEngine {
       try {
         const ethereumFee = await externalFeeProvider()
         if (ethereumFee == null) continue
+        const ethereumFeeInts = Object.keys(ethereumFee).reduce((out, cur) => {
+          out[cur] = biggyRoundToNearestInt(ethereumFee[cur])
+          return out
+        }, {})
         this.walletLocalData.otherData.networkFees.default.gasPrice = {
           ...this.walletLocalData.otherData.networkFees.default.gasPrice,
-          ...ethereumFee
+          ...ethereumFeeInts
         }
         this.walletLocalDataDirty = true
         break
