@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.15.9 (2022-05-04)
+
+- ETH: Round gas price values to ints before converting to hex
+
 ## 0.15.8 (2022-05-03)
 
 - ETH: Fix initial local network fees assignment
