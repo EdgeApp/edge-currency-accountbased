@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.15.8 (2022-05-03)
+
+- ETH: Fix initial local network fees assignment
+- ETH: Merge info server fees response with local data instead of overwriting
+- ETH: Prioritize the queried minGasLimit and minGasPrice over the default values
+
 ## 0.15.7 (2022-05-02)
 
 - Fix assignment of network fees from info server
