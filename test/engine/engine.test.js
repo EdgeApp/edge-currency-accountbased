@@ -153,6 +153,10 @@ for (const fixture of fixtures) {
 
   describe('Start engine', function () {
     it('Get BlockHeight', function (done) {
+      if (!engine) throw new Error('ErrorNoEngine')
+      engine.startEngine().catch(e => {
+        console.log('startEngine error', e, e.message)
+      })
       this.timeout(100000)
       emitter.once('onBlockHeightChange', height => {
         const thirdPartyHeight = 1578127
@@ -168,10 +172,6 @@ for (const fixture of fixtures) {
         }
         assert(getHeight > 0)
         done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
-      })
-      if (!engine) throw new Error('ErrorNoEngine')
-      engine.startEngine().catch(e => {
-        console.log('startEngine error', e, e.message)
       })
     })
   })
