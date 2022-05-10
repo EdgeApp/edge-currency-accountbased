@@ -20,6 +20,7 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import {
   asyncWaterfall,
   getDenomInfo,
+  pickRandom,
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
@@ -144,7 +145,8 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const { fetchCors = io.fetch } = io
   const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
     initOptions
-  const connection = new FIOSDK('', '', '', fetchCors, undefined, tpid)
+  const baseUrl = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)[0]
+  const connection = new FIOSDK('', '', baseUrl, fetchCors, undefined, tpid)
 
   let toolsPromise: Promise<FioPlugin>
   function makeCurrencyTools(): Promise<FioPlugin> {
