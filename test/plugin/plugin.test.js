@@ -8,6 +8,7 @@ import {
   makeFakeIo
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
+import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index.js'
 import { expectRejection } from '../expectRejection.js'
@@ -28,7 +29,7 @@ for (const fixture of fixtures) {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
-    io: { ...fakeIo, random: size => fixture.key },
+    io: { ...fakeIo, fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
