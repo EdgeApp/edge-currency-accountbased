@@ -11,6 +11,7 @@ import {
 } from '../../src/ethereum/fees/feeProviders'
 import { currencyInfo as ethCurrencyInfo } from '../../src/ethereum/info/ethInfo.js'
 import { currencyInfo as ftmCurrencyInfo } from '../../src/ethereum/info/ftmInfo.js'
+import { fakeLog } from '../fakeLog.js'
 
 // TODO: Loop for all plugins
 describe(`FTM Network Fees`, function () {
@@ -25,25 +26,31 @@ describe(`FTM Network Fees`, function () {
 
   it('EvmGasStation Fees', async function () {
     // $FlowFixMe
-    const fees = await fetchFeesFromEvmGasStation(fetch, ethCurrencyInfo, {
-      gasStationApiKey: [
-        'EG16P5AF5FNJ3XR8ICP3UAYHT68G53TAKU',
-        '63YA67UBCWPG6SEREC9GNRRR31SDPGSQY9',
-        'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
-      ]
-    })
+    const fees = await fetchFeesFromEvmGasStation(
+      fetch,
+      ethCurrencyInfo,
+      {
+        gasStationApiKey: 'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
+      },
+      fakeLog
+    )
     validateGasPrices(fees)
   })
 
   it('EvmScan Fees', async function () {
     // $FlowFixMe
-    const fees = await fetchFeesFromEvmScan(fetch, ftmCurrencyInfo, {
-      evmScanApiKey: [
-        'EG16P5AF5FNJ3XR8ICP3UAYHT68G53TAKU',
-        '63YA67UBCWPG6SEREC9GNRRR31SDPGSQY9',
-        'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
-      ]
-    })
+    const fees = await fetchFeesFromEvmScan(
+      fetch,
+      ftmCurrencyInfo,
+      {
+        evmScanApiKey: [
+          'EG16P5AF5FNJ3XR8ICP3UAYHT68G53TAKU',
+          '63YA67UBCWPG6SEREC9GNRRR31SDPGSQY9',
+          'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
+        ]
+      },
+      fakeLog
+    )
     validateGasPrices(fees)
   })
 })
