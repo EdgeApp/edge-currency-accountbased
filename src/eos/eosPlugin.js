@@ -29,20 +29,8 @@ import {
 } from './eosSchema.js'
 import { type EosJsConfig } from './eosTypes'
 
-const validCharacters = '12345abcdefghijklmnopqrstuvwxyz.'
-
 export function checkAddress(address: string): boolean {
-  // TODO: Check for a valid address format. The passed in
-  // address would be a use visible displayed address such as what would
-  // go into a QR code
-
-  for (let i = 0; i < address.length; i++) {
-    const c = address.charAt(i)
-    if (!validCharacters.includes(c)) {
-      return false
-    }
-  }
-  return true
+  return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
 export class EosPlugin extends CurrencyPlugin {
