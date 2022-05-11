@@ -15,6 +15,7 @@ import {
   type EdgeFetchFunction,
   type EdgeIo,
   type EdgeParsedUri,
+  type EdgeToken,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EosApi from 'eosjs-api'
@@ -140,6 +141,16 @@ export class EosPlugin extends CurrencyPlugin {
       amount
     )
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    const contractAddress = token?.networkLocation?.contractAddress
+    if (contractAddress != null) {
+      if (!checkAddress(contractAddress))
+        throw new Error('ErrorInvalidContractAddress')
+      return contractAddress.toLowerCase()
+    }
+    return super.getTokenId(token)
   }
 
   // change to fetch call in the future

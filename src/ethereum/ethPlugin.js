@@ -18,6 +18,7 @@ import {
   type EdgeIo,
   type EdgeMetaToken,
   type EdgeParsedUri,
+  type EdgeToken,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -335,6 +336,16 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
     return Object.keys(ethPlugins).map(plugin => `wallet:${plugin}`)
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    const contractAddress = token?.networkLocation?.contractAddress
+    if (contractAddress != null) {
+      if (!EthereumUtil.isValidAddress(contractAddress))
+        throw new Error('ErrorInvalidContractAddress')
+      return contractAddress.toLowerCase()
+    }
+    return super.getTokenId(token)
   }
 }
 
