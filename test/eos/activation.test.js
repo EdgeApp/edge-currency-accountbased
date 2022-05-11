@@ -92,6 +92,7 @@ describe(`EOS activation`, function () {
   })
 
   it.skip('getSupportedCurrencies', async function () {
+    this.timeout(5000)
     if (plugin.otherMethods) {
       const result =
         await plugin.otherMethods.getActivationSupportedCurrencies()
