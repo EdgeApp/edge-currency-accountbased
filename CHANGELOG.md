@@ -1,5 +1,19 @@
 # edge-currency-accountbased
 
+## 0.15.10 (2022-05-12)
+
+- Add `getTokenId` to ethereum and eos plugins
+- Upgrade edge-core-js to v0.19.15
+- Upgrade @binance-chain/javascript-sdk to v4.2.0
+- Replaced eos `checkAddress` internal loop with regex
+- Fix XRP `disconnect` method
+- Fix tests
+  - Fix plugin imports
+  - Always initialize FIO sdk with a baseUrl
+  - Fix FTM network fees test
+  - Fix ftmInfo.js filename
+  - Add timeout to getSupportedCurrencies test to prevent hanging
+
 ## 0.15.9 (2022-05-04)
 
 - ETH: Round gas price values to ints before converting to hex
