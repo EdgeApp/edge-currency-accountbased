@@ -5,7 +5,7 @@ import { makeBinanceSmartChainPlugin } from './info/bscInfo.js'
 import { makeCeloPlugin } from './info/celoInfo.js'
 import { makeEthereumClassicPlugin } from './info/etcInfo.js'
 import { makeEthereumPlugin } from './info/ethInfo.js'
-import { makeFantomPlugin } from './info/ftminfo.js'
+import { makeFantomPlugin } from './info/ftmInfo.js'
 import { makePolygonPlugin } from './info/maticInfo'
 import { makeRskPlugin } from './info/rskInfo.js'
 
