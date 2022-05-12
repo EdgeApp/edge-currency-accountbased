@@ -9,19 +9,20 @@ const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
     'https://fio.eosdac.io/v1/',
-    'https://fio.eosphere.io/v1/',
     'https://fio.eosrio.io/v1/',
     'https://fio.acherontrading.com/v1/',
     'https://fio.eos.barcelona/v1/',
-    'https://api.fio.eosdetroit.io/v1/',
     'https://api.fio.alohaeos.com/v1/',
     'https://fio.greymass.com/v1/',
     'https://fio.eosargentina.io/v1/',
     'https://fio.cryptolions.io/v1/',
     'https://api.fio.currencyhub.io/v1/',
-    'https://fio.eoscannon.io/v1/',
     'https://fio.eosdublin.io/v1/',
-    'https://api.fiosweden.org/v1/'
+    'https://fio-za.eostribe.io/v1/',
+    'https://fioapi.ledgerwise.io/v1/',
+    'https://api.fio.greeneosio.com/v1/',
+    'https://api.fio.services/v1/',
+    'https://fio.eosusa.news/v1/'
   ],
   historyNodeUrls: [
     'https://fio.greymass.com/v1/',

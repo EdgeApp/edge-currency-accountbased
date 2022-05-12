@@ -3,7 +3,7 @@
  */
 // @flow
 
-import BnbApiClient from '@binance-chain/javascript-sdk'
+import { crypto } from '@binance-chain/javascript-sdk'
 import { bns } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -24,7 +24,12 @@ import { getDenomInfo } from '../common/utils.js'
 import { BinanceEngine } from './bnbEngine.js'
 import { currencyInfo } from './bnbInfo.js'
 
-const bnbCrypto = BnbApiClient.crypto
+const {
+  checkAddress,
+  getAddressFromPrivateKey,
+  getPrivateKeyFromMnemonic,
+  validateMnemonic
+} = crypto
 
 export class BinancePlugin extends CurrencyPlugin {
   constructor(io: EdgeIo) {
@@ -33,9 +38,9 @@ export class BinancePlugin extends CurrencyPlugin {
 
   // will actually use MNEMONIC version of private key
   async importPrivateKey(mnemonic: string): Promise<Object> {
-    const isValid = bnbCrypto.validateMnemonic(mnemonic)
+    const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid BNB mnemonic')
-    const binanceKey = bnbCrypto.getPrivateKeyFromMnemonic(mnemonic)
+    const binanceKey = getPrivateKeyFromMnemonic(mnemonic)
 
     return { binanceMnemonic: mnemonic, binanceKey }
   }
@@ -46,7 +51,7 @@ export class BinancePlugin extends CurrencyPlugin {
     if (type === 'binance') {
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
       const binanceMnemonic = entropyToMnemonic(entropy)
-      const binanceKey = bnbCrypto.getPrivateKeyFromMnemonic(binanceMnemonic)
+      const binanceKey = getPrivateKeyFromMnemonic(binanceMnemonic)
 
       return { binanceMnemonic, binanceKey }
     } else {
@@ -60,11 +65,9 @@ export class BinancePlugin extends CurrencyPlugin {
       let publicKey = ''
       let privateKey = walletInfo.keys.binanceKey
       if (typeof privateKey !== 'string') {
-        privateKey = bnbCrypto.getPrivateKeyFromMnemonic(
-          walletInfo.keys.binanceMnemonic
-        )
+        privateKey = getPrivateKeyFromMnemonic(walletInfo.keys.binanceMnemonic)
       }
-      publicKey = bnbCrypto.getAddressFromPrivateKey(privateKey, 'bnb')
+      publicKey = getAddressFromPrivateKey(privateKey, 'bnb')
       return { publicKey }
     } else {
       throw new Error('InvalidWalletType')
@@ -90,7 +93,7 @@ export class BinancePlugin extends CurrencyPlugin {
       address = edgeParsedUri.publicAddress
     }
 
-    const valid = bnbCrypto.checkAddress(address || '', 'bnb')
+    const valid = checkAddress(address || '', 'bnb')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -104,7 +107,7 @@ export class BinancePlugin extends CurrencyPlugin {
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
-    const valid = bnbCrypto.checkAddress(publicAddress, 'bnb')
+    const valid = checkAddress(publicAddress, 'bnb')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }

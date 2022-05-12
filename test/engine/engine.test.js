@@ -19,11 +19,19 @@ import fetch from 'node-fetch'
 import { CurrencyEngine } from '../../src/common/engine.js'
 import { CurrencyPlugin } from '../../src/common/plugin.js'
 import { WalletLocalData } from '../../src/common/types.js'
-import { currencyInfo } from '../../src/ethereum/info/ethInfo.js'
 import edgeCorePlugins from '../../src/index.js'
 import { fakeLog } from '../fakeLog.js'
 import { engineTestTxs } from './engine.txs.js'
 import fixtures from './fixtures.js'
+
+const fakeIo = makeFakeIo()
+const opts: EdgeCorePluginOptions = {
+  initOptions: {},
+  io: { ...fakeIo, fetch },
+  log: fakeLog,
+  nativeIo: {},
+  pluginDisklet: fakeIo.disklet
+}
 
 for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
@@ -33,14 +41,8 @@ for (const fixture of fixtures) {
   const WALLET_TYPE = fixture.WALLET_TYPE
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
-  const fakeIo = makeFakeIo()
-  const opts: EdgeCorePluginOptions = {
-    initOptions: {},
-    io: { ...fakeIo, fetch, random: size => fixture.key },
-    log: fakeLog,
-    nativeIo: {},
-    pluginDisklet: fakeIo.disklet
-  }
+  opts.io = { ...opts.io, random: size => fixture.key }
+
   const factory = edgeCorePlugins[fixture.pluginId]
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
@@ -151,6 +153,10 @@ for (const fixture of fixtures) {
 
   describe('Start engine', function () {
     it('Get BlockHeight', function (done) {
+      if (!engine) throw new Error('ErrorNoEngine')
+      engine.startEngine().catch(e => {
+        console.log('startEngine error', e, e.message)
+      })
       this.timeout(100000)
       emitter.once('onBlockHeightChange', height => {
         const thirdPartyHeight = 1578127
@@ -166,10 +172,6 @@ for (const fixture of fixtures) {
         }
         assert(getHeight > 0)
         done() // Can be "done" since the promise resolves before the event fires but just be on the safe side
-      })
-      if (!engine) throw new Error('ErrorNoEngine')
-      engine.startEngine().catch(e => {
-        console.log('startEngine error', e, e.message)
       })
     })
   })
@@ -206,8 +208,10 @@ for (const fixture of fixtures) {
   })
 }
 
-const fakeIo = makeFakeIo()
-const plugin = new CurrencyPlugin(fakeIo, 'fakePlugin', currencyInfo)
+// Get the currency info
+const factory = edgeCorePlugins.ethereum
+const ethPlugin = factory(opts)
+const plugin = new CurrencyPlugin(fakeIo, 'fakePlugin', ethPlugin.currencyInfo)
 const emitter = new EventEmitter()
 const callbacks: EdgeCurrencyEngineCallbacks = {
   onAddressesChecked(progressRatio) {

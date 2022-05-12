@@ -278,7 +278,7 @@ export class XrpEngine extends CurrencyEngine {
 
   async killEngine() {
     await super.killEngine()
-    await this.xrpPlugin.disconnectApi(this.walletId)
+    await this.multicastServers('disconnect')
   }
 
   async resyncBlockchain(): Promise<void> {

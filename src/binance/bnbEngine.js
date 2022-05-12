@@ -3,7 +3,7 @@
  */
 // @flow
 
-import BnbApiClient from '@binance-chain/javascript-sdk'
+import { BncClient } from '@binance-chain/javascript-sdk'
 import { bns } from 'biggystring'
 import {
   type EdgeSpendInfo,
@@ -517,7 +517,7 @@ export class BinanceEngine extends CurrencyEngine {
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
-    const bnbClient = new BnbApiClient(
+    const bnbClient = new BncClient(
       currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
     )
     bnbClient.chooseNetwork('mainnet')

@@ -376,7 +376,7 @@ export class FioEngine extends CurrencyEngine {
     this.fioSdkPreparedTrx = new FIOSDK(
       this.walletInfo.keys.fioKey,
       this.walletInfo.keys.publicKey,
-      '',
+      baseUrl,
       this.fetchCors,
       undefined,
       this.tpid,
