@@ -15,6 +15,7 @@ import {
   type EdgeFetchFunction,
   type EdgeIo,
   type EdgeParsedUri,
+  type EdgeToken,
   type EdgeWalletInfo
 } from 'edge-core-js/types'
 import EosApi from 'eosjs-api'
@@ -29,20 +30,8 @@ import {
 } from './eosSchema.js'
 import { type EosJsConfig } from './eosTypes'
 
-const validCharacters = '12345abcdefghijklmnopqrstuvwxyz.'
-
 export function checkAddress(address: string): boolean {
-  // TODO: Check for a valid address format. The passed in
-  // address would be a use visible displayed address such as what would
-  // go into a QR code
-
-  for (let i = 0; i < address.length; i++) {
-    const c = address.charAt(i)
-    if (!validCharacters.includes(c)) {
-      return false
-    }
-  }
-  return true
+  return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
 export class EosPlugin extends CurrencyPlugin {
@@ -152,6 +141,16 @@ export class EosPlugin extends CurrencyPlugin {
       amount
     )
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    const contractAddress = token?.networkLocation?.contractAddress
+    if (contractAddress != null) {
+      if (!checkAddress(contractAddress))
+        throw new Error('ErrorInvalidContractAddress')
+      return contractAddress.toLowerCase()
+    }
+    return super.getTokenId(token)
   }
 
   // change to fetch call in the future
