@@ -1,5 +1,8 @@
 # edge-currency-accountbased
 
+## 0.15.11 (2022-05-14)
+- Remove RPC node that returns false zero balances
+
 ## 0.15.10 (2022-05-12)
 
 - Add `getTokenId` to ethereum and eos plugins
