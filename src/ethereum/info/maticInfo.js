@@ -37,7 +37,6 @@ const otherSettings: EthereumSettings = {
     'https://rpc.polycat.finance',
     'https://rpc-mainnet.maticvigil.com',
     'https://matic-mainnet.chainstacklabs.com',
-    'https://matic-mainnet-full-rpc.bwarelabs.com',
     'https://rpc-mainnet.matic.quiknode.pro'
   ],
   evmScanApiServers: ['https://api.polygonscan.com'],
