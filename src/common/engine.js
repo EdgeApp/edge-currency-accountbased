@@ -67,6 +67,7 @@ export class CurrencyEngine {
   currencyInfo: EdgeCurrencyInfo
   allTokens: EdgeMetaToken[]
   customTokens: EdgeMetaToken[]
+  enabledTokens: string[]
   currentSettings: any
   timers: any
   walletId: string
@@ -104,6 +105,7 @@ export class CurrencyEngine {
     this.walletId = walletInfo.id ? `${walletInfo.id} - ` : ''
     this.currencyInfo = currencyPlugin.currencyInfo
     this.allTokens = currencyPlugin.currencyInfo.metaTokens.slice(0)
+    this.enabledTokens = []
     this.customTokens = []
     this.timers = {}
 
@@ -250,6 +252,8 @@ export class CurrencyEngine {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
+    const { currencyCode } = this.currencyInfo
+
     if (!this.walletInfo.keys.publicKey) {
       const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
       this.walletInfo.keys.publicKey = pubKeys.publicKey
@@ -258,18 +262,12 @@ export class CurrencyEngine {
     const disklet = this.walletLocalDisklet
     try {
       const result = await disklet.getText(DATA_STORE_FILE)
-      this.walletLocalData = new WalletLocalData(
-        result,
-        this.currencyInfo.currencyCode
-      )
+      this.walletLocalData = new WalletLocalData(result, currencyCode)
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
         this.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(
-          null,
-          this.currencyInfo.currencyCode
-        )
+        this.walletLocalData = new WalletLocalData(null, currencyCode)
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
         await disklet.setText(
           DATA_STORE_FILE,
@@ -281,19 +279,70 @@ export class CurrencyEngine {
       }
     }
 
-    for (const token of this.walletLocalData.enabledTokens) {
-      this.tokenCheckBalanceStatus[token] = 0
-      this.tokenCheckTransactionsStatus[token] = 0
+    // Add the native token currency
+    this.tokenCheckBalanceStatus[currencyCode] = 0
+    this.tokenCheckTransactionsStatus[currencyCode] = 0
+    this.enabledTokens.push(currencyCode)
+
+    const { customTokens = {}, enabledTokenIds = [] } = opts
+
+    // Add all of the custom tokens
+    for (const token of Object.keys(customTokens)) {
+      const {
+        currencyCode,
+        denominations,
+        displayName,
+        networkLocation = {}
+      } = customTokens[token]
+      this.addCustomToken({
+        currencyCode,
+        currencyName: displayName,
+        multiplier: denominations[0].multiplier,
+        contractAddress: networkLocation?.contractAddress
+      })
     }
+
+    // Create a map for fast searching
+    const tokenIdMap = enabledTokenIds.reduce((map, tokenId) => {
+      map[tokenId] = true
+      return map
+    }, {})
+
+    // Add all the enabled known tokens
+    const addTokenPromises = this.allTokens.map(
+      ({ currencyCode, contractAddress = '', currencyName, denominations }) =>
+        this.currencyPlugin
+          .getTokenId({
+            currencyCode,
+            displayName: currencyName,
+            denominations,
+            networkLocation: { contractAddress }
+          })
+          .then(tokenId => {
+            if (
+              tokenIdMap[tokenId] === true &&
+              !this.enabledTokens.includes(currencyCode)
+            ) {
+              this.enabledTokens.push(currencyCode)
+              this.walletLocalData.totalBalances[currencyCode] = '0'
+              this.tokenCheckBalanceStatus[currencyCode] = 0
+              this.tokenCheckTransactionsStatus[currencyCode] = 0
+            }
+          })
+          .catch()
+    )
+
+    await Promise.all(addTokenPromises)
 
     // Initialize walletLocalData.lastTransactionQueryHeight for
     //  backwards-compatibility
     if (!this.walletLocalData.lastTransactionQueryHeight) {
-      for (const token of this.walletLocalData.enabledTokens) {
+      for (const token of this.enabledTokens) {
         this.walletLocalData.lastTransactionQueryHeight[token] =
           this.walletLocalData.lastAddressQueryHeight || 0
       }
     }
+
     this.doInitialBalanceCallback()
   }
 
@@ -534,7 +583,7 @@ export class CurrencyEngine {
   }
 
   doInitialBalanceCallback() {
-    for (const currencyCode of this.walletLocalData.enabledTokens) {
+    for (const currencyCode of this.enabledTokens) {
       try {
         this.currencyEngineCallbacks.onBalanceChanged(
           currencyCode,
@@ -550,7 +599,7 @@ export class CurrencyEngine {
   }
 
   doInitialTransactionsCallback() {
-    for (const currencyCode of this.walletLocalData.enabledTokens) {
+    for (const currencyCode of this.enabledTokens) {
       try {
         this.currencyEngineCallbacks.onTransactionsChanged(
           this.transactionList[currencyCode]
@@ -592,7 +641,7 @@ export class CurrencyEngine {
       return
     }
 
-    const activeTokens = this.walletLocalData.enabledTokens
+    const activeTokens = this.enabledTokens
     const perTokenSlice = 1 / activeTokens.length
     let totalStatus = 0
     let numComplete = 0
@@ -636,10 +685,7 @@ export class CurrencyEngine {
   }
 
   async clearBlockchainCache(): Promise<void> {
-    const temp = JSON.stringify({
-      enabledTokens: this.walletLocalData.enabledTokens,
-      publicKey: this.walletLocalData.publicKey
-    })
+    const temp = JSON.stringify({ publicKey: this.walletLocalData.publicKey })
     this.walletLocalData = new WalletLocalData(
       temp,
       this.currencyInfo.currencyCode
@@ -661,20 +707,25 @@ export class CurrencyEngine {
   }
 
   enableTokensSync(tokens: string[]) {
-    for (const token of tokens) {
-      if (this.walletLocalData.enabledTokens.indexOf(token) === -1) {
-        this.walletLocalData.enabledTokens.push(token)
+    const tokenMap = tokens.reduce((map, currencyCode) => {
+      map[currencyCode] = true
+      return map
+    }, {})
+
+    for (const token of this.allTokens) {
+      const { currencyCode } = token
+      if (
+        tokenMap[currencyCode] === true &&
+        !this.enabledTokens.includes(currencyCode)
+      ) {
+        this.enabledTokens.push(currencyCode)
         // Initialize balance
-        this.walletLocalData.totalBalances[token] = '0'
+        this.walletLocalData.totalBalances[currencyCode] = '0'
         this.currencyEngineCallbacks.onBalanceChanged(
-          token,
-          this.walletLocalData.totalBalances[token]
+          currencyCode,
+          this.walletLocalData.totalBalances[currencyCode]
         )
-        this.walletLocalDataDirty = true
       }
-    }
-    if (this.walletLocalDataDirty) {
-      this.saveWalletLoop()
     }
   }
 
@@ -683,18 +734,14 @@ export class CurrencyEngine {
   }
 
   disableTokensSync(tokens: string[]) {
-    for (const token of tokens) {
-      if (token === this.currencyInfo.currencyCode) {
+    for (const currencyCode of tokens) {
+      if (currencyCode === this.currencyInfo.currencyCode) {
         continue
       }
-      const index = this.walletLocalData.enabledTokens.indexOf(token)
+      const index = this.enabledTokens.indexOf(currencyCode)
       if (index !== -1) {
-        this.walletLocalData.enabledTokens.splice(index, 1)
-        this.walletLocalDataDirty = true
+        this.enabledTokens.splice(index, 1)
       }
-    }
-    if (this.walletLocalDataDirty) {
-      this.saveWalletLoop()
     }
   }
 
@@ -703,7 +750,7 @@ export class CurrencyEngine {
   }
 
   async getEnabledTokens(): Promise<string[]> {
-    return this.walletLocalData.enabledTokens
+    return this.enabledTokens
   }
 
   async addCustomToken(obj: CustomToken, contractAddress?: string) {
@@ -770,7 +817,7 @@ export class CurrencyEngine {
   }
 
   getTokenStatus(token: string) {
-    return this.walletLocalData.enabledTokens.indexOf(token) !== -1
+    return this.enabledTokens.includes(token)
   }
 
   getBalance(options: EdgeCurrencyCodeOptions): string {

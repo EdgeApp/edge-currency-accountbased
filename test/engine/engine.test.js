@@ -83,7 +83,9 @@ for (const fixture of fixtures) {
     log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
-    walletLocalEncryptedDisklet: walletLocalDisklet
+    walletLocalEncryptedDisklet: walletLocalDisklet,
+    customTokens: {},
+    enabledTokenIds: []
   }
 
   describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function () {
@@ -250,7 +252,9 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   log: fakeLog,
   userSettings: undefined,
   walletLocalDisklet,
-  walletLocalEncryptedDisklet: walletLocalDisklet
+  walletLocalEncryptedDisklet: walletLocalDisklet,
+  customTokens: {},
+  enabledTokenIds: []
 }
 const walletInfo = { id: '', type: '', keys: {} }
 

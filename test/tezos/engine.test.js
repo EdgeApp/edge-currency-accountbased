@@ -65,7 +65,9 @@ describe(`Tezos engine`, function () {
     log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
-    walletLocalEncryptedDisklet: walletLocalDisklet
+    walletLocalEncryptedDisklet: walletLocalDisklet,
+    customTokens: {},
+    enabledTokenIds: []
   }
 
   const info: EdgeWalletInfo = {

@@ -1328,7 +1328,7 @@ export class EthereumNetwork {
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
       return this.currencyInfo.currencyCode
     } else {
-      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+      for (const tk of this.ethEngine.enabledTokens) {
         const tokenInfo = this.ethEngine.getTokenInfo(tk)
         if (tokenInfo) {
           const tokenContractAddress = tokenInfo.contractAddress
@@ -1434,7 +1434,7 @@ export class EthereumNetwork {
     // txs for *all* tokens.
     const response = { tokenTxs: {}, server: 'alethio' }
     if (currencyCode !== this.currencyInfo.currencyCode) {
-      for (const tk of this.ethEngine.walletLocalData.enabledTokens) {
+      for (const tk of this.ethEngine.enabledTokens) {
         if (tk !== this.currencyInfo.currencyCode) {
           response.tokenTxs[tk] = {
             blockHeight: startBlock,
@@ -1958,18 +1958,13 @@ export class EthereumNetwork {
         async () => this.check('nonce')
       )
 
-      let currencyCodes
-      if (
-        this.ethEngine.walletLocalData.enabledTokens.indexOf(
-          this.currencyInfo.currencyCode
-        ) === -1
-      ) {
-        currencyCodes = [this.currencyInfo.currencyCode].concat(
-          this.ethEngine.walletLocalData.enabledTokens
-        )
-      } else {
-        currencyCodes = this.ethEngine.walletLocalData.enabledTokens
+      const { currencyCode } = this.currencyInfo
+      const currencyCodes = this.ethEngine.enabledTokens
+
+      if (!currencyCodes.includes(currencyCode)) {
+        currencyCodes.push(currencyCode)
       }
+
       for (const tk of currencyCodes) {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalLastChecked[tk],
