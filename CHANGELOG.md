@@ -1,6 +1,11 @@
 # edge-currency-accountbased
 
+## 0.16.0 (2022-05-19)
+
+- Remove the enabledTokens from the cached data (walletLocalData) and filter unknown tokens out
+
 ## 0.15.11 (2022-05-14)
+
 - Remove RPC node that returns false zero balances
 
 ## 0.15.10 (2022-05-12)
