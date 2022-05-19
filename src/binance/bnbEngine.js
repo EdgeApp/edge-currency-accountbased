@@ -158,7 +158,7 @@ export class BinanceEngine extends CurrencyEngine {
         if (jsonObj.balances.length === 0) {
           this.updateBalance('BNB', '0')
         }
-        for (const tk of this.walletLocalData.enabledTokens) {
+        for (const tk of this.enabledTokens) {
           for (const balance of jsonObj.balances) {
             if (balance.symbol === tk) {
               const denom = getDenomInfo(this.currencyInfo, tk)
@@ -315,7 +315,7 @@ export class BinanceEngine extends CurrencyEngine {
         ADDRESS_QUERY_LOOKBACK_TIME
     }
 
-    for (const currencyCode of this.walletLocalData.enabledTokens) {
+    for (const currencyCode of this.enabledTokens) {
       promiseArray.push(this.checkTransactionsFetch(startTime, currencyCode))
     }
 

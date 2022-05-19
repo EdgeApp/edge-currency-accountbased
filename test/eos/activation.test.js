@@ -69,7 +69,9 @@ describe(`EOS activation`, function () {
     log: fakeLog,
     userSettings: undefined,
     walletLocalDisklet,
-    walletLocalEncryptedDisklet: walletLocalDisklet
+    walletLocalEncryptedDisklet: walletLocalDisklet,
+    customTokens: {},
+    enabledTokenIds: []
   }
 
   const info: EdgeWalletInfo = {

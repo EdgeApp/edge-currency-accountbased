@@ -502,7 +502,6 @@ export class EosEngine extends CurrencyEngine {
   }
 
   async checkTransactionsInnerLoop() {
-    const { enabledTokens } = this.walletLocalData
     if (
       !this.walletLocalData.otherData ||
       !this.walletLocalData.otherData.accountName
@@ -511,7 +510,7 @@ export class EosEngine extends CurrencyEngine {
     }
     const acct = this.walletLocalData.otherData.accountName
 
-    for (const token of enabledTokens) {
+    for (const token of this.enabledTokens) {
       let incomingResult, outgoingResult
       try {
         incomingResult = await this.checkIncomingTransactions(acct, token)
@@ -830,7 +829,7 @@ export class EosEngine extends CurrencyEngine {
       // Check balance on account
       if (this.walletLocalData.otherData.accountName) {
         for (const token of this.allTokens) {
-          if (this.walletLocalData.enabledTokens.includes(token.currencyCode)) {
+          if (this.enabledTokens.includes(token.currencyCode)) {
             const results = await this.multicastServers(
               'getCurrencyBalance',
               token.contractAddress,

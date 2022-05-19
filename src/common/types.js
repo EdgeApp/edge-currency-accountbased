@@ -28,7 +28,6 @@ export class WalletLocalData {
   lastTransactionDate: { [currencyCode: string]: number }
   publicKey: string
   totalBalances: { [currencyCode: string]: string }
-  enabledTokens: string[]
   lastCheckedTxsDropped: number
   numUnconfirmedSpendTxs: number
   numTransactions: { [currencyCode: string]: number }
@@ -46,7 +45,6 @@ export class WalletLocalData {
     this.numTransactions = {}
     this.otherData = {}
     this.publicKey = ''
-    this.enabledTokens = [primaryCurrency]
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)
 
@@ -68,12 +66,6 @@ export class WalletLocalData {
       if (typeof data.publicKey === 'string') this.publicKey = data.publicKey
       if (typeof data.totalBalances !== 'undefined') {
         this.totalBalances = data.totalBalances
-      }
-      if (typeof data.enabledTokens !== 'undefined') {
-        this.enabledTokens = data.enabledTokens
-        if (!this.enabledTokens.includes(primaryCurrency)) {
-          this.enabledTokens.push(primaryCurrency)
-        }
       }
       if (typeof data.otherData !== 'undefined') this.otherData = data.otherData
       if (typeof data.lastTransactionQueryHeight === 'object')
