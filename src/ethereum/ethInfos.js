@@ -6,6 +6,7 @@ import { makeCeloPlugin } from './info/celoInfo.js'
 import { makeEthereumClassicPlugin } from './info/etcInfo.js'
 import { makeEthereumPlugin } from './info/ethInfo.js'
 import { makeFantomPlugin } from './info/ftmInfo.js'
+import { makeGoerliPlugin } from './info/goerliInfo.js'
 import { makeKovanPlugin } from './info/kovanInfo.js'
 import { makePolygonPlugin } from './info/maticInfo'
 import { makeRinkebyPlugin } from './info/rinkebyInfo.js'
@@ -17,6 +18,7 @@ export const ethPlugins = {
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
   fantom: makeFantomPlugin,
+  goerli: makeGoerliPlugin,
   kovan: makeKovanPlugin,
   rinkeby: makeRinkebyPlugin,
   ropsten: makeRopstenPlugin,
