@@ -4,6 +4,7 @@ import { makeAvalanchePlugin } from './info/avaxInfo'
 import { makeBinanceSmartChainPlugin } from './info/bscInfo.js'
 import { makeCeloPlugin } from './info/celoInfo.js'
 import { makeEthereumClassicPlugin } from './info/etcInfo.js'
+import { makeEthDevPlugin } from './info/ethDevInfo.js'
 import { makeEthereumPlugin } from './info/ethInfo.js'
 import { makeFantomPlugin } from './info/ftmInfo.js'
 import { makeGoerliPlugin } from './info/goerliInfo.js'
@@ -17,6 +18,7 @@ export const ethPlugins = {
   binancesmartchain: makeBinanceSmartChainPlugin,
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
+  ethDev: makeEthDevPlugin,
   fantom: makeFantomPlugin,
   goerli: makeGoerliPlugin,
   kovan: makeKovanPlugin,
