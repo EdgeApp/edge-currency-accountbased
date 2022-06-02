@@ -61,7 +61,11 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://eth-kovan.alchemyapi.io', 'https://kovan.infura.io/v3'],
+  rpcServers: [
+    'https://kovan.poa.network',
+    'https://eth-kovan.alchemyapi.io',
+    'https://kovan.infura.io/v3'
+  ],
 
   evmScanApiServers: ['https://api-kovan.etherscan.io'],
   blockcypherApiServers: [],

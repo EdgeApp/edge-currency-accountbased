@@ -63,7 +63,7 @@ const defaultNetworkFees: EthereumFees = {
 const otherSettings: EthereumSettings = {
   rpcServers: ['http://localhost:8545'],
 
-  evmScanApiServers: ['https://api-kovan.etherscan.io'],
+  evmScanApiServers: [],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['ethereum', 'ether'],
