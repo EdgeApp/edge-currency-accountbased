@@ -448,13 +448,14 @@ export type AmberdataAccountsTx = $Call<typeof asAmberdataAccountsTx>
 
 export const asAmberdataAccountsFuncs = asObject({
   transactionHash: asString,
-  timestamp: asString,
+  timestamp: asNumber,
   blockNumber: asString,
   value: asString,
   initialGas: asString,
   leftOverGas: asString,
   from: asObject({ address: asString }),
-  to: asArray(asObject({ address: asString }))
+  to: asArray(asObject({ address: asString })),
+  contractCodeAddress: asString
 })
 
 export type AmberdataAccountsFuncs = $Call<typeof asAmberdataAccountsFuncs>
@@ -471,13 +472,14 @@ export type FetchGetAmberdataApiResponse = $Call<
 
 export type AmberdataInternalTx = {|
   transactionHash: string,
-  timestamp: string,
+  timestamp: number,
   blockNumber: string,
   value: string,
   initialGas: string,
   leftOverGas: string,
   from: { address: string },
-  to: Array<{ address: string }>
+  to: Array<{ address: string }>,
+  contractCodeAddress: string
 |}
 
 export const asRpcResultString = asObject({
