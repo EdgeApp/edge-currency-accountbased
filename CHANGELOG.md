@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.16.1 (2022-06-10)
+
+- ETH: Break out testnets into their own plugins
+- ZEC: Upgrade react-native-zcash to v0.2.2
+- ETH: Remove internal transaction queries
+
 ## 0.16.0 (2022-05-19)
 
 - Remove the enabledTokens from the cached data (walletLocalData) and filter unknown tokens out
