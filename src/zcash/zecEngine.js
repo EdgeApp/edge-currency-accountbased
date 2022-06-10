@@ -140,10 +140,11 @@ export class ZcashEngine extends CurrencyEngine {
         downloadProgress * 0.8
 
       const percent =
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] +
-        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode]
+        (this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] +
+          this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode]) /
+        2
       if (percent !== this.progressRatio) {
-        if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
+        if (Math.abs(percent - this.progressRatio) > 0.1 || percent === 1) {
           this.progressRatio = percent
           this.updateOnAddressesChecked()
         }
