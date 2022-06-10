@@ -35,13 +35,11 @@ import {
   type CheckTokenBalBlockchair,
   type EthereumSettings,
   type EthereumTxOtherParams,
-  type EvmScanInternalTransaction,
   type EvmScanTransaction,
   type FetchGetAlethio,
   type FetchGetAmberdataApiResponse,
   type RpcResultString,
   asAlethioAccountsTokenTransfer,
-  asAmberdataAccountsFuncs,
   asAmberdataAccountsTx,
   asBlockbookAddress,
   asBlockbookBlockHeight,
@@ -51,7 +49,6 @@ import {
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
   asEvmScancanTokenTransaction,
-  asEvmScanInternalTransaction,
   asEvmScanTransaction,
   asFetchGetAlethio,
   asFetchGetAmberdataApiResponse,
@@ -107,8 +104,7 @@ type BroadcastResults = {
 }
 
 type GetEthscanAllTxsOptions = {
-  contractAddress?: string,
-  searchRegularTxs?: boolean
+  contractAddress?: string
 }
 
 type GetEthscanAllTxsResponse = {
@@ -187,15 +183,12 @@ export class EthereumNetwork {
     )
   }
 
-  processEvmScanTransaction(
-    tx: EvmScanTransaction | EvmScanInternalTransaction,
-    currencyCode: string
-  ) {
+  processEvmScanTransaction(tx: EvmScanTransaction, currencyCode: string) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string = '0'
 
-    if (!tx.contractAddress && tx.gasPrice) {
+    if (tx.gasPrice) {
       nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
     }
 
@@ -243,6 +236,7 @@ export class EthereumNetwork {
     } else {
       throw new Error('Invalid transaction result format')
     }
+
     const edgeTransaction: EdgeTransaction = {
       txid,
       date: parseInt(tx.timeStamp),
@@ -1014,14 +1008,11 @@ export class EthereumNetwork {
           startBlock,
           page,
           offset,
-          contractAddress,
-          searchRegularTxs
+          contractAddress
         } = params[0]
         let startUrl
         if (currencyCode === this.currencyInfo.currencyCode) {
-          startUrl = `?action=${
-            searchRegularTxs ? 'txlist' : 'txlistinternal'
-          }&module=account`
+          startUrl = `?action=txlist&module=account`
         } else {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
@@ -1232,7 +1223,6 @@ export class EthereumNetwork {
     const allTransactions: EdgeTransaction[] = []
     let server: string = ''
     const contractAddress = options.contractAddress
-    const searchRegularTxs = options.searchRegularTxs
     while (1) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
       const response = await this.multicastServers('getTransactions', {
@@ -1241,8 +1231,7 @@ export class EthereumNetwork {
         startBlock,
         page,
         offset,
-        contractAddress,
-        searchRegularTxs
+        contractAddress
       })
       server = response.server
       const transactions = response.result.result
@@ -1279,19 +1268,10 @@ export class EthereumNetwork {
         startBlock,
         currencyCode,
         asEvmScanTransaction,
-        { searchRegularTxs: true }
+        {}
       )
-      const txsInternalResp = await this.getAllTxsEthscan(
-        startBlock,
-        currencyCode,
-        asEvmScanInternalTransaction,
-        { searchRegularTxs: false }
-      )
-      server = txsRegularResp.server || txsInternalResp.server
-      allTransactions = [
-        ...txsRegularResp.allTransactions,
-        ...txsInternalResp.allTransactions
-      ]
+      server = txsRegularResp.server
+      allTransactions = [...txsRegularResp.allTransactions]
     } else {
       const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
       if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
@@ -1461,101 +1441,59 @@ export class EthereumNetwork {
   async getAllTxsAmberdata(
     startBlock: number,
     startDate: number,
-    currencyCode: string,
-    searchRegularTxs: boolean
+    currencyCode: string
   ): Promise<EdgeTransaction[]> {
     const address = this.ethEngine.walletLocalData.publicKey
 
     let page = 0
     const allTransactions: EdgeTransaction[] = []
     while (1) {
-      let url = `/addresses/${address}/${
-        searchRegularTxs ? 'transactions' : 'functions'
-      }?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
+      let url = `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
 
-      if (searchRegularTxs) {
-        let cleanedResponseObj: FetchGetAmberdataApiResponse
-        try {
-          if (startDate) {
-            const newDateObj = new Date(startDate)
-            const now = new Date()
-            if (newDateObj) {
-              url =
-                url +
-                `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
-            }
+      let cleanedResponseObj: FetchGetAmberdataApiResponse
+      try {
+        if (startDate) {
+          const newDateObj = new Date(startDate)
+          const now = new Date()
+          if (newDateObj) {
+            url =
+              url +
+              `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
           }
+        }
 
-          const jsonObj = await this.fetchGetAmberdataApi(url)
-          cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
-        } catch (e) {
-          this.logError('checkTxsAmberdata regular txs', e)
-          throw new Error('checkTxsAmberdata (regular tx) response is invalid')
-        }
-        const amberdataTxs = cleanedResponseObj.payload.records
-        for (const amberdataTx of amberdataTxs) {
-          try {
-            const cleanAmberdataTx = asAmberdataAccountsTx(amberdataTx)
-
-            const tx = this.processAmberdataTxRegular(
-              cleanAmberdataTx,
-              currencyCode
-            )
-            if (tx) {
-              allTransactions.push(tx)
-            }
-          } catch (e) {
-            this.ethEngine.error(
-              `checkTxsAmberdata process regular ${safeErrorMessage(
-                e
-              )}\n${JSON.stringify(amberdataTx)}`
-            )
-            throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
-          }
-        }
-        if (amberdataTxs.length === 0) {
-          break
-        }
-        page++
-      } else {
-        let cleanedResponseObj: FetchGetAmberdataApiResponse
-        try {
-          if (startDate) {
-            url = url + `&startDate=${startDate}&endDate=${Date.now()}`
-          }
-          const jsonObj = await this.fetchGetAmberdataApi(url)
-          cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
-        } catch (e) {
-          this.logError('checkTxsAmberdata internal txs', e)
-          throw new Error('checkTxsAmberdata (internal tx) response is invalid')
-        }
-        const amberdataTxs = cleanedResponseObj.payload.records
-        for (const amberdataTx of amberdataTxs) {
-          try {
-            const cleanamberdataTx = asAmberdataAccountsFuncs(amberdataTx)
-            const tx = this.processAmberdataTxInternal(
-              cleanamberdataTx,
-              currencyCode
-            )
-            if (tx) {
-              allTransactions.push(tx)
-            }
-          } catch (e) {
-            this.ethEngine.error(
-              `checkTxsAmberdata process internal ${safeErrorMessage(
-                e
-              )}\n${JSON.stringify(amberdataTx)}`
-            )
-            throw new Error('checkTxsAmberdata internal amberdataTx is invalid')
-          }
-        }
-        if (amberdataTxs.length === 0) {
-          break
-        }
-        page++
+        const jsonObj = await this.fetchGetAmberdataApi(url)
+        cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
+      } catch (e) {
+        this.logError('checkTxsAmberdata regular txs', e)
+        throw new Error('checkTxsAmberdata (regular tx) response is invalid')
       }
-    }
+      const amberdataTxs = cleanedResponseObj.payload.records
+      for (const amberdataTx of amberdataTxs) {
+        try {
+          const cleanAmberdataTx = asAmberdataAccountsTx(amberdataTx)
 
+          const tx = this.processAmberdataTxRegular(
+            cleanAmberdataTx,
+            currencyCode
+          )
+          if (tx) {
+            allTransactions.push(tx)
+          }
+        } catch (e) {
+          this.ethEngine.error(
+            `checkTxsAmberdata process regular ${safeErrorMessage(
+              e
+            )}\n${JSON.stringify(amberdataTx)}`
+          )
+          throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
+        }
+      }
+      if (amberdataTxs.length === 0) {
+        break
+      }
+      page++
+    }
     return allTransactions
   }
 
@@ -1566,22 +1504,14 @@ export class EthereumNetwork {
     const allTxsRegular: EdgeTransaction[] = await this.getAllTxsAmberdata(
       startBlock,
       startDate,
-      currencyCode,
-      true
-    )
-
-    const allTxsInternal: EdgeTransaction[] = await this.getAllTxsAmberdata(
-      startBlock,
-      startDate,
-      currencyCode,
-      false
+      currencyCode
     )
 
     return {
       tokenTxs: {
         [`${this.currencyInfo.currencyCode}`]: {
           blockHeight: startBlock,
-          edgeTransactions: [...allTxsRegular, ...allTxsInternal]
+          edgeTransactions: [...allTxsRegular]
         }
       },
       server: 'amberdata'
