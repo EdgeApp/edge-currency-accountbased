@@ -2,17 +2,14 @@
 import '@polkadot/wasm-crypto/initOnlyAsm'
 
 // import 'jsbi'
-// $FlowFixMe
-import { Keyring } from '../../lib/polkadot/bundles/keyring.js'
-// $FlowFixMe
-import txWrapper from '../../lib/polkadot/bundles/txwrapper.js'
+import { Keyring } from './bundles/keyring.js'
+import txWrapper from './bundles/txwrapper.js'
 import {
   ed25519PairFromSeed,
   encodeAddress,
   isAddress,
   mnemonicToMiniSecret
-  // $FlowFixMe
-} from '../../lib/polkadot/bundles/utilCrypto.js'
+} from './bundles/utilCrypto.js'
 
 const {
   construct,

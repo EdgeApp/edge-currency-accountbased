@@ -2,12 +2,13 @@ import babel from '@rollup/plugin-babel'
 import commonJs from '@rollup/plugin-commonjs'
 import json from '@rollup/plugin-json'
 import nodeResolve from '@rollup/plugin-node-resolve'
+import modify from 'rollup-plugin-modify'
 
 const files = [
   {
     input: './node_modules/@polkadot/util-crypto/index.js',
     output: {
-      file: './lib/polkadot/bundles/utilCrypto.js',
+      file: './src/polkadot/bundles/utilCrypto.js',
       format: 'esm',
       exports: 'named'
     }
@@ -15,7 +16,7 @@ const files = [
   {
     input: './node_modules/@polkadot/keyring/index.js',
     output: {
-      file: './lib/polkadot/bundles/keyring.js',
+      file: './src/polkadot/bundles/keyring.js',
       format: 'esm',
       exports: 'named'
     }
@@ -23,7 +24,7 @@ const files = [
   {
     input: './node_modules/@substrate/txwrapper-polkadot/lib/index.js',
     output: {
-      file: './lib/polkadot/bundles/txwrapper.js',
+      file: './src/polkadot/bundles/txwrapper.js',
       format: 'esm',
       exports: 'named'
     }
@@ -44,6 +45,14 @@ const options = {
         //   return './node_modules/jsbi/dist/jsbi-umd.js'
       }
     },
+    // {
+    //   name: 'fix-import-meta',
+    //   resolveId(source) {
+    //     if (/import\.meta && /.test(source)) return ''
+    //     // if (/jsbi\.mjs/.test(source))
+    //     //   return './node_modules/jsbi/dist/jsbi-umd.js'
+    //   }
+    // },
     nodeResolve({ exportConditions: ['node'], preferBuiltins: false }), // 'preferBuiltins: true' to suppress warning
     commonJs({
       dynamicRequireTargets: [
@@ -61,8 +70,15 @@ const options = {
           }
         ]
       ],
-      plugins: ['@babel/plugin-syntax-bigint', 'babel-plugin-transform-bigint'],
+      plugins: [
+        '@babel/plugin-syntax-bigint',
+        'babel-plugin-transform-bigint',
+        'babel-plugin-transform-import-meta'
+      ],
       babelHelpers: 'bundled'
+    }),
+    modify({
+      'import.meta && ': ''
     })
   ],
   // Suppress THIS_IS_UNDEFINED warnings
