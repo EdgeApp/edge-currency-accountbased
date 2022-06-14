@@ -1,6 +1,6 @@
 // @flow
 
-import '@polkadot/wasm-crypto/initOnlyAsm'
+import './bundles/wasm-crypto-asmjs.js'
 
 // import { Keyring } from '@polkadot/keyring'
 // import {
@@ -55,7 +55,6 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-// $FlowFixMe
 // const { Keyring } = require('@polkadot/keyring')
 
 export class PolkadotEngine extends CurrencyEngine {

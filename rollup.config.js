@@ -28,6 +28,14 @@ const files = [
       format: 'esm',
       exports: 'named'
     }
+  },
+  {
+    input: './node_modules/@polkadot/wasm-crypto-asmjs/index.js',
+    output: {
+      file: './src/polkadot/bundles/wasm-crypto-asmjs.js',
+      format: 'esm',
+      exports: 'named'
+    }
   }
 ]
 
@@ -45,14 +53,6 @@ const options = {
         //   return './node_modules/jsbi/dist/jsbi-umd.js'
       }
     },
-    // {
-    //   name: 'fix-import-meta',
-    //   resolveId(source) {
-    //     if (/import\.meta && /.test(source)) return ''
-    //     // if (/jsbi\.mjs/.test(source))
-    //     //   return './node_modules/jsbi/dist/jsbi-umd.js'
-    //   }
-    // },
     nodeResolve({ exportConditions: ['node'], preferBuiltins: false }), // 'preferBuiltins: true' to suppress warning
     commonJs({
       dynamicRequireTargets: [

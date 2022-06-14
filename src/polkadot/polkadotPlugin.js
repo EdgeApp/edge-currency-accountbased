@@ -1,5 +1,6 @@
 // @flow
-import '@polkadot/wasm-crypto/initOnlyAsm'
+// import '@polkadot/wasm-crypto/initOnlyAsm'
+import './bundles/wasm-crypto-asmjs.js'
 
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
