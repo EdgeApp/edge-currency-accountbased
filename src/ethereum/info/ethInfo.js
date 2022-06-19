@@ -430,11 +430,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x056fd409e1d7a124bd7017459dfea2f387b6d5cd'
     },
     {
-      currencyCode: 'PAX',
-      currencyName: 'Paxos',
+      currencyCode: 'USDP',
+      currencyName: 'Pax Dollar',
       denominations: [
         {
-          name: 'PAX',
+          name: 'USDP',
           multiplier: '1000000000000000000'
         }
       ],
