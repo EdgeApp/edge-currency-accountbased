@@ -27,7 +27,7 @@ module.exports = {
   },
   plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)],
   node: {
-    stream: 'empty',
+    // stream: 'empty',
     fs: 'empty'
   }
 }
