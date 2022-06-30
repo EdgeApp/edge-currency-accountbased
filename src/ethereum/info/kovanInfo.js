@@ -135,6 +135,150 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: [
     {
+      currencyCode: 'AAVE',
+      currencyName: 'Aave',
+      denominations: [
+        {
+          name: 'AAVE',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xb597cd8d3217ea6477232f9217fa70837ff667af'
+    },
+    {
+      currencyCode: 'AMPL',
+      currencyName: 'Ampleforth',
+      denominations: [
+        {
+          name: 'AMPL',
+          multiplier: '1000000000'
+        }
+      ],
+      contractAddress: '0x3e0437898a5667a4769b1ca5a34aab1ae7e81377'
+    },
+    {
+      currencyCode: 'BUSD',
+      currencyName: 'Binance USD',
+      denominations: [
+        {
+          name: 'BUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x4c6e1efc12fdfd568186b7baec0a43fffb4bcccf'
+    },
+    {
+      currencyCode: 'ENJ',
+      currencyName: 'Enjin Coin',
+      denominations: [
+        {
+          name: 'ENJ',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xc64f90cd7b564d3ab580eb20a102a8238e218be2'
+    },
+    {
+      currencyCode: 'sUSD',
+      currencyName: 'Synth sUSD',
+      denominations: [
+        {
+          name: 'sUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x99b267b9d96616f906d53c26decf3c5672401282'
+    },
+    {
+      currencyCode: 'LINK',
+      currencyName: 'ChainLink',
+      denominations: [
+        {
+          name: 'LINK',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xAD5ce863aE3E4E9394Ab43d4ba0D80f419F61789'
+    },
+    {
+      currencyCode: 'MANA',
+      currencyName: 'Decentraland',
+      denominations: [
+        {
+          name: 'MANA',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x738dc6380157429e957d223e6333dc385c85fec7'
+    },
+    {
+      currencyCode: 'TUSD',
+      currencyName: 'TrueUSD',
+      denominations: [
+        {
+          name: 'TUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x016750ac630f711882812f24dba6c95b9d35856d'
+    },
+    {
+      currencyCode: 'SNX',
+      currencyName: 'Synthetix',
+      denominations: [
+        {
+          name: 'SNX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x7fdb81b0b8a010dd4ffc57c3fecbf145ba8bd947'
+    },
+    {
+      currencyCode: 'REN',
+      currencyName: 'Republic Token',
+      denominations: [
+        {
+          name: 'REN',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x5eebf65a6746eed38042353ba84c8e37ed58ac6f'
+    },
+    {
+      currencyCode: 'MKR',
+      currencyName: 'Maker',
+      denominations: [
+        {
+          name: 'MKR',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x61e4cae3da7fd189e52a4879c7b8067d7c2cc0fa'
+    },
+    {
+      currencyCode: 'YFI',
+      currencyName: 'yearn.finance',
+      denominations: [
+        {
+          name: 'YFI',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xb7c325266ec274feb1354021d27fa3e3379d840d'
+    },
+    {
+      currencyCode: 'ZRX',
+      currencyName: 'ZRX',
+      denominations: [
+        {
+          name: 'ZRX',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xd0d76886cf8d952ca26177eb7cfdf83bad08c00c'
+    },
+
+    {
       currencyCode: 'DAI',
       currencyName: 'Dai Stablecoin',
       denominations: [
@@ -144,6 +288,28 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0xff795577d9ac8bd7d90ee22b6c1703490b6512fd'
+    },
+    {
+      currencyCode: 'USDC',
+      currencyName: 'USD Coin',
+      denominations: [
+        {
+          name: 'USDC',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0xe22da380ee6b445bb8273c81944adeb6e8450422'
+    },
+    {
+      currencyCode: 'USDT',
+      currencyName: 'Tether',
+      denominations: [
+        {
+          name: 'USDT',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0x13512979ade267ab5100878e2e0f485b568328a4'
     },
     {
       currencyCode: 'WETH',
