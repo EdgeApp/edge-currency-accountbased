@@ -4,8 +4,15 @@ const webpack = require('webpack')
 
 const babelOptions = {
   // For debugging, just remove "@babel/preset-env":
-  presets: ['@babel/preset-env', '@babel/preset-flow'],
-  plugins: [['@babel/plugin-transform-for-of', { assumeArray: true }]],
+  presets: [
+    [
+      '@babel/preset-env',
+      {
+        targets: { chrome: '67' }
+      }
+    ],
+    '@babel/preset-flow'
+  ],
   cacheDirectory: true
 }
 
