@@ -25,8 +25,20 @@ module.exports = {
     filename: 'edge-currency-accountbased.js',
     path: path.join(path.resolve(__dirname), 'lib/react-native')
   },
-  plugins: [new webpack.IgnorePlugin(/^https-proxy-agent$/)],
-  node: {
-    fs: 'empty'
+  plugins: [
+    new webpack.IgnorePlugin({ resourceRegExp: /^https-proxy-agent$/ })
+  ],
+  resolve: {
+    fallback: {
+      fs: false,
+      vm: require.resolve('vm-browserify'),
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      https: require.resolve('https-browserify'),
+      http: require.resolve('stream-http'),
+      os: require.resolve('os-browserify/browser'),
+      string_decoder: require.resolve('string_decoder'),
+      path: require.resolve('path-browserify')
+    }
   }
 }
