@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.16.2 (2022-06-30)
+
+- Add: All AAVE token for kovan
+- Change: Rename PAX token to USDP for ethereum
+
 ## 0.16.1 (2022-06-10)
 
 - ETH: Break out testnets into their own plugins
