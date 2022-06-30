@@ -19,15 +19,15 @@ import { makeZcashPlugin } from './zcash/zecPlugin.js'
 const plugins = {
   ...eosPlugins,
   ...ethPlugins,
+  binance: makeBinancePlugin,
   fio: makeFioPlugin,
-  zcash: makeZcashPlugin,
+  hedera: makeHederaPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
+  solana: makeSolanaPlugin,
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
-  binance: makeBinancePlugin,
-  hedera: makeHederaPlugin,
-  solana: makeSolanaPlugin
+  zcash: makeZcashPlugin
 }
 
 if (
