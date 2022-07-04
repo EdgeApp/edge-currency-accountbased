@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.16.3 (2022-07-04)
+
+- ETH: Fix network fee calculation
+
 ## 0.16.2 (2022-06-30)
 
 - Add: All AAVE token for kovan
