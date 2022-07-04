@@ -187,6 +187,7 @@ export class EthereumNetwork {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string = '0'
+    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     if (tx.gasPrice) {
       nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
@@ -204,8 +205,10 @@ export class EthereumNetwork {
         // spend to someone else
         netNativeAmount = bns.sub('0', tx.value)
 
-        // For spends, include the network fee in the transaction amount
-        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        // For spends, include the network fee in the transaction amount if not a token tx
+        if (!tokenTx) {
+          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        }
       }
     } else {
       // Receive transaction
@@ -237,13 +240,22 @@ export class EthereumNetwork {
       throw new Error('Invalid transaction result format')
     }
 
+    let parentNetworkFee
+    let networkFee = '0'
+    if (tokenTx) {
+      parentNetworkFee = nativeNetworkFee
+    } else {
+      networkFee = nativeNetworkFee
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid,
       date: parseInt(tx.timeStamp),
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
-      networkFee: nativeNetworkFee,
+      networkFee,
+      parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
       otherParams
@@ -261,6 +273,7 @@ export class EthereumNetwork {
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
+    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = tokenTransfer.attributes.value
     const fee = tokenTransfer.attributes.fee
@@ -289,8 +302,10 @@ export class EthereumNetwork {
         // spend to someone else
         netNativeAmount = bns.sub('0', value)
 
-        // For spends, include the network fee in the transaction amount
-        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        // For spends, include the network fee in the transaction amount if not a token tx
+        if (!tokenTx) {
+          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        }
       }
     } else if (
       toAddress.toLowerCase() ===
@@ -317,16 +332,25 @@ export class EthereumNetwork {
 
     let blockHeight = tokenTransfer.attributes.globalRank[0]
     if (blockHeight < 0) blockHeight = 0
+
+    let parentNetworkFee
+    let networkFee = '0'
+    if (tokenTx) {
+      parentNetworkFee = nativeNetworkFee
+    } else {
+      networkFee = nativeNetworkFee
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: tokenTransfer.relationships.transaction.data.id,
       date: tokenTransfer.attributes.blockCreationTime,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
-      networkFee: nativeNetworkFee,
+      networkFee,
       ourReceiveAddresses,
       signedTx: '',
-      parentNetworkFee: '',
+      parentNetworkFee,
       otherParams
     }
 
@@ -346,6 +370,8 @@ export class EthereumNetwork {
     const fromAddress = amberdataTx.from.address || ''
     const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
 
+    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
+
     if (fromAddress && toAddress) {
       nativeNetworkFee = '0'
 
@@ -358,8 +384,10 @@ export class EthereumNetwork {
           // spend to someone else
           netNativeAmount = bns.sub('0', value)
 
-          // For spends, include the network fee in the transaction amount
-          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+          // For spends, include the network fee in the transaction amount if not a token tx
+          if (!tokenTx) {
+            netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+          }
         }
       } else if (toAddress.toLowerCase() === walletAddress.toLowerCase()) {
         // Receive transaction
@@ -382,16 +410,25 @@ export class EthereumNetwork {
       let blockHeight = parseInt(amberdataTx.blockNumber, 10)
       if (blockHeight < 0) blockHeight = 0
       const date = new Date(amberdataTx.timestamp).getTime() / 1000
+
+      let parentNetworkFee
+      let networkFee = '0'
+      if (tokenTx) {
+        parentNetworkFee = nativeNetworkFee
+      } else {
+        networkFee = nativeNetworkFee
+      }
+
       const edgeTransaction: EdgeTransaction = {
         txid: amberdataTx.transactionHash,
         date,
         currencyCode,
         blockHeight,
         nativeAmount: netNativeAmount,
-        networkFee: nativeNetworkFee,
+        networkFee,
         ourReceiveAddresses,
         signedTx: '',
-        parentNetworkFee: '',
+        parentNetworkFee,
         otherParams
       }
 
@@ -410,6 +447,7 @@ export class EthereumNetwork {
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
     let tokenRecipientAddress: string | null
+    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = amberdataTx.value
     const fee = amberdataTx.fee ? amberdataTx.fee : '0'
@@ -430,8 +468,10 @@ export class EthereumNetwork {
           // spend to someone else
           netNativeAmount = bns.sub('0', value)
 
-          // For spends, include the network fee in the transaction amount
-          netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+          // For spends, include the network fee in the transaction amount if not a token tx
+          if (!tokenTx) {
+            netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+          }
         }
       } else if (toAddress.toLowerCase() === walletAddress.toLowerCase()) {
         // Receive transaction
@@ -454,16 +494,24 @@ export class EthereumNetwork {
       let blockHeight = parseInt(amberdataTx.blockNumber, 10)
       if (blockHeight < 0) blockHeight = 0
       const date = new Date(amberdataTx.timestamp).getTime() / 1000
+      let parentNetworkFee
+      let networkFee = '0'
+      if (tokenTx) {
+        parentNetworkFee = nativeNetworkFee
+      } else {
+        networkFee = nativeNetworkFee
+      }
+
       const edgeTransaction: EdgeTransaction = {
         txid: amberdataTx.hash,
         date,
         currencyCode,
         blockHeight,
         nativeAmount: netNativeAmount,
-        networkFee: nativeNetworkFee,
+        networkFee,
         ourReceiveAddresses,
         signedTx: '',
-        parentNetworkFee: '',
+        parentNetworkFee,
         otherParams
       }
 
