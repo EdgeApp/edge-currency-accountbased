@@ -27,7 +27,6 @@ import { EthereumEngine } from './ethEngine'
 import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
 import {
   type AlethioTokenTransfer,
-  type AmberdataInternalTx,
   type AmberdataTx,
   type BlockbookAddress,
   type BlockbookTokenBalance,
