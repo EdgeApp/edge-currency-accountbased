@@ -43,7 +43,7 @@ import {
   validateObject
 } from '../common/utils'
 import { NETWORK_FEES_POLL_MILLISECONDS, WEI_MULTIPLIER } from './ethConsts.js'
-import { EthereumNetwork } from './ethNetwork'
+import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
 import { EIP712TypedDataSchema } from './ethSchema.js'
 import {
@@ -966,17 +966,6 @@ export class EthereumEngine extends CurrencyEngine {
     // **********************************
     // Create the unsigned EdgeTransaction
 
-    // This is used for display purposes in the GUI
-    const feeRateUsed = {
-      // Convert gasPrice from wei to gwei
-      gasPrice: bns.div(
-        gasPrice,
-        WEI_MULTIPLIER.toString(),
-        WEI_MULTIPLIER.toString().length - 1
-      ),
-      gasLimit
-    }
-
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -984,7 +973,7 @@ export class EthereumEngine extends CurrencyEngine {
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed,
+      feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams // otherParams

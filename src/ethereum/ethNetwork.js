@@ -22,6 +22,7 @@ import {
   snooze,
   validateObject
 } from '../common/utils'
+import { WEI_MULTIPLIER } from './ethConsts.js'
 import { EthereumEngine } from './ethEngine'
 import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
 import {
@@ -130,6 +131,60 @@ type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'txs'
 
 type QueryFuncs = {
   [method: UpdateMethods]: (...args: any) => Promise<EthereumNetworkUpdate>[]
+}
+
+/**
+ * Builds the `feeRateUsed` object for an Ethereum transaction.
+ * Usually, a valid output will be consumed by the GUI for display purposes.
+ * Failure to construct the object will return an empty object.
+ *
+ * An example of the object returned:
+ * ```js
+ * getFeeRateUsed(gasPrice: '33000000000', gasUsed: '20000', gasLimit: '21000') => {
+ *  gasPrice: '33',
+ *  gasUsed: '20000',
+ *  gasLimit: '21000'
+ * }
+ * ```
+ *
+ * An example usage:
+ * ```js
+ * const edgeTransaction: EdgeTransaction = {
+ * ...
+ * feeRateUsed: this.getFeeRateUsed(...),
+ * ...
+ * }
+ * ```
+ *
+ * @param {string} gasPrice - The gas price of the transaction, in ***wei***.
+ * @param {string} gasLimit - The gas limit of the transaction, in units of gas. If the
+ *                            limit was not customly set, it will default to 21000.
+ * @param {void | string} gasUsed - The amount of gas used in a transaction, in units of gas.
+ * @returns {object} A `feeRateUsed` object to be included in an `EdgeTransaction`
+ */
+export const getFeeRateUsed = (
+  gasPrice: string,
+  gasLimit: string,
+  gasUsed?: string
+) => {
+  let feeRateUsed = {}
+
+  try {
+    feeRateUsed = {
+      // Convert gasPrice from wei to gwei
+      gasPrice: bns.div(
+        gasPrice,
+        WEI_MULTIPLIER.toString(),
+        WEI_MULTIPLIER.toString().length - 1
+      ),
+      ...(gasUsed !== undefined ? { gasUsed: gasUsed } : {}),
+      gasLimit: gasLimit
+    }
+  } catch (e) {
+    console.log(`Failed to construct feeRateUssed: ${e}`)
+  }
+
+  return feeRateUsed
 }
 
 export class EthereumNetwork {
@@ -255,6 +310,7 @@ export class EthereumNetwork {
       blockHeight,
       nativeAmount: netNativeAmount,
       networkFee,
+      feeRateUsed: getFeeRateUsed(tx.gasPrice, tx.gas, tx.gasUsed),
       parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
@@ -428,6 +484,11 @@ export class EthereumNetwork {
         blockHeight,
         nativeAmount: netNativeAmount,
         networkFee,
+        feeRateUsed: getFeeRateUsed(
+          amberdataTx.gasPrice,
+          amberdataTx.gasLimit,
+          amberdataTx.gasUsed
+        ),
         ourReceiveAddresses,
         signedTx: '',
         parentNetworkFee,
