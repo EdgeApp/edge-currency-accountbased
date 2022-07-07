@@ -1,6 +1,8 @@
 // @flow
 
 import { div } from 'biggystring'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
+import { Buffer } from 'buffer'
 import {
   type EdgeCorePluginOptions,
   type EdgeCurrencyEngine,
@@ -16,8 +18,14 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin.js'
-import { getDenomInfo } from '../common/utils.js'
+import { getDenomInfo, isHex } from '../common/utils.js'
 import { PolkadotEngine } from './polkadotEngine.js'
+import {
+  ed25519PairFromSeed,
+  isAddress,
+  Keyring,
+  mnemonicToMiniSecret
+} from './polkadotUtils'
 
 export class PolkadotPlugin extends CurrencyPlugin {
   pluginId: string
@@ -28,15 +36,40 @@ export class PolkadotPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
-    throw new Error('Need to implement importPrivateKey')
+    if (validateMnemonic(userInput)) {
+      const miniSecret = mnemonicToMiniSecret(userInput)
+      const { secretKey } = ed25519PairFromSeed(miniSecret)
+      return {
+        [`${this.pluginId}Mnemonic`]: userInput,
+        [`${this.pluginId}Key`]: Buffer.from(secretKey).toString('hex')
+      }
+    } else if (isHex(userInput)) {
+      return {
+        [`${this.pluginId}Key`]: userInput
+      }
+    } else {
+      throw new Error('InvalidPrivateKey')
+    }
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    throw new Error('Need to implement createPrivateKey')
+    const type = walletType.replace('wallet:', '')
+
+    if (type === this.pluginId) {
+      const entropy = Buffer.from(this.io.random(32))
+      const mnemonic = entropyToMnemonic(entropy)
+      return this.importPrivateKey(mnemonic)
+    } else {
+      throw new Error('InvalidWalletType')
+    }
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    throw new Error('Need to implement derivePublicKey')
+    const keyring = new Keyring({ ss58Format: 0 })
+    const pair = keyring.addFromUri(walletInfo.keys[`${this.pluginId}Mnemonic`])
+    return {
+      publicKey: pair.address
+    }
   }
 
   async parseUri(
@@ -46,14 +79,21 @@ export class PolkadotPlugin extends CurrencyPlugin {
   ): Promise<EdgeParsedUri> {
     const networks = { [this.pluginId]: true }
 
-    const { edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
+    let address = ''
+    if (edgeParsedUri.publicAddress) {
+      address = edgeParsedUri.publicAddress
+    }
 
+    if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
+
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
 
@@ -61,7 +101,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
-    const { nativeAmount, currencyCode } = obj
+    const { nativeAmount, currencyCode, publicAddress } = obj
+
+    if (!isAddress(publicAddress)) throw new Error('InvalidPublicAddressError')
 
     let amount
     if (typeof nativeAmount === 'string') {
