@@ -1,6 +1,6 @@
 // @flow
 
-import { add, gt, mul, sub } from 'biggystring'
+import { abs, add, gt, mul, sub } from 'biggystring'
 import {
   type EdgeSpendInfo,
   type EdgeTransaction,
@@ -10,19 +10,20 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
-import { getDenomInfo } from '../common/utils.js'
+import { cleanTxLogs, getDenomInfo, getOtherParams } from '../common/utils.js'
 import { PolkadotPlugin } from './polkadotPlugin.js'
 import {
   type PolkadotSettings,
   type SdkBalance,
   type SdkBlockHeight,
+  type SdkPaymentInfo,
   type SubscanResponse,
   type SubscanTx,
   asSubscanResponse,
   asTransactions,
   asTransfer
 } from './polkadotTypes.js'
-import { ApiPromise } from './polkadotUtils'
+import { ApiPromise, Keyring } from './polkadotUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
@@ -31,6 +32,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   settings: PolkadotSettings
   api: ApiPromise
+  keypair: Keyring
   nonce: number
 
   constructor(
@@ -238,6 +240,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
+    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
     const nativeAmount: string = edgeSpendInfo.spendTargets[0].nativeAmount
     const balance = this.getBalance({
       currencyCode: this.currencyInfo.currencyCode
@@ -248,6 +251,30 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       throw new InsufficientFundsError()
     }
 
+    const transfer = await this.api.tx.balances.transferKeepAlive(
+      publicAddress,
+      nativeAmount
+    )
+
+    const paymentInfo: SdkPaymentInfo = await transfer.paymentInfo(
+      this.walletInfo.keys.publicKey
+    )
+
+    // The fee returned from partial fee is always off by the length fee, because reasons
+    const nativeNetworkFee = sub(
+      paymentInfo.partialFee.toString(),
+      this.settings.lengthFeePerByte
+    )
+
+    const totalTxAmount = add(nativeAmount, nativeNetworkFee)
+    if (gt(totalTxAmount, spendableBalance)) {
+      throw new InsufficientFundsError()
+    }
+
+    const otherParams: JsonObject = {
+      publicAddress
+    }
+
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
@@ -255,23 +282,82 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       date: 0,
       currencyCode,
       blockHeight: 0,
-      nativeAmount,
-      networkFee: '0',
+      nativeAmount: mul(totalTxAmount, '-1'),
+      networkFee: nativeNetworkFee,
       ourReceiveAddresses: [],
-      signedTx: ''
+      signedTx: '',
+      otherParams
     }
 
     return edgeTransaction
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    throw new Error('Need to implement signTx')
+    const { publicAddress } = getOtherParams(edgeTransaction)
+    if (publicAddress == null)
+      throw new Error('Missing publicAddress from makeSpend')
+
+    const nativeAmount = abs(
+      add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+    )
+
+    // The SDK doesn't support serializable transactions so we need to recreate it
+    const transfer = await this.api.tx.balances.transferKeepAlive(
+      publicAddress,
+      nativeAmount
+    )
+
+    if (this.keypair == null) {
+      const keyring = new Keyring({ ss58Format: 0 })
+      this.keypair = keyring.addFromUri(
+        this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      )
+    }
+
+    const signer = this.api.createType('SignerPayload', {
+      method: transfer,
+      nonce: this.nonce,
+      genesisHash: this.api.genesisHash,
+      blockHash: this.api.genesisHash,
+      runtimeVersion: this.api.runtimeVersion,
+      version: this.api.extrinsicVersion
+    })
+
+    const extrinsicPayload = this.api.createType(
+      'ExtrinsicPayload',
+      signer.toPayload(),
+      { version: this.api.extrinsicVersion }
+    )
+
+    const signedPayload = extrinsicPayload.sign(this.keypair)
+
+    transfer.addSignature(
+      this.keypair.address,
+      signedPayload.signature,
+      signer.toPayload()
+    )
+
+    edgeTransaction.signedTx = transfer.toHex()
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('Need to implement broadcastTx')
+    try {
+      const txid = await this.api.rpc.author.submitExtrinsic(
+        edgeTransaction.signedTx
+      )
+
+      edgeTransaction.txid = txid.toHex()
+      edgeTransaction.date = Date.now() / 1000
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    } catch (e) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
+
+    return edgeTransaction
   }
 
   getDisplayPrivateSeed() {

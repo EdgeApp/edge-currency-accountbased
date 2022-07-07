@@ -10,6 +10,7 @@ import { eosPlugins } from './eos/index.js'
 import { ethPlugins } from './ethereum/ethInfos.js'
 import { makeFioPlugin } from './fio/fioPlugin'
 import { makeHederaPlugin } from './hedera/hederaInfo.js'
+import { makePolkadotPlugin } from './polkadot/polkadotInfo.js'
 import { makeSolanaPlugin } from './solana/solanaInfo.js'
 import { makeStellarPlugin } from './stellar/stellarPlugin.js'
 import { makeTezosPlugin } from './tezos/tezosPlugin.js'
@@ -22,6 +23,7 @@ const plugins = {
   binance: makeBinancePlugin,
   fio: makeFioPlugin,
   hedera: makeHederaPlugin,
+  polkadot: makePolkadotPlugin,
   // "ripple" is network name. XRP is just an asset:
   ripple: makeRipplePlugin,
   solana: makeSolanaPlugin,
