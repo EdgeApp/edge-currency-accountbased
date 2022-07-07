@@ -21,18 +21,25 @@ import { CurrencyPlugin } from '../common/plugin.js'
 import { getDenomInfo, isHex } from '../common/utils.js'
 import { PolkadotEngine } from './polkadotEngine.js'
 import {
+  ApiPromise,
   ed25519PairFromSeed,
   isAddress,
   Keyring,
-  mnemonicToMiniSecret
+  mnemonicToMiniSecret,
+  WsProvider
 } from './polkadotUtils'
 
 export class PolkadotPlugin extends CurrencyPlugin {
   pluginId: string
 
+  // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
+  polkadotApi: ApiPromise
+  polkadotApiSubscribers: { [walletId: string]: boolean }
+
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
     super(io, currencyInfo.pluginId, currencyInfo)
     this.pluginId = currencyInfo.pluginId
+    this.polkadotApiSubscribers = {}
   }
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
@@ -119,6 +126,27 @@ export class PolkadotPlugin extends CurrencyPlugin {
     }
     const encodedUri = this.encodeUriCommon(obj, this.pluginId, amount)
     return encodedUri
+  }
+
+  async connectApi(walletId: string): Promise<ApiPromise> {
+    if (this.polkadotApi == null) {
+      this.polkadotApi = await ApiPromise.create({
+        initWasm: false,
+        provider: new WsProvider(
+          this.currencyInfo.defaultSettings.otherSettings.rpcNodes[0]
+        )
+      })
+    }
+    this.polkadotApiSubscribers[walletId] = true
+    return this.polkadotApi
+  }
+
+  async disconnectApi(walletId: string): Promise<void> {
+    delete this.polkadotApiSubscribers[walletId]
+    if (Object.keys(this.polkadotApiSubscribers) === 0) {
+      await this.polkadotApi.disconnectApi()
+      this.polkadotApi = undefined
+    }
   }
 }
 
