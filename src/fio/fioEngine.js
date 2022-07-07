@@ -1,4 +1,5 @@
 // @flow
+/* eslint camelcase: 0 */
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
