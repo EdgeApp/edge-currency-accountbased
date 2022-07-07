@@ -11,6 +11,7 @@ import {
 import { CurrencyEngine } from '../common/engine.js'
 import { PolkadotPlugin } from './polkadotPlugin.js'
 import { type PolkadotSettings } from './polkadotTypes.js'
+import { ApiPromise } from './polkadotUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
@@ -18,6 +19,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   settings: PolkadotSettings
+  api: ApiPromise
 
   constructor(
     currencyPlugin: PolkadotPlugin,
@@ -44,6 +46,8 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
 
   async startEngine() {
     this.engineOn = true
+    await this.currencyPlugin.connectApi(this.walletId)
+    this.api = this.currencyPlugin.polkadotApi
     this.initOtherData()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
@@ -53,10 +57,11 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
 
   async killEngine() {
     await super.killEngine()
+    await this.currencyPlugin.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain(): Promise<void> {
-    await super.killEngine()
+    await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
