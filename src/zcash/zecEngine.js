@@ -24,7 +24,7 @@ import type {
   ZcashTransaction
 } from './zecTypes'
 
-export class ZcashEngine extends CurrencyEngine {
+export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
   pluginId: string
   otherData: ZcashOtherData
   synchronizer: ZcashSynchronizer

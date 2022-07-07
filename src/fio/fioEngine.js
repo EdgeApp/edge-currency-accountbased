@@ -80,7 +80,7 @@ type PreparedTrx = {
   packed_trx: string
 }
 
-export class FioEngine extends CurrencyEngine {
+export class FioEngine extends CurrencyEngine<FioPlugin> {
   fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
   otherMethods: Object

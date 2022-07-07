@@ -37,7 +37,7 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-export class SolanaEngine extends CurrencyEngine {
+export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string

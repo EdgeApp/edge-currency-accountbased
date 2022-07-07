@@ -45,7 +45,7 @@ type TezosFunction =
   | 'injectOperation'
   | 'silentInjection'
 
-export class TezosEngine extends CurrencyEngine {
+export class TezosEngine extends CurrencyEngine<TezosPlugin> {
   tezosPlugin: TezosPlugin
   fetchCors: EdgeFetchFunction
 

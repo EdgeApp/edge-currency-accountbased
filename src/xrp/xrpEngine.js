@@ -64,7 +64,7 @@ type XrpFunction =
   | 'preparePayment'
   | 'submit'
 
-export class XrpEngine extends CurrencyEngine {
+export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
   xrpSettings: XrpSettings

@@ -75,7 +75,7 @@ type BnbFunction =
 //   otherParams: {} // otherParams
 // }
 
-export class BinanceEngine extends CurrencyEngine {
+export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   binancePlugin: BinancePlugin
   // otherData: BinanceWalletOtherData
   // initOptions: BinanceInitOptions

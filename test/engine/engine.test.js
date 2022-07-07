@@ -258,7 +258,7 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
 }
 const walletInfo = { id: '', type: '', keys: {} }
 
-function validateTxidListMap(engine: CurrencyEngine) {
+function validateTxidListMap(engine: CurrencyEngine<CurrencyPlugin>) {
   const ccs = ['ETH', 'DAI']
   for (const currencyCode of ccs) {
     const transactionList = engine.transactionList[currencyCode]

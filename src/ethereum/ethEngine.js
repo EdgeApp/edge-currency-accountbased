@@ -74,7 +74,7 @@ import {
 
 const walletConnectors: WalletConnectors = {}
 
-export class EthereumEngine extends CurrencyEngine {
+export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork

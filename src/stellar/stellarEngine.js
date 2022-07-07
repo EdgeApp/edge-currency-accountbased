@@ -41,7 +41,7 @@ type StellarServerFunction =
   | 'ledgers'
   | 'submitTransaction'
 
-export class StellarEngine extends CurrencyEngine {
+export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   stellarPlugin: StellarPlugin
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }

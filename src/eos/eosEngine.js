@@ -97,7 +97,7 @@ class CosignAuthorityProvider {
     )
   }
 }
-export class EosEngine extends CurrencyEngine {
+export class EosEngine extends CurrencyEngine<EosPlugin> {
   // TODO: Add currency specific params
   // Store any per wallet specific data in the `currencyEngine` object. Add any params
   // to the EosEngine class definition in eosEngine.js and initialize them in the
