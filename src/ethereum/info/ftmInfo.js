@@ -90,15 +90,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [
     // Array of objects describing the supported metatokens
     {
-      currencyCode: 'FUSDT',
-      currencyName: 'Frapped Tether',
+      currencyCode: 'BOO',
+      currencyName: 'SpookyToken',
       denominations: [
         {
-          name: 'FUSDT',
-          multiplier: '1000000'
+          name: 'BOO',
+          multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a'
+      contractAddress: '0x841fad6eae12c286d1fd18d1d525dffa75c7effe'
     },
     {
       currencyCode: 'FBTC',
@@ -112,17 +112,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0xe1146b9ac456fcbb60644c36fd3f868a9072fc6e'
     },
     {
-      currencyCode: 'USDC',
-      currencyName: 'USD Coin',
-      denominations: [
-        {
-          name: 'USDC',
-          multiplier: '1000000'
-        }
-      ],
-      contractAddress: '0x04068da6c83afcfa0e13ba15a6696662335d5b75'
-    },
-    {
       currencyCode: 'FETH',
       currencyName: 'Frapped Ethereum',
       denominations: [
@@ -134,37 +123,15 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x658b0c7613e890ee50b8c4bc6a3f41ef411208ad'
     },
     {
-      currencyCode: 'WFTM',
-      currencyName: 'Wrapped Fantom',
+      currencyCode: 'FUSDT',
+      currencyName: 'Frapped Tether',
       denominations: [
         {
-          name: 'WFTM',
-          multiplier: '1000000000000000000'
+          name: 'FUSDT',
+          multiplier: '1000000'
         }
       ],
-      contractAddress: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83'
-    },
-    {
-      currencyCode: 'BOO',
-      currencyName: 'SpookyToken',
-      denominations: [
-        {
-          name: 'BOO',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0x841fad6eae12c286d1fd18d1d525dffa75c7effe'
-    },
-    {
-      currencyCode: 'xBOO',
-      currencyName: 'Boo MirrorWorld',
-      denominations: [
-        {
-          name: 'xBOO',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598'
+      contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a'
     },
     {
       currencyCode: 'MAI',
@@ -178,17 +145,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0xfB98B335551a418cD0737375a2ea0ded62Ea213b'
     },
     {
-      currencyCode: 'TOMB',
-      currencyName: 'Tomb',
-      denominations: [
-        {
-          name: 'TOMB',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7'
-    },
-    {
       currencyCode: 'TBOND',
       currencyName: 'Tomb Bonds',
       denominations: [
@@ -200,6 +156,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x24248CD1747348bDC971a5395f4b3cd7feE94ea0'
     },
     {
+      currencyCode: 'TOMB',
+      currencyName: 'Tomb',
+      denominations: [
+        {
+          name: 'TOMB',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x6c021Ae822BEa943b2E66552bDe1D2696a53fbB7'
+    },
+    {
       currencyCode: 'TSHARE',
       currencyName: 'Tomb Shares',
       denominations: [
@@ -209,6 +176,39 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x4cdf39285d7ca8eb3f090fda0c069ba5f4145b37'
+    },
+    {
+      currencyCode: 'USDC',
+      currencyName: 'USD Coin',
+      denominations: [
+        {
+          name: 'USDC',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0x04068da6c83afcfa0e13ba15a6696662335d5b75'
+    },
+    {
+      currencyCode: 'WFTM',
+      currencyName: 'Wrapped Fantom',
+      denominations: [
+        {
+          name: 'WFTM',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83'
+    },
+    {
+      currencyCode: 'xBOO',
+      currencyName: 'Boo MirrorWorld',
+      denominations: [
+        {
+          name: 'xBOO',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      contractAddress: '0xa48d959AE2E88f1dAA7D5F611E01908106dE7598'
     }
   ]
 }
