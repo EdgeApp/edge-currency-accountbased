@@ -17,7 +17,8 @@ export type PolkadotSettings = {
   genesisHash: string,
   existentialDeposit: string,
   subscanBaseUrl: string,
-  subscanQueryLimit: number
+  subscanQueryLimit: number,
+  lengthFeePerByte: string
 }
 
 export const asSubscanResponse = asObject({
