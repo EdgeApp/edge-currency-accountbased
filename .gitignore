@@ -4,6 +4,7 @@
 /coverage
 /intermediate
 /lib
+/src/polkadot/sdk-bundle.js
 
 # Package managers:
 node_modules/

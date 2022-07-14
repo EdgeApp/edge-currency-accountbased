@@ -857,32 +857,11 @@ export class EosEngine extends CurrencyEngine {
                         `Received balance for unsupported currencyCode: ${currencyCode}`
                       )
                     }
-
-                    if (!this.walletLocalData.totalBalances[currencyCode]) {
-                      this.walletLocalData.totalBalances[currencyCode] = '0'
-                    }
-                    if (
-                      !bns.eq(
-                        this.walletLocalData.totalBalances[currencyCode],
-                        nativeAmount
-                      )
-                    ) {
-                      this.walletLocalData.totalBalances[currencyCode] =
-                        nativeAmount
-                      this.walletLocalDataDirty = true
-                      this.currencyEngineCallbacks.onBalanceChanged(
-                        currencyCode,
-                        nativeAmount
-                      )
-                      this.warn(
-                        `Updated ${currencyCode} balance ${nativeAmount}`
-                      )
-                    }
+                    this.updateBalance(currencyCode, nativeAmount)
                   }
                 }
               }
             }
-            this.tokenCheckBalanceStatus[token.currencyCode] = 1
           }
         }
       }
