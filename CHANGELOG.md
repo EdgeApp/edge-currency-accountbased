@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.16.4 (2022-07-13)
+
+- FTM: Add new default tokens: AVAX, BNB, BTC, CRV, DAI, ETH, FUSD, LIF3, LINK, LSHARE, MIM, TREEB, ZOO
+- ETH: Calculate and store feeRateUsed in transactions
+
 ## 0.16.3 (2022-07-04)
 
 - ETH: Fix network fee calculation
