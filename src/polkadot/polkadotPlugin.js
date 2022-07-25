@@ -153,7 +153,17 @@ export class PolkadotPlugin extends CurrencyPlugin {
 export function makePolkadotPluginInner(
   opts: EdgeCorePluginOptions,
   currencyInfo: EdgeCurrencyInfo
-): EdgeCurrencyPlugin {
+): EdgeCurrencyPlugin | void {
+  if (
+    // $FlowFixMe
+    BigInt != null &&
+    typeof BigInt === 'function' &&
+    typeof BigInt(2) !== 'bigint'
+  ) {
+    // Return early if required bigint support isn't present
+    return
+  }
+
   const { io } = opts
 
   let toolsPromise: Promise<PolkadotPlugin>
