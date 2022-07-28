@@ -64,7 +64,7 @@ type XrpFunction =
   | 'preparePayment'
   | 'submit'
 
-export class XrpEngine extends CurrencyEngine {
+export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   xrpPlugin: XrpPlugin
   otherData: XrpWalletOtherData
   xrpSettings: XrpSettings
@@ -223,24 +223,8 @@ export class XrpEngine extends CurrencyEngine {
           const currencyCode = currency
           const exchangeAmount = value
           const nativeAmount = bns.mul(exchangeAmount, '1000000')
-
-          if (this.walletLocalData.totalBalances[currencyCode] == null) {
-            this.walletLocalData.totalBalances[currencyCode] = '0'
-          }
-
-          if (
-            this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
-          ) {
-            this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
-            this.currencyEngineCallbacks.onBalanceChanged(
-              currencyCode,
-              nativeAmount
-            )
-          }
+          this.updateBalance(currencyCode, nativeAmount)
         }
-        this.tokenCheckBalanceStatus.XRP = 1
-        this.updateOnAddressesChecked()
       }
     } catch (e) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {

@@ -1,4 +1,5 @@
 // @flow
+/* eslint camelcase: 0 */
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'

@@ -1,4 +1,5 @@
 // @flow
+/* eslint camelcase: 0 */
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
@@ -79,7 +80,7 @@ type PreparedTrx = {
   packed_trx: string
 }
 
-export class FioEngine extends CurrencyEngine {
+export class FioEngine extends CurrencyEngine<FioPlugin> {
   fetchCors: EdgeFetchFunction
   fioPlugin: FioPlugin
   otherMethods: Object
@@ -461,20 +462,6 @@ export class FioEngine extends CurrencyEngine {
     } catch (e) {
       this.error(`doInitialBalanceCallback onStakingStatusChanged`, e)
     }
-  }
-
-  updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.localDataDirty()
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
   checkUnStakeTx(otherParams: TxOtherParams): boolean {

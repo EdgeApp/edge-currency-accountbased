@@ -45,7 +45,7 @@ type TezosFunction =
   | 'injectOperation'
   | 'silentInjection'
 
-export class TezosEngine extends CurrencyEngine {
+export class TezosEngine extends CurrencyEngine<TezosPlugin> {
   tezosPlugin: TezosPlugin
   fetchCors: EdgeFetchFunction
 
@@ -296,7 +296,6 @@ export class TezosEngine extends CurrencyEngine {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop() {
-    this.tokenCheckBalanceStatus.XTZ = 0
     const currencyCode = PRIMARY_CURRENCY
     const pkh = this.walletLocalData.publicKey
     if (
@@ -305,12 +304,7 @@ export class TezosEngine extends CurrencyEngine {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
     const balance = await this.multicastServers('getBalance', pkh)
-    if (this.walletLocalData.totalBalances[currencyCode] !== balance) {
-      this.walletLocalData.totalBalances[currencyCode] = balance
-      this.warn(`Updated ${currencyCode} balance ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
-    }
-    this.tokenCheckBalanceStatus.XTZ = 1
+    this.updateBalance(currencyCode, balance)
   }
 
   async checkBlockchainInnerLoop() {

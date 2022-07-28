@@ -74,7 +74,7 @@ import {
 
 const walletConnectors: WalletConnectors = {}
 
-export class EthereumEngine extends CurrencyEngine {
+export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
@@ -476,19 +476,6 @@ export class EthereumEngine extends CurrencyEngine {
             }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
           )
     }
-  }
-
-  updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
   processUnconfirmedTransaction(tx: Object) {

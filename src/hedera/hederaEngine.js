@@ -28,7 +28,7 @@ import {
 
 const GENESIS = 1535068800 // '2018-08-24T00:00:00.000Z'
 
-export class HederaEngine extends CurrencyEngine {
+export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   hederaPlugin: HederaPlugin
   client: hedera.Client
   accountId: ?hedera.AccountId
@@ -239,7 +239,7 @@ export class HederaEngine extends CurrencyEngine {
     }
   }
 
-  async updateBalance(): Promise<void> {
+  async queryBalance(): Promise<void> {
     if (this.accountId == null) {
       return
     }
@@ -249,14 +249,7 @@ export class HederaEngine extends CurrencyEngine {
       .execute(this.client)
     const nativeBalance: string = hbarBalance.asTinybar().toString()
 
-    this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] =
-      nativeBalance
-    this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
-    this.updateOnAddressesChecked()
-    this.currencyEngineCallbacks.onBalanceChanged(
-      this.currencyInfo.currencyCode,
-      nativeBalance
-    )
+    this.updateBalance(this.currencyInfo.currencyCode, nativeBalance)
   }
 
   async getNewTransactions() {
@@ -378,7 +371,7 @@ export class HederaEngine extends CurrencyEngine {
     }
 
     this.addToLoop('getNewTransactions', 1000)
-    this.addToLoop('updateBalance', 5000)
+    this.addToLoop('queryBalance', 5000)
     this.addToLoop('checkAccountCreationStatus', 5000)
 
     await super.startEngine()

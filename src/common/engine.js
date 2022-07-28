@@ -47,8 +47,10 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
-export class CurrencyEngine {
-  currencyPlugin: CurrencyPlugin
+type CurrencyPluginType<T> = T & CurrencyPlugin
+
+export class CurrencyEngine<T> {
+  currencyPlugin: CurrencyPluginType<T>
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
@@ -78,7 +80,7 @@ export class CurrencyEngine {
   otherData: Object
 
   constructor(
-    currencyPlugin: CurrencyPlugin,
+    currencyPlugin: CurrencyPluginType<T>,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
@@ -524,6 +526,20 @@ export class CurrencyEngine {
     }
     this.walletLocalData.numUnconfirmedSpendTxs = numUnconfirmedSpendTxs
     this.walletLocalDataDirty = true
+  }
+
+  updateBalance(tk: string, balance: string) {
+    if (this.walletLocalData.totalBalances[tk] == null) {
+      this.walletLocalData.totalBalances[tk] = '0'
+    }
+    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+      this.walletLocalData.totalBalances[tk] = balance
+      this.walletLocalDataDirty = true
+      this.warn(`${tk}: token Address balance: ${balance}`)
+      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+    }
+    this.tokenCheckBalanceStatus[tk] = 1
+    this.updateOnAddressesChecked()
   }
 
   updateTransaction(

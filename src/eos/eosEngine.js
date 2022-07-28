@@ -97,7 +97,7 @@ class CosignAuthorityProvider {
     )
   }
 }
-export class EosEngine extends CurrencyEngine {
+export class EosEngine extends CurrencyEngine<EosPlugin> {
   // TODO: Add currency specific params
   // Store any per wallet specific data in the `currencyEngine` object. Add any params
   // to the EosEngine class definition in eosEngine.js and initialize them in the
@@ -857,32 +857,11 @@ export class EosEngine extends CurrencyEngine {
                         `Received balance for unsupported currencyCode: ${currencyCode}`
                       )
                     }
-
-                    if (!this.walletLocalData.totalBalances[currencyCode]) {
-                      this.walletLocalData.totalBalances[currencyCode] = '0'
-                    }
-                    if (
-                      !bns.eq(
-                        this.walletLocalData.totalBalances[currencyCode],
-                        nativeAmount
-                      )
-                    ) {
-                      this.walletLocalData.totalBalances[currencyCode] =
-                        nativeAmount
-                      this.walletLocalDataDirty = true
-                      this.currencyEngineCallbacks.onBalanceChanged(
-                        currencyCode,
-                        nativeAmount
-                      )
-                      this.warn(
-                        `Updated ${currencyCode} balance ${nativeAmount}`
-                      )
-                    }
+                    this.updateBalance(currencyCode, nativeAmount)
                   }
                 }
               }
             }
-            this.tokenCheckBalanceStatus[token.currencyCode] = 1
           }
         }
       }

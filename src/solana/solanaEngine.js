@@ -37,7 +37,7 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-export class SolanaEngine extends CurrencyEngine {
+export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -91,19 +91,6 @@ export class SolanaEngine extends CurrencyEngine {
 
     const response = await asyncWaterfall(funcs)
     return response.result
-  }
-
-  updateBalance(tk: string, balance: string) {
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
   async queryBalance() {

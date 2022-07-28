@@ -41,7 +41,7 @@ type StellarServerFunction =
   | 'ledgers'
   | 'submitTransaction'
 
-export class StellarEngine extends CurrencyEngine {
+export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   stellarPlugin: StellarPlugin
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
@@ -298,27 +298,9 @@ export class StellarEngine extends CurrencyEngine {
         const denom = getDenomInfo(this.currencyInfo, currencyCode)
         if (denom && denom.multiplier) {
           const nativeAmount = bns.mul(bal.balance, denom.multiplier)
-          if (
-            typeof this.walletLocalData.totalBalances[currencyCode] ===
-            'undefined'
-          ) {
-            this.walletLocalData.totalBalances[currencyCode] = '0'
-          }
-
-          if (
-            this.walletLocalData.totalBalances[currencyCode] !== nativeAmount
-          ) {
-            this.walletLocalData.totalBalances[currencyCode] = nativeAmount
-            this.warn(`Updated ${currencyCode} balance ${nativeAmount}`)
-            this.currencyEngineCallbacks.onBalanceChanged(
-              currencyCode,
-              nativeAmount
-            )
-          }
+          this.updateBalance(currencyCode, nativeAmount)
         }
       }
-      this.tokenCheckBalanceStatus.XLM = 1
-      this.updateOnAddressesChecked()
     } catch (e) {
       if (e.response && e.response.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')

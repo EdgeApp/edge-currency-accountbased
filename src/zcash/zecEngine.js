@@ -24,7 +24,7 @@ import type {
   ZcashTransaction
 } from './zecTypes'
 
-export class ZcashEngine extends CurrencyEngine {
+export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
   pluginId: string
   otherData: ZcashOtherData
   synchronizer: ZcashSynchronizer
@@ -179,19 +179,6 @@ export class ZcashEngine extends CurrencyEngine {
       this.warn('Failed to update balances', e)
       this.updateBalance(`${this.currencyInfo.currencyCode}`, '0')
     }
-  }
-
-  updateBalance(tk: string, balance: string) {
-    if (this.walletLocalData.totalBalances[tk] == null) {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
   async queryTransactions() {
