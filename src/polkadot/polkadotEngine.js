@@ -14,7 +14,8 @@ import {
   cleanTxLogs,
   decimalToHex,
   getDenomInfo,
-  getOtherParams
+  getOtherParams,
+  makeMutex
 } from '../common/utils.js'
 import { PolkadotPlugin } from './polkadotPlugin.js'
 import {
@@ -33,6 +34,8 @@ import { ApiPromise, Keyring } from './polkadotUtils'
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
+
+const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   settings: PolkadotSettings
@@ -149,6 +152,10 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   }
 
   async queryTransactions() {
+    return queryTxMutex(() => this.queryTransactionsInner())
+  }
+
+  async queryTransactionsInner() {
     // Skip pages we don't need
     let page = Math.floor(
       this.otherData.txCount / this.settings.subscanQueryLimit
