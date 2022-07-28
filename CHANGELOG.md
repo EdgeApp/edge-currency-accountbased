@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.17.0 (2022-07-27)
+
+- Add Polkadot (DOT)
+
 ## 0.16.4 (2022-07-13)
 
 - FTM: Add new default tokens: AVAX, BNB, BTC, CRV, DAI, ETH, FUSD, LIF3, LINK, LSHARE, MIM, TREEB, ZOO
