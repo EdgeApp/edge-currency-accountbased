@@ -3,8 +3,7 @@
 import {
   asArray,
   asBoolean,
-  asEither,
-  asNull,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
@@ -46,7 +45,7 @@ export type SubscanTx = $Call<typeof asTransfer>
 
 export const asTransactions = asObject({
   count: asNumber,
-  transfers: asEither(asArray(asTransfer), asNull)
+  transfers: asMaybe(asArray(asTransfer), [])
 })
 
 export type SdkBalance = {
