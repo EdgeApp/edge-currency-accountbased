@@ -133,7 +133,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
 
     let nativeAmount = mul(amount, denom.multiplier)
     if (from === this.walletInfo.keys.publicKey) {
-      nativeAmount = `-${add(amount, fee)}`
+      nativeAmount = `-${add(nativeAmount, fee)}`
     } else {
       ourReceiveAddresses.push(to)
     }
@@ -202,7 +202,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
         page * this.settings.subscanQueryLimit + transfers.length
 
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        this.otherData.txCount / count
+        count === 0 ? 1 : this.otherData.txCount / count
       this.updateOnAddressesChecked()
 
       // count is the total number of transactions ever for an account
