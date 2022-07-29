@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.17.2 (2022-07-29)
+
+- DOT: Fix sent native amount
+- DOT: Fix regression in new wallet syncing
+
 ## 0.17.1 (2022-07-28)
 
 - DOT: Fix txCount in `queryTransactions`
