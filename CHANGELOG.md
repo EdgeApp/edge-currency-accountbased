@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.17.1 (2022-07-28)
+
+- DOT: Fix txCount in `queryTransactions`
+- DOT: Reorder operations in `queryTransactions` to reduce callback usage, retry failed queries, and reduce logging
+
 ## 0.17.0 (2022-07-27)
 
 - Add Polkadot (DOT)
