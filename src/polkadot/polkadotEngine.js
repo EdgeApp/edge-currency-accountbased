@@ -14,7 +14,8 @@ import {
   cleanTxLogs,
   decimalToHex,
   getDenomInfo,
-  getOtherParams
+  getOtherParams,
+  makeMutex
 } from '../common/utils.js'
 import { PolkadotPlugin } from './polkadotPlugin.js'
 import {
@@ -33,6 +34,8 @@ import { ApiPromise, Keyring } from './polkadotUtils'
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
+
+const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   settings: PolkadotSettings
@@ -149,11 +152,14 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   }
 
   async queryTransactions() {
+    return queryTxMutex(() => this.queryTransactionsInner())
+  }
+
+  async queryTransactionsInner() {
     // Skip pages we don't need
     let page = Math.floor(
       this.otherData.txCount / this.settings.subscanQueryLimit
     )
-    let numProcessedTxs = this.otherData.txCount
 
     while (true) {
       const payload = {
@@ -161,15 +167,25 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
         page,
         address: this.walletInfo.keys.publicKey
       }
-      const response = await this.fetchSubscan('/scan/transfers', payload)
-      const { count, transfers } = asTransactions(response.data)
 
-      // count is the total number of transactions ever for an account
-      // If we've already seen all the transfers we don't need to bother processing or page through older ones
-      if (count === this.otherData.txCount) break
-
-      // Instead of an empty array, a null is returned when there are zero transfers
-      if (transfers == null) break
+      let count = 0
+      let transfers = []
+      try {
+        const response = await this.fetchSubscan('/scan/transfers', payload)
+        const cleanResponse = asTransactions(response.data)
+        count = cleanResponse.count
+        transfers = cleanResponse.transfers
+      } catch (e) {
+        if (
+          typeof e?.message === 'string' &&
+          e.message.includes('Subscan /scan/transfers failed with 429')
+        ) {
+          this.log(e.message)
+          continue
+        } else {
+          throw e
+        }
+      }
 
       // Process txs (newest first)
       transfers.forEach(tx => {
@@ -179,27 +195,25 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
           const hash = tx != null && typeof tx.hash === 'string' ? tx.hash : ''
           this.warn(`Ignoring invalid transfer ${hash}`)
         }
-        numProcessedTxs++
       })
 
-      // We've reached the end of the query
-      if (transfers.length < this.settings.subscanQueryLimit) break
+      // If we haven't reached the end, Update local txCount and progress and then query the next page
+      this.otherData.txCount =
+        page * this.settings.subscanQueryLimit + transfers.length
+
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        this.otherData.txCount / count
+      this.updateOnAddressesChecked()
+
+      // count is the total number of transactions ever for an account
+      // If we've already seen all the transfers we don't need to bother processing or page through older ones
+      if (count === this.otherData.txCount) break
 
       page++
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        numProcessedTxs / count
-      this.updateOnAddressesChecked()
     }
-
-    if (this.otherData.txCount < numProcessedTxs) {
-      this.otherData.txCount = numProcessedTxs
-      this.walletLocalDataDirty = true
-    }
-
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-    this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
+      this.walletLocalDataDirty = true
       this.currencyEngineCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
       )
