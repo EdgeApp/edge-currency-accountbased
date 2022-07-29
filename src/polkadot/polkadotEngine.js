@@ -133,7 +133,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
 
     let nativeAmount = mul(amount, denom.multiplier)
     if (from === this.walletInfo.keys.publicKey) {
-      nativeAmount = `-${add(amount, fee)}`
+      nativeAmount = `-${add(nativeAmount, fee)}`
     } else {
       ourReceiveAddresses.push(to)
     }
