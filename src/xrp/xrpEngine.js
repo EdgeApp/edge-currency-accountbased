@@ -60,7 +60,6 @@ type XrpFunction =
   | 'getTransactions'
   | 'getBalances'
   | 'connect'
-  | 'disconnect'
   | 'preparePayment'
   | 'submit'
 
@@ -84,7 +83,6 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     // Request is most commonly used SDK method for funcs but some are special
     switch (func) {
       case 'getBalances':
-      case 'disconnect':
       case 'submit':
         method = func
         break
@@ -262,7 +260,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
 
   async killEngine() {
     await super.killEngine()
-    await this.multicastServers('disconnect')
+    await this.xrpPlugin.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain(): Promise<void> {
