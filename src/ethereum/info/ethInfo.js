@@ -73,10 +73,9 @@ const otherSettings: EthereumSettings = {
   ],
   blockcypherApiServers: ['https://api.blockcypher.com'],
   blockbookServers: [
-    'https://blockbook-ethereum.tronwallet.me',
+    'https://ethbook.guarda.co',
     'https://eth1.trezor.io',
-    'https://eth2.trezor.io',
-    'https://eth2.bcfn.ca'
+    'https://eth2.trezor.io'
   ],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
