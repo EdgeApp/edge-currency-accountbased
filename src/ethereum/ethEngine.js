@@ -506,8 +506,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       to: [toAddress],
       gas: '',
       gasPrice: '',
-      gasUsed: tx.fees.toString(10),
-      cumulativeGasUsed: ''
+      gasUsed: tx.fees.toString(10)
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -788,7 +787,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
-        cumulativeGasUsed: '0',
         nonceArg: rbfNonce,
         rbfTxid,
         data
@@ -816,7 +814,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
-        cumulativeGasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceArg: rbfNonce,
         rbfTxid,

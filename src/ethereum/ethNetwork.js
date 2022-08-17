@@ -277,8 +277,7 @@ export class EthereumNetwork {
       to: [tx.to],
       gas: tx.gas,
       gasPrice: tx.gasPrice || '',
-      gasUsed: tx.gasUsed,
-      cumulativeGasUsed: tx.cumulativeGasUsed || ''
+      gasUsed: tx.gasUsed
     }
 
     let blockHeight = parseInt(tx.blockNumber)
