@@ -1546,7 +1546,7 @@ export class EthereumNetwork {
       newNonce: '0',
       tokenBal: {},
       tokenTxs: {
-        [this.currencyInfo.currencyCode]: {
+        [params.currencyCode]: {
           blockHeight: startBlock,
           edgeTransactions: []
         }
