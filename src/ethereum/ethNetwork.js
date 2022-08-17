@@ -511,7 +511,9 @@ export class EthereumNetwork {
     const resultRaw =
       server.indexOf('trezor') === -1
         ? await this.ethEngine.io.fetch(url)
-        : await this.ethEngine.fetchCors(url)
+        : await this.ethEngine.fetchCors(url, {
+            headers: { 'User-Agent': 'http.agent' }
+          })
     return resultRaw.json()
   }
 
