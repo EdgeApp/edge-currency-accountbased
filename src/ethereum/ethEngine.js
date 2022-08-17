@@ -508,7 +508,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       gasPrice: '',
       gasUsed: tx.fees.toString(10),
       cumulativeGasUsed: '',
-      errorVal: 0,
       tokenRecipientAddress: null
     }
 
@@ -791,7 +790,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gasPrice: gasPrice,
         gasUsed: '0',
         cumulativeGasUsed: '0',
-        errorVal: 0,
         tokenRecipientAddress: null,
         nonceArg: rbfNonce,
         rbfTxid,
@@ -821,7 +819,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gasPrice: gasPrice,
         gasUsed: '0',
         cumulativeGasUsed: '0',
-        errorVal: 0,
         tokenRecipientAddress: publicAddress,
         nonceArg: rbfNonce,
         rbfTxid,

@@ -279,7 +279,6 @@ export class EthereumNetwork {
       gasPrice: tx.gasPrice || '',
       gasUsed: tx.gasUsed,
       cumulativeGasUsed: tx.cumulativeGasUsed || '',
-      errorVal: parseInt(tx.isError),
       tokenRecipientAddress: null
     }
 
@@ -381,7 +380,6 @@ export class EthereumNetwork {
       gas: '0',
       gasPrice: '0',
       gasUsed: '0',
-      errorVal: 0,
       tokenRecipientAddress
     }
 
@@ -461,7 +459,6 @@ export class EthereumNetwork {
         gas: '0',
         gasPrice: '0',
         gasUsed: '0',
-        errorVal: 0,
         tokenRecipientAddress
       }
 
@@ -1670,7 +1667,7 @@ export class EthereumNetwork {
       blockHeight,
       blockTime,
       value,
-      ethereumSpecific: { gasLimit, status, gasUsed, gasPrice },
+      ethereumSpecific: { gasLimit, gasUsed, gasPrice },
       vin,
       vout
     } = blockbookTx
@@ -1723,7 +1720,6 @@ export class EthereumNetwork {
       gas: gasLimit.toString(),
       gasPrice,
       gasUsed: gasUsed.toString(),
-      errorVal: status,
       tokenRecipientAddress
     }
     const edgeTransaction: EdgeTransaction = {
