@@ -278,8 +278,7 @@ export class EthereumNetwork {
       gas: tx.gas,
       gasPrice: tx.gasPrice || '',
       gasUsed: tx.gasUsed,
-      cumulativeGasUsed: tx.cumulativeGasUsed || '',
-      tokenRecipientAddress: null
+      cumulativeGasUsed: tx.cumulativeGasUsed || ''
     }
 
     let blockHeight = parseInt(tx.blockNumber)
@@ -326,7 +325,6 @@ export class EthereumNetwork {
     let netNativeAmount: string
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
-    let tokenRecipientAddress: string | null
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = tokenTransfer.attributes.value
@@ -338,10 +336,8 @@ export class EthereumNetwork {
 
     if (currencyCode === this.currencyInfo.currencyCode) {
       nativeNetworkFee = fee
-      tokenRecipientAddress = null
     } else {
       nativeNetworkFee = '0'
-      tokenRecipientAddress = toAddress
     }
 
     if (
@@ -379,8 +375,7 @@ export class EthereumNetwork {
       to: [toAddress],
       gas: '0',
       gasPrice: '0',
-      gasUsed: '0',
-      tokenRecipientAddress
+      gasUsed: '0'
     }
 
     let blockHeight = tokenTransfer.attributes.globalRank[0]
@@ -418,7 +413,6 @@ export class EthereumNetwork {
     let netNativeAmount: string
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string
-    let tokenRecipientAddress: string | null
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = amberdataTx.value
@@ -429,7 +423,6 @@ export class EthereumNetwork {
 
     if (fromAddress && toAddress) {
       nativeNetworkFee = fee
-      tokenRecipientAddress = null
 
       if (fromAddress.toLowerCase() === walletAddress.toLowerCase()) {
         // is a spend
@@ -458,8 +451,7 @@ export class EthereumNetwork {
         to: [toAddress],
         gas: '0',
         gasPrice: '0',
-        gasUsed: '0',
-        tokenRecipientAddress
+        gasUsed: '0'
       }
 
       let blockHeight = parseInt(amberdataTx.blockNumber, 10)
@@ -1676,7 +1668,6 @@ export class EthereumNetwork {
     let fromAddress = vin[0].addresses[0].toLowerCase()
     let currencyCode = this.currencyInfo.currencyCode
     let nativeAmount = value
-    let tokenRecipientAddress = null
     let networkFee = bns.mul(gasPrice, gasUsed.toString())
     let parentNetworkFee
     const ourReceiveAddresses = []
@@ -1710,7 +1701,6 @@ export class EthereumNetwork {
       fromAddress = from.toLowerCase()
       currencyCode = symbol
       nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
-      tokenRecipientAddress = toAddress
       networkFee = '0'
       parentNetworkFee = bns.mul(gasPrice, gasUsed.toString())
     }
@@ -1719,8 +1709,7 @@ export class EthereumNetwork {
       to: [toAddress],
       gas: gasLimit.toString(),
       gasPrice,
-      gasUsed: gasUsed.toString(),
-      tokenRecipientAddress
+      gasUsed: gasUsed.toString()
     }
     const edgeTransaction: EdgeTransaction = {
       txid,

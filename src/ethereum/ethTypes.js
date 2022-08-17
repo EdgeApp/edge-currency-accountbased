@@ -193,7 +193,7 @@ export type EthereumTxOtherParams = {
   gasPrice: string,
   gasUsed: string,
   cumulativeGasUsed?: string,
-  tokenRecipientAddress: string | null,
+  tokenRecipientAddress?: string,
   nonceUsed?: string,
   rbfTxid?: string,
   data?: string | null
