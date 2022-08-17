@@ -247,11 +247,11 @@ export class EthereumNetwork {
       nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
     }
 
-    if (
+    const isSpend =
       tx.from.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    ) {
-      // is a spend
+
+    if (isSpend) {
       if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
@@ -293,7 +293,7 @@ export class EthereumNetwork {
 
     let parentNetworkFee
     let networkFee = '0'
-    if (tokenTx) {
+    if (tokenTx && isSpend) {
       parentNetworkFee = nativeNetworkFee
     } else {
       networkFee = nativeNetworkFee
@@ -339,11 +339,11 @@ export class EthereumNetwork {
       nativeNetworkFee = '0'
     }
 
-    if (
+    const isSpend =
       fromAddress.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    ) {
-      // is a spend
+
+    if (isSpend) {
       if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
         // Spend to self. netNativeAmount is just the fee
         netNativeAmount = bns.mul(nativeNetworkFee, '-1')
@@ -382,7 +382,7 @@ export class EthereumNetwork {
 
     let parentNetworkFee
     let networkFee = '0'
-    if (tokenTx) {
+    if (tokenTx && isSpend) {
       parentNetworkFee = nativeNetworkFee
     } else {
       networkFee = nativeNetworkFee
@@ -420,11 +420,12 @@ export class EthereumNetwork {
       amberdataTx.from.length > 0 ? amberdataTx.from[0].address : ''
     const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
 
+    const isSpend = fromAddress.toLowerCase() === walletAddress.toLowerCase()
+
     if (fromAddress && toAddress) {
       nativeNetworkFee = fee
 
-      if (fromAddress.toLowerCase() === walletAddress.toLowerCase()) {
-        // is a spend
+      if (isSpend) {
         if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
           // Spend to self. netNativeAmount is just the fee
           netNativeAmount = bns.mul(nativeNetworkFee, '-1')
@@ -458,7 +459,7 @@ export class EthereumNetwork {
       const date = new Date(amberdataTx.timestamp).getTime() / 1000
       let parentNetworkFee
       let networkFee = '0'
-      if (tokenTx) {
+      if (tokenTx && isSpend) {
         parentNetworkFee = nativeNetworkFee
       } else {
         networkFee = nativeNetworkFee
@@ -1672,14 +1673,16 @@ export class EthereumNetwork {
     let networkFee = bns.mul(gasPrice, gasUsed.toString())
     let parentNetworkFee
     const ourReceiveAddresses = []
+
+    const isSpend = fromAddress === ourAddress
+
     if (toAddress === fromAddress) {
       // Send to self
       nativeAmount = bns.mul('-1', networkFee)
     } else if (toAddress === ourAddress) {
       // Receive
       ourReceiveAddresses.push(ourAddress)
-    } else if (fromAddress === ourAddress) {
-      // Send
+    } else if (isSpend) {
       nativeAmount = bns.mul('-1', bns.add(nativeAmount, networkFee))
     }
     if (tokenTx) {
@@ -1704,7 +1707,9 @@ export class EthereumNetwork {
       currencyCode = symbol
       nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
       networkFee = '0'
-      parentNetworkFee = bns.mul(gasPrice, gasUsed.toString())
+      parentNetworkFee = isSpend
+        ? bns.mul(gasPrice, gasUsed.toString())
+        : undefined
     }
     const otherParams: EthereumTxOtherParams = {
       from: [fromAddress],
