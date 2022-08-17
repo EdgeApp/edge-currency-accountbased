@@ -1697,6 +1697,7 @@ export class EthereumNetwork {
       }
       // Override currencyCode and nativeAmount if token transaction
       toAddress = to.toLowerCase()
+      if (toAddress === ourAddress) ourReceiveAddresses.push(ourAddress)
       fromAddress = from.toLowerCase()
       currencyCode = symbol
       nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
@@ -1718,6 +1719,11 @@ export class EthereumNetwork {
       nativeAmount,
       networkFee,
       parentNetworkFee,
+      feeRateUsed: getFeeRateUsed(
+        gasPrice,
+        gasLimit.toString(),
+        gasUsed.toString()
+      ),
       ourReceiveAddresses,
       signedTx: '',
       otherParams
