@@ -137,7 +137,6 @@ export const asEvmScancanTokenTransaction = asObject({
   nonce: asString,
   gasPrice: asString,
   gas: asString,
-  cumulativeGasUsed: asString,
   gasUsed: asString,
   confirmations: asString,
   contractAddress: asString,
@@ -161,7 +160,6 @@ export const asEvmScanTransaction = asObject({
   to: asString,
   gas: asString,
   isError: asString,
-  cumulativeGasUsed: asString,
   confirmations: asOptional(asString)
 })
 
@@ -192,9 +190,7 @@ export type EthereumTxOtherParams = {
   gas: string,
   gasPrice: string,
   gasUsed: string,
-  cumulativeGasUsed?: string,
-  errorVal: number,
-  tokenRecipientAddress: string | null,
+  tokenRecipientAddress?: string,
   nonceUsed?: string,
   rbfTxid?: string,
   data?: string | null
@@ -399,7 +395,6 @@ export type AmberdataTx = {|
   gasLimit: string,
   gasPrice: string,
   gasUsed: string,
-  cumulativeGasUsed: string,
   from: Array<{ address: string }>,
   to: Array<{ address: string }>
 |}
@@ -413,7 +408,6 @@ export const asAmberdataAccountsTx = asObject({
   gasLimit: asString,
   gasPrice: asString,
   gasUsed: asString,
-  cumulativeGasUsed: asString,
   from: asArray(
     asObject({
       address: asString
