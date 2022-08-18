@@ -296,11 +296,12 @@ function getEdgeInfoServer() {
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
-export function getOtherParams(tx: EdgeTransaction): JsonObject {
-  if (tx.otherParams == null) {
+export function getOtherParams<T: JsonObject>(tx: EdgeTransaction): T {
+  const otherParams: any = tx.otherParams
+  if (otherParams == null) {
     throw new TypeError('Transaction is missing otherParams')
   }
-  return tx.otherParams
+  return otherParams
 }
 
 type Mutex = <T>(callback: () => Promise<T>) => Promise<T>

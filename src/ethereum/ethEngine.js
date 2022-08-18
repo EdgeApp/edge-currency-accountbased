@@ -978,7 +978,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
+    const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)
