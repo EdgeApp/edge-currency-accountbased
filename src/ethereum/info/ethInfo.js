@@ -1230,6 +1230,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
         }
       ],
       contractAddress: '0x111111111117dc0aa78b770fa6a738034120c302'
+    },
+    {
+      currencyCode: 'NOW',
+      currencyName: 'NOW Token',
+      denominations: [
+        {
+          name: 'NOW',
+          multiplier: '100000000'
+        }
+      ],
+      contractAddress: '0xe9a95d175a5f4c9369f3b74222402eb1b837693b'
     }
   ]
 }
