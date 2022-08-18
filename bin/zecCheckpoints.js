@@ -4,7 +4,8 @@ const fs = require('fs')
 
 const { asObject, asString, asNumber } = cleaners
 
-const RPC_URL = 'https://zec.nownodes.io'
+// const RPC_URL = 'https://zec.nownodes.io'
+const RPC_URL = 'https://zec.getblock.io/mainnet/'
 const NUM_BLOCKS_BETWEEN_CHECKPOINTS = 10000
 
 const CHECKPOINT_DIR_PATH = `./src/zcash/zecCheckpoints/`
@@ -54,7 +55,8 @@ const postRequest = body => ({
   method: 'POST',
   headers: {
     'content-type': 'application/json',
-    'api-key': API_KEY
+    // 'api-key': API_KEY // nownodes
+    'x-api-key': API_KEY // getblock
   },
   body: JSON.stringify(body)
 })
