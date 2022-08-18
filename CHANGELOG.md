@@ -1,5 +1,14 @@
 # edge-currency-accountbased
 
+## 0.17.3 (2022-08-18)
+
+- Fix blockbook query txs return object initialization
+- Only record parent network fee on outgoing transactions
+- ETH: Update blockbook server list
+- XRP: Fix API disconnect
+- ETH: Add NOW Token
+- Remove unused values from transactions
+
 ## 0.17.2 (2022-07-29)
 
 - DOT: Fix sent native amount
