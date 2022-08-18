@@ -791,7 +791,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
-        nonceArg: rbfNonce,
+        nonceUsed: rbfNonce,
         rbfTxid,
         data
       }
@@ -819,7 +819,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gasPrice: gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
-        nonceArg: rbfNonce,
+        nonceUsed: rbfNonce,
         rbfTxid,
         data
       }
@@ -998,8 +998,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     // Nonce:
 
-    const nonceArg: string = otherParams.nonceArg
-    let nonce: string = nonceArg
+    let nonce: string | void = otherParams.nonceUsed
     if (!nonce) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
