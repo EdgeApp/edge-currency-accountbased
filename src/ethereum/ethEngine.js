@@ -666,6 +666,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     const {
       edgeSpendInfo,
       currencyCode,
+      pendingTxs = [],
       skipChecks = false
     } = super.makeSpend(edgeSpendInfoIn)
 
@@ -676,7 +677,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     */
     let rbfGasPrice: string
     let rbfGasLimit: string
-    let rbfNonce: string
+    let rbfNonce: string | void
     const rbfTxid =
       edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
     if (rbfTxid) {
@@ -736,6 +737,25 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     const defaultGasLimit = gasLimit
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
+    //
+    // Nonce:
+    //
+
+    let nonceUsed: string | void
+    // Determining the nonce from the RBF takes precedence
+    if (rbfNonce != null) {
+      nonceUsed = rbfNonce
+    }
+    // Determine the nonce to use from the number of pending transactions
+    else if (pendingTxs.length > 0) {
+      const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
+      const baseNonce =
+        this.walletLocalData.numUnconfirmedSpendTxs > 0
+          ? otherData.unconfirmedNextNonce
+          : otherData.nextNonce
+      nonceUsed = bns.add(baseNonce, pendingTxs.length.toString())
+    }
+
     let contractAddress
     let value
     if (currencyCode === this.currencyInfo.currencyCode) {
@@ -745,7 +765,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
-        nonceUsed: rbfNonce,
+        nonceUsed,
         rbfTxid,
         data
       }
@@ -773,7 +793,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gasPrice: gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
-        nonceUsed: rbfNonce,
+        nonceUsed,
         rbfTxid,
         data
       }
