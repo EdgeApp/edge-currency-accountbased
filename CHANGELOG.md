@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.17.4 (2022-08-18)
+
+- Remove useless broken dependencies usb and node-hid before building
+- ZEC: update checkpoint script and checkpoint files
+- FIO: Update server list
+
 ## 0.17.3 (2022-08-18)
 
 - Fix blockbook query txs return object initialization
