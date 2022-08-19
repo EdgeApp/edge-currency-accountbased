@@ -38,7 +38,7 @@
     "postinstall": "sh ./postinstall.sh",
     "lint": "eslint .",
     "precommit": "lint-staged && flow && npm test && npm run build",
-    "prepare": "npm run build",
+    "prepare": "npm run postinstall && npm run build",
     "test": "nyc mocha -r sucrase/register './test/**/*.test.js'",
     "posttest": "nyc report --reporter=html",
     "updot": "updot"

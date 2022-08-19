@@ -1,6 +1,7 @@
 [ignore]
 <PROJECT_ROOT>/lib/.*
 <PROJECT_ROOT>/node_modules/@rollup/
+<PROJECT_ROOT>/node_modules/rechoir/node_modules/resolve/test/resolver/malformed_package_json/.*
 
 [include]
 
