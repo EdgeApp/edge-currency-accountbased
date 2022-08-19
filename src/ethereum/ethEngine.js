@@ -26,7 +26,6 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import { type CustomToken } from '../common/types'
 import {
-  addHexPrefix,
   biggyRoundToNearestInt,
   bufToHex,
   cleanTxLogs,
@@ -476,51 +475,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
             }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
           )
     }
-  }
-
-  processUnconfirmedTransaction(tx: Object) {
-    const fromAddress = '0x' + tx.inputs[0].addresses[0]
-    const toAddress = '0x' + tx.outputs[0].addresses[0]
-    const epochTime = Date.parse(tx.received) / 1000
-    const ourReceiveAddresses: string[] = []
-
-    let nativeAmount: string
-    if (
-      normalizeAddress(fromAddress) ===
-      normalizeAddress(this.walletLocalData.publicKey)
-    ) {
-      if (fromAddress === toAddress) {
-        // Spend to self
-        nativeAmount = bns.sub('0', tx.fees.toString(10))
-      } else {
-        nativeAmount = (0 - tx.total).toString(10)
-        nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
-      }
-    } else {
-      nativeAmount = tx.total.toString(10)
-      ourReceiveAddresses.push(this.walletLocalData.publicKey)
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [fromAddress],
-      to: [toAddress],
-      gas: '',
-      gasPrice: '',
-      gasUsed: tx.fees.toString(10)
-    }
-
-    const edgeTransaction: EdgeTransaction = {
-      txid: addHexPrefix(tx.hash),
-      date: epochTime,
-      currencyCode: this.currencyInfo.currencyCode,
-      blockHeight: 0,
-      nativeAmount,
-      networkFee: tx.fees.toString(10),
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams
-    }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
   /**

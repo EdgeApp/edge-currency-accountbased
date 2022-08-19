@@ -19,14 +19,6 @@ function normalizeAddress(address: string) {
   return address.toLowerCase().replace('0x', '')
 }
 
-function addHexPrefix(value: string) {
-  if (value.indexOf('0x') === 0) {
-    return value
-  } else {
-    return '0x' + value
-  }
-}
-
 function shuffleArray(array: any[]) {
   let currentIndex = array.length
   let temporaryValue, randomIndex
@@ -432,7 +424,6 @@ export function biggyRoundToNearestInt(float: string): string {
 
 export {
   normalizeAddress,
-  addHexPrefix,
   validateObject,
   getDenomInfo,
   asyncWaterfall,
