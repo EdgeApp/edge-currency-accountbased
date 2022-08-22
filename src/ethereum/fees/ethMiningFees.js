@@ -26,6 +26,7 @@ export function calcMiningFee(
   currencyInfo: EdgeCurrencyInfo
 ): EthereumCalcedFees {
   let useDefaults = true
+  let customGasLimit, customGasPrice
   if (
     spendInfo.spendTargets &&
     spendInfo.spendTargets.length &&
@@ -34,33 +35,64 @@ export function calcMiningFee(
     const { customNetworkFee } = spendInfo || {}
     if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
       const { gasLimit, gasPrice } = customNetworkFee
-      const minGasLimit =
-        networkFees.default?.gasLimit?.minGasLimit ??
-        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-          .gasLimit.minGasLimit
-      const minGasPrice =
-        networkFees.default?.gasPrice?.minGasPrice ??
-        currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-          .gasPrice.minGasPrice
-      const minGasPriceGwei = bns.div(minGasPrice, WEI_MULTIPLIER)
+
       if (
-        bns.lt(gasLimit, minGasLimit) ||
-        bns.lt(gasPrice, minGasPriceGwei) ||
-        isNaN(gasLimit) ||
-        isNaN(gasPrice) ||
-        /^\s*$/.test(gasLimit) ||
-        /^\s*$/.test(gasPrice)
+        (isNaN(gasLimit) || gasLimit === '') &&
+        (isNaN(gasPrice) || gasPrice === '')
       ) {
         const e = new Error(
-          `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+          `Custom Fee must have at least gasLimit or gasPrice specified`
         )
         e.name = 'ErrorBelowMinimumFee'
         throw e
       }
 
-      const gasPriceWei = bns.mul(gasPrice, WEI_MULTIPLIER)
-      return { gasLimit, gasPrice: gasPriceWei, useDefaults: false }
+      if (gasPrice != null && gasPrice !== '') {
+        const minGasPrice =
+          networkFees.default?.gasPrice?.minGasPrice ??
+          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+            .gasPrice.minGasPrice
+        const minGasPriceGwei = bns.div(minGasPrice, WEI_MULTIPLIER)
+        if (bns.lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
+          const e = new Error(
+            `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+          )
+          e.name = 'ErrorBelowMinimumFee'
+          throw e
+        }
+
+        customGasPrice = bns.mul(gasPrice, WEI_MULTIPLIER)
+      }
+
+      if (gasLimit != null && gasLimit !== '') {
+        const minGasLimit =
+          networkFees.default?.gasLimit?.minGasLimit ??
+          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+            .gasLimit.minGasLimit
+        if (bns.lt(gasLimit, minGasLimit) || /^\s*$/.test(gasLimit)) {
+          const e = new Error(
+            `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+          )
+          e.name = 'ErrorBelowMinimumFee'
+          throw e
+        }
+        customGasLimit = gasLimit
+
+        // useDefaults should be named useGasLimitDefaults since it only affects the gasLimit
+        // Set to false since we have a custom gasLimit
+        useDefaults = false
+      }
     }
+
+    if (customGasLimit != null && customGasPrice != null) {
+      return {
+        gasLimit: customGasLimit,
+        gasPrice: customGasPrice,
+        useDefaults: false
+      }
+    }
+
+    // If we have incomplete fees from custom fees, calculate as normal
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
     )
@@ -84,7 +116,10 @@ export function calcMiningFee(
     }
 
     let networkFeeOption = 'standard'
-    if (typeof spendInfo.networkFeeOption === 'string') {
+    if (
+      typeof spendInfo.networkFeeOption === 'string' &&
+      spendInfo.networkFeeOption !== ES_FEE_CUSTOM
+    ) {
       networkFeeOption = spendInfo.networkFeeOption
     }
 
@@ -153,7 +188,11 @@ export function calcMiningFee(
       default:
         throw new Error(`Invalid networkFeeOption`)
     }
-    const out: EthereumCalcedFees = { gasLimit, gasPrice, useDefaults }
+    const out: EthereumCalcedFees = {
+      gasLimit: customGasLimit ?? gasLimit,
+      gasPrice: customGasPrice ?? gasPrice,
+      useDefaults
+    }
     return out
   } else {
     throw new Error('ErrorInvalidSpendInfo')
