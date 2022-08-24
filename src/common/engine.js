@@ -929,6 +929,7 @@ export class CurrencyEngine<T> {
   }
 
   makeSpend(edgeSpendInfo: EdgeSpendInfo): Object {
+    const { skipChecks = false } = edgeSpendInfo
     checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
@@ -950,7 +951,7 @@ export class CurrencyEngine<T> {
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!nativeBalance || bns.eq(nativeBalance, '0')) {
+    if (!skipChecks && (!nativeBalance || bns.eq(nativeBalance, '0'))) {
       throw new InsufficientFundsError()
     }
 
@@ -964,7 +965,7 @@ export class CurrencyEngine<T> {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }
 
-    return { edgeSpendInfo, nativeBalance, currencyCode, denom }
+    return { edgeSpendInfo, nativeBalance, currencyCode, denom, skipChecks }
   }
 
   // called by GUI after sliding to confirm

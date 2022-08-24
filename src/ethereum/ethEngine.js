@@ -667,7 +667,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       edgeSpendInfo,
       currencyCode,
       pendingTxs = [],
-      skipChecks = false
+      skipChecks
     } = super.makeSpend(edgeSpendInfoIn)
 
     /**
@@ -902,29 +902,27 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     // Balance checks:
     //
 
-    if (!skipChecks) {
-      if (currencyCode === this.currencyInfo.currencyCode) {
-        totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-        if (bns.gt(totalTxAmount, nativeBalance)) {
-          throw new InsufficientFundsError()
-        }
-        nativeAmount = bns.mul(totalTxAmount, '-1')
-      } else {
-        parentNetworkFee = nativeNetworkFee
-        // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
-        if (bns.gt(nativeNetworkFee, nativeBalance)) {
-          throw new InsufficientFundsError({
-            currencyCode: this.currencyInfo.currencyCode,
-            networkFee: nativeNetworkFee
-          })
-        }
-        const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-        if (bns.gt(nativeAmount, balanceToken)) {
-          throw new InsufficientFundsError()
-        }
-        nativeNetworkFee = '0' // Do not show a fee for token transactions.
-        nativeAmount = bns.mul(nativeAmount, '-1')
+    if (currencyCode === this.currencyInfo.currencyCode) {
+      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+      if (!skipChecks && bns.gt(totalTxAmount, nativeBalance)) {
+        throw new InsufficientFundsError()
       }
+      nativeAmount = bns.mul(totalTxAmount, '-1')
+    } else {
+      parentNetworkFee = nativeNetworkFee
+      // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
+      if (!skipChecks && bns.gt(nativeNetworkFee, nativeBalance)) {
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee: nativeNetworkFee
+        })
+      }
+      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      if (!skipChecks && bns.gt(nativeAmount, balanceToken)) {
+        throw new InsufficientFundsError()
+      }
+      nativeNetworkFee = '0' // Do not show a fee for token transactions.
+      nativeAmount = bns.mul(nativeAmount, '-1')
     }
 
     //
