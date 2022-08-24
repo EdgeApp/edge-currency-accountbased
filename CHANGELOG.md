@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.17.5 (2022-08-23)
+
+- Implement new `skipChecks` and `pendingTxs` API from `EdgeSpendInfo` for ETH engines
+- Allow specifying only gasPrice or gasLimit for custom fees
+
 ## 0.17.4 (2022-08-18)
 
 - Remove useless broken dependencies usb and node-hid before building
