@@ -19,14 +19,6 @@ function normalizeAddress(address: string) {
   return address.toLowerCase().replace('0x', '')
 }
 
-function addHexPrefix(value: string) {
-  if (value.indexOf('0x') === 0) {
-    return value
-  } else {
-    return '0x' + value
-  }
-}
-
 function shuffleArray(array: any[]) {
   let currentIndex = array.length
   let temporaryValue, randomIndex
@@ -296,11 +288,12 @@ function getEdgeInfoServer() {
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
-export function getOtherParams(tx: EdgeTransaction): JsonObject {
-  if (tx.otherParams == null) {
+export function getOtherParams<T: JsonObject>(tx: EdgeTransaction): T {
+  const otherParams: any = tx.otherParams
+  if (otherParams == null) {
     throw new TypeError('Transaction is missing otherParams')
   }
-  return tx.otherParams
+  return otherParams
 }
 
 type Mutex = <T>(callback: () => Promise<T>) => Promise<T>
@@ -431,7 +424,6 @@ export function biggyRoundToNearestInt(float: string): string {
 
 export {
   normalizeAddress,
-  addHexPrefix,
   validateObject,
   getDenomInfo,
   asyncWaterfall,

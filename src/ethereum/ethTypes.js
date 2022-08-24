@@ -184,7 +184,7 @@ export const asEvmScanGasResponse = asObject({
 
 export type EvmScanGasResponse = $Call<typeof asEvmScanGasResponse>
 
-export type EthereumTxOtherParams = {
+export type EthereumTxOtherParams = {|
   from: string[],
   to: string[],
   gas: string,
@@ -194,7 +194,7 @@ export type EthereumTxOtherParams = {
   nonceUsed?: string,
   rbfTxid?: string,
   data?: string | null
-}
+|}
 
 export type EthereumWalletOtherData = {
   nextNonce: string,

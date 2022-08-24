@@ -26,7 +26,6 @@ import ethWallet from 'ethereumjs-wallet'
 import { CurrencyEngine } from '../common/engine.js'
 import { type CustomToken } from '../common/types'
 import {
-  addHexPrefix,
   biggyRoundToNearestInt,
   bufToHex,
   cleanTxLogs,
@@ -478,51 +477,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
   }
 
-  processUnconfirmedTransaction(tx: Object) {
-    const fromAddress = '0x' + tx.inputs[0].addresses[0]
-    const toAddress = '0x' + tx.outputs[0].addresses[0]
-    const epochTime = Date.parse(tx.received) / 1000
-    const ourReceiveAddresses: string[] = []
-
-    let nativeAmount: string
-    if (
-      normalizeAddress(fromAddress) ===
-      normalizeAddress(this.walletLocalData.publicKey)
-    ) {
-      if (fromAddress === toAddress) {
-        // Spend to self
-        nativeAmount = bns.sub('0', tx.fees.toString(10))
-      } else {
-        nativeAmount = (0 - tx.total).toString(10)
-        nativeAmount = bns.sub(nativeAmount, tx.fees.toString(10))
-      }
-    } else {
-      nativeAmount = tx.total.toString(10)
-      ourReceiveAddresses.push(this.walletLocalData.publicKey)
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [fromAddress],
-      to: [toAddress],
-      gas: '',
-      gasPrice: '',
-      gasUsed: tx.fees.toString(10)
-    }
-
-    const edgeTransaction: EdgeTransaction = {
-      txid: addHexPrefix(tx.hash),
-      date: epochTime,
-      currencyCode: this.currencyInfo.currencyCode,
-      blockHeight: 0,
-      nativeAmount,
-      networkFee: tx.fees.toString(10),
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams
-    }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
-  }
-
   /**
    *  Fetch network fees from various providers in order of priority, stopping
    *  and writing upon successful result.
@@ -709,7 +663,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const {
+      edgeSpendInfo,
+      currencyCode,
+      pendingTxs = [],
+      skipChecks = false
+    } = super.makeSpend(edgeSpendInfoIn)
 
     /**
     For RBF transactions, get the gas price and limit (fees) of the existing
@@ -718,7 +677,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     */
     let rbfGasPrice: string
     let rbfGasLimit: string
-    let rbfNonce: string
+    let rbfNonce: string | void
     const rbfTxid =
       edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
     if (rbfTxid) {
@@ -778,6 +737,25 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     const defaultGasLimit = gasLimit
     let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
+    //
+    // Nonce:
+    //
+
+    let nonceUsed: string | void
+    // Determining the nonce from the RBF takes precedence
+    if (rbfNonce != null) {
+      nonceUsed = rbfNonce
+    }
+    // Determine the nonce to use from the number of pending transactions
+    else if (pendingTxs.length > 0) {
+      const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
+      const baseNonce =
+        this.walletLocalData.numUnconfirmedSpendTxs > 0
+          ? otherData.unconfirmedNextNonce
+          : otherData.nextNonce
+      nonceUsed = bns.add(baseNonce, pendingTxs.length.toString())
+    }
+
     let contractAddress
     let value
     if (currencyCode === this.currencyInfo.currencyCode) {
@@ -787,7 +765,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
-        nonceArg: rbfNonce,
+        nonceUsed,
         rbfTxid,
         data
       }
@@ -815,7 +793,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         gasPrice: gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
-        nonceArg: rbfNonce,
+        nonceUsed,
         rbfTxid,
         data
       }
@@ -920,30 +898,38 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     let totalTxAmount = '0'
     let parentNetworkFee = null
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
-      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      if (bns.gt(totalTxAmount, nativeBalance)) {
-        throw new InsufficientFundsError()
+    //
+    // Balance checks:
+    //
+
+    if (!skipChecks) {
+      if (currencyCode === this.currencyInfo.currencyCode) {
+        totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
+        if (bns.gt(totalTxAmount, nativeBalance)) {
+          throw new InsufficientFundsError()
+        }
+        nativeAmount = bns.mul(totalTxAmount, '-1')
+      } else {
+        parentNetworkFee = nativeNetworkFee
+        // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
+        if (bns.gt(nativeNetworkFee, nativeBalance)) {
+          throw new InsufficientFundsError({
+            currencyCode: this.currencyInfo.currencyCode,
+            networkFee: nativeNetworkFee
+          })
+        }
+        const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+        if (bns.gt(nativeAmount, balanceToken)) {
+          throw new InsufficientFundsError()
+        }
+        nativeNetworkFee = '0' // Do not show a fee for token transactions.
+        nativeAmount = bns.mul(nativeAmount, '-1')
       }
-      nativeAmount = bns.mul(totalTxAmount, '-1')
-    } else {
-      parentNetworkFee = nativeNetworkFee
-      // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
-      if (bns.gt(nativeNetworkFee, nativeBalance)) {
-        throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee: nativeNetworkFee
-        })
-      }
-      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-      if (bns.gt(nativeAmount, balanceToken)) {
-        throw new InsufficientFundsError()
-      }
-      nativeNetworkFee = '0' // Do not show a fee for token transactions.
-      nativeAmount = bns.mul(nativeAmount, '-1')
     }
-    // **********************************
+
+    //
     // Create the unsigned EdgeTransaction
+    //
 
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
@@ -966,7 +952,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
+    const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)
@@ -986,8 +972,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     // Nonce:
 
-    const nonceArg: string = otherParams.nonceArg
-    let nonce: string = nonceArg
+    let nonce: string | void = otherParams.nonceUsed
     if (!nonce) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
