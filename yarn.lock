@@ -3915,10 +3915,10 @@ ed2curve@^0.3.0:
   dependencies:
     tweetnacl "1.x.x"
 
-edge-core-js@^0.19.17:
-  version "0.19.17"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.17.tgz#407ac24ea7f3f1ff7c30339a8130f7ee936bcbcf"
-  integrity sha512-2Alw11N1yEK498qRZ7ghR6jAwlhRbq3yAMM5wj9L/Fll2sY+8McVJSGtrEQL7WjkPt/FDZ8+MNr4zRd0SHAPmA==
+edge-core-js@^0.19.26:
+  version "0.19.26"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.26.tgz#628a515d1af7557bbd9a6b34c6262899d4a0ee95"
+  integrity sha512-pfJTPxPRZHWfOnpCWVaZk8fuft1GL3mTl5WHNAddnC+8Eb1+zO0xuD5ldLLamEAZvke3mKaq3OTxU1ica7hyhw==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"
@@ -3926,7 +3926,7 @@ edge-core-js@^0.19.17:
     cleaners "^0.3.11"
     currency-codes "^1.1.2"
     disklet "^0.5.2"
-    edge-sync-client "^0.2.6"
+    edge-sync-client "^0.2.7"
     elliptic "^6.4.0"
     ethereumjs-tx "^1.3.7"
     ethereumjs-util "^5.2.0"
@@ -3939,13 +3939,13 @@ edge-core-js@^0.19.17:
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
     serverlet "^0.1.0"
-    yaob "^0.3.7"
+    yaob "^0.3.8"
     yavent "^0.1.3"
 
-edge-sync-client@^0.2.6:
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.6.tgz#4425e14edd0f85f41a0ebe702e0e27274111cc90"
-  integrity sha512-UNaxgXD87QJDEMYRs6fycOj1+Tt2WNPpNPcm4O4l2JCtPdqSHbjSHfGruS5/VWq5nGYPGX1boH15ekaLYCqo0w==
+edge-sync-client@^0.2.7:
+  version "0.2.7"
+  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.7.tgz#57041f1a17565f24750803a99aaea517361fe9e1"
+  integrity sha512-ySWvsvHisg3e5gV/KBQymt0Fos1Nqupb6fbvxn5YXM5SmsOWz2iGRqocSc/Qxyd85WV7G/DjpJ8zWVqf0eUTrg==
   dependencies:
     base-x "^1.0.4"
     cleaners "^0.3.9"
@@ -8475,10 +8475,17 @@ yaml@^1.10.0:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz#2301c5ffbf12b467de8da2333a459e29e7920e4b"
   integrity sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==
 
-yaob@^0.3.6, yaob@^0.3.7:
+yaob@^0.3.6:
   version "0.3.7"
   resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.7.tgz#f33f6a7869a8cabaec761a31ae577aaee659d9d0"
   integrity sha512-r48BLEBGUhkUHBVudB4X+JvID4ZczwzPJg0zDynZ3gbBguEwtO7WE+djKQSY1uclVOB6a7Y51oB8OhAyhQNCxg==
+  dependencies:
+    rfc4648 "^1.1.0"
+
+yaob@^0.3.8:
+  version "0.3.8"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.8.tgz#a359fd092dbf42d07f82eb2fb0b00bdb87f1c4cc"
+  integrity sha512-6ocTmk7fVAB7TOc8ot7sdt5o+UK3d8qtDtd61IBIVe++V1xGmhP3Y8FYOCrzmo6ywzGJPaDS66orZIwnw5NwEw==
   dependencies:
     rfc4648 "^1.1.0"
 
