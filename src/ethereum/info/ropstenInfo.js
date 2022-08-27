@@ -115,6 +115,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Ropsten Testnet',
   pluginId: 'ropsten',
   walletType: 'wallet:ropsten',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

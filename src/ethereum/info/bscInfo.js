@@ -70,6 +70,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'BNB Smart Chain',
   pluginId: 'binancesmartchain',
   walletType: 'wallet:binancesmartchain',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

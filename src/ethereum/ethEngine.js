@@ -714,8 +714,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    let data =
-      spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
+    let data = spendTarget.memo ?? spendTarget.otherParams?.data
+    if (data != null && !isHex(data)) {
+      throw new Error(`Memo/data field must be of type 'hex'`)
+    }
 
     let otherParams: Object = {}
 

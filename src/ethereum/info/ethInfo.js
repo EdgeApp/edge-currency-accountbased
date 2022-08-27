@@ -120,6 +120,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Ethereum',
   pluginId: 'ethereum',
   walletType: 'wallet:ethereum',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

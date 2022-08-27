@@ -74,6 +74,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Avalanche',
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

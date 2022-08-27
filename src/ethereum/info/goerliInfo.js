@@ -112,6 +112,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Goerli Testnet',
   pluginId: 'goerli',
   walletType: 'wallet:goerli',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

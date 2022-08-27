@@ -109,6 +109,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Dev Ethereum',
   pluginId: 'ethDev',
   walletType: 'wallet:ethDev',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

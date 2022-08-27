@@ -113,6 +113,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Kovan Testnet',
   pluginId: 'kovan',
   walletType: 'wallet:kovan',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

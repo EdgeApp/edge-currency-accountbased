@@ -67,6 +67,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'RSK',
   pluginId: 'rsk',
   walletType: 'wallet:rsk',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

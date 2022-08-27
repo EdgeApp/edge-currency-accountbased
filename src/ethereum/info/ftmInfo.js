@@ -72,6 +72,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Fantom',
   pluginId: 'fantom',
   walletType: 'wallet:fantom',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,
