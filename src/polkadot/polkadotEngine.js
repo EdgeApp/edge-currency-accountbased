@@ -6,7 +6,8 @@ import {
   type EdgeTransaction,
   type EdgeWalletInfo,
   type JsonObject,
-  InsufficientFundsError
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -303,13 +304,17 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    const nativeAmount: string = edgeSpendInfo.spendTargets[0].nativeAmount
+    const { nativeAmount, publicAddress } = edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
     const balance = this.getBalance({
       currencyCode: this.currencyInfo.currencyCode
     })

@@ -361,17 +361,18 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     edgeSpendInfoIn: EdgeSpendInfo
   ): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
-      super.makeSpend(edgeSpendInfoIn)
+      this.makeSpendCheck(edgeSpendInfoIn)
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    let nativeAmount = '0'
-    if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
-      nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    } else {
-      throw new NoAmountSpecifiedError()
-    }
+
+    const { publicAddress } = edgeSpendInfo.spendTargets[0]
+    let { nativeAmount } = edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
     if (bns.eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }

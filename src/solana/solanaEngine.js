@@ -9,7 +9,8 @@ import {
   type EdgeTransaction,
   type EdgeWalletInfo,
   type JsonObject,
-  InsufficientFundsError
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -285,15 +286,20 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
+
+    const { nativeAmount, publicAddress } = edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     const nativeNetworkFee = this.feePerSignature
-    const nativeAmount: string = edgeSpendInfo.spendTargets[0].nativeAmount
+
     const balanceSol = this.walletLocalData.totalBalances[this.chainCode]
     let totalTxAmount = '0'
     totalTxAmount = bns.add(nativeAmount, nativeNetworkFee)

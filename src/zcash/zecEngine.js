@@ -286,14 +286,13 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     if (!this.isSynced) throw new Error('Cannot spend until wallet is synced')
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const { publicAddress, nativeAmount } = spendTarget
 
-    let nativeAmount = '0'
-    if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
-      nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    } else {
-      throw new NoAmountSpecifiedError()
-    }
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     if (bns.eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
@@ -318,6 +317,14 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     // **********************************
     // Create the unsigned EdgeTransaction
 
+    const spendTargets = edgeSpendInfo.spendTargets.map(si => ({
+      uniqueIdentifier: si.uniqueIdentifier,
+      memo: si.memo,
+      nativeAmount: si.nativeAmount ?? '0',
+      currencyCode,
+      publicAddress
+    }))
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -328,7 +335,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
         this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      spendTargets: edgeSpendInfo.spendTargets
+      spendTargets
     }
 
     return edgeTransaction
@@ -355,7 +362,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
-      memo: spendTarget.uniqueIdentifier ?? '',
+      memo: spendTarget.memo ?? spendTarget.uniqueIdentifier ?? '',
       fromAccountIndex: 0,
       spendingKey: this.walletInfo.keys[`${this.pluginId}SpendKey`]
     }

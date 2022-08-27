@@ -15,7 +15,8 @@ import {
   type EdgeSpendTarget,
   type EdgeTransaction,
   type EdgeWalletInfo,
-  InsufficientFundsError
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
 import { signTypedData_v4 } from 'eth-sig-util'
@@ -663,12 +664,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const {
-      edgeSpendInfo,
-      currencyCode,
-      pendingTxs = [],
-      skipChecks
-    } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, skipChecks } =
+      this.makeSpendCheck(edgeSpendInfoIn)
+
+    const { pendingTxs = [] } = edgeSpendInfo
 
     /**
     For RBF transactions, get the gas price and limit (fees) of the existing
@@ -705,7 +704,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
-    const publicAddress = spendTarget.publicAddress
+    const { publicAddress } = spendTarget
+    let { nativeAmount } = spendTarget
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
     if (!EthereumUtil.isValidAddress(publicAddress)) {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
@@ -735,7 +739,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
 
     const defaultGasLimit = gasLimit
-    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
 
     //
     // Nonce:

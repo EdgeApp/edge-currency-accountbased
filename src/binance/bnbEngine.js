@@ -9,7 +9,8 @@ import {
   type EdgeSpendInfo,
   type EdgeTransaction,
   type EdgeWalletInfo,
-  InsufficientFundsError
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -416,10 +417,16 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, currencyCode } = super.makeSpend(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
-    const publicAddress = spendTarget.publicAddress
+    const { publicAddress } = spendTarget
+    let { nativeAmount } = spendTarget
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
     const data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
@@ -472,7 +479,6 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     )
     ErrorInsufficientFundsMoreBnb.name = 'ErrorInsufficientFundsMoreBnb'
 
-    let nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
     const balanceBnb =
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
 
