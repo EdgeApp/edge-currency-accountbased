@@ -928,7 +928,13 @@ export class CurrencyEngine<T> {
     return dataDump
   }
 
-  makeSpend(edgeSpendInfo: EdgeSpendInfo): Object {
+  makeSpendCheck(edgeSpendInfo: EdgeSpendInfo): {
+    edgeSpendInfo: EdgeSpendInfo,
+    nativeBalance: string,
+    currencyCode: string,
+    denom: EdgeDenomination,
+    skipChecks: boolean
+  } {
     const { skipChecks = false } = edgeSpendInfo
     checkEdgeSpendInfo(edgeSpendInfo)
 

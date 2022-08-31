@@ -15,7 +15,8 @@ import {
   type EdgeStakingStatus,
   type EdgeTransaction,
   type EdgeWalletInfo,
-  InsufficientFundsError
+  InsufficientFundsError,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine.js'
@@ -502,7 +503,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       })
 
     /*
-    If no stakedAmount object was found, then insert a new object into the 
+    If no stakedAmount object was found, then insert a new object into the
     stakedAmounts array. Insert into the array at the correct index maintaining
     a sorting by unlockDate in descending order.
     */
@@ -1408,9 +1409,8 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    const { edgeSpendInfo, nativeBalance, currencyCode } = super.makeSpend(
-      edgeSpendInfoIn
-    )
+    const { edgeSpendInfo, nativeBalance, currencyCode } =
+      this.makeSpendCheck(edgeSpendInfoIn)
     const lockedBalance =
       this.walletLocalData.totalBalances[
         this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
@@ -1418,9 +1418,15 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     const availableBalance = bns.sub(nativeBalance, lockedBalance)
 
     // Set common vars
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
-    const quantity = edgeSpendInfo.spendTargets[0].nativeAmount
-    const { otherParams = {} }: { otherParams: TxOtherParams } = edgeSpendInfo
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const { publicAddress } = spendTarget
+    const { nativeAmount: quantity } = spendTarget
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (quantity == null) throw new NoAmountSpecifiedError()
+
+    const { otherParams = {} } = edgeSpendInfo
 
     // Set default action if not specified
     if (!otherParams.action) {

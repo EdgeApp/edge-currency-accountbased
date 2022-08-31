@@ -914,7 +914,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
-      super.makeSpend(edgeSpendInfoIn)
+      this.makeSpendCheck(edgeSpendInfoIn)
     const { defaultSettings } = this.currencyInfo
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (!tokenInfo) throw new Error('Unable to find token info')
@@ -931,7 +931,12 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-    const publicAddress = edgeSpendInfo.spendTargets[0].publicAddress
+    const { publicAddress } = edgeSpendInfo.spendTargets[0]
+    let { nativeAmount } = edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     // Check if destination address is activated
     let mustCreateAccount = false
@@ -954,13 +959,6 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
     if (mustCreateAccount) {
       throw new Error('ErrorAccountNotActivated')
-    }
-
-    let nativeAmount = '0'
-    if (typeof edgeSpendInfo.spendTargets[0].nativeAmount === 'string') {
-      nativeAmount = edgeSpendInfo.spendTargets[0].nativeAmount
-    } else {
-      throw new NoAmountSpecifiedError()
     }
 
     if (bns.eq(nativeAmount, '0')) {
