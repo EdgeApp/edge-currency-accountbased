@@ -165,6 +165,24 @@ export const asEvmScanTransaction = asObject({
 
 export type EvmScanTransaction = $Call<typeof asEvmScanTransaction>
 
+export const asEvmScanInternalTransaction = asObject({
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  blockNumber: asString,
+  timeStamp: asString,
+  gasUsed: asString,
+  value: asString,
+  from: asString,
+  to: asString,
+  gas: asString,
+  isError: asString,
+  contractAddress: asOptional(asString)
+})
+
+export type EvmScanInternalTransaction = $Call<
+  typeof asEvmScanInternalTransaction
+>
+
 export const asEvmScanGasResponseResult = asObject({
   LastBlock: asString,
   SafeGasPrice: asString,
