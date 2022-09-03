@@ -73,6 +73,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Celo',
   pluginId: 'celo',
   walletType: 'wallet:celo',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

@@ -75,6 +75,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Polygon',
   pluginId: 'polygon', // matching mnemonic here
   walletType: 'wallet:polygon',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

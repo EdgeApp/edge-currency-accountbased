@@ -3915,10 +3915,10 @@ ed2curve@^0.3.0:
   dependencies:
     tweetnacl "1.x.x"
 
-edge-core-js@^0.19.26:
-  version "0.19.26"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.26.tgz#628a515d1af7557bbd9a6b34c6262899d4a0ee95"
-  integrity sha512-pfJTPxPRZHWfOnpCWVaZk8fuft1GL3mTl5WHNAddnC+8Eb1+zO0xuD5ldLLamEAZvke3mKaq3OTxU1ica7hyhw==
+edge-core-js@^0.19.28:
+  version "0.19.28"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-0.19.28.tgz#ca38b42c3e92b4196bb3e224f9824d8e7506bd32"
+  integrity sha512-7wI2rWIn6R6WEpj1KXrQAQFZNp486MDjQ98pscCEqoj55xuL+GPr9Qt/0dvBwRYSRLxmrCyFD6PykzAcn6WrEA==
   dependencies:
     aes-js "^3.1.0"
     base-x "^1.0.4"

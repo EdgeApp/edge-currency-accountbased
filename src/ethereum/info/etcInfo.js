@@ -92,6 +92,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Ethereum Classic',
   pluginId: 'ethereumclassic',
   walletType: 'wallet:ethereumclassic',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,

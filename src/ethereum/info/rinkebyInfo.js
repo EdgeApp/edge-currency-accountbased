@@ -112,6 +112,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Rinkeby Testnet',
   pluginId: 'rinkeby',
   walletType: 'wallet:rinkeby',
+  memoType: 'hex',
 
   canReplaceByFee: true,
   defaultSettings,
