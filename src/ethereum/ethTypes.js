@@ -6,7 +6,6 @@
 import WalletConnect from '@walletconnect/client'
 import {
   asArray,
-  asBoolean,
   asEither,
   asMap,
   asMaybe,
@@ -254,127 +253,6 @@ export const asBlockbookBlockHeight = asObject({
 
 export type BlockbookBlockHeight = $Call<typeof asBlockbookBlockHeight>
 
-export const asBlockbookTokenTransfer = asObject({
-  from: asString,
-  to: asString,
-  symbol: asString,
-  value: asString,
-  token: asString
-})
-
-export type BlockbookTokenTransfer = $Call<typeof asBlockbookTokenTransfer>
-
-export const asBlockbookTx = asObject({
-  txid: asString,
-  vin: asArray(asObject({ addresses: asArray(asString) })),
-  vout: asArray(asObject({ addresses: asArray(asString) })),
-  blockHeight: asNumber,
-  value: asString,
-  blockTime: asNumber,
-  tokenTransfers: asOptional(asArray(asBlockbookTokenTransfer)),
-  ethereumSpecific: asObject({
-    status: asNumber,
-    gasLimit: asNumber,
-    gasUsed: asNumber,
-    gasPrice: asString
-  })
-})
-
-export type BlockbookTx = $Call<typeof asBlockbookTx>
-
-export const asBlockbookTokenBalance = asObject({
-  symbol: asString,
-  contract: asString,
-  balance: asString
-})
-
-export type BlockbookTokenBalance = $Call<typeof asBlockbookTokenBalance>
-
-export const asBlockbookAddress = asObject({
-  page: asNumber,
-  totalPages: asNumber,
-  itemsOnPage: asNumber,
-  balance: asString,
-  unconfirmedBalance: asString,
-  unconfirmedTxs: asNumber,
-  transactions: asMaybe(asArray(asBlockbookTx), []),
-  nonce: asString,
-  tokens: asMaybe(asArray(asBlockbookTokenBalance), [])
-})
-
-export type BlockbookAddress = $Call<typeof asBlockbookAddress>
-
-export const asAlethioAccountsTokenTransfer = asObject({
-  type: asString,
-  attributes: asObject({
-    fee: asOptional(asString),
-    value: asString,
-    blockCreationTime: asNumber,
-    symbol: asString,
-    globalRank: asArray(asNumber)
-  }),
-  relationships: asObject({
-    token: asObject({
-      data: asObject({
-        id: asString
-      }),
-      links: asObject({
-        related: asString
-      })
-    }),
-    from: asObject({
-      data: asObject({
-        id: asString
-      }),
-      links: asObject({
-        related: asString
-      })
-    }),
-    to: asObject({
-      data: asObject({
-        id: asString
-      }),
-      links: asObject({
-        related: asString
-      })
-    }),
-    transaction: asObject({
-      data: asObject({
-        id: asString
-      }),
-      links: asObject({
-        related: asString
-      })
-    })
-  }),
-  links: asObject({
-    next: asString
-  }),
-  meta: asObject({
-    page: asObject({
-      hasNext: asBoolean
-    })
-  })
-})
-
-export type AlethioAccountsTokenTransfer = $Call<
-  typeof asAlethioAccountsTokenTransfer
->
-
-export const asFetchGetAlethio = asObject({
-  data: asArray(asAlethioAccountsTokenTransfer),
-  links: asObject({
-    next: asString
-  }),
-  meta: asObject({
-    page: asObject({
-      hasNext: asBoolean
-    })
-  })
-})
-
-export type FetchGetAlethio = $Call<typeof asFetchGetAlethio>
-
 export const asBlockChairAddress = asObject({
   balance: asString,
   token_address: asString,
@@ -404,19 +282,6 @@ export const asCheckBlockHeightBlockchair = asObject({
   })
 })
 
-export type AmberdataTx = {|
-  hash: string,
-  timestamp: string,
-  blockNumber: string,
-  value: string,
-  fee: string,
-  gasLimit: string,
-  gasPrice: string,
-  gasUsed: string,
-  from: Array<{ address: string }>,
-  to: Array<{ address: string }>
-|}
-
 export const asAmberdataAccountsTx = asObject({
   hash: asString,
   timestamp: asString,
@@ -437,42 +302,6 @@ export const asAmberdataAccountsTx = asObject({
     })
   )
 })
-
-export type AmberdataAccountsTx = $Call<typeof asAmberdataAccountsTx>
-
-export const asAmberdataAccountsFuncs = asObject({
-  transactionHash: asString,
-  timestamp: asString,
-  blockNumber: asString,
-  value: asString,
-  initialGas: asString,
-  leftOverGas: asString,
-  from: asObject({ address: asString }),
-  to: asArray(asObject({ address: asString }))
-})
-
-export type AmberdataAccountsFuncs = $Call<typeof asAmberdataAccountsFuncs>
-
-export const asFetchGetAmberdataApiResponse = asObject({
-  payload: asObject({
-    records: asArray(asEither(asAmberdataAccountsTx, asAmberdataAccountsFuncs))
-  })
-})
-
-export type FetchGetAmberdataApiResponse = $Call<
-  typeof asFetchGetAmberdataApiResponse
->
-
-export type AmberdataInternalTx = {|
-  transactionHash: string,
-  timestamp: string,
-  blockNumber: string,
-  value: string,
-  initialGas: string,
-  leftOverGas: string,
-  from: { address: string },
-  to: Array<{ address: string }>
-|}
 
 export const asRpcResultString = asObject({
   result: asString
