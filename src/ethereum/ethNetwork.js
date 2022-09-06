@@ -27,13 +27,17 @@ import { EthereumEngine } from './ethEngine'
 import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
 import {
   type AlethioTokenTransfer,
+  type BlockbookAddress,
+  type BlockbookTokenBalance,
   type CheckTokenBalBlockchair,
   type EthereumSettings,
   type EthereumTxOtherParams,
   type EvmScanInternalTransaction,
   type EvmScanTransaction,
   type RpcResultString,
+  asBlockbookAddress,
   asBlockbookBlockHeight,
+  asBlockbookTokenBalance,
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
@@ -84,7 +88,7 @@ type EthFunction =
   | 'getTransactions'
   | 'eth_getCode'
   | 'blockbookBlockHeight'
-  | 'blockbookTxs'
+  | 'blockbookAddress'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -184,7 +188,7 @@ export class EthereumNetwork {
   checkBlockHeightBlockchair: (...any) => any
   checkBlockHeightAmberdata: (...any) => any
   checkBlockHeightBlockbook: (...any) => any
-  checkTxsBlockbook: (...any) => any
+  checkAddressBlockbook: (...any) => any
   checkNonceEthscan: (...any) => any
   checkNonceAmberdata: (...any) => any
   checkTokenBalEthscan: (...any) => any
@@ -207,6 +211,7 @@ export class EthereumNetwork {
     this.currencyInfo = currencyInfo
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     this.multicastServers = this.multicastServers.bind(this)
+    this.checkAddressBlockbook = this.checkAddressBlockbook.bind(this)
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
     this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
     this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
@@ -975,7 +980,7 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
 
-      case 'blockbookTxs':
+      case 'blockbookAddress':
         funcs = blockbookServers.map(server => async () => {
           const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
@@ -1263,6 +1268,57 @@ export class EthereumNetwork {
         }
       }
     }
+  }
+
+  async checkAddressBlockbook(
+    params: GetTxsParams
+  ): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
+    const out = {
+      newNonce: '0',
+      tokenBal: {},
+      server: ''
+    }
+    const query = '/api/v2/address/' + address + `?&details=tokenBalances`
+    const { result: jsonObj, server } = await this.multicastServers(
+      'blockbookAddress',
+      query
+    )
+    let addressInfo: BlockbookAddress
+    try {
+      addressInfo = asBlockbookAddress(jsonObj)
+    } catch (e) {
+      this.ethEngine.error(
+        `checkTxsBlockbook ${server} error BlockbookAddress ${JSON.stringify(
+          jsonObj
+        )}`
+      )
+      throw new Error(
+        `checkTxsBlockbook ${server} returned invalid JSON for BlockbookAddress`
+      )
+    }
+    const { nonce, tokens, balance } = addressInfo
+    out.newNonce = nonce
+    out.tokenBal[this.currencyInfo.currencyCode] = balance
+    out.server = server
+
+    // Token balances
+    for (const token: BlockbookTokenBalance of tokens) {
+      try {
+        const { symbol, balance } = asBlockbookTokenBalance(token)
+        out.tokenBal[symbol] = balance
+      } catch (e) {
+        this.ethEngine.error(
+          `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
+            token
+          )}`
+        )
+        throw new Error(
+          `checkTxsBlockbook ${server} returned invalid JSON for BlockbookTokenBalance`
+        )
+      }
+    }
+    return out
   }
 
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
@@ -1587,7 +1643,8 @@ export class EthereumNetwork {
     }
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
-      // txs.push(this.checkTxsBlockbook)
+      tokenBal.push(this.checkAddressBlockbook)
+      nonce.push(this.checkAddressBlockbook)
     }
     if (blockchairApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockchair)

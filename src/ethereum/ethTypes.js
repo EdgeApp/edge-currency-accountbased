@@ -253,6 +253,24 @@ export const asBlockbookBlockHeight = asObject({
 
 export type BlockbookBlockHeight = $Call<typeof asBlockbookBlockHeight>
 
+export const asBlockbookTokenBalance = asObject({
+  symbol: asString,
+  contract: asString,
+  balance: asString
+})
+
+export type BlockbookTokenBalance = $Call<typeof asBlockbookTokenBalance>
+
+export const asBlockbookAddress = asObject({
+  balance: asString,
+  unconfirmedBalance: asString,
+  unconfirmedTxs: asNumber,
+  nonce: asString,
+  tokens: asMaybe(asArray(asBlockbookTokenBalance), [])
+})
+
+export type BlockbookAddress = $Call<typeof asBlockbookAddress>
+
 export const asBlockChairAddress = asObject({
   balance: asString,
   token_address: asString,
