@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.17.6 (2022-09-06)
+
+- Allow EVM data to be passed through memo field
+- Rename engine.js:makeSpend to makeSpendCheck since it has a different return signature than the asset specific makeSpend
+- Restore internal transaction support for etherscan providers. Remove transaction queries from blockbook providers since they don't support internal txs
+- Fix broken ethEngine skipChecks
+
 ## 0.17.5 (2022-08-23)
 
 - Implement new `skipChecks` and `pendingTxs` API from `EdgeSpendInfo` for ETH engines
