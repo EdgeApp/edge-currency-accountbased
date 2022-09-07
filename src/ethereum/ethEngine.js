@@ -715,9 +715,11 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
 
     let data = spendTarget.memo ?? spendTarget.otherParams?.data
-    if (data != null && !isHex(data)) {
+    if (data != null && data.length > 0 && !isHex(data)) {
       throw new Error(`Memo/data field must be of type 'hex'`)
     }
+
+    if (data === '') data = undefined
 
     let otherParams: Object = {}
 
