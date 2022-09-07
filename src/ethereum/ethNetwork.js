@@ -27,31 +27,23 @@ import { EthereumEngine } from './ethEngine'
 import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
 import {
   type AlethioTokenTransfer,
-  type AmberdataTx,
   type BlockbookAddress,
   type BlockbookTokenBalance,
-  type BlockbookTokenTransfer,
-  type BlockbookTx,
   type CheckTokenBalBlockchair,
   type EthereumSettings,
   type EthereumTxOtherParams,
+  type EvmScanInternalTransaction,
   type EvmScanTransaction,
-  type FetchGetAlethio,
-  type FetchGetAmberdataApiResponse,
   type RpcResultString,
-  asAlethioAccountsTokenTransfer,
-  asAmberdataAccountsTx,
   asBlockbookAddress,
   asBlockbookBlockHeight,
   asBlockbookTokenBalance,
-  asBlockbookTx,
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
   asEvmScancanTokenTransaction,
+  asEvmScanInternalTransaction,
   asEvmScanTransaction,
-  asFetchGetAlethio,
-  asFetchGetAmberdataApiResponse,
   asRpcResultString
 } from './ethTypes'
 import { getEvmScanApiKey } from './fees/feeProviders.js'
@@ -96,7 +88,7 @@ type EthFunction =
   | 'getTransactions'
   | 'eth_getCode'
   | 'blockbookBlockHeight'
-  | 'blockbookTxs'
+  | 'blockbookAddress'
 
 type BroadcastResults = {
   incrementNonce: boolean,
@@ -104,7 +96,8 @@ type BroadcastResults = {
 }
 
 type GetEthscanAllTxsOptions = {
-  contractAddress?: string
+  contractAddress?: string,
+  searchRegularTxs?: boolean
 }
 
 type GetEthscanAllTxsResponse = {
@@ -195,7 +188,7 @@ export class EthereumNetwork {
   checkBlockHeightBlockchair: (...any) => any
   checkBlockHeightAmberdata: (...any) => any
   checkBlockHeightBlockbook: (...any) => any
-  checkTxsBlockbook: (...any) => any
+  checkAddressBlockbook: (...any) => any
   checkNonceEthscan: (...any) => any
   checkNonceAmberdata: (...any) => any
   checkTokenBalEthscan: (...any) => any
@@ -218,11 +211,11 @@ export class EthereumNetwork {
     this.currencyInfo = currencyInfo
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     this.multicastServers = this.multicastServers.bind(this)
+    this.checkAddressBlockbook = this.checkAddressBlockbook.bind(this)
     this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
     this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
     this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
     this.checkBlockHeightBlockbook = this.checkBlockHeightBlockbook.bind(this)
-    this.checkTxsBlockbook = this.checkTxsBlockbook.bind(this)
     this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
     this.checkNonceAmberdata = this.checkNonceAmberdata.bind(this)
     this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
@@ -231,19 +224,21 @@ export class EthereumNetwork {
     this.checkTxsEthscan = this.checkTxsEthscan.bind(this)
     this.processEthereumNetworkUpdate =
       this.processEthereumNetworkUpdate.bind(this)
-    this.checkTxsAmberdata = this.checkTxsAmberdata.bind(this)
     this.queryFuncs = this.buildQueryFuncs(
       currencyInfo.defaultSettings.otherSettings
     )
   }
 
-  processEvmScanTransaction(tx: EvmScanTransaction, currencyCode: string) {
+  processEvmScanTransaction(
+    tx: EvmScanTransaction | EvmScanInternalTransaction,
+    currencyCode: string
+  ) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string = '0'
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
-    if (tx.gasPrice) {
+    if (!tx.contractAddress && tx.gasPrice) {
       nativeNetworkFee = bns.mul(tx.gasPrice, tx.gasUsed)
     }
 
@@ -306,7 +301,10 @@ export class EthereumNetwork {
       blockHeight,
       nativeAmount: netNativeAmount,
       networkFee,
-      feeRateUsed: getFeeRateUsed(tx.gasPrice, tx.gas, tx.gasUsed),
+      feeRateUsed:
+        tx.gasPrice != null
+          ? getFeeRateUsed(tx.gasPrice, tx.gas, tx.gasUsed)
+          : undefined,
       parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
@@ -402,91 +400,6 @@ export class EthereumNetwork {
     }
 
     return edgeTransaction
-  }
-
-  processAmberdataTxRegular(
-    amberdataTx: AmberdataTx,
-    currencyCode: string
-  ): EdgeTransaction | null {
-    const walletAddress = this.ethEngine.walletLocalData.publicKey
-    let netNativeAmount: string
-    const ourReceiveAddresses: string[] = []
-    let nativeNetworkFee: string
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-
-    const value = amberdataTx.value
-    const fee = amberdataTx.fee ? amberdataTx.fee : '0'
-    const fromAddress =
-      amberdataTx.from.length > 0 ? amberdataTx.from[0].address : ''
-    const toAddress = amberdataTx.to.length > 0 ? amberdataTx.to[0].address : ''
-
-    const isSpend = fromAddress.toLowerCase() === walletAddress.toLowerCase()
-
-    if (fromAddress && toAddress) {
-      nativeNetworkFee = fee
-
-      if (isSpend) {
-        if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
-          // Spend to self. netNativeAmount is just the fee
-          netNativeAmount = bns.mul(nativeNetworkFee, '-1')
-        } else {
-          // spend to someone else
-          netNativeAmount = bns.sub('0', value)
-
-          // For spends, include the network fee in the transaction amount if not a token tx
-          if (!tokenTx) {
-            netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
-          }
-        }
-      } else if (toAddress.toLowerCase() === walletAddress.toLowerCase()) {
-        // Receive transaction
-        netNativeAmount = value
-        ourReceiveAddresses.push(walletAddress.toLowerCase())
-      } else {
-        return null
-      }
-
-      const otherParams: EthereumTxOtherParams = {
-        from: [fromAddress],
-        to: [toAddress],
-        gas: '0',
-        gasPrice: '0',
-        gasUsed: '0'
-      }
-
-      let blockHeight = parseInt(amberdataTx.blockNumber, 10)
-      if (blockHeight < 0) blockHeight = 0
-      const date = new Date(amberdataTx.timestamp).getTime() / 1000
-      let parentNetworkFee
-      let networkFee = '0'
-      if (tokenTx && isSpend) {
-        parentNetworkFee = nativeNetworkFee
-      } else {
-        networkFee = nativeNetworkFee
-      }
-
-      const edgeTransaction: EdgeTransaction = {
-        txid: amberdataTx.hash,
-        date,
-        currencyCode,
-        blockHeight,
-        nativeAmount: netNativeAmount,
-        networkFee,
-        feeRateUsed: getFeeRateUsed(
-          amberdataTx.gasPrice,
-          amberdataTx.gasLimit,
-          amberdataTx.gasUsed
-        ),
-        ourReceiveAddresses,
-        signedTx: '',
-        parentNetworkFee,
-        otherParams
-      }
-
-      return edgeTransaction
-    } else {
-      return null
-    }
   }
 
   async fetchGetEtherscan(server: string, cmd: string) {
@@ -1026,11 +939,14 @@ export class EthereumNetwork {
           startBlock,
           page,
           offset,
-          contractAddress
+          contractAddress,
+          searchRegularTxs
         } = params[0]
         let startUrl
         if (currencyCode === this.currencyInfo.currencyCode) {
-          startUrl = `?action=txlist&module=account`
+          startUrl = `?action=${
+            searchRegularTxs ? 'txlist' : 'txlistinternal'
+          }&module=account`
         } else {
           startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
         }
@@ -1064,7 +980,7 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
 
-      case 'blockbookTxs':
+      case 'blockbookAddress':
         funcs = blockbookServers.map(server => async () => {
           const result = await this.fetchGetBlockbook(server, params[0])
           return { server, result }
@@ -1241,6 +1157,7 @@ export class EthereumNetwork {
     const allTransactions: EdgeTransaction[] = []
     let server: string = ''
     const contractAddress = options.contractAddress
+    const searchRegularTxs = options.searchRegularTxs
     while (1) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
       const response = await this.multicastServers('getTransactions', {
@@ -1249,7 +1166,8 @@ export class EthereumNetwork {
         startBlock,
         page,
         offset,
-        contractAddress
+        contractAddress,
+        searchRegularTxs
       })
       server = response.server
       const transactions = response.result.result
@@ -1286,10 +1204,19 @@ export class EthereumNetwork {
         startBlock,
         currencyCode,
         asEvmScanTransaction,
-        {}
+        { searchRegularTxs: true }
       )
-      server = txsRegularResp.server
-      allTransactions = [...txsRegularResp.allTransactions]
+      const txsInternalResp = await this.getAllTxsEthscan(
+        startBlock,
+        currencyCode,
+        asEvmScanInternalTransaction,
+        { searchRegularTxs: false }
+      )
+      server = txsRegularResp.server || txsInternalResp.server
+      allTransactions = [
+        ...txsRegularResp.allTransactions,
+        ...txsInternalResp.allTransactions
+      ]
     } else {
       const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
       if (tokenInfo && typeof tokenInfo.contractAddress === 'string') {
@@ -1343,399 +1270,55 @@ export class EthereumNetwork {
     }
   }
 
-  async checkTxsAlethio(
-    startBlock: number,
-    currencyCode: string,
-    useApiKey: boolean
-  ): Promise<EthereumNetworkUpdate> {
-    const address = this.ethEngine.walletLocalData.publicKey
-    const { native, token } =
-      this.currencyInfo.defaultSettings.otherSettings.alethioCurrencies
-    let linkNext
-    let cleanedResponseObj: FetchGetAlethio
-    const allTransactions: EdgeTransaction[] = []
-    while (1) {
-      let jsonObj
-      try {
-        if (linkNext) {
-          jsonObj = await this.fetchGetAlethio(linkNext, false, useApiKey)
-        } else {
-          if (currencyCode === this.currencyInfo.currencyCode) {
-            jsonObj = await this.fetchGetAlethio(
-              `/accounts/${address}/${native}Transfers`,
-              true,
-              useApiKey
-            )
-          } else {
-            jsonObj = await this.fetchGetAlethio(
-              `/accounts/${address}/${token}Transfers`,
-              true,
-              useApiKey
-            )
-          }
-        }
-        cleanedResponseObj = asFetchGetAlethio(jsonObj)
-      } catch (e) {
-        this.ethEngine.error(
-          `checkTxsAlethio \n${safeErrorMessage(e)}\n${linkNext || ''}`
-        )
-        throw new Error('checkTxsAlethio response is invalid')
-      }
-
-      linkNext = cleanedResponseObj.links.next
-      let hasNext = cleanedResponseObj.meta.page.hasNext
-
-      for (const tokenTransfer of cleanedResponseObj.data) {
-        try {
-          const cleanTokenTransfer =
-            asAlethioAccountsTokenTransfer(tokenTransfer)
-          const txBlockheight = cleanTokenTransfer.attributes.globalRank[0]
-          if (txBlockheight > startBlock) {
-            let txCurrencyCode = this.currencyInfo.currencyCode
-            if (currencyCode !== this.currencyInfo.currencyCode) {
-              const contractAddress =
-                cleanTokenTransfer.relationships.token.data.id
-              txCurrencyCode = this.getTokenCurrencyCode(contractAddress)
-            }
-            if (typeof txCurrencyCode === 'string') {
-              const tx = this.processAlethioTransaction(
-                cleanTokenTransfer,
-                txCurrencyCode
-              )
-              if (tx) {
-                allTransactions.push(tx)
-              }
-            }
-          } else {
-            hasNext = false
-            break
-          }
-        } catch (e) {
-          this.ethEngine.error('checkTxsAlethio tokenTransfer ', e)
-          throw new Error(
-            `checkTxsAlethio tokenTransfer is invalid\n${JSON.stringify(
-              tokenTransfer
-            )}`
-          )
-        }
-      }
-
-      if (!hasNext) {
-        break
-      }
-    }
-
-    // We init txsByCurrency with all tokens (or ETH) in order to
-    // force processEthereumNetworkUpdate to set the lastChecked
-    // timestamp.  Otherwise tokens w/out transactions won't get
-    // throttled properly. Remember that Alethio responds with
-    // txs for *all* tokens.
-    const response = { tokenTxs: {}, server: 'alethio' }
-    if (currencyCode !== this.currencyInfo.currencyCode) {
-      for (const tk of this.ethEngine.enabledTokens) {
-        if (tk !== this.currencyInfo.currencyCode) {
-          response.tokenTxs[tk] = {
-            blockHeight: startBlock,
-            edgeTransactions: []
-          }
-        }
-      }
-    } else {
-      // ETH is singled out here because it is a different (but very
-      // similar) Alethio process
-      response.tokenTxs[this.currencyInfo.currencyCode] = {
-        blockHeight: startBlock,
-        edgeTransactions: []
-      }
-    }
-
-    for (const tx: EdgeTransaction of allTransactions) {
-      response.tokenTxs[tx.currencyCode].edgeTransactions.push(tx)
-    }
-    return response
-  }
-
-  // fine, used in asyncWaterfalls
-  async getAllTxsAmberdata(
-    startBlock: number,
-    startDate: number,
-    currencyCode: string
-  ): Promise<EdgeTransaction[]> {
-    const address = this.ethEngine.walletLocalData.publicKey
-
-    let page = 0
-    const allTransactions: EdgeTransaction[] = []
-    while (1) {
-      let url = `/addresses/${address}/transactions?page=${page}&size=${NUM_TRANSACTIONS_TO_QUERY}`
-
-      let cleanedResponseObj: FetchGetAmberdataApiResponse
-      try {
-        if (startDate) {
-          const newDateObj = new Date(startDate)
-          const now = new Date()
-          if (newDateObj) {
-            url =
-              url +
-              `&startDate=${newDateObj.toISOString()}&endDate=${now.toISOString()}`
-          }
-        }
-
-        const jsonObj = await this.fetchGetAmberdataApi(url)
-        cleanedResponseObj = asFetchGetAmberdataApiResponse(jsonObj)
-      } catch (e) {
-        this.logError('checkTxsAmberdata regular txs', e)
-        throw new Error('checkTxsAmberdata (regular tx) response is invalid')
-      }
-      const amberdataTxs = cleanedResponseObj.payload.records
-      for (const amberdataTx of amberdataTxs) {
-        try {
-          const cleanAmberdataTx = asAmberdataAccountsTx(amberdataTx)
-
-          const tx = this.processAmberdataTxRegular(
-            cleanAmberdataTx,
-            currencyCode
-          )
-          if (tx) {
-            allTransactions.push(tx)
-          }
-        } catch (e) {
-          this.ethEngine.error(
-            `checkTxsAmberdata process regular ${safeErrorMessage(
-              e
-            )}\n${JSON.stringify(amberdataTx)}`
-          )
-          throw new Error('checkTxsAmberdata regular amberdataTx is invalid')
-        }
-      }
-      if (amberdataTxs.length === 0) {
-        break
-      }
-      page++
-    }
-    return allTransactions
-  }
-
-  async checkTxsAmberdata(
+  async checkAddressBlockbook(
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
-    const { startBlock, startDate, currencyCode } = params
-    const allTxsRegular: EdgeTransaction[] = await this.getAllTxsAmberdata(
-      startBlock,
-      startDate,
-      currencyCode
-    )
-
-    return {
-      tokenTxs: {
-        [`${this.currencyInfo.currencyCode}`]: {
-          blockHeight: startBlock,
-          edgeTransactions: [...allTxsRegular]
-        }
-      },
-      server: 'amberdata'
-    }
-  }
-
-  async checkTxsBlockbook(
-    params: GetTxsParams
-  ): Promise<EthereumNetworkUpdate> {
-    const { startBlock = 0 } = params
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    let page = 1
-    let totalPages = 1
     const out = {
       newNonce: '0',
       tokenBal: {},
-      tokenTxs: {
-        [params.currencyCode]: {
-          blockHeight: startBlock,
-          edgeTransactions: []
-        }
-      },
       server: ''
     }
-    while (page <= totalPages) {
-      const query =
-        '/api/v2/address/' +
-        address +
-        `?from=${startBlock}&page=${page}&details=txs`
-      const { result: jsonObj, server } = await this.multicastServers(
-        'blockbookTxs',
-        query
+    const query = '/api/v2/address/' + address + `?&details=tokenBalances`
+    const { result: jsonObj, server } = await this.multicastServers(
+      'blockbookAddress',
+      query
+    )
+    let addressInfo: BlockbookAddress
+    try {
+      addressInfo = asBlockbookAddress(jsonObj)
+    } catch (e) {
+      this.ethEngine.error(
+        `checkTxsBlockbook ${server} error BlockbookAddress ${JSON.stringify(
+          jsonObj
+        )}`
       )
-      let addressInfo: BlockbookAddress
+      throw new Error(
+        `checkTxsBlockbook ${server} returned invalid JSON for BlockbookAddress`
+      )
+    }
+    const { nonce, tokens, balance } = addressInfo
+    out.newNonce = nonce
+    out.tokenBal[this.currencyInfo.currencyCode] = balance
+    out.server = server
+
+    // Token balances
+    for (const token: BlockbookTokenBalance of tokens) {
       try {
-        addressInfo = asBlockbookAddress(jsonObj)
+        const { symbol, balance } = asBlockbookTokenBalance(token)
+        out.tokenBal[symbol] = balance
       } catch (e) {
         this.ethEngine.error(
-          `checkTxsBlockbook ${server} error BlockbookAddress ${JSON.stringify(
-            jsonObj
+          `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
+            token
           )}`
         )
         throw new Error(
-          `checkTxsBlockbook ${server} returned invalid JSON for BlockbookAddress`
+          `checkTxsBlockbook ${server} returned invalid JSON for BlockbookTokenBalance`
         )
-      }
-      const { nonce, tokens, balance, transactions } = addressInfo
-      out.newNonce = nonce
-      out.tokenBal[this.currencyInfo.currencyCode] = balance
-      out.server = server
-      totalPages = addressInfo.totalPages
-      page++
-
-      // Token balances
-      for (const token: BlockbookTokenBalance of tokens) {
-        try {
-          const { symbol, balance } = asBlockbookTokenBalance(token)
-          out.tokenBal[symbol] = balance
-        } catch (e) {
-          this.ethEngine.error(
-            `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
-              token
-            )}`
-          )
-          throw new Error(
-            `checkTxsBlockbook ${server} returned invalid JSON for BlockbookTokenBalance`
-          )
-        }
-      }
-
-      // Transactions
-      for (const tx: BlockbookTx of transactions) {
-        const transactionsArray = []
-        try {
-          const cleanTx = asBlockbookTx(tx)
-          if (
-            cleanTx.tokenTransfers !== undefined &&
-            cleanTx.tokenTransfers.length > 0
-          ) {
-            for (const tokenTransfer of cleanTx.tokenTransfers) {
-              if (
-                address === tokenTransfer.to.toLowerCase() ||
-                address === tokenTransfer.from.toLowerCase()
-              ) {
-                try {
-                  transactionsArray.push(
-                    this.processBlockbookTx(tx, tokenTransfer)
-                  )
-                } catch (e) {
-                  if (safeErrorMessage(e) !== 'Unsupported contract address')
-                    throw e
-                  continue
-                }
-              }
-            }
-          }
-          if (
-            address === tx.vout[0].addresses[0].toLowerCase() ||
-            address === tx.vin[0].addresses[0].toLowerCase()
-          )
-            transactionsArray.push(this.processBlockbookTx(tx))
-        } catch (e) {
-          this.ethEngine.error(`checkTxsBlockbook ${server} BlockbookTx `, e)
-          throw new Error(
-            `Blockbook ${server} returned invalid JSON for BlockbookTx`
-          )
-        }
-        for (const edgeTransaction of transactionsArray) {
-          if (out.tokenTxs[edgeTransaction.currencyCode] === undefined)
-            out.tokenTxs[edgeTransaction.currencyCode] = {
-              blockHeight: startBlock,
-              edgeTransactions: []
-            }
-          out.tokenTxs[edgeTransaction.currencyCode].edgeTransactions.push(
-            edgeTransaction
-          )
-        }
       }
     }
     return out
-  }
-
-  processBlockbookTx(
-    blockbookTx: BlockbookTx,
-    tokenTx?: BlockbookTokenTransfer
-  ): EdgeTransaction {
-    const {
-      txid,
-      blockHeight,
-      blockTime,
-      value,
-      ethereumSpecific: { gasLimit, gasUsed, gasPrice },
-      vin,
-      vout
-    } = blockbookTx
-    const ourAddress = this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    let toAddress = vout[0].addresses[0].toLowerCase()
-    let fromAddress = vin[0].addresses[0].toLowerCase()
-    let currencyCode = this.currencyInfo.currencyCode
-    let nativeAmount = value
-    let networkFee = bns.mul(gasPrice, gasUsed.toString())
-    let parentNetworkFee
-    const ourReceiveAddresses = []
-
-    const isSpend = fromAddress === ourAddress
-
-    if (toAddress === fromAddress) {
-      // Send to self
-      nativeAmount = bns.mul('-1', networkFee)
-    } else if (toAddress === ourAddress) {
-      // Receive
-      ourReceiveAddresses.push(ourAddress)
-    } else if (isSpend) {
-      nativeAmount = bns.mul('-1', bns.add(nativeAmount, networkFee))
-    }
-    if (tokenTx) {
-      const { symbol, value, to, from, token } = tokenTx
-      // Ignore token transaction if the contract address isn't recognized
-      if (
-        !this.ethEngine.allTokens
-          .concat(this.ethEngine.customTokens)
-          .some(
-            metatoken =>
-              metatoken.contractAddress &&
-              metatoken.contractAddress.toLowerCase() === token.toLowerCase()
-          )
-      ) {
-        this.ethEngine.log(`processBlockbookTx unsupported token ${token}`)
-        throw new Error('Unsupported contract address')
-      }
-      // Override currencyCode and nativeAmount if token transaction
-      toAddress = to.toLowerCase()
-      if (toAddress === ourAddress) ourReceiveAddresses.push(ourAddress)
-      fromAddress = from.toLowerCase()
-      currencyCode = symbol
-      nativeAmount = toAddress === ourAddress ? value : bns.mul('-1', value)
-      networkFee = '0'
-      parentNetworkFee = isSpend
-        ? bns.mul(gasPrice, gasUsed.toString())
-        : undefined
-    }
-    const otherParams: EthereumTxOtherParams = {
-      from: [fromAddress],
-      to: [toAddress],
-      gas: gasLimit.toString(),
-      gasPrice,
-      gasUsed: gasUsed.toString()
-    }
-    const edgeTransaction: EdgeTransaction = {
-      txid,
-      date: blockTime,
-      currencyCode,
-      blockHeight,
-      nativeAmount,
-      networkFee,
-      parentNetworkFee,
-      feeRateUsed: getFeeRateUsed(
-        gasPrice,
-        gasLimit.toString(),
-        gasUsed.toString()
-      ),
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams
-    }
-    return edgeTransaction
   }
 
   async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
@@ -2060,7 +1643,8 @@ export class EthereumNetwork {
     }
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
-      txs.push(this.checkTxsBlockbook)
+      tokenBal.push(this.checkAddressBlockbook)
+      nonce.push(this.checkAddressBlockbook)
     }
     if (blockchairApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockchair)
@@ -2071,7 +1655,7 @@ export class EthereumNetwork {
       nonce.push(this.checkNonceAmberdata)
     }
     if (amberdataApiServers.length > 0) {
-      txs.push(this.checkTxsAmberdata)
+      // txs.push(this.checkTxsAmberdata)
     }
     if (rpcServers.length > 0) {
       tokenBal.push(this.checkTokenBalRpc)
