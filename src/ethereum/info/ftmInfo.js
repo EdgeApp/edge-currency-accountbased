@@ -212,6 +212,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x049d68029688eabf473097a2fc38ef61633a3c7a'
     },
     {
+      currencyCode: 'L3USD',
+      currencyName: 'L3USD',
+      denominations: [{ name: 'L3USD', multiplier: '1000000000000000000' }],
+      contractAddress: '0x5f0456f728e2d59028b4f5b8ad8c604100724c6a'
+    },
+    {
       currencyCode: 'LIF3',
       currencyName: 'LIF3',
       denominations: [
