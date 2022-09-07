@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.17.7 (2022-09-07)
+
+- ETH: Fix spending with empty memo field
+- FTM: Add L3USD token
+- Update ZEC checkpoints
+
 ## 0.17.6 (2022-09-06)
 
 - Allow EVM data to be passed through memo field
