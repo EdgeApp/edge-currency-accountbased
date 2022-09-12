@@ -1,58 +1,56 @@
-
-
 import { asNumber, asObject } from 'cleaners'
 import { Subscriber } from 'yaob'
 
-export type ZcashSettings = {
+export interface ZcashSettings {
   rpcNode: {
-    networkName: string,
-    defaultHost: string,
+    networkName: string
+    defaultHost: string
     defaultPort: number
-  },
-  blockchairServers: [string],
+  }
+  blockchairServers: [string]
   defaultBirthday: number
 }
 
-export type ZcashSpendInfo = {
-  zatoshi: string,
-  toAddress: string,
-  memo: string,
-  fromAccountIndex: number,
+export interface ZcashSpendInfo {
+  zatoshi: string
+  toAddress: string
+  memo: string
+  fromAccountIndex: number
   spendingKey?: string
 }
 
-export type ZcashTransaction = {
-  rawTransactionId: string,
-  blockTimeInSeconds: number,
-  minedHeight: number,
-  value: string,
-  toAddress?: string,
+export interface ZcashTransaction {
+  rawTransactionId: string
+  blockTimeInSeconds: number
+  minedHeight: number
+  value: string
+  toAddress?: string
   memo?: string
 }
 
-export type ZcashPendingTransaction = {
-  alias: string,
-  txId: string,
+export interface ZcashPendingTransaction {
+  alias: string
+  txId: string
   raw: string
 }
 
-export type ZcashWalletBalance = {
-  alias: string,
-  availableZatoshi: string,
+export interface ZcashWalletBalance {
+  alias: string
+  availableZatoshi: string
   totalZatoshi: string
 }
 
-export type UnifiedViewingKey = {
-  extfvk: string,
+export interface UnifiedViewingKey {
+  extfvk: string
   extpub: string
 }
 
-export type ZcashInitializerConfig = {
-  networkName: string,
-  defaultHost: string,
-  defaultPort: number,
-  fullViewingKey: UnifiedViewingKey,
-  alias: string,
+export interface ZcashInitializerConfig {
+  networkName: string
+  defaultHost: string
+  defaultPort: number
+  fullViewingKey: UnifiedViewingKey
+  alias: string
   birthdayHeight: number
 }
 
@@ -66,42 +64,42 @@ export type ZcashSynchronizerStatus =
   | 'ENHANCING'
   | 'SYNCED'
 
-export type ZcashStatusEvent = {
-  alias: string,
+export interface ZcashStatusEvent {
+  alias: string
   name: ZcashSynchronizerStatus
 }
 
-export type ZcashUpdateEvent = {
-  alias: string,
-  isDownloading: boolean,
-  isScanning: boolean,
-  lastDownloadedHeight: number,
-  lastScannedHeight: number,
-  scanProgress: number, // 0 - 100
+export interface ZcashUpdateEvent {
+  alias: string
+  isDownloading: boolean
+  isScanning: boolean
+  lastDownloadedHeight: number
+  lastScannedHeight: number
+  scanProgress: number // 0 - 100
   networkBlockHeight: number
 }
 
 // Block range is inclusive
-export type ZcashBlockRange = {
-  first: number,
+export interface ZcashBlockRange {
+  first: number
   last: number
 }
 
-export type ZcashOtherData = {
-  alias: string,
+export interface ZcashOtherData {
+  alias: string
   blockRange: ZcashBlockRange
 }
 
-export type ZcashSynchronizer = {
+export interface ZcashSynchronizer {
   on: Subscriber<{
-    statusChanged: ZcashStatusEvent,
+    statusChanged: ZcashStatusEvent
     update: ZcashUpdateEvent
-  }>,
-  start: () => Promise<void>,
-  stop: () => Promise<void>,
-  getTransactions: (arg: ZcashBlockRange) => Promise<ZcashTransaction[]>,
-  rescan: (arg: number) => Promise<string>,
-  sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>,
+  }>
+  start: () => Promise<void>
+  stop: () => Promise<void>
+  getTransactions: (arg: ZcashBlockRange) => Promise<ZcashTransaction[]>
+  rescan: (arg: number) => Promise<string>
+  sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>
   getShieldedBalance: () => Promise<ZcashWalletBalance>
 }
 

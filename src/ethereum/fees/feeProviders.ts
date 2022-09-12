@@ -1,5 +1,3 @@
-
-
 import { div } from 'biggystring'
 import {
   EdgeCurrencyInfo,
@@ -21,12 +19,12 @@ import {
 } from '../ethConsts'
 import { EthGasStationSchema } from '../ethSchema'
 import {
+  asEthereumFees,
+  asEvmScanGasResponseResult,
   EthereumBaseMultiplier,
   EthereumFee,
   EthereumInitOptions,
-  EvmScanGasResponse,
-  asEthereumFees,
-  asEvmScanGasResponseResult
+  EvmScanGasResponse
 } from '../ethTypes'
 
 export const printFees = (log: EdgeLog, fees: Object) => {
@@ -38,9 +36,11 @@ export const printFees = (log: EdgeLog, fees: Object) => {
   }
 }
 
-export type FeeProviderFunction = () => Promise<EthereumBaseMultiplier | undefined>
-type FeeProviderMap = {
-  infoFeeProvider: () => Promise<EthereumFee>,
+export type FeeProviderFunction = () => Promise<
+  EthereumBaseMultiplier | undefined
+>
+interface FeeProviderMap {
+  infoFeeProvider: () => Promise<EthereumFee>
   externalFeeProviders: FeeProviderFunction[]
 }
 
@@ -53,9 +53,11 @@ export const FeeProviders = (
   const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
 
   return {
-    infoFeeProvider: () => fetchFeesFromInfoServer(fetch, currencyInfo),
+    infoFeeProvider: async () =>
+      await fetchFeesFromInfoServer(fetch, currencyInfo),
     externalFeeProviders: providerFns.map(
-      provider => () => provider(fetch, currencyInfo, initOptions, log)
+      provider => async () =>
+        await provider(fetch, currencyInfo, initOptions, log)
     )
   }
 }

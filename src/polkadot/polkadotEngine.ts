@@ -1,12 +1,10 @@
-
-
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -20,15 +18,15 @@ import {
 } from '../common/utils'
 import { PolkadotPlugin } from './polkadotPlugin'
 import {
+  asSubscanResponse,
+  asTransactions,
+  asTransfer,
   PolkadotSettings,
   SdkBalance,
   SdkBlockHeight,
   SdkPaymentInfo,
   SubscanResponse,
-  SubscanTx,
-  asSubscanResponse,
-  asTransactions,
-  asTransfer
+  SubscanTx
 } from './polkadotTypes'
 import { ApiPromise, Keyring } from './polkadotUtils'
 
@@ -153,7 +151,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   }
 
   async queryTransactions() {
-    return queryTxMutex(() => this.queryTransactionsInner())
+    return await queryTxMutex(async () => await this.queryTransactionsInner())
   }
 
   async queryTransactionsInner() {

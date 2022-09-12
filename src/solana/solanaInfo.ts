@@ -1,10 +1,6 @@
 /* global */
 
-
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo
-} from 'edge-core-js/types'
+import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeSolanaPluginInner } from './solanaPlugin'
 import { SolanaSettings } from './solanaTypes'

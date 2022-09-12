@@ -1,5 +1,3 @@
-
-
 import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
 
 export const asGetFioName = asObject({

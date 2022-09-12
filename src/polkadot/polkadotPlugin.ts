@@ -1,5 +1,3 @@
-
-
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -65,7 +63,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     if (type === this.pluginId) {
       const entropy = Buffer.from(this.io.random(32))
       const mnemonic = entropyToMnemonic(entropy)
-      return this.importPrivateKey(mnemonic)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -119,7 +117,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
       amount = div(nativeAmount, denom.multiplier, 10)
@@ -167,10 +165,10 @@ export function makePolkadotPluginInner(
   const { io } = opts
 
   let toolsPromise: Promise<PolkadotPlugin>
-  function makeCurrencyTools(): Promise<PolkadotPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<PolkadotPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new PolkadotPlugin(io, currencyInfo))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

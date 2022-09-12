@@ -1,12 +1,10 @@
-
-
 import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
 
-export type HederaSettings = {
-  creatorApiServers: [string],
-  mirrorNodes: [string],
-  client: string,
-  checksumNetworkID: string,
+export interface HederaSettings {
+  creatorApiServers: [string]
+  mirrorNodes: [string]
+  client: string
+  checksumNetworkID: string
   maxFee: number
 }
 

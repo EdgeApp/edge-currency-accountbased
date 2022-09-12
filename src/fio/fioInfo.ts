@@ -1,6 +1,5 @@
 /* global */
 
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { FIO_REQUESTS_TYPES } from './fioConst'

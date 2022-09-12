@@ -1,5 +1,3 @@
-
-
 export const FIO_REG_API_ENDPOINTS = {
   buyAddress: 'buy-address',
   getDomains: 'get-domains',
@@ -127,47 +125,47 @@ export const STAKING_REWARD_MEMO = 'Paying Staking Rewards'
 export const STAKING_LOCK_PERIOD = 1000 * 60 * 60 * 24 * 7 // 7 days
 export const DAY_INTERVAL = 1000 * 60 * 60 * 24
 
-export type FioRequest = {
-  fio_request_id: string,
-  payer_fio_address: string,
-  payee_fio_address: string,
-  payee_fio_public_key: string,
-  payer_fio_public_key: string,
-  amount: string,
-  token_code: string,
-  metadata: string,
-  time_stamp: string,
+export interface FioRequest {
+  fio_request_id: string
+  payer_fio_address: string
+  payee_fio_address: string
+  payee_fio_public_key: string
+  payer_fio_public_key: string
+  amount: string
+  token_code: string
+  metadata: string
+  time_stamp: string
   content: string
 }
 
-export type FioAddress = {
-  name: string,
+export interface FioAddress {
+  name: string
   bundledTxs?: number
 }
 
-export type FioDomain = {
-  name: string,
-  expiration: string,
+export interface FioDomain {
+  name: string
+  expiration: string
   isPublic: boolean
 }
 
-export type TxOtherParams = {
-  account: string,
-  name: string,
-  authorization: Array<{ actor: string, permission: string }>,
+export interface TxOtherParams {
+  account: string
+  name: string
+  authorization: Array<{ actor: string; permission: string }>
   data?: {
-    amount?: number,
-    max_fee?: number,
-    tpid?: string,
+    amount?: number
+    max_fee?: number
+    tpid?: string
     actor?: string
-  } & any,
+  } & any
   action?: {
-    name: string,
+    name: string
     params: any
-  },
+  }
   meta: {
-    isTransferProcessed?: boolean,
+    isTransferProcessed?: boolean
     isFeeProcessed?: boolean
-  },
+  }
   ui?: any
 }

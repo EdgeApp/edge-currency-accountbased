@@ -1,4 +1,3 @@
-
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -113,7 +112,7 @@ export class TezosPlugin extends CurrencyPlugin {
       publicAddress: address
     }
     edgeParsedUri.nativeAmount =
-      content && content.amount !== '0' ? content.amount : undefined
+      content != null && content.amount !== '0' ? content.amount : undefined
     edgeParsedUri.currencyCode = 'XTZ'
     return edgeParsedUri
   }
@@ -143,10 +142,10 @@ export function makeTezosPlugin(
   const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<TezosPlugin>
-  function makeCurrencyTools(): Promise<TezosPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<TezosPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new TezosPlugin(io, fetchCors))
-    return toolsPromise
+    return await toolsPromise
   }
   async function makeCurrencyEngine(
     walletInfo: EdgeWalletInfo,

@@ -1,5 +1,3 @@
-
-
 import { currencyInfo } from './fioInfo'
 
 export const fioApiErrorCodes = [400, 403, 404]
@@ -18,7 +16,7 @@ export const fioRegApiErrorCodes: { [string]: string } = {
 }
 
 export class FioError extends Error {
-  list: Array<{ field: string, message: string }>
+  list: Array<{ field: string; message: string }>
   labelCode: string
   errorCode: number
   json: any

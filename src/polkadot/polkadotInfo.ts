@@ -1,10 +1,6 @@
 /* global */
 
-
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo
-} from 'edge-core-js/types'
+import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makePolkadotPluginInner } from './polkadotPlugin'
 import { PolkadotSettings } from './polkadotTypes'

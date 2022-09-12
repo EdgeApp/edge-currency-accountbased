@@ -1,5 +1,3 @@
-
-
 import { makeAvalanchePlugin } from './info/avaxInfo'
 import { makeBinanceSmartChainPlugin } from './info/bscInfo'
 import { makeCeloPlugin } from './info/celoInfo'

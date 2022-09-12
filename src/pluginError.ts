@@ -1,12 +1,10 @@
-
-
 export const pluginErrorCodes = [400, 403, 404]
 export const pluginErrorName = {
   XRP_ERROR: 'XrpError'
 }
 
 export class PluginError extends Error {
-  list: Array<{ field: string, message: string }>
+  list: Array<{ field: string; message: string }>
   labelCode: string
   errorCode: number
   json: any

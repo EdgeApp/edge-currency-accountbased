@@ -1,4 +1,3 @@
-
 import { AddressTool, KeyTool, makeSynchronizer } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
@@ -15,15 +14,16 @@ export default function makePluginIo() {
   bridgifyObject(AddressTool)
 
   return {
-    fetchText(uri: string, opts: Object) {
-      return window.fetch(uri, opts).then(reply =>
-        reply.text().then(text => ({
-          ok: reply.ok,
-          status: reply.status,
-          statusText: reply.statusText,
-          url: reply.url,
-          text
-        }))
+    async fetchText(uri: string, opts: Object) {
+      return await window.fetch(uri, opts).then(
+        async reply =>
+          await reply.text().then(text => ({
+            ok: reply.ok,
+            status: reply.status,
+            statusText: reply.statusText,
+            url: reply.url,
+            text
+          }))
       )
     },
     KeyTool,

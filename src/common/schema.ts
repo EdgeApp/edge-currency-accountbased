@@ -1,5 +1,3 @@
-
-
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 
 import { safeErrorMessage } from './utils'

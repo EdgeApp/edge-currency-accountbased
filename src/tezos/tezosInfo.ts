@@ -1,4 +1,3 @@
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { TezosSettings } from './tezosTypes'

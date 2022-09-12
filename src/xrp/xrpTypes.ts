@@ -2,23 +2,22 @@
  * Created by paul on 8/26/17.
  */
 
-
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 
-export type XrpSettings = {
-  rippledServers: string[],
-  defaultFee: string,
+export interface XrpSettings {
+  rippledServers: string[]
+  defaultFee: string
   baseReserve: string
 }
 
-export type XrpCustomToken = {
-  currencyCode: string,
-  currencyName: string,
-  multiplier: string,
+export interface XrpCustomToken {
+  currencyCode: string
+  currencyName: string
+  multiplier: string
   contractAddress: string
 }
 
-export type XrpWalletOtherData = {
+export interface XrpWalletOtherData {
   recommendedFee: string // Floating point value in full XRP value
 }
 

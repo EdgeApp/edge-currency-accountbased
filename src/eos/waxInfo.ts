@@ -3,11 +3,7 @@
  */
 /* global fetch */
 
-
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo
-} from 'edge-core-js/types'
+import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeEosBasedPluginInner } from './eosPlugin'
 import { EosJsConfig, EosSettings } from './eosTypes'

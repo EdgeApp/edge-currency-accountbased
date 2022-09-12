@@ -1,4 +1,3 @@
-
 import {
   asArray,
   asNumber,
@@ -8,15 +7,15 @@ import {
   asUnknown
 } from 'cleaners'
 
-export type SolanaSettings = {
-  rpcNodes: string[],
-  commitment: 'confirmed' | 'finalized',
-  txQueryLimit: number,
-  derivationPath: string,
+export interface SolanaSettings {
+  rpcNodes: string[]
+  commitment: 'confirmed' | 'finalized'
+  txQueryLimit: number
+  derivationPath: string
   memoPublicKey: string
 }
 
-export type SolanaOtherData = {
+export interface SolanaOtherData {
   newestTxid: string
 }
 
@@ -24,9 +23,9 @@ export const asRpcBalance = asObject({
   value: asNumber
 })
 
-export type RpcSignatureForAddress = {
-  signature: string,
-  blocktime?: number,
+export interface RpcSignatureForAddress {
+  signature: string
+  blocktime?: number
   err?: any
 }
 

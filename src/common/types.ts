@@ -2,7 +2,6 @@
  * Created by paul on 8/26/17.
  */
 
-
 import { EdgeTransaction } from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
@@ -10,16 +9,22 @@ export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
 export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
 export const TRANSACTION_STORE_FILE = 'txEngineFolder/transactionList.json'
 
-export type CustomToken = {
-  currencyCode: string,
-  currencyName: string,
-  multiplier: string,
+export interface CustomToken {
+  currencyCode: string
+  currencyName: string
+  multiplier: string
   contractAddress: string
 }
 
-export type TxIdMap = { [currencyCode: string]: { [txid: string]: number } }
-export type TxIdList = { [currencyCode: string]: string[] }
-export type TransactionList = { [currencyCode: string]: EdgeTransaction[] }
+export interface TxIdMap {
+  [currencyCode: string]: { [txid: string]: number }
+}
+export interface TxIdList {
+  [currencyCode: string]: string[]
+}
+export interface TransactionList {
+  [currencyCode: string]: EdgeTransaction[]
+}
 
 export class WalletLocalData {
   blockHeight: number

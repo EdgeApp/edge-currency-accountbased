@@ -1,5 +1,3 @@
-
-
 import { makeEosPlugin } from './eosInfo'
 import { makeTelosPlugin } from './telosInfo'
 import { makeWaxPlugin } from './waxInfo'

@@ -1,5 +1,3 @@
-
-
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyInfo,
@@ -29,7 +27,8 @@ export const getOtherMethods = (
       throw new Error('ErrorUnableToGetCost')
     }
   },
-  validateAccount: () => Promise.resolve({ result: 'AccountAvailable' })
+  validateAccount: async () =>
+    await Promise.resolve({ result: 'AccountAvailable' })
 })
 
 export const validAddress = (address: string = ''): boolean => {
