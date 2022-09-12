@@ -1,13 +1,33 @@
 {
   "extends": [
     "standard-kit/prettier",
-    "standard-kit/prettier/flow",
+    "standard-kit/prettier/typescript",
     "standard-kit/prettier/node"
   ],
-  "plugins": [
-    "simple-import-sort"
-  ],
+  "parserOptions": {
+    "project": "tsconfig.json"
+  },
+  "plugins": ["json-files", "simple-import-sort"],
   "rules": {
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "ignoreRestSiblings": true,
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "@typescript-eslint/restrict-template-expressions": "off",
+    "no-unused-vars": "off",
+    "no-useless-return": "off",
+    "no-void": "off",
     "simple-import-sort/imports": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": "package.json",
+      "rules": {
+        "json-files/sort-package-json": "error"
+      }
+    }
+  ]
 }

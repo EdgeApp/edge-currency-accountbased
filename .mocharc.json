@@ -1,0 +1,16 @@
+{
+  "extension": ["ts"],
+  "spec": "test/**/*.test.ts",
+  "require": "sucrase/register",
+  "colors": true,
+  "reporter":"mocha-multi-reporters",
+  "reporterOption": "configFile=.mocharc.json",
+  "reporterEnabled": "mochawesome,mocha-junit-reporter",
+    "mochaJunitReporterReporterOptions": {
+        "mochaFile": "./coverage/junit.xml"
+    },
+    "mochawesomeReporterOptions": {
+      "reportDir": "coverage",
+      "reportName": "mochawesome"
+    }
+}
