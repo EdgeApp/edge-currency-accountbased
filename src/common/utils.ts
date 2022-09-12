@@ -1,6 +1,5 @@
 /**
  * Created by paul on 8/26/17.
- * @flow
  */
 
 import { add, mul } from 'biggystring'
@@ -110,24 +109,24 @@ function getDenomInfo(
   })
 
   // Look in the currencyInfo tokens
-  if (!edgeDenomination) {
+  if (edgeDenomination == null) {
     for (const metaToken of currencyInfo.metaTokens) {
       edgeDenomination = metaToken.denominations.find(element => {
         return element.name === denom
       })
-      if (edgeDenomination) {
+      if (edgeDenomination != null) {
         break
       }
     }
   }
 
   // Look in custom tokens
-  if (!edgeDenomination && customTokens) {
+  if (edgeDenomination == null && customTokens != null) {
     for (const metaToken of customTokens) {
       edgeDenomination = metaToken.denominations.find(element => {
         return element.name === denom
       })
-      if (edgeDenomination) {
+      if (edgeDenomination != null) {
         break
       }
     }
@@ -135,13 +134,15 @@ function getDenomInfo(
   return edgeDenomination
 }
 
-const snoozeReject: Function = (ms: number) =>
-  new Promise((resolve: Function, reject: Function) => setTimeout(reject, ms))
-const snooze: Function = (ms: number) =>
-  new Promise((resolve: Function) => setTimeout(resolve, ms))
+const snoozeReject: Function = async (ms: number) =>
+  await new Promise((resolve: Function, reject: Function) =>
+    setTimeout(reject, ms)
+  )
+const snooze: Function = async (ms: number) =>
+  await new Promise((resolve: Function) => setTimeout(resolve, ms))
 
-function promiseAny(promises: Promise<any>[]): Promise<any> {
-  return new Promise((resolve: Function, reject: Function) => {
+async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
+  return await new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
       promise.then(
@@ -162,12 +163,12 @@ function promiseAny(promises: Promise<any>[]): Promise<any> {
  * n number of promises resolve to identical keys.
  */
 async function promiseNy<T>(
-  promises: Promise<T>[],
+  promises: Array<Promise<T>>,
   checkResult: (arg: T) => string | undefined,
   n?: number = promises.length
 ): Promise<T> {
   const map: { [key: string]: number } = {}
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     let resolved = 0
     let failed = 0
     let done = false
@@ -204,12 +205,12 @@ async function promiseNy<T>(
  * If the promise doesn't resolve in the given time,
  * reject it with the provided error, or a generic error if none is provided.
  */
-function timeout<T>(
+async function timeout<T>(
   promise: Promise<T>,
   ms: number,
   error: Error = new Error(`Timeout of ${ms}ms exceeded`)
 ): Promise<T> {
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(error), ms)
     promise.then(
       ok => {
@@ -224,14 +225,14 @@ function timeout<T>(
   })
 }
 
-type AsyncFunction = void => Promise<any>
+type AsyncFunction = () => Promise<any>
 
 async function asyncWaterfall(
   asyncFuncs: AsyncFunction[],
   timeoutMs: number = 5000
 ): Promise<any> {
   let pending = asyncFuncs.length
-  const promises: Promise<any>[] = []
+  const promises: Array<Promise<any>> = []
   for (const func of asyncFuncs) {
     const index = promises.length
     promises.push(
@@ -288,7 +289,7 @@ function getEdgeInfoServer() {
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
-export function getOtherParams<T: JsonObject>(tx: EdgeTransaction): T {
+export function getOtherParams<T extends JsonObject>(tx: EdgeTransaction): T {
   const otherParams: any = tx.otherParams
   if (otherParams == null) {
     throw new TypeError('Transaction is missing otherParams')
@@ -315,7 +316,7 @@ export function makeMutex(): Mutex {
     if (busy) await new Promise(resolve => queue.push(resolve))
     try {
       busy = true
-      return callback()
+      return await callback()
     } finally {
       busy = false
       const resolve = queue.shift()
@@ -373,11 +374,11 @@ function getFetchCors(opts: EdgeCorePluginOptions): Function {
       status: reply.status,
       statusText: reply.statusText,
       url: reply.url,
-      json() {
-        return Promise.resolve().then(() => JSON.parse(reply.text))
+      async json() {
+        return await Promise.resolve().then(() => JSON.parse(reply.text))
       },
-      text() {
-        return Promise.resolve(reply.text)
+      async text() {
+        return await Promise.resolve(reply.text)
       }
     }))
   }

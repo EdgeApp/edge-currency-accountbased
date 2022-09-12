@@ -2,7 +2,6 @@
  * Created by paul on 8/26/17.
  */
 
-
 import WalletConnect from '@walletconnect/client'
 import {
   asArray,
@@ -18,49 +17,49 @@ import {
 } from 'cleaners'
 import { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
-export type EthereumInitOptions = {
-  blockcypherApiKey?: string,
-  evmScanApiKey?: string | string[],
-  infuraProjectId?: string,
-  blockchairApiKey?: string,
-  alethioApiKey?: string,
-  amberdataApiKey?: string,
-  gasStationApiKey?: string,
-  quiknodeApiKey?: string,
+export interface EthereumInitOptions {
+  blockcypherApiKey?: string
+  evmScanApiKey?: string | string[]
+  infuraProjectId?: string
+  blockchairApiKey?: string
+  alethioApiKey?: string
+  amberdataApiKey?: string
+  gasStationApiKey?: string
+  quiknodeApiKey?: string
   alchemyApiKey?: string
 }
 
-export type EthereumSettings = {
-  alethioApiServers: string[],
-  feeUpdateFrequencyMs?: number,
+export interface EthereumSettings {
+  alethioApiServers: string[]
+  feeUpdateFrequencyMs?: number
   alethioCurrencies: {
-    native: string,
+    native: string
     token: string
-  } | null,
-  amberdataApiServers: string[],
-  amberDataBlockchainId: string,
-  amberdataRpcServers: string[],
-  blockbookServers: string[],
-  blockchairApiServers: string[],
-  blockcypherApiServers: string[],
+  } | null
+  amberdataApiServers: string[]
+  amberDataBlockchainId: string
+  amberdataRpcServers: string[]
+  blockbookServers: string[]
+  blockchairApiServers: string[]
+  blockcypherApiServers: string[]
   chainParams: {
-    chainId: number,
+    chainId: number
     name: string
-  },
-  supportsEIP1559?: boolean,
-  checkUnconfirmedTransactions: boolean,
+  }
+  supportsEIP1559?: boolean
+  checkUnconfirmedTransactions: boolean
   // eslint-disable-next-line no-use-before-define
-  defaultNetworkFees: EthereumFees,
-  ercTokenStandard: string,
-  evmScanApiServers: string[],
-  ethGasStationUrl: string | null,
-  hdPathCoinType: number,
+  defaultNetworkFees: EthereumFees
+  ercTokenStandard: string
+  evmScanApiServers: string[]
+  ethGasStationUrl: string | null
+  hdPathCoinType: number
   iosAllowedTokens: {
     [currencyCode: string]: true
-  },
-  pluginMnemonicKeyName: string,
-  pluginRegularKeyName: string,
-  rpcServers: string[],
+  }
+  pluginMnemonicKeyName: string
+  pluginRegularKeyName: string
+  rpcServers: string[]
   uriNetworks: string[]
 }
 
@@ -98,7 +97,9 @@ export const asEthereumBaseFeeMultiplier = asObject({
   highFee: asString
 })
 
-export type EthereumBaseMultiplier = ReturnType<typeof asEthereumBaseFeeMultiplier>
+export type EthereumBaseMultiplier = ReturnType<
+  typeof asEthereumBaseFeeMultiplier
+>
 
 export const asEthereumFee = asObject({
   baseFeeMultiplier: asOptional(asEthereumBaseFeeMultiplier),
@@ -113,15 +114,15 @@ export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
 
 export type EthereumFees = ReturnType<typeof asEthereumFees>
 
-export type EthereumCalcedFees = {
-  gasPrice: string,
-  gasLimit: string,
+export interface EthereumCalcedFees {
+  gasPrice: string
+  gasLimit: string
   useDefaults: boolean
 }
 
-export type LastEstimatedGasLimit = {
-  publicAddress: string,
-  contractAddress: string | undefined,
+export interface LastEstimatedGasLimit {
+  publicAddress: string
+  contractAddress: string | undefined
   gasLimit: string
 }
 
@@ -144,7 +145,9 @@ export const asEvmScancanTokenTransaction = asObject({
   tokenDecimal: asString
 })
 
-export type EvmScanTokenTransaction = ReturnType<typeof asEvmScancanTokenTransaction>
+export type EvmScanTokenTransaction = ReturnType<
+  typeof asEvmScancanTokenTransaction
+>
 
 export const asEvmScanTransaction = asObject({
   hash: asOptional(asString),
@@ -178,7 +181,7 @@ export const asEvmScanInternalTransaction = asObject({
   contractAddress: asOptional(asString)
 })
 
-export type EvmScanInternalTransaction = $Call<
+export type EvmScanInternalTransaction = ReturnType<
   typeof asEvmScanInternalTransaction
 >
 
@@ -201,47 +204,47 @@ export const asEvmScanGasResponse = asObject({
 
 export type EvmScanGasResponse = ReturnType<typeof asEvmScanGasResponse>
 
-export type EthereumTxOtherParams = {
-  from: string[],
-  to: string[],
-  gas: string,
-  gasPrice: string,
-  gasUsed: string,
-  tokenRecipientAddress?: string,
-  nonceUsed?: string,
-  rbfTxid?: string,
+export interface EthereumTxOtherParams {
+  from: string[]
+  to: string[]
+  gas: string
+  gasPrice: string
+  gasUsed: string
+  tokenRecipientAddress?: string
+  nonceUsed?: string
+  rbfTxid?: string
   data?: string | null
 }
 
-export type EthereumWalletOtherData = {
-  nextNonce: string,
-  unconfirmedNextNonce: string,
+export interface EthereumWalletOtherData {
+  nextNonce: string
+  unconfirmedNextNonce: string
   networkFees: EthereumFees
 }
 
-export type AlethioTokenTransferAttributes = {
-  blockCreationTime: number,
-  symbol: string,
-  fee: string | undefined,
-  value: string,
+export interface AlethioTokenTransferAttributes {
+  blockCreationTime: number
+  symbol: string
+  fee: string | undefined
+  value: string
   globalRank: number[]
 }
 
-export type AlethioTransactionDataObj = {
-  data: { id: string },
+export interface AlethioTransactionDataObj {
+  data: { id: string }
   links: { related: string }
 }
 
-export type AlethioTransactionRelationships = {
-  from: AlethioTransactionDataObj,
-  to: AlethioTransactionDataObj,
-  transaction: AlethioTransactionDataObj,
+export interface AlethioTransactionRelationships {
+  from: AlethioTransactionDataObj
+  to: AlethioTransactionDataObj
+  transaction: AlethioTransactionDataObj
   token: AlethioTransactionDataObj
 }
 
-export type AlethioTokenTransfer = {
-  type: string,
-  attributes: AlethioTokenTransferAttributes,
+export interface AlethioTokenTransfer {
+  type: string
+  attributes: AlethioTokenTransferAttributes
   relationships: AlethioTransactionRelationships
 }
 
@@ -292,7 +295,9 @@ export const asCheckTokenBalBlockchair = asObject({
   )
 })
 
-export type CheckTokenBalBlockchair = ReturnType<typeof asCheckTokenBalBlockchair>
+export type CheckTokenBalBlockchair = ReturnType<
+  typeof asCheckTokenBalBlockchair
+>
 
 export const asCheckBlockHeightBlockchair = asObject({
   data: asObject({
@@ -327,34 +332,34 @@ export const asRpcResultString = asObject({
 
 export type RpcResultString = ReturnType<typeof asRpcResultString>
 
-export type TxRpcParams = {
-  from?: string,
-  to: string,
-  data: string,
-  gas: string,
-  gasPrice: string,
-  value?: string,
+export interface TxRpcParams {
+  from?: string
+  to: string
+  data: string
+  gas: string
+  gasPrice: string
+  value?: string
   nonce?: string
 }
 
-type EIP712TypeData = {
-  name: string,
+interface EIP712TypeData {
+  name: string
   type: string
 }
 
-export type EIP712TypedDataParam = {
+export interface EIP712TypedDataParam {
   types: {
-    EIP712Domain: [EIP712TypeData],
+    EIP712Domain: [EIP712TypeData]
     [type: string]: [EIP712TypeData]
-  },
-  primaryType: string,
-  domain: Object,
+  }
+  primaryType: string
+  domain: Object
   message: Object
 }
 
-export type EthereumUtils = {
-  signMessage: (message: string) => string,
-  signTypedData: (typedData: Object) => string,
+export interface EthereumUtils {
+  signMessage: (message: string) => string
+  signTypedData: (typedData: Object) => string
   txRpcParamsToSpendInfo: (
     params: TxRpcParams,
     currencyCode: string
@@ -396,17 +401,16 @@ const asWcDappDetails = asObject({
 })
 
 export type WcDappDetails = {
-  ...ReturnType<typeof asWcDappDetails>,
   timeConnected: number
-}
+} & ReturnType<typeof asWcDappDetails>
 
-export type Dapp = { ...WcProps, ...WcDappDetails, timeConnected: number }
+export type Dapp = { timeConnected: number } & WcProps & WcDappDetails
 
-export type WalletConnectors = {
+export interface WalletConnectors {
   [uri: string]: {
-    connector: WalletConnect,
-    wcProps: WcProps,
-    dApp: WcDappDetails,
+    connector: WalletConnect
+    wcProps: WcProps
+    dApp: WcDappDetails
     walletId?: string
   }
 }
@@ -415,27 +419,27 @@ export const asWcSessionRequestParams = asObject({
   params: asArray(asWcDappDetails)
 })
 
-export type EthereumOtherMethods = {
-  personal_sign: (params: string[]) => string,
-  eth_sign: (params: string[]) => string,
-  eth_signTypedData: (params: string[]) => string,
-  eth_signTypedData_v4: (params: string[]) => string,
+export interface EthereumOtherMethods {
+  personal_sign: (params: string[]) => string
+  eth_sign: (params: string[]) => string
+  eth_signTypedData: (params: string[]) => string
+  eth_signTypedData_v4: (params: string[]) => string
   eth_sendTransaction: (
     params: TxRpcParams,
     currencyCode: string
-  ) => Promise<EdgeTransaction>,
+  ) => Promise<EdgeTransaction>
   eth_signTransaction: (
     params: TxRpcParams,
     currencyCode: string
-  ) => Promise<EdgeTransaction>,
-  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>,
-  wcInit(wcProps: WcProps): Promise<WcDappDetails>,
-  wcConnect: (uri: string, publicKey: string, walletId: string) => void,
-  wcDisconnect: (uri: string) => void,
+  ) => Promise<EdgeTransaction>
+  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
+  wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
+  wcConnect: (uri: string, publicKey: string, walletId: string) => void
+  wcDisconnect: (uri: string) => void
   wcRequestResponse: (
     uri: string,
     approve: boolean,
     payload: WcRpcPayload
-  ) => Promise<void>,
+  ) => Promise<void>
   wcGetConnections: () => Dapp[]
 }
