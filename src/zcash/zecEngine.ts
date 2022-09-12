@@ -1,6 +1,4 @@
-
-
-import { bns } from 'biggystring'
+import { abs, add, eq, gt, lte, sub } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
@@ -231,7 +229,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     const ourReceiveAddresses = []
     if (tx.toAddress != null) {
       // check if tx is a spend
-      netNativeAmount = `-${bns.add(
+      netNativeAmount = `-${add(
         netNativeAmount,
         this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
       )}`
@@ -275,11 +273,11 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    const spendableBalance = bns.sub(
+    const spendableBalance = sub(
       this.availableZatoshi,
       this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
     )
-    if (bns.lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
     return spendableBalance
   }
@@ -294,15 +292,15 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    if (bns.eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
+    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
-    const totalTxAmount = bns.add(
+    const totalTxAmount = add(
       nativeAmount,
       this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
     )
 
     if (
-      bns.gt(
+      gt(
         totalTxAmount,
         this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
       )
@@ -310,7 +308,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
       throw new InsufficientFundsError()
     }
 
-    if (bns.gt(totalTxAmount, this.availableZatoshi)) {
+    if (gt(totalTxAmount, this.availableZatoshi)) {
       throw new InsufficientFundsError('Amount exceeds available balance')
     }
 
@@ -357,8 +355,8 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
 
     const spendTarget = edgeTransaction.spendTargets[0]
     const txParams: ZcashSpendInfo = {
-      zatoshi: bns.sub(
-        bns.abs(edgeTransaction.nativeAmount),
+      zatoshi: sub(
+        abs(edgeTransaction.nativeAmount),
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { bns } from 'biggystring'
+import { add, mul } from 'biggystring'
 import { Buffer } from 'buffer'
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 import {
@@ -61,7 +61,7 @@ export function isHex(h: string) {
 }
 
 export function toHex(num: string) {
-  return bns.add(num, '0', 16)
+  return add(num, '0', 16)
 }
 
 export function hexToBuf(hex: string) {
@@ -86,11 +86,11 @@ export function removeHexPrefix(value: string) {
 }
 
 export function hexToDecimal(num: string) {
-  return bns.add(num, '0', 10)
+  return add(num, '0', 10)
 }
 
 export function decimalToHex(num: string) {
-  return bns.add(num, '0', 16)
+  return add(num, '0', 16)
 }
 
 export function bufToHex(buf: any) {
@@ -357,7 +357,7 @@ export function biggyScience(num: string): string {
   // exit early if the number is not in scientific notation
   if (exponent == null) return num
 
-  return bns.mul(factor, '1' + '0'.repeat(parseInt(exponent))).toString()
+  return mul(factor, '1' + '0'.repeat(parseInt(exponent))).toString()
 }
 
 /**
@@ -418,7 +418,7 @@ export function mergeDeeply(...objects: any[]): any {
 export function biggyRoundToNearestInt(float: string): string {
   const [int, dec] = float.split('.')
   if (dec == null) return int
-  if (parseInt(dec[0]) >= 5) return bns.add(int, '1')
+  if (parseInt(dec[0]) >= 5) return add(int, '1')
   return int
 }
 

@@ -1,7 +1,6 @@
-
 /* eslint-disable camelcase */
 
-import { bns } from 'biggystring'
+import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
@@ -171,7 +170,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
               server => async () => {
                 const uri = `${server}/api/v1/activateAccount`
                 const response = await fetchCors(uri, options)
-                return response.json()
+                return await response.json()
               }
             ),
             15000
@@ -234,13 +233,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     const currencyCode = symbol
     const ourReceiveAddresses = []
     const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
-    if (!denom) {
+    if (denom == null) {
       this.error(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
       )
       return 0
     }
-    let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+    let nativeAmount = mul(exchangeAmount, denom.multiplier)
     let name = ''
     if (to === this.walletLocalData.otherData.accountName) {
       name = from
@@ -278,10 +277,9 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   processOutgoingTransaction(action: EosTransaction): number {
     const ourReceiveAddresses = []
     // Hyperion nodes return a UTC timestamp without the Z suffix. We need to add it to parse it accurately.
-    const timestamp =
-      action['@timestamp'].indexOf('Z') === -1
-        ? action['@timestamp'] + 'Z'
-        : action['@timestamp']
+    const timestamp = !action['@timestamp'].includes('Z')
+      ? action['@timestamp'] + 'Z'
+      : action['@timestamp']
     const date = Date.parse(timestamp) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
     if (!action.block_num) {
@@ -319,13 +317,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         this.allTokens
       )
       // if invalid currencyCode then don't count as valid transaction
-      if (!denom) {
+      if (denom == null) {
         this.error(
           `processOutgoingTransaction Received unsupported currencyCode: ${currencyCode}`
         )
         return 0
       }
-      let nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+      let nativeAmount = mul(exchangeAmount, denom.multiplier)
       // if sending to one's self
       if (to === this.walletLocalData.otherData.accountName) {
         ourReceiveAddresses.push(to)
@@ -850,8 +848,8 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                       currencyCode,
                       [...this.customTokens, ...this.allTokens]
                     )
-                    if (denom && denom.multiplier) {
-                      nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+                    if (denom != null && denom.multiplier) {
+                      nativeAmount = mul(exchangeAmount, denom.multiplier)
                     } else {
                       this.log(
                         `Received balance for unsupported currencyCode: ${currencyCode}`
@@ -917,14 +915,14 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { defaultSettings } = this.currencyInfo
     const tokenInfo = this.getTokenInfo(currencyCode)
-    if (!tokenInfo) throw new Error('Unable to find token info')
+    if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress } = tokenInfo
     const nativeDenomination = getDenomInfo(
       this.currencyInfo,
       currencyCode,
       this.allTokens
     )
-    if (!nativeDenomination) {
+    if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
     }
     const nativePrecision = nativeDenomination.multiplier.length - 1
@@ -941,7 +939,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     // Check if destination address is activated
     let mustCreateAccount = false
     const activated = this.activatedAccountsCache[publicAddress]
-    if (activated !== undefined && activated === false) {
+    if (activated !== undefined && !activated) {
       mustCreateAccount = true
     } else if (activated === undefined) {
       try {
@@ -961,24 +959,20 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       throw new Error('ErrorAccountNotActivated')
     }
 
-    if (bns.eq(nativeAmount, '0')) {
+    if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
-    const exchangeAmount = bns.div(
-      nativeAmount,
-      denom.multiplier,
-      nativePrecision
-    )
+    const exchangeAmount = div(nativeAmount, denom.multiplier, nativePrecision)
     const networkFee = '0'
-    if (bns.gt(nativeAmount, nativeBalance)) {
+    if (gt(nativeAmount, nativeBalance)) {
       throw new InsufficientFundsError()
     }
 
     const quantity =
-      bns.toFixed(exchangeAmount, nativePrecision) + ` ${currencyCode}`
+      toFixed(exchangeAmount, nativePrecision) + ` ${currencyCode}`
     let memo = ''
     if (
-      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams != null &&
       typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier ===
         'string'
     ) {
@@ -1055,7 +1049,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   //   // edgeSpendInfo.spendTargets[0].nativeAmount
   //   //
   //   // Throw if this currency cannot spend a 0 amount
-  //   // if (bns.eq(nativeAmount, '0')) {
+  //   // if (eq(nativeAmount, '0')) {
   //   //   throw (new error.NoAmountSpecifiedError())
   //   // }
 

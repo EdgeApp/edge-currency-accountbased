@@ -2,9 +2,8 @@
  * Created by paul on 7/7/17.
  */
 
-
 import { BncClient } from '@binance-chain/javascript-sdk'
-import { bns } from 'biggystring'
+import { add, gt, mul, sub } from 'biggystring'
 import {
   EdgeSpendInfo,
   EdgeTransaction,
@@ -31,10 +30,7 @@ import {
   BinanceApiGetTransactions,
   BinanceApiNodeInfo
 } from './bnbSchema'
-import {
-  BinanceApiTransaction,
-  BinanceTxOtherParams
-} from './bnbTypes'
+import { BinanceApiTransaction, BinanceTxOtherParams } from './bnbTypes'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -106,7 +102,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         `The server returned error code ${response.status} for ${url}`
       )
     }
-    return response.json()
+    return await response.json()
   }
 
   async checkBlockchainInnerLoop() {
@@ -150,13 +146,13 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
           for (const balance of jsonObj.balances) {
             if (balance.symbol === tk) {
               const denom = getDenomInfo(this.currencyInfo, tk)
-              if (!denom) {
+              if (denom == null) {
                 this.error(
                   `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
                 )
                 break
               }
-              const nativeAmount = bns.mul(balance.free, denom.multiplier)
+              const nativeAmount = mul(balance.free, denom.multiplier)
               this.updateBalance(tk, nativeAmount)
             }
           }
@@ -180,24 +176,24 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   ) {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
-    const nativeNetworkFee: string = bns.mul(tx.txFee, NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
-    const nativeValue = bns.mul(tx.value, NATIVE_UNIT_MULTIPLIER)
+    const nativeNetworkFee: string = mul(tx.txFee, NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
+    const nativeValue = mul(tx.value, NATIVE_UNIT_MULTIPLIER)
     if (
       tx.fromAddr.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
       // if it's a send to one's self
       if (tx.fromAddr.toLowerCase() === tx.toAddr.toLowerCase()) {
         // Spend to self. netNativeAmount is just the fee
-        netNativeAmount = bns.mul(nativeNetworkFee, '-1')
+        netNativeAmount = mul(nativeNetworkFee, '-1')
       } else {
-        netNativeAmount = bns.sub('0', nativeValue)
+        netNativeAmount = sub('0', nativeValue)
 
         // For spends, include the network fee in the transaction amount
-        netNativeAmount = bns.sub(netNativeAmount, nativeNetworkFee)
+        netNativeAmount = sub(netNativeAmount, nativeNetworkFee)
       }
     } else {
       // Receive transaction
-      netNativeAmount = bns.add('0', nativeValue)
+      netNativeAmount = add('0', nativeValue)
       // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
@@ -447,7 +443,10 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         contractAddress = publicAddress
       } else {
         const tokenInfo = this.getTokenInfo(currencyCode)
-        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+        if (
+          tokenInfo == null ||
+          typeof tokenInfo.contractAddress !== 'string'
+        ) {
           throw new Error(
             'Error: Token not supported or invalid contract address'
           )
@@ -466,7 +465,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       otherParams = bnbParams
     }
     if (
-      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams != null &&
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
       otherParams.memo =
@@ -483,11 +482,11 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
 
     let totalTxAmount = '0'
-    totalTxAmount = bns.add(nativeAmount, nativeNetworkFee)
-    if (bns.gt(totalTxAmount, balanceBnb)) {
+    totalTxAmount = add(nativeAmount, nativeNetworkFee)
+    if (gt(totalTxAmount, balanceBnb)) {
       throw new InsufficientFundsError()
     }
-    nativeAmount = bns.mul(totalTxAmount, '-1')
+    nativeAmount = mul(totalTxAmount, '-1')
 
     // **********************************
     // Create the unsigned EdgeTransaction
@@ -518,13 +517,13 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     await bnbClient.setPrivateKey(privKey)
     await bnbClient.initChain()
     const currencyCode = edgeTransaction.currencyCode
-    const spendAmount = bns.add(
+    const spendAmount = add(
       edgeTransaction.nativeAmount,
       NETWORK_FEE_NATIVE_AMOUNT
     )
     const amount = spendAmount.replace('-', '')
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
-    if (!denom) {
+    if (denom == null) {
       this.error(`signTx Received unsupported currencyCode: ${currencyCode}`)
       throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
     }

@@ -1,6 +1,4 @@
-
-
-import { bns } from 'biggystring'
+import { eq, gt, lt } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
@@ -137,14 +135,14 @@ export class CurrencyEngine<T> {
       if (edgeTransaction.nativeAmount.slice(0, 1) === '-') {
         return true
       }
-      if (bns.gt(edgeTransaction.nativeAmount, '0')) {
+      if (gt(edgeTransaction.nativeAmount, '0')) {
         return false
       }
     }
     let out = true
     if (
       edgeTransaction.ourReceiveAddresses &&
-      edgeTransaction.ourReceiveAddresses.length
+      edgeTransaction.ourReceiveAddresses.length > 0
     ) {
       for (const addr of edgeTransaction.ourReceiveAddresses) {
         if (addr === this.walletLocalData.publicKey) {
@@ -312,8 +310,13 @@ export class CurrencyEngine<T> {
 
     // Add all the enabled known tokens
     const addTokenPromises = this.allTokens.map(
-      ({ currencyCode, contractAddress = '', currencyName, denominations }) =>
-        this.currencyPlugin
+      async ({
+        currencyCode,
+        contractAddress = '',
+        currencyName,
+        denominations
+      }) =>
+        await this.currencyPlugin
           .getTokenId({
             currencyCode,
             displayName: currencyName,
@@ -370,7 +373,7 @@ export class CurrencyEngine<T> {
   ) {
     this.log('executing addTransaction: ', edgeTransaction.txid)
     // set otherParams if not already set
-    if (!edgeTransaction.otherParams) {
+    if (edgeTransaction.otherParams == null) {
       edgeTransaction.otherParams = {}
     }
 
@@ -532,7 +535,7 @@ export class CurrencyEngine<T> {
     if (this.walletLocalData.totalBalances[tk] == null) {
       this.walletLocalData.totalBalances[tk] = '0'
     }
-    if (!bns.eq(balance, this.walletLocalData.totalBalances[tk])) {
+    if (!eq(balance, this.walletLocalData.totalBalances[tk])) {
       this.walletLocalData.totalBalances[tk] = balance
       this.walletLocalDataDirty = true
       this.warn(`${tk}: token Address balance: ${balance}`)
@@ -794,8 +797,8 @@ export class CurrencyEngine<T> {
       throw new Error('ErrorInvalidCurrencyNameLength')
     }
     if (
-      bns.lt(tokenObj.multiplier, '1') ||
-      bns.gt(tokenObj.multiplier, '100000000000000000000000000000000')
+      lt(tokenObj.multiplier, '1') ||
+      gt(tokenObj.multiplier, '100000000000000000000000000000000')
     ) {
       throw new Error('ErrorInvalidMultiplier')
     }
@@ -929,10 +932,10 @@ export class CurrencyEngine<T> {
   }
 
   makeSpendCheck(edgeSpendInfo: EdgeSpendInfo): {
-    edgeSpendInfo: EdgeSpendInfo,
-    nativeBalance: string,
-    currencyCode: string,
-    denom: EdgeDenomination,
+    edgeSpendInfo: EdgeSpendInfo
+    nativeBalance: string
+    currencyCode: string
+    denom: EdgeDenomination
     skipChecks: boolean
   } {
     const { skipChecks = false } = edgeSpendInfo
@@ -957,7 +960,7 @@ export class CurrencyEngine<T> {
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    if (!skipChecks && (!nativeBalance || bns.eq(nativeBalance, '0'))) {
+    if (!skipChecks && (!nativeBalance || eq(nativeBalance, '0'))) {
       throw new InsufficientFundsError()
     }
 
@@ -967,7 +970,7 @@ export class CurrencyEngine<T> {
       currencyCode,
       this.customTokens
     )
-    if (!denom) {
+    if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }
 

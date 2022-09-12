@@ -2,9 +2,8 @@
  * Created by paul on 8/8/17.
  */
 
-
 import { crypto } from '@binance-chain/javascript-sdk'
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
@@ -118,10 +117,10 @@ export class BinancePlugin extends CurrencyPlugin {
         currencyCode || 'BNB',
         customTokens
       )
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 18)
+      amount = div(nativeAmount, denom.multiplier, 18)
     }
     const encodedUri = this.encodeUriCommon(obj, 'binance', amount)
     return encodedUri
@@ -134,10 +133,10 @@ export function makeBinancePlugin(
   const { io, initOptions } = opts
 
   let toolsPromise: Promise<BinancePlugin>
-  function makeCurrencyTools(): Promise<BinancePlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<BinancePlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new BinancePlugin(io))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

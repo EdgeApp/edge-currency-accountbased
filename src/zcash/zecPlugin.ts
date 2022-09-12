@@ -1,6 +1,4 @@
-
-
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
@@ -19,7 +17,7 @@ import { CurrencyPlugin } from '../common/plugin'
 import { getDenomInfo } from '../common/utils'
 import { ZcashEngine } from './zecEngine'
 import { currencyInfo } from './zecInfo'
-import { UnifiedViewingKey, asBlockchairInfo } from './zecTypes'
+import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
 
 export class ZcashPlugin extends CurrencyPlugin {
   pluginId: string
@@ -77,7 +75,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     if (type === `${this.pluginId}`) {
       const entropy = Buffer.from(this.io.random(32)).toString('hex')
       const mnemonic = entropyToMnemonic(entropy)
-      return this.importPrivateKey(mnemonic)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -149,10 +147,10 @@ export class ZcashPlugin extends CurrencyPlugin {
         currencyCode || `${this.currencyInfo.currencyCode}`,
         customTokens
       )
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 18)
+      amount = div(nativeAmount, denom.multiplier, 18)
     }
     const encodedUri = this.encodeUriCommon(obj, `${this.pluginId}`, amount)
     return encodedUri
@@ -169,10 +167,10 @@ export function makeZcashPlugin(
   const RNAccountbased = opts.nativeIo['edge-currency-accountbased']
   const { KeyTool, AddressTool, makeSynchronizer } = RNAccountbased
   let toolsPromise: Promise<ZcashPlugin>
-  function makeCurrencyTools(): Promise<ZcashPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<ZcashPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new ZcashPlugin(io, KeyTool, AddressTool))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

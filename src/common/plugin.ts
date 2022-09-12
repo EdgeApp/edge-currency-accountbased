@@ -2,8 +2,7 @@
  * Created by paul on 8/8/17.
  */
 
-
-import { bns } from 'biggystring'
+import { mul, toFixed } from 'biggystring'
 // import { currencyInfo } from './currencyInfoXRP'
 import {
   EdgeCurrencyEngine,
@@ -114,11 +113,11 @@ export class CurrencyPlugin {
         currencyCode = currencyInfo.currencyCode
       }
       const denom = getDenomInfo(currencyInfo, currencyCode, customTokens)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      let nativeAmount = bns.mul(amountStr, denom.multiplier)
-      nativeAmount = bns.toFixed(nativeAmount, 0, 0)
+      let nativeAmount = mul(amountStr, denom.multiplier)
+      nativeAmount = toFixed(nativeAmount, 0, 0)
 
       edgeParsedUri.nativeAmount = nativeAmount || undefined
       edgeParsedUri.currencyCode = currencyCode || undefined

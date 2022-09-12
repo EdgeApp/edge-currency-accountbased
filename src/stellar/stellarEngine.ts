@@ -2,8 +2,7 @@
  * Created by paul on 7/7/17.
  */
 
-
-import { bns } from 'biggystring'
+import { add, div, eq, gt, mul, sub } from 'biggystring'
 // import { currencyInfo } from './stellarInfo'
 import {
   EdgeCurrencyEngineOptions,
@@ -154,8 +153,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
-    if (denom && denom.multiplier) {
-      nativeAmount = bns.mul(exchangeAmount, denom.multiplier)
+    if (denom != null && denom.multiplier) {
+      nativeAmount = mul(exchangeAmount, denom.multiplier)
     } else {
       throw new Error('ErrorDenomNotFound')
     }
@@ -177,7 +176,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       }
     } else {
       // This is a spend. Include fee in amount and make amount negative
-      nativeAmount = bns.add(nativeAmount, networkFee)
+      nativeAmount = add(nativeAmount, networkFee)
       nativeAmount = '-' + nativeAmount
     }
     const edgeTransaction: EdgeTransaction = {
@@ -296,8 +295,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
           currencyCode = bal.asset_type
         }
         const denom = getDenomInfo(this.currencyInfo, currencyCode)
-        if (denom && denom.multiplier) {
-          const nativeAmount = bns.mul(bal.balance, denom.multiplier)
+        if (denom != null && denom.multiplier) {
+          const nativeAmount = mul(bal.balance, denom.multiplier)
           this.updateBalance(currencyCode, nativeAmount)
         }
       }
@@ -373,7 +372,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     // Check if destination address is activated
     let mustCreateAccount = false
     const activated = this.activatedAccountsCache[publicAddress]
-    if (activated === false) {
+    if (!activated) {
       mustCreateAccount = true
     } else if (activated === undefined) {
       try {
@@ -385,11 +384,11 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       }
     }
 
-    if (bns.eq(nativeAmount, '0')) {
+    if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
 
-    const exchangeAmount = bns.div(nativeAmount, denom.multiplier, 7)
+    const exchangeAmount = div(nativeAmount, denom.multiplier, 7)
 
     const account = new this.stellarApi.Account(
       this.walletLocalData.publicKey,
@@ -397,7 +396,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     )
     let memoId: ?string
     if (
-      edgeSpendInfo.spendTargets[0].otherParams &&
+      edgeSpendInfo.spendTargets[0].otherParams != null &&
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
@@ -428,9 +427,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     transaction = transaction.build()
 
     const networkFee = transaction.fee.toString()
-    nativeAmount = bns.add(networkFee, nativeAmount) // Add fee to total
-    const nativeBalance2 = bns.sub(nativeBalance, '10000000') // Subtract the 1 min XLM
-    if (bns.gt(nativeAmount, nativeBalance2)) {
+    nativeAmount = add(networkFee, nativeAmount) // Add fee to total
+    const nativeBalance2 = sub(nativeBalance, '10000000') // Subtract the 1 min XLM
+    if (gt(nativeAmount, nativeBalance2)) {
       throw new InsufficientFundsError()
     }
 

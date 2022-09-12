@@ -2,8 +2,7 @@
  * Created by paul on 8/8/17.
  */
 
-
-import { bns } from 'biggystring'
+import { add, div } from 'biggystring'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -61,11 +60,11 @@ export class StellarPlugin extends CurrencyPlugin {
     }
   }
 
-  importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
+  async importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
     privateKey.replace(/ /g, '')
     stellarApi.Keypair.fromSecret(privateKey)
     if (privateKey.length !== 56) throw new Error('Private key wrong length')
-    return Promise.resolve({ stellarKey: privateKey })
+    return await Promise.resolve({ stellarKey: privateKey })
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
@@ -118,7 +117,7 @@ export class StellarPlugin extends CurrencyPlugin {
       }
     }
     if (parsedUri.query.memo) {
-      const m = bns.add(parsedUri.query.memo, '0')
+      const m = add(parsedUri.query.memo, '0')
       // Check if the memo is an integer
       if (m !== parsedUri.query.memo) {
         throw new Error('ErrorInvalidMemoId')
@@ -138,10 +137,10 @@ export class StellarPlugin extends CurrencyPlugin {
       const currencyCode: string = 'XLM'
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 7)
+      amount = div(nativeAmount, denom.multiplier, 7)
     }
     if (!amount && !obj.label && !obj.message) {
       return obj.publicAddress
@@ -177,10 +176,10 @@ export function makeStellarPlugin(
   const { io } = opts
 
   let toolsPromise: Promise<StellarPlugin>
-  function makeCurrencyTools(): Promise<StellarPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<StellarPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new StellarPlugin(io))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

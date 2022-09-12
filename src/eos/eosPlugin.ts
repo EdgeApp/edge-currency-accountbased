@@ -3,8 +3,7 @@
  */
 /* global */
 
-
-import { bns } from 'biggystring'
+import { div, toFixed } from 'biggystring'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -130,10 +129,10 @@ export class EosPlugin extends CurrencyPlugin {
       const currencyCode = this.currencyInfo.currencyCode
       const nativeAmount = obj.nativeAmount
       const denom = getDenomInfo(this.currencyInfo, currencyCode)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 4)
+      amount = div(nativeAmount, denom.multiplier, 4)
     }
     const encodedUri = this.encodeUriCommon(
       obj,
@@ -150,12 +149,12 @@ export class EosPlugin extends CurrencyPlugin {
         throw new Error('ErrorInvalidContractAddress')
       return contractAddress.toLowerCase()
     }
-    return super.getTokenId(token)
+    return await super.getTokenId(token)
   }
 
   // change to fetch call in the future
   async getAccSystemStats(account: string) {
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       this.eosServer.getAccount(account, (error, result) => {
         if (error) {
           if (error.message.includes('unknown key')) {
@@ -178,12 +177,12 @@ export function makeEosBasedPluginInner(
   const fetch = getFetchCors(opts)
 
   let toolsPromise: Promise<EosPlugin>
-  function makeCurrencyTools(): Promise<EosPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<EosPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
       new EosPlugin(io, fetch, currencyInfo, eosJsConfig)
     )
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(
@@ -243,7 +242,9 @@ export function makeEosBasedPluginInner(
         throw new Error('UnableToGetSupportedCurrencies')
       }
     },
-    getActivationCost: async (currencyCode: string): Promise<string> | undefined => {
+    getActivationCost: async (
+      currencyCode: string
+    ): Promise<string> | undefined => {
       try {
         const out = await asyncWaterfall(
           currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
@@ -263,7 +264,7 @@ export function makeEosBasedPluginInner(
                 Number(prices.net) * startingResources.net +
                 Number(prices.cpu) * startingResources.cpu
               const totalEosString = totalEos.toString()
-              const price = bns.toFixed(totalEosString, 0, 4)
+              const price = toFixed(totalEosString, 0, 4)
               return price
             }
           )

@@ -6,7 +6,7 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
-import { bns } from 'biggystring'
+import { div, mul, add, sub, lte, gt, lt } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -254,7 +254,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           networkFeeOption: 'custom',
           customNetworkFee: {
             gasLimit: hexToDecimal(params.gas),
-            gasPrice: bns.div(
+            gasPrice: div(
               hexToDecimal(params.gasPrice),
               WEI_MULTIPLIER.toString(),
               18
@@ -565,9 +565,9 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       }
 
       for (const feeType of Object.keys(baseMultiplier)) {
-        const baseFee = bns.mul(baseMultiplier[feeType], baseFeePerGasDecimal)
-        const totalFee = bns.add(baseFee, minPriorityFee)
-        out[feeType] = bns.div(totalFee, '1')
+        const baseFee = mul(baseMultiplier[feeType], baseFeePerGasDecimal)
+        const totalFee = add(baseFee, minPriorityFee)
+        out[feeType] = div(totalFee, '1')
       }
 
       this.log.warn(
@@ -629,11 +629,11 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       // same function in edge-core-js.
 
       const getMax = (min: string, max: string): string => {
-        const diff = bns.sub(max, min)
-        if (bns.lte(diff, '1')) {
+        const diff = sub(max, min)
+        if (lte(diff, '1')) {
           return min
         }
-        const mid = bns.add(min, bns.div(diff, '2'))
+        const mid = add(min, div(diff, '2'))
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
@@ -642,16 +642,16 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           this.walletLocalData.otherData.networkFees,
           this.currencyInfo
         )
-        const fee = bns.mul(gasPrice, gasLimit)
-        const totalAmount = bns.add(mid, fee)
-        if (bns.gt(totalAmount, balance)) {
+        const fee = mul(gasPrice, gasLimit)
+        const totalAmount = add(mid, fee)
+        if (gt(totalAmount, balance)) {
           return getMax(min, mid)
         } else {
           return getMax(mid, max)
         }
       }
 
-      return getMax('0', bns.add(balance, '1'))
+      return getMax('0', add(balance, '1'))
     } else {
       // For tokens, the max amount is the balance but we should call makeSpend to make sure there's
       // enough mainnet currency to pay the fee
@@ -687,7 +687,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
         if (rbfTrx.otherParams) {
           const { gasPrice, gas, nonceUsed } = rbfTrx.otherParams
-          rbfGasPrice = bns.mul(gasPrice, '2')
+          rbfGasPrice = mul(gasPrice, '2')
           rbfGasLimit = gas
           rbfNonce = nonceUsed
         }
@@ -760,7 +760,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         this.walletLocalData.numUnconfirmedSpendTxs > 0
           ? otherData.unconfirmedNextNonce
           : otherData.nextNonce
-      nonceUsed = bns.add(baseNonce, pendingTxs.length.toString())
+      nonceUsed = add(baseNonce, pendingTxs.length.toString())
     }
 
     let contractAddress
@@ -777,7 +777,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         data
       }
       otherParams = ethParams
-      value = bns.add(nativeAmount, '0', 16)
+      value = add(nativeAmount, '0', 16)
     } else {
       if (data) {
         contractAddress = publicAddress
@@ -846,19 +846,19 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
               'eth_estimateGas',
               estimateGasParams
             )
-            gasLimit = bns.add(
+            gasLimit = add(
               parseInt(estimateGasResult.result.result, 16).toString(),
               '0'
             )
             // Overestimate gas limit to reduce chance of failure when sending to a contract
             if (currencyCode === this.currencyInfo.currencyCode) {
               // Double gas limit estimate when sending ETH to contract
-              gasLimit = bns.mul(gasLimit, '2')
+              gasLimit = mul(gasLimit, '2')
             } else {
               // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
-              gasLimit = bns.lt(gasLimit, bns.div(defaultGasLimit, '2'))
-                ? bns.mul(gasLimit, '2')
-                : bns.lt(gasLimit, defaultGasLimit)
+              gasLimit = lt(gasLimit, div(defaultGasLimit, '2'))
+                ? mul(gasLimit, '2')
+                : lt(gasLimit, defaultGasLimit)
                 ? defaultGasLimit
                 : gasLimit
             }
@@ -877,7 +877,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
 
         // Sanity check calculated value
-        if (bns.lt(gasLimit, '21000')) {
+        if (lt(gasLimit, '21000')) {
           gasLimit = defaultGasLimit
           this.lastEstimatedGasLimit.gasLimit = ''
           throw new Error('Calculated gasLimit less than minimum')
@@ -901,7 +901,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     const nativeBalance =
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
 
-    let nativeNetworkFee = bns.mul(gasPrice, gasLimit)
+    let nativeNetworkFee = mul(gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee = null
 
@@ -910,26 +910,26 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     //
 
     if (currencyCode === this.currencyInfo.currencyCode) {
-      totalTxAmount = bns.add(nativeNetworkFee, nativeAmount)
-      if (!skipChecks && bns.gt(totalTxAmount, nativeBalance)) {
+      totalTxAmount = add(nativeNetworkFee, nativeAmount)
+      if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
         throw new InsufficientFundsError()
       }
-      nativeAmount = bns.mul(totalTxAmount, '-1')
+      nativeAmount = mul(totalTxAmount, '-1')
     } else {
       parentNetworkFee = nativeNetworkFee
       // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
-      if (!skipChecks && bns.gt(nativeNetworkFee, nativeBalance)) {
+      if (!skipChecks && gt(nativeNetworkFee, nativeBalance)) {
         throw new InsufficientFundsError({
           currencyCode: this.currencyInfo.currencyCode,
           networkFee: nativeNetworkFee
         })
       }
       const balanceToken = this.walletLocalData.totalBalances[currencyCode]
-      if (!skipChecks && bns.gt(nativeAmount, balanceToken)) {
+      if (!skipChecks && gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError()
       }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
-      nativeAmount = bns.mul(nativeAmount, '-1')
+      nativeAmount = mul(nativeAmount, '-1')
     }
 
     //
@@ -966,13 +966,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
       // Remove the networkFee from the nativeAmount
-      const nativeAmount = bns.add(
+      const nativeAmount = add(
         edgeTransaction.nativeAmount,
         edgeTransaction.networkFee
       )
-      nativeAmountHex = bns.mul('-1', nativeAmount, 16)
+      nativeAmountHex = mul('-1', nativeAmount, 16)
     } else {
-      nativeAmountHex = bns.mul('-1', edgeTransaction.nativeAmount, 16)
+      nativeAmountHex = mul('-1', edgeTransaction.nativeAmount, 16)
     }
 
     // Nonce:
@@ -986,16 +986,16 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       // Otherwise, use the next nonce
       if (
         this.walletLocalData.numUnconfirmedSpendTxs &&
-        bns.gt(
+        gt(
           this.walletLocalData.otherData.unconfirmedNextNonce,
           this.walletLocalData.otherData.nextNonce
         )
       ) {
-        const diff = bns.sub(
+        const diff = sub(
           this.walletLocalData.otherData.unconfirmedNextNonce,
           this.walletLocalData.otherData.nextNonce
         )
-        if (bns.lte(diff, '5')) {
+        if (lte(diff, '5')) {
           nonce = this.walletLocalData.otherData.unconfirmedNextNonce
           this.walletLocalDataDirty = true
         } else {
@@ -1125,7 +1125,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     if (edgeTransaction.blockHeight === 0) {
       const nonceUsed: string | void = edgeTransaction.otherParams?.nonceUsed
       if (nonceUsed != null) {
-        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+        // @ts-expect-error
+        this.walletLocalData.otherData.unconfirmedNextNonce = add(
           nonceUsed,
           '1'
         )

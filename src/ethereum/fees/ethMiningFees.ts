@@ -3,15 +3,11 @@
  * @flow
  */
 
-import { bns } from 'biggystring'
+import { add, div, gte, lt, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
 import { normalizeAddress } from '../../common/utils'
-import {
-  EthereumCalcedFees,
-  EthereumFee,
-  EthereumFees
-} from '../ethTypes'
+import { EthereumCalcedFees, EthereumFee, EthereumFees } from '../ethTypes'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'
@@ -29,11 +25,14 @@ export function calcMiningFee(
   let customGasLimit, customGasPrice
   if (
     spendInfo.spendTargets &&
-    spendInfo.spendTargets.length &&
+    spendInfo.spendTargets.length > 0 &&
     spendInfo.spendTargets[0].publicAddress
   ) {
     const { customNetworkFee } = spendInfo || {}
-    if (spendInfo.networkFeeOption === ES_FEE_CUSTOM && customNetworkFee) {
+    if (
+      spendInfo.networkFeeOption === ES_FEE_CUSTOM &&
+      customNetworkFee != null
+    ) {
       const { gasLimit, gasPrice } = customNetworkFee
 
       if (
@@ -52,8 +51,8 @@ export function calcMiningFee(
           networkFees.default?.gasPrice?.minGasPrice ??
           currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
             .gasPrice.minGasPrice
-        const minGasPriceGwei = bns.div(minGasPrice, WEI_MULTIPLIER)
-        if (bns.lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
+        const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
+        if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
           const e = new Error(
             `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
           )
@@ -61,7 +60,7 @@ export function calcMiningFee(
           throw e
         }
 
-        customGasPrice = bns.mul(gasPrice, WEI_MULTIPLIER)
+        customGasPrice = mul(gasPrice, WEI_MULTIPLIER)
       }
 
       if (gasLimit != null && gasLimit !== '') {
@@ -69,7 +68,7 @@ export function calcMiningFee(
           networkFees.default?.gasLimit?.minGasLimit ??
           currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
             .gasLimit.minGasLimit
-        if (bns.lt(gasLimit, minGasLimit) || /^\s*$/.test(gasLimit)) {
+        if (lt(gasLimit, minGasLimit) || /^\s*$/.test(gasLimit)) {
           const e = new Error(
             `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
           )
@@ -131,9 +130,9 @@ export function calcMiningFee(
     let nativeAmount = spendInfo.spendTargets[0].nativeAmount
     if (useLimit === 'tokenTransaction') {
       // Small hack. Edgetimate the relative value of token to ethereum as 10%
-      nativeAmount = bns.div(nativeAmount, '10')
+      nativeAmount = div(nativeAmount, '10')
     }
-    if (!networkFeeForGasPrice.gasPrice) {
+    if (networkFeeForGasPrice.gasPrice == null) {
       throw new Error('ErrorInvalidGasPrice')
     }
     const gasPriceObj = networkFeeForGasPrice.gasPrice
@@ -143,7 +142,7 @@ export function calcMiningFee(
         break
       case ES_FEE_STANDARD: {
         if (
-          bns.gte(
+          gte(
             nativeAmount,
             networkFeeForGasPrice.gasPrice.standardFeeHighAmount
           )
@@ -151,7 +150,7 @@ export function calcMiningFee(
           gasPrice = gasPriceObj.standardFeeHigh
           break
         }
-        if (bns.lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
+        if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
           if (!networkFeeForGasPrice.gasPrice) {
             throw new Error('ErrorInvalidGasPrice')
           }
@@ -160,25 +159,25 @@ export function calcMiningFee(
         }
 
         // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
-        const lowHighAmountDiff = bns.sub(
+        const lowHighAmountDiff = sub(
           gasPriceObj.standardFeeHighAmount,
           gasPriceObj.standardFeeLowAmount
         )
-        const lowHighFeeDiff = bns.sub(
+        const lowHighFeeDiff = sub(
           gasPriceObj.standardFeeHigh,
           gasPriceObj.standardFeeLow
         )
 
         // How much above the lowFeeAmount is the user sending
-        const amountDiffFromLow = bns.sub(
+        const amountDiffFromLow = sub(
           nativeAmount,
           gasPriceObj.standardFeeLowAmount
         )
 
         // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
-        const temp1 = bns.mul(amountDiffFromLow, lowHighFeeDiff)
-        const addFeeToLow = bns.div(temp1, lowHighAmountDiff)
-        gasPrice = bns.add(gasPriceObj.standardFeeLow, addFeeToLow)
+        const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
+        const addFeeToLow = div(temp1, lowHighAmountDiff)
+        gasPrice = add(gasPriceObj.standardFeeLow, addFeeToLow)
         break
       }
 

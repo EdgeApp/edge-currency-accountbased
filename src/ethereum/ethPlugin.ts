@@ -2,9 +2,8 @@
  * Created by paul on 8/8/17.
  */
 
-
 import { getLocalStorage } from '@walletconnect/browser-utils'
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
@@ -321,10 +320,10 @@ export class EthereumPlugin extends CurrencyPlugin {
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 18)
+      amount = div(nativeAmount, denom.multiplier, 18)
     }
     const encodedUri = this.encodeUriCommon(
       obj,
@@ -345,7 +344,7 @@ export class EthereumPlugin extends CurrencyPlugin {
         throw new Error('ErrorInvalidContractAddress')
       return contractAddress.toLowerCase()
     }
-    return super.getTokenId(token)
+    return await super.getTokenId(token)
   }
 }
 
@@ -357,8 +356,8 @@ export function makeEthereumBasedPluginInner(
   const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<EthereumPlugin>
-  function makeCurrencyTools(): Promise<EthereumPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<EthereumPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
       new EthereumPlugin(io, currencyInfo, fetchCors)
     )
@@ -369,7 +368,7 @@ export function makeEthereumBasedPluginInner(
     const wcStorage = getLocalStorage()
     if (wcStorage != null) wcStorage.clear()
 
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

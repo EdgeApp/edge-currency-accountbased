@@ -1,15 +1,13 @@
-
-
 import * as solanaWeb3 from '@solana/web3'
-import { bns } from 'biggystring'
+import { add, gt, mul } from 'biggystring'
 import { asNumber } from 'cleaners'
 import {
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -17,13 +15,13 @@ import { CurrencyEngine } from '../common/engine'
 import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils'
 import { SolanaPlugin } from './solanaPlugin'
 import {
+  asRecentBlockHash,
+  asRpcBalance,
+  asRpcGetTransaction,
   RpcGetTransaction,
   RpcSignatureForAddress,
   SolanaOtherData,
-  SolanaSettings,
-  asRecentBlockHash,
-  asRpcBalance,
-  asRpcGetTransaction
+  SolanaSettings
 } from './solanaTypes'
 
 const {
@@ -87,7 +85,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
           `fetchRpc ${options.method} failed error: ${res.status}`
         )
       }
-      return res.json()
+      return await res.json()
     })
 
     const response = await asyncWaterfall(funcs)
@@ -302,8 +300,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
 
     const balanceSol = this.walletLocalData.totalBalances[this.chainCode]
     let totalTxAmount = '0'
-    totalTxAmount = bns.add(nativeAmount, nativeNetworkFee)
-    if (bns.gt(totalTxAmount, balanceSol)) {
+    totalTxAmount = add(nativeAmount, nativeNetworkFee)
+    if (gt(totalTxAmount, balanceSol)) {
       throw new InsufficientFundsError()
     }
     // Create Solana transaction
@@ -350,7 +348,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       date: 0,
       currencyCode,
       blockHeight: 0,
-      nativeAmount: bns.mul(totalTxAmount, '-1'),
+      nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',

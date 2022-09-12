@@ -1,7 +1,5 @@
-
-
 import * as hedera from '@hashgraph/sdk'
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCorePluginOptions,
@@ -39,7 +37,7 @@ export class HederaPlugin extends CurrencyPlugin {
     if (type === this.pluginId) {
       const entropy = this.io.random(32)
       const mnemonic = entropyToMnemonic(entropy)
-      return this.importPrivateKey(mnemonic)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -144,7 +142,7 @@ export class HederaPlugin extends CurrencyPlugin {
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }
-    const amount = bns.div(nativeAmount, denom.multiplier, 8)
+    const amount = div(nativeAmount, denom.multiplier, 8)
 
     return this.encodeUriCommon(obj, this.pluginId, amount)
   }
@@ -158,10 +156,10 @@ export function makeHederaPluginInner(
 
   let toolsPromise: Promise<HederaPlugin>
 
-  function makeCurrencyTools(): Promise<HederaPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<HederaPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new HederaPlugin(io, currencyInfo))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

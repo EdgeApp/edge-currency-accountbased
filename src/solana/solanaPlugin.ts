@@ -1,7 +1,5 @@
-
-
 import * as solanaWeb3 from '@solana/web3'
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import * as ed25519 from 'ed25519-hd-key'
@@ -64,7 +62,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     if (type === this.pluginId) {
       const entropy = Buffer.from(this.io.random(32))
       const mnemonic = entropyToMnemonic(entropy)
-      return this.importPrivateKey(mnemonic)
+      return await this.importPrivateKey(mnemonic)
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -127,10 +125,10 @@ export class SolanaPlugin extends CurrencyPlugin {
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 18)
+      amount = div(nativeAmount, denom.multiplier, 18)
     }
     const encodedUri = this.encodeUriCommon(obj, this.pluginId, amount)
     return encodedUri
@@ -145,10 +143,10 @@ export function makeSolanaPluginInner(
   const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<SolanaPlugin>
-  function makeCurrencyTools(): Promise<SolanaPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<SolanaPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new SolanaPlugin(io, currencyInfo))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

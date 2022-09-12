@@ -1,6 +1,6 @@
 // @flow
 
-import { bns } from 'biggystring'
+import { gte, add } from 'biggystring'
 import { assert } from 'chai'
 import {
   type EdgeCorePluginOptions,
@@ -103,7 +103,7 @@ describe(`Tezos engine`, function () {
     this.timeout(10000)
     if (engine) {
       await engine.checkAccountInnerLoop()
-      assert.equal(bns.gte(engine.walletLocalData.totalBalances.XTZ, '0'), true)
+      assert.equal(gte(engine.walletLocalData.totalBalances.XTZ, '0'), true)
     } else {
       assert.equal(0, 1)
     }
@@ -124,7 +124,7 @@ describe(`Tezos engine`, function () {
     if (engine) {
       edgeTransaction = await engine.makeSpend(edgeSpendInfo)
       assert.equal(
-        bns.add(edgeTransaction.nativeAmount, edgeTransaction.networkFee) ===
+        add(edgeTransaction.nativeAmount, edgeTransaction.networkFee) ===
           '-3000000',
         true
       )

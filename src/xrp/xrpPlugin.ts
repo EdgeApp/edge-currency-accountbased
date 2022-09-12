@@ -2,8 +2,7 @@
  * Created by paul on 8/8/17.
  */
 
-
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -24,11 +23,7 @@ import {
 } from 'xrpl'
 
 import { CurrencyPlugin } from '../common/plugin'
-import {
-  asyncWaterfall,
-  getDenomInfo,
-  safeErrorMessage
-} from '../common/utils'
+import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { XrpEngine } from './xrpEngine'
 import { currencyInfo } from './xrpInfo'
 
@@ -159,7 +154,7 @@ export class XrpPlugin extends CurrencyPlugin {
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 6)
+      amount = div(nativeAmount, denom.multiplier, 6)
     }
     const encodedUri = this.encodeUriCommon(obj, 'ripple', amount)
     return encodedUri
@@ -172,10 +167,10 @@ export function makeRipplePlugin(
   const { io } = opts
 
   let toolsPromise: Promise<XrpPlugin>
-  function makeCurrencyTools(): Promise<XrpPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<XrpPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new XrpPlugin(io))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(

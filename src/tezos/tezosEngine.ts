@@ -1,5 +1,4 @@
-
-import { bns } from 'biggystring'
+import { add, div, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
@@ -22,11 +21,11 @@ import {
 import { TezosPlugin } from '../tezos/tezosPlugin'
 import { currencyInfo } from './tezosInfo'
 import {
+  asXtzGetTransaction,
   HeadInfo,
   OperationsContainer,
   TezosOperation,
-  XtzGetTransaction,
-  asXtzGetTransaction
+  XtzGetTransaction
 } from './tezosTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 15000
@@ -72,8 +71,8 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             .fetch(server + '/chains/main/blocks/head/header')
-            .then(function (response) {
-              return response.json()
+            .then(async function (response) {
+              return await response.json()
             })
             .then(function (json) {
               return json
@@ -100,8 +99,8 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           const result = await this.fetchCors(
             `${server}/v1/accounts/${params[0]}`
           )
-            .then(function (response) {
-              return response.json()
+            .then(async function (response) {
+              return await response.json()
             })
             .then(function (json) {
               return json.numTransactions
@@ -119,8 +118,8 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           const result: XtzGetTransaction = await this.fetchCors(
             `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
               pagination
-          ).then(function (response) {
-            return response.json()
+          ).then(async function (response) {
+            return await response.json()
           })
           return { server, result }
         })
@@ -239,7 +238,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         nativeAmount = '-' + networkFee
       }
     } else {
-      nativeAmount = '-' + bns.add(nativeAmount, networkFee)
+      nativeAmount = '-' + add(nativeAmount, networkFee)
     }
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash,
@@ -354,7 +353,9 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    return makeSpendMutex(() => this.makeSpendInner(edgeSpendInfoIn))
+    return await makeSpendMutex(
+      async () => await this.makeSpendInner(edgeSpendInfoIn)
+    )
   }
 
   async makeSpendInner(
@@ -373,7 +374,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    if (bns.eq(nativeAmount, '0')) {
+    if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
     const keys = {
@@ -391,7 +392,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           keys.pkh,
           keys,
           publicAddress,
-          bns.div(nativeAmount, denom.multiplier, 6),
+          div(nativeAmount, denom.multiplier, 6),
           this.currencyInfo.defaultSettings.fee.transaction
         )
       } catch (e) {
@@ -406,17 +407,14 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     }
     let networkFee = '0'
     for (const operation of ops.opOb.contents) {
-      networkFee = bns.add(networkFee, operation.fee)
+      networkFee = add(networkFee, operation.fee)
       const burn = await this.isBurn(operation)
       if (burn) {
-        networkFee = bns.add(
-          networkFee,
-          this.currencyInfo.defaultSettings.fee.burn
-        )
+        networkFee = add(networkFee, this.currencyInfo.defaultSettings.fee.burn)
       }
     }
-    nativeAmount = bns.add(nativeAmount, networkFee)
-    if (bns.gt(nativeAmount, nativeBalance)) {
+    nativeAmount = add(nativeAmount, networkFee)
+    if (gt(nativeAmount, nativeBalance)) {
       throw new InsufficientFundsError()
     }
     nativeAmount = '-' + nativeAmount

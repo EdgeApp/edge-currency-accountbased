@@ -1,7 +1,5 @@
-
-
 import * as hedera from '@hashgraph/sdk'
-import { bns } from 'biggystring'
+import { add, eq, gt, toFixed } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -75,7 +73,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
           return {
             paymentAddress: accountActivationQuoteAddress,
             currencyCode,
-            amount: bns.toFixed(accountActivationQuoteAmount, 3, 9),
+            amount: toFixed(accountActivationQuoteAmount, 3, 9),
             exchangeAmount: '0'
           }
         }
@@ -115,7 +113,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
           return {
             paymentAddress: address,
             currencyCode,
-            amount: bns.toFixed(amount, 3, 18),
+            amount: toFixed(amount, 3, 18),
             exchangeAmount: '0'
           }
         } catch (e) {
@@ -336,7 +334,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
 
       const nativeAmount = ourTransfer.amount.toString()
       const ourReceiveAddresses = []
-      if (bns.gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
+      if (gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
 
       txs.push({
         txid: removeHexPrefix(bufToHex(base64.parse(tx.transaction_hash))),
@@ -407,18 +405,16 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    if (bns.eq(nativeAmount, '0')) {
+    if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
 
     const hbar = hedera.Hbar.fromTinybar(nativeAmount)
     const txnFee = hedera.Hbar.fromTinybar(this.maxFee)
     const networkFee = txnFee.asTinybar().toString()
-    nativeAmount = bns.add(nativeAmount, networkFee)
+    nativeAmount = add(nativeAmount, networkFee)
 
-    if (
-      bns.gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode])
-    ) {
+    if (gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode])) {
       throw new InsufficientFundsError()
     }
 

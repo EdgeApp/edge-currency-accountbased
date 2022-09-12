@@ -1,9 +1,8 @@
-
 /* eslint camelcase: 0 */
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
-import { bns } from 'biggystring'
+import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
 import {
   EdgeCorePluginOptions,
@@ -38,7 +37,10 @@ const FIO_CURRENCY_CODE = 'FIO'
 const FIO_TYPE = 'fio'
 const FIO_REG_SITE_API_KEY = ''
 
-type DomainItem = { domain: string, free: boolean }
+interface DomainItem {
+  domain: string
+  free: boolean
+}
 
 export function checkAddress(address: string): boolean {
   const start = address.startsWith(FIO_CURRENCY_CODE)
@@ -131,10 +133,10 @@ export class FioPlugin extends CurrencyPlugin {
       const currencyCode: string = FIO_CURRENCY_CODE
       const nativeAmount: string = obj.nativeAmount
       const denom = getDenomInfo(currencyInfo, currencyCode)
-      if (!denom) {
+      if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
-      amount = bns.div(nativeAmount, denom.multiplier, 16)
+      amount = div(nativeAmount, denom.multiplier, 16)
     }
     const encodedUri = this.encodeUriCommon(obj, FIO_TYPE, amount)
     return encodedUri
@@ -150,10 +152,10 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const connection = new FIOSDK('', '', baseUrl, fetchCors, undefined, tpid)
 
   let toolsPromise: Promise<FioPlugin>
-  function makeCurrencyTools(): Promise<FioPlugin> {
-    if (toolsPromise != null) return toolsPromise
+  async function makeCurrencyTools(): Promise<FioPlugin> {
+    if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(new FioPlugin(io))
-    return toolsPromise
+    return await toolsPromise
   }
 
   async function multicastServers(
@@ -171,7 +173,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
             out = await connection.genericAction(actionName, params)
           } catch (e) {
             // handle FIO API error
-            if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
+            if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
               out = {
                 isError: true,
                 data: {
@@ -410,9 +412,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     },
     async buyAddressRequest(
       options: {
-        address: string,
-        referralCode: string,
-        publicKey: string,
+        address: string
+        referralCode: string
+        publicKey: string
         apiToken?: string
       },
       isFree: boolean = false
@@ -456,7 +458,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
           throw new Error(data.error)
         }
-        return result.json()
+        return await result.json()
       } catch (e) {
         if (e.labelCode) throw e
         throw new FioError(
@@ -507,16 +509,16 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           }
         )
         const json: {
-          staked_token_pool: number,
-          outstanding_srps: number,
-          rewards_token_pool: number,
-          combined_token_pool: number,
-          staking_rewards_reserves_minted: number,
-          roe: number,
-          activated: boolean,
+          staked_token_pool: number
+          outstanding_srps: number
+          rewards_token_pool: number
+          combined_token_pool: number
+          staking_rewards_reserves_minted: number
+          roe: number
+          activated: boolean
           historical_apr: {
-            '1day': number | null,
-            '7day': number | null,
+            '1day': number | null
+            '7day': number | null
             '30day': number | null
           }
         } = await result.json()

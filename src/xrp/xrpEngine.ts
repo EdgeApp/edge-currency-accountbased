@@ -2,8 +2,7 @@
  * Created by paul on 7/7/17.
  */
 
-
-import { bns } from 'biggystring'
+import { add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
@@ -15,25 +14,17 @@ import {
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine'
-import {
-  cleanTxLogs,
-  getOtherParams,
-  safeErrorMessage
-} from '../common/utils'
-import {
-  PluginError,
-  pluginErrorCodes,
-  pluginErrorName
-} from '../pluginError'
+import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
+import { PluginError, pluginErrorCodes, pluginErrorName } from '../pluginError'
 import { XrpPlugin } from './xrpPlugin'
 import {
-  XrpSettings,
-  XrpTransaction,
-  XrpWalletOtherData,
   asBalance,
   asFee,
   asGetTransactionsResponse,
-  asServerInfo
+  asServerInfo,
+  XrpSettings,
+  XrpTransaction,
+  XrpWalletOtherData
 } from './xrpTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -41,16 +32,16 @@ const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
-type PaymentJson = {
-  Amount: string,
-  TransactionType: string,
-  Account: string,
-  Destination: string,
-  Fee: string,
+interface PaymentJson {
+  Amount: string
+  TransactionType: string
+  Account: string
+  Destination: string
+  Fee: string
   DestinationTag?: number
 }
 
-type XrpParams = {
+interface XrpParams {
   preparedTx: Object
 }
 
@@ -142,7 +133,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     if (tx.Destination === this.walletLocalData.publicKey) {
       ourReceiveAddresses.push(this.walletLocalData.publicKey)
     } else {
-      nativeAmount = `-${bns.add(nativeAmount, tx.Fee)}`
+      nativeAmount = `-${add(nativeAmount, tx.Fee)}`
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -220,7 +211,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
           const { currency, value } = asBalance(bal)
           const currencyCode = currency
           const exchangeAmount = value
-          const nativeAmount = bns.mul(exchangeAmount, '1000000')
+          const nativeAmount = mul(exchangeAmount, '1000000')
           this.updateBalance(currencyCode, nativeAmount)
         }
       }
@@ -275,9 +266,9 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       currencyCode
     })
     if (currencyCode === this.xrpPlugin.currencyInfo.currencyCode) {
-      spendableBalance = bns.sub(spendableBalance, this.xrpSettings.baseReserve)
+      spendableBalance = sub(spendableBalance, this.xrpSettings.baseReserve)
     }
-    if (bns.lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
     return spendableBalance
   }
@@ -297,7 +288,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    if (bns.eq(nativeAmount, '0')) {
+    if (eq(nativeAmount, '0')) {
       throw new NoAmountSpecifiedError()
     }
 
@@ -306,9 +297,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     // Make sure amount doesn't drop the balance below the reserve amount otherwise the
     // transaction is invalid. It is not necessary to consider the fee in this
     // calculation because the transaction fee can be taken out of the reserve balance.
-    if (
-      bns.gt(bns.add(nativeAmount, this.xrpSettings.baseReserve), nativeBalance)
-    )
+    if (gt(add(nativeAmount, this.xrpSettings.baseReserve), nativeBalance))
       throw new InsufficientFundsError()
 
     const uniqueIdentifier =
@@ -340,7 +329,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
         )
       }
 
-      if (memoMaxValue != null && bns.gt(uniqueIdentifier, memoMaxValue)) {
+      if (memoMaxValue != null && gt(uniqueIdentifier, memoMaxValue)) {
         throw new PluginError(
           'XRP Destination Tag is above its maximum limit',
           pluginErrorName.XRP_ERROR,
@@ -389,7 +378,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     const otherParams: XrpParams = {
       preparedTx
     }
-    nativeAmount = `-${bns.add(nativeAmount, nativeNetworkFee)}`
+    nativeAmount = `-${add(nativeAmount, nativeNetworkFee)}`
 
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
