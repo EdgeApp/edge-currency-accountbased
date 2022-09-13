@@ -20,6 +20,8 @@ import parse from 'url-parse'
 
 import { getDenomInfo } from '../common/utils'
 
+type ParsedUri = ReturnType<typeof parse>
+
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {
   io: EdgeIo
@@ -34,26 +36,26 @@ export class CurrencyPlugin {
     this.highestTxHeight = 0
   }
 
-  async createPrivateKey(walletType: string) {
+  async createPrivateKey(_walletType: string): Promise<Object> {
     throw new Error('Must implement createPrivateKey')
   }
 
-  async derivePublicKey(walletInfo: EdgeWalletInfo) {
+  async derivePublicKey(_walletInfo: EdgeWalletInfo): Promise<Object> {
     throw new Error('Must implement derivePublicKey')
   }
 
   async makeEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    _walletInfo: EdgeWalletInfo,
+    _opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     throw new Error('Must implement makeEngine')
   }
 
-  async parseUri(uri: string) {
+  async parseUri(_uri: string): Promise<EdgeParsedUri> {
     throw new Error('Must implement parseUri')
   }
 
-  async encodeUri(obj: EdgeEncodeUri) {
+  async encodeUri(_obj: EdgeEncodeUri): Promise<string> {
     throw new Error('Must implement encodeUri')
   }
 
@@ -63,19 +65,20 @@ export class CurrencyPlugin {
     networks: { [network: string]: boolean },
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
-  ) {
+  ): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
     const parsedUri = parse(uri, {}, true)
+    let protocol: string | undefined
 
     // Add support for renproject Gateway URI type
     const isGateway = uri.startsWith(`${currencyInfo.pluginId}://`)
 
     // Remove ":" from protocol
-    if (parsedUri.protocol) {
-      parsedUri.protocol = parsedUri.protocol.replace(':', '')
+    if (parsedUri.protocol != null && parsedUri.protocol !== '') {
+      protocol = parsedUri.protocol.replace(':', '')
     }
 
     // Wrong crypto or protocol is not supported
-    if (parsedUri.protocol && !networks[parsedUri.protocol]) {
+    if (protocol != null && protocol !== '' && !networks[protocol]) {
       throw new Error(
         `Uri protocol '${parsedUri.protocol}' is not supported for ${currencyInfo.pluginId}.`
       )
@@ -99,45 +102,50 @@ export class CurrencyPlugin {
     const message = parsedUri.query.message
     const category = parsedUri.query.category
 
-    if (label || message || category || isGateway) {
+    if (label != null || message != null || category != null || isGateway) {
       edgeParsedUri.metadata = {}
-      edgeParsedUri.metadata.name = label || undefined
-      edgeParsedUri.metadata.notes = message || undefined
-      edgeParsedUri.metadata.category = category || undefined
-      edgeParsedUri.metadata.gateway = isGateway || undefined
+      edgeParsedUri.metadata.name = label
+      edgeParsedUri.metadata.notes = message
+      edgeParsedUri.metadata.category = category
+      // @ts-expect-error
+      edgeParsedUri.metadata.gateway = isGateway ?? false
     }
 
     const amountStr = parsedUri.query.amount
-    if (amountStr && typeof amountStr === 'string') {
-      if (!currencyCode) {
+    if (amountStr != null && typeof amountStr === 'string') {
+      if (currencyCode == null) {
         currencyCode = currencyInfo.currencyCode
       }
-      const denom = getDenomInfo(currencyInfo, currencyCode, customTokens)
+      const denom = getDenomInfo(currencyInfo, currencyCode ?? '', customTokens)
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
       let nativeAmount = mul(amountStr, denom.multiplier)
       nativeAmount = toFixed(nativeAmount, 0, 0)
 
-      edgeParsedUri.nativeAmount = nativeAmount || undefined
-      edgeParsedUri.currencyCode = currencyCode || undefined
+      edgeParsedUri.nativeAmount = nativeAmount
+      edgeParsedUri.currencyCode = currencyCode
     }
 
     return { edgeParsedUri, parsedUri }
   }
 
-  encodeUriCommon(obj: EdgeEncodeUri, network: string, amount?: string) {
-    if (!obj.publicAddress) {
+  encodeUriCommon(
+    obj: EdgeEncodeUri,
+    network: string,
+    amount?: string
+  ): string {
+    if (obj.publicAddress == null) {
       throw new Error('InvalidPublicAddressError')
     }
-    if (!amount && !obj.label && !obj.message) {
+    if (amount == null && obj.label == null && obj.message == null) {
       return obj.publicAddress
     } else {
       let queryString: string = ''
-      if (amount) {
+      if (amount != null) {
         queryString += 'amount=' + amount + '&'
       }
-      if (obj.label || obj.message) {
+      if (obj.label != null || obj.message != null) {
         if (typeof obj.label === 'string') {
           queryString += 'label=' + obj.label + '&'
         }
@@ -157,7 +165,7 @@ export class CurrencyPlugin {
     }
   }
 
-  async getTokenId(token: EdgeToken): Promise<string> {
+  async getTokenId(_token: EdgeToken): Promise<string> {
     return this.currencyInfo.pluginId
   }
 }

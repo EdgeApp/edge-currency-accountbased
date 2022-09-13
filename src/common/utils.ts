@@ -8,17 +8,19 @@ import { asArray, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyInfo,
+  EdgeDenomination,
+  EdgeFetchFunction,
   EdgeMetaToken,
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
 import { validate } from 'jsonschema'
 
-function normalizeAddress(address: string) {
+function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
 }
 
-function shuffleArray(array: any[]) {
+function shuffleArray<T>(array: T[]): T[] {
   let currentIndex = array.length
   let temporaryValue, randomIndex
 
@@ -36,47 +38,47 @@ function shuffleArray(array: any[]) {
 
   return array
 }
-function validateObject(object: any, schema: any) {
+function validateObject(object: any, schema: any): boolean {
   const result = validate(object, schema)
 
   if (result.errors.length === 0) {
     return true
   } else {
-    for (const n in result.errors) {
-      const errMsg = result.errors[n].message
+    for (const error of result.errors) {
+      const errMsg = error.message
       console.log('ERROR: validateObject:' + errMsg)
     }
     return false
   }
 }
 
-export function isEmpty(map: Object) {
+export function isEmpty(map: Object): boolean {
   return Object.keys(map).length !== 0
 }
 
-export function isHex(h: string) {
+export function isHex(h: string): boolean {
   const out = /^[0-9A-F]+$/i.test(removeHexPrefix(h))
   return out
 }
 
-export function toHex(num: string) {
+export function toHex(num: string): string {
   return add(num, '0', 16)
 }
 
-export function hexToBuf(hex: string) {
+export function hexToBuf(hex: string): Buffer {
   const noHexPrefix = hex.replace('0x', '')
   const buf = Buffer.from(noHexPrefix, 'hex')
   return buf
 }
 
-export function padHex(hex: string, bytes: number) {
+export function padHex(hex: string, bytes: number): string {
   if (2 * bytes - hex.length > 0) {
     return hex.padStart(2 * bytes, '0')
   }
   return hex
 }
 
-export function removeHexPrefix(value: string) {
+export function removeHexPrefix(value: string): string {
   if (value.indexOf('0x') === 0) {
     return value.substring(2)
   } else {
@@ -84,15 +86,15 @@ export function removeHexPrefix(value: string) {
   }
 }
 
-export function hexToDecimal(num: string) {
+export function hexToDecimal(num: string): string {
   return add(num, '0', 10)
 }
 
-export function decimalToHex(num: string) {
+export function decimalToHex(num: string): string {
   return add(num, '0', 16)
 }
 
-export function bufToHex(buf: any) {
+export function bufToHex(buf: Buffer): string {
   const signedTxBuf = Buffer.from(buf)
   const hex = '0x' + signedTxBuf.toString('hex')
   return hex
@@ -102,7 +104,7 @@ function getDenomInfo(
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
   customTokens?: EdgeMetaToken[]
-) {
+): EdgeDenomination | undefined {
   // Look in the primary currency denoms
   let edgeDenomination = currencyInfo.denominations.find(element => {
     return element.name === denom
@@ -150,7 +152,7 @@ async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
           resolve(value)
         },
         error => {
-          return --pending || reject(error)
+          if (--pending === 0) reject(error)
         }
       )
     }
@@ -165,7 +167,7 @@ async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
 async function promiseNy<T>(
   promises: Array<Promise<T>>,
   checkResult: (arg: T) => string | undefined,
-  n?: number = promises.length
+  n: number = promises.length
 ): Promise<T> {
   const map: { [key: string]: number } = {}
   return await new Promise((resolve, reject) => {
@@ -253,17 +255,19 @@ async function asyncWaterfall(
     try {
       const result = await Promise.race(promises)
       if (result === 'async_waterfall_timed_out') {
-        promises.pop()
+        const p = promises.pop()
+        p?.then().catch()
         --pending
       } else {
         return result
       }
-    } catch (e) {
+    } catch (e: any) {
       const i = e.index
       promises.splice(i, 1)
-      promises.pop()
+      const p = promises.pop()
+      p?.then().catch()
       --pending
-      if (!pending) {
+      if (pending === 0) {
         throw e
       }
     }
@@ -282,7 +286,7 @@ export function pickRandom<T>(list: T[], count: number): T[] {
   return out
 }
 
-function getEdgeInfoServer() {
+function getEdgeInfoServer(): string {
   return 'https://info1.edgesecure.co:8444'
 }
 
@@ -313,7 +317,7 @@ export function makeMutex(): Mutex {
   let busy = false
   const queue: Array<() => void> = []
   return async function lock<T>(callback: () => T | Promise<T>): Promise<T> {
-    if (busy) await new Promise(resolve => queue.push(resolve))
+    if (busy) await new Promise(resolve => queue.push(() => resolve(undefined)))
     try {
       busy = true
       return await callback()
@@ -347,7 +351,7 @@ const asCleanTxLogs = asObject({
   )
 })
 
-export function cleanTxLogs(tx: EdgeTransaction) {
+export function cleanTxLogs(tx: EdgeTransaction): string {
   return JSON.stringify(asCleanTxLogs(tx), null, 2)
 }
 
@@ -364,24 +368,8 @@ export function biggyScience(num: string): string {
 /**
  * Emulates the browser Fetch API more accurately than fetch JSON.
  */
-function getFetchCors(opts: EdgeCorePluginOptions): Function {
-  const nativeIo = opts.nativeIo['edge-currency-accountbased']
-  if (nativeIo == null) return opts.io.fetch
-
-  return function fetch(uri: string, opts?: Object) {
-    return nativeIo.fetchText(uri, opts).then(reply => ({
-      ok: reply.ok,
-      status: reply.status,
-      statusText: reply.statusText,
-      url: reply.url,
-      async json() {
-        return await Promise.resolve().then(() => JSON.parse(reply.text))
-      },
-      async text() {
-        return await Promise.resolve(reply.text)
-      }
-    }))
-  }
+function getFetchCors(opts: EdgeCorePluginOptions): EdgeFetchFunction {
+  return opts.io.fetchCors ?? opts.io.fetch
 }
 
 export function safeErrorMessage(e?: Error): string {
@@ -398,7 +386,7 @@ export function safeErrorMessage(e?: Error): string {
  * preferring the items from later objects.
  */
 export function mergeDeeply(...objects: any[]): any {
-  const out = {}
+  const out: any = {}
 
   for (const o of objects) {
     if (o == null) continue

@@ -38,7 +38,7 @@ export class WalletLocalData {
   numTransactions: { [currencyCode: string]: number }
   otherData: Object
 
-  constructor(jsonString: string | null, primaryCurrency: string) {
+  constructor(jsonString: string | null) {
     this.blockHeight = 0
     const totalBalances: { [currencyCode: string]: string } = {}
     this.totalBalances = totalBalances

@@ -102,7 +102,7 @@ export class CurrencyEngine<T> {
     this.txIdMap = {}
     this.txIdList = {}
     this.walletInfo = walletInfo
-    this.walletId = walletInfo.id ? `${walletInfo.id} - ` : ''
+    this.walletId = walletInfo.id != null ? `${walletInfo.id} - ` : ''
     this.currencyInfo = currencyPlugin.currencyInfo
     this.allTokens = currencyPlugin.currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
@@ -125,13 +125,26 @@ export class CurrencyEngine<T> {
     if (typeof this.walletInfo.keys.publicKey !== 'string') {
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
+    this.walletLocalData = {
+      blockHeight: 0,
+      lastAddressQueryHeight: 0,
+      lastTransactionQueryHeight: {},
+      lastTransactionDate: {},
+      publicKey: '',
+      totalBalances: {},
+      lastCheckedTxsDropped: 0,
+      numUnconfirmedSpendTxs: 0,
+      numTransactions: {},
+      otherData: {}
+    }
+    this.otherData = {}
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginId}`
     )
   }
 
   isSpendTx(edgeTransaction: EdgeTransaction): boolean {
-    if (edgeTransaction.nativeAmount) {
+    if (edgeTransaction.nativeAmount !== '') {
       if (edgeTransaction.nativeAmount.slice(0, 1) === '-') {
         return true
       }
@@ -140,10 +153,7 @@ export class CurrencyEngine<T> {
       }
     }
     let out = true
-    if (
-      edgeTransaction.ourReceiveAddresses &&
-      edgeTransaction.ourReceiveAddresses.length > 0
-    ) {
+    if (edgeTransaction.ourReceiveAddresses.length > 0) {
       for (const addr of edgeTransaction.ourReceiveAddresses) {
         if (addr === this.walletLocalData.publicKey) {
           out = false
@@ -153,7 +163,7 @@ export class CurrencyEngine<T> {
     return out
   }
 
-  async loadTransactions() {
+  async loadTransactions(): Promise<void> {
     if (this.transactionsLoaded) {
       this.log('Transactions already loaded')
       return
@@ -198,7 +208,10 @@ export class CurrencyEngine<T> {
 
     let isEmptyTransactions = true
     for (const cc of Object.keys(this.transactionList)) {
-      if (this.transactionList[cc] && this.transactionList[cc].length > 0) {
+      if (
+        this.transactionList[cc] != null &&
+        this.transactionList[cc].length > 0
+      ) {
         isEmptyTransactions = false
         break
       }
@@ -209,11 +222,7 @@ export class CurrencyEngine<T> {
         this.transactionList[cc] !== undefined &&
         this.transactionList[cc].length > 0
       ) {
-        if (
-          transactionList !== undefined &&
-          transactionList[cc] !== undefined &&
-          transactionList[cc].length < this.transactionList[cc].length
-        ) {
+        if (transactionList[cc].length < this.transactionList[cc].length) {
           this.log.crash(
             new Error(
               `Transaction list length mismatch for ${cc}: on disk ${transactionList[cc].length} txs < in memory ${this.transactionList[cc].length} txs`
