@@ -1,18 +1,16 @@
-// @flow
-
 import { assert, expect } from 'chai'
 import {
-  type EdgeCorePluginOptions,
-  type EdgeCurrencyPlugin,
-  type EdgeCurrencyTools,
+  EdgeCorePluginOptions,
+  EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   makeFakeIo
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
 
-import edgeCorePlugins from '../../src/index.js'
-import { expectRejection } from '../expectRejection.js'
-import { fakeLog } from '../fakeLog.js'
-import fixtures from './fixtures.js'
+import edgeCorePlugins from '../../src/index'
+import { expectRejection } from '../expectRejection'
+import { fakeLog } from '../fakeLog'
+import fixtures from './fixtures'
 
 for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
@@ -35,30 +33,30 @@ for (const fixture of fixtures) {
       expect(plugin.currencyInfo.currencyCode).equals(
         fixture['Test Currency code']
       )
-      return plugin.makeCurrencyTools().then(async currencyTools => {
+      return await plugin.makeCurrencyTools().then(async currencyTools => {
         tools = currencyTools
       })
     })
-    it('ripple.com invalid URI handler', function () {
-      return expectRejection(
+    it('ripple.com invalid URI handler', async function () {
+      return await expectRejection(
         tools.parseUri(fixture.parseUri['ripple.com invalid uri handler'][0])
       )
     })
 
-    it('ripple.com invalid URI domain', function () {
-      return expectRejection(
+    it('ripple.com invalid URI domain', async function () {
+      return await expectRejection(
         tools.parseUri(fixture.parseUri['ripple.com invalid uri domain'][0])
       )
     })
 
-    it('ripple.com invalid URI path', function () {
-      return expectRejection(
+    it('ripple.com invalid URI path', async function () {
+      return await expectRejection(
         tools.parseUri(fixture.parseUri['ripple.com invalid uri path'][0])
       )
     })
 
-    it('ripple.com invalid URI param', function () {
-      return expectRejection(
+    it('ripple.com invalid URI param', async function () {
+      return await expectRejection(
         tools.parseUri(fixture.parseUri['ripple.com invalid uri param'][0])
       )
     })

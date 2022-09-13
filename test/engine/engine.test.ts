@@ -1,28 +1,26 @@
-// @flow
-
 import { assert, expect } from 'chai'
 import {
-  type EdgeCorePluginOptions,
-  type EdgeCurrencyEngine,
-  type EdgeCurrencyEngineCallbacks,
-  type EdgeCurrencyEngineOptions,
-  type EdgeCurrencyPlugin,
-  type EdgeCurrencyTools,
-  type EdgeWalletInfo,
   closeEdge,
+  EdgeCorePluginOptions,
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineCallbacks,
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
+  EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { beforeEach, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import { CurrencyEngine } from '../../src/common/engine.js'
-import { CurrencyPlugin } from '../../src/common/plugin.js'
-import { WalletLocalData } from '../../src/common/types.js'
-import edgeCorePlugins from '../../src/index.js'
-import { fakeLog } from '../fakeLog.js'
-import { engineTestTxs } from './engine.txs.js'
-import fixtures from './fixtures.js'
+import { CurrencyEngine } from '../../src/common/engine'
+import { CurrencyPlugin } from '../../src/common/plugin'
+import { WalletLocalData } from '../../src/common/types'
+import edgeCorePlugins from '../../src/index'
+import { fakeLog } from '../fakeLog'
+import { engineTestTxs } from './engine.txs'
+import fixtures from './fixtures'
 
 const fakeIo = makeFakeIo()
 const opts: EdgeCorePluginOptions = {
@@ -93,7 +91,7 @@ for (const fixture of fixtures) {
       expect(plugin.currencyInfo.currencyCode).equals(
         fixture['Test Currency code']
       )
-      return plugin.makeCurrencyTools().then(async currencyTools => {
+      return await plugin.makeCurrencyTools().then(async currencyTools => {
         tools = currencyTools
 
         keys = await tools.createPrivateKey(WALLET_TYPE)
@@ -109,7 +107,7 @@ for (const fixture of fixtures) {
   })
 
   describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
-    it('Make Engine', function () {
+    it('Make Engine', async function () {
       if (WALLET_TYPE === 'wallet:fio') this.timeout(60000)
       const info: EdgeWalletInfo = {
         id: '1',
@@ -117,39 +115,45 @@ for (const fixture of fixtures) {
         keys
       }
       if (!plugin) throw new Error('ErrorNoPlugin')
-      return plugin.makeCurrencyEngine(info, currencyEngineOptions).then(e => {
-        engine = e
-        assert.equal(typeof engine.startEngine, 'function', 'startEngine')
-        assert.equal(typeof engine.killEngine, 'function', 'killEngine')
-        assert.equal(typeof engine.getBlockHeight, 'function', 'getBlockHeight')
-        assert.equal(typeof engine.getBalance, 'function', 'getBalance')
-        assert.equal(
-          typeof engine.getNumTransactions,
-          'function',
-          'getNumTransactions'
-        )
-        assert.equal(
-          typeof engine.getTransactions,
-          'function',
-          'getTransactions'
-        )
-        assert.equal(
-          typeof engine.getFreshAddress,
-          'function',
-          'getFreshAddress'
-        )
-        assert.equal(
-          typeof engine.addGapLimitAddresses,
-          'function',
-          'addGapLimitAddresses'
-        )
-        assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
-        assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
-        assert.equal(typeof engine.signTx, 'function', 'signTx')
-        assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
-        assert.equal(typeof engine.saveTx, 'function', 'saveTx')
-        return true
-      })
+      return await plugin
+        .makeCurrencyEngine(info, currencyEngineOptions)
+        .then(e => {
+          engine = e
+          assert.equal(typeof engine.startEngine, 'function', 'startEngine')
+          assert.equal(typeof engine.killEngine, 'function', 'killEngine')
+          assert.equal(
+            typeof engine.getBlockHeight,
+            'function',
+            'getBlockHeight'
+          )
+          assert.equal(typeof engine.getBalance, 'function', 'getBalance')
+          assert.equal(
+            typeof engine.getNumTransactions,
+            'function',
+            'getNumTransactions'
+          )
+          assert.equal(
+            typeof engine.getTransactions,
+            'function',
+            'getTransactions'
+          )
+          assert.equal(
+            typeof engine.getFreshAddress,
+            'function',
+            'getFreshAddress'
+          )
+          assert.equal(
+            typeof engine.addGapLimitAddresses,
+            'function',
+            'addGapLimitAddresses'
+          )
+          assert.equal(typeof engine.isAddressUsed, 'function', 'isAddressUsed')
+          assert.equal(typeof engine.makeSpend, 'function', 'makeSpend')
+          assert.equal(typeof engine.signTx, 'function', 'signTx')
+          assert.equal(typeof engine.broadcastTx, 'function', 'broadcastTx')
+          assert.equal(typeof engine.saveTx, 'function', 'saveTx')
+          return true
+        })
     })
   })
 
@@ -182,13 +186,13 @@ for (const fixture of fixtures) {
     if (fixture.messages == null) return
     it('Should sign a hashed message', async function () {
       if (!engine) throw new Error('ErrorNoEngine')
-      // $FlowFixMe
+      // @ts-expect-error
       const sig = engine.utils.signMessage(fixture.messages.eth_sign.param)
       assert.equal(sig, fixture.messages.eth_sign.signature)
     })
     it('Should sign a typed message', function () {
       if (!engine) throw new Error('ErrorNoEngine')
-      // $FlowFixMe
+      // @ts-expect-error
       const sig = engine.utils.signTypedData(
         fixture.messages.eth_signTypedData.param
       )

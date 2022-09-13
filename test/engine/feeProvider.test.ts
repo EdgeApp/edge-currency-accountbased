@@ -1,5 +1,3 @@
-// @flow
-
 import { assert } from 'chai'
 import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
@@ -9,14 +7,14 @@ import {
   fetchFeesFromEvmScan,
   fetchFeesFromInfoServer
 } from '../../src/ethereum/fees/feeProviders'
-import { currencyInfo as ethCurrencyInfo } from '../../src/ethereum/info/ethInfo.js'
-import { currencyInfo as ftmCurrencyInfo } from '../../src/ethereum/info/ftmInfo.js'
-import { fakeLog } from '../fakeLog.js'
+import { currencyInfo as ethCurrencyInfo } from '../../src/ethereum/info/ethInfo'
+import { currencyInfo as ftmCurrencyInfo } from '../../src/ethereum/info/ftmInfo'
+import { fakeLog } from '../fakeLog'
 
 // TODO: Loop for all plugins
 describe(`FTM Network Fees`, function () {
   it('Validate Info Server Fees', async function () {
-    // $FlowFixMe
+    // @ts-expect-error
     const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo)
     validateGasPrices(fees.default.gasPrice, true)
     // Info server should provide gas limit as well
@@ -25,7 +23,7 @@ describe(`FTM Network Fees`, function () {
   })
 
   it('EvmGasStation Fees', async function () {
-    // $FlowFixMe
+    // @ts-expect-error
     const fees = await fetchFeesFromEvmGasStation(
       fetch,
       ethCurrencyInfo,
@@ -38,7 +36,7 @@ describe(`FTM Network Fees`, function () {
   })
 
   it('EvmScan Fees', async function () {
-    // $FlowFixMe
+    // @ts-expect-error
     const fees = await fetchFeesFromEvmScan(
       fetch,
       ftmCurrencyInfo,

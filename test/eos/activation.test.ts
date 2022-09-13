@@ -1,22 +1,20 @@
-// @flow
-
 import { assert } from 'chai'
 import {
-  type EdgeCorePluginOptions,
-  type EdgeCurrencyEngine,
-  type EdgeCurrencyEngineCallbacks,
-  type EdgeCurrencyEngineOptions,
-  type EdgeCurrencyPlugin,
-  type EdgeWalletInfo,
   closeEdge,
+  EdgeCorePluginOptions,
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineCallbacks,
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyPlugin,
+  EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import edgeCorePlugins from '../../src/index.js'
-import { fakeLog } from '../fakeLog.js'
+import edgeCorePlugins from '../../src/index'
+import { fakeLog } from '../fakeLog'
 
 describe(`EOS activation`, function () {
   let engine: EdgeCurrencyEngine
@@ -85,8 +83,8 @@ describe(`EOS activation`, function () {
     }
   }
 
-  before('Engine', function () {
-    return plugin
+  before('Engine', async function () {
+    return await plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
         engine = result
@@ -95,7 +93,7 @@ describe(`EOS activation`, function () {
 
   it.skip('getSupportedCurrencies', async function () {
     this.timeout(5000)
-    if (plugin.otherMethods) {
+    if (plugin.otherMethods != null) {
       const result =
         await plugin.otherMethods.getActivationSupportedCurrencies()
       assert.equal(result.BTC, true)
@@ -107,7 +105,7 @@ describe(`EOS activation`, function () {
 
   it('getActivationCost', async function () {
     this.timeout(10000)
-    if (plugin.otherMethods) {
+    if (plugin.otherMethods != null) {
       const result = await plugin.otherMethods.getActivationCost('EOS')
       const cost = Number(result)
       assert.equal(cost > 0.01, true)

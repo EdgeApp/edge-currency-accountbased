@@ -1,24 +1,22 @@
-// @flow
-
-import { gte, add } from 'biggystring'
+import { add, gte } from 'biggystring'
 import { assert } from 'chai'
 import {
-  type EdgeCorePluginOptions,
-  type EdgeCurrencyEngineCallbacks,
-  type EdgeCurrencyEngineOptions,
-  type EdgeCurrencyPlugin,
-  type EdgeSpendInfo,
-  type EdgeWalletInfo,
   closeEdge,
+  EdgeCorePluginOptions,
+  EdgeCurrencyEngineCallbacks,
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyPlugin,
+  EdgeSpendInfo,
+  EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import edgeCorePlugins from '../../src/index.js'
-import { TezosEngine } from '../../src/tezos/tezosEngine.js'
-import { fakeLog } from '../fakeLog.js'
+import edgeCorePlugins from '../../src/index'
+import { TezosEngine } from '../../src/tezos/tezosEngine'
+import { fakeLog } from '../fakeLog'
 
 describe(`Tezos engine`, function () {
   const fakeIo = makeFakeIo()
@@ -57,7 +55,7 @@ describe(`Tezos engine`, function () {
       emitter.emit('wcNewContractCall', payload)
     }
   }
-  // $FlowFixMe
+  // @ts-expect-error
   let engine: TezosEngine
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
@@ -83,8 +81,8 @@ describe(`Tezos engine`, function () {
     }
   }
 
-  before('Engine', function () {
-    return plugin
+  before('Engine', async function () {
+    return await plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
         engine = result
