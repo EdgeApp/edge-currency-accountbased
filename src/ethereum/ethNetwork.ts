@@ -173,7 +173,7 @@ export const getFeeRateUsed = (
       ...(gasUsed !== undefined ? { gasUsed: gasUsed } : {}),
       gasLimit: gasLimit
     }
-  } catch (e) {
+  } catch (e: any) {
     console.log(`Failed to construct feeRateUssed: ${e}`)
   }
 
@@ -1070,7 +1070,7 @@ export class EthereumNetwork {
 
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
       return { blockHeight, server }
-    } catch (e) {
+    } catch (e: any) {
       this.ethEngine.log('checkBlockHeightBlockbook blockHeight ', e)
       throw new Error(`checkBlockHeightBlockbook returned invalid JSON`)
     }
@@ -1087,7 +1087,7 @@ export class EthereumNetwork {
         10
       )
       return { blockHeight, server: 'blockchair' }
-    } catch (e) {
+    } catch (e: any) {
       this.logError(e)
       throw new Error('checkBlockHeightBlockchair returned invalid JSON')
     }
@@ -1098,7 +1098,7 @@ export class EthereumNetwork {
       const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
       const blockHeight = parseInt(asRpcResultString(jsonObj).result, 16)
       return { blockHeight, server: 'amberdata' }
-    } catch (e) {
+    } catch (e: any) {
       this.logError('checkBlockHeightAmberdata', e)
       throw new Error('checkTxsAmberdata (regular tx) response is invalid')
     }
@@ -1128,7 +1128,7 @@ export class EthereumNetwork {
       )
       const newNonce = `${parseInt(asRpcResultString(jsonObj).result, 16)}`
       return { newNonce, server: 'amberdata' }
-    } catch (e) {
+    } catch (e: any) {
       this.logError('checkNonceAmberdata', e)
       throw new Error('Amberdata returned invalid JSON')
     }
@@ -1176,7 +1176,7 @@ export class EthereumNetwork {
           const cleanedTx = cleanerFunc(transactions[i])
           const tx = this.processEvmScanTransaction(cleanedTx, currencyCode)
           allTransactions.push(tx)
-        } catch (e) {
+        } catch (e: any) {
           this.ethEngine.error(
             `getAllTxsEthscan ${cleanerFunc.name}\n${safeErrorMessage(
               e
@@ -1287,7 +1287,7 @@ export class EthereumNetwork {
     let addressInfo: BlockbookAddress
     try {
       addressInfo = asBlockbookAddress(jsonObj)
-    } catch (e) {
+    } catch (e: any) {
       this.ethEngine.error(
         `checkTxsBlockbook ${server} error BlockbookAddress ${JSON.stringify(
           jsonObj
@@ -1307,7 +1307,7 @@ export class EthereumNetwork {
       try {
         const { symbol, balance } = asBlockbookTokenBalance(token)
         out.tokenBal[symbol] = balance
-      } catch (e) {
+      } catch (e: any) {
         this.ethEngine.error(
           `checkTxsBlockbook ${server} BlockbookTokenBalance ${JSON.stringify(
             token
@@ -1349,7 +1349,7 @@ export class EthereumNetwork {
         }
       }
       cleanedResponseObj = asRpcResultString(jsonObj)
-    } catch (e) {
+    } catch (e: any) {
       this.ethEngine.error(
         `checkTokenBalEthscan token ${tk} response ${response || ''} `,
         e
@@ -1373,7 +1373,7 @@ export class EthereumNetwork {
     try {
       const jsonObj = await this.fetchGetBlockchair(path, true)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
-    } catch (e) {
+    } catch (e: any) {
       this.logError('checkTokenBalBlockchair', e)
       throw new Error('checkTokenBalBlockchair response is invalid')
     }
@@ -1393,7 +1393,7 @@ export class EthereumNetwork {
         } else {
           // Do nothing, eg: Old DAI token balance is ignored
         }
-      } catch (e) {
+      } catch (e: any) {
         this.ethEngine.error(
           `checkTokenBalBlockchair tokenData ${safeErrorMessage(
             e
@@ -1427,7 +1427,7 @@ export class EthereumNetwork {
       }
 
       cleanedResponseObj = asRpcResultString(jsonObj)
-    } catch (e) {
+    } catch (e: any) {
       this.ethEngine.error(
         `checkTokenBalRpc token ${tk} response ${response || ''} `,
         e
@@ -1457,7 +1457,7 @@ export class EthereumNetwork {
       try {
         const ethUpdate = await checkFunc()
         this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
-      } catch (e) {
+      } catch (e: any) {
         this.ethEngine.error('checkAndUpdate ', e)
       }
     }

@@ -171,7 +171,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
           try {
             out = await connection.genericAction(actionName, params)
-          } catch (e) {
+          } catch (e: any) {
             // handle FIO API error
             if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
               out = {
@@ -259,7 +259,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     ) {
       try {
         FIOSDK.isFioAddressValid(fioAddress)
-      } catch (e) {
+      } catch (e: any) {
         throw new FioError(
           '',
           400,
@@ -277,7 +277,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
             currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
           )
         }
-      } catch (e) {
+      } catch (e: any) {
         if (
           e.name === 'FioError' &&
           e.json &&
@@ -304,7 +304,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           )
         }
         return result
-      } catch (e) {
+      } catch (e: any) {
         if (
           (e.name === 'FioError' &&
             e.labelCode ===
@@ -324,7 +324,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     async isFioAddressValid(fioAddress: string): Promise<boolean> {
       try {
         return FIOSDK.isFioAddressValid(fioAddress)
-      } catch (e) {
+      } catch (e: any) {
         return false
       }
     },
@@ -338,7 +338,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         } else {
           if (!FIOSDK.isFioAddressValid(fioName)) return false
         }
-      } catch (e) {
+      } catch (e: any) {
         throw new FioError(
           '',
           400,
@@ -351,7 +351,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         })
 
         return !isAvailableRes.is_registered
-      } catch (e) {
+      } catch (e: any) {
         if (
           e.name === 'FioError' &&
           e.json &&
@@ -396,7 +396,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     async doesAccountExist(fioName: string): Promise<boolean> {
       try {
         if (!FIOSDK.isFioAddressValid(fioName)) return false
-      } catch (e) {
+      } catch (e: any) {
         return false
       }
       try {
@@ -405,7 +405,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         })
 
         return isAvailableRes.is_registered
-      } catch (e) {
+      } catch (e: any) {
         this.error('doesAccountExist error: ', e)
         return false
       }
@@ -459,7 +459,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           throw new Error(data.error)
         }
         return await result.json()
-      } catch (e) {
+      } catch (e: any) {
         if (e.labelCode) throw e
         throw new FioError(
           safeErrorMessage(e),
@@ -491,7 +491,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           throw new Error(json.error)
         }
         return json.domains
-      } catch (e) {
+      } catch (e: any) {
         if (e.labelCode) throw e
         throw new FioError(
           safeErrorMessage(e),
@@ -529,7 +529,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         return (apr != null && apr > DEFAULT_APR) || apr == null
           ? DEFAULT_APR
           : apr
-      } catch (e) {
+      } catch (e: any) {
         if (e.labelCode) throw e
         throw new FioError(
           e.message,

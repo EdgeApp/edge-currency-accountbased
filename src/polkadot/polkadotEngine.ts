@@ -85,7 +85,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
         this.currencyInfo.currencyCode,
         response.data.free.toString()
       )
-    } catch (e) {
+    } catch (e: any) {
       this.warn('queryBalance failed with error: ', e)
     }
   }
@@ -101,7 +101,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (e) {
+    } catch (e: any) {
       this.warn('queryBlockheight failed with error: ', e)
     }
   }
@@ -174,7 +174,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
         const cleanResponse = asTransactions(response.data)
         count = cleanResponse.count
         transfers = cleanResponse.transfers
-      } catch (e) {
+      } catch (e: any) {
         if (
           typeof e?.message === 'string' &&
           e.message.includes('Subscan /scan/transfers failed with 429')
@@ -190,7 +190,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       transfers.forEach(tx => {
         try {
           this.processPolkadotTransaction(asTransfer(tx))
-        } catch (e) {
+        } catch (e: any) {
           const hash = tx != null && typeof tx.hash === 'string' ? tx.hash : ''
           this.warn(`Ignoring invalid transfer ${hash}`)
         }
@@ -423,7 +423,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       edgeTransaction.txid = txid.toHex()
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-    } catch (e) {
+    } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }

@@ -73,7 +73,7 @@ export class XrpPlugin extends CurrencyPlugin {
 
       // If that worked, return the key:
       return { rippleKey: privateKey }
-    } catch (e) {
+    } catch (e: any) {
       throw new Error(`Invalid private key: ${safeErrorMessage(e)}`)
     }
   }
@@ -114,7 +114,7 @@ export class XrpPlugin extends CurrencyPlugin {
       uri = `ripple:${classicAddress}?to=${classicAddress}${
         tag !== false ? `&dt=${tag}` : ''
       }`
-    } catch (e) {
+    } catch (e: any) {
       //
     }
 

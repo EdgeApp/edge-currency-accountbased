@@ -176,7 +176,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
             15000
           )
           return asGetAccountActivationQuote(out)
-        } catch (e) {
+        } catch (e: any) {
           this.error(`getAccountActivationQuoteError: `, e)
           throw new Error(`getAccountActivationQuoteError`)
         }
@@ -213,7 +213,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error fetching height: `, e)
     }
   }
@@ -513,7 +513,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       try {
         incomingResult = await this.checkIncomingTransactions(acct, token)
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
-      } catch (e) {
+      } catch (e: any) {
         this.error(`checkTransactionsInnerLoop fetches failed with error: `, e)
         return false
       }
@@ -864,7 +864,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         }
       }
       this.updateOnAddressesChecked()
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error fetching account: `, e)
     }
   }
@@ -945,7 +945,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       try {
         await this.eosPlugin.getAccSystemStats(publicAddress)
         this.activatedAccountsCache[publicAddress] = true
-      } catch (e) {
+      } catch (e: any) {
         if (e.code.includes('ErrorUnknownAccount')) {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
@@ -1137,7 +1137,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       edgeTransaction.txid = signedTx.transaction_id
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
-    } catch (e) {
+    } catch (e: any) {
       this.error('\nCaught exception: ', e)
       if (e instanceof RpcError) this.error(JSON.stringify(e.json, null, 2))
       let err = e

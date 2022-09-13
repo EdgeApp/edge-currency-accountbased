@@ -237,7 +237,7 @@ export function makeEosBasedPluginInner(
           )
         )
         return asGetActivationSupportedCurrencies(out)
-      } catch (e) {
+      } catch (e: any) {
         log.error(`UnableToGetSupportedCurrencies error: `, e)
         throw new Error('UnableToGetSupportedCurrencies')
       }
@@ -270,7 +270,7 @@ export function makeEosBasedPluginInner(
           )
         )
         return out
-      } catch (e) {
+      } catch (e: any) {
         log.error(`ErrorUnableToGetCost: `, e)
         throw new Error('ErrorUnableToGetCost')
       }
@@ -292,7 +292,7 @@ export function makeEosBasedPluginInner(
           throw e
         }
         throw new Error('ErrorUnknownError')
-      } catch (e) {
+      } catch (e: any) {
         if (e.code === 'ErrorUnknownAccount') {
           out.result = 'AccountAvailable'
         } else {

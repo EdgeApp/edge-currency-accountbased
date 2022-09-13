@@ -216,7 +216,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       } else if (e[0] && e[0].kind && e[0].kind === 'branch' && e[0].id) {
         return 'Failed in preapply with an error code (' + e[0].id + ')'
       }
-    } catch (e) {}
+    } catch(e: any) {}
     return ''
   }
 
@@ -395,7 +395,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           div(nativeAmount, denom.multiplier, 6),
           this.currencyInfo.defaultSettings.fee.transaction
         )
-      } catch (e) {
+      } catch(e: any) {
         error = e
       }
     } while (

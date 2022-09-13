@@ -39,7 +39,7 @@ export class TezosPlugin extends CurrencyPlugin {
     try {
       const valid = eztz.crypto.checkAddress(address)
       return valid
-    } catch (e) {
+    } catch (e: any) {
       return false
     }
   }

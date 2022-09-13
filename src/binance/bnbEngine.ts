@@ -124,7 +124,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
           )
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error('Error fetching height: ', e)
     }
   }
@@ -158,7 +158,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       // fetching of account balances for uninitiated accounts returns 404 (throws error)
       if (
         this.tokenCheckTransactionsStatus.BNB === 1 &&
@@ -269,7 +269,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         }
         start = end
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error(
         `Error checkTransactionsFetch ${currencyCode}: ${this.walletLocalData.publicKey}`,
         e
@@ -306,7 +306,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     let resultArray = []
     try {
       resultArray = await Promise.all(promiseArray)
-    } catch (e) {
+    } catch (e: any) {
       this.error('Failed to query transactions ', e)
     }
     let successCount = 0

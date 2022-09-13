@@ -177,14 +177,14 @@ export class CurrencyEngine<T> {
     try {
       const result = await disklet.getText(TXID_LIST_FILE)
       txIdList = JSON.parse(result)
-    } catch (e) {
+    } catch (e: any) {
       this.log('Could not load txidList file. Failure is ok on new device')
       await disklet.setText(TXID_LIST_FILE, JSON.stringify(this.txIdList))
     }
     try {
       const result = await disklet.getText(TXID_MAP_FILE)
       txIdMap = JSON.parse(result)
-    } catch (e) {
+    } catch (e: any) {
       this.log('Could not load txidMap file. Failure is ok on new device')
       await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
     }
@@ -192,7 +192,7 @@ export class CurrencyEngine<T> {
     try {
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === 'ENOENT') {
         this.log(
           'Could not load transactionList file. Failure is ok on new device'
@@ -282,7 +282,7 @@ export class CurrencyEngine<T> {
           DATA_STORE_FILE,
           JSON.stringify(this.walletLocalData)
         )
-      } catch (e) {
+      } catch (e: any) {
         this.error('Error writing to localDataStore. Engine not started: ', e)
         throw e
       }
@@ -617,7 +617,7 @@ export class CurrencyEngine<T> {
           currencyCode,
           this.walletLocalData.totalBalances[currencyCode]
         )
-      } catch (e) {
+      } catch (e: any) {
         this.error(
           `doInitialBalanceCallback Error for currencyCode ${currencyCode}`,
           e
@@ -632,7 +632,7 @@ export class CurrencyEngine<T> {
         this.currencyEngineCallbacks.onTransactionsChanged(
           this.transactionList[currencyCode]
         )
-      } catch (e) {
+      } catch (e: any) {
         this.error(
           `doInitialTransactionsCallback Error for currencyCode ${currencyCode}`,
           e
@@ -645,7 +645,7 @@ export class CurrencyEngine<T> {
     try {
       // @ts-expect-error
       await this[func]()
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error in Loop: ${func} `, e)
     }
     if (this.engineOn) {

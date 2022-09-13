@@ -100,7 +100,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       ])
       const balance = asRpcBalance(response)
       this.updateBalance(this.chainCode, balance.value.toString())
-    } catch (e) {
+    } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
       this.error(`Error checking ${this.chainCode} address balance`, e)
     }
@@ -116,7 +116,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error(`queryBlockheight Error `, e)
     }
   }
@@ -130,7 +130,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       } = asRecentBlockHash(response).value
       this.feePerSignature = lamportsPerSignature.toString()
       this.recentBlockhash = blockhash
-    } catch (e) {
+    } catch (e: any) {
       this.error(`queryFee Error `, e)
     }
   }
@@ -188,7 +188,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
         if (response.length < this.settings.txQueryLimit) break // RPC limit
         before = response[this.settings.txQueryLimit - 1].signature
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error('getTransactionSignatures failed with error: ', e)
       return
     }
@@ -227,7 +227,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
             this.updateOnAddressesChecked()
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         // Note the oldest failed tx query so we try again next loop
         failedTxQueryIndex = i
         break
@@ -396,7 +396,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-    } catch (e) {
+    } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }

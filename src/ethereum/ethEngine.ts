@@ -273,7 +273,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       eth_signTypedData: params => {
         try {
           return this.utils.signTypedData(JSON.parse(params[1]))
-        } catch (e) {
+        } catch(e: any) {
           // It's possible that the dApp makes the wrong call.
           // Try to sign using the latest signTypedData_v4 method.
           return this.otherMethods.eth_signTypedData_v4(params)
@@ -380,7 +380,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
                     ]
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
-                } catch (e) {
+                } catch(e: any) {
                   this.warn(`Wallet connect call_request `, e)
                   throw e
                 }
@@ -446,7 +446,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
                   requestBody({ result: result.txid })
                 )
             }
-          } catch (e) {
+          } catch(e: any) {
             walletConnectors[uri].connector.rejectRequest(
               requestBody({
                 error: {
@@ -497,7 +497,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
         this.walletLocalDataDirty = true
         break
-      } catch (e) {
+      } catch(e: any) {
         this.error(
           `Error fetching fees from ${
             externalFeeProvider.name
@@ -865,7 +865,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           } else {
             gasLimit = '21000'
           }
-        } catch (e) {
+        } catch(e: any) {
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
             this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
@@ -889,7 +889,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           contractAddress,
           gasLimit
         }
-      } catch (e) {
+      } catch(e: any) {
         this.error(`makeSpend Error determining gas limit `, e)
       }
     } else if (useDefaults) {

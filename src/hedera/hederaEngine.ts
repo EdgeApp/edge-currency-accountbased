@@ -116,7 +116,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
             amount: toFixed(amount, 3, 18),
             exchangeAmount: '0'
           }
-        } catch (e) {
+        } catch (e: any) {
           this.warn(
             'getAccountActivationQuote: error submitting account activation request',
             e
@@ -152,7 +152,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
             )
             throw new Error('ErrorActivationPayment')
           }
-        } catch (e) {
+        } catch (e: any) {
           this.warn('submitActivationPayment error: ', e)
           throw e
         }
@@ -188,7 +188,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
           accountId = account.account
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
     }
 
@@ -219,7 +219,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
         if (json.status === 'success' && json.account_id != null) {
           accountId = json.account_id
         }
-      } catch (e) {
+      } catch (e: any) {
         this.warn(
           `error checking Hedera account creation status, ID: ${activationRequestId} error `,
           e
@@ -268,7 +268,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
       }
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       this.updateOnAddressesChecked()
-    } catch (e) {
+    } catch (e: any) {
       this.warn('getNewTransactions error getting transactions:', e)
     }
   }
@@ -496,7 +496,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
         base64.parse(edgeTransaction.signedTx)
       )
       await txn.execute(this.client)
-    } catch (e) {
+    } catch (e: any) {
       this.warn('broadcastTx error', e)
       throw e
     }

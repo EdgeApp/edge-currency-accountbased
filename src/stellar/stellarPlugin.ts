@@ -43,7 +43,7 @@ export class StellarPlugin extends CurrencyPlugin {
     try {
       stellarApi.Keypair.fromPublicKey(address)
       return true
-    } catch (e) {
+    } catch (e: any) {
       return false
     }
   }

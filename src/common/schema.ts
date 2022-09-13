@@ -13,7 +13,7 @@ export const asCurrencyCodeOptions = asObject({
 export function checkEdgeSpendInfo(raw: any): void {
   try {
     asPartialSpendInfo(raw)
-  } catch (e) {
+  } catch (e: any) {
     throw new TypeError(`Invalid EdgeSpendInfo: ${safeErrorMessage(e)}`)
   }
 }
@@ -21,7 +21,7 @@ export function checkEdgeSpendInfo(raw: any): void {
 export function checkCustomToken(raw: any): void {
   try {
     asCustomToken(raw)
-  } catch (e) {
+  } catch (e: any) {
     throw new TypeError(`Invalid CustomToken: ${safeErrorMessage(e)}`)
   }
 }

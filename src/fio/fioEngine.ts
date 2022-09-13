@@ -423,7 +423,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error(`checkBlockchainInnerLoop Error fetching height: `, e)
     }
   }
@@ -445,7 +445,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             balanceCurrencyCodes[currencyCodeKey]
           ] ?? '0'
         )
-      } catch (e) {
+      } catch (e: any) {
         this.log.error(
           'doInitialBalanceCallback Error for currencyCode',
           balanceCurrencyCodes[currencyCodeKey],
@@ -459,7 +459,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         stakedAmounts: [],
         ...this.otherData.stakingStatus
       })
-    } catch (e) {
+    } catch (e: any) {
       this.error(`doInitialBalanceCallback onStakingStatusChanged`, e)
     }
   }
@@ -569,7 +569,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       this.currencyEngineCallbacks.onStakingStatusChanged({
         ...this.otherData.stakingStatus
       })
-    } catch (e) {
+    } catch (e: any) {
       this.error('onStakingStatusChanged error')
     }
   }
@@ -814,7 +814,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         // if no transactions at all
         return true
       }
-    } catch (e) {
+    } catch (e: any) {
       return await this.checkTransactions(++historyNodeIndex)
     }
 
@@ -869,7 +869,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           break
         }
         pos -= HISTORY_NODE_OFFSET
-      } catch (e) {
+      } catch (e: any) {
         return await this.checkTransactions(++historyNodeIndex)
       }
     }
@@ -884,7 +884,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     let transactions
     try {
       transactions = await this.checkTransactions()
-    } catch (e) {
+    } catch (e: any) {
       this.error('checkTransactionsInnerLoop fetches failed with error: ', e)
       return false
     }
@@ -950,7 +950,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         default:
           res = await fioSdk.genericAction(actionName, params)
       }
-    } catch (e) {
+    } catch (e: any) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
         if (
@@ -1008,7 +1008,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           res
         )} - apiUrl: ${apiUrl} - endpoint: ${endpoint}`
       )
-    } catch (e) {
+    } catch (e: any) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
         this.log(
@@ -1091,7 +1091,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         (result: GetFioName) => {
           try {
             return JSON.stringify(asGetFioName(result))
-          } catch (e) {
+          } catch (e: any) {
             this.log(`getFioNames checkResult function returned error `, e)
           }
         },
@@ -1151,7 +1151,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       this.updateBalance(currencyCode, nativeAmount)
       this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
       this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
-    } catch (e) {
+    } catch (e: any) {
       this.log('checkAccountInnerLoop getFioBalance error: ', e)
     }
 
@@ -1259,7 +1259,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       }
 
       if (isChanged) this.localDataDirty()
-    } catch (e) {
+    } catch (e: any) {
       this.warn('checkAccountInnerLoop getFioNames error: ', e)
     }
   }
@@ -1303,7 +1303,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           fioRequests.push(...requests)
           lastPageAmount = requests.length
         }
-      } catch (e) {
+      } catch (e: any) {
         lastPageAmount = 0
         this.error('fetchFioRequests error: ', e)
       }
@@ -1365,7 +1365,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           'recordObtData',
           this.otherData.fioRequestsToApprove[fioRequestId]
         )
-      } catch (e) {
+      } catch (e: any) {
         this.error(
           `approveErroredFioRequests recordObtData error: ${safeErrorMessage(
             e

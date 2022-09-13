@@ -19,7 +19,7 @@ export const getOtherMethods = (
     try {
       const response = await io.fetch(`${creatorApiServer}/account/cost`)
       return asGetActivationCost(await response.json()).hbar
-    } catch (e) {
+    } catch (e: any) {
       opts.log.warn(
         'getActivationCost error unable to get account activation cost',
         e

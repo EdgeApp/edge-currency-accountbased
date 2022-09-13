@@ -71,7 +71,7 @@ export class HederaPlugin extends CurrencyPlugin {
         [`${this.pluginId}Mnemonic`]: privateMnemonic,
         [`${this.pluginId}Key`]: privateKey
       }
-    } catch (e) {
+    } catch (e: any) {
       throw new Error('InvalidPrivateKey')
     }
   }

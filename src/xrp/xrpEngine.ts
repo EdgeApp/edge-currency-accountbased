@@ -97,7 +97,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       const fee = asFee(response).result.drops.minimum_fee
       this.otherData.recommendedFee = fee
       this.walletLocalDataDirty = true
-    } catch (e) {
+    } catch (e: any) {
       this.error(
         `Error fetching recommended fee: ${safeErrorMessage(
           e
@@ -122,7 +122,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
           this.walletLocalData.blockHeight
         )
       }
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error fetching height: `, e)
     }
   }
@@ -194,7 +194,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
       this.updateOnAddressesChecked()
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
     }
   }
@@ -215,7 +215,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
           this.updateBalance(currencyCode, nativeAmount)
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.warn('Account not found. Probably not activated w/minimum XRP')
         this.tokenCheckBalanceStatus.XRP = 1
@@ -234,7 +234,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     this.engineOn = true
     try {
       await this.xrpPlugin.connectApi(this.walletId)
-    } catch (e) {
+    } catch (e: any) {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
@@ -358,7 +358,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       try {
         preparedTx = await this.multicastServers('preparePayment', payment)
         break
-      } catch (e) {
+      } catch (e: any) {
         if (
           safeErrorMessage(e).includes('has too many decimal places') &&
           i > 0
