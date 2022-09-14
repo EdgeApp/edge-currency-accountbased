@@ -423,8 +423,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
-    // @ts-expect-error
-    let memoId: ?string
+    let memoId: string
     if (
       // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       edgeSpendInfo.spendTargets[0].otherParams != null &&

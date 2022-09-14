@@ -29,8 +29,7 @@ const GENESIS = 1535068800 // '2018-08-24T00:00:00.000Z'
 export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   hederaPlugin: HederaPlugin
   client: hedera.Client
-  // @ts-expect-error
-  accountId: ?hedera.AccountId
+  accountId: hedera.AccountId | undefined | null
   otherMethods: Object
   io: EdgeIo
   creatorApiServers: [string]
