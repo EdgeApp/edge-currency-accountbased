@@ -239,8 +239,11 @@ export class CurrencyEngine<T> {
 
     if (isEmptyTransactions) {
       // Easy, just copy everything over
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.transactionList = transactionList || this.transactionList
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.txIdList = txIdList || this.txIdList
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.txIdMap = txIdMap || this.txIdMap
     } else if (transactionList != null) {
       // Manually add transactions via addTransaction()
@@ -263,6 +266,7 @@ export class CurrencyEngine<T> {
   ): Promise<void> {
     const { currencyCode } = this.currencyInfo
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.walletInfo.keys.publicKey) {
       const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
       // @ts-expect-error
@@ -306,6 +310,7 @@ export class CurrencyEngine<T> {
         displayName,
         networkLocation = {}
       } = customTokens[token]
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.addCustomToken({
         currencyCode,
         currencyName: displayName,
@@ -355,10 +360,12 @@ export class CurrencyEngine<T> {
 
     // Initialize walletLocalData.lastTransactionQueryHeight for
     //  backwards-compatibility
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.walletLocalData.lastTransactionQueryHeight) {
       for (const token of this.enabledTokens) {
         // @ts-expect-error
         this.walletLocalData.lastTransactionQueryHeight[token] =
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           this.walletLocalData.lastAddressQueryHeight || 0
       }
     }
@@ -366,7 +373,9 @@ export class CurrencyEngine<T> {
     this.doInitialBalanceCallback()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   findTransaction(currencyCode: string, txid: string) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.txIdMap[currencyCode]) {
       const index = this.txIdMap[currencyCode][txid]
       if (typeof index === 'number') {
@@ -376,11 +385,13 @@ export class CurrencyEngine<T> {
     return -1
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   sortTxByDate(a: EdgeTransaction, b: EdgeTransaction) {
     return b.date - a.date
   }
 
   // Add or update tx in transactionList
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   addTransaction(
     currencyCode: string,
     edgeTransaction: EdgeTransaction,
@@ -394,6 +405,7 @@ export class CurrencyEngine<T> {
 
     if (edgeTransaction.blockHeight < 1) {
       edgeTransaction.otherParams.lastSeenTime =
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         lastSeenTime || Math.round(Date.now() / 1000)
     }
     const txid = normalizeAddress(edgeTransaction.txid)
@@ -477,6 +489,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   sortTransactions(currencyCode: string) {
     // Sort
     this.transactionList[currencyCode].sort(this.sortTxByDate)
@@ -484,6 +497,7 @@ export class CurrencyEngine<T> {
     const txIdList: string[] = []
     let i = 0
     for (const tx of this.transactionList[currencyCode]) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!this.txIdMap[currencyCode]) {
         this.txIdMap[currencyCode] = {}
       }
@@ -494,6 +508,7 @@ export class CurrencyEngine<T> {
     this.txIdList[currencyCode] = txIdList
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   checkDroppedTransactionsThrottled() {
     const now = Date.now() / 1000
     if (
@@ -512,6 +527,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   checkDroppedTransactions(dateNow: number) {
     let numUnconfirmedSpendTxs = 0
     for (const currencyCode in this.transactionList) {
@@ -546,6 +562,7 @@ export class CurrencyEngine<T> {
     this.walletLocalDataDirty = true
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   updateBalance(tk: string, balance: string) {
     if (this.walletLocalData.totalBalances[tk] == null) {
       this.walletLocalData.totalBalances[tk] = '0'
@@ -560,6 +577,7 @@ export class CurrencyEngine<T> {
     this.updateOnAddressesChecked()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   updateTransaction(
     currencyCode: string,
     edgeTransaction: EdgeTransaction,
@@ -575,6 +593,7 @@ export class CurrencyEngine<T> {
   // *************************************
   // Save the wallet data store
   // *************************************
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveWalletLoop() {
     const disklet = this.walletLocalDisklet
     const promises = []
@@ -616,6 +635,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   doInitialBalanceCallback() {
     for (const currencyCode of this.enabledTokens) {
       try {
@@ -632,6 +652,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   doInitialTransactionsCallback() {
     for (const currencyCode of this.enabledTokens) {
       try {
@@ -647,6 +668,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async addToLoop(func: string, timer: number) {
     try {
       // @ts-expect-error
@@ -657,6 +679,7 @@ export class CurrencyEngine<T> {
     if (this.engineOn) {
       this.timers[func] = setTimeout(() => {
         if (this.engineOn) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.addToLoop(func, timer)
         }
       }, timer)
@@ -664,12 +687,14 @@ export class CurrencyEngine<T> {
     return true
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getTokenInfo(token: string) {
     return this.allTokens.find(element => {
       return element.currencyCode === token
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   updateOnAddressesChecked() {
     if (this.addressesChecked) {
       return
@@ -680,7 +705,9 @@ export class CurrencyEngine<T> {
     let totalStatus = 0
     let numComplete = 0
     for (const token of activeTokens) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const balanceStatus = this.tokenCheckBalanceStatus[token] || 0
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const txStatus = this.tokenCheckTransactionsStatus[token] || 0
       totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
       if (balanceStatus === 1 && txStatus === 1) {
@@ -696,7 +723,9 @@ export class CurrencyEngine<T> {
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
   }
 
@@ -704,6 +733,7 @@ export class CurrencyEngine<T> {
   // Public methods
   // *************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     // Set status flag to false
     this.engineOn = false
@@ -714,6 +744,7 @@ export class CurrencyEngine<T> {
     this.timers = {}
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async changeUserSettings(userSettings: Object) {
     this.currentSettings = userSettings
   }
@@ -742,6 +773,7 @@ export class CurrencyEngine<T> {
     return parseInt(this.walletLocalData.blockHeight)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   enableTokensSync(tokens: string[]) {
     const tokenMap = tokens.reduce((map, currencyCode) => {
       // @ts-expect-error
@@ -767,10 +799,12 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async enableTokens(tokens: string[]) {
     this.enableTokensSync(tokens)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   disableTokensSync(tokens: string[]) {
     for (const currencyCode of tokens) {
       if (currencyCode === this.currencyInfo.currencyCode) {
@@ -783,6 +817,7 @@ export class CurrencyEngine<T> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async disableTokens(tokens: string[]) {
     this.disableTokensSync(tokens)
   }
@@ -791,6 +826,7 @@ export class CurrencyEngine<T> {
     return this.enabledTokens
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async addCustomToken(obj: CustomToken, contractAddress?: string) {
     checkCustomToken(obj)
 
@@ -846,6 +882,7 @@ export class CurrencyEngine<T> {
       currencyCode: tokenObj.currencyCode,
       currencyName: tokenObj.currencyName,
       denominations: [denom],
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       contractAddress: contractAddress || tokenObj.contractAddress
     }
 
@@ -854,6 +891,7 @@ export class CurrencyEngine<T> {
     this.enableTokensSync([edgeMetaToken.currencyCode])
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getTokenStatus(token: string) {
     return this.enabledTokens.includes(token)
   }
@@ -897,12 +935,14 @@ export class CurrencyEngine<T> {
     if (options === null) {
       return this.transactionList[currencyCode].slice(0)
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (options.startIndex && options.startIndex > 0) {
       startIndex = options.startIndex
       if (startIndex >= this.transactionList[currencyCode].length) {
         startIndex = this.transactionList[currencyCode].length - 1
       }
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (options.startEntries && options.startEntries > 0) {
       startEntries = options.startEntries
       if (
@@ -917,6 +957,7 @@ export class CurrencyEngine<T> {
     // Copy the appropriate entries from the arrayTransactions
     let returnArray = []
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (startEntries) {
       returnArray = this.transactionList[currencyCode].slice(
         startIndex,
@@ -928,12 +969,15 @@ export class CurrencyEngine<T> {
     return returnArray
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars
   async addGapLimitAddresses(addresses: string[], options: any) {}
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars
   async isAddressUsed(address: string, options: any) {
     return false
   }
@@ -980,6 +1024,7 @@ export class CurrencyEngine<T> {
     }
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!skipChecks && (!nativeBalance || eq(nativeBalance, '0'))) {
       throw new InsufficientFundsError()
     }
@@ -998,6 +1043,7 @@ export class CurrencyEngine<T> {
   }
 
   // called by GUI after sliding to confirm
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveTx(edgeTransaction: EdgeTransaction) {
     // add the transaction to disk and fire off callback (alert in GUI)
     this.addTransaction(edgeTransaction.currencyCode, edgeTransaction)

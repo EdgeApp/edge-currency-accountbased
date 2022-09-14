@@ -117,6 +117,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeEthereumClassicPlugin = (opts: EdgeCorePluginOptions) => {
   return makeEthereumBasedPluginInner(opts, currencyInfo)
 }

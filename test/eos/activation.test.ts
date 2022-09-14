@@ -136,6 +136,7 @@ describe(`EOS activation`, function () {
 
   describe('killEngine...', function () {
     it('Should stop the engine', function (done) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       engine.killEngine().then(() => {
         closeEdge()
         done()

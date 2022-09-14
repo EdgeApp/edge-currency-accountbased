@@ -21,6 +21,7 @@ for (const fixture of fixtures) {
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     io: { ...fakeIo, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},

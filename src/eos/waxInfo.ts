@@ -80,6 +80,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeWaxPlugin = (opts: EdgeCorePluginOptions) => {
   return makeEosBasedPluginInner(opts, waxCurrencyInfo, eosJsConfig)
 }

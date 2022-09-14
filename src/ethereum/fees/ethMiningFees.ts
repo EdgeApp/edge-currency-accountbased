@@ -24,10 +24,13 @@ export function calcMiningFee(
   let useDefaults = true
   let customGasLimit, customGasPrice
   if (
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     spendInfo.spendTargets &&
     spendInfo.spendTargets.length > 0 &&
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     spendInfo.spendTargets[0].publicAddress
   ) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const { customNetworkFee } = spendInfo || {}
     if (
       spendInfo.networkFeeOption === ES_FEE_CUSTOM &&
@@ -108,6 +111,7 @@ export function calcMiningFee(
 
     let useLimit = 'regularTransaction'
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       spendInfo.currencyCode &&
       spendInfo.currencyCode !== currencyInfo.currencyCode
     ) {
@@ -125,6 +129,7 @@ export function calcMiningFee(
     // @ts-expect-error
     const gasLimit = networkFeeForGasLimit.gasLimit[useLimit]
     let gasPrice = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!spendInfo.spendTargets[0].nativeAmount) {
       throw new Error('ErrorInvalidNativeAmount')
     }
@@ -152,7 +157,9 @@ export function calcMiningFee(
           break
         }
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!networkFeeForGasPrice.gasPrice) {
             throw new Error('ErrorInvalidGasPrice')
           }

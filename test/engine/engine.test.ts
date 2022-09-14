@@ -41,6 +41,7 @@ for (const fixture of fixtures) {
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
   // @ts-expect-error
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   opts.io = { ...opts.io, random: size => fixture.key }
 
   // @ts-expect-error
@@ -118,6 +119,7 @@ for (const fixture of fixtures) {
         // @ts-expect-error
         keys
       }
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!plugin) throw new Error('ErrorNoPlugin')
       return await plugin
         .makeCurrencyEngine(info, currencyEngineOptions)
@@ -163,6 +165,7 @@ for (const fixture of fixtures) {
 
   describe('Start engine', function () {
     it('Get BlockHeight', function (done) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!engine) throw new Error('ErrorNoEngine')
       engine.startEngine().catch(e => {
         console.log('startEngine error', e, e.message)
@@ -174,6 +177,7 @@ for (const fixture of fixtures) {
         if (WALLET_TYPE === 'wallet:eth') {
           assert(height >= thirdPartyHeight, 'Block height')
         }
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!engine) throw new Error('ErrorNoEngine')
         const getHeight = engine.getBlockHeight()
         // this validation is not OK for RSK
@@ -189,12 +193,14 @@ for (const fixture of fixtures) {
   describe('Message signing', function () {
     if (fixture.messages == null) return
     it('Should sign a hashed message', async function () {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!engine) throw new Error('ErrorNoEngine')
       // @ts-expect-error
       const sig = engine.utils.signMessage(fixture.messages.eth_sign.param)
       assert.equal(sig, fixture.messages.eth_sign.signature)
     })
     it('Should sign a typed message', function () {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!engine) throw new Error('ErrorNoEngine')
       // @ts-expect-error
       const sig = engine.utils.signTypedData(
@@ -206,7 +212,9 @@ for (const fixture of fixtures) {
 
   describe('Stop the engine', function () {
     it('Should stop the engine', function (done) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!engine) throw new Error('ErrorNoEngine')
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       engine.killEngine().then(() => {
         closeEdge()
         done()
@@ -266,6 +274,7 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
 }
 const walletInfo = { id: '', type: '', keys: {} }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function validateTxidListMap(engine: CurrencyEngine<CurrencyPlugin>) {
   const ccs = ['ETH', 'DAI']
   for (const currencyCode of ccs) {

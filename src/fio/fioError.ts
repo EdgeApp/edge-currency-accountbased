@@ -28,13 +28,17 @@ export class FioError extends Error {
   constructor(message: string, code?: number, labelCode?: string, json?: any) {
     super(message)
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, FioError)
     }
 
     this.name = 'FioError'
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (code) this.errorCode = code
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (labelCode) this.labelCode = labelCode
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (json) this.json = json
   }
 }

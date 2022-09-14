@@ -255,6 +255,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeAvalanchePlugin = (opts: EdgeCorePluginOptions) => {
   return makeEthereumBasedPluginInner(opts, currencyInfo)
 }

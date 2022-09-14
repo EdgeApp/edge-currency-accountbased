@@ -64,6 +64,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     this.progressRatio = 0
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchRpc(method: string, params: any = []) {
     const body = {
       jsonrpc: '2.0',
@@ -94,6 +95,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     return response.result
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBalance() {
     try {
       const response = await this.fetchRpc('getBalance', [
@@ -108,6 +110,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBlockheight() {
     try {
       const blockheight = asNumber(await this.fetchRpc('getSlot'))
@@ -123,6 +126,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryFee() {
     try {
       const response = await this.fetchRpc('getRecentBlockhash')
@@ -137,6 +141,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processSolanaTransaction(tx: RpcGetTransaction, timestamp: number) {
     const ourReceiveAddresses = []
     const index = tx.transaction.message.accountKeys.findIndex(
@@ -165,6 +170,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     this.addTransaction(this.chainCode, edgeTransaction)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryTransactions() {
     let before = null
     const until =
@@ -173,6 +179,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     let txids = []
     try {
       // Gather all transaction IDs since we last updated
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       while (1) {
         const params = [
           this.base58PublicKey,
@@ -261,6 +268,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   initOtherData() {
     if (this.otherData.newestTxid == null) {
       this.otherData.newestTxid = ''
@@ -271,13 +279,19 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   // // Public methods
   // // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
     this.initOtherData()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -408,9 +422,12 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
     ) {
       return this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
@@ -418,7 +435,9 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

@@ -71,6 +71,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         const nonCachedNodes = this.tezosPlugin.tezosRpcNodes
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
+            // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
             .fetch(server + '/chains/main/blocks/head/header')
             .then(async function (response) {
               return await response.json()
@@ -98,6 +99,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       case 'getNumberOfOperations':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}`
           )
             .then(async function (response) {
@@ -118,6 +120,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
             ? ''
             : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.fetchCors(
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}/operations?type=transaction` +
               pagination
           ).then(async function (response) {
@@ -162,12 +165,14 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
             .catch((e: Error) => {
               this.error('Error when injection operation: ', e)
               const errorMessage = this.formatError(e)
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!preApplyError && errorMessage !== '') {
                 preApplyError = errorMessage
               }
               throw e
             })
           // Preapply passed -> Broadcast to all remaining nodes in the waterfall
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.multicastServers('silentInjection', server, params[1])
           return { server, result }
         })
@@ -191,6 +196,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           remainingRpcNodes.map(async server => {
             eztz.node.setProvider(server)
             const result = await eztz.rpc.silentInject(params[1])
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
             this.warn(`Injected silently to: ${server}`)
             return { server, result }
           })
@@ -210,19 +216,26 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     }
     try {
       if (
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         e.error &&
         e.error === 'Operation Failed' &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         e.errors &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         e.errors[0].id
       ) {
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         return 'Failed in preapply with an error code (' + e.errors[0].id + ')'
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       } else if (e[0] && e[0].kind && e[0].kind === 'branch' && e[0].id) {
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         return 'Failed in preapply with an error code (' + e[0].id + ')'
       }
     } catch (e: any) {}
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processTezosTransaction(tx: XtzGetTransaction) {
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
@@ -259,9 +272,11 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     const pkh = this.walletLocalData.publicKey
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.otherData.numberTransactions) {
       // @ts-expect-error
       this.otherData.numberTransactions = 0
@@ -298,9 +313,11 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     this.updateOnAddressesChecked()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const currencyCode = PRIMARY_CURRENCY
     const pkh = this.walletLocalData.publicKey
@@ -313,6 +330,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     this.updateBalance(currencyCode, balance)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     const head: HeadInfo = await this.multicastServers('getHead')
     const blockHeight = head.level
@@ -345,11 +363,16 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
   // Public methods
   // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -477,14 +500,18 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.mnemonic) {
       return this.walletInfo.keys.mnemonic
     }
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

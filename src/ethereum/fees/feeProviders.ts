@@ -27,6 +27,7 @@ import {
   EvmScanGasResponse
 } from '../ethTypes'
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const printFees = (log: EdgeLog, fees: Object) => {
   const keys = Object.keys(fees)
   for (const key of keys) {
@@ -127,8 +128,10 @@ export const fetchFeesFromEvmGasStation = async (
   const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
   if (ethGasStationUrl == null || gasStationApiKey == null) return
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const apiKeyParams = gasStationApiKey
-    ? `?api-key=${gasStationApiKey || ''}`
+    ? // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      `?api-key=${gasStationApiKey || ''}`
     : ''
   const result = await fetch(`${ethGasStationUrl}${apiKeyParams}`)
   const jsonObj = await result.json()
@@ -144,6 +147,7 @@ export const fetchFeesFromEvmGasStation = async (
     // greater-by-a-factor-of-ten gas prices, we need to multiply the GWEI
     // from Polygon Gas Station by 10 so they conform.
     fees.safeLow *= 10
+    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
     fees.average = ((jsonObj.fast + jsonObj.safeLow) / 2) * 10
     fees.fast = jsonObj.standard * 10
     fees.fastest *= 10
@@ -164,12 +168,16 @@ export const fetchFeesFromEvmGasStation = async (
   }
 
   // Correct inconsistencies, set gas prices
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.average <= fees.safeLow) fees.average = fees.safeLow + 1
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.fast <= fees.average) fees.fast = fees.average + 1
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.fastest <= fees.fast) fees.fastest = fees.fast + 1
 
   let lowFee = fees.safeLow
   let standardFeeLow = fees.fast
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   let standardFeeHigh = ((fees.fast + fees.fastest) * 0.5 + fees.fastest) * 0.5
   let highFee = standardFeeHigh > fees.fastest ? standardFeeHigh : fees.fastest
 

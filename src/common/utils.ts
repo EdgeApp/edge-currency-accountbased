@@ -256,6 +256,7 @@ async function asyncWaterfall(
       const result = await Promise.race(promises)
       if (result === 'async_waterfall_timed_out') {
         const p = promises.pop()
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         p?.then().catch()
         --pending
       } else {
@@ -265,6 +266,7 @@ async function asyncWaterfall(
       const i = e.index
       promises.splice(i, 1)
       const p = promises.pop()
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       p?.then().catch()
       --pending
       if (pending === 0) {

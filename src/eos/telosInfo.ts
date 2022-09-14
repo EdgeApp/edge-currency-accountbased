@@ -79,6 +79,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeTelosPlugin = (opts: EdgeCorePluginOptions) => {
   return makeEosBasedPluginInner(opts, telosCurrencyInfo, eosJsConfig)
 }

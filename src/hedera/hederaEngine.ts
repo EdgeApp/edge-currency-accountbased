@@ -43,6 +43,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     io: EdgeIo,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     currencyInfo: EdgeCurrencyInfo
   ) {
     super(currencyPlugin, walletInfo, opts)
@@ -169,6 +170,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
         // @ts-expect-error
         this.walletLocalData.otherData.paymentSubmitted = true
         this.walletLocalDataDirty = true
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.addToLoop('checkAccountCreationStatus', 5000)
 
         return txn
@@ -204,6 +206,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     }
 
     // Double check with activation server
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (accountId == null && paymentSubmitted && activationRequestId != null) {
       try {
         const response = await this.io.fetch(
@@ -265,6 +268,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     this.updateBalance(this.currencyInfo.currencyCode, nativeBalance)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async getNewTransactions() {
     if (this.accountId == null) {
       return
@@ -289,6 +293,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processTxs(txs: EdgeTransaction[]) {
     if (txs.length > 0) {
       const latestTx = txs[txs.length - 1]
@@ -378,6 +383,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   // Public methods
   // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
 
@@ -392,8 +398,11 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
       this.walletLocalData.otherData.hederaAccount = ''
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('getNewTransactions', 1000)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBalance', 5000)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountCreationStatus', 5000)
 
     await super.startEngine()
@@ -532,6 +541,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: Object): Promise<EdgeFreshAddress> {
     // @ts-expect-error
     return { publicAddress: this.walletLocalData.otherData.hederaAccount }
@@ -541,16 +551,20 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     return Math.floor(Date.now() / 1000)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     return (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletInfo.keys[`${this.hederaPlugin.pluginId}Mnemonic`] ||
       this.walletInfo.keys[`${this.hederaPlugin.pluginId}Key`] ||
       ''
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     if (
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys != null &&
       this.walletInfo.keys.publicKey != null
     ) {

@@ -97,18 +97,22 @@ export class SolanaPlugin extends CurrencyPlugin {
       this.currencyInfo,
       uri,
       networks,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
     let address = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -119,6 +123,7 @@ export class SolanaPlugin extends CurrencyPlugin {
   ): Promise<string> {
     const { nativeAmount, currencyCode, publicAddress } = obj
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!PublicKey.isOnCurve(new PublicKey(publicAddress).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
@@ -126,6 +131,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         this.currencyInfo,
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )

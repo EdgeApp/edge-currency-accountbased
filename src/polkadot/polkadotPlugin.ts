@@ -88,10 +88,12 @@ export class PolkadotPlugin extends CurrencyPlugin {
       this.currencyInfo,
       uri,
       networks,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
     let address = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress
     }
@@ -99,6 +101,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -115,6 +118,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         this.currencyInfo,
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
@@ -141,6 +145,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
   }
 
   async disconnectApi(walletId: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete this.polkadotApiSubscribers[walletId]
     // @ts-expect-error
     if (Object.keys(this.polkadotApiSubscribers) === 0) {

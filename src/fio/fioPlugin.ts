@@ -63,6 +63,7 @@ export class FioPlugin extends CurrencyPlugin {
     const { pluginId } = this.currencyInfo
     const keys = {}
     if (/[0-9a-zA-Z]{51}$/.test(userInput)) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!ecc.isValidPrivate(userInput)) {
         throw new Error('Invalid private key')
       }
@@ -123,6 +124,7 @@ export class FioPlugin extends CurrencyPlugin {
       },
       FIO_CURRENCY_CODE
     )
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -182,6 +184,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
             out = await connection.genericAction(actionName, params)
           } catch (e: any) {
             // handle FIO API error
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
               out = {
                 isError: true,
@@ -202,6 +205,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       )
     )
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (res.isError) {
       const error = new FioError(res.errorMessage)
       error.json = res.data.json
@@ -233,18 +237,23 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
     // Initialize otherData defaults if they weren't on disk
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.highestTxHeight) {
       currencyEngine.otherData.highestTxHeight = 0
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.fioAddresses) {
       currencyEngine.otherData.fioAddresses = []
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.fioDomains) {
       currencyEngine.otherData.fioDomains = []
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.fioRequestsToApprove) {
       currencyEngine.otherData.fioRequestsToApprove = {}
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.fioRequests) {
       // @ts-expect-error
       currencyEngine.otherData.fioRequests = {
@@ -282,6 +291,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         const isAvailableRes = await multicastServers('isAvailable', {
           fioName: fioAddress
         })
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!isAvailableRes.is_registered) {
           throw new FioError(
             '',
@@ -292,7 +302,9 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       } catch (e: any) {
         if (
           e.name === 'FioError' &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields &&
           e.errorCode === 400
         ) {
@@ -308,6 +320,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           chainCode,
           tokenCode
         })
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!result.public_address || result.public_address === '0') {
           throw new FioError(
             '',
@@ -346,8 +359,10 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     ): Promise<boolean> {
       try {
         if (isDomain) {
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!FIOSDK.isFioDomainValid(fioName)) return false
         } else {
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!FIOSDK.isFioAddressValid(fioName)) return false
         }
       } catch (e: any) {
@@ -362,11 +377,14 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           fioName
         })
 
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         return !isAvailableRes.is_registered
       } catch (e: any) {
         if (
           e.name === 'FioError' &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields &&
           e.errorCode === 400
         ) {
@@ -382,6 +400,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       const isAvailableRes = await multicastServers('isAvailable', {
         fioName: domain
       })
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!isAvailableRes.is_registered)
         throw new FioError(
           '',
@@ -408,6 +427,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     },
     async doesAccountExist(fioName: string): Promise<boolean> {
       try {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!FIOSDK.isFioAddressValid(fioName)) return false
       } catch (e: any) {
         return false
@@ -453,6 +473,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           const data = await result.json()
 
           // @ts-expect-error
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (fioRegApiErrorCodes[data.errorCode]) {
             throw new FioError(
               data.error,
@@ -477,6 +498,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         }
         return await result.json()
       } catch (e: any) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.labelCode) throw e
         throw new FioError(
           safeErrorMessage(e),
@@ -486,6 +508,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       }
     },
     async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!ref) ref = currencyInfo.defaultSettings.defaultRef
       try {
         const result = await fetchCors(
@@ -497,6 +520,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         const json = await result.json()
         if (!result.ok) {
           // @ts-expect-error
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (fioRegApiErrorCodes[json.errorCode]) {
             throw new FioError(
               json.error,
@@ -511,6 +535,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         }
         return json.domains
       } catch (e: any) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.labelCode) throw e
         throw new FioError(
           safeErrorMessage(e),
@@ -549,6 +574,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           ? DEFAULT_APR
           : apr
       } catch (e: any) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.labelCode) throw e
         throw new FioError(
           e.message,

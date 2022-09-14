@@ -54,6 +54,7 @@ describe(`FTM Network Fees`, function () {
 })
 
 // @ts-expect-error
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const validateGasPrices = (gasPrice, isInfoServer = false) => {
   const lowFee = parseInt(gasPrice.lowFee)
   const standardFeeLow = parseInt(gasPrice.standardFeeLow)

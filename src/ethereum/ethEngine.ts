@@ -98,6 +98,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     super(currencyPlugin, walletInfo, opts)
     const { pluginId } = this.currencyInfo
     if (typeof this.walletInfo.keys[`${pluginId}Key`] !== 'string') {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       if (walletInfo.keys.keys && walletInfo.keys.keys[`${pluginId}Key`]) {
         this.walletInfo.keys[`${pluginId}Key`] =
           walletInfo.keys.keys[`${pluginId}Key`]
@@ -148,6 +149,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
         // Recursively finds all the dependencies of a type
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function dependencies(primaryType, found = []) {
           // @ts-expect-error
           if (found.includes(primaryType)) {
@@ -169,11 +171,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
 
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function encodeType(primaryType) {
           // Get dependencies primary first, then alphabetical
           let deps = dependencies(primaryType)
           deps = deps.filter(t => t !== primaryType)
           // @ts-expect-error
+          // eslint-disable-next-line @typescript-eslint/require-array-sort-compare
           deps = [primaryType].concat(deps.sort())
 
           // Format as a string with fields
@@ -187,11 +191,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
 
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function typeHash(primaryType) {
           return EthereumUtil.keccak256(encodeType(primaryType))
         }
 
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function encodeData(primaryType, data) {
           const encTypes = []
           const encValues = []
@@ -223,10 +229,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
 
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function structHash(primaryType, data) {
           return EthereumUtil.keccak256(encodeData(primaryType, data))
         }
 
+        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         function signHash() {
           return EthereumUtil.keccak256(
             Buffer.concat([
@@ -329,6 +337,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         walletName: string = 'Edge'
       ): Promise<WcDappDetails> => {
         return await timeout(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           new Promise((resolve, reject) => {
             const connector = new WalletConnect({
               uri: wcProps.uri,
@@ -345,6 +354,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
               'session_request',
               // @ts-expect-error
               (error: Error, payload: WcRpcPayload) => {
+                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                 if (error) {
                   this.error(`Wallet connect session_request`, error)
                   throw error
@@ -367,6 +377,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
               // @ts-expect-error
               (error: Error, payload: WcRpcPayload) => {
                 try {
+                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (error) throw error
                   const out = {
                     uri: wcProps.uri,
@@ -405,10 +416,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
               }
             )
 
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             connector.on('disconnect', (error, payload) => {
               if (error != null) {
                 throw error
               }
+              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
               delete walletConnectors[wcProps.uri]
             })
           }),
@@ -424,7 +437,9 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         walletConnectors[uri].walletId = walletId
       },
       wcDisconnect: (uri: string) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         walletConnectors[uri].connector.killSession()
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete walletConnectors[uri]
       },
       wcRequestResponse: async (
@@ -501,6 +516,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
    *  Fetch network fees from various providers in order of priority, stopping
    *  and writing upon successful result.
    */
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async updateNetworkFees() {
     for (const externalFeeProvider of this.externalFeeProviders) {
       try {
@@ -551,6 +567,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     // * Supported for post EIP-1559 chains only
     const { supportsEIP1559 = false } =
       this.currencyInfo.defaultSettings.otherSettings
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!supportsEIP1559) return
 
     const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
@@ -571,6 +588,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     // The minimum priority fee for slow transactions
     const minPriorityFee =
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
     // This is how much we will multiply the base fee by
     // @ts-expect-error
@@ -603,6 +621,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     return out
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async clearBlockchainCache() {
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
@@ -615,6 +634,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   // Public methods
   // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
     const feeUpdateFrequencyMs =
@@ -635,11 +655,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
       .finally(
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         async () =>
           await this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs)
       )
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.ethNetwork.needsLoop()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -695,6 +718,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, skipChecks } =
       this.makeSpendCheck(edgeSpendInfoIn)
@@ -710,7 +734,9 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     let rbfGasLimit: string
     let rbfNonce: string | undefined
     const rbfTxid =
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (rbfTxid) {
       const rbfTxIndex = this.findTransaction(currencyCode, rbfTxid)
 
@@ -726,6 +752,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       }
 
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!rbfGasPrice || !rbfGasLimit || !rbfNonce) {
         throw new Error('Missing data to complete RBF transaction.')
       }
@@ -743,6 +770,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!EthereumUtil.isValidAddress(publicAddress)) {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
@@ -762,6 +790,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     // Use RBF gas price and gas limit when present, otherwise, calculate mining fees
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (rbfGasPrice && rbfGasLimit) {
       gasPrice = rbfGasPrice
       gasLimit = rbfGasLimit
@@ -815,6 +844,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       otherParams = ethParams
       value = add(nativeAmount, '0', 16)
     } else {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (data) {
         contractAddress = publicAddress
       } else {
@@ -853,9 +883,11 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
         this.lastEstimatedGasLimit.gasLimit === '')
     ) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!data) {
         const dataArray = abi.simpleEncode(
           'transfer(address,uint256):(uint256)',
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           contractAddress || publicAddress,
           value
         )
@@ -864,6 +896,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
       const estimateGasParams = [
         {
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           to: contractAddress || publicAddress,
           from: this.walletLocalData.publicKey,
           gas: '0xffffff',
@@ -876,6 +909,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         // Determine if recipient is a normal or contract address
         const getCodeResult = await this.ethNetwork.multicastServers(
           'eth_getCode',
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           [contractAddress || publicAddress, 'latest']
         )
 
@@ -989,6 +1023,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       otherParams // otherParams
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (parentNetworkFee) {
       edgeTransaction.parentNetworkFee = parentNetworkFee
     }
@@ -1018,6 +1053,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     // Nonce:
 
     let nonce: string | undefined = otherParams.nonceUsed
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!nonce) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
@@ -1025,6 +1061,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       // 3. Is no more than 5 higher than confirmed nonce
       // Otherwise, use the next nonce
       if (
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         this.walletLocalData.numUnconfirmedSpendTxs &&
         gt(
           // @ts-expect-error
@@ -1126,9 +1163,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
     ) {
       return this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
@@ -1136,7 +1176,9 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }
@@ -1144,10 +1186,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   }
 
   // Overload saveTx to mutate replaced transactions by RBF
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveTx(edgeTransaction: EdgeTransaction) {
     // We must check if this transaction replaces another transaction
     if (
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       edgeTransaction.otherParams != null &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       edgeTransaction.otherParams.rbfTxid
     ) {
       const { currencyCode } = edgeTransaction
@@ -1184,9 +1229,11 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.saveTx(edgeTransaction)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async addCustomToken(obj: CustomToken) {
     const { contractAddress } = obj
     if (
@@ -1195,6 +1242,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.addCustomToken(obj, contractAddress.toLowerCase())
   }
 }

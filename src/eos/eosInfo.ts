@@ -83,6 +83,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
   return makeEosBasedPluginInner(opts, eosCurrencyInfo, eosJsConfig)
 }

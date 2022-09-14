@@ -84,20 +84,24 @@ export class BinancePlugin extends CurrencyPlugin {
       currencyInfo,
       uri,
       networks,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       currencyCode || 'BNB',
       customTokens
     )
     let address = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const valid = checkAddress(address || '', 'bnb')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -115,6 +119,7 @@ export class BinancePlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         currencyInfo,
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || 'BNB',
         customTokens
       )

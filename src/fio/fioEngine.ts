@@ -107,6 +107,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     stakingStatus: EdgeStakingStatus
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
     this.walletLocalDataDirty = true
   }
@@ -182,11 +183,14 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             )
             params.maxFee = fee
 
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (params.fioRequestId) {
               this.otherData.fioRequestsToApprove[params.fioRequestId] = params
               this.localDataDirty()
               const res = await this.multicastServers(actionName, params)
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (res && res.status === 'sent_to_blockchain') {
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
                 delete this.otherData.fioRequestsToApprove[params.fioRequestId]
                 this.removeFioRequest(
                   params.fioRequestId,
@@ -205,6 +209,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             params.maxFee = fee
             const res = await this.multicastServers(actionName, params)
             if (
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               params.ownerPublicKey &&
               params.ownerPublicKey !== this.walletInfo.keys.publicKey
             ) {
@@ -259,6 +264,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             const transferredDomainIndex = this.otherData.fioDomains.findIndex(
               ({ name }) => name === params.fioDomain
             )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (transferredDomainIndex) {
               this.otherData.fioDomains.splice(transferredDomainIndex, 1)
               this.localDataDirty()
@@ -271,6 +277,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
               this.otherData.fioAddresses.findIndex(
                 ({ name }) => name === params.fioAddress
               )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (transferredAddressIndex) {
               this.otherData.fioAddresses.splice(transferredAddressIndex, 1)
               this.localDataDirty()
@@ -288,6 +295,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             const res = await this.multicastServers(actionName, params)
 
             // @ts-expect-error
+            // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
             fioAddress.bundledTxs += DEFAULT_BUNDLED_TXS_AMOUNT
             this.localDataDirty()
             return { bundledTxs: fioAddress.bundledTxs, ...res }
@@ -334,6 +342,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   // Normalize date if not exists "Z" parameter
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getUTCDate(dateString: string) {
     const date = new Date(dateString)
 
@@ -351,6 +360,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   Unstaked FIO is locked until 7 days after the start of the GMT day for when
   the transaction occurred (block-time).
   */
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getUnlockDate(txDate: Date) {
     const blockTimeBeginingOfGmtDay =
       Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
@@ -364,6 +374,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
     if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (walletInfo.keys.ownerPublicKey) {
         this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
       } else {
@@ -375,6 +386,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     await this.checkAbiAccounts()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   fioSdkInit() {
     const baseUrl = shuffleArray(
       // @ts-expect-error
@@ -413,20 +425,24 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async loadAbiAccounts(apiUrl: string) {
     this.setFioSdkBaseUrl(apiUrl)
     for (const accountName of FioConstants.rawAbiAccountName) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (Transactions.abiMap.get(accountName)) continue
       const response = await this.fioSdk.getAbi(accountName)
       Transactions.abiMap.set(response.account_name, response)
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   setFioSdkBaseUrl(apiUrl: string) {
     Transactions.baseUrl = apiUrl
   }
 
   // Poll on the blockheight
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
       const info = await this.multicastServers('getChainInfo')
@@ -448,6 +464,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     return super.getBalance(options)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   doInitialBalanceCallback() {
     super.doInitialBalanceCallback()
 
@@ -525,6 +542,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     if (stakedAmountIndex < 0) {
       // Search for the correct index to insert the new stakedAmount object
       const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         (stakedAmount, index) =>
           unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
       )
@@ -652,6 +670,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           ...existingTrx.otherParams,
           ...otherParams,
           data: {
+            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
             ...(existingTrx.otherParams != null &&
             existingTrx.otherParams.data != null
               ? existingTrx.otherParams.data
@@ -659,6 +678,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
             ...otherParams.data
           },
           meta: {
+            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
             ...(existingTrx.otherParams != null &&
             existingTrx.otherParams.meta != null
               ? existingTrx.otherParams.meta
@@ -667,9 +687,11 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           }
         }
 
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (otherParams.meta.isTransferProcessed) {
           return action.block_num
         }
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (otherParams.meta.isFeeProcessed) {
           if (trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens]) {
             nativeAmount = sub(nativeAmount, existingTrx.networkFee)
@@ -748,6 +770,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           ...existingTrx.otherParams,
           data: {
             ...otherParams.data,
+            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
             ...(existingTrx.otherParams != null &&
             existingTrx.otherParams.data != null
               ? existingTrx.otherParams.data
@@ -755,15 +778,18 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           },
           meta: {
             ...otherParams.meta,
+            // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
             ...(existingTrx.otherParams != null &&
             existingTrx.otherParams.meta != null
               ? existingTrx.otherParams.meta
               : {})
           }
         }
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (otherParams.meta.isFeeProcessed) {
           return action.block_num
         }
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (otherParams.meta.isTransferProcessed) {
           if (data.to !== actor) {
             nativeAmount = sub(existingTrx.nativeAmount, networkFee)
@@ -805,6 +831,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   async checkTransactions(historyNodeIndex: number = 0): Promise<boolean> {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
       return false
     // @ts-expect-error
@@ -824,12 +851,14 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         HISTORY_NODE_ACTIONS.getActions
       )
 
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       if (lastActionObject.error && lastActionObject.error.noNodeForIndex) {
         // no more history nodes left
         return false
       }
 
       asHistoryResponse(lastActionObject)
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (lastActionObject.actions.length) {
         lastActionSeqNumber = lastActionObject.actions[0].account_action_seq
       } else {
@@ -858,12 +887,14 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           },
           HISTORY_NODE_ACTIONS.getActions
         )
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
         if (actionsObject.error && actionsObject.error.noNodeForIndex) {
           return false
         }
 
         let actions = []
 
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (actionsObject.actions && actionsObject.actions.length > 0) {
           actions = actionsObject.actions
         } else {
@@ -888,6 +919,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           }
         }
 
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!actions.length || actions.length < HISTORY_NODE_OFFSET) {
           break
         }
@@ -905,6 +937,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     return true
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     let transactions
     try {
@@ -935,9 +968,11 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     },
     uri: string
   ): Promise<any> {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex])
       return { error: { noNodeForIndex: true } }
     const apiUrl = this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex]
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const result = await this.fetchCors(`${apiUrl}history/${uri || ''}`, {
       method: 'POST',
       headers: {
@@ -977,11 +1012,16 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       }
     } catch (e: any) {
       // handle FIO API error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
         if (
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
           e.json &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields[0] &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields[0].error
         ) {
           e.message = e.json.fields[0].error
@@ -1013,6 +1053,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     return res
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async executePreparedTrx(
     apiUrl: string,
     endpoint: string,
@@ -1035,6 +1076,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       )
     } catch (e: any) {
       // handle FIO API error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
         this.log(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
@@ -1044,9 +1086,13 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           )}`
         )
         if (
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
           e.json &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields[0] &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.json.fields[0].error
         ) {
           e.message = e.json.fields[0].error
@@ -1106,6 +1152,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           res
         )}`
       )
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!res) {
         throw new Error('Service is unavailable')
       }
@@ -1137,7 +1184,9 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       )
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (res.isError) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const error = new FioError(res.errorMessage || res.data.message)
       error.json = res.data.json
       error.list = res.data.list
@@ -1150,6 +1199,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   // Check all account balance and other relevant info
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const currencyCode = this.currencyInfo.currencyCode
     const balanceCurrencyCodes =
@@ -1247,6 +1297,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
               areDomainsChanged = true
               break
             }
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (existedFioDomain.isPublic !== !!fioDomain.is_public) {
               areDomainsChanged = true
               break
@@ -1288,6 +1339,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
           name: fioDomain.fio_domain,
           expiration: fioDomain.expiration,
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           isPublic: !!fioDomain.is_public
         }))
       }
@@ -1333,6 +1385,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           }
         )
 
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (requests) {
           requestsLastPage++
           fioRequests.push(...requests)
@@ -1361,6 +1414,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     newList: FioRequest[]
   ): boolean => {
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     function compareArray(arrA, arrB) {
       for (const fioRequest of arrA) {
         if (
@@ -1437,13 +1491,20 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('approveErroredFioRequests', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkFioRequests', REQUEST_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -1453,10 +1514,12 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     await this.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const lockedBalance =
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.totalBalances[
         this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
       ] || '0'
@@ -1474,6 +1537,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     const { otherParams = {} } = edgeSpendInfo
 
     // Set default action if not specified
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!otherParams.action) {
       otherParams.action = {
         name: ACTIONS.transferTokens,
@@ -1496,6 +1560,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       fee = this.recentFioFee.fee
     } else {
       let feeFioAddress = ''
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (FEE_ACTION_MAP[name] != null && params) {
         feeFioAddress = params[FEE_ACTION_MAP[name].propName]
       }
@@ -1577,6 +1642,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   ): Promise<EdgeTransaction> {
     let trx
     const { otherParams } = edgeTransaction
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
     if (otherParams != null && otherParams.action && otherParams.action.name) {
       // @ts-expect-error
       trx = await this.otherMethods.fioAction(
@@ -1600,21 +1666,28 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletInfo.keys.publicKey }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     let out = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.fioKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += this.walletInfo.keys.fioKey
     }
     return out
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     let out = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += this.walletInfo.keys.publicKey
     }
     return out

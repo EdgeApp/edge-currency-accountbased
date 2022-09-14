@@ -36,6 +36,7 @@ export class EthereumPlugin extends CurrencyPlugin {
   constructor(
     io: EdgeIo,
     currencyInfo: EdgeCurrencyInfo,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     fetchCors: EdgeFetchFunction
   ) {
     super(io, currencyInfo.pluginId, currencyInfo)
@@ -48,6 +49,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const keyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!EthereumUtil.isValidPrivate(keyBuffer)) {
         throw new Error('Invalid private key')
       }
@@ -57,6 +59,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       const keys = {
         [pluginRegularKeyName]: hexKey
       }
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.derivePublicKey({
         type: `wallet:${pluginId}`,
         id: 'fake',
@@ -112,6 +115,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       )
       const hdwallet = hdKey.fromMasterSeed(seedBuffer)
       const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
       const wallet = walletPathDerivation.getWallet()
       const publicKey = wallet.getPublicKey()
@@ -122,11 +126,13 @@ export class EthereumPlugin extends CurrencyPlugin {
         walletInfo.keys[pluginRegularKeyName].replace(/^0x/, ''),
         'hex'
       )
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!EthereumUtil.isValidPrivate(keyBuffer)) {
         throw new Error('Invalid private key')
       }
       address = `0x${EthereumUtil.privateToAddress(keyBuffer).toString('hex')}`
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!EthereumUtil.isValidAddress(address)) {
       throw new Error('Invalid address')
     }
@@ -138,6 +144,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     const { hdPathCoinType } = defaultSettings.otherSettings
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
     const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
+    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
     const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
     const wallet = walletPathDerivation.getWallet()
     const privKey = wallet.getPrivateKeyString().replace(/^0x/, '')
@@ -163,6 +170,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       this.currencyInfo,
       uri,
       networks,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
@@ -184,6 +192,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     }
 
     let address = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (edgeParsedUri.publicAddress) {
       address = edgeParsedUri.publicAddress
       edgeParsedUri.publicAddress = edgeParsedUri.publicAddress.toLowerCase()
@@ -191,6 +200,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
     let [prefix, contractAddress] = address.split('-') // Split the address to get the prefix according to EIP-681
     // If contractAddress is null or undefined it means there is no prefix
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!contractAddress) {
       contractAddress = prefix // Set the contractAddress to be the prefix when the prefix is missing.
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
@@ -200,6 +210,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     // Verify checksum if it's present in the address
     if (
       /[A-F]/.test(address) &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !EthereumUtil.isValidChecksumAddress(address)
     ) {
       throw new Error('InvalidPublicAddressError')
@@ -207,22 +218,27 @@ export class EthereumPlugin extends CurrencyPlugin {
 
     // Verify address is valid
     address = address.toLowerCase()
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!EthereumUtil.isValidAddress(address || '')) {
       throw new Error('InvalidPublicAddressError')
     }
 
     // Parse according to EIP-961
     if (prefix === 'token' || prefix === 'token_info') {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!parsedUri.query) throw new Error('InvalidUriError')
 
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const currencyCode = parsedUri.query.symbol || 'SYM'
       if (currencyCode.length < 2 || currencyCode.length > 5) {
         throw new Error('Wrong Token symbol')
       }
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const currencyName = parsedUri.query.name || currencyCode
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const decimalsInput = parsedUri.query.decimals || '18'
       let multiplier = '1000000000000000000'
       const decimals = parseInt(decimalsInput)
@@ -233,6 +249,7 @@ export class EthereumPlugin extends CurrencyPlugin {
 
       const type =
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         parsedUri.query.type ||
         this.currencyInfo.defaultSettings.otherSettings.ercTokenStandard
 
@@ -286,9 +303,11 @@ export class EthereumPlugin extends CurrencyPlugin {
           }
 
           // Validate addresses
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!EthereumUtil.isValidAddress(publicAddress)) {
             throw new Error('InvalidPublicAddressError')
           }
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!EthereumUtil.isValidAddress(contractAddress)) {
             throw new Error('InvalidContractAddressError')
           }
@@ -327,6 +346,7 @@ export class EthereumPlugin extends CurrencyPlugin {
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = EthereumUtil.isValidAddress(publicAddress)
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -334,6 +354,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         this.currencyInfo,
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
@@ -350,6 +371,7 @@ export class EthereumPlugin extends CurrencyPlugin {
     return encodedUri
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
     return Object.keys(ethPlugins).map(plugin => `wallet:${plugin}`)
   }
@@ -357,6 +379,7 @@ export class EthereumPlugin extends CurrencyPlugin {
   async getTokenId(token: EdgeToken): Promise<string> {
     const contractAddress = token?.networkLocation?.contractAddress
     if (contractAddress != null) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!EthereumUtil.isValidAddress(contractAddress))
         throw new Error('ErrorInvalidContractAddress')
       return contractAddress.toLowerCase()
@@ -410,12 +433,15 @@ export function makeEthereumBasedPluginInner(
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
     // Initialize otherData defaults if they weren't on disk
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.nextNonce) {
       currencyEngine.otherData.nextNonce = '0'
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.unconfirmedNextNonce) {
       currencyEngine.otherData.unconfirmedNextNonce = '0'
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.networkFees) {
       currencyEngine.otherData.networkFees = {
         ...currencyInfo.defaultSettings.otherSettings.defaultNetworkFees

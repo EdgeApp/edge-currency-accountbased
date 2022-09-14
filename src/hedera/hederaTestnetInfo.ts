@@ -46,6 +46,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeHederaTestnetPlugin = (opts: EdgeCorePluginOptions) => {
   return makeHederaPluginInner(opts, currencyInfo)
 }

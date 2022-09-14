@@ -42,6 +42,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makePolkadotPlugin = (opts: EdgeCorePluginOptions) => {
   return makePolkadotPluginInner(opts, currencyInfo)
 }

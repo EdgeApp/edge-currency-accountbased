@@ -94,6 +94,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     // this.initOptions = initOptions
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGet(url: string) {
     const response = await this.io.fetch(url, {
       method: 'GET'
@@ -106,6 +107,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return await response.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
       const jsonObj = await this.multicastServers(
@@ -130,6 +132,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
 
@@ -171,6 +174,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processBinanceApiTransaction(
     tx: BinanceApiTransaction,
     currencyCode: string
@@ -286,6 +290,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     const blockHeight = Date.now()
     let startTime: number = TIMESTAMP_BEFORE_BNB_LAUNCH
@@ -314,6 +319,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     let successCount = 0
     // @ts-expect-error
     for (const r of resultArray) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (r) successCount++
     }
     if (successCount === promiseArray.length) {
@@ -350,6 +356,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         }
         const response = await promiseAny(promises)
         const result = await response.json()
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
         if (result[0] && result[0].ok && result[0].code === 0) {
           this.log(`multicastServers ${func} ${JSON.stringify(out)} won`)
           return {
@@ -368,6 +375,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
           this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
             // @ts-expect-error
             server => async () => {
+              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
               const result = await this.fetchGet(server + params[0])
               if (typeof result !== 'object') {
                 const msg = `Invalid return value ${func} in ${server}`
@@ -398,16 +406,21 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   // // Public methods
   // // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     // this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     // this.addToLoop(
     //   'checkUnconfirmedTransactionsInnerLoop',
     //   UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
     // )
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -417,6 +430,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     await this.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
@@ -444,6 +458,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       otherParams = bnbParams
     } else {
       let contractAddress = ''
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (data) {
         contractAddress = publicAddress
       } else {
@@ -470,7 +485,9 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       otherParams = bnbParams
     }
     if (
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       edgeSpendInfo.spendTargets[0].otherParams != null &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
       // @ts-expect-error
@@ -565,6 +582,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       'bnb_broadcastTx',
       bnbSignedTransaction
     )
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (response.result[0] && response.result[0].ok) {
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       edgeTransaction.txid = response.result[0].hash
@@ -572,14 +590,18 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.binanceMnemonic) {
       return this.walletInfo.keys.binanceMnemonic
     }
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

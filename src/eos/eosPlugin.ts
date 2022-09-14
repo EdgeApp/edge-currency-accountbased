@@ -59,6 +59,7 @@ export class EosPlugin extends CurrencyPlugin {
     if (strippedPrivateKey.length !== 51) {
       throw new Error('Private key wrong length')
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!ecc.isValidPrivate(strippedPrivateKey)) {
       throw new Error('Invalid private key')
     }
@@ -101,6 +102,7 @@ export class EosPlugin extends CurrencyPlugin {
       let ownerPublicKey
       // usage of eosOwnerKey must be protected by conditional
       // checking for its existence
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (walletInfo.keys.eosOwnerKey) {
         ownerPublicKey = ecc.privateToPublic(walletInfo.keys.eosOwnerKey)
       }
@@ -115,6 +117,7 @@ export class EosPlugin extends CurrencyPlugin {
       [this.currencyInfo.defaultSettings.otherSettings.uriProtocol]: true
     })
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
     const valid = checkAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -156,11 +159,14 @@ export class EosPlugin extends CurrencyPlugin {
   }
 
   // change to fetch call in the future
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async getAccSystemStats(account: string) {
     return await new Promise((resolve, reject) => {
       // @ts-expect-error
       this.eosServer.getAccount(account, (error, result) => {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (error) {
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (error.message.includes('unknown key')) {
             error.code = 'ErrorUnknownAccount'
           }
@@ -212,12 +218,15 @@ export function makeEosBasedPluginInner(
     // undefined
     // TODO: Initialize anything specific to this currency
     // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.accountName) {
       currencyEngine.otherData.accountName = ''
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.lastQueryActionSeq) {
       currencyEngine.otherData.lastQueryActionSeq = {}
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.highestTxHeight) {
       currencyEngine.otherData.highestTxHeight = {}
     }
@@ -296,6 +305,7 @@ export function makeEosBasedPluginInner(
       try {
         const tools = await makeCurrencyTools()
         const result = await tools.getAccSystemStats(account)
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (result) {
           const e = new Error('ErrorAccountUnavailable')
           e.name = 'ErrorAccountUnavailable'

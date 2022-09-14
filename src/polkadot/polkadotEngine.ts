@@ -75,6 +75,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     return asSubscanResponse(out)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBalance() {
     try {
       const response: SdkBalance = await this.api.query.system.account(
@@ -90,6 +91,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBlockheight() {
     try {
       const response: SdkBlockHeight = await this.api.rpc.chain.getBlock()
@@ -106,6 +108,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processPolkadotTransaction(tx: SubscanTx) {
     const {
       from,
@@ -150,10 +153,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryTransactions() {
     return await queryTxMutex(async () => await this.queryTransactionsInner())
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryTransactionsInner() {
     // Skip pages we don't need
     let page = Math.floor(
@@ -178,6 +183,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       } catch (e: any) {
         if (
           typeof e?.message === 'string' &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           e.message.includes('Subscan /scan/transfers failed with 429')
         ) {
           this.log(e.message)
@@ -224,6 +230,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   initOtherData() {
     // @ts-expect-error
     if (this.otherData.txCount == null) {
@@ -236,17 +243,23 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   // // Public methods
   // // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
     await this.currencyPlugin.connectApi(this.walletId)
     this.api = this.currencyPlugin.polkadotApi
     this.initOtherData()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     await super.killEngine()
     await this.currencyPlugin.disconnectApi(this.walletId)
@@ -281,6 +294,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     const fee = tx.networkFee
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     const getMax = (min, max) => {
       const diff = sub(max, min)
       if (lte(diff, '1')) {
@@ -438,9 +452,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
     ) {
       return this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
@@ -448,7 +465,9 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

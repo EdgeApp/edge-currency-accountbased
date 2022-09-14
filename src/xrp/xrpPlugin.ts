@@ -62,6 +62,7 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   async disconnectApi(walletId: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
       // @ts-expect-error
@@ -138,12 +139,14 @@ export class XrpPlugin extends CurrencyPlugin {
       uri,
       networks
     )
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
     const valid = isValidAddress(edgeParsedUri.publicAddress || '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     edgeParsedUri.uniqueIdentifier = parsedUri.query.dt || undefined
     return edgeParsedUri
   }

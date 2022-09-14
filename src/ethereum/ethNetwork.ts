@@ -105,6 +105,7 @@ interface GetEthscanAllTxsResponse {
   server: string
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function broadcastWrapper(promise: Promise<Object>, server: string) {
   const out = {
     result: await promise,
@@ -157,6 +158,7 @@ interface QueryFuncs {
  * @param {void | string} gasUsed - The amount of gas used in a transaction, in units of gas.
  * @returns {object} A `feeRateUsed` object to be included in an `EdgeTransaction`
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const getFeeRateUsed = (
   gasPrice: string,
   gasLimit: string,
@@ -261,6 +263,7 @@ export class EthereumNetwork {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processEvmScanTransaction(
     tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string
@@ -271,6 +274,7 @@ export class EthereumNetwork {
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!tx.contractAddress && tx.gasPrice) {
       // @ts-expect-error
       nativeNetworkFee = mul(tx.gasPrice, tx.gasUsed)
@@ -306,6 +310,7 @@ export class EthereumNetwork {
       to: [tx.to],
       gas: tx.gas,
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       gasPrice: tx.gasPrice || '',
       gasUsed: tx.gasUsed
     }
@@ -362,6 +367,7 @@ export class EthereumNetwork {
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = tokenTransfer.attributes.value
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const fee = tokenTransfer.attributes.fee
       ? tokenTransfer.attributes.fee
       : '0'
@@ -440,6 +446,7 @@ export class EthereumNetwork {
   }
 
   // @ts-expect-error
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetEtherscan(server: string, cmd: string) {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
@@ -458,6 +465,7 @@ export class EthereumNetwork {
     return await response.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetBlockbook(server: string, param: string) {
     const url = server + param
     const resultRaw = !server.includes('trezor')
@@ -468,6 +476,7 @@ export class EthereumNetwork {
     return await resultRaw.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchPostRPC(
     method: string,
     params: Object,
@@ -484,18 +493,21 @@ export class EthereumNetwork {
     let addOnUrl = ''
     if (url.includes('infura')) {
       const { infuraProjectId } = this.ethEngine.initOptions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!infuraProjectId || infuraProjectId.length < 6) {
         throw new Error('Need Infura Project ID')
       }
       addOnUrl = `/${infuraProjectId}`
     } else if (url.includes('alchemyapi')) {
       const { alchemyApiKey } = this.ethEngine.initOptions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!alchemyApiKey || alchemyApiKey.length < 6) {
         throw new Error('Need Alchemy API key')
       }
       addOnUrl = `/v2/-${alchemyApiKey}`
     } else if (url.includes('quiknode')) {
       const { quiknodeApiKey } = this.ethEngine.initOptions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!quiknodeApiKey || quiknodeApiKey.length < 6) {
         throw new Error('Need Quiknode API key')
       }
@@ -519,9 +531,11 @@ export class EthereumNetwork {
     return await response.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchPostBlockcypher(cmd: string, body: any, baseUrl: string) {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (blockcypherApiKey && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
@@ -542,12 +556,14 @@ export class EthereumNetwork {
     return await response.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     const { blockchairApiKey } = this.ethEngine.initOptions
     const { blockchairApiServers } =
       this.currencyInfo.defaultSettings.otherSettings
 
     const keyParam =
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       includeKey && blockchairApiKey ? `&key=${blockchairApiKey}` : ''
     const url = `${blockchairApiServers[0]}${path}`
     const response = await this.ethEngine.io.fetch(`${url}${keyParam}`)
@@ -555,6 +571,7 @@ export class EthereumNetwork {
     return await response.json()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchPostAmberdataRpc(method: string, params: string[] = []) {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataRpcServers } =
@@ -586,6 +603,7 @@ export class EthereumNetwork {
     return jsonObj
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataApiServers } =
@@ -613,9 +631,12 @@ export class EthereumNetwork {
    * @throws Exception when Alethio throttles with a 429 response code
    */
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetAlethio(
     pathOrLink: string,
+    // eslint-disable-next-line @typescript-eslint/default-param-last
     isPath: boolean = true,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     useApiKey: boolean
   ) {
     const { alethioApiKey = '' } = this.ethEngine.initOptions
@@ -625,6 +646,7 @@ export class EthereumNetwork {
 
     const response = await this.ethEngine.io.fetch(
       url,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       alethioApiKey
         ? { headers: { Authorization: `Bearer ${alethioApiKey}` } }
         : undefined
@@ -919,6 +941,7 @@ export class EthereumNetwork {
         funcs = evmScanApiServers.map(server => async () => {
           // @ts-expect-error
           const result = await this.fetchGetEtherscan(server, url)
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!result.result || typeof result.result !== 'string') {
             const msg = `Invalid return value eth_getBalance in ${server}`
             this.ethEngine.error(msg)
@@ -966,6 +989,7 @@ export class EthereumNetwork {
         funcs = evmScanApiServers.map(server => async () => {
           // @ts-expect-error
           const result = await this.fetchGetEtherscan(server, url)
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!result.result || typeof result.result !== 'string') {
             const msg = `Invalid return value getTokenBalance in ${server}`
             this.ethEngine.error(msg)
@@ -991,6 +1015,7 @@ export class EthereumNetwork {
         let startUrl
         if (currencyCode === this.currencyInfo.currencyCode) {
           startUrl = `?action=${
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             searchRegularTxs ? 'txlist' : 'txlistinternal'
           }&module=account`
         } else {
@@ -1195,7 +1220,9 @@ export class EthereumNetwork {
   ): Promise<EthereumNetworkUpdate> {
     return await asyncWaterfall(
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/return-await
       this.queryFuncs[method].map(func => async () => await func(...args))
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ).catch(e => {
       return {}
     })
@@ -1214,6 +1241,7 @@ export class EthereumNetwork {
     let server: string = ''
     const contractAddress = options.contractAddress
     const searchRegularTxs = options.searchRegularTxs
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     while (1) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
       const response = await this.multicastServers('getTransactions', {
@@ -1269,6 +1297,7 @@ export class EthereumNetwork {
         asEvmScanInternalTransaction,
         { searchRegularTxs: false }
       )
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       server = txsRegularResp.server || txsInternalResp.server
       allTransactions = [
         ...txsRegularResp.allTransactions,
@@ -1315,6 +1344,7 @@ export class EthereumNetwork {
         if (tokenInfo != null) {
           const tokenContractAddress = tokenInfo.contractAddress
           if (
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             txnContractAddress &&
             typeof tokenContractAddress === 'string' &&
             tokenContractAddress.toLowerCase() ===
@@ -1329,6 +1359,7 @@ export class EthereumNetwork {
 
   // @ts-expect-error
   async checkAddressBlockbook(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
@@ -1413,6 +1444,7 @@ export class EthereumNetwork {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         `checkTokenBalEthscan token ${tk} response ${response || ''} `,
         e
       )
@@ -1494,6 +1526,7 @@ export class EthereumNetwork {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         `checkTokenBalRpc token ${tk} response ${response || ''} `,
         e
       )
@@ -1511,7 +1544,9 @@ export class EthereumNetwork {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAndUpdate(
+    // eslint-disable-next-line @typescript-eslint/default-param-last
     lastChecked: number = 0,
     pollMillisec: number,
     preUpdateBlockHeight: number,
@@ -1600,21 +1635,26 @@ export class EthereumNetwork {
   }
 
   // @ts-expect-error
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processEthereumNetworkUpdate(
     now: number,
     ethereumNetworkUpdate: EthereumNetworkUpdate,
     preUpdateBlockHeight: number
   ) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!ethereumNetworkUpdate) return
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (ethereumNetworkUpdate.blockHeight) {
       this.ethEngine.log(
         `${
           this.currencyInfo.currencyCode
         } processEthereumNetworkUpdate blockHeight ${
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
         } won`
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.ethEngine.log(`Got block height ${blockHeight || 'no blockheight'}`)
       if (
         typeof blockHeight === 'number' &&
@@ -1630,9 +1670,11 @@ export class EthereumNetwork {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (ethereumNetworkUpdate.newNonce) {
       this.ethEngine.log(
         `${this.currencyInfo.currencyCode} processEthereumNetworkUpdate nonce ${
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
         } won`
       )
@@ -1649,6 +1691,7 @@ export class EthereumNetwork {
         `${
           this.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenBal ${
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
         } won`
       )
@@ -1664,6 +1707,7 @@ export class EthereumNetwork {
         `${
           this.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenTxs ${
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
         } won`
       )
@@ -1671,6 +1715,7 @@ export class EthereumNetwork {
         this.ethNeeds.tokenTxsLastChecked[tk] = now
         this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (tuple.edgeTransactions) {
           // @ts-expect-error
           for (const tx: EdgeTransaction of tuple.edgeTransactions) {
@@ -1736,6 +1781,7 @@ export class EthereumNetwork {
   }
 
   // TODO: Convert to error types
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   throwError(res: FetchResponse, funcName: string, url: string) {
     switch (res.status) {
       case 402: // blockchair
@@ -1749,6 +1795,7 @@ export class EthereumNetwork {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   logError(funcName: string, e?: Error) {
     safeErrorMessage(e).includes('rateLimited')
       ? this.ethEngine.log(funcName, e)

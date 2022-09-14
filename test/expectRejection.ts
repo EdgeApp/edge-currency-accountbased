@@ -8,6 +8,7 @@ export async function expectRejection(
   message?: string
 ): Promise<unknown> {
   return await promise.then(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ok => {
       throw new Error('Expecting this promise to reject')
     },

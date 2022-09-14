@@ -44,6 +44,7 @@ export class ZcashPlugin extends CurrencyPlugin {
 
   async isValidAddress(address: string): Promise<boolean> {
     return (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (await this.AddressTool.isValidShieldedAddress(address)) ||
       (await this.AddressTool.isValidTransparentAddress(address))
     )
@@ -119,6 +120,7 @@ export class ZcashPlugin extends CurrencyPlugin {
       currencyInfo,
       uri,
       networks,
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       currencyCode || `${this.currencyInfo.currencyCode}`,
       customTokens
     )
@@ -144,6 +146,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     if (nativeAmount != null) {
       const denom = getDenomInfo(
         currencyInfo,
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || `${this.currencyInfo.currencyCode}`,
         customTokens
       )
@@ -161,6 +164,7 @@ export function makeZcashPlugin(
   opts: EdgeCorePluginOptions
 ): EdgeCurrencyPlugin {
   const { io } = opts
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   if (!opts.nativeIo['edge-currency-accountbased']) {
     throw new Error('Need opts')
   }

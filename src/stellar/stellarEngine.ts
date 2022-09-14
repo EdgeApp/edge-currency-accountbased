@@ -162,6 +162,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
     if (denom != null && denom.multiplier) {
       nativeAmount = mul(exchangeAmount, denom.multiplier)
     } else {
@@ -182,6 +183,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       ourReceiveAddresses.push(fromAddress)
       if (fromAddress === this.walletLocalData.publicKey) {
         // This is a spend to self. Make fee the only amount
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         nativeAmount = '-' + networkFee
       }
     } else {
@@ -235,14 +237,17 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // }
 
   // Polling version
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
 
     const address = this.walletLocalData.publicKey
     let page
     let pagingToken
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     while (1) {
       try {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!page) {
           page = await this.multicastServers('payments', address)
         } else {
@@ -255,6 +260,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
           pagingToken = await this.processTransaction(tx)
         }
       } catch (e: any) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.response && e.response.title === 'Resource Missing') {
           this.log('Account not found. Probably not activated w/minimum XLM')
           this.tokenCheckTransactionsStatus.XLM = 1
@@ -274,6 +280,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       )
       this.transactionsChangedArray = []
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
       this.otherData.lastPagingToken = pagingToken
       this.walletLocalDataDirty = true
@@ -283,9 +290,11 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.updateOnAddressesChecked()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
@@ -305,12 +314,14 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
           currencyCode = bal.asset_type
         }
         const denom = getDenomInfo(this.currencyInfo, currencyCode)
+        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
         if (denom != null && denom.multiplier) {
           const nativeAmount = mul(bal.balance, denom.multiplier)
           this.updateBalance(currencyCode, nativeAmount)
         }
       }
     } catch (e: any) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.response && e.response.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')
         this.tokenCheckBalanceStatus.XLM = 1
@@ -321,6 +332,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   checkBlockchainInnerLoop() {
     this.multicastServers('ledgers')
       .then(r => {
@@ -351,11 +363,16 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // Public methods
   // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -365,6 +382,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     await this.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
@@ -408,7 +426,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     // @ts-expect-error
     let memoId: ?string
     if (
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       edgeSpendInfo.spendTargets[0].otherParams != null &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
@@ -437,6 +457,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       )
     }
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (memoId) {
       // @ts-expect-error
       const memo = this.stellarApi.Memo.id(memoId)
@@ -472,7 +493,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.pendingTransactionsIndex++
 
     // Clean up old pendingTransactions
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
     }
 
@@ -491,6 +514,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     try {
       const { idInternal } = otherParams
       const transaction = this.pendingTransactionsMap[idInternal]
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
@@ -520,6 +544,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     try {
       const { idInternal } = otherParams
       const transaction = this.pendingTransactionsMap[idInternal]
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!transaction) {
         throw new Error('ErrorInvalidTransaction')
       }
@@ -544,14 +569,18 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.stellarKey) {
       return this.walletInfo.keys.stellarKey
     }
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.publicKey
     }

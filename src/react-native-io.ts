@@ -10,6 +10,7 @@ import {
 } from './zcash/zecTypes'
 
 // TODO: Remove this entire file in the next breaking change.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function makePluginIo() {
   bridgifyObject(KeyTool)
   bridgifyObject(AddressTool)

@@ -22,6 +22,7 @@ import { UriTransaction } from './tezosTypes'
 export class TezosPlugin extends CurrencyPlugin {
   tezosRpcNodes: Object[]
   tezosApiServers: Object[]
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(io: EdgeIo, fetchCors: EdgeFetchFunction) {
     super(io, 'tezos', currencyInfo)
     this.tezosRpcNodes = []
@@ -56,6 +57,7 @@ export class TezosPlugin extends CurrencyPlugin {
       throw new Error('Mnemonic phrase must be 24 words long')
     }
     const keys = eztz.crypto.generateKeys(userInput, '')
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.derivePublicKey({
       type: 'wallet:tezos',
       id: 'fake',
@@ -98,6 +100,7 @@ export class TezosPlugin extends CurrencyPlugin {
       address = uri
     } else if (uri.slice(0, 10) === 'web+tezos:') {
       operation = decodeMainnet(uri)
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!operation[0] || !operation[0].content) {
         throw new Error('InvalidUriError')
       }
@@ -162,6 +165,7 @@ export function makeTezosPlugin(
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.numberTransactions) {
       // @ts-expect-error
       currencyEngine.otherData.numberTransaction = 0

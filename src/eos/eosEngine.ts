@@ -74,6 +74,7 @@ class CosignAuthorityProvider {
   }
 
   // @ts-expect-error
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async getRequiredKeys(args) {
     const { transaction } = args
     // Iterate over the actions and authorizations
@@ -148,9 +149,11 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
           // @ts-expect-error
           requestedAccountCurrencyCode
         } = params
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!currencyCode || !requestedAccountName) {
           throw new Error('ErrorInvalidParams')
         }
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!ownerPublicKey && !activePublicKey) {
           throw new Error('ErrorInvalidParams')
         }
@@ -203,6 +206,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
     if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (walletInfo.keys.ownerPublicKey) {
         this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
       } else {
@@ -213,6 +217,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   }
 
   // Poll on the blockheight
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
       const result = await this.multicastServers('getInfo', {})
@@ -237,7 +242,9 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       return 0
     }
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     const { act, trx_id, block_num } = action
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     const block_time = action['@timestamp']
 
     const { from, to, memo, symbol } = act.data
@@ -296,6 +303,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       : action['@timestamp']
     const date = Date.parse(timestamp) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!action.block_num) {
       this.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No tx block_num`
@@ -304,6 +312,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
     const txid = action.trx_id
 
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!action.act) {
       this.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act`
@@ -315,6 +324,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     // this.log(`Txid: ${txid}`)
     // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!action.act.data) {
         this.error(
           `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act.data`
@@ -388,6 +398,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
 
     let newHighestTxHeight =
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
     while (!finish) {
@@ -398,6 +409,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         currencyCode,
         skip,
         limit,
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         low: newHighestTxHeight + 1
       }
       const actionsObject = await this.multicastServers(
@@ -406,6 +418,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       )
       let actions = []
       // if the actions array is not empty, then set the actions variable
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
@@ -425,6 +438,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         }
       }
       // if there are no actions or it's less than the limit (we're at the end)
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!actions.length || actions.length < limit) {
         break
       }
@@ -434,6 +448,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     if (
       newHighestTxHeight >
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
       // @ts-expect-error
@@ -453,6 +468,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
 
     let newHighestTxHeight =
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
 
     const limit = 10
@@ -472,6 +488,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         currencyCode,
         skip,
         limit,
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         low: newHighestTxHeight + 1
       }
       const actionsObject = await this.multicastServers(
@@ -484,6 +501,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
 
       // if there are no actions
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (actionsObject.actions && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
@@ -504,6 +522,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
           break
         }
       }
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!actions.length || actions.length < limit) {
         break
       }
@@ -512,6 +531,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     if (
       newHighestTxHeight >
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
     ) {
       // @ts-expect-error
@@ -522,10 +542,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     return true
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !this.walletLocalData.otherData ||
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !this.walletLocalData.otherData.accountName
     ) {
       return
@@ -568,12 +591,14 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
             // @ts-expect-error
             server => async () => {
               const url =
+                // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
                 server +
                 `/v2/history/get_actions?transfer.${
                   direction === 'outgoing' ? 'from' : 'to'
                 }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
               const response = await this.eosJsConfig.fetch(url)
               const parsedUrl = parse(url, {}, true)
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!response.ok) {
                 this.error('multicast in / out tx server error: ', server)
                 throw new Error(
@@ -680,6 +705,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                   }
                 }
               )
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!authorizersReply.ok) {
                 throw new Error(
                   `${server} get_key_accounts failed with ${JSON.stringify(
@@ -689,11 +715,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
               }
               const authorizersData = await authorizersReply.json()
               // verify array order (chronological)?
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!authorizersData.account_names[0]) {
                 // indicates no activation has occurred
                 // set flag to indicate whether has hit activation API
                 // only do once per login (makeEngine)
                 if (
+                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   this.currencyInfo.defaultSettings.otherSettings
                     .createAccountViaSingleApiEndpoints &&
                   this.currencyInfo.defaultSettings.otherSettings
@@ -719,6 +747,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                   )
                   const response = await request.json()
                   const { accountName, transactionId } = response
+                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (!accountName) throw new Error(response)
                   this.warn(
                     `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
@@ -739,6 +768,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                   body: getAccountBody
                 }
               )
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!accountReply.ok) {
                 throw new Error(
                   `${server} get_account failed with ${authorizersReply}`
@@ -757,6 +787,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
               const response = await this.eosJsConfig.fetch(
                 `${server}/v0/state/key_accounts?public_key=${params[0]}`
               )
+              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!response.ok) {
                 throw new Error(
                   `${server} get_account failed with ${response.code}`
@@ -811,6 +842,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                 return this.eosJsConfig.fetch(...args)
               }
             })
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             const keys = params[1].keyProvider ? params[1].keyProvider : []
             params[1] = {
               ...params[1],
@@ -841,10 +873,12 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   }
 
   // Check all account balance and other relevant info
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const publicKey = this.walletLocalData.publicKey
     try {
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (bogusAccounts[this.walletLocalData.otherData.accountName]) {
         // @ts-expect-error
         this.walletLocalData.otherData.accountName = ''
@@ -853,9 +887,11 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       }
       // Check if the publicKey has an account accountName
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!this.walletLocalData.otherData.accountName) {
         const account = await this.multicastServers('getKeyAccounts', publicKey)
         // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (account && !bogusAccounts[account.account_name]) {
           // @ts-expect-error
           this.walletLocalData.otherData.accountName = account.account_name
@@ -866,6 +902,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
 
       // Check balance on account
       // @ts-expect-error
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (this.walletLocalData.otherData.accountName) {
         for (const token of this.allTokens) {
           if (this.enabledTokens.includes(token.currencyCode)) {
@@ -875,6 +912,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
               // @ts-expect-error
               this.walletLocalData.otherData.accountName
             )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (results && results.length > 0) {
               for (const r of results) {
                 if (typeof r === 'string') {
@@ -890,6 +928,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                       currencyCode,
                       [...this.customTokens, ...this.allTokens]
                     )
+                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
                     if (denom != null && denom.multiplier) {
                       nativeAmount = mul(exchangeAmount, denom.multiplier)
                     } else {
@@ -927,12 +966,17 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
 
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
@@ -942,8 +986,10 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     await this.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.walletLocalData.otherData.accountName) {
       // @ts-expect-error
       return { publicAddress: this.walletLocalData.otherData.accountName }
@@ -958,6 +1004,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
@@ -994,6 +1041,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         await this.eosPlugin.getAccSystemStats(publicAddress)
         this.activatedAccountsCache[publicAddress] = true
       } catch (e: any) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.code.includes('ErrorUnknownAccount')) {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
@@ -1165,11 +1213,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     const otherParams = getOtherParams(edgeTransaction)
     // Broadcast transaction and add date
     const keyProvider = []
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.walletInfo.keys.eosKey) {
       keyProvider.push(this.walletInfo.keys.eosKey)
     }
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.walletInfo.keys.eosOwnerKey) {
       keyProvider.push(this.walletInfo.keys.eosOwnerKey)
     }
@@ -1191,6 +1241,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       this.error('\nCaught exception: ', e)
       if (e instanceof RpcError) this.error(JSON.stringify(e.json, null, 2))
       let err = e
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (err.error) {
         this.error(`err.error= ${err.error}`)
         this.error(`err.error.name= ${err.error.name}`)
@@ -1200,12 +1251,15 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       } catch (e2) {
         throw e
       }
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (err.error && err.error.name === 'tx_net_usage_exceeded') {
         err = new Error('Insufficient NET available to send EOS transaction')
         err.name = 'ErrorEosInsufficientNet'
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       } else if (err.error && err.error.name === 'tx_cpu_usage_exceeded') {
         err = new Error('Insufficient CPU available to send EOS transaction')
         err.name = 'ErrorEosInsufficientCpu'
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       } else if (err.error && err.error.name === 'ram_usage_exceeded') {
         err = new Error('Insufficient RAM available to send EOS transaction')
         err.name = 'ErrorEosInsufficientRam'
@@ -1214,25 +1268,35 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     let out = ''
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.eosKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'active key\n' + this.walletInfo.keys.eosKey + '\n\n'
     }
     return out
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     let out = ''
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.ownerPublicKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'owner publicKey\n' + this.walletInfo.keys.ownerPublicKey + '\n\n'
     }
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'active publicKey\n' + this.walletInfo.keys.publicKey + '\n\n'
     }
     return out

@@ -93,6 +93,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   }
 
   // Poll on the blockheight
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkServerInfoInnerLoop() {
     try {
       const options = { command: 'fee' }
@@ -130,6 +131,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processRippleTransaction(tx: XrpTransaction) {
     const ourReceiveAddresses = []
     let nativeAmount = tx.Amount
@@ -156,6 +158,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
@@ -202,9 +205,11 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkUnconfirmedTransactionsFetch() {}
 
   // Check all account balance and other relevant info
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const address = this.walletLocalData.publicKey
     try {
@@ -233,6 +238,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   // Public methods
   // ****************************************************************************
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
     try {
@@ -241,17 +247,23 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.startEngine()
         }
       }, 10000)
       return
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     await super.killEngine()
     await this.xrpPlugin.disconnectApi(this.walletId)
@@ -276,6 +288,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     return spendableBalance
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
@@ -427,10 +440,12 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     return this.walletInfo.keys?.rippleKey ?? ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     return this.walletInfo.keys?.publicKey ?? ''
   }

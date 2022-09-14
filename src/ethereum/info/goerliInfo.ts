@@ -135,6 +135,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const makeGoerliPlugin = (opts: EdgeCorePluginOptions) => {
   return makeEthereumBasedPluginInner(opts, currencyInfo)
 }

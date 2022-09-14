@@ -55,6 +55,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     this.makeSynchronizer = makeSynchronizer
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   initData() {
     const { birthdayHeight, alias } = this.initializer
 
@@ -74,6 +75,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     this.progressRatio = 0
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   initSubscriptions() {
     this.synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
@@ -91,12 +93,14 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     })
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryAll() {
     await this.queryBalance()
     await this.queryTransactions()
     this.onUpdateTransactions()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   onUpdateBlockHeight(networkBlockHeight: number) {
     if (this.walletLocalData.blockHeight !== networkBlockHeight) {
       this.walletLocalData.blockHeight = networkBlockHeight
@@ -107,6 +111,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   onUpdateTransactions() {
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -116,6 +121,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   onUpdateProgress(
     lastDownloadedHeight: number,
     scanProgress: number,
@@ -158,19 +164,23 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.initData()
     this.synchronizer = await this.makeSynchronizer(this.initializer)
     await this.synchronizer.start()
     this.initSubscriptions()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   isSynced() {
     // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBalance() {
     if (!this.isSynced()) return
     try {
@@ -187,6 +197,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryTransactions() {
     try {
       let first = this.otherData.blockRange.first
@@ -209,11 +220,13 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
 
         first = last + 1
         last =
+          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
           last +
             this.currencyInfo.defaultSettings.otherSettings
               .transactionQueryLimit <
           this.walletLocalData.blockHeight
-            ? last +
+            ? // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+              last +
               this.currencyInfo.defaultSettings.otherSettings
                 .transactionQueryLimit
             : this.walletLocalData.blockHeight
@@ -232,6 +245,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processTransaction(tx: ZcashTransaction) {
     let netNativeAmount = tx.value
     const ourReceiveAddresses = []
@@ -260,6 +274,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     this.addTransaction(`${this.currencyInfo.currencyCode}`, edgeTransaction)
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     await this.synchronizer.stop()
     await super.killEngine()
@@ -274,12 +289,14 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.synchronizer.rescan(
       this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
         this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     const spendableBalance = sub(
       this.availableZatoshi,
@@ -290,7 +307,9 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     return spendableBalance
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.isSynced) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const spendTarget = edgeSpendInfo.spendTargets[0]
@@ -386,9 +405,12 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     return edgeTransaction
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     if (
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletInfo.keys[`${this.pluginId}Mnemonic`]
     ) {
       return this.walletInfo.keys[`${this.pluginId}Mnemonic`]
@@ -396,7 +418,9 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     return ''
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
       return this.walletInfo.keys.unifiedViewingKeys.extfvk
     }

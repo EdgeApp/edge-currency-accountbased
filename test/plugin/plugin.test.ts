@@ -29,6 +29,7 @@ for (const fixture of fixtures) {
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
     // @ts-expect-error
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     io: { ...fakeIo, fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
@@ -63,6 +64,7 @@ for (const fixture of fixtures) {
 
     it('Create valid key', async function () {
       const keys = await tools.createPrivateKey(WALLET_TYPE)
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       assert.equal(!keys, false)
       assert.equal(typeof keys[keyName], 'string')
       const length = keys[keyName].length
@@ -304,6 +306,7 @@ for (const fixture of fixtures) {
               // @ts-expect-error
               if (parsedUri[key][metaKey] === undefined)
                 // @ts-expect-error
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
                 delete parsedUri[key][metaKey]
             })
           }
