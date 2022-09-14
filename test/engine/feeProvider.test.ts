@@ -14,16 +14,17 @@ import { fakeLog } from '../fakeLog'
 // TODO: Loop for all plugins
 describe(`FTM Network Fees`, function () {
   it('Validate Info Server Fees', async function () {
-    // @ts-expect-error
     const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo)
+    // @ts-expect-error
     validateGasPrices(fees.default.gasPrice, true)
     // Info server should provide gas limit as well
+    // @ts-expect-error
     assert.equal(fees.default.gasLimit.regularTransaction, '21000')
+    // @ts-expect-error
     assert.equal(fees.default.gasLimit.tokenTransaction, '300000')
   })
 
   it('EvmGasStation Fees', async function () {
-    // @ts-expect-error
     const fees = await fetchFeesFromEvmGasStation(
       fetch,
       ethCurrencyInfo,
@@ -36,7 +37,6 @@ describe(`FTM Network Fees`, function () {
   })
 
   it('EvmScan Fees', async function () {
-    // @ts-expect-error
     const fees = await fetchFeesFromEvmScan(
       fetch,
       ftmCurrencyInfo,
@@ -53,6 +53,7 @@ describe(`FTM Network Fees`, function () {
   })
 })
 
+// @ts-expect-error
 const validateGasPrices = (gasPrice, isInfoServer = false) => {
   const lowFee = parseInt(gasPrice.lowFee)
   const standardFeeLow = parseInt(gasPrice.standardFeeLow)

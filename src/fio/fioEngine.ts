@@ -1,8 +1,12 @@
 /* eslint camelcase: 0 */
 
+// @ts-expect-error
 import { FIOSDK } from '@fioprotocol/fiosdk'
+// @ts-expect-error
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
+// @ts-expect-error
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
+// @ts-expect-error
 import { Constants as FioConstants } from '@fioprotocol/fiosdk/lib/utils/constants'
 import { add, div, gt, max, mul, sub } from 'biggystring'
 import {
@@ -88,6 +92,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   recentFioFee: RecentFioFee
   fioSdk: FIOSDK
   fioSdkPreparedTrx: FIOSDK
+  // @ts-expect-error
   otherData: {
     highestTxHeight: number
     fioAddresses: FioAddress[]
@@ -114,6 +119,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     tpid: string
   ) {
     super(currencyPlugin, walletInfo, opts)
+    // @ts-expect-error
     this.fetchCors = fetchCors
     this.fioPlugin = currencyPlugin
     this.tpid = tpid
@@ -128,6 +134,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           case 'addPublicAddress':
           case 'requestFunds': {
             const { fee } = await this.multicastServers(
+              // @ts-expect-error
               FEE_ACTION_MAP[actionName].action,
               {
                 [FEE_ACTION_MAP[actionName].propName]:
@@ -140,6 +147,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           }
           case 'rejectFundsRequest': {
             const { fee } = await this.multicastServers(
+              // @ts-expect-error
               FEE_ACTION_MAP[actionName].action,
               {
                 [FEE_ACTION_MAP[actionName].propName]:
@@ -165,6 +173,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           }
           case 'recordObtData': {
             const { fee } = await this.multicastServers(
+              // @ts-expect-error
               FEE_ACTION_MAP[actionName].action,
               {
                 [FEE_ACTION_MAP[actionName].propName]:
@@ -278,6 +287,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
             const res = await this.multicastServers(actionName, params)
 
+            // @ts-expect-error
             fioAddress.bundledTxs += DEFAULT_BUNDLED_TXS_AMOUNT
             this.localDataDirty()
             return { bundledTxs: fioAddress.bundledTxs, ...res }
@@ -312,9 +322,13 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       ): Promise<FioRequest[]> => {
         const startIndex = itemsPerPage * (page - 1)
         const endIndex = itemsPerPage * page
-        return this.otherData.fioRequests[type]
-          .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
-          .slice(startIndex, endIndex)
+        return (
+          // @ts-expect-error
+          this.otherData.fioRequests[type]
+            // @ts-expect-error
+            .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
+            .slice(startIndex, endIndex)
+        )
       }
     }
   }
@@ -363,6 +377,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
   fioSdkInit() {
     const baseUrl = shuffleArray(
+      // @ts-expect-error
       this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => apiUrl)
     )[0]
 
@@ -391,6 +406,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     await asyncWaterfall(
       shuffleArray(
         this.currencyInfo.defaultSettings.apiUrls.map(
+          // @ts-expect-error
           apiUrl => async () => await this.loadAbiAccounts(apiUrl)
         )
       )
@@ -456,6 +472,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
     try {
       this.currencyEngineCallbacks.onStakingStatusChanged({
+        // @ts-expect-error
         stakedAmounts: [],
         ...this.otherData.stakingStatus
       })
@@ -497,7 +514,6 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     */
     const stakedAmountIndex =
       this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
-        // @ts-expect-error
         return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
       })
 
@@ -510,7 +526,6 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       // Search for the correct index to insert the new stakedAmount object
       const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
         (stakedAmount, index) =>
-          // @ts-expect-error
           unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
       )
       // If needleIndex is -1 (not found), then insert into the end of the array
@@ -532,12 +547,15 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
         nativeAmount: '0'
       }
+      // @ts-expect-error
       const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
+        // @ts-expect-error
         ({ txId: itemTxId, txName: itemTxName }) =>
           itemTxId === txId && itemTxName === txName
       )
 
       if (addedTxIndex < 0) {
+        // @ts-expect-error
         stakedAmount.otherParams.txs.push({
           txId,
           nativeAmount,
@@ -545,6 +563,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           txName
         })
       } else {
+        // @ts-expect-error
         stakedAmount.otherParams.txs[addedTxIndex] = {
           txId,
           nativeAmount,
@@ -553,6 +572,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         }
       }
 
+      // @ts-expect-error
       for (const tx of stakedAmount.otherParams.txs) {
         stakedAmount.nativeAmount = add(
           stakedAmount.nativeAmount,
@@ -597,6 +617,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       meta: {}
     }
     const ourReceiveAddresses = []
+    // @ts-expect-error
     if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
       return action.block_num
     }
@@ -786,6 +807,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   async checkTransactions(historyNodeIndex: number = 0): Promise<boolean> {
     if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
       return false
+    // @ts-expect-error
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const actor = this.fioSdk.transactions.getActor(
@@ -858,6 +880,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           } else if (
             (blockNum === newHighestTxHeight &&
               i === HISTORY_NODE_OFFSET - 1) ||
+            // @ts-expect-error
             blockNum < this.walletLocalData.otherData.highestTxHeight
           ) {
             finish = true
@@ -873,7 +896,9 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         return await this.checkTransactions(++historyNodeIndex)
       }
     }
+    // @ts-expect-error
     if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
+      // @ts-expect-error
       this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
       this.localDataDirty()
     }
@@ -1052,6 +1077,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       const preparedTrx = await asyncWaterfall(
         shuffleArray(
           this.currencyInfo.defaultSettings.apiUrls.map(
+            // @ts-expect-error
             apiUrl => async () =>
               await this.fioApiRequest(apiUrl, actionName, params, true)
           )
@@ -1065,6 +1091,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       res = await promiseAny(
         shuffleArray(
           this.currencyInfo.defaultSettings.apiUrls.map(
+            // @ts-expect-error
             async apiUrl =>
               await this.executePreparedTrx(
                 apiUrl,
@@ -1085,6 +1112,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     } else if (actionName === 'getFioNames') {
       res = await promiseNy(
         this.currencyInfo.defaultSettings.apiUrls.map(
+          // @ts-expect-error
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
@@ -1101,6 +1129,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       res = await asyncWaterfall(
         shuffleArray(
           this.currencyInfo.defaultSettings.apiUrls.map(
+            // @ts-expect-error
             apiUrl => async () =>
               await this.fioApiRequest(apiUrl, actionName, params)
           )
@@ -1135,6 +1164,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
     // Balance
     try {
+      // @ts-expect-error
       const balances: {
         staked: string
         locked: string
@@ -1189,10 +1219,11 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
         // check for removed / transferred addresses
         if (!areAddressesChanged) {
-          for (const fioAddress of this.walletLocalData.otherData
+          for (const fioAddress of this.walletLocalData.otherData // @ts-expect-error
             .fioAddresses) {
             if (
               result.fio_addresses.findIndex(
+                // @ts-expect-error
                 item => item.fio_address === fioAddress.name
               ) < 0
             ) {
@@ -1231,6 +1262,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
           for (const fioDomain of this.otherData.fioDomains) {
             if (
               result.fio_domains.findIndex(
+                // @ts-expect-error
                 item => item.fio_domain === fioDomain.name
               ) < 0
             ) {
@@ -1243,6 +1275,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
       if (areAddressesChanged) {
         isChanged = true
+        // @ts-expect-error
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
           bundledTxs: fioAddress.remaining_bundled_tx
@@ -1251,6 +1284,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
 
       if (areDomainsChanged) {
         isChanged = true
+        // @ts-expect-error
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
           name: fioDomain.fio_domain,
           expiration: fioDomain.expiration,
@@ -1277,6 +1311,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     }
 
     if (this.otherData.fioRequests == null) {
+      // @ts-expect-error
       this.otherData.fioRequests = {
         [FIO_REQUESTS_TYPES.SENT]: [],
         [FIO_REQUESTS_TYPES.PENDING]: []
@@ -1310,8 +1345,10 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     }
 
     if (
+      // @ts-expect-error
       this.fioRequestsListChanged(this.otherData.fioRequests[type], fioRequests)
     ) {
+      // @ts-expect-error
       this.otherData.fioRequests[type] = [...fioRequests]
       isChanged = true
     }
@@ -1323,6 +1360,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     existingList: FioRequest[],
     newList: FioRequest[]
   ): boolean => {
+    // @ts-expect-error
     function compareArray(arrA, arrB) {
       for (const fioRequest of arrA) {
         if (
@@ -1347,20 +1385,23 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   removeFioRequest = (fioRequestId: string | number, type: string): void => {
+    // @ts-expect-error
     const fioRequestIndex = this.otherData.fioRequests[type].findIndex(
       (fioRequest: FioRequest) =>
         fioRequest.fio_request_id === `${fioRequestId}`
     )
 
     if (fioRequestIndex > -1) {
+      // @ts-expect-error
       this.otherData.fioRequests[type].splice(fioRequestIndex, 1)
     }
   }
 
   async approveErroredFioRequests(): Promise<void> {
-    for (const fioRequestId in this.walletLocalData.otherData
+    for (const fioRequestId in this.walletLocalData.otherData // @ts-expect-error
       .fioRequestsToApprove) {
       try {
+        // @ts-expect-error
         await this.otherMethods.fioAction(
           'recordObtData',
           this.otherData.fioRequestsToApprove[fioRequestId]
@@ -1380,6 +1421,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     this.otherData.highestTxHeight = 0
     this.otherData.fioAddresses = []
     this.otherData.fioDomains = []
+    // @ts-expect-error
     this.otherData.fioRequests = {
       [FIO_REQUESTS_TYPES.SENT]: [],
       [FIO_REQUESTS_TYPES.PENDING]: []
@@ -1457,6 +1499,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
       if (FEE_ACTION_MAP[name] != null && params) {
         feeFioAddress = params[FEE_ACTION_MAP[name].propName]
       }
+      // @ts-expect-error
       fee = await this.otherMethods.getFee(name, feeFioAddress)
     }
     params.maxFee = fee
@@ -1535,6 +1578,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     let trx
     const { otherParams } = edgeTransaction
     if (otherParams != null && otherParams.action && otherParams.action.name) {
+      // @ts-expect-error
       trx = await this.otherMethods.fioAction(
         otherParams.action.name,
         otherParams.action.params

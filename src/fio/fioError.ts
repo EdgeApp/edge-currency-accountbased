@@ -1,6 +1,7 @@
 import { currencyInfo } from './fioInfo'
 
 export const fioApiErrorCodes = [400, 403, 404]
+// @ts-expect-error
 export const fioRegApiErrorCodes: { [string]: string } = {
   INVALID_FIO_NAME: currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS,
   ALREADY_REGISTERED:
@@ -16,8 +17,11 @@ export const fioRegApiErrorCodes: { [string]: string } = {
 }
 
 export class FioError extends Error {
+  // @ts-expect-error
   list: Array<{ field: string; message: string }>
+  // @ts-expect-error
   labelCode: string
+  // @ts-expect-error
   errorCode: number
   json: any
 

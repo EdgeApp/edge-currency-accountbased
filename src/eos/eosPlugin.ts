@@ -17,7 +17,9 @@ import {
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+// @ts-expect-error
 import EosApi from 'eosjs-api'
+// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'
@@ -34,6 +36,7 @@ export function checkAddress(address: string): boolean {
 }
 
 export class EosPlugin extends CurrencyPlugin {
+  // @ts-expect-error
   otherMethods: Object
   eosServer: Object
 
@@ -155,6 +158,7 @@ export class EosPlugin extends CurrencyPlugin {
   // change to fetch call in the future
   async getAccSystemStats(account: string) {
     return await new Promise((resolve, reject) => {
+      // @ts-expect-error
       this.eosServer.getAccount(account, (error, result) => {
         if (error) {
           if (error.message.includes('unknown key')) {
@@ -199,6 +203,7 @@ export function makeEosBasedPluginInner(
     )
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
     // currencyEngine.otherData is an opaque utility object for use for currency
     // specific data that will be persisted to disk on this one device.
@@ -217,15 +222,18 @@ export function makeEosBasedPluginInner(
       currencyEngine.otherData.highestTxHeight = {}
     }
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }
 
   const otherMethods = {
+    // @ts-expect-error
     getActivationSupportedCurrencies: async (): Object => {
       try {
         const out = await asyncWaterfall(
           currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+            // @ts-expect-error
             server => async () => {
               const uri = `${server}/api/v1/getSupportedCurrencies`
               const response = await fetch(uri)
@@ -244,10 +252,12 @@ export function makeEosBasedPluginInner(
     },
     getActivationCost: async (
       currencyCode: string
+      // @ts-expect-error
     ): Promise<string> | undefined => {
       try {
         const out = await asyncWaterfall(
           currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+            // @ts-expect-error
             server => async () => {
               const uri = `${server}/api/v1/eosPrices/${currencyCode}`
               const response = await fetch(uri)
@@ -300,6 +310,7 @@ export function makeEosBasedPluginInner(
         }
       }
       log.warn(`validateAccount: result=${out.result}`)
+      // @ts-expect-error
       return out
     }
   }

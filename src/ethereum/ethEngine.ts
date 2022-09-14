@@ -2,11 +2,10 @@
  * Created by paul on 7/7/17.
  */
 
-
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
-import { div, mul, add, sub, lte, gt, lt } from 'biggystring'
+import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -20,8 +19,11 @@ import {
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
 import { signTypedData_v4 } from 'eth-sig-util'
+// @ts-expect-error
 import abi from 'ethereumjs-abi'
+// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
+// @ts-expect-error
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'
@@ -47,6 +49,7 @@ import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumPlugin } from './ethPlugin'
 import { EIP712TypedDataSchema } from './ethSchema'
 import {
+  asWcSessionRequestParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
   EthereumFee,
@@ -62,8 +65,7 @@ import {
   WalletConnectors,
   WcDappDetails,
   WcProps,
-  WcRpcPayload,
-  asWcSessionRequestParams
+  WcRpcPayload
 } from './ethTypes'
 import { calcMiningFee } from './fees/ethMiningFees'
 import {
@@ -75,6 +77,7 @@ import {
 const walletConnectors: WalletConnectors = {}
 
 export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
+  // @ts-expect-error
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
@@ -134,6 +137,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         return EthereumUtil.toRpcSig(v, r, s)
       },
 
+      // @ts-expect-error
       signTypedData: (typedData: EIP712TypedDataParam) => {
         // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
         const valid = validateObject(typedData, EIP712TypedDataSchema)
@@ -143,13 +147,16 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         const types = typedData.types
 
         // Recursively finds all the dependencies of a type
+        // @ts-expect-error
         function dependencies(primaryType, found = []) {
+          // @ts-expect-error
           if (found.includes(primaryType)) {
             return found
           }
           if (types[primaryType] === undefined) {
             return found
           }
+          // @ts-expect-error
           found.push(primaryType)
           for (const field of types[primaryType]) {
             for (const dep of dependencies(field.type, found)) {
@@ -161,15 +168,17 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           return found
         }
 
+        // @ts-expect-error
         function encodeType(primaryType) {
           // Get dependencies primary first, then alphabetical
           let deps = dependencies(primaryType)
           deps = deps.filter(t => t !== primaryType)
+          // @ts-expect-error
           deps = [primaryType].concat(deps.sort())
 
           // Format as a string with fields
           let result = ''
-          for (const of deps) {
+          for (const type of deps) {
             result += `${type}(${types[type]
               .map(({ name, type }) => `${type} ${name}`)
               .join(',')})`
@@ -177,10 +186,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           return result
         }
 
+        // @ts-expect-error
         function typeHash(primaryType) {
           return EthereumUtil.keccak256(encodeType(primaryType))
         }
 
+        // @ts-expect-error
         function encodeData(primaryType, data) {
           const encTypes = []
           const encValues = []
@@ -211,6 +222,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           return abi.rawEncode(encTypes, encValues)
         }
 
+        // @ts-expect-error
         function structHash(primaryType, data) {
           return EthereumUtil.keccak256(encodeData(primaryType, data))
         }
@@ -273,7 +285,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       eth_signTypedData: params => {
         try {
           return this.utils.signTypedData(JSON.parse(params[1]))
-        } catch(e: any) {
+        } catch (e: any) {
           // It's possible that the dApp makes the wrong call.
           // Try to sign using the latest signTypedData_v4 method.
           return this.otherMethods.eth_signTypedData_v4(params)
@@ -284,15 +296,17 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           data: JSON.parse(params[1])
         }),
       eth_sendTransaction: async (params, cc) => {
+        // @ts-expect-error
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
         const tx = await this.makeSpend(spendInfo)
         const signedTx = await this.signTx(tx)
-        return this.broadcastTx(signedTx)
+        return await this.broadcastTx(signedTx)
       },
       eth_signTransaction: async (params, cc) => {
+        // @ts-expect-error
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
         const tx = await this.makeSpend(spendInfo)
-        return this.signTx(tx)
+        return await this.signTx(tx)
       },
       eth_sendRawTransaction: async params => {
         const tx: EdgeTransaction = {
@@ -306,7 +320,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           ourReceiveAddresses: []
         }
 
-        return this.broadcastTx(tx)
+        return await this.broadcastTx(tx)
       },
 
       // Wallet Connect utils
@@ -314,7 +328,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         wcProps: WcProps,
         walletName: string = 'Edge'
       ): Promise<WcDappDetails> => {
-        return timeout(
+        return await timeout(
           new Promise((resolve, reject) => {
             const connector = new WalletConnect({
               uri: wcProps.uri,
@@ -329,6 +343,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
             connector.on(
               'session_request',
+              // @ts-expect-error
               (error: Error, payload: WcRpcPayload) => {
                 if (error) {
                   this.error(`Wallet connect session_request`, error)
@@ -349,6 +364,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
             // Subscribe to call requests
             connector.on(
               'call_request',
+              // @ts-expect-error
               (error: Error, payload: WcRpcPayload) => {
                 try {
                   if (error) throw error
@@ -371,16 +387,18 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
                               .tokenTransaction
                           ),
                           gasPrice: decimalToHex(
+                            // @ts-expect-error
                             this.otherData.networkFees.default.gasPrice
                               .standardFeeHigh
                           )
                         },
+                        // @ts-expect-error
                         ...payload.params[0]
                       }
                     ]
                   }
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
-                } catch(e: any) {
+                } catch (e: any) {
                   this.warn(`Wallet connect call_request `, e)
                   throw e
                 }
@@ -388,7 +406,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
             )
 
             connector.on('disconnect', (error, payload) => {
-              if (error) {
+              if (error != null) {
                 throw error
               }
               delete walletConnectors[wcProps.uri]
@@ -422,6 +440,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
         if (approve) {
           try {
+            // @ts-expect-error
             const result = await this.otherMethods[`${payload.method}`](
               payload.params
             )
@@ -446,7 +465,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
                   requestBody({ result: result.txid })
                 )
             }
-          } catch(e: any) {
+          } catch (e: any) {
             walletConnectors[uri].connector.rejectRequest(
               requestBody({
                 error: {
@@ -488,16 +507,19 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         const ethereumFee = await externalFeeProvider()
         if (ethereumFee == null) continue
         const ethereumFeeInts = Object.keys(ethereumFee).reduce((out, cur) => {
+          // @ts-expect-error
           out[cur] = biggyRoundToNearestInt(ethereumFee[cur])
           return out
         }, {})
+        // @ts-expect-error
         this.walletLocalData.otherData.networkFees.default.gasPrice = {
+          // @ts-expect-error
           ...this.walletLocalData.otherData.networkFees.default.gasPrice,
           ...ethereumFeeInts
         }
         this.walletLocalDataDirty = true
         break
-      } catch(e: any) {
+      } catch (e: any) {
         this.error(
           `Error fetching fees from ${
             externalFeeProvider.name
@@ -522,60 +544,64 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   Reference analysis for choosing 2 gwei minimum priority fee:
     https://hackmd.io/@q8X_WM2nTfu6nuvAzqXiTQ/1559-wallets#:~:text=2%20gwei%20is%20probably%20a%20very%20good%20default
   */
-  updateNetworkFeesFromBaseFeePerGas =
-    async (): Promise<EthereumBaseMultiplier | undefined> => {
-      // Get base fees from 'rpcServers' and convert to our network fees format.
-      // * Supported for post EIP-1559 chains only
-      const { supportsEIP1559 = false } =
-        this.currencyInfo.defaultSettings.otherSettings
-      if (!supportsEIP1559) return
+  updateNetworkFeesFromBaseFeePerGas = async (): Promise<
+    EthereumBaseMultiplier | undefined
+  > => {
+    // Get base fees from 'rpcServers' and convert to our network fees format.
+    // * Supported for post EIP-1559 chains only
+    const { supportsEIP1559 = false } =
+      this.currencyInfo.defaultSettings.otherSettings
+    if (!supportsEIP1559) return
 
-      const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
-      if (baseFeePerGas == null) return
-      const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
+    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+    if (baseFeePerGas == null) return
+    const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-      const networkFees: EthereumFees =
-        this.walletLocalData.otherData.networkFees
+    const networkFees: EthereumFees =
+      // @ts-expect-error
+      this.walletLocalData.otherData.networkFees
 
-      // Make sure there is a default network fee entry and gasPrice entry
-      if (networkFees.default == null || networkFees.default.gasPrice == null) {
-        return
-      }
-
-      const defaultNetworkFee: EthereumFee =
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-          .default
-
-      // The minimum priority fee for slow transactions
-      const minPriorityFee =
-        networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
-      // This is how much we will multiply the base fee by
-      const baseMultiplier: EthereumBaseMultiplier =
-        networkFees.default.baseFeeMultiplier ||
-        defaultNetworkFee.baseFeeMultiplier
-
-      // Make sure the properties exist
-      if (minPriorityFee == null || baseMultiplier == null) return
-
-      const out: EthereumBaseMultiplier = {
-        lowFee: '',
-        standardFeeLow: '',
-        standardFeeHigh: '',
-        highFee: ''
-      }
-
-      for (const feeType of Object.keys(baseMultiplier)) {
-        const baseFee = mul(baseMultiplier[feeType], baseFeePerGasDecimal)
-        const totalFee = add(baseFee, minPriorityFee)
-        out[feeType] = div(totalFee, '1')
-      }
-
-      this.log.warn(
-        `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
-      )
-      printFees(this.log, out)
-      return out
+    // Make sure there is a default network fee entry and gasPrice entry
+    if (networkFees.default == null || networkFees.default.gasPrice == null) {
+      return
     }
+
+    const defaultNetworkFee: EthereumFee =
+      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+
+    // The minimum priority fee for slow transactions
+    const minPriorityFee =
+      networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
+    // This is how much we will multiply the base fee by
+    // @ts-expect-error
+    const baseMultiplier: EthereumBaseMultiplier =
+      networkFees.default.baseFeeMultiplier != null ||
+      defaultNetworkFee.baseFeeMultiplier
+
+    // Make sure the properties exist
+    if (minPriorityFee == null || baseMultiplier == null) return
+
+    const out: EthereumBaseMultiplier = {
+      lowFee: '',
+      standardFeeLow: '',
+      standardFeeHigh: '',
+      highFee: ''
+    }
+
+    for (const feeType of Object.keys(baseMultiplier)) {
+      // @ts-expect-error
+      const baseFee = mul(baseMultiplier[feeType], baseFeePerGasDecimal)
+      const totalFee = add(baseFee, minPriorityFee)
+      // @ts-expect-error
+      out[feeType] = div(totalFee, '1')
+    }
+
+    this.log.warn(
+      `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
+    )
+    printFees(this.log, out)
+    return out
+  }
 
   async clearBlockchainCache() {
     await super.clearBlockchainCache()
@@ -599,14 +625,19 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       .then(info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
+        // @ts-expect-error
         this.walletLocalData.otherData.networkFees = mergeDeeply(
+          // @ts-expect-error
           this.walletLocalData.otherData.networkFees,
           info
         )
         this.walletLocalDataDirty = true
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
-      .finally(() => this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs))
+      .finally(
+        async () =>
+          await this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs)
+      )
 
     this.ethNetwork.needsLoop()
     super.startEngine()
@@ -639,6 +670,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         spendInfo.spendTargets[0].nativeAmount = mid
         const { gasPrice, gasLimit } = calcMiningFee(
           spendInfo,
+          // @ts-expect-error
           this.walletLocalData.otherData.networkFees,
           this.currencyInfo
         )
@@ -685,7 +717,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       if (rbfTxIndex > -1) {
         const rbfTrx = this.transactionList[currencyCode][rbfTxIndex]
 
-        if (rbfTrx.otherParams) {
+        if (rbfTrx.otherParams != null) {
           const { gasPrice, gas, nonceUsed } = rbfTrx.otherParams
           rbfGasPrice = mul(gasPrice, '2')
           rbfGasLimit = gas
@@ -693,6 +725,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
       }
 
+      // @ts-expect-error
       if (!rbfGasPrice || !rbfGasLimit || !rbfNonce) {
         throw new Error('Missing data to complete RBF transaction.')
       }
@@ -728,12 +761,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     let useDefaults: boolean = false
 
     // Use RBF gas price and gas limit when present, otherwise, calculate mining fees
+    // @ts-expect-error
     if (rbfGasPrice && rbfGasLimit) {
       gasPrice = rbfGasPrice
       gasLimit = rbfGasLimit
     } else {
       const miningFees = calcMiningFee(
         edgeSpendInfo,
+        // @ts-expect-error
         this.walletLocalData.otherData.networkFees,
         this.currencyInfo
       )
@@ -755,6 +790,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     }
     // Determine the nonce to use from the number of pending transactions
     else if (pendingTxs.length > 0) {
+      // @ts-expect-error
       const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
       const baseNonce =
         this.walletLocalData.numUnconfirmedSpendTxs > 0
@@ -783,7 +819,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         contractAddress = publicAddress
       } else {
         const tokenInfo = this.getTokenInfo(currencyCode)
-        if (!tokenInfo || typeof tokenInfo.contractAddress !== 'string') {
+        if (
+          tokenInfo == null ||
+          typeof tokenInfo.contractAddress !== 'string'
+        ) {
           throw new Error(
             'Error: Token not supported or invalid contract address'
           )
@@ -865,7 +904,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           } else {
             gasLimit = '21000'
           }
-        } catch(e: any) {
+        } catch (e: any) {
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
             this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
@@ -889,13 +928,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           contractAddress,
           gasLimit
         }
-      } catch(e: any) {
+      } catch (e: any) {
         this.error(`makeSpend Error determining gas limit `, e)
       }
     } else if (useDefaults) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
       gasLimit = this.lastEstimatedGasLimit.gasLimit
     }
+    // @ts-expect-error
     otherParams.gas = gasLimit
 
     const nativeBalance =
@@ -987,15 +1027,20 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       if (
         this.walletLocalData.numUnconfirmedSpendTxs &&
         gt(
+          // @ts-expect-error
           this.walletLocalData.otherData.unconfirmedNextNonce,
+          // @ts-expect-error
           this.walletLocalData.otherData.nextNonce
         )
       ) {
         const diff = sub(
+          // @ts-expect-error
           this.walletLocalData.otherData.unconfirmedNextNonce,
+          // @ts-expect-error
           this.walletLocalData.otherData.nextNonce
         )
         if (lte(diff, '5')) {
+          // @ts-expect-error
           nonce = this.walletLocalData.otherData.unconfirmedNextNonce
           this.walletLocalDataDirty = true
         } else {
@@ -1004,10 +1049,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           throw e
         }
       } else {
+        // @ts-expect-error
         nonce = this.walletLocalData.otherData.nextNonce
       }
     }
     // Convert nonce to hex for tsParams
+    // @ts-expect-error
     const nonceHex = toHex(nonce)
 
     // Data:
@@ -1061,7 +1108,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     edgeTransaction.signedTx = bufToHex(signedTx.serialize())
     edgeTransaction.txid = bufToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
-    if (edgeTransaction.otherParams) {
+    if (edgeTransaction.otherParams != null) {
       edgeTransaction.otherParams.nonceUsed = nonce
     }
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -1099,7 +1146,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   // Overload saveTx to mutate replaced transactions by RBF
   async saveTx(edgeTransaction: EdgeTransaction) {
     // We must check if this transaction replaces another transaction
-    if (edgeTransaction.otherParams && edgeTransaction.otherParams.rbfTxid) {
+    if (
+      edgeTransaction.otherParams != null &&
+      edgeTransaction.otherParams.rbfTxid
+    ) {
       const { currencyCode } = edgeTransaction
 
       // Get the replaced transaction using the rbfTxid
@@ -1123,7 +1173,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
 
     // Update the unconfirmed nonce if the transaction being saved is not confirmed
     if (edgeTransaction.blockHeight === 0) {
-      const nonceUsed: string | void = edgeTransaction.otherParams?.nonceUsed
+      const nonceUsed: string | undefined =
+        edgeTransaction.otherParams?.nonceUsed
       if (nonceUsed != null) {
         // @ts-expect-error
         this.walletLocalData.otherData.unconfirmedNextNonce = add(

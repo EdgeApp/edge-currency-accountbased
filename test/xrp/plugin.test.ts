@@ -20,11 +20,13 @@ for (const fixture of fixtures) {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
+    // @ts-expect-error
     io: { ...fakeIo, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
+  // @ts-expect-error
   const factory = edgeCorePlugins[fixture.pluginId]
   const plugin: EdgeCurrencyPlugin = factory(opts)
 

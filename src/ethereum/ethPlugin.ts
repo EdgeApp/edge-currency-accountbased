@@ -20,7 +20,9 @@ import {
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
+// @ts-expect-error
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin'
@@ -150,7 +152,9 @@ export class EthereumPlugin extends CurrencyPlugin {
     // By default, all EVM clones should be WalletConnect compatible.
     const networks = { wc: true }
     this.currencyInfo.defaultSettings.otherSettings.uriNetworks.forEach(
+      // @ts-expect-error
       network => {
+        // @ts-expect-error
         networks[network] = true
       }
     )
@@ -164,12 +168,15 @@ export class EthereumPlugin extends CurrencyPlugin {
     )
 
     if (parsedUri.protocol === 'wc') {
+      // @ts-expect-error
       if (parsedUri.query.bridge != null && parsedUri.query.key != null) {
         edgeParsedUri.walletConnect = {
           uri,
           topic: parsedUri.pathname.split('@')[0],
           version: parsedUri.pathname.split('@')[1],
+          // @ts-expect-error
           bridge: parsedUri.query.bridge,
+          // @ts-expect-error
           key: parsedUri.query.key
         }
         return edgeParsedUri
@@ -208,11 +215,14 @@ export class EthereumPlugin extends CurrencyPlugin {
     if (prefix === 'token' || prefix === 'token_info') {
       if (!parsedUri.query) throw new Error('InvalidUriError')
 
+      // @ts-expect-error
       const currencyCode = parsedUri.query.symbol || 'SYM'
       if (currencyCode.length < 2 || currencyCode.length > 5) {
         throw new Error('Wrong Token symbol')
       }
+      // @ts-expect-error
       const currencyName = parsedUri.query.name || currencyCode
+      // @ts-expect-error
       const decimalsInput = parsedUri.query.decimals || '18'
       let multiplier = '1000000000000000000'
       const decimals = parseInt(decimalsInput)
@@ -222,6 +232,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       multiplier = '1' + '0'.repeat(decimals)
 
       const type =
+        // @ts-expect-error
         parsedUri.query.type ||
         this.currencyInfo.defaultSettings.otherSettings.ercTokenStandard
 
@@ -230,6 +241,7 @@ export class EthereumPlugin extends CurrencyPlugin {
           currencyCode,
           contractAddress: contractAddress.toLowerCase(),
           currencyName,
+          // @ts-expect-error
           multiplier,
           denominations: [{ name: currencyCode, multiplier }],
           type: type.toUpperCase()
@@ -249,11 +261,14 @@ export class EthereumPlugin extends CurrencyPlugin {
       switch (functionName) {
         // ERC-20 token transfer
         case 'transfer': {
+          // @ts-expect-error
           const publicAddress = parameters.address ?? ''
           const contractAddress = targetAddress ?? ''
           const nativeAmount =
+            // @ts-expect-error
             parameters.uint256 != null
-              ? biggyScience(parameters.uint256)
+              ? // @ts-expect-error
+                biggyScience(parameters.uint256)
               : edgeParsedUri.nativeAmount
 
           // Get meta token from contract address
@@ -289,8 +304,10 @@ export class EthereumPlugin extends CurrencyPlugin {
         case undefined: {
           const publicAddress = targetAddress
           const nativeAmount =
+            // @ts-expect-error
             parameters.value != null
-              ? biggyScience(parameters.value)
+              ? // @ts-expect-error
+                biggyScience(parameters.value)
               : edgeParsedUri.nativeAmount
 
           return { ...edgeParsedUri, publicAddress, nativeAmount }
@@ -389,6 +406,7 @@ export function makeEthereumBasedPluginInner(
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
     // Initialize otherData defaults if they weren't on disk
@@ -404,6 +422,7 @@ export function makeEthereumBasedPluginInner(
       }
     }
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

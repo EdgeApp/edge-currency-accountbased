@@ -97,6 +97,7 @@ export class BinancePlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
+    // @ts-expect-error
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -157,6 +158,7 @@ export function makeBinancePlugin(
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

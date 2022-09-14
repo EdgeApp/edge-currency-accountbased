@@ -73,6 +73,7 @@ type BnbFunction =
 // }
 
 export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
+  // @ts-expect-error
   binancePlugin: BinancePlugin
   // otherData: BinanceWalletOtherData
   // initOptions: BinanceInitOptions
@@ -303,6 +304,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       promiseArray.push(this.checkTransactionsFetch(startTime, currencyCode))
     }
 
+    // @ts-expect-error
     let resultArray = []
     try {
       resultArray = await Promise.all(promiseArray)
@@ -310,6 +312,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       this.error('Failed to query transactions ', e)
     }
     let successCount = 0
+    // @ts-expect-error
     for (const r of resultArray) {
       if (r) successCount++
     }
@@ -363,6 +366,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       case 'bnb_getTransactions':
         funcs =
           this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
+            // @ts-expect-error
             server => async () => {
               const result = await this.fetchGet(server + params[0])
               if (typeof result !== 'object') {
@@ -375,6 +379,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
           )
         // Randomize array
         funcs = shuffleArray(funcs)
+        // @ts-expect-error
         out = await asyncWaterfall(funcs)
         break
     }
@@ -468,6 +473,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       edgeSpendInfo.spendTargets[0].otherParams != null &&
       edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     ) {
+      // @ts-expect-error
       otherParams.memo =
         edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
@@ -528,8 +534,10 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
     }
     const nativeAmountString = parseInt(amount) / parseInt(denom.multiplier)
+    // @ts-expect-error
     const nativeAmount = parseFloat(nativeAmountString)
     // identity function, overriding library's version
+    // @ts-expect-error
     bnbClient._broadcastDelegate = x => {
       return x
     }
@@ -541,6 +549,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       currencyCode,
       otherParams.memo
     )
+    // @ts-expect-error
     otherParams.serializedTx = signedTx.serialize()
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction

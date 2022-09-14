@@ -36,6 +36,7 @@ export class HederaPlugin extends CurrencyPlugin {
 
     if (type === this.pluginId) {
       const entropy = this.io.random(32)
+      // @ts-expect-error
       const mnemonic = entropyToMnemonic(entropy)
       return await this.importPrivateKey(mnemonic)
     } else {
@@ -178,6 +179,7 @@ export function makeHederaPluginInner(
 
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

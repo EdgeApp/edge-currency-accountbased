@@ -34,13 +34,16 @@ const opts: EdgeCorePluginOptions = {
 for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
   let engine: EdgeCurrencyEngine
+  // @ts-expect-error
   let keys
 
   const WALLET_TYPE = fixture.WALLET_TYPE
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
+  // @ts-expect-error
   opts.io = { ...opts.io, random: size => fixture.key }
 
+  // @ts-expect-error
   const factory = edgeCorePlugins[fixture.pluginId]
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
@@ -112,6 +115,7 @@ for (const fixture of fixtures) {
       const info: EdgeWalletInfo = {
         id: '1',
         type: WALLET_TYPE,
+        // @ts-expect-error
         keys
       }
       if (!plugin) throw new Error('ErrorNoPlugin')
@@ -284,34 +288,50 @@ function validateTxidListMap(engine: CurrencyEngine<CurrencyPlugin>) {
   }
 }
 describe('Test transaction list updating', () => {
+  // @ts-expect-error
   let engine
   beforeEach(() => {
     engine = new CurrencyEngine(plugin, walletInfo, currencyEngineOptions)
     engine.walletLocalData = new WalletLocalData(
       '{"publicKey": "0x123456"}',
+      // @ts-expect-error
       'ETH'
     )
 
     for (const tx of engineTestTxs.ETH) {
+      // @ts-expect-error
       engine.addTransaction('ETH', tx, tx.date)
     }
     for (const tx of engineTestTxs.DAI) {
+      // @ts-expect-error
       engine.addTransaction('DAI', tx, tx.date)
     }
   })
 
   it('addTransaction', () => {
+    // @ts-expect-error
     assert(engine.transactionList.ETH[0].date === 1555590000)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].date === 1555580000)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].date === 1555570000)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].date === 1555560000)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].date === 1555550000)
+    // @ts-expect-error
     assert(engine.transactionList.DAI[0].date === 1555690000)
+    // @ts-expect-error
     assert(engine.transactionList.DAI[1].date === 1555680000)
+    // @ts-expect-error
     assert(engine.transactionList.DAI[2].date === 1555670000)
+    // @ts-expect-error
     assert(engine.transactionList.DAI[3].date === 1555660000)
+    // @ts-expect-error
     assert(engine.transactionList.DAI[4].date === 1555650000)
+    // @ts-expect-error
     assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
+    // @ts-expect-error
     validateTxidListMap(engine)
   })
 
@@ -325,13 +345,21 @@ describe('Test transaction list updating', () => {
       otherParams: {}
     }
 
+    // @ts-expect-error
     engine.addTransaction('ETH', updatedTx, updatedTx.date)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[0].txid === '005')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].txid === '004')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].txid === '002')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].txid === '001')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].txid === '003')
+    // @ts-expect-error
     assert(engine.walletLocalData.numUnconfirmedSpendTxs === 5)
+    // @ts-expect-error
     validateTxidListMap(engine)
   })
 
@@ -355,17 +383,28 @@ describe('Test transaction list updating', () => {
       }
     ]
     for (const tx of updatedTxs) {
+      // @ts-expect-error
       engine.addTransaction('ETH', tx, tx.date)
     }
+    // @ts-expect-error
     engine.checkDroppedTransactions(1555590000)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[0].txid === '005')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].txid === '004')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].txid === '003')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].blockHeight === 2)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].txid === '002')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].txid === '001')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].blockHeight === 1)
+    // @ts-expect-error
     assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
+    // @ts-expect-error
     validateTxidListMap(engine)
   })
 
@@ -397,19 +436,32 @@ describe('Test transaction list updating', () => {
       }
     ]
     for (const tx of updatedTxs) {
+      // @ts-expect-error
       engine.addTransaction('ETH', tx, tx.date)
     }
+    // @ts-expect-error
     engine.checkDroppedTransactions(1555656401)
+    // @ts-expect-error
     assert(engine.transactionList.ETH.length === 5)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[0].txid === '005')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].txid === '004')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].txid === '003')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].blockHeight === 2)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].txid === '002')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].blockHeight === -1)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].txid === '001')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].blockHeight === 1)
+    // @ts-expect-error
     assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
+    // @ts-expect-error
     validateTxidListMap(engine)
   })
 
@@ -433,6 +485,7 @@ describe('Test transaction list updating', () => {
       }
     ]
     for (const tx of updatedTxs) {
+      // @ts-expect-error
       engine.addTransaction('ETH', tx, 1555590000)
     }
     const updateTx: any = {
@@ -443,20 +496,34 @@ describe('Test transaction list updating', () => {
       blockHeight: 0,
       otherParams: {}
     }
+    // @ts-expect-error
     engine.addTransaction('ETH', updateTx, 1555666401)
 
+    // @ts-expect-error
     engine.checkDroppedTransactions(1555666401)
+    // @ts-expect-error
     assert(engine.transactionList.ETH.length === 5)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[0].txid === '005')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].txid === '004')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[1].blockHeight === -1)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].txid === '003')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[2].blockHeight === 2)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].txid === '002')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[3].blockHeight === 0)
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].txid === '001')
+    // @ts-expect-error
     assert(engine.transactionList.ETH[4].blockHeight === 1)
+    // @ts-expect-error
     assert(engine.walletLocalData.numUnconfirmedSpendTxs === 3)
+    // @ts-expect-error
     validateTxidListMap(engine)
   })
 })

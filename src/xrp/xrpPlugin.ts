@@ -38,11 +38,14 @@ export class XrpPlugin extends CurrencyPlugin {
   }
 
   async connectApi(walletId: string): Promise<void> {
+    // @ts-expect-error
     if (this.rippleApi.serverName == null) {
       const funcs =
         this.currencyInfo.defaultSettings.otherSettings.rippledServers.map(
+          // @ts-expect-error
           server => async () => {
             const api = new Client(server)
+            // @ts-expect-error
             api.serverName = server
             await api.connect()
             const out = { server, api }
@@ -50,6 +53,7 @@ export class XrpPlugin extends CurrencyPlugin {
           }
         )
       const result = await asyncWaterfall(funcs)
+      // @ts-expect-error
       if (this.rippleApi.serverName == null) {
         this.rippleApi = result.api
       }
@@ -60,6 +64,7 @@ export class XrpPlugin extends CurrencyPlugin {
   async disconnectApi(walletId: string): Promise<void> {
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
+      // @ts-expect-error
       await this.rippleApi.disconnect()
       this.rippleApi = {}
     }
@@ -85,6 +90,7 @@ export class XrpPlugin extends CurrencyPlugin {
       const algorithm =
         type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
       const entropy = Array.from(this.io.random(32))
+      // @ts-expect-error
       const keys = Wallet.fromEntropy(entropy, { algorithm })
       return { rippleKey: keys.seed }
     } else {
@@ -137,6 +143,7 @@ export class XrpPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
+    // @ts-expect-error
     edgeParsedUri.uniqueIdentifier = parsedUri.query.dt || undefined
     return edgeParsedUri
   }
@@ -183,12 +190,14 @@ export function makeRipplePlugin(
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
     if (currencyEngine.otherData.recommendedFee == null) {
       currencyEngine.otherData.recommendedFee = '0'
     }
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

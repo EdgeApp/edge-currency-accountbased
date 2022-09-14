@@ -14,6 +14,7 @@ import { fakeLog } from '../fakeLog'
 import fixtures from './fixtures'
 
 for (const fixture of fixtures) {
+  // @ts-expect-error
   let keys
   let tools: EdgeCurrencyTools
 
@@ -27,11 +28,13 @@ for (const fixture of fixtures) {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
+    // @ts-expect-error
     io: { ...fakeIo, fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
   }
+  // @ts-expect-error
   const factory = edgeCorePlugins[fixture.pluginId]
   const plugin: EdgeCurrencyPlugin = factory(opts)
 
@@ -78,6 +81,7 @@ for (const fixture of fixtures) {
     it('Valid private key', async function () {
       keys = await tools.derivePublicKey({
         id: 'id',
+        // @ts-expect-error
         keys: { [keyName]: keys[keyName], [mnemonicName]: fixture.mnemonic },
         type: WALLET_TYPE
       })
@@ -86,12 +90,14 @@ for (const fixture of fixtures) {
 
     it('Invalid key name', async function () {
       return await expectRejection(
+        // @ts-expect-error
         tools.derivePublicKey(fixture['Invalid key name'])
       )
     })
 
     it('Invalid wallet type', async function () {
       return await expectRejection(
+        // @ts-expect-error
         tools.derivePublicKey(fixture['Invalid wallet type'])
       )
     })
@@ -114,16 +120,19 @@ for (const fixture of fixtures) {
     if (fixture.parseUri['checksum address only'] != null)
       it('checksum address only', async function () {
         const parsedUri = await tools.parseUri(
+          // @ts-expect-error
           fixture.parseUri['checksum address only'][0]
         )
         assert.equal(
           parsedUri.publicAddress,
+          // @ts-expect-error
           fixture.parseUri['checksum address only'][1]
         )
       })
     if (fixture.parseUri['invalid checksum address only'] != null)
       it('invalid checksum address only', async function () {
         return await expectRejection(
+          // @ts-expect-error
           tools.parseUri(fixture.parseUri['invalid checksum address only'][0])
         )
       })
@@ -276,6 +285,7 @@ for (const fixture of fixtures) {
       'RenBrige Gateway uri address with amount, label & message',
       'RenBrige Gateway uri address'
     ].forEach(function (caseName) {
+      // @ts-expect-error
       const caseFixtures = fixture.parseUri[caseName]
 
       if (caseFixtures == null) return
@@ -289,11 +299,15 @@ for (const fixture of fixtures) {
             console.log(';;', parsedUri)
 
           if (key === 'metadata') {
+            // @ts-expect-error
             Object.keys(parsedUri[key]).forEach(metaKey => {
+              // @ts-expect-error
               if (parsedUri[key][metaKey] === undefined)
+                // @ts-expect-error
                 delete parsedUri[key][metaKey]
             })
           }
+          // @ts-expect-error
           assert.deepEqual(parsedUri[key], value)
         })
       })
@@ -308,12 +322,14 @@ for (const fixture of fixtures) {
     })
     it('address only', async function () {
       const encodedUri = await tools.encodeUri(
+        // @ts-expect-error
         fixture.encodeUri['address only'][0]
       )
       assert.equal(encodedUri, fixture.encodeUri['address only'][1])
     })
     it('weird address', async function () {
       const encodedUri = await tools.encodeUri(
+        // @ts-expect-error
         fixture.encodeUri['weird address'][0]
       )
       assert.equal(encodedUri, fixture.encodeUri['weird address'][1])
@@ -335,12 +351,14 @@ for (const fixture of fixtures) {
     })
     it('address & amount', async function () {
       const encodedUri = await tools.encodeUri(
+        // @ts-expect-error
         fixture.encodeUri['address & amount'][0]
       )
       assert.equal(encodedUri, fixture.encodeUri['address & amount'][1])
     })
     it('address, amount, and label', async function () {
       const encodedUri = await tools.encodeUri(
+        // @ts-expect-error
         fixture.encodeUri['address, amount, and label'][0]
       )
       assert.equal(
@@ -350,6 +368,7 @@ for (const fixture of fixtures) {
     })
     it('address, amount, label, & message', async function () {
       const encodedUri = await tools.encodeUri(
+        // @ts-expect-error
         fixture.encodeUri['address, amount, label, & message'][0]
       )
       assert.equal(

@@ -1,3 +1,4 @@
+// @ts-expect-error
 import * as solanaWeb3 from '@solana/web3'
 import { add, gt, mul } from 'biggystring'
 import { asNumber } from 'cleaners'
@@ -41,6 +42,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
+  // @ts-expect-error
   otherData: SolanaOtherData
   fetchCors: EdgeFetchFunction
   settings: SolanaSettings
@@ -167,6 +169,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     let before = null
     const until =
       this.otherData.newestTxid !== '' ? this.otherData.newestTxid : null
+    // @ts-expect-error
     let txids = []
     try {
       // Gather all transaction IDs since we last updated
@@ -184,6 +187,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
           'getSignaturesForAddress',
           params
         )
+        // @ts-expect-error
         txids = txids.concat(response)
         if (response.length < this.settings.txQueryLimit) break // RPC limit
         before = response[this.settings.txQueryLimit - 1].signature

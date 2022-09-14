@@ -157,6 +157,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   async queryTransactionsInner() {
     // Skip pages we don't need
     let page = Math.floor(
+      // @ts-expect-error
       this.otherData.txCount / this.settings.subscanQueryLimit
     )
 
@@ -197,15 +198,18 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       })
 
       // If we haven't reached the end, Update local txCount and progress and then query the next page
+      // @ts-expect-error
       this.otherData.txCount =
         page * this.settings.subscanQueryLimit + transfers.length
 
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        // @ts-expect-error
         count === 0 ? 1 : this.otherData.txCount / count
       this.updateOnAddressesChecked()
 
       // count is the total number of transactions ever for an account
       // If we've already seen all the transfers we don't need to bother processing or page through older ones
+      // @ts-expect-error
       if (count === this.otherData.txCount) break
 
       page++
@@ -221,7 +225,9 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   }
 
   initOtherData() {
+    // @ts-expect-error
     if (this.otherData.txCount == null) {
+      // @ts-expect-error
       this.otherData.txCount = 0
     }
   }
@@ -274,6 +280,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     const tx = await this.makeSpend(maxSpendInfo)
     const fee = tx.networkFee
 
+    // @ts-expect-error
     const getMax = (min, max) => {
       const diff = sub(max, min)
       if (lte(diff, '1')) {

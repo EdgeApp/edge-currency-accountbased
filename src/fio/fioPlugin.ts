@@ -1,6 +1,8 @@
 /* eslint camelcase: 0 */
 
+// @ts-expect-error
 import { FIOSDK } from '@fioprotocol/fiosdk'
+// @ts-expect-error
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -14,6 +16,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'
@@ -49,6 +52,7 @@ export function checkAddress(address: string): boolean {
 }
 
 export class FioPlugin extends CurrencyPlugin {
+  // @ts-expect-error
   otherMethods: Object
 
   constructor(io: EdgeIo) {
@@ -63,6 +67,7 @@ export class FioPlugin extends CurrencyPlugin {
         throw new Error('Invalid private key')
       }
 
+      // @ts-expect-error
       keys.fioKey = userInput
     } else {
       // it looks like a mnemonic, so validate that way:
@@ -72,7 +77,9 @@ export class FioPlugin extends CurrencyPlugin {
         throw new Error('Invalid input')
       }
       const privKeys = await FIOSDK.createPrivateKeyMnemonic(userInput)
+      // @ts-expect-error
       keys.fioKey = privKeys.fioKey
+      // @ts-expect-error
       keys.mnemonic = privKeys.mnemonic
     }
 
@@ -82,6 +89,7 @@ export class FioPlugin extends CurrencyPlugin {
       id: 'fake',
       keys
     })
+    // @ts-expect-error
     keys.publicKey = pubKeys.publicKey
 
     return keys
@@ -164,6 +172,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   ): Promise<any> {
     const res = await asyncWaterfall(
       shuffleArray(
+        // @ts-expect-error
         currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
           let out
 
@@ -220,6 +229,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
     // Initialize otherData defaults if they weren't on disk
@@ -236,6 +246,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       currencyEngine.otherData.fioRequestsToApprove = {}
     }
     if (!currencyEngine.otherData.fioRequests) {
+      // @ts-expect-error
       currencyEngine.otherData.fioRequests = {
         [FIO_REQUESTS_TYPES.SENT]: [],
         [FIO_REQUESTS_TYPES.PENDING]: []
@@ -247,6 +258,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
       }
     }
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }
@@ -365,6 +377,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         throw e
       }
     },
+    // @ts-expect-error
     async isDomainPublic(domain): Promise<boolean> {
       const isAvailableRes = await multicastServers('isAvailable', {
         fioName: domain
@@ -406,6 +419,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
 
         return isAvailableRes.is_registered
       } catch (e: any) {
+        // @ts-expect-error
         this.error('doesAccountExist error: ', e)
         return false
       }
@@ -438,10 +452,12 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         if (!result.ok) {
           const data = await result.json()
 
+          // @ts-expect-error
           if (fioRegApiErrorCodes[data.errorCode]) {
             throw new FioError(
               data.error,
               result.status,
+              // @ts-expect-error
               fioRegApiErrorCodes[data.errorCode],
               data
             )
@@ -451,6 +467,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
             throw new FioError(
               data.error,
               result.status,
+              // @ts-expect-error
               fioRegApiErrorCodes.ALREADY_REGISTERED,
               data
             )
@@ -479,10 +496,12 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         )
         const json = await result.json()
         if (!result.ok) {
+          // @ts-expect-error
           if (fioRegApiErrorCodes[json.errorCode]) {
             throw new FioError(
               json.error,
               result.status,
+              // @ts-expect-error
               fioRegApiErrorCodes[json.errorCode],
               json
             )

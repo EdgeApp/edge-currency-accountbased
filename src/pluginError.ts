@@ -4,8 +4,11 @@ export const pluginErrorName = {
 }
 
 export class PluginError extends Error {
+  // @ts-expect-error
   list: Array<{ field: string; message: string }>
+  // @ts-expect-error
   labelCode: string
+  // @ts-expect-error
   errorCode: number
   json: any
 

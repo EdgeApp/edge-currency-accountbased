@@ -1,3 +1,4 @@
+// @ts-expect-error
 import * as solanaWeb3 from '@solana/web3'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
@@ -26,9 +27,11 @@ const { Keypair, PublicKey } = solanaWeb3
 const createKeyPair = async (
   mnemonic: string,
   path: string
+  // @ts-expect-error
 ): Promise<Keypair> => {
   const buffer = await mnemonicToSeed(mnemonic)
   const deriveSeed = ed25519.derivePath(path, buffer.toString('hex')).key
+  // @ts-expect-error
   return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
 }
 
@@ -105,6 +108,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
+    // @ts-expect-error
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -160,8 +164,10 @@ export function makeSolanaPluginInner(
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

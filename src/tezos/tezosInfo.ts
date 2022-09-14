@@ -20,6 +20,7 @@ const otherSettings: TezosSettings = {
     //  'https://teznode.letzbake.com',
     'https://mainnet.tezrpc.me'
   ],
+  // @ts-expect-error
   tezosApiServers: ['https://api.tzkt.io']
 }
 

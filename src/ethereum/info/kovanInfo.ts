@@ -31,10 +31,12 @@ const defaultNetworkFees: EthereumFees = {
   },
   '1983987abc9837fbabc0982347ad828': {
     baseFeeMultiplier: undefined,
+    // @ts-expect-error
     gasLimit: {
       regularTransaction: '21002',
       tokenTransaction: '37124'
     },
+    // @ts-expect-error
     gasPrice: {
       lowFee: '1000000002',
       standardFeeLow: '40000000002',
@@ -47,6 +49,7 @@ const defaultNetworkFees: EthereumFees = {
   },
   '2983987abc9837fbabc0982347ad828': {
     baseFeeMultiplier: undefined,
+    // @ts-expect-error
     gasLimit: {
       regularTransaction: '21002',
       tokenTransaction: '37124'

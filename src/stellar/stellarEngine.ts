@@ -46,6 +46,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
   pendingTransactionsMap: { [index: number]: Object }
+  // @ts-expect-error
   otherData: StellarWalletOtherData
 
   constructor(
@@ -71,7 +72,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       // Functions that should waterfall from top to low priority servers
       case 'loadAccount':
         funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
+          // @ts-expect-error
           const result = await api[func](...params)
+          // @ts-expect-error
           return { server: api.serverName, result }
         })
         out = await asyncWaterfall(funcs)
@@ -81,6 +84,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         funcs = this.stellarPlugin.stellarApiServers.map(
           serverApi => async () => {
             const result = await serverApi
+              // @ts-expect-error
               .ledgers()
               .order('desc')
               .limit(1)
@@ -90,6 +94,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
               this.walletLocalData.blockHeight <= blockHeight &&
               blockHeight >= this.currencyPlugin.highestTxHeight
             ) {
+              // @ts-expect-error
               return { server: serverApi.serverName, result }
             } else {
               throw new Error('Height out of date')
@@ -103,11 +108,13 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         funcs = this.stellarPlugin.stellarApiServers.map(
           serverApi => async () => {
             const result = await serverApi
+              // @ts-expect-error
               .payments()
               .limit(TX_QUERY_PAGING_LIMIT)
               .cursor(this.otherData.lastPagingToken)
               .forAccount(...params)
               .call()
+            // @ts-expect-error
             return { server: serverApi.serverName, result }
           }
         )
@@ -118,7 +125,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       case 'submitTransaction':
         out = await promiseAny(
           this.stellarPlugin.stellarApiServers.map(async serverApi => {
+            // @ts-expect-error
             const result = await serverApi[func](...params)
+            // @ts-expect-error
             return { server: serverApi.serverName, result }
           })
         )
@@ -162,6 +171,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     let rawTx: StellarTransaction
     try {
       rawTx = await tx.transaction()
+      // @ts-expect-error
       networkFee = rawTx.fee_charged.toString()
     } catch (e: any) {
       this.error(`processTransaction rawTx Error `, e)
@@ -390,10 +400,12 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
 
     const exchangeAmount = div(nativeAmount, denom.multiplier, 7)
 
+    // @ts-expect-error
     const account = new this.stellarApi.Account(
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
+    // @ts-expect-error
     let memoId: ?string
     if (
       edgeSpendInfo.spendTargets[0].otherParams != null &&
@@ -401,11 +413,13 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     ) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
+    // @ts-expect-error
     const txBuilder = new this.stellarApi.TransactionBuilder(account)
     let transaction
 
     if (mustCreateAccount) {
       transaction = txBuilder.addOperation(
+        // @ts-expect-error
         this.stellarApi.Operation.createAccount({
           destination: publicAddress,
           startingBalance: exchangeAmount
@@ -413,14 +427,18 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       )
     } else {
       transaction = txBuilder.addOperation(
+        // @ts-expect-error
         this.stellarApi.Operation.payment({
           destination: publicAddress,
+          // @ts-expect-error
           asset: this.stellarApi.Asset.native(),
           amount: exchangeAmount
         })
       )
     }
+    // @ts-expect-error
     if (memoId) {
+      // @ts-expect-error
       const memo = this.stellarApi.Memo.id(memoId)
       transaction = transaction.addMemo(memo)
     }
@@ -477,9 +495,11 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         throw new Error('ErrorInvalidTransaction')
       }
       this.warn('Signing...')
+      // @ts-expect-error
       const keypair = this.stellarApi.Keypair.fromSecret(
         this.walletInfo.keys.stellarKey
       )
+      // @ts-expect-error
       await transaction.sign(keypair)
     } catch (e: any) {
       this.error(

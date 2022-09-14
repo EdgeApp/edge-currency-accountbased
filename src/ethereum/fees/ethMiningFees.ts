@@ -122,6 +122,7 @@ export function calcMiningFee(
       networkFeeOption = spendInfo.networkFeeOption
     }
 
+    // @ts-expect-error
     const gasLimit = networkFeeForGasLimit.gasLimit[useLimit]
     let gasPrice = ''
     if (!spendInfo.spendTargets[0].nativeAmount) {
@@ -150,6 +151,7 @@ export function calcMiningFee(
           gasPrice = gasPriceObj.standardFeeHigh
           break
         }
+        // @ts-expect-error
         if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
           if (!networkFeeForGasPrice.gasPrice) {
             throw new Error('ErrorInvalidGasPrice')

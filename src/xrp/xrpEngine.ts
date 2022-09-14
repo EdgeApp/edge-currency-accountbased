@@ -56,6 +56,7 @@ type XrpFunction =
 
 export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   xrpPlugin: XrpPlugin
+  // @ts-expect-error
   otherData: XrpWalletOtherData
   xrpSettings: XrpSettings
 
@@ -82,7 +83,9 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
         break
     }
     const out = {
+      // @ts-expect-error
       result: await this.xrpPlugin.rippleApi[method](...params),
+      // @ts-expect-error
       server: this.xrpPlugin.rippleApi.serverName
     }
     this.log(`multicastServers ${func} ${out.server} won`)

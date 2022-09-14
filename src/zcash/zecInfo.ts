@@ -12,6 +12,7 @@ const otherSettings: ZcashSettings = {
   },
   blockchairServers: ['https://api.blockchair.com'],
   defaultBirthday: 1310000,
+  // @ts-expect-error
   defaultNetworkFee: '1000', // hardcoded default ZEC fee
   transactionQueryLimit: 999
 }

@@ -27,6 +27,7 @@ export const eosJsConfig: EosJsConfig = {
 }
 
 const otherSettings: EosSettings = {
+  // @ts-expect-error
   eosActivationServers: [],
   // used for the following routines, is Hyperion v2:
 
@@ -63,6 +64,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'WAX',
   displayName: 'Wax',
   pluginId: 'wax',
+  // @ts-expect-error
   pluginName: 'wax',
   // do we need plugin name?
   walletType: 'wallet:wax',

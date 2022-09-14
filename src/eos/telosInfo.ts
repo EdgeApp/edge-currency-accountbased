@@ -26,6 +26,7 @@ const denominations = [
 ]
 
 const otherSettings: EosSettings = {
+  // @ts-expect-error
   eosActivationServers: [
     'https://eospay.edge.app',
     'https://account.teloscrew.com'
@@ -62,6 +63,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TLOS',
   displayName: 'Telos',
   pluginId: 'telos',
+  // @ts-expect-error
   pluginName: 'telos',
   // do we need plugin name?
   walletType: 'wallet:telos',

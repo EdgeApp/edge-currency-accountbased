@@ -55,7 +55,7 @@ describe(`Tezos engine`, function () {
       emitter.emit('wcNewContractCall', payload)
     }
   }
-  // @ts-expect-error
+
   let engine: TezosEngine
   const walletLocalDisklet = fakeIo.disklet
   const currencyEngineOptions: EdgeCurrencyEngineOptions = {
@@ -85,6 +85,7 @@ describe(`Tezos engine`, function () {
     return await plugin
       .makeCurrencyEngine(info, currencyEngineOptions)
       .then(result => {
+        // @ts-expect-error
         engine = result
       })
   })

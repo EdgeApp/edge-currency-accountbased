@@ -1,3 +1,4 @@
+// @ts-expect-error
 import { AddressTool, KeyTool, makeSynchronizer } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 

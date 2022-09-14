@@ -16,6 +16,7 @@ import {
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
+// @ts-expect-error
 import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
@@ -72,15 +73,19 @@ class CosignAuthorityProvider {
     this.rpc = rpc
   }
 
+  // @ts-expect-error
   async getRequiredKeys(args) {
     const { transaction } = args
     // Iterate over the actions and authorizations
+    // @ts-expect-error
     transaction.actions.forEach((action, ti) => {
+      // @ts-expect-error
       action.authorization.forEach((auth, ai) => {
         // If the authorization matches the expected cosigner
         // then remove it from the transaction while checking
         // for what public keys are required
         if (auth.actor === 'greymassfuel' && auth.permission === 'cosign') {
+          // @ts-expect-error
           delete transaction.actions[ti].authorization.splice(ai, 1)
         }
       })
@@ -103,6 +108,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   // constructor()
   eosPlugin: EosPlugin
   activatedAccountsCache: { [publicAddress: string]: boolean }
+  // @ts-expect-error
   otherData: EosWalletOtherData
   otherMethods: Object
   eosJsConfig: EosJsConfig
@@ -131,10 +137,15 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     this.otherMethods = {
       getAccountActivationQuote: async (params: Object): Promise<Object> => {
         const {
+          // @ts-expect-error
           requestedAccountName,
+          // @ts-expect-error
           currencyCode,
+          // @ts-expect-error
           ownerPublicKey,
+          // @ts-expect-error
           activePublicKey,
+          // @ts-expect-error
           requestedAccountCurrencyCode
         } = params
         if (!currencyCode || !requestedAccountName) {
@@ -167,6 +178,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         try {
           const out = await asyncWaterfall(
             this.currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
+              // @ts-expect-error
               server => async () => {
                 const uri = `${server}/api/v1/activateAccount`
                 const response = await fetchCors(uri, options)
@@ -241,9 +253,11 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
     let nativeAmount = mul(exchangeAmount, denom.multiplier)
     let name = ''
+    // @ts-expect-error
     if (to === this.walletLocalData.otherData.accountName) {
       name = from
       ourReceiveAddresses.push(to)
+      // @ts-expect-error
       if (from === this.walletLocalData.otherData.accountName) {
         // This is a spend to self. Make amount 0
         nativeAmount = '0'
@@ -325,8 +339,10 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       }
       let nativeAmount = mul(exchangeAmount, denom.multiplier)
       // if sending to one's self
+      // @ts-expect-error
       if (to === this.walletLocalData.otherData.accountName) {
         ourReceiveAddresses.push(to)
+        // @ts-expect-error
         if (from === this.walletLocalData.otherData.accountName) {
           // This is a spend to self. Make amount 0
           nativeAmount = '0'
@@ -371,6 +387,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     let finish = false
 
     let newHighestTxHeight =
+      // @ts-expect-error
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
     while (!finish) {
@@ -416,8 +433,10 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     // if there have been new valid actions then increase the last sequence number
     if (
       newHighestTxHeight >
+      // @ts-expect-error
       (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
+      // @ts-expect-error
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] =
         newHighestTxHeight
       this.walletLocalDataDirty = true
@@ -433,6 +452,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight =
+      // @ts-expect-error
       this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
 
     const limit = 10
@@ -460,6 +480,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       )
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
+      // @ts-expect-error
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
 
       // if there are no actions
@@ -490,8 +511,10 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     }
     if (
       newHighestTxHeight >
+      // @ts-expect-error
       (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
     ) {
+      // @ts-expect-error
       this.walletLocalData.otherData.highestTxHeight[currencyCode] =
         newHighestTxHeight
       this.walletLocalDataDirty = true
@@ -502,10 +525,12 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   async checkTransactionsInnerLoop() {
     if (
       !this.walletLocalData.otherData ||
+      // @ts-expect-error
       !this.walletLocalData.otherData.accountName
     ) {
       return
     }
+    // @ts-expect-error
     const acct = this.walletLocalData.otherData.accountName
 
     for (const token of this.enabledTokens) {
@@ -540,6 +565,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         const { direction, acct, currencyCode, skip, limit, low } = params[0]
         const hyperionFuncs =
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+            // @ts-expect-error
             server => async () => {
               const url =
                 server +
@@ -562,6 +588,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
           )
         const dfuseFuncs =
           this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+            // @ts-expect-error
             server => async () => {
               if (this.currencyInfo.currencyCode !== 'EOS')
                 throw new Error('dfuse only supports EOS')
@@ -588,16 +615,20 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
                 asDfuseGetTransactionsResponse,
                 asDfuseGetTransactionsErrorResponse
               )(await response.json())
+              // @ts-expect-error
               if (responseJson.errors != null) {
                 this.warn(
                   `dfuse ${server} get transactions failed: ${JSON.stringify(
+                    // @ts-expect-error
                     responseJson.errors[0]
                   )}`
                 )
+                // @ts-expect-error
                 throw new Error(responseJson.errors[0].message)
               }
               // Convert txs to Hyperion
               const actions =
+                // @ts-expect-error
                 responseJson.data.searchTransactionsBackward.results.map(tx =>
                   asHyperionTransaction({
                     trx_id: tx.trace.id,
@@ -637,6 +668,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         })
         const hyperionFuncs =
           this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
+            // @ts-expect-error
             server => async () => {
               const authorizersReply = await this.eosJsConfig.fetch(
                 `${server}/v1/history/get_key_accounts`,
@@ -718,6 +750,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         // dfuse API is EOS only
         const dfuseFuncs =
           this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
+            // @ts-expect-error
             server => async () => {
               if (this.currencyInfo.currencyCode !== 'EOS')
                 throw new Error('dfuse only supports EOS')
@@ -771,6 +804,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
             : pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
+            // @ts-expect-error
             const rpc = new JsonRpc(server, {
               fetch: (...args) => {
                 // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
@@ -792,6 +826,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
               textDecoder: new TextDecoder(),
               textEncoder: new TextEncoder()
             })
+            // @ts-expect-error
             const result = await eos[func](...params)
             return { server, result }
           })
@@ -809,15 +844,20 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   async checkAccountInnerLoop() {
     const publicKey = this.walletLocalData.publicKey
     try {
+      // @ts-expect-error
       if (bogusAccounts[this.walletLocalData.otherData.accountName]) {
+        // @ts-expect-error
         this.walletLocalData.otherData.accountName = ''
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onAddressChanged()
       }
       // Check if the publicKey has an account accountName
+      // @ts-expect-error
       if (!this.walletLocalData.otherData.accountName) {
         const account = await this.multicastServers('getKeyAccounts', publicKey)
+        // @ts-expect-error
         if (account && !bogusAccounts[account.account_name]) {
+          // @ts-expect-error
           this.walletLocalData.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
@@ -825,12 +865,14 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       }
 
       // Check balance on account
+      // @ts-expect-error
       if (this.walletLocalData.otherData.accountName) {
         for (const token of this.allTokens) {
           if (this.enabledTokens.includes(token.currencyCode)) {
             const results = await this.multicastServers(
               'getCurrencyBalance',
               token.contractAddress,
+              // @ts-expect-error
               this.walletLocalData.otherData.accountName
             )
             if (results && results.length > 0) {
@@ -872,8 +914,11 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
+    // @ts-expect-error
     this.walletLocalData.otherData.lastQueryActionSeq = {}
+    // @ts-expect-error
     this.walletLocalData.otherData.highestTxHeight = {}
+    // @ts-expect-error
     this.walletLocalData.otherData.accountName = ''
   }
 
@@ -898,12 +943,15 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   }
 
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
+    // @ts-expect-error
     if (this.walletLocalData.otherData.accountName) {
+      // @ts-expect-error
       return { publicAddress: this.walletLocalData.otherData.accountName }
     } else {
       // Account is not yet active. Return the publicKeys so the user can activate the account
       return {
         publicAddress: '',
+        // @ts-expect-error
         publicKey: this.walletInfo.keys.publicKey,
         ownerPublicKey: this.walletInfo.keys.ownerPublicKey
       }
@@ -985,11 +1033,13 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
         name: 'transfer',
         authorization: [
           {
+            // @ts-expect-error
             actor: this.walletLocalData.otherData.accountName,
             permission: 'active'
           }
         ],
         data: {
+          // @ts-expect-error
           from: this.walletLocalData.otherData.accountName,
           to: publicAddress,
           quantity,

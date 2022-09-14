@@ -13,6 +13,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+// @ts-expect-error
 import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
@@ -79,6 +80,7 @@ export class StellarPlugin extends CurrencyPlugin {
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const networks = {}
+    // @ts-expect-error
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
 
@@ -101,27 +103,37 @@ export class StellarPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
+    // @ts-expect-error
     if (parsedUri.query.msg) {
       edgeParsedUri.metadata = {
+        // @ts-expect-error
         notes: parsedUri.query.msg
       }
     }
+    // @ts-expect-error
     if (parsedUri.query.asset_code) {
+      // @ts-expect-error
       if (parsedUri.query.asset_code.toUpperCase() !== 'XLM') {
         throw new Error('ErrorInvalidCurrencyCode')
       }
     }
+    // @ts-expect-error
     if (parsedUri.query.memo_type) {
+      // @ts-expect-error
       if (parsedUri.query.memo_type !== 'MEMO_ID') {
         throw new Error('ErrorInvalidMemoType')
       }
     }
+    // @ts-expect-error
     if (parsedUri.query.memo) {
+      // @ts-expect-error
       const m = add(parsedUri.query.memo, '0')
       // Check if the memo is an integer
+      // @ts-expect-error
       if (m !== parsedUri.query.memo) {
         throw new Error('ErrorInvalidMemoId')
       }
+      // @ts-expect-error
       edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     }
     return edgeParsedUri
@@ -194,6 +206,7 @@ export function makeStellarPlugin(
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
     if (!currencyEngine.otherData.accountSequence) {
       currencyEngine.otherData.accountSequence = 0
@@ -202,6 +215,7 @@ export function makeStellarPlugin(
       currencyEngine.otherData.lastPagingToken = '0'
     }
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

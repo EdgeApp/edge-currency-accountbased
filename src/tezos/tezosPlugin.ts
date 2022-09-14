@@ -9,6 +9,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+// @ts-expect-error
 import { eztz } from 'eztz'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
@@ -101,6 +102,7 @@ export class TezosPlugin extends CurrencyPlugin {
         throw new Error('InvalidUriError')
       }
       content = operation[0].content
+      // @ts-expect-error
       address = content.destination
       if (!this.checkAddress(address)) {
         throw new Error('InvalidPublicAddressError')
@@ -112,6 +114,7 @@ export class TezosPlugin extends CurrencyPlugin {
       publicAddress: address
     }
     edgeParsedUri.nativeAmount =
+      // @ts-expect-error
       content != null && content.amount !== '0' ? content.amount : undefined
     edgeParsedUri.currencyCode = 'XTZ'
     return edgeParsedUri
@@ -158,10 +161,13 @@ export function makeTezosPlugin(
 
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
+    // @ts-expect-error
     if (!currencyEngine.otherData.numberTransactions) {
+      // @ts-expect-error
       currencyEngine.otherData.numberTransaction = 0
     }
     const out: TezosEngine = currencyEngine
+    // @ts-expect-error
     return out
   }
 

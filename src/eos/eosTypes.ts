@@ -24,8 +24,10 @@ export interface EosTransactionSuperNode {
 
 export interface EosTransaction {
   block_time: string
+  // @ts-expect-error
   block_num: number
   account_action_seq: number
+  // @ts-expect-error
   trx_id: string
   act: {
     authorization: any
@@ -40,8 +42,10 @@ export interface EosTransaction {
     name: string
   }
   '@timestamp': string
+  // @ts-expect-error
   block_num: number
   producer: string
+  // @ts-expect-error
   trx_id: string
   parent: number
   global_sequence: number
@@ -74,7 +78,9 @@ export interface EosParams {}
 
 export interface EosWalletOtherData {
   accountName: string
+  // @ts-expect-error
   lastQueryActionSeq: { [string]: number }
+  // @ts-expect-error
   highestTxHeight: { [string]: number }
 }
 

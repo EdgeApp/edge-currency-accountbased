@@ -189,8 +189,10 @@ export function makeZcashPlugin(
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
     // This is just to make sure otherData is Flow checked
+    // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

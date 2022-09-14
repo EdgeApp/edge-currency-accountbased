@@ -39,6 +39,7 @@ const denominations = [
 ]
 
 const otherSettings: EosSettings = {
+  // @ts-expect-error
   eosActivationServers: ['https://eospay.edge.app'],
   eosHyperionNodes: ['https://api.eossweden.org'],
   eosNodes: [
@@ -67,6 +68,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'EOS',
   displayName: 'EOS',
   pluginId: 'eos',
+  // @ts-expect-error
   pluginName: 'eos',
   walletType: 'wallet:eos',
 

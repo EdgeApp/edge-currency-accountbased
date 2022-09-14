@@ -30,6 +30,7 @@ import {
 export const printFees = (log: EdgeLog, fees: Object) => {
   const keys = Object.keys(fees)
   for (const key of keys) {
+    // @ts-expect-error
     const value = fees[key]
     if (typeof value === 'string')
       log.warn(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
@@ -176,6 +177,7 @@ export const fetchFeesFromEvmGasStation = async (
   standardFeeLow = (
     Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
   ).toString()
+  // @ts-expect-error
   standardFeeHigh = (
     Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
   ).toString()
@@ -184,6 +186,7 @@ export const fetchFeesFromEvmGasStation = async (
   const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
   log.warn(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
   printFees(log, out)
+  // @ts-expect-error
   return out
 }
 
@@ -194,6 +197,7 @@ export const fetchFeesFromInfoServer = async (
   const infoServer = getEdgeInfoServer()
   const url = `${infoServer}/v1/networkFees/${currencyCode}`
   const result = await fetch(url)
+  // @ts-expect-error
   return asEthereumFees(await result.json())
 }
 

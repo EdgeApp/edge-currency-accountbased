@@ -98,6 +98,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
 
     if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
 
+    // @ts-expect-error
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
     return edgeParsedUri
   }
@@ -141,6 +142,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
 
   async disconnectApi(walletId: string): Promise<void> {
     delete this.polkadotApiSubscribers[walletId]
+    // @ts-expect-error
     if (Object.keys(this.polkadotApiSubscribers) === 0) {
       await this.polkadotApi.disconnectApi()
       this.polkadotApi = undefined
@@ -153,7 +155,6 @@ export function makePolkadotPluginInner(
   currencyInfo: EdgeCurrencyInfo
 ): EdgeCurrencyPlugin | undefined {
   if (
-    // @ts-expect-error
     BigInt != null &&
     typeof BigInt === 'function' &&
     typeof BigInt(2) !== 'bigint'
@@ -184,6 +185,7 @@ export function makePolkadotPluginInner(
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
+    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

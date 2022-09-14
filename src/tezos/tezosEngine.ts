@@ -8,6 +8,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+// @ts-expect-error
 import { eztz } from 'eztz'
 
 import { CurrencyEngine } from '../common/engine'
@@ -112,6 +113,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
 
       case 'getTransactions':
         funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
+          // @ts-expect-error
           const pagination = /tzkt/.test(server)
             ? ''
             : `&p='${params[1]}&number=50`
@@ -141,6 +143,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
               this.currencyInfo.defaultSettings.limit.storage,
               this.currencyInfo.defaultSettings.fee.reveal
             )
+            // @ts-expect-error
             .then(function (response) {
               return response
             })
@@ -216,7 +219,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       } else if (e[0] && e[0].kind && e[0].kind === 'branch' && e[0].id) {
         return 'Failed in preapply with an error code (' + e[0].id + ')'
       }
-    } catch(e: any) {}
+    } catch (e: any) {}
     return ''
   }
 
@@ -258,10 +261,13 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
 
   async checkTransactionsInnerLoop() {
     const pkh = this.walletLocalData.publicKey
+    // @ts-expect-error
     if (!this.otherData.numberTransactions) {
+      // @ts-expect-error
       this.otherData.numberTransactions = 0
     }
     const num = await this.multicastServers('getNumberOfOperations', pkh)
+    // @ts-expect-error
     if (num !== this.otherData.numberTransactions) {
       let txs: XtzGetTransaction[] = []
       let page = 0
@@ -284,6 +290,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         )
         this.transactionsChangedArray = []
       }
+      // @ts-expect-error
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
@@ -395,7 +402,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
           div(nativeAmount, denom.multiplier, 6),
           this.currencyInfo.defaultSettings.fee.transaction
         )
-      } catch(e: any) {
+      } catch (e: any) {
         error = e
       }
     } while (

@@ -265,17 +265,20 @@ export class CurrencyEngine<T> {
 
     if (!this.walletInfo.keys.publicKey) {
       const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
+      // @ts-expect-error
       this.walletInfo.keys.publicKey = pubKeys.publicKey
     }
 
     const disklet = this.walletLocalDisklet
     try {
       const result = await disklet.getText(DATA_STORE_FILE)
+      // @ts-expect-error
       this.walletLocalData = new WalletLocalData(result, currencyCode)
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
         this.log('No walletLocalData setup yet: Failure is ok')
+        // @ts-expect-error
         this.walletLocalData = new WalletLocalData(null, currencyCode)
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
         await disklet.setText(
@@ -313,6 +316,7 @@ export class CurrencyEngine<T> {
 
     // Create a map for fast searching
     const tokenIdMap = enabledTokenIds.reduce((map, tokenId) => {
+      // @ts-expect-error
       map[tokenId] = true
       return map
     }, {})
@@ -334,6 +338,7 @@ export class CurrencyEngine<T> {
           })
           .then(tokenId => {
             if (
+              // @ts-expect-error
               tokenIdMap[tokenId] === true &&
               !this.enabledTokens.includes(currencyCode)
             ) {
@@ -352,6 +357,7 @@ export class CurrencyEngine<T> {
     //  backwards-compatibility
     if (!this.walletLocalData.lastTransactionQueryHeight) {
       for (const token of this.enabledTokens) {
+        // @ts-expect-error
         this.walletLocalData.lastTransactionQueryHeight[token] =
           this.walletLocalData.lastAddressQueryHeight || 0
       }
@@ -716,6 +722,7 @@ export class CurrencyEngine<T> {
     const temp = JSON.stringify({ publicKey: this.walletLocalData.publicKey })
     this.walletLocalData = new WalletLocalData(
       temp,
+      // @ts-expect-error
       this.currencyInfo.currencyCode
     )
     this.walletLocalDataDirty = true
@@ -731,11 +738,13 @@ export class CurrencyEngine<T> {
   }
 
   getBlockHeight(): number {
+    // @ts-expect-error
     return parseInt(this.walletLocalData.blockHeight)
   }
 
   enableTokensSync(tokens: string[]) {
     const tokenMap = tokens.reduce((map, currencyCode) => {
+      // @ts-expect-error
       map[currencyCode] = true
       return map
     }, {})
@@ -743,6 +752,7 @@ export class CurrencyEngine<T> {
     for (const token of this.allTokens) {
       const { currencyCode } = token
       if (
+        // @ts-expect-error
         tokenMap[currencyCode] === true &&
         !this.enabledTokens.includes(currencyCode)
       ) {
@@ -932,6 +942,7 @@ export class CurrencyEngine<T> {
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],
       walletType: this.walletInfo.type,
+      // @ts-expect-error
       pluginType: this.currencyInfo.pluginId,
       data: {
         walletLocalData: this.walletLocalData
