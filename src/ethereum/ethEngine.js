@@ -997,6 +997,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         )
         if (bns.lte(diff, '5')) {
           nonce = this.walletLocalData.otherData.unconfirmedNextNonce
+          this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+            this.walletLocalData.otherData.unconfirmedNextNonce,
+            '1'
+          )
           this.walletLocalDataDirty = true
         } else {
           const e = new Error('Excessive pending spend transactions')
@@ -1005,6 +1009,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         }
       } else {
         nonce = this.walletLocalData.otherData.nextNonce
+        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
+          this.walletLocalData.otherData.nextNonce,
+          '1'
+        )
       }
     }
     // Convert nonce to hex for tsParams
@@ -1119,17 +1127,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       }
 
       this.addTransaction(currencyCode, updatedEdgeTransaction)
-    }
-
-    // Update the unconfirmed nonce if the transaction being saved is not confirmed
-    if (edgeTransaction.blockHeight === 0) {
-      const nonceUsed: string | void = edgeTransaction.otherParams?.nonceUsed
-      if (nonceUsed != null) {
-        this.walletLocalData.otherData.unconfirmedNextNonce = bns.add(
-          nonceUsed,
-          '1'
-        )
-      }
     }
 
     super.saveTx(edgeTransaction)
