@@ -1,5 +1,4 @@
-// @ts-expect-error
-import * as solanaWeb3 from '@solana/web3'
+import * as solanaWeb3 from '@solana/web3.js'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'

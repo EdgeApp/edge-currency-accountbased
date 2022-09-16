@@ -1,5 +1,4 @@
-// @ts-expect-error
-import * as solanaWeb3 from '@solana/web3'
+import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, mul } from 'biggystring'
 import { asNumber } from 'cleaners'
 import {
