@@ -118,7 +118,7 @@
     "@babel/preset-env": "^7.16.11",
     "@babel/preset-flow": "^7.16.7",
     "@babel/runtime": "^7.17.8",
-    "@polkadot/api": "^8.13.1",
+    "@polkadot/api": "^9.3.3",
     "@rollup/plugin-commonjs": "^22.0.0",
     "@rollup/plugin-node-resolve": "^13.3.0",
     "babel-eslint": "^10.1.0",
