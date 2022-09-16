@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.17.8 (2022-09-16)
+
+- ETH: Fix nonce bug caused by mutating wallet unconfirmed nonce state in `saveTx`
+
 ## 0.17.7 (2022-09-07)
 
 - ETH: Fix spending with empty memo field
