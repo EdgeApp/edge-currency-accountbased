@@ -1012,7 +1012,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     } catch (e) {
       // handle FIO API error
       if (e.errorCode && fioApiErrorCodes.indexOf(e.errorCode) > -1) {
-        this.log(
+        this.log.error(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: ${JSON.stringify(
@@ -1029,7 +1029,7 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
         }
         throw e
       } else {
-        this.log(
+        this.log.error(
           `executePreparedTrx error. requestParams: ${JSON.stringify(
             preparedTrx
           )} - apiUrl: ${apiUrl} - endpoint: ${endpoint} - message: `,
