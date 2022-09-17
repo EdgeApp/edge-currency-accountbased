@@ -10,22 +10,24 @@ import { makeFantomPlugin } from './info/ftmInfo.js'
 import { makeGoerliPlugin } from './info/goerliInfo.js'
 import { makeKovanPlugin } from './info/kovanInfo.js'
 import { makePolygonPlugin } from './info/maticInfo'
+import { makeMumbaiPlugin } from './info/mumbaiInfo'
 import { makeRinkebyPlugin } from './info/rinkebyInfo.js'
 import { makeRopstenPlugin } from './info/ropstenInfo.js'
 import { makeRskPlugin } from './info/rskInfo.js'
 
 export const ethPlugins = {
+  avalanche: makeAvalanchePlugin,
   binancesmartchain: makeBinanceSmartChainPlugin,
+  celo: makeCeloPlugin,
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
   ethDev: makeEthDevPlugin,
   fantom: makeFantomPlugin,
   goerli: makeGoerliPlugin,
   kovan: makeKovanPlugin,
+  mumbai: makeMumbaiPlugin,
+  polygon: makePolygonPlugin,
   rinkeby: makeRinkebyPlugin,
   ropsten: makeRopstenPlugin,
-  rsk: makeRskPlugin,
-  polygon: makePolygonPlugin,
-  celo: makeCeloPlugin,
-  avalanche: makeAvalanchePlugin
+  rsk: makeRskPlugin
 }
