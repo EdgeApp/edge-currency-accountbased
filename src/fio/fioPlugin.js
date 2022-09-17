@@ -265,30 +265,6 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
         )
       }
       try {
-        const isAvailableRes = await multicastServers('isAvailable', {
-          fioName: fioAddress
-        })
-        if (!isAvailableRes.is_registered) {
-          throw new FioError(
-            '',
-            404,
-            currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
-          )
-        }
-      } catch (e) {
-        if (
-          e.name === 'FioError' &&
-          e.json &&
-          e.json.fields &&
-          e.errorCode === 400
-        ) {
-          e.labelCode =
-            currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-        }
-
-        throw e
-      }
-      try {
         const result = await multicastServers('getPublicAddress', {
           fioAddress,
           chainCode,
