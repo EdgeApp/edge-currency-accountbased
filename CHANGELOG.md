@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.0 (2022-09-19)
+
+- Convert project to Typescript
+- Upgrade @polkadot/api to v9.3.3
+
 ## 0.17.7 (2022-09-07)
 
 - ETH: Fix spending with empty memo field
