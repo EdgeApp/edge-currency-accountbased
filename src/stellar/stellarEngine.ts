@@ -372,9 +372,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     // Check if destination address is activated
     let mustCreateAccount = false
     const activated = this.activatedAccountsCache[publicAddress]
-    if (!activated) {
-      mustCreateAccount = true
-    } else if (activated === undefined) {
+    if (activated === undefined) {
       try {
         await this.multicastServers('loadAccount', publicAddress)
         this.activatedAccountsCache[publicAddress] = true
@@ -382,6 +380,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         this.activatedAccountsCache[publicAddress] = false
         mustCreateAccount = true
       }
+    } else if (!activated) {
+      mustCreateAccount = true
     }
 
     if (eq(nativeAmount, '0')) {
