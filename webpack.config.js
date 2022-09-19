@@ -10,20 +10,19 @@ const babelOptions = {
       {
         targets: { chrome: '67' }
       }
-    ],
-    '@babel/preset-flow'
+    ]
   ],
   cacheDirectory: true
 }
 
 module.exports = {
   devtool: 'source-map',
-  entry: './src/index.js',
+  entry: './lib/index.js',
   mode: 'development',
   module: {
     rules: [
       {
-        test: /\.js$/,
+        test: /\.(ts|js)?$/,
         use: { loader: 'babel-loader', options: babelOptions }
       }
     ]
