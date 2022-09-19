@@ -73,7 +73,7 @@ const validateGasPrices = (gasPrice, isInfoServer = false) => {
   // Check value ordering
   assert.isTrue(lowFee < standardFeeLow)
   assert.isTrue(standardFeeLow < standardFeeHigh)
-  assert.isTrue(standardFeeHigh < highFee)
+  assert.isTrue(standardFeeHigh <= highFee)
 
   // Info server should fill out everything
   if (isInfoServer) {
