@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { add, div, gte, lt, mul, sub } from 'biggystring'
+import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
 import { normalizeAddress } from '../../common/utils'
@@ -156,7 +156,7 @@ export function calcMiningFee(
           gasPrice = gasPriceObj.standardFeeHigh
           break
         }
-        // @ts-expect-error
+
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
