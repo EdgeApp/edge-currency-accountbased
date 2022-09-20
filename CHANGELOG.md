@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.1 (2022-09-20)
+
+- Fix broken biggystring import
+- ZEC: update checkpoints
+
 ## 0.18.0 (2022-09-19)
 
 - Convert project to Typescript
