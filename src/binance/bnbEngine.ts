@@ -20,14 +20,14 @@ import {
   getDenomInfo,
   getOtherParams,
   promiseAny,
-  shuffleArray,
-  validateObject
+  shuffleArray
 } from '../common/utils'
 import { currencyInfo } from './bnbInfo'
 import { BinancePlugin } from './bnbPlugin'
-import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema'
 import {
+  asBinanceApiAccountBalance,
   asBinanceApiGetTransactions,
+  asBinanceApiNodeInfo,
   BinanceApiTransaction,
   BinanceTxOtherParams
 } from './bnbTypes'
@@ -90,25 +90,23 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
-      const jsonObj = await this.multicastServers(
+      const response = await this.multicastServers(
         'bnb_blockNumber',
         `/api/v1/node-info`
       )
-      const valid = validateObject(jsonObj, BinanceApiNodeInfo)
-      if (valid) {
-        const blockHeight: number = jsonObj.sync_info.latest_block_height
-        this.log(`Got block height ${blockHeight}`)
-        if (this.walletLocalData.blockHeight !== blockHeight) {
-          this.checkDroppedTransactionsThrottled()
-          this.walletLocalData.blockHeight = blockHeight // Convert to decimal
-          this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onBlockHeightChanged(
-            this.walletLocalData.blockHeight
-          )
-        }
+      const jsonObj = asBinanceApiNodeInfo(response)
+      const blockHeight: number = jsonObj.sync_info.latest_block_height
+      this.log(`Got block height ${blockHeight}`)
+      if (this.walletLocalData.blockHeight !== blockHeight) {
+        this.checkDroppedTransactionsThrottled()
+        this.walletLocalData.blockHeight = blockHeight // Convert to decimal
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
+        )
       }
     } catch (e: any) {
-      this.error('Error fetching height: ', e)
+      this.error('Error fetching height: ', e.message)
     }
   }
 
@@ -117,28 +115,26 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     const address = this.walletLocalData.publicKey
 
     try {
-      const jsonObj = await this.multicastServers(
+      const response = await this.multicastServers(
         'bnb_getBalance',
         `/api/v1/account/${address}`
       )
-      const valid = validateObject(jsonObj, BinanceApiAccountBalance)
-      if (valid) {
-        if (jsonObj.balances.length === 0) {
-          this.updateBalance('BNB', '0')
-        }
-        for (const tk of this.enabledTokens) {
-          for (const balance of jsonObj.balances) {
-            if (balance.symbol === tk) {
-              const denom = getDenomInfo(this.currencyInfo, tk)
-              if (denom == null) {
-                this.error(
-                  `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
-                )
-                break
-              }
-              const nativeAmount = mul(balance.free, denom.multiplier)
-              this.updateBalance(tk, nativeAmount)
+      const jsonObj = asBinanceApiAccountBalance(response)
+      if (jsonObj.balances.length === 0) {
+        this.updateBalance('BNB', '0')
+      }
+      for (const tk of this.enabledTokens) {
+        for (const balance of jsonObj.balances) {
+          if (balance.symbol === tk) {
+            const denom = getDenomInfo(this.currencyInfo, tk)
+            if (denom == null) {
+              this.error(
+                `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
+              )
+              break
             }
+            const nativeAmount = mul(balance.free, denom.multiplier)
+            this.updateBalance(tk, nativeAmount)
           }
         }
       }

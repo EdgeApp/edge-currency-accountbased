@@ -4,6 +4,23 @@
 
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 
+export const asBinanceApiNodeInfo = asObject({
+  sync_info: asObject({
+    latest_block_height: asNumber
+  })
+})
+
+export const asBinanceApiAccountBalance = asObject({
+  balances: asArray(
+    asObject({
+      free: asString,
+      frozen: asString,
+      locked: asString,
+      symbol: asString
+    })
+  )
+})
+
 export const asBinanceApiTransaction = asObject({
   hash: asString,
   blockHeight: asNumber,
