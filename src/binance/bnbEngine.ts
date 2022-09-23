@@ -24,7 +24,6 @@ import {
   validateObject
 } from '../common/utils'
 import { currencyInfo } from './bnbInfo'
-// import { calcMiningFee } from './ethMiningFees'
 import { BinancePlugin } from './bnbPlugin'
 import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema'
 import {
@@ -37,8 +36,6 @@ const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
-// const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
-// const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
 const NATIVE_UNIT_MULTIPLIER = '100000000'
@@ -50,33 +47,10 @@ type BnbFunction =
   | 'bnb_blockNumber'
   | 'bnb_getBalance'
   | 'bnb_getTransactions'
-// | 'eth_getTransactionCount'
-
-// async function broadcastWrapper (promise: Promise<Object>, server: string) {
-//   const out = {
-//     result: await promise,
-//     server
-//   }
-//   return out
-// }
-
-// const dummyTransaction: EdgeTransaction = {
-//   txid: '', // txid
-//   date: 0, // date
-//   currencyCode: 'BNB', // currencyCode
-//   blockHeight: 0, // blockHeight
-//   nativeAmount: '0', // nativeAmount
-//   networkFee: '0', // networkFee
-//   ourReceiveAddresses: [], // ourReceiveAddresses
-//   signedTx: '0', // signedTx
-//   otherParams: {} // otherParams
-// }
 
 export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   // @ts-expect-error
   binancePlugin: BinancePlugin
-  // otherData: BinanceWalletOtherData
-  // initOptions: BinanceInitOptions
 
   constructor(
     currencyPlugin: BinancePlugin,
@@ -85,13 +59,6 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     opts: any // EdgeCurrencyEngineOptions
   ) {
     super(currencyPlugin, walletInfo, opts)
-    // if (typeof this.walletInfo.keys.ethereumKey !== 'string') {
-    //   if (walletInfo.keys.keys && walletInfo.keys.keys.ethereumKey) {
-    //     this.walletInfo.keys.ethereumKey = walletInfo.keys.keys.ethereumKey
-    //   }
-    // }
-    // this.currencyPlugin = currencyPlugin
-    // this.initOptions = initOptions
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -399,12 +366,6 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return out.result
   }
 
-  // async clearBlockchainCache () {
-  //   await super.clearBlockchainCache()
-  //   this.otherData.nextNonce = '0'
-  //   this.otherData.unconfirmedNextNonce = '0'
-  // }
-
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -416,13 +377,8 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
-    // this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // this.addToLoop(
-    //   'checkUnconfirmedTransactionsInnerLoop',
-    //   UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS
-    // )
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
