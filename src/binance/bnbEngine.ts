@@ -13,6 +13,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { asErrorMessage } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -25,12 +26,12 @@ import {
 import { currencyInfo } from './bnbInfo'
 // import { calcMiningFee } from './ethMiningFees'
 import { BinancePlugin } from './bnbPlugin'
+import { BinanceApiAccountBalance, BinanceApiNodeInfo } from './bnbSchema'
 import {
-  BinanceApiAccountBalance,
-  BinanceApiGetTransactions,
-  BinanceApiNodeInfo
-} from './bnbSchema'
-import { BinanceApiTransaction, BinanceTxOtherParams } from './bnbTypes'
+  asBinanceApiGetTransactions,
+  BinanceApiTransaction,
+  BinanceTxOtherParams
+} from './bnbTypes'
 
 const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -39,10 +40,9 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 // const UNCONFIRMED_TRANSACTION_POLL_MILLISECONDS = 3000
 // const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000 // 10 minutes
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
-const NUM_TRANSACTIONS_TO_QUERY = 50
-const TIMESTAMP_BEFORE_BNB_LAUNCH = 1554076800000 // 2019-04-01, BNB launched on 2019-04-18
+const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
 const NATIVE_UNIT_MULTIPLIER = '100000000'
-const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 2 * 28 // two months
+const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 5 // 5 days
 const NETWORK_FEE_NATIVE_AMOUNT = '37500' // fixed amount for BNB
 
 type BnbFunction =
@@ -97,6 +97,19 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGet(url: string) {
     const response = await this.io.fetch(url, {
+      method: 'GET'
+    })
+    if (!response.ok) {
+      throw new Error(
+        `The server returned error code ${response.status} for ${url}`
+      )
+    }
+    return await response.json()
+  }
+
+  async fetchCorsGet(url: string): Promise<Object> {
+    const fetch = this.io.fetchCors ?? this.io.fetch
+    const response = await fetch(url, {
       method: 'GET'
     })
     if (!response.ok) {
@@ -174,15 +187,16 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processBinanceApiTransaction(
     tx: BinanceApiTransaction,
     currencyCode: string
-  ) {
+  ): void {
+    if (currencyCode !== tx.asset) return
+    if (tx.type !== 'TRANSFER') return
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
-    const nativeNetworkFee: string = mul(tx.txFee, NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
-    const nativeValue = mul(tx.value, NATIVE_UNIT_MULTIPLIER)
+    const nativeNetworkFee: string = mul(String(tx.fee), NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
+    const nativeValue = mul(String(tx.amount), NATIVE_UNIT_MULTIPLIER)
     if (
       tx.fromAddr.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
@@ -199,19 +213,14 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     } else {
       // Receive transaction
       netNativeAmount = add('0', nativeValue)
-      // ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
-    }
-
-    const otherParams: Object = {
-      code: tx.code,
-      orderId: tx.orderId
+      ourReceiveAddresses.push(this.walletLocalData.publicKey.toLowerCase())
     }
 
     let blockHeight = tx.blockHeight
     if (blockHeight < 0) blockHeight = 0
-    const unixTimestamp = new Date(tx.timeStamp)
+    const unixTimestamp = new Date(tx.blockTime)
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.txHash,
+      txid: tx.hash,
       date: unixTimestamp.getTime(),
       currencyCode,
       blockHeight,
@@ -219,7 +228,9 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       networkFee: nativeNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams
+      metadata: {
+        notes: tx.memo
+      }
     }
 
     this.addTransaction(currencyCode, edgeTransaction)
@@ -230,64 +241,39 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     currencyCode: string
   ): Promise<boolean> {
     const address = this.walletLocalData.publicKey
-    let checkAddressSuccess = true
     let start = startTime
     let end = 0
     const now = Date.now()
     try {
-      // this.log('checkTransactionsFetch start of while loop')
-      while (end !== now && checkAddressSuccess) {
-        // loop from startTime to current time by 3-month increments
+      while (end !== now) {
         end = start + TRANSACTION_QUERY_TIME_WINDOW
         if (end > now) end = now
-        // this.log('checkTransactionsFetch outer loop: ', start, ' and end: ', end)
-        for (let offset = 0; ; offset += NUM_TRANSACTIONS_TO_QUERY) {
-          // this.log('checkTransactionsFetch inner loop, offset is: ', offset)
-          // loop by 50-tx increments
-          const baseUrl = `/api/v1/transactions?address=${address}&txType=TRANSFER&limit=${NUM_TRANSACTIONS_TO_QUERY}`
-          const finalUrl =
-            baseUrl +
-            `&offset=${offset}&startTime=${start}&endTime=${end}&txAsset=${currencyCode}`
-          const transactionsResults = await this.multicastServers(
-            'bnb_getTransactions',
-            finalUrl
-          )
-          const valid = validateObject(
-            transactionsResults,
-            BinanceApiGetTransactions
-          )
-          if (valid) {
-            for (const transaction of transactionsResults.tx) {
-              // should we process extra transaction for native BNB fees?
-              this.processBinanceApiTransaction(transaction, currencyCode)
-            }
-            if (transactionsResults.tx.length < NUM_TRANSACTIONS_TO_QUERY) {
-              break
-            }
-          } else {
-            checkAddressSuccess = false
-            this.error(
-              'checkTransactionsFetch inner loop invalid query results'
-            )
-            break
-          }
+        const baseUrl = `/bc/api/v1/txs?address=${address}`
+        const finalUrl = baseUrl + `&startTime=${start}&endTime=${end}`
+        const results = await this.multicastServers(
+          'bnb_getTransactions',
+          finalUrl
+        )
+        const transactionsResults = asBinanceApiGetTransactions(results)
+        for (const transaction of transactionsResults.txs) {
+          this.processBinanceApiTransaction(transaction, currencyCode)
         }
         start = end
       }
     } catch (e: any) {
-      this.error(
-        `Error checkTransactionsFetch ${currencyCode}: ${this.walletLocalData.publicKey}`,
-        e
-      )
+      const err = asErrorMessage(e)
+      if (!err.message.includes('404')) {
+        this.error(
+          `Error checkTransactionsFetch ${currencyCode}: ${this.walletLocalData.publicKey}`,
+          e
+        )
+        return false
+      }
     }
 
-    if (checkAddressSuccess) {
-      this.tokenCheckTransactionsStatus[currencyCode] = 1
-      // this.updateOnAddressesChecked()
-      return true
-    } else {
-      return false
-    }
+    this.tokenCheckTransactionsStatus[currencyCode] = 1
+    this.updateOnAddressesChecked()
+    return true
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -370,13 +356,30 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
 
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
-      case 'bnb_getTransactions':
         funcs =
           this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
-            // @ts-expect-error
-            server => async () => {
+            (server: string) => async () => {
               // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
               const result = await this.fetchGet(server + params[0])
+              if (typeof result !== 'object') {
+                const msg = `Invalid return value ${func} in ${server}`
+                this.error(msg)
+                throw new Error(msg)
+              }
+              return { server, result }
+            }
+          )
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        // @ts-expect-error
+        out = await asyncWaterfall(funcs)
+        break
+      case 'bnb_getTransactions':
+        funcs =
+          this.currencyInfo.defaultSettings.otherSettings.binanceNewApiServers.map(
+            (server: string) => async () => {
+              const path: string = params[0]
+              const result = await this.fetchCorsGet(server + path)
               if (typeof result !== 'object') {
                 const msg = `Invalid return value ${func} in ${server}`
                 this.error(msg)

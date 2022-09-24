@@ -35,38 +35,3 @@ export const BinanceApiAccountBalance = {
   },
   required: ['balances', 'address']
 }
-
-export const BinanceApiGetTransactions = {
-  type: 'object',
-  properties: {
-    tx: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          blockHeight: { type: 'number' },
-          timeStamp: { type: 'string' },
-          txHash: { type: 'string' },
-          fromAddr: { type: 'string' },
-          toAddr: { type: 'string' },
-          value: { type: 'string' },
-          txFee: { type: 'string' },
-          txAsset: { type: 'string' },
-          memo: { type: 'string' }
-        },
-        required: [
-          'blockHeight',
-          'timeStamp',
-          'txHash',
-          'fromAddr',
-          'toAddr',
-          'value',
-          'txFee',
-          'txAsset',
-          'memo'
-        ]
-      }
-    }
-  },
-  required: ['tx']
-}

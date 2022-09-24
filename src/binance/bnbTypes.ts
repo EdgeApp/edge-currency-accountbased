@@ -2,26 +2,29 @@
  * Created by paul on 8/26/17.
  */
 
+import { asArray, asNumber, asObject, asString } from 'cleaners'
+
+export const asBinanceApiTransaction = asObject({
+  hash: asString,
+  blockHeight: asNumber,
+  blockTime: asNumber,
+  type: asString,
+  fee: asNumber,
+  memo: asString,
+  asset: asString,
+  amount: asNumber,
+  fromAddr: asString,
+  toAddr: asString
+})
+export const asBinanceApiGetTransactions = asObject({
+  // total: asNumber,
+  txs: asArray(asBinanceApiTransaction)
+})
+export type BinanceApiTransaction = ReturnType<typeof asBinanceApiTransaction>
+
 export interface BinanceSettings {
   binanceApiServers: string[]
-}
-
-export interface BinanceApiTransaction {
-  txHash: string
-  blockHeight: number
-  txType: string
-  timeStamp: string
-  fromAddr: string
-  toAddr: string
-  value: string
-  txAsset: string
-  txFee: string
-  txAge: number
-  orderId: null | string
-  code: number
-  data: null | string
-  confirmBlocks: number
-  memo: string
+  binanceNewApiServers: string[]
 }
 
 export interface BinanceTxOtherParams {

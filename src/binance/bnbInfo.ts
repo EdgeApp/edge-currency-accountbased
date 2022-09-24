@@ -6,11 +6,11 @@ import { BinanceSettings } from './bnbTypes'
 
 const otherSettings: BinanceSettings = {
   binanceApiServers: [
-    'https://dex.binance.org',
     'https://dex-atlantic.binance.org',
     'https://dex-asiapacific.binance.org',
     'https://dex-european.binance.org'
-  ]
+  ],
+  binanceNewApiServers: ['https://api.binance.org']
 }
 
 const defaultSettings: any = {
