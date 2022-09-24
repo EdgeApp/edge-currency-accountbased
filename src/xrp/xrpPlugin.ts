@@ -145,9 +145,7 @@ export class XrpPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.dt || undefined
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.dt
     return edgeParsedUri
   }
 
@@ -200,7 +198,6 @@ export function makeRipplePlugin(
       currencyEngine.otherData.recommendedFee = '0'
     }
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

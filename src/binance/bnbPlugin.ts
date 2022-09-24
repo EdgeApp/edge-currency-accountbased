@@ -84,25 +84,17 @@ export class BinancePlugin extends CurrencyPlugin {
       currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || 'BNB',
+      currencyCode ?? 'BNB',
       customTokens
     )
-    let address = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (edgeParsedUri.publicAddress) {
-      address = edgeParsedUri.publicAddress
-    }
+    const address = edgeParsedUri.publicAddress ?? ''
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const valid = checkAddress(address || '', 'bnb')
+    const valid = checkAddress(address, 'bnb')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     return edgeParsedUri
   }
 
@@ -119,8 +111,7 @@ export class BinancePlugin extends CurrencyPlugin {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || 'BNB',
+        currencyCode ?? 'BNB',
         customTokens
       )
       if (denom == null) {
@@ -163,7 +154,6 @@ export function makeBinancePlugin(
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

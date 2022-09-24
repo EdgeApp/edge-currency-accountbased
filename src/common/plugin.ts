@@ -20,7 +20,7 @@ import parse from 'url-parse'
 
 import { getDenomInfo } from '../common/utils'
 
-type ParsedUri = ReturnType<typeof parse>
+type ParsedUri = parse<Record<string, string | undefined>>
 
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {

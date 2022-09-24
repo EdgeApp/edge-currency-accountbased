@@ -196,7 +196,6 @@ export function makeZcashPlugin(
     // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

@@ -2,7 +2,14 @@
  * Created by paul on 8/26/17.
  */
 
-import { asArray, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 export const asBinanceApiNodeInfo = asObject({
   sync_info: asObject({
@@ -39,6 +46,19 @@ export const asBinanceApiGetTransactions = asObject({
 })
 export type BinanceApiTransaction = ReturnType<typeof asBinanceApiTransaction>
 
+export const asBnbKeys = asObject({
+  binanceMnemonic: asOptional(asString),
+  publicKey: asOptional(asString)
+})
+
+export const asBroadcastTxResponse = asObject({
+  result: asArray(
+    asObject({
+      ok: asBoolean,
+      hash: asOptional(asString)
+    })
+  )
+})
 export interface BinanceSettings {
   binanceApiServers: string[]
   beaconChainApiServers: string[]

@@ -28,6 +28,7 @@ import {
   asBinanceApiAccountBalance,
   asBinanceApiGetTransactions,
   asBinanceApiNodeInfo,
+  asBroadcastTxResponse,
   BinanceApiTransaction,
   BinanceTxOtherParams
 } from './bnbTypes'
@@ -61,8 +62,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     super(currencyPlugin, walletInfo, opts)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchGet(url: string) {
+  async fetchGet(url: string): Promise<Object> {
     const response = await this.io.fetch(url, {
       method: 'GET'
     })
@@ -87,8 +87,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return await response.json()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkBlockchainInnerLoop() {
+  async checkBlockchainInnerLoop(): Promise<void> {
     try {
       const response = await this.multicastServers(
         'bnb_blockNumber',
@@ -110,8 +109,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
 
     try {
@@ -239,8 +237,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return true
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     const blockHeight = Date.now()
     let startTime: number = TIMESTAMP_BEFORE_BNB_LAUNCH
     const promiseArray = []
@@ -258,17 +255,14 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       promiseArray.push(this.checkTransactionsFetch(startTime, currencyCode))
     }
 
-    // @ts-expect-error
-    let resultArray = []
+    let resultArray: boolean[] = []
     try {
       resultArray = await Promise.all(promiseArray)
     } catch (e: any) {
       this.error('Failed to query transactions ', e)
     }
     let successCount = 0
-    // @ts-expect-error
     for (const r of resultArray) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (r) successCount++
     }
     if (successCount === promiseArray.length) {
@@ -322,8 +316,8 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         funcs =
           this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
             (server: string) => async () => {
-              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-              const result = await this.fetchGet(server + params[0])
+              const path: string = params[0]
+              const result = await this.fetchGet(server + path)
               if (typeof result !== 'object') {
                 const msg = `Invalid return value ${func} in ${server}`
                 this.error(msg)
@@ -366,17 +360,18 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
   // // Public methods
   // // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    void this.addToLoop(
+      'checkBlockchainInnerLoop',
+      BLOCKCHAIN_POLL_MILLISECONDS
+    )
+    void this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    void this.addToLoop(
+      'checkTransactionsInnerLoop',
+      TRANSACTION_POLL_MILLISECONDS
+    )
+    void super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -385,8 +380,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     await this.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
@@ -400,17 +394,16 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     const data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
-    let otherParams: Object = {}
+    let otherParams: BinanceTxOtherParams | undefined
 
     if (currencyCode === PRIMARY_CURRENCY) {
-      const bnbParams: BinanceTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         errorVal: 0,
         tokenRecipientAddress: null,
         data: data
       }
-      otherParams = bnbParams
     } else {
       let contractAddress = ''
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -430,22 +423,15 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         contractAddress = tokenInfo.contractAddress
       }
 
-      const bnbParams: BinanceTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
         errorVal: 0,
         tokenRecipientAddress: publicAddress,
         data: data
       }
-      otherParams = bnbParams
     }
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      edgeSpendInfo.spendTargets[0].otherParams != null &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    ) {
-      // @ts-expect-error
+    if (edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier != null) {
       otherParams.memo =
         edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
@@ -505,9 +491,8 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       this.error(`signTx Received unsupported currencyCode: ${currencyCode}`)
       throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
     }
-    const nativeAmountString = parseInt(amount) / parseInt(denom.multiplier)
-    // @ts-expect-error
-    const nativeAmount = parseFloat(nativeAmountString)
+    const nativeAmount = parseInt(amount) / parseInt(denom.multiplier)
+
     // identity function, overriding library's version
     // @ts-expect-error
     bnbClient._broadcastDelegate = x => {
@@ -521,6 +506,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
       currencyCode,
       otherParams.memo
     )
+
     // @ts-expect-error
     otherParams.serializedTx = signedTx.serialize()
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -533,32 +519,30 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     const otherParams = getOtherParams(edgeTransaction)
 
     const bnbSignedTransaction = otherParams.serializedTx
-    const response = await this.multicastServers(
+    const reply = await this.multicastServers(
       'bnb_broadcastTx',
       bnbSignedTransaction
     )
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (response.result[0] && response.result[0].ok) {
+    const response = asBroadcastTxResponse(reply)
+    if (response.result[0]?.ok) {
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-      edgeTransaction.txid = response.result[0].hash
+      edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
     }
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.binanceMnemonic) {
-      return this.walletInfo.keys.binanceMnemonic
+  getDisplayPrivateSeed(): string {
+    const { keys } = this.walletInfo
+    if (keys.binanceMnemonic != null) {
+      return keys.binanceMnemonic
     }
     return ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+  getDisplayPublicSeed(): string {
+    const { keys } = this.walletInfo
+    if (keys.publicKey != null) {
+      return keys.publicKey
     }
     return ''
   }

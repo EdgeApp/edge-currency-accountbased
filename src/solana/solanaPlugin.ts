@@ -110,9 +110,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     return edgeParsedUri
   }
 
@@ -172,7 +170,6 @@ export function makeSolanaPluginInner(
     // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out
