@@ -376,7 +376,7 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
         break
       case 'bnb_getTransactions':
         funcs =
-          this.currencyInfo.defaultSettings.otherSettings.binanceNewApiServers.map(
+          this.currencyInfo.defaultSettings.otherSettings.beaconChainApiServers.map(
             (server: string) => async () => {
               const path: string = params[0]
               const result = await this.fetchCorsGet(server + path)

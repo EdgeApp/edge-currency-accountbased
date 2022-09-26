@@ -24,7 +24,7 @@ export type BinanceApiTransaction = ReturnType<typeof asBinanceApiTransaction>
 
 export interface BinanceSettings {
   binanceApiServers: string[]
-  binanceNewApiServers: string[]
+  beaconChainApiServers: string[]
 }
 
 export interface BinanceTxOtherParams {
