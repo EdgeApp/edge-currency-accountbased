@@ -45,7 +45,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
-  pendingTransactionsMap: { [index: number]: Object }
+  pendingTransactionsMap: Map<number, Object>
   // @ts-expect-error
   otherData: StellarWalletOtherData
 
@@ -59,7 +59,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
+    this.pendingTransactionsMap = new Map()
   }
 
   async multicastServers(
@@ -143,7 +143,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     let currencyCode = ''
     let exchangeAmount = ''
     let fromAddress = ''
-    let toAddress, nativeAmount, networkFee
+    let toAddress, nativeAmount: string, networkFee: string
     if (tx.type === 'create_account') {
       fromAddress = tx.source_account
       toAddress = tx.account
@@ -162,8 +162,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
 
     const date: number = Date.parse(tx.created_at) / 1000
     const denom = getDenomInfo(this.currencyInfo, currencyCode)
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-    if (denom != null && denom.multiplier) {
+    if (denom?.multiplier != null) {
       nativeAmount = mul(exchangeAmount, denom.multiplier)
     } else {
       throw new Error('ErrorDenomNotFound')
@@ -183,7 +182,6 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       ourReceiveAddresses.push(fromAddress)
       if (fromAddress === this.walletLocalData.publicKey) {
         // This is a spend to self. Make fee the only amount
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         nativeAmount = '-' + networkFee
       }
     } else {
@@ -237,18 +235,15 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // }
 
   // Polling version
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     const blockHeight = this.walletLocalData.blockHeight
 
     const address = this.walletLocalData.publicKey
     let page
     let pagingToken
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    while (1) {
+    while (true) {
       try {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!page) {
+        if (page == null) {
           page = await this.multicastServers('payments', address)
         } else {
           page = await page.next()
@@ -260,8 +255,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
           pagingToken = await this.processTransaction(tx)
         }
       } catch (e: any) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (e.response && e.response.title === 'Resource Missing') {
+        if (e.response?.title === 'Resource Missing') {
           this.log('Account not found. Probably not activated w/minimum XLM')
           this.tokenCheckTransactionsStatus.XLM = 1
           this.updateOnAddressesChecked()
@@ -280,8 +274,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       )
       this.transactionsChangedArray = []
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (pagingToken) {
+    if (pagingToken != null) {
       this.otherData.lastPagingToken = pagingToken
       this.walletLocalDataDirty = true
     }
@@ -290,12 +283,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.updateOnAddressesChecked()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkUnconfirmedTransactionsFetch() {}
-
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
     try {
       const account: StellarAccount = await this.multicastServers(
@@ -314,15 +303,13 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
           currencyCode = bal.asset_type
         }
         const denom = getDenomInfo(this.currencyInfo, currencyCode)
-        // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-        if (denom != null && denom.multiplier) {
+        if (denom?.multiplier != null) {
           const nativeAmount = mul(bal.balance, denom.multiplier)
           this.updateBalance(currencyCode, nativeAmount)
         }
       }
     } catch (e: any) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (e.response && e.response.title === 'Resource Missing') {
+      if (e.response?.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')
         this.tokenCheckBalanceStatus.XLM = 1
         this.updateOnAddressesChecked()
@@ -332,8 +319,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  checkBlockchainInnerLoop() {
+  checkBlockchainInnerLoop(): void {
     this.multicastServers('ledgers')
       .then(r => {
         const blockHeight = r.records[0].sequence
@@ -354,7 +340,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
-    this.pendingTransactionsMap = {}
+    this.pendingTransactionsMap = new Map()
     await super.clearBlockchainCache()
     this.otherData.accountSequence = 0
   }
@@ -363,17 +349,18 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    void this.addToLoop(
+      'checkBlockchainInnerLoop',
+      BLOCKCHAIN_POLL_MILLISECONDS
+    )
+    void this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    void this.addToLoop(
+      'checkTransactionsInnerLoop',
+      TRANSACTION_POLL_MILLISECONDS
+    )
+    void super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -382,8 +369,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     await this.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
 
@@ -424,12 +410,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       this.otherData.accountSequence
     )
     let memoId: string
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      edgeSpendInfo.spendTargets[0].otherParams != null &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    ) {
+    if (edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier != null) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
     // @ts-expect-error
@@ -456,8 +437,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       )
     }
     // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (memoId) {
+    if (memoId != null) {
       // @ts-expect-error
       const memo = this.stellarApi.Memo.id(memoId)
       transaction = transaction.addMemo(memo)
@@ -488,15 +468,11 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         toAddress: publicAddress
       }
     }
-    this.pendingTransactionsMap[idInternal] = transaction
+    this.pendingTransactionsMap.set(idInternal, transaction)
     this.pendingTransactionsIndex++
 
     // Clean up old pendingTransactions
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete this.pendingTransactionsMap[this.pendingTransactionsIndex - 20]
-    }
+    this.pendingTransactionsMap.delete(this.pendingTransactionsIndex - 20)
 
     this.warn('Stellar transaction prepared')
     this.warn(`idInternal: ${idInternal}`)
@@ -512,9 +488,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     // Do signing
     try {
       const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
+      const transaction = this.pendingTransactionsMap.get(idInternal)
+      if (transaction == null) {
         throw new Error('ErrorInvalidTransaction')
       }
       this.warn('Signing...')
@@ -542,9 +517,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
 
     try {
       const { idInternal } = otherParams
-      const transaction = this.pendingTransactionsMap[idInternal]
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!transaction) {
+      const transaction = this.pendingTransactionsMap.get(idInternal)
+      if (transaction == null) {
         throw new Error('ErrorInvalidTransaction')
       }
       this.warn(`Broadcasting...\n${cleanTxLogs(edgeTransaction)}`)
@@ -568,19 +542,15 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.stellarKey) {
+  getDisplayPrivateSeed(): string {
+    if (this.walletInfo.keys?.stellarKey != null) {
       return this.walletInfo.keys.stellarKey
     }
     return ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+  getDisplayPublicSeed(): string {
+    if (this.walletInfo.keys?.publicKey != null) {
       return this.walletInfo.keys.publicKey
     }
     return ''

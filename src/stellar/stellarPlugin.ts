@@ -87,8 +87,7 @@ export class StellarPlugin extends CurrencyPlugin {
     if (uri.includes(STELLAR_SEP007_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
       const addr = parsedUri.query.destination
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (addr) {
+      if (addr != null) {
         uri = uri.replace(STELLAR_SEP007_PREFIX, `${URI_PREFIX}:${addr}`)
       }
     }
@@ -99,32 +98,27 @@ export class StellarPlugin extends CurrencyPlugin {
       networks
     )
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-    const valid = this.checkAddress(edgeParsedUri.publicAddress || '')
+    const valid = this.checkAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.msg) {
+    if (parsedUri.query.msg != null) {
       edgeParsedUri.metadata = {
         notes: parsedUri.query.msg
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.asset_code) {
+    if (parsedUri.query.asset_code != null) {
       if (parsedUri.query.asset_code.toUpperCase() !== 'XLM') {
         throw new Error('ErrorInvalidCurrencyCode')
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.memo_type) {
+    if (parsedUri.query.memo_type != null) {
       if (parsedUri.query.memo_type !== 'MEMO_ID') {
         throw new Error('ErrorInvalidMemoType')
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.memo) {
+    if (parsedUri.query.memo != null) {
       const m = add(parsedUri.query.memo, '0')
       // Check if the memo is an integer
       if (m !== parsedUri.query.memo) {
@@ -150,17 +144,14 @@ export class StellarPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 7)
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!amount && !obj.label && !obj.message) {
+    if (amount == null && obj.label == null && obj.message == null) {
       return obj.publicAddress
     } else {
       let queryString: string = `destination=${obj.publicAddress}&`
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (amount) {
+      if (amount != null) {
         queryString += 'amount=' + amount + '&'
       }
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      if (obj.label || obj.message) {
+      if (obj.label != null || obj.message != null) {
         if (typeof obj.label === 'string') {
           queryString += 'label=' + obj.label + '&'
         }
@@ -207,12 +198,10 @@ export function makeStellarPlugin(
     // This is just to make sure otherData is Flow checked
     // @ts-expect-error
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.accountSequence) {
+    if (currencyEngine.otherData.accountSequence == null) {
       currencyEngine.otherData.accountSequence = 0
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.lastPagingToken) {
+    if (currencyEngine.otherData.lastPagingToken == null) {
       currencyEngine.otherData.lastPagingToken = '0'
     }
 
