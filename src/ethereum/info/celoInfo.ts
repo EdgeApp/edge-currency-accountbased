@@ -37,8 +37,11 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://forno.celo.org'],
-  evmScanApiServers: ['https://explorer.celo.org/api'],
+  rpcServers: [
+    'https://forno.celo.org',
+    'https://celo-mainnet-rpc.allthatnode.com'
+  ],
+  evmScanApiServers: ['https://explorer.celo.org'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['celo'],
