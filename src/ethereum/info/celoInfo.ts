@@ -1,6 +1,10 @@
 /* global */
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
+import {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo,
+  EdgeCurrencyPlugin
+} from 'edge-core-js/types'
 
 import { makeEthereumBasedPluginInner } from '../ethPlugin'
 import { EthereumFees, EthereumSettings } from '../ethTypes'
@@ -111,7 +115,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeCeloPlugin = (opts: EdgeCorePluginOptions) => {
+export const makeCeloPlugin = (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin => {
   return makeEthereumBasedPluginInner(opts, currencyInfo)
 }
