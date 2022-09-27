@@ -394,43 +394,18 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     const data =
       spendTarget.otherParams != null ? spendTarget.otherParams.data : undefined
 
-    let otherParams: BinanceTxOtherParams | undefined
-
-    if (currencyCode === PRIMARY_CURRENCY) {
-      otherParams = {
-        from: [this.walletLocalData.publicKey],
-        to: [publicAddress],
-        errorVal: 0,
-        tokenRecipientAddress: null,
-        data: data
-      }
-    } else {
-      let contractAddress = ''
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (data) {
-        contractAddress = publicAddress
-      } else {
-        const tokenInfo = this.getTokenInfo(currencyCode)
-        if (
-          tokenInfo == null ||
-          typeof tokenInfo.contractAddress !== 'string'
-        ) {
-          throw new Error(
-            'Error: Token not supported or invalid contract address'
-          )
-        }
-
-        contractAddress = tokenInfo.contractAddress
-      }
-
-      otherParams = {
-        from: [this.walletLocalData.publicKey],
-        to: [contractAddress],
-        errorVal: 0,
-        tokenRecipientAddress: publicAddress,
-        data: data
-      }
+    const otherParams: BinanceTxOtherParams = {
+      from: [this.walletLocalData.publicKey],
+      to: [publicAddress],
+      errorVal: 0,
+      tokenRecipientAddress: null,
+      data: data
     }
+
+    if (currencyCode !== PRIMARY_CURRENCY) {
+      throw new Error('Binance Beacon Chain token transfers not supported')
+    }
+
     if (edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier != null) {
       otherParams.memo =
         edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
