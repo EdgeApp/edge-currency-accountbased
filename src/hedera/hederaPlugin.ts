@@ -179,7 +179,6 @@ export function makeHederaPluginInner(
 
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

@@ -176,15 +176,12 @@ export class EthereumPlugin extends CurrencyPlugin {
     )
 
     if (parsedUri.protocol === 'wc') {
-      // @ts-expect-error
       if (parsedUri.query.bridge != null && parsedUri.query.key != null) {
         edgeParsedUri.walletConnect = {
           uri,
           topic: parsedUri.pathname.split('@')[0],
           version: parsedUri.pathname.split('@')[1],
-          // @ts-expect-error
           bridge: parsedUri.query.bridge,
-          // @ts-expect-error
           key: parsedUri.query.key
         }
         return edgeParsedUri
@@ -228,18 +225,15 @@ export class EthereumPlugin extends CurrencyPlugin {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!parsedUri.query) throw new Error('InvalidUriError')
 
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      const currencyCode = parsedUri.query.symbol || 'SYM'
+      const currencyCode = parsedUri.query.symbol ?? 'SYM'
       if (currencyCode.length < 2 || currencyCode.length > 5) {
         throw new Error('Wrong Token symbol')
       }
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      const currencyName = parsedUri.query.name || currencyCode
-      // @ts-expect-error
+      const currencyName = parsedUri.query.name ?? currencyCode
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      const decimalsInput = parsedUri.query.decimals || '18'
+      const decimalsInput = parsedUri.query.decimals ?? '18'
       let multiplier = '1000000000000000000'
       const decimals = parseInt(decimalsInput)
       if (decimals < 0 || decimals > 18) {
@@ -248,9 +242,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       multiplier = '1' + '0'.repeat(decimals)
 
       const type =
-        // @ts-expect-error
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        parsedUri.query.type ||
+        parsedUri.query.type ??
         this.currencyInfo.defaultSettings.otherSettings.ercTokenStandard
 
       const edgeParsedUriToken: EdgeParsedUri = {
@@ -278,14 +270,11 @@ export class EthereumPlugin extends CurrencyPlugin {
       switch (functionName) {
         // ERC-20 token transfer
         case 'transfer': {
-          // @ts-expect-error
           const publicAddress = parameters.address ?? ''
           const contractAddress = targetAddress ?? ''
           const nativeAmount =
-            // @ts-expect-error
             parameters.uint256 != null
-              ? // @ts-expect-error
-                biggyScience(parameters.uint256)
+              ? biggyScience(parameters.uint256)
               : edgeParsedUri.nativeAmount
 
           // Get meta token from contract address
@@ -323,10 +312,8 @@ export class EthereumPlugin extends CurrencyPlugin {
         case undefined: {
           const publicAddress = targetAddress
           const nativeAmount =
-            // @ts-expect-error
             parameters.value != null
-              ? // @ts-expect-error
-                biggyScience(parameters.value)
+              ? biggyScience(parameters.value)
               : edgeParsedUri.nativeAmount
 
           return { ...edgeParsedUri, publicAddress, nativeAmount }
@@ -448,7 +435,6 @@ export function makeEthereumBasedPluginInner(
       }
     }
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

@@ -10,7 +10,8 @@ const otherSettings: BinanceSettings = {
     'https://dex-atlantic.binance.org',
     'https://dex-asiapacific.binance.org',
     'https://dex-european.binance.org'
-  ]
+  ],
+  beaconChainApiServers: ['https://api.binance.org']
 }
 
 const defaultSettings: any = {

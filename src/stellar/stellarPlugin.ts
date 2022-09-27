@@ -105,41 +105,31 @@ export class StellarPlugin extends CurrencyPlugin {
       throw new Error('InvalidPublicAddressError')
     }
 
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (parsedUri.query.msg) {
       edgeParsedUri.metadata = {
-        // @ts-expect-error
         notes: parsedUri.query.msg
       }
     }
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (parsedUri.query.asset_code) {
-      // @ts-expect-error
       if (parsedUri.query.asset_code.toUpperCase() !== 'XLM') {
         throw new Error('ErrorInvalidCurrencyCode')
       }
     }
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (parsedUri.query.memo_type) {
-      // @ts-expect-error
       if (parsedUri.query.memo_type !== 'MEMO_ID') {
         throw new Error('ErrorInvalidMemoType')
       }
     }
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (parsedUri.query.memo) {
-      // @ts-expect-error
       const m = add(parsedUri.query.memo, '0')
       // Check if the memo is an integer
-      // @ts-expect-error
       if (m !== parsedUri.query.memo) {
         throw new Error('ErrorInvalidMemoId')
       }
-      // @ts-expect-error
       edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     }
     return edgeParsedUri
@@ -226,7 +216,6 @@ export function makeStellarPlugin(
       currencyEngine.otherData.lastPagingToken = '0'
     }
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

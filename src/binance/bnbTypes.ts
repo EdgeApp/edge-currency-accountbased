@@ -2,26 +2,66 @@
  * Created by paul on 8/26/17.
  */
 
+import {
+  asArray,
+  asBoolean,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
+
+export const asBinanceApiNodeInfo = asObject({
+  sync_info: asObject({
+    latest_block_height: asNumber
+  })
+})
+
+export const asBinanceApiAccountBalance = asObject({
+  balances: asArray(
+    asObject({
+      free: asString,
+      frozen: asString,
+      locked: asString,
+      symbol: asString
+    })
+  )
+})
+
+export const asBinanceApiTransaction = asObject({
+  hash: asString,
+  blockHeight: asNumber,
+  blockTime: asNumber,
+  type: asString,
+  fee: asNumber,
+  memo: asString,
+  asset: asString,
+  amount: asNumber,
+  fromAddr: asString,
+  toAddr: asString
+})
+export const asBinanceApiGetTransactions = asObject({
+  // total: asNumber,
+  txs: asArray(asBinanceApiTransaction)
+})
+export type BinanceApiTransaction = ReturnType<typeof asBinanceApiTransaction>
+
+export const asBnbKeys = asObject({
+  binanceMnemonic: asOptional(asString),
+  publicKey: asOptional(asString)
+})
+
+export const asBroadcastTxResponse = asObject({
+  result: asArray(
+    asObject({
+      ok: asBoolean,
+      hash: asOptional(asString)
+    })
+  )
+})
 export interface BinanceSettings {
   binanceApiServers: string[]
-}
-
-export interface BinanceApiTransaction {
-  txHash: string
-  blockHeight: number
-  txType: string
-  timeStamp: string
-  fromAddr: string
-  toAddr: string
-  value: string
-  txAsset: string
-  txFee: string
-  txAge: number
-  orderId: null | string
-  code: number
-  data: null | string
-  confirmBlocks: number
-  memo: string
+  beaconChainApiServers: string[]
 }
 
 export interface BinanceTxOtherParams {

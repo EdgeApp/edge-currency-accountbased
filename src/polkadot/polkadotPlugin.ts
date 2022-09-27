@@ -100,9 +100,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
 
     if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo || undefined
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo ?? undefined
     return edgeParsedUri
   }
 
@@ -190,7 +188,6 @@ export function makePolkadotPluginInner(
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
 
     return out

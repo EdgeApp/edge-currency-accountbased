@@ -723,10 +723,8 @@ export class CurrencyEngine<T> {
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
+  async startEngine(): Promise<void> {
+    void this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
   }
 
   // *************************************
@@ -974,11 +972,9 @@ export class CurrencyEngine<T> {
     return { publicAddress: this.walletLocalData.publicKey }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars
-  async addGapLimitAddresses(addresses: string[], options: any) {}
+  async addGapLimitAddresses(_addresses: string[]): Promise<void> {}
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/no-unused-vars
-  async isAddressUsed(address: string, options: any) {
+  async isAddressUsed(_address: string): Promise<boolean> {
     return false
   }
 

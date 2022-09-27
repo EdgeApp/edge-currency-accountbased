@@ -2,12 +2,17 @@
  * Created by paul on 8/26/17.
  */
 
+import { asObject, asString } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
 export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
 export const TRANSACTION_STORE_FILE = 'txEngineFolder/transactionList.json'
+
+export const asErrorMessage = asObject({
+  message: asString
+})
 
 export interface CustomToken {
   currencyCode: string

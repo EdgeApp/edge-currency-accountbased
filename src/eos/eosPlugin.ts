@@ -231,7 +231,6 @@ export function makeEosBasedPluginInner(
       currencyEngine.otherData.highestTxHeight = {}
     }
 
-    // @ts-expect-error
     const out: EdgeCurrencyEngine = currencyEngine
     return out
   }

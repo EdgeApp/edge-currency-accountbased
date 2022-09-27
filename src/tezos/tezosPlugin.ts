@@ -171,7 +171,6 @@ export function makeTezosPlugin(
       currencyEngine.otherData.numberTransaction = 0
     }
     const out: TezosEngine = currencyEngine
-    // @ts-expect-error
     return out
   }
 
