@@ -380,6 +380,7 @@ export const asWcRpcPayload = asObject({
     'personal_sign',
     'eth_sign',
     'eth_signTypedData',
+    'eth_signTypedData_v4',
     'eth_sendTransaction',
     'eth_signTransaction',
     'eth_sendRawTransaction'
