@@ -39,13 +39,10 @@ export class StellarPlugin extends CurrencyPlugin {
   }
 
   checkAddress(address: string): boolean {
-    // TODO: check address
-    try {
-      Keypair.fromPublicKey(address)
-      return true
-    } catch (e: any) {
-      return false
-    }
+    return (
+      StrKey.isValidEd25519PublicKey(address) || // regular address
+      StrKey.isValidMed25519PublicKey(address) // muxed address
+    )
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
