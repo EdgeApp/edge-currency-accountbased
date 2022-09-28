@@ -1,6 +1,10 @@
 /* global */
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
+import {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo,
+  EdgeCurrencyPlugin
+} from 'edge-core-js/types'
 
 import { makeEthereumBasedPluginInner } from '../ethPlugin'
 import { EthereumFees, EthereumSettings } from '../ethTypes'
@@ -33,8 +37,11 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const otherSettings: EthereumSettings = {
-  rpcServers: ['https://forno.celo.org'],
-  evmScanApiServers: ['https://explorer.celo.org/api'],
+  rpcServers: [
+    'https://forno.celo.org',
+    'https://celo-mainnet-rpc.allthatnode.com'
+  ],
+  evmScanApiServers: ['https://explorer.celo.org'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['celo'],
@@ -111,7 +118,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeCeloPlugin = (opts: EdgeCorePluginOptions) => {
+export const makeCeloPlugin = (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin => {
   return makeEthereumBasedPluginInner(opts, currencyInfo)
 }
