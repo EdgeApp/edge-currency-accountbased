@@ -66,19 +66,22 @@ export class CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
-    const parsedUri = parse(uri, {}, true)
-    let protocol: string | undefined
+    const parsedUri = { ...parse(uri, {}, true) }
 
     // Add support for renproject Gateway URI type
     const isGateway = uri.startsWith(`${currencyInfo.pluginId}://`)
 
     // Remove ":" from protocol
-    if (parsedUri.protocol != null && parsedUri.protocol !== '') {
-      protocol = parsedUri.protocol.replace(':', '')
+    if (parsedUri.protocol != null) {
+      parsedUri.protocol = parsedUri.protocol.replace(':', '')
     }
 
     // Wrong crypto or protocol is not supported
-    if (protocol != null && protocol !== '' && !networks[protocol]) {
+    if (
+      parsedUri.protocol != null &&
+      parsedUri.protocol !== '' &&
+      !networks[parsedUri.protocol]
+    ) {
       throw new Error(
         `Uri protocol '${parsedUri.protocol}' is not supported for ${currencyInfo.pluginId}.`
       )
