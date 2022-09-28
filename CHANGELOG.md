@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.18.2 (2022-09-27)
+
+- BNB: Fix Beacon Chain transaction processing
+- Fix parseUriCommon protocol parsing
+- CELO: Update server list
+- ZEC: update checkpoints
+
 ## 0.18.1 (2022-09-20)
 
 - Fix broken biggystring import
