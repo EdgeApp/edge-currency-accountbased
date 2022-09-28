@@ -45,7 +45,7 @@ export class StellarPlugin extends CurrencyPlugin {
     )
   }
 
-  async createPrivateKey(walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<{ stellarKey: string }> {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'stellar') {
@@ -64,7 +64,9 @@ export class StellarPlugin extends CurrencyPlugin {
     return await Promise.resolve({ stellarKey: privateKey })
   }
 
-  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(
+    walletInfo: EdgeWalletInfo
+  ): Promise<{ publicKey: string }> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'stellar') {
       const keypair = Keypair.fromSecret(walletInfo.keys.stellarKey)

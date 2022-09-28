@@ -17,7 +17,9 @@ import {
   Asset,
   Keypair,
   Memo,
+  MemoType,
   Operation,
+  Transaction,
   TransactionBuilder
 } from 'stellar-sdk'
 
@@ -52,7 +54,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   stellarPlugin: StellarPlugin
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
-  pendingTransactionsMap: Map<number, Object>
+  pendingTransactionsMap: Map<number, Transaction<Memo<MemoType>, Operation[]>>
   // @ts-expect-error
   otherData: StellarWalletOtherData
 
@@ -487,7 +489,6 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       }
       this.warn('Signing...')
       const keypair = Keypair.fromSecret(this.walletInfo.keys.stellarKey)
-      // @ts-expect-error
       await transaction.sign(keypair)
     } catch (e: any) {
       this.error(
