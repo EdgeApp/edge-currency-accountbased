@@ -3,7 +3,6 @@
  */
 
 import { add, div, eq, gt, mul, sub } from 'biggystring'
-// import { currencyInfo } from './stellarInfo'
 import {
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
@@ -210,31 +209,6 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.addTransaction(currencyCode, edgeTransaction)
     return tx.paging_token
   }
-
-  // Streaming version. Doesn't work in RN
-  // async checkTransactionsInnerLoop () {
-  //   const address = this.walletLocalData.publicKey
-  //   const txHandler = (tx) => {
-  //     this.log('Got something:')
-  //     this.processTransaction(tx)
-  //   }
-  //   let close
-  //   const errorHandler = (e) => {
-  //     if (close) {
-  //       close()
-  //       close = null
-  //       this.checkTransactionsInnerLoop()
-  //     }
-  //   }
-  //   close = this.stellarServer.payments()
-  //     .forAccount(address)
-  //     .limit(TX_QUERY_PAGING_LIMIT)
-  //     .cursor(this.otherData.lastPagingToken)
-  //     .stream({
-  //       onmessage: txHandler,
-  //       onerror: errorHandler
-  //     })
-  // }
 
   // Polling version
   async checkTransactionsInnerLoop(): Promise<void> {
