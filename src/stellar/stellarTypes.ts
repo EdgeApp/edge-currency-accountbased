@@ -2,6 +2,8 @@
  * Created by paul on 8/26/17.
  */
 
+import { asObject, asString } from 'cleaners'
+
 export interface StellarSettings {
   stellarServers: string[]
 }
@@ -63,3 +65,22 @@ export interface StellarWalletOtherData {
   lastPagingToken: string
   accountSequence: number
 }
+
+export const asFeeStats = asObject({
+  fee_charged: asObject({
+    max: asString,
+    min: asString,
+    mode: asString,
+    p10: asString,
+    p20: asString,
+    p30: asString,
+    p40: asString,
+    p50: asString,
+    p60: asString,
+    p70: asString,
+    p80: asString,
+    p90: asString,
+    p95: asString,
+    p99: asString
+  })
+})

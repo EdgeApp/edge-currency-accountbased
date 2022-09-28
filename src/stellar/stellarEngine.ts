@@ -14,6 +14,7 @@ import {
 import {
   Account,
   Asset,
+  BASE_FEE,
   Keypair,
   Memo,
   MemoType,
@@ -32,6 +33,7 @@ import {
 } from '../common/utils'
 import { StellarPlugin } from '../stellar/stellarPlugin'
 import {
+  asFeeStats,
   StellarAccount,
   StellarOperation,
   StellarTransaction,
@@ -44,6 +46,7 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 30000
 const TRANSACTION_POLL_MILLISECONDS = 5000
 
 type StellarServerFunction =
+  | 'feeStats'
   | 'payments'
   | 'loadAccount'
   | 'ledgers'
@@ -54,6 +57,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
   pendingTransactionsMap: Map<number, Transaction<Memo<MemoType>, Operation[]>>
+  fees: { low: string; standard: string; high: string }
   // @ts-expect-error
   otherData: StellarWalletOtherData
 
@@ -67,6 +71,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = new Map()
+    this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
   }
 
   async multicastServers(
@@ -77,6 +82,19 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
+      case 'feeStats':
+        funcs =
+          this.currencyInfo.defaultSettings.otherSettings.stellarServers.map(
+            (serverUrl: string) => async () => {
+              const response = await fetch(`${serverUrl}/fee_stats`)
+              const result = asFeeStats(await response.json())
+
+              return { server: serverUrl, result }
+            }
+          )
+        out = await asyncWaterfall(funcs)
+        break
+
       case 'loadAccount':
         funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
           // @ts-expect-error
@@ -313,6 +331,17 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       })
   }
 
+  async queryFee(): Promise<void> {
+    try {
+      const response: ReturnType<typeof asFeeStats> =
+        await this.multicastServers('feeStats')
+      const { p50, p70, p95 } = response.fee_charged
+      this.fees = { low: p50, standard: p70, high: p95 }
+    } catch (e: any) {
+      this.error(`queryFee Error `, e)
+    }
+  }
+
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -336,6 +365,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     )
+    void this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
     void super.startEngine()
   }
 
@@ -387,7 +417,13 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     const memoId: string | undefined =
       edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier
 
-    const txBuilder = new TransactionBuilder(account)
+    const feeSetting =
+      edgeSpendInfo.networkFeeOption !== undefined &&
+      edgeSpendInfo.networkFeeOption !== 'custom'
+        ? this.fees[edgeSpendInfo.networkFeeOption]
+        : BASE_FEE
+
+    const txBuilder = new TransactionBuilder(account, { fee: feeSetting })
     let transaction
 
     if (mustCreateAccount) {
