@@ -58,10 +58,12 @@ export class StellarPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
-    privateKey.replace(/ /g, '')
-    Keypair.fromSecret(privateKey)
-    if (privateKey.length !== 56) throw new Error('Private key wrong length')
-    return await Promise.resolve({ stellarKey: privateKey })
+    const cleanKey = privateKey.replace(/\s/g, '')
+    if (!StrKey.isValidEd25519SecretSeed(cleanKey)) {
+      if (cleanKey.length !== 56) throw new Error('Private key wrong length')
+      else throw new Error('Invalid private key')
+    }
+    return { stellarKey: cleanKey }
   }
 
   async derivePublicKey(
