@@ -13,8 +13,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
-import stellarApi from 'stellar-sdk'
+import stellarApi, { Keypair, Server, StrKey } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -26,15 +25,15 @@ import { currencyInfo } from './stellarInfo'
 const URI_PREFIX = 'web+stellar'
 
 export class StellarPlugin extends CurrencyPlugin {
-  stellarApiServers: Object[]
+  stellarApiServers: Server[]
+
   constructor(io: EdgeIo) {
     super(io, 'stellar', currencyInfo)
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
     for (const server of currencyInfo.defaultSettings.otherSettings
       .stellarServers) {
-      const stellarServer = new stellarApi.Server(server)
-      stellarServer.serverName = server
+      const stellarServer = new Server(server)
       this.stellarApiServers.push(stellarServer)
     }
   }
@@ -42,7 +41,7 @@ export class StellarPlugin extends CurrencyPlugin {
   checkAddress(address: string): boolean {
     // TODO: check address
     try {
-      stellarApi.Keypair.fromPublicKey(address)
+      Keypair.fromPublicKey(address)
       return true
     } catch (e: any) {
       return false
@@ -53,8 +52,8 @@ export class StellarPlugin extends CurrencyPlugin {
     const type = walletType.replace('wallet:', '')
 
     if (type === 'stellar') {
-      const entropy = Array.from(this.io.random(32))
-      const keypair = stellarApi.Keypair.fromRawEd25519Seed(entropy)
+      const entropy = Buffer.from(this.io.random(32))
+      const keypair = Keypair.fromRawEd25519Seed(entropy)
       return { stellarKey: keypair.secret() }
     } else {
       throw new Error('InvalidWalletType')
@@ -63,7 +62,7 @@ export class StellarPlugin extends CurrencyPlugin {
 
   async importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
     privateKey.replace(/ /g, '')
-    stellarApi.Keypair.fromSecret(privateKey)
+    Keypair.fromSecret(privateKey)
     if (privateKey.length !== 56) throw new Error('Private key wrong length')
     return await Promise.resolve({ stellarKey: privateKey })
   }
@@ -71,7 +70,7 @@ export class StellarPlugin extends CurrencyPlugin {
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'stellar') {
-      const keypair = stellarApi.Keypair.fromSecret(walletInfo.keys.stellarKey)
+      const keypair = Keypair.fromSecret(walletInfo.keys.stellarKey)
       return { publicKey: keypair.publicKey() }
     } else {
       throw new Error('InvalidWalletType')
@@ -190,8 +189,6 @@ export function makeStellarPlugin(
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
     const currencyEngine = new StellarEngine(tools, walletInfo, opts)
-
-    currencyEngine.stellarApi = stellarApi
 
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
