@@ -83,15 +83,10 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     switch (func) {
       // Functions that should waterfall from top to low priority servers
       case 'feeStats':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.stellarServers.map(
-            (serverUrl: string) => async () => {
-              const response = await fetch(`${serverUrl}/fee_stats`)
-              const result = asFeeStats(await response.json())
-
-              return { server: serverUrl, result }
-            }
-          )
+        funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
+          const result = await api[func]()
+          return { server: api.serverURL.hostname(), result }
+        })
         out = await asyncWaterfall(funcs)
         break
 

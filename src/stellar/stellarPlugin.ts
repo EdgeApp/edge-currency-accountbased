@@ -29,11 +29,17 @@ export class StellarPlugin extends CurrencyPlugin {
 
   constructor(io: EdgeIo) {
     super(io, 'stellar', currencyInfo)
-    stellarApi.Network.usePublicNetwork()
+
+    // console.log('typeoftypeof', Object.keys(stellarApi))
+    // stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
     for (const server of currencyInfo.defaultSettings.otherSettings
       .stellarServers) {
       const stellarServer = new Server(server)
+      // stellarServer
+      //   .feeStats()
+      //   .then(res => console.log(res))
+      //   .catch(console.log)
       this.stellarApiServers.push(stellarServer)
     }
   }
@@ -190,6 +196,8 @@ export function makeStellarPlugin(
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
     const currencyEngine = new StellarEngine(tools, walletInfo, opts)
+
+    // currencyEngine.stellarApi = stellarApi
 
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 

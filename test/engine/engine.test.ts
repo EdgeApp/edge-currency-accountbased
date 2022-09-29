@@ -95,9 +95,10 @@ for (const fixture of fixtures) {
       expect(plugin.currencyInfo.currencyCode).equals(
         fixture['Test Currency code']
       )
+      console.log('intesting 1')
       return await plugin.makeCurrencyTools().then(async currencyTools => {
         tools = currencyTools
-
+        console.log('intesting 2')
         keys = await tools.createPrivateKey(WALLET_TYPE)
         const info: EdgeWalletInfo = {
           id: '1',
