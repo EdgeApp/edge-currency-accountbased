@@ -591,9 +591,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
       networkFees.default.minPriorityFee || defaultNetworkFee.minPriorityFee
     // This is how much we will multiply the base fee by
-    // @ts-expect-error
-    const baseMultiplier: EthereumBaseMultiplier =
-      networkFees.default.baseFeeMultiplier != null ||
+    const baseMultiplier: EthereumBaseMultiplier | undefined =
+      networkFees.default.baseFeeMultiplier ??
       defaultNetworkFee.baseFeeMultiplier
 
     // Make sure the properties exist
