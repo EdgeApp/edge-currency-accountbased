@@ -23,6 +23,7 @@ import {
 } from '../common/utils'
 import { StellarPlugin } from '../stellar/stellarPlugin'
 import {
+  asFeeStats,
   StellarAccount,
   StellarOperation,
   StellarTransaction,
@@ -34,7 +35,10 @@ const ADDRESS_POLL_MILLISECONDS = 15000
 const BLOCKCHAIN_POLL_MILLISECONDS = 30000
 const TRANSACTION_POLL_MILLISECONDS = 5000
 
+const BASE_FEE = 100 // Stroops
+
 type StellarServerFunction =
+  | 'feeStats'
   | 'payments'
   | 'loadAccount'
   | 'ledgers'
@@ -46,6 +50,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
   pendingTransactionsMap: { [index: number]: Object }
+  fees: { low: number; standard: number; high: number }
   // @ts-expect-error
   otherData: StellarWalletOtherData
 
@@ -60,6 +65,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
+    this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
   }
 
   async multicastServers(
@@ -70,6 +76,19 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     let funcs
     switch (func) {
       // Functions that should waterfall from top to low priority servers
+      case 'feeStats':
+        funcs =
+          this.currencyInfo.defaultSettings.otherSettings.stellarServers.map(
+            (serverUrl: string) => async () => {
+              const response = await fetch(`${serverUrl}/fee_stats`)
+              const result = asFeeStats(await response.json())
+
+              return { server: serverUrl, result }
+            }
+          )
+        out = await asyncWaterfall(funcs)
+        break
+
       case 'loadAccount':
         funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
           // @ts-expect-error
@@ -351,6 +370,21 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       })
   }
 
+  async queryFee(): Promise<void> {
+    try {
+      const response: ReturnType<typeof asFeeStats> =
+        await this.multicastServers('feeStats')
+      const { p50, p70, p95 } = response.fee_charged
+      this.fees = {
+        low: parseInt(p50),
+        standard: parseInt(p70),
+        high: parseInt(p95)
+      }
+    } catch (e: any) {
+      this.error(`queryFee Error `, e)
+    }
+  }
+
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -366,6 +400,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    void this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -432,8 +467,17 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     ) {
       memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
+
+    const feeSetting =
+      edgeSpendInfo.networkFeeOption !== undefined &&
+      edgeSpendInfo.networkFeeOption !== 'custom'
+        ? this.fees[edgeSpendInfo.networkFeeOption]
+        : BASE_FEE
+
     // @ts-expect-error
-    const txBuilder = new this.stellarApi.TransactionBuilder(account)
+    const txBuilder = new this.stellarApi.TransactionBuilder(account, {
+      fee: feeSetting
+    })
     let transaction
 
     if (mustCreateAccount) {
