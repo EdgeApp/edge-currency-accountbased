@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.18.3 (2022-09-30)
+
+- XLM: Add dynamic fee support
+- EVM: Fix broken baseFee from accidental boolean coercion
+- SOL: Update explorer URLs
+
 ## 0.18.2 (2022-09-27)
 
 - BNB: Fix Beacon Chain transaction processing
