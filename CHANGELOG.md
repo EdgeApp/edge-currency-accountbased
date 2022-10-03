@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.4 (2022-10-03)
+
+- BNB: Fix transaction amount and fee denomination
+- ZEC: Update checkpoints
+
 ## 0.18.3 (2022-09-30)
 
 - XLM: Add dynamic fee support
