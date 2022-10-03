@@ -39,7 +39,6 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
-const NATIVE_UNIT_MULTIPLIER = '100000000'
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 5 // 5 days
 const NETWORK_FEE_NATIVE_AMOUNT = '37500' // fixed amount for BNB
 
@@ -156,8 +155,8 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     if (tx.type !== 'TRANSFER') return
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
-    const nativeNetworkFee: string = mul(String(tx.fee), NATIVE_UNIT_MULTIPLIER) // always denominated in BNB
-    const nativeValue = mul(String(tx.amount), NATIVE_UNIT_MULTIPLIER)
+    const nativeNetworkFee: string = String(tx.fee)
+    const nativeValue = String(tx.amount)
     if (
       tx.fromAddr.toLowerCase() === this.walletLocalData.publicKey.toLowerCase()
     ) {
