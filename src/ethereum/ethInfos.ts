@@ -4,6 +4,7 @@ import { makeCeloPlugin } from './info/celoInfo'
 import { makeEthereumClassicPlugin } from './info/etcInfo'
 import { makeEthDevPlugin } from './info/ethDevInfo'
 import { makeEthereumPlugin } from './info/ethInfo'
+import { makeEthereumPoWPlugin } from './info/ethwInfo'
 import { makeFantomPlugin } from './info/ftmInfo'
 import { makeGoerliPlugin } from './info/goerliInfo'
 import { makeKovanPlugin } from './info/kovanInfo'
@@ -16,6 +17,7 @@ export const ethPlugins = {
   binancesmartchain: makeBinanceSmartChainPlugin,
   ethereum: makeEthereumPlugin,
   ethereumclassic: makeEthereumClassicPlugin,
+  ethereumpow: makeEthereumPoWPlugin,
   ethDev: makeEthDevPlugin,
   fantom: makeFantomPlugin,
   goerli: makeGoerliPlugin,
