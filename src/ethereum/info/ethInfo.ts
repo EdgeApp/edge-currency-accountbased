@@ -550,6 +550,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x967da4048cD07aB37855c090aAF366e4ce1b9F48'
     },
     {
+      currencyCode: 'OGN',
+      currencyName: 'Origin',
+      denominations: [{ name: 'OGN', multiplier: '1000000000000000000' }],
+      contractAddress: '0x8207c1ffc5b6804f6024322ccf34f29c3541ae26'
+    },
+    {
       currencyCode: 'OMG',
       currencyName: 'OmiseGO',
       denominations: [{ name: 'OMG', multiplier: '1000000000000000000' }],
