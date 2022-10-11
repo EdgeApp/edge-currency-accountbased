@@ -41,7 +41,7 @@ const otherSettings: EthereumSettings = {
     'https://forno.celo.org',
     'https://celo-mainnet-rpc.allthatnode.com'
   ],
-  evmScanApiServers: ['https://explorer.celo.org'],
+  evmScanApiServers: ['https://explorer.celo.org/mainnet'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['celo'],
