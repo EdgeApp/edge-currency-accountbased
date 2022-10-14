@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.5 (2022-10-14)
+
+- CELO: Fix server url
+- ZEC: Update checkpoints
+
 ## 0.18.4 (2022-10-03)
 
 - BNB: Fix transaction amount and fee denomination
