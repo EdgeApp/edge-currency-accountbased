@@ -1503,26 +1503,32 @@ export class EthereumNetwork {
 
   // @ts-expect-error
   async checkTokenBalRpc(tk: string): Promise<EthereumNetworkUpdate> {
-    // eth_call cannot be used to query mainnet currency code balance
-    if (tk === this.currencyInfo.currencyCode) return {}
     let cleanedResponseObj: RpcResultString
     let response
     let jsonObj
     let server
     const address = this.ethEngine.walletLocalData.publicKey
     try {
-      const tokenInfo = this.ethEngine.getTokenInfo(tk)
-      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
-        const params = {
-          data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
-          to: tokenInfo.contractAddress
-        }
-
-        const response = await this.multicastServers('eth_call', params)
+      if (tk === this.currencyInfo.currencyCode) {
+        response = await this.multicastServers('eth_getBalance', address)
         jsonObj = response.result
         server = response.server
-      }
+      } else {
+        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        if (
+          tokenInfo != null &&
+          typeof tokenInfo.contractAddress === 'string'
+        ) {
+          const params = {
+            data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
+            to: tokenInfo.contractAddress
+          }
 
+          const response = await this.multicastServers('eth_call', params)
+          jsonObj = response.result
+          server = response.server
+        }
+      }
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
