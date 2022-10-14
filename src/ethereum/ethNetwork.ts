@@ -1038,7 +1038,19 @@ export class EthereumNetwork {
         })
         // Randomize array
         funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
+
+        if (funcs.length > 0) {
+          out = await asyncWaterfall(funcs)
+        } else {
+          /*
+          // HACK: If a currency doesn't have an etherscan API compatible 
+          // server we need to return an empty array
+          */
+
+          // @ts-expect-error
+          out = { ...out, result: { result: [] } }
+        }
+
         break
       }
 
@@ -1760,9 +1772,9 @@ export class EthereumNetwork {
     if (evmScanApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightEthscan)
       nonce.push(this.checkNonceEthscan)
-      txs.push(this.checkTxsEthscan)
       tokenBal.push(this.checkTokenBalEthscan)
     }
+    txs.push(this.checkTxsEthscan) // We'll fake it if we don't have a server
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
       tokenBal.push(this.checkAddressBlockbook)
