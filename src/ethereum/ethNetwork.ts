@@ -1038,7 +1038,19 @@ export class EthereumNetwork {
         })
         // Randomize array
         funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
+
+        if (funcs.length > 0) {
+          out = await asyncWaterfall(funcs)
+        } else {
+          /*
+          // HACK: If a currency doesn't have an etherscan API compatible 
+          // server we need to return an empty array
+          */
+
+          // @ts-expect-error
+          out = { ...out, result: { result: [] } }
+        }
+
         break
       }
 
@@ -1503,26 +1515,32 @@ export class EthereumNetwork {
 
   // @ts-expect-error
   async checkTokenBalRpc(tk: string): Promise<EthereumNetworkUpdate> {
-    // eth_call cannot be used to query mainnet currency code balance
-    if (tk === this.currencyInfo.currencyCode) return {}
     let cleanedResponseObj: RpcResultString
     let response
     let jsonObj
     let server
     const address = this.ethEngine.walletLocalData.publicKey
     try {
-      const tokenInfo = this.ethEngine.getTokenInfo(tk)
-      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
-        const params = {
-          data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
-          to: tokenInfo.contractAddress
-        }
-
-        const response = await this.multicastServers('eth_call', params)
+      if (tk === this.currencyInfo.currencyCode) {
+        response = await this.multicastServers('eth_getBalance', address)
         jsonObj = response.result
         server = response.server
-      }
+      } else {
+        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        if (
+          tokenInfo != null &&
+          typeof tokenInfo.contractAddress === 'string'
+        ) {
+          const params = {
+            data: `0x70a08231${padHex(removeHexPrefix(address), 32)}`,
+            to: tokenInfo.contractAddress
+          }
 
+          const response = await this.multicastServers('eth_call', params)
+          jsonObj = response.result
+          server = response.server
+        }
+      }
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
@@ -1754,9 +1772,9 @@ export class EthereumNetwork {
     if (evmScanApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightEthscan)
       nonce.push(this.checkNonceEthscan)
-      txs.push(this.checkTxsEthscan)
       tokenBal.push(this.checkTokenBalEthscan)
     }
+    txs.push(this.checkTxsEthscan) // We'll fake it if we don't have a server
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
       tokenBal.push(this.checkAddressBlockbook)
