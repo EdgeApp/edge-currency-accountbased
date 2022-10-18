@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.18.6 (2022-10-18)
+
+- ETH: Add Origin (OGN)
+- EVM: Add RPC balance query
+- EVM: Return empty transaction arrays if evmscan server list is empty
+
 ## 0.18.5 (2022-10-14)
 
 - CELO: Fix server url
