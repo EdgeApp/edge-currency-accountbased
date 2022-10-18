@@ -82,6 +82,7 @@ type EthFunction =
   | 'eth_blockNumber'
   | 'eth_call'
   | 'eth_getTransactionCount'
+  | 'eth_getTransactionCount_RPC'
   | 'eth_getBalance'
   | 'eth_estimateGas'
   | 'getTokenBalance'
@@ -202,6 +203,8 @@ export class EthereumNetwork {
   // @ts-expect-error
   checkAddressBlockbook: (...any) => any
   // @ts-expect-error
+  checkNonceRpc: (...any) => any
+  // @ts-expect-error
   checkNonceEthscan: (...any) => any
   // @ts-expect-error
   checkNonceAmberdata: (...any) => any
@@ -243,6 +246,8 @@ export class EthereumNetwork {
     this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
     // @ts-expect-error
     this.checkBlockHeightBlockbook = this.checkBlockHeightBlockbook.bind(this)
+    // @ts-expect-error
+    this.checkNonceRpc = this.checkNonceRpc.bind(this)
     // @ts-expect-error
     this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
     // @ts-expect-error
@@ -910,26 +915,30 @@ export class EthereumNetwork {
           return { server, result }
         })
 
-        funcs.push(
-          ...rpcServers.map(baseUrl => async () => {
-            const result = await this.fetchPostRPC(
-              'eth_getTransactionCount',
-              [params[0], 'latest'],
-              chainId,
-              baseUrl
+        // Randomize array
+        funcs = shuffleArray(funcs)
+        out = await asyncWaterfall(funcs)
+        break
+
+      case 'eth_getTransactionCount_RPC':
+        funcs = rpcServers.map(baseUrl => async () => {
+          const result = await this.fetchPostRPC(
+            'eth_getTransactionCount',
+            [params[0], 'latest'],
+            chainId,
+            baseUrl
+          )
+          // Check if successful http response was actually an error
+          if (result.error != null) {
+            this.ethEngine.error(
+              `Successful eth_getTransactionCount_RPC response object from ${baseUrl} included an error ${result.error}`
             )
-            // Check if successful http response was actually an error
-            if (result.error != null) {
-              this.ethEngine.error(
-                `Successful eth_getTransactionCount response object from ${baseUrl} included an error ${result.error}`
-              )
-              throw new Error(
-                'Successful eth_getTransactionCount response object included an error'
-              )
-            }
-            return { server: parse(baseUrl).hostname, result }
-          })
-        )
+            throw new Error(
+              'Successful eth_getTransactionCount_RPC response object included an error'
+            )
+          }
+          return { server: parse(baseUrl).hostname, result }
+        })
 
         // Randomize array
         funcs = shuffleArray(funcs)
@@ -1191,6 +1200,23 @@ export class EthereumNetwork {
     } catch (e: any) {
       this.logError('checkBlockHeightAmberdata', e)
       throw new Error('checkTxsAmberdata (regular tx) response is invalid')
+    }
+  }
+
+  // @ts-expect-error
+  async checkNonceRpc(): Promise<EthereumNetworkUpdate> {
+    const address = this.ethEngine.walletLocalData.publicKey
+    const { result, server } = await this.multicastServers(
+      'eth_getTransactionCount_RPC',
+      address
+    )
+
+    const cleanRes = asRpcResultString(result)
+    if (/0[xX][0-9a-fA-F]+/.test(cleanRes.result)) {
+      const newNonce = add('0', cleanRes.result)
+      return { newNonce, server }
+    } else {
+      throw new Error('checkNonceRpc returned invalid JSON')
     }
   }
 
@@ -1792,6 +1818,7 @@ export class EthereumNetwork {
       // txs.push(this.checkTxsAmberdata)
     }
     if (rpcServers.length > 0) {
+      nonce.push(this.checkNonceRpc)
       tokenBal.push(this.checkTokenBalRpc)
     }
 
