@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.18.7 (2022-10-19)
+
+- EVM: Split up eth_getTransactionCount into separate evmscan and rpc methods
+
 ## 0.18.6 (2022-10-18)
 
 - ETH: Add Origin (OGN)
