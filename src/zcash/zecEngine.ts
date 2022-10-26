@@ -309,8 +309,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!this.isSynced) throw new Error('Cannot spend until wallet is synced')
+    if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
