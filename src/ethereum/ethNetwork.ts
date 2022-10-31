@@ -1504,7 +1504,7 @@ export class EthereumNetwork {
     const address = this.ethEngine.walletLocalData.publicKey
     const path = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
     try {
-      const jsonObj = await this.fetchGetBlockchair(path, true)
+      const jsonObj = await this.fetchGetBlockchair(path, false)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
     } catch (e: any) {
       this.logError('checkTokenBalBlockchair', e)
