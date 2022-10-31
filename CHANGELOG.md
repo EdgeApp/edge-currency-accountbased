@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.8 (2022-10-31)
+
+- ZEC: Throw error when attempting to send before wallet is synced
+- ZEC: Update checkpoints
+
 ## 0.18.7 (2022-10-19)
 
 - EVM: Split up eth_getTransactionCount into separate evmscan and rpc methods
