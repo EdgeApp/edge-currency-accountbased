@@ -98,7 +98,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
       address = edgeParsedUri.publicAddress
     }
 
-    if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
+    if (!isAddress(address)) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo ?? undefined
     return edgeParsedUri
@@ -110,7 +112,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
   ): Promise<string> {
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!isAddress(publicAddress)) throw new Error('InvalidPublicAddressError')
+    if (!isAddress(publicAddress)) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     let amount
     if (typeof nativeAmount === 'string') {

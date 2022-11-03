@@ -9,17 +9,7 @@
   },
   "plugins": ["json-files", "simple-import-sort"],
   "rules": {
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "ignoreRestSiblings": true,
-        "argsIgnorePattern": "^_"
-      }
-    ],
     "@typescript-eslint/restrict-template-expressions": "off",
-    "no-unused-vars": "off",
-    "no-useless-return": "off",
-    "no-void": "off",
     "simple-import-sort/imports": "error"
   },
   "overrides": [
