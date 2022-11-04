@@ -3,7 +3,7 @@ import nodeResolve from '@rollup/plugin-node-resolve'
 
 export default {
   external: ['bn.js'],
-  input: './src/polkadot/polkadot-sdk-bundle.js.flow',
+  input: './src/polkadot/polkadot-sdk-bundle.d.ts',
   output: {
     file: './src/polkadot/polkadot-sdk-bundle.js',
     format: 'cjs'
