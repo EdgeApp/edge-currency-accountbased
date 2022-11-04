@@ -1,8 +1,5 @@
 language: node_js
-sudo: false
 node_js:
-  - "14.17.3"
-install:
-  - yarn
+  - 14
 script:
-  - yarn test
+  - yarn verify
