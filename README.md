@@ -1,9 +1,8 @@
 # Edge Currency Plugin for Account-Based currencies
-[![Build Status][travis-image]][travis-url] [![NPM version][npm-image]][npm-url] [![Dependency Status][daviddm-image]][daviddm-url]
 
-[![js-standard-style](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
+[![Build Status](https://app.travis-ci.com/EdgeApp/edge-currency-accountbased.svg?branch=master)](https://app.travis-ci.com/EdgeApp/edge-currency-accountbased)
 
-Implements Bitcoin send/receive functionality per the spec for crypto currency plugins for [edge-core-js](https://github.com/EdgeApp/edge-core-js)
+Implements send/receive functionality per the spec for crypto currency plugins for [edge-core-js](https://github.com/EdgeApp/edge-core-js)
 
 ## Installing
 
@@ -39,11 +38,11 @@ To run a local version of this repo inside the full Edge Wallet app, clone this 
 
 Run `npm run test` to run the unit tests.
 
-To use the local cloned version of this repo, `cd edge-react-gui` and run 
+To use the local cloned version of this repo, `cd edge-react-gui` and run
 
     npm run updot edge-currency-accountbased
     npm run postinstall
-    
+
 This will copy the necessary files from `edge-currency-accountbased` into the `edge-react-gui/node_modules/edge-currency-accountbased` replacing the npm installed version. This needs to be done after any modifications to `edge-currency-accountbased`
 
 ## Adding a New Blockchain / Currency
