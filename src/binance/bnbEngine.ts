@@ -361,16 +361,18 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
 
   async startEngine(): Promise<void> {
     this.engineOn = true
-    void this.addToLoop(
+    this.addToLoop(
       'checkBlockchainInnerLoop',
       BLOCKCHAIN_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS).catch(
+      () => {}
     )
-    void this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
-    void this.addToLoop(
+    this.addToLoop(
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
-    )
-    void super.startEngine()
+    ).catch(() => {})
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {

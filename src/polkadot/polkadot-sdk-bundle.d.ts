@@ -1,5 +1,3 @@
-// @flow
-
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api'
 import * as utilCrypto from '@polkadot/util-crypto'
 

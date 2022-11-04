@@ -31,7 +31,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
   pluginId: string
 
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
-  polkadotApi: ApiPromise
+  polkadotApi: ApiPromise | undefined
   polkadotApiSubscribers: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
@@ -98,7 +98,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
       address = edgeParsedUri.publicAddress
     }
 
-    if (!isAddress(address)) throw new Error('InvalidPublicAddressError')
+    if (!isAddress(address)) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo ?? undefined
     return edgeParsedUri
@@ -110,7 +112,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
   ): Promise<string> {
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!isAddress(publicAddress)) throw new Error('InvalidPublicAddressError')
+    if (!isAddress(publicAddress)) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     let amount
     if (typeof nativeAmount === 'string') {
@@ -147,6 +151,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     delete this.polkadotApiSubscribers[walletId]
     // @ts-expect-error
     if (Object.keys(this.polkadotApiSubscribers) === 0) {
+      // @ts-expect-error
       await this.polkadotApi.disconnectApi()
       this.polkadotApi = undefined
     }

@@ -400,15 +400,19 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
-    void this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop(
+      'checkBlockchainInnerLoop',
+      BLOCKCHAIN_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop(
+      'checkTransactionsInnerLoop',
+      TRANSACTION_POLL_MILLISECONDS
+    ).catch(() => {})
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {

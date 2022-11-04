@@ -39,7 +39,7 @@
     "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",
     "precommit": "lint-staged && npm-run-all types test",
-    "prepare": "husky install && npm-run-all clean postinstall lib types rollup webpack checkpoints",
+    "prepare": "husky install && npm-run-all clean rollup postinstall lib types webpack checkpoints",
     "rollup": "rollup -c",
     "test": "mocha",
     "posttest": "nyc report --reporter=html",

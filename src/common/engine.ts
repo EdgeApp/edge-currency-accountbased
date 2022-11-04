@@ -724,7 +724,9 @@ export class CurrencyEngine<T> {
   }
 
   async startEngine(): Promise<void> {
-    void this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
+    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS).catch(
+      () => {}
+    )
   }
 
   // *************************************
