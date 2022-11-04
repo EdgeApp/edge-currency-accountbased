@@ -3,7 +3,6 @@ import {
   Keyring,
   utilCrypto,
   WsProvider
-  // @ts-expect-error
 } from './polkadot-sdk-bundle'
 
 const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto

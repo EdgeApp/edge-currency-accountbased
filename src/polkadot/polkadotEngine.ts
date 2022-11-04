@@ -38,8 +38,8 @@ const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   settings: PolkadotSettings
-  api: ApiPromise
-  keypair: Keyring
+  api!: ApiPromise
+  keypair: Keyring | undefined
   nonce: number
 
   constructor(
@@ -78,6 +78,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBalance() {
     try {
+      // @ts-expect-error
       const response: SdkBalance = await this.api.query.system.account(
         this.walletInfo.keys.publicKey
       )
@@ -94,6 +95,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async queryBlockheight() {
     try {
+      // @ts-expect-error
       const response: SdkBlockHeight = await this.api.rpc.chain.getBlock()
       const height = response.block.header.number
       if (height > this.walletLocalData.blockHeight) {
@@ -247,6 +249,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   async startEngine() {
     this.engineOn = true
     await this.currencyPlugin.connectApi(this.walletId)
+    // @ts-expect-error
     this.api = this.currencyPlugin.polkadotApi
     this.initOtherData()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -348,6 +351,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       nativeAmount
     )
 
+    // @ts-expect-error
     const paymentInfo: SdkPaymentInfo = await transfer.paymentInfo(
       this.walletInfo.keys.publicKey
     )
@@ -401,6 +405,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
 
     if (this.keypair == null) {
       const keyring = new Keyring({ ss58Format: 0 })
+      // @ts-expect-error
       this.keypair = keyring.addFromUri(
         this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
       )
@@ -421,9 +426,11 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       { version: this.api.extrinsicVersion }
     )
 
+    // @ts-expect-error
     const signedPayload = extrinsicPayload.sign(this.keypair)
 
     transfer.addSignature(
+      // @ts-expect-error
       this.keypair.address,
       signedPayload.signature,
       signer.toPayload()
