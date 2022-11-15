@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.18.9 (2022-11-15)
+
+- Fix Travis builds
+- Fix prepare scripts
+- Make Polkadot types visible in Typescript
+- Enable remaining ESLint rule
+
 ## 0.18.8 (2022-10-31)
 
 - ZEC: Throw error when attempting to send before wallet is synced
