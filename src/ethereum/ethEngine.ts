@@ -740,10 +740,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       const rbfTxIndex = this.findTransaction(currencyCode, rbfTxid)
 
       if (rbfTxIndex > -1) {
-        const rbfTrx = this.transactionList[currencyCode][rbfTxIndex]
+        const rbfTx = this.transactionList[currencyCode][rbfTxIndex]
 
-        if (rbfTrx.otherParams != null) {
-          const { gasPrice, gas, nonceUsed } = rbfTrx.otherParams
+        if (rbfTx.otherParams != null) {
+          const { gasPrice, gas, nonceUsed } = rbfTx.otherParams
           rbfGasPrice = mul(gasPrice, '2')
           rbfGasLimit = gas
           rbfNonce = nonceUsed
