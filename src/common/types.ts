@@ -41,7 +41,7 @@ export class WalletLocalData {
   lastCheckedTxsDropped: number
   numUnconfirmedSpendTxs: number
   numTransactions: { [currencyCode: string]: number }
-  otherData: Object
+  otherData: { [key: string]: any }
 
   constructor(jsonString: string | null) {
     this.blockHeight = 0

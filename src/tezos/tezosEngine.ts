@@ -270,14 +270,11 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkTransactionsInnerLoop() {
     const pkh = this.walletLocalData.publicKey
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.otherData.numberTransactions) {
-      // @ts-expect-error
       this.otherData.numberTransactions = 0
     }
     const num = await this.multicastServers('getNumberOfOperations', pkh)
-    // @ts-expect-error
     if (num !== this.otherData.numberTransactions) {
       let txs: XtzGetTransaction[] = []
       let page = 0
@@ -300,7 +297,6 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
         )
         this.transactionsChangedArray = []
       }
-      // @ts-expect-error
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
