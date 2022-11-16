@@ -1036,7 +1036,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)
     const gasPriceHex = toHex(otherParams.gasPrice)
-    let nativeAmountHex
+    let txValue
 
     if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
       // Remove the networkFee from the nativeAmount
@@ -1044,16 +1044,16 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
         edgeTransaction.nativeAmount,
         edgeTransaction.networkFee
       )
-      nativeAmountHex = mul('-1', nativeAmount, 16)
+      txValue = mul('-1', nativeAmount, 16)
     } else {
-      nativeAmountHex = mul('-1', edgeTransaction.nativeAmount, 16)
+      txValue = mul('-1', edgeTransaction.nativeAmount, 16)
     }
 
     // If the nativeAmount for the transaction is negative, this means the
     // transaction being signed is a "receive transaction", and not a spend,
     // and we should not include an amount in the transaction's value field.
-    if (lt(nativeAmountHex, '0')) {
-      nativeAmountHex = '0x00'
+    if (lt(txValue, '0')) {
+      txValue = '0x00'
     }
 
     // Nonce:
@@ -1107,7 +1107,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       data = otherParams.data
       if (edgeTransaction.currencyCode !== this.currencyInfo.currencyCode) {
         // Smart contract calls only allow for tx value if it's the parent currency
-        nativeAmountHex = '0x00'
+        txValue = '0x00'
       }
     } else if (
       edgeTransaction.currencyCode === this.currencyInfo.currencyCode
@@ -1117,10 +1117,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       const dataArray = abi.simpleEncode(
         'transfer(address,uint256):(uint256)',
         otherParams.tokenRecipientAddress,
-        nativeAmountHex
+        txValue
       )
       data = '0x' + Buffer.from(dataArray).toString('hex')
-      nativeAmountHex = '0x00'
+      txValue = '0x00'
     }
 
     // Select the chain
@@ -1135,7 +1135,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       gasPrice: gasPriceHex,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
-      value: nativeAmountHex,
+      value: txValue,
       data
     }
 
