@@ -1105,6 +1105,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     let data
     if (otherParams.data != null) {
       data = otherParams.data
+      if (edgeTransaction.currencyCode !== this.currencyInfo.currencyCode) {
+        // Smart contract calls only allow for tx value if it's the parent currency
+        nativeAmountHex = '0x00'
+      }
     } else if (
       edgeTransaction.currencyCode === this.currencyInfo.currencyCode
     ) {
