@@ -1049,6 +1049,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
       nativeAmountHex = mul('-1', edgeTransaction.nativeAmount, 16)
     }
 
+    // If the nativeAmount for the transaction is negative, this means the
+    // transaction being signed is a "receive transaction", and not a spend,
+    // and we should not include an amount in the transaction's value field.
+    if (lt(nativeAmountHex, '0')) {
+      nativeAmountHex = '0x00'
+    }
+
     // Nonce:
 
     let nonce: string | undefined = otherParams.nonceUsed
