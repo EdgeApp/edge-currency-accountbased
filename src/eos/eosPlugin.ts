@@ -21,6 +21,7 @@ import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
 import { EosEngine } from './eosEngine'
 import {
@@ -111,7 +112,7 @@ export class EosPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = this.parseUriCommon(this.currencyInfo, uri, {
+    const { edgeParsedUri } = parseUriCommon(this.currencyInfo, uri, {
       [this.currencyInfo.defaultSettings.otherSettings.uriProtocol]: true
     })
 
@@ -138,7 +139,7 @@ export class EosPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 4)
     }
-    const encodedUri = this.encodeUriCommon(
+    const encodedUri = encodeUriCommon(
       obj,
       this.currencyInfo.defaultSettings.otherSettings.uriProtocol,
       amount

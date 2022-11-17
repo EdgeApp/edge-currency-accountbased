@@ -24,6 +24,7 @@ import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import { ethPlugins } from './ethInfos'
@@ -162,7 +163,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
     )
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
@@ -346,11 +347,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(
-      obj,
-      this.currencyInfo.pluginId,
-      amount
-    )
+    const encodedUri = encodeUriCommon(obj, this.currencyInfo.pluginId, amount)
     return encodedUri
   }
 

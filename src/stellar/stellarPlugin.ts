@@ -18,6 +18,7 @@ import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { StellarEngine } from './stellarEngine'
 import { currencyInfo } from './stellarInfo'
@@ -91,7 +92,7 @@ export class StellarPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       networks

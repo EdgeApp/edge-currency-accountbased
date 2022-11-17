@@ -19,6 +19,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { BinanceEngine } from './bnbEngine'
 import { currencyInfo } from './bnbInfo'
@@ -80,7 +81,7 @@ export class BinancePlugin extends CurrencyPlugin {
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       networks,
@@ -119,7 +120,7 @@ export class BinancePlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'binance', amount)
+    const encodedUri = encodeUriCommon(obj, 'binance', amount)
     return encodedUri
   }
 }

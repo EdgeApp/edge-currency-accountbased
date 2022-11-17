@@ -14,6 +14,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
 import { HederaEngine } from './hederaEngine'
 import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
@@ -100,7 +101,7 @@ export class HederaPlugin extends CurrencyPlugin {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = this.parseUriCommon(
+    } = parseUriCommon(
       this.currencyInfo,
       uri,
       { [`${pluginId}`]: true },
@@ -143,7 +144,7 @@ export class HederaPlugin extends CurrencyPlugin {
     }
     const amount = div(nativeAmount, denom.multiplier, 8)
 
-    return this.encodeUriCommon(obj, pluginId, amount)
+    return encodeUriCommon(obj, pluginId, amount)
   }
 }
 

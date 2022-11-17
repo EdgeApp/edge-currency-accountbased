@@ -18,6 +18,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, getFetchCors } from '../common/utils'
 import { SolanaEngine } from './solanaEngine'
 
@@ -88,7 +89,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
@@ -134,7 +135,7 @@ export class SolanaPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, pluginId, amount)
+    const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }
 }

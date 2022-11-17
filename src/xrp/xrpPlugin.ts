@@ -23,6 +23,7 @@ import {
 } from 'xrpl'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { XrpEngine } from './xrpEngine'
 import { currencyInfo } from './xrpInfo'
@@ -134,7 +135,7 @@ export class XrpPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       networks
@@ -164,7 +165,7 @@ export class XrpPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 6)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'ripple', amount)
+    const encodedUri = encodeUriCommon(obj, 'ripple', amount)
     return encodedUri
   }
 }

@@ -14,6 +14,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { ZcashEngine } from './zecEngine'
 import { currencyInfo } from './zecInfo'
@@ -116,7 +117,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = this.parseUriCommon(
+    } = parseUriCommon(
       currencyInfo,
       uri,
       networks,
@@ -156,7 +157,7 @@ export class ZcashPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, `${pluginId}`, amount)
+    const encodedUri = encodeUriCommon(obj, `${pluginId}`, amount)
     return encodedUri
   }
 }

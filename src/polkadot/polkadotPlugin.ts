@@ -16,6 +16,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
 import { PolkadotEngine } from './polkadotEngine'
 import {
@@ -82,7 +83,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
@@ -128,7 +129,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 10)
     }
-    const encodedUri = this.encodeUriCommon(obj, pluginId, amount)
+    const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }
 

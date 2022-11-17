@@ -17,6 +17,7 @@ import {
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
   getDenomInfo,
@@ -113,7 +114,7 @@ export class FioPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = this.parseUriCommon(
+    const { edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       {
@@ -145,7 +146,7 @@ export class FioPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 16)
     }
-    const encodedUri = this.encodeUriCommon(obj, FIO_TYPE, amount)
+    const encodedUri = encodeUriCommon(obj, FIO_TYPE, amount)
     return encodedUri
   }
 }
