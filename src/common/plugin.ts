@@ -27,13 +27,11 @@ export class CurrencyPlugin {
   io: EdgeIo
   pluginId: string
   currencyInfo: EdgeCurrencyInfo
-  highestTxHeight: number
 
   constructor(io: EdgeIo, pluginId: string, currencyInfo: EdgeCurrencyInfo) {
     this.io = io
     this.pluginId = pluginId
     this.currencyInfo = currencyInfo
-    this.highestTxHeight = 0
   }
 
   async createPrivateKey(_walletType: string): Promise<Object> {

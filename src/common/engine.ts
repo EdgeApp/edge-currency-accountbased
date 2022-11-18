@@ -410,11 +410,6 @@ export class CurrencyEngine<T> {
     }
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(currencyCode, txid)
-    // if blockHeight of transaction is higher than known blockHeight
-    // then set transaction's blockHeight as the highest known blockHeight
-    if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
-      this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
-    }
 
     let needsReSort = false
     // if transaction doesn't exist in database

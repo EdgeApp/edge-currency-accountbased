@@ -25,6 +25,8 @@ import { currencyInfo } from './stellarInfo'
 const URI_PREFIX = 'web+stellar'
 
 export class StellarPlugin extends CurrencyPlugin {
+  highestTxHeight: number = 0
+
   stellarApiServers: Object[]
   constructor(io: EdgeIo) {
     super(io, 'stellar', currencyInfo)

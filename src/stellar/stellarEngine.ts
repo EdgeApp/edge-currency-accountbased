@@ -111,7 +111,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
             const blockHeight = result.records[0].sequence
             if (
               this.walletLocalData.blockHeight <= blockHeight &&
-              blockHeight >= this.currencyPlugin.highestTxHeight
+              this.currencyPlugin.highestTxHeight <= blockHeight
             ) {
               // @ts-expect-error
               return { server: serverApi.serverName, result }
@@ -226,6 +226,9 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       }
     }
 
+    if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
+      this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
+    }
     this.addTransaction(currencyCode, edgeTransaction)
     return tx.paging_token
   }
