@@ -9,6 +9,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -17,7 +18,6 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, getFetchCors } from '../common/utils'
 import { SolanaEngine } from './solanaEngine'
@@ -35,9 +35,13 @@ const createKeyPair = async (
   return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
 }
 
-export class SolanaPlugin extends CurrencyPlugin {
+export class SolanaPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {

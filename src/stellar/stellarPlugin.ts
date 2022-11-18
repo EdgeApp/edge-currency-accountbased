@@ -7,7 +7,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
@@ -17,7 +19,6 @@ import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { StellarEngine } from './stellarEngine'
@@ -25,12 +26,15 @@ import { currencyInfo } from './stellarInfo'
 
 const URI_PREFIX = 'web+stellar'
 
-export class StellarPlugin extends CurrencyPlugin {
+export class StellarPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
   highestTxHeight: number = 0
 
   stellarApiServers: Object[]
   constructor(io: EdgeIo) {
-    super(io, 'stellar', currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
     for (const server of currencyInfo.defaultSettings.otherSettings

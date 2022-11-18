@@ -12,8 +12,8 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
-  EdgeFetchFunction,
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
@@ -23,20 +23,18 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import { ethPlugins } from './ethInfos'
 
-export class EthereumPlugin extends CurrencyPlugin {
-  constructor(
-    io: EdgeIo,
-    currencyInfo: EdgeCurrencyInfo,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    fetchCors: EdgeFetchFunction
-  ) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+export class EthereumPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
+  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -379,9 +377,7 @@ export function makeEthereumBasedPluginInner(
   let toolsPromise: Promise<EthereumPlugin>
   async function makeCurrencyTools(): Promise<EthereumPlugin> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(
-      new EthereumPlugin(io, currencyInfo, fetchCors)
-    )
+    toolsPromise = Promise.resolve(new EthereumPlugin(io, currencyInfo))
 
     // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
     // a user from reconnecting to an "active" but invisible connection. Future enhancement

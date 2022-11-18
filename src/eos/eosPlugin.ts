@@ -10,6 +10,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeFetchFunction,
   EdgeIo,
@@ -20,7 +21,6 @@ import {
 import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
 import { EosEngine } from './eosEngine'
@@ -34,10 +34,10 @@ export function checkAddress(address: string): boolean {
   return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
-export class EosPlugin extends CurrencyPlugin {
-  // @ts-expect-error
-  otherMethods: Object
+export class EosPlugin implements EdgeCurrencyTools {
   eosServer: Object
+  currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
 
   constructor(
     io: EdgeIo,
@@ -45,7 +45,8 @@ export class EosPlugin extends CurrencyPlugin {
     currencyInfo: EdgeCurrencyInfo,
     eosJsConfig: EosJsConfig
   ) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
 
     eosJsConfig.httpEndpoint =
       this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]

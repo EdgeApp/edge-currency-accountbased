@@ -10,7 +10,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -18,7 +20,6 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { BinanceEngine } from './bnbEngine'
@@ -31,9 +32,13 @@ const {
   validateMnemonic
 } = crypto
 
-export class BinancePlugin extends CurrencyPlugin {
+export class BinancePlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   constructor(io: EdgeIo) {
-    super(io, 'binance', currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   // will actually use MNEMONIC version of private key

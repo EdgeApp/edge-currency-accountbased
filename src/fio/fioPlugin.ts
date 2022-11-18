@@ -8,7 +8,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
@@ -16,7 +18,6 @@ import {
 } from 'edge-core-js/types'
 import ecc from 'eosjs-ecc'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
@@ -49,12 +50,13 @@ export function checkAddress(address: string): boolean {
   return start && length
 }
 
-export class FioPlugin extends CurrencyPlugin {
-  // @ts-expect-error
-  otherMethods: Object
+export class FioPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
 
   constructor(io: EdgeIo) {
-    super(io, FIO_TYPE, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {

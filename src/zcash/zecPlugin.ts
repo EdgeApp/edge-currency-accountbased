@@ -5,7 +5,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -13,20 +15,24 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { ZcashEngine } from './zecEngine'
 import { currencyInfo } from './zecInfo'
 import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
 
-export class ZcashPlugin extends CurrencyPlugin {
+export class ZcashPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   KeyTool: any
   AddressTool: any
   network: string
 
   constructor(io: EdgeIo, KeyTool: any, AddressTool: any) {
-    super(io, `${currencyInfo.pluginId}`, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
+
     this.network =
       currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
     this.KeyTool = KeyTool

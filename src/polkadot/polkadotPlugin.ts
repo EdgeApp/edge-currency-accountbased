@@ -7,6 +7,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -15,7 +16,6 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
 import { PolkadotEngine } from './polkadotEngine'
@@ -28,13 +28,17 @@ import {
   WsProvider
 } from './polkadotUtils'
 
-export class PolkadotPlugin extends CurrencyPlugin {
+export class PolkadotPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
   polkadotApi: ApiPromise | undefined
   polkadotApiSubscribers: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
     this.polkadotApiSubscribers = {}
   }
 

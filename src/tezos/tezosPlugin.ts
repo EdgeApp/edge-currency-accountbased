@@ -2,9 +2,10 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
-  EdgeFetchFunction,
   EdgeIo,
   EdgeParsedUri,
   EdgeWalletInfo
@@ -12,23 +13,27 @@ import {
 import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { getFetchCors } from './../common/utils'
 import { TezosEngine } from './tezosEngine'
 import { currencyInfo } from './tezosInfo'
 import { UriTransaction } from './tezosTypes'
 
-export class TezosPlugin extends CurrencyPlugin {
+export class TezosPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
   tezosRpcNodes: Object[]
   tezosApiServers: Object[]
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  constructor(io: EdgeIo, fetchCors: EdgeFetchFunction) {
-    super(io, 'tezos', currencyInfo)
+
+  constructor(io: EdgeIo) {
+    this.io = io
+    this.currencyInfo = currencyInfo
+
     this.tezosRpcNodes = []
     for (const rpcNode of currencyInfo.defaultSettings.otherSettings
       .tezosRpcNodes) {
       this.tezosRpcNodes.push(rpcNode)
     }
+
     this.tezosApiServers = []
     for (const apiServer of currencyInfo.defaultSettings.otherSettings
       .tezosApiServers) {
@@ -149,7 +154,7 @@ export function makeTezosPlugin(
   let toolsPromise: Promise<TezosPlugin>
   async function makeCurrencyTools(): Promise<TezosPlugin> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new TezosPlugin(io, fetchCors))
+    toolsPromise = Promise.resolve(new TezosPlugin(io))
     return await toolsPromise
   }
   async function makeCurrencyEngine(

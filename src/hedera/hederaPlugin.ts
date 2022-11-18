@@ -7,13 +7,13 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
 import { HederaEngine } from './hederaEngine'
@@ -24,9 +24,13 @@ import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
 const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
-export class HederaPlugin extends CurrencyPlugin {
+export class HederaPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {

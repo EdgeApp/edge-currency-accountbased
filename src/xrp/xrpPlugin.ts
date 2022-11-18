@@ -7,7 +7,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
@@ -22,18 +24,20 @@ import {
   xAddressToClassicAddress
 } from 'xrpl'
 
-import { CurrencyPlugin } from '../common/plugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { XrpEngine } from './xrpEngine'
 import { currencyInfo } from './xrpInfo'
 
-export class XrpPlugin extends CurrencyPlugin {
+export class XrpPlugin implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
   rippleApi: Object
   rippleApiSubscribers: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo) {
-    super(io, 'ripple', currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
     this.rippleApi = {}
     this.rippleApiSubscribers = {}
   }

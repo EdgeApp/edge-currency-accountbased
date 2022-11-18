@@ -15,10 +15,10 @@ import { beforeEach, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
-import { CurrencyPlugin } from '../../src/common/plugin'
 import { WalletLocalData } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
+import { FakeTools } from '../fake/FakeTools'
 import { engineTestTxs } from './engine.txs'
 import fixtures from './fixtures'
 
@@ -227,9 +227,6 @@ for (const fixture of fixtures) {
 }
 
 // Get the currency info
-const factory = edgeCorePlugins.ethereum
-const ethPlugin = factory(opts)
-const plugin = new CurrencyPlugin(fakeIo, 'fakePlugin', ethPlugin.currencyInfo)
 const emitter = new EventEmitter()
 const callbacks: EdgeCurrencyEngineCallbacks = {
   onAddressesChecked(progressRatio) {
@@ -275,7 +272,7 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
 const walletInfo = { id: '', type: '', keys: {} }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function validateTxidListMap(engine: CurrencyEngine<CurrencyPlugin>) {
+function validateTxidListMap(engine: CurrencyEngine<FakeTools>) {
   const ccs = ['ETH', 'DAI']
   for (const currencyCode of ccs) {
     const transactionList = engine.transactionList[currencyCode]
@@ -300,7 +297,11 @@ describe('Test transaction list updating', () => {
   // @ts-expect-error
   let engine
   beforeEach(() => {
-    engine = new CurrencyEngine(plugin, walletInfo, currencyEngineOptions)
+    engine = new CurrencyEngine(
+      new FakeTools(),
+      walletInfo,
+      currencyEngineOptions
+    )
     engine.walletLocalData = new WalletLocalData(
       '{"publicKey": "0x123456"}',
       // @ts-expect-error

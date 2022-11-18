@@ -81,11 +81,12 @@ export class CurrencyEngine<
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const currencyCode = currencyPlugin.currencyInfo.currencyCode
+    const { io, currencyInfo } = currencyPlugin
+    const { currencyCode } = currencyInfo
     const { walletLocalDisklet, callbacks } = opts
 
     this.currencyPlugin = currencyPlugin
-    this.io = currencyPlugin.io
+    this.io = io
     this.log = opts.log
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))
@@ -102,8 +103,8 @@ export class CurrencyEngine<
     this.txIdList = {}
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id != null ? `${walletInfo.id} - ` : ''
-    this.currencyInfo = currencyPlugin.currencyInfo
-    this.allTokens = currencyPlugin.currencyInfo.metaTokens.slice(0)
+    this.currencyInfo = currencyInfo
+    this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
     this.customTokens = []
     this.timers = {}
