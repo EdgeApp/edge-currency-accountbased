@@ -220,6 +220,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x8eBAf22B6F053dFFeaf46f4Dd9eFA95D89ba8580'
     },
     {
+      currencyCode: 'USDC',
+      currencyName: 'USD Coin',
+      denominations: [
+        {
+          name: 'USDC',
+          multiplier: '1000000'
+        }
+      ],
+      contractAddress: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E'
+    },
+    {
       currencyCode: 'USDC.e',
       currencyName: 'USD Coin',
       denominations: [
