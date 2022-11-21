@@ -1,10 +1,5 @@
 import { add, div, mul, sub } from 'biggystring'
-import {
-  EdgeCurrencyInfo,
-  EdgeTransaction,
-  JsonObject
-  // @ts-expect-error
-} from 'edge-core-js/src/types/types'
+import { EdgeCurrencyInfo, EdgeTransaction, JsonObject } from 'edge-core-js'
 import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
@@ -268,11 +263,10 @@ export class EthereumNetwork {
     )
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processEvmScanTransaction(
     tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string
-  ) {
+  ): EdgeTransaction {
     let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
     let nativeNetworkFee: string = '0'
@@ -724,6 +718,7 @@ export class EthereumNetwork {
     } else if (typeof res.result === 'string') {
       // Success!!
       this.ethEngine.warn(`SUCCESS ${server}\n${cleanTxLogs(tx)}`)
+      // @ts-expect-error
       return res
     } else {
       this.ethEngine.error(
@@ -1522,7 +1517,6 @@ export class EthereumNetwork {
         const tokenSymbol = cleanTokenData.token_symbol
         const tokenInfo = this.ethEngine.getTokenInfo(tokenSymbol)
         if (tokenInfo != null && tokenInfo.contractAddress === tokenAddress) {
-          // @ts-expect-error
           response[tokenSymbol] = balance
         } else {
           // Do nothing, eg: Old DAI token balance is ignored
@@ -1761,8 +1755,7 @@ export class EthereumNetwork {
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (tuple.edgeTransactions) {
-          // @ts-expect-error
-          for (const tx: EdgeTransaction of tuple.edgeTransactions) {
+          for (const tx of tuple.edgeTransactions) {
             this.ethEngine.addTransaction(tk, tx)
           }
           this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
