@@ -58,15 +58,13 @@ export class PolkadotPlugin extends CurrencyPlugin {
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === this.pluginId) {
-      const entropy = Buffer.from(this.io.random(32))
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {

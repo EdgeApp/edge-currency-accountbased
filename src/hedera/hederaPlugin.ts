@@ -32,16 +32,14 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === this.pluginId) {
-      const entropy = this.io.random(32)
-      // @ts-expect-error
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = this.io.random(32)
+    // @ts-expect-error
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -78,24 +76,23 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (type === this.pluginId) {
-      if (
-        walletInfo.keys == null ||
-        walletInfo.keys?.[`${this.pluginId}Key`] == null
-      ) {
-        throw new Error('Invalid private key')
-      }
-
-      const privateKey = hedera.Ed25519PrivateKey.fromString(
-        walletInfo.keys[`${this.pluginId}Key`]
-      )
-
-      return {
-        publicKey: privateKey.publicKey.toString()
-      }
-    } else {
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
+    }
+
+    if (
+      walletInfo.keys == null ||
+      walletInfo.keys?.[`${this.pluginId}Key`] == null
+    ) {
+      throw new Error('Invalid private key')
+    }
+
+    const privateKey = hedera.Ed25519PrivateKey.fromString(
+      walletInfo.keys[`${this.pluginId}Key`]
+    )
+
+    return {
+      publicKey: privateKey.publicKey.toString()
     }
   }
 

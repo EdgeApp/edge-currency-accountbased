@@ -71,38 +71,35 @@ export class ZcashPlugin extends CurrencyPlugin {
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === `${this.pluginId}`) {
-      const entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32)).toString('hex')
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (type === `${this.pluginId}`) {
-      const mnemonic = walletInfo.keys[`${this.pluginId}Mnemonic`]
-      if (typeof mnemonic !== 'string') {
-        throw new Error('InvalidMnemonic')
-      }
-      const hexBuffer = await mnemonicToSeed(mnemonic)
-      const hex = hexBuffer.toString('hex')
-      const unifiedViewingKeys: UnifiedViewingKey =
-        await this.KeyTool.deriveViewingKey(hex, this.network)
-      const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
-        unifiedViewingKeys.extfvk,
-        this.network
-      )
-      return {
-        publicKey: shieldedAddress,
-        unifiedViewingKeys
-      }
-    } else {
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
+    }
+
+    const mnemonic = walletInfo.keys[`${this.pluginId}Mnemonic`]
+    if (typeof mnemonic !== 'string') {
+      throw new Error('InvalidMnemonic')
+    }
+    const hexBuffer = await mnemonicToSeed(mnemonic)
+    const hex = hexBuffer.toString('hex')
+    const unifiedViewingKeys: UnifiedViewingKey =
+      await this.KeyTool.deriveViewingKey(hex, this.network)
+    const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
+      unifiedViewingKeys.extfvk,
+      this.network
+    )
+    return {
+      publicKey: shieldedAddress,
+      unifiedViewingKeys
     }
   }
 

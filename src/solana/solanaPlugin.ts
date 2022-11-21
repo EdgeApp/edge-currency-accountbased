@@ -59,30 +59,26 @@ export class SolanaPlugin extends CurrencyPlugin {
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === this.pluginId) {
-      const entropy = Buffer.from(this.io.random(32))
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (
-      type === this.pluginId &&
-      walletInfo.keys[`${this.pluginId}Mnemonic`] != null
-    ) {
-      const keys = await this.importPrivateKey(
-        walletInfo.keys[`${this.pluginId}Mnemonic`]
-      )
-      return { publicKey: keys.publicKey.toString() }
-    } else {
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+    if (walletInfo.keys[`${this.pluginId}Mnemonic`] == null) {
+      throw new Error('Missing mnemonic')
+    }
+    const keys = await this.importPrivateKey(
+      walletInfo.keys[`${this.pluginId}Mnemonic`]
+    )
+    return { publicKey: keys.publicKey.toString() }
   }
 
   async parseUri(
