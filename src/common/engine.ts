@@ -20,7 +20,6 @@ import {
   SpendToSelfError
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from './plugin'
 import {
   asCurrencyCodeOptions,
   checkCustomToken,
@@ -45,10 +44,10 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
-type CurrencyPluginType<T> = T & CurrencyPlugin
-
-export class CurrencyEngine<T> {
-  currencyPlugin: CurrencyPluginType<T>
+export class CurrencyEngine<
+  T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
+> {
+  currencyPlugin: T
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
@@ -78,7 +77,7 @@ export class CurrencyEngine<T> {
   otherData: Object
 
   constructor(
-    currencyPlugin: CurrencyPluginType<T>,
+    currencyPlugin: T,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
@@ -269,7 +268,6 @@ export class CurrencyEngine<T> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.walletInfo.keys.publicKey) {
       const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
-      // @ts-expect-error
       this.walletInfo.keys.publicKey = pubKeys.publicKey
     }
 
@@ -335,7 +333,7 @@ export class CurrencyEngine<T> {
         denominations
       }) =>
         await this.currencyPlugin
-          .getTokenId({
+          .getTokenId?.({
             currencyCode,
             displayName: currencyName,
             denominations,

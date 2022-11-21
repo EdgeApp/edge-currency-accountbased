@@ -12,7 +12,6 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import { serialize } from 'uri-js'
@@ -164,9 +163,5 @@ export class CurrencyPlugin {
       const url = serialize(serializeObj)
       return url
     }
-  }
-
-  async getTokenId(_token: EdgeToken): Promise<string> {
-    return this.currencyInfo.pluginId
   }
 }

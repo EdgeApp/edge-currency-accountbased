@@ -361,13 +361,14 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     const contractAddress = token?.networkLocation?.contractAddress
-    if (contractAddress != null) {
+    if (
+      contractAddress == null ||
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!EthereumUtil.isValidAddress(contractAddress))
-        throw new Error('ErrorInvalidContractAddress')
-      return contractAddress.toLowerCase()
+      !EthereumUtil.isValidAddress(contractAddress)
+    ) {
+      throw new Error('ErrorInvalidContractAddress')
     }
-    return await super.getTokenId(token)
+    return contractAddress.toLowerCase()
   }
 }
 

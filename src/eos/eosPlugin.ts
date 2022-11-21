@@ -148,12 +148,10 @@ export class EosPlugin extends CurrencyPlugin {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     const contractAddress = token?.networkLocation?.contractAddress
-    if (contractAddress != null) {
-      if (!checkAddress(contractAddress))
-        throw new Error('ErrorInvalidContractAddress')
-      return contractAddress.toLowerCase()
+    if (contractAddress == null || !checkAddress(contractAddress)) {
+      throw new Error('ErrorInvalidContractAddress')
     }
-    return await super.getTokenId(token)
+    return contractAddress.toLowerCase()
   }
 
   // change to fetch call in the future
