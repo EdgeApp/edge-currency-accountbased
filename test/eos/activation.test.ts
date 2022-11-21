@@ -14,7 +14,7 @@ import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
-import { fakeLog } from '../fakeLog'
+import { fakeLog } from '../fake/fakeLog'
 
 describe(`EOS activation`, function () {
   let engine: EdgeCurrencyEngine

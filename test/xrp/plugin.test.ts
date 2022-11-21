@@ -9,7 +9,7 @@ import { before, describe, it } from 'mocha'
 
 import edgeCorePlugins from '../../src/index'
 import { expectRejection } from '../expectRejection'
-import { fakeLog } from '../fakeLog'
+import { fakeLog } from '../fake/fakeLog'
 import fixtures from './fixtures'
 
 for (const fixture of fixtures) {

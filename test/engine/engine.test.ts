@@ -18,7 +18,7 @@ import { CurrencyEngine } from '../../src/common/engine'
 import { CurrencyPlugin } from '../../src/common/plugin'
 import { WalletLocalData } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
-import { fakeLog } from '../fakeLog'
+import { fakeLog } from '../fake/fakeLog'
 import { engineTestTxs } from './engine.txs'
 import fixtures from './fixtures'
 

@@ -9,7 +9,7 @@ import {
 } from '../../src/ethereum/fees/feeProviders'
 import { currencyInfo as ethCurrencyInfo } from '../../src/ethereum/info/ethInfo'
 import { currencyInfo as ftmCurrencyInfo } from '../../src/ethereum/info/ftmInfo'
-import { fakeLog } from '../fakeLog'
+import { fakeLog } from '../fake/fakeLog'
 
 // TODO: Loop for all plugins
 describe(`FTM Network Fees`, function () {

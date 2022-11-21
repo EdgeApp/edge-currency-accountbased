@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
 import { TezosEngine } from '../../src/tezos/tezosEngine'
-import { fakeLog } from '../fakeLog'
+import { fakeLog } from '../fake/fakeLog'
 
 describe(`Tezos engine`, function () {
   const fakeIo = makeFakeIo()
