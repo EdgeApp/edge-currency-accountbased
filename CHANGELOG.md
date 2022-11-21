@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.18.10 (2022-11-21)
+
+- AVAX: Add USDC token
+- Extend makeSpend to support token amount metadata for smart-contract calls
+
 ## 0.18.9 (2022-11-15)
 
 - Fix Travis builds
