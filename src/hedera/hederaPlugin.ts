@@ -24,11 +24,8 @@ const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaPlugin extends CurrencyPlugin {
-  pluginId: string
-
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
     super(io, currencyInfo.pluginId, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
@@ -43,6 +40,7 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
+    const { pluginId } = this.currencyInfo
     try {
       let privateMnemonic
       let privateKey
@@ -67,8 +65,8 @@ export class HederaPlugin extends CurrencyPlugin {
       }
 
       return {
-        [`${this.pluginId}Mnemonic`]: privateMnemonic,
-        [`${this.pluginId}Key`]: privateKey
+        [`${pluginId}Mnemonic`]: privateMnemonic,
+        [`${pluginId}Key`]: privateKey
       }
     } catch (e: any) {
       throw new Error('InvalidPrivateKey')
@@ -76,19 +74,20 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
+    const { pluginId } = this.currencyInfo
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
     if (
       walletInfo.keys == null ||
-      walletInfo.keys?.[`${this.pluginId}Key`] == null
+      walletInfo.keys?.[`${pluginId}Key`] == null
     ) {
       throw new Error('Invalid private key')
     }
 
     const privateKey = hedera.Ed25519PrivateKey.fromString(
-      walletInfo.keys[`${this.pluginId}Key`]
+      walletInfo.keys[`${pluginId}Key`]
     )
 
     return {
@@ -97,13 +96,14 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
+    const { pluginId } = this.currencyInfo
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
     } = this.parseUriCommon(
       this.currencyInfo,
       uri,
-      { [`${this.pluginId}`]: true },
+      { [`${pluginId}`]: true },
       this.currencyInfo.currencyCode
     )
 
@@ -123,6 +123,7 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async encodeUri(obj: EdgeEncodeUri): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { publicAddress, nativeAmount } = obj
     if (!validAddress(publicAddress)) {
       throw new Error('InvalidPublicAddressError')
@@ -142,7 +143,7 @@ export class HederaPlugin extends CurrencyPlugin {
     }
     const amount = div(nativeAmount, denom.multiplier, 8)
 
-    return this.encodeUriCommon(obj, this.pluginId, amount)
+    return this.encodeUriCommon(obj, pluginId, amount)
   }
 }
 

@@ -20,14 +20,12 @@ import { currencyInfo } from './zecInfo'
 import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
 
 export class ZcashPlugin extends CurrencyPlugin {
-  pluginId: string
   KeyTool: any
   AddressTool: any
   network: string
 
   constructor(io: EdgeIo, KeyTool: any, AddressTool: any) {
     super(io, `${currencyInfo.pluginId}`, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
     this.network =
       currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
     this.KeyTool = KeyTool
@@ -36,8 +34,10 @@ export class ZcashPlugin extends CurrencyPlugin {
 
   // TODO: Replace with RPC method
   async getNewWalletBirthdayBlockheight(): Promise<number> {
+    const { pluginId } = this.currencyInfo
+
     const response = await this.io.fetch(
-      `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${this.pluginId}/stats`
+      `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${pluginId}/stats`
     )
     return asBlockchairInfo(await response.json()).data.best_block_height
   }
@@ -52,6 +52,7 @@ export class ZcashPlugin extends CurrencyPlugin {
 
   // will actually use MNEMONIC version of private key
   async importPrivateKey(userInput: string): Promise<Object> {
+    const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(userInput)
     if (!isValid)
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
@@ -64,9 +65,9 @@ export class ZcashPlugin extends CurrencyPlugin {
     const birthdayHeight = await this.getNewWalletBirthdayBlockheight()
 
     return {
-      [`${this.pluginId}Mnemonic`]: userInput,
-      [`${this.pluginId}SpendKey`]: spendKey,
-      [`${this.pluginId}BirthdayHeight`]: birthdayHeight
+      [`${pluginId}Mnemonic`]: userInput,
+      [`${pluginId}SpendKey`]: spendKey,
+      [`${pluginId}BirthdayHeight`]: birthdayHeight
     }
   }
 
@@ -81,11 +82,12 @@ export class ZcashPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
+    const { pluginId } = this.currencyInfo
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
-    const mnemonic = walletInfo.keys[`${this.pluginId}Mnemonic`]
+    const mnemonic = walletInfo.keys[`${pluginId}Mnemonic`]
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
@@ -108,7 +110,8 @@ export class ZcashPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { [this.pluginId]: true }
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
 
     const {
       edgeParsedUri,
@@ -133,6 +136,7 @@ export class ZcashPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
     if (!(await this.isValidAddress(publicAddress))) {
@@ -152,7 +156,7 @@ export class ZcashPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, `${this.pluginId}`, amount)
+    const encodedUri = this.encodeUriCommon(obj, `${pluginId}`, amount)
     return encodedUri
   }
 }

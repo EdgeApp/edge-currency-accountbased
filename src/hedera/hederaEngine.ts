@@ -496,7 +496,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
       throw new Error('missing otherParam transferTx')
     }
 
-    const privateKey = this.walletInfo.keys[`${this.hederaPlugin.pluginId}Key`]
+    const privateKey = this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
 
     if (privateKey == null) {
       throw new Error('missing privateKey in walletInfo')
@@ -554,8 +554,8 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   getDisplayPrivateSeed() {
     return (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.hederaPlugin.pluginId}Mnemonic`] ||
-      this.walletInfo.keys[`${this.hederaPlugin.pluginId}Key`] ||
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ||
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ||
       ''
     )
   }

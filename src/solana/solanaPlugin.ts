@@ -35,14 +35,12 @@ const createKeyPair = async (
 }
 
 export class SolanaPlugin extends CurrencyPlugin {
-  pluginId: string
-
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
     super(io, currencyInfo.pluginId, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
 
@@ -52,8 +50,8 @@ export class SolanaPlugin extends CurrencyPlugin {
     )
 
     return {
-      [`${this.pluginId}Mnemonic`]: mnemonic,
-      [`${this.pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+      [`${pluginId}Mnemonic`]: mnemonic,
+      [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
       publicKey: keypair.publicKey.toBase58()
     }
   }
@@ -69,14 +67,15 @@ export class SolanaPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
-    if (walletInfo.keys[`${this.pluginId}Mnemonic`] == null) {
+    if (walletInfo.keys[`${pluginId}Mnemonic`] == null) {
       throw new Error('Missing mnemonic')
     }
     const keys = await this.importPrivateKey(
-      walletInfo.keys[`${this.pluginId}Mnemonic`]
+      walletInfo.keys[`${pluginId}Mnemonic`]
     )
     return { publicKey: keys.publicKey.toString() }
   }
@@ -86,7 +85,8 @@ export class SolanaPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { [this.pluginId]: true }
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,
@@ -114,6 +114,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -133,7 +134,7 @@ export class SolanaPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, this.pluginId, amount)
+    const encodedUri = this.encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }
 }

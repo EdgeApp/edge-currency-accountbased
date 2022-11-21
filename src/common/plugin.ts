@@ -24,12 +24,10 @@ type ParsedUri = parse<Record<string, string | undefined>>
 // TODO: pass in denoms pull code into common
 export class CurrencyPlugin {
   io: EdgeIo
-  pluginId: string
   currencyInfo: EdgeCurrencyInfo
 
   constructor(io: EdgeIo, pluginId: string, currencyInfo: EdgeCurrencyInfo) {
     this.io = io
-    this.pluginId = pluginId
     this.currencyInfo = currencyInfo
   }
 

@@ -383,9 +383,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     const keypair = Keypair.fromSecretKey(
       Uint8Array.from(
         Buffer.from(
-          this.walletInfo.keys[
-            `${this.currencyPlugin.currencyInfo.pluginId}Key`
-          ],
+          this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
           'hex'
         )
       )
@@ -427,9 +425,9 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     ) {
-      return this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     }
     return ''
   }

@@ -407,7 +407,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       const keyring = new Keyring({ ss58Format: 0 })
       // @ts-expect-error
       this.keypair = keyring.addFromUri(
-        this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+        this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
       )
     }
 
@@ -465,9 +465,9 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     ) {
-      return this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     }
     return ''
   }

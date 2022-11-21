@@ -51,7 +51,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     makeSynchronizer: any
   ) {
     super(currencyPlugin, walletInfo, opts)
-    this.pluginId = currencyPlugin.pluginId
+    this.pluginId = this.currencyInfo.pluginId
     this.makeSynchronizer = makeSynchronizer
   }
 

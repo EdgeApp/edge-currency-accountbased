@@ -28,29 +28,27 @@ import {
 } from './polkadotUtils'
 
 export class PolkadotPlugin extends CurrencyPlugin {
-  pluginId: string
-
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
   polkadotApi: ApiPromise | undefined
   polkadotApiSubscribers: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
     super(io, currencyInfo.pluginId, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
     this.polkadotApiSubscribers = {}
   }
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     if (validateMnemonic(userInput)) {
       const miniSecret = mnemonicToMiniSecret(userInput)
       const { secretKey } = ed25519PairFromSeed(miniSecret)
       return {
-        [`${this.pluginId}Mnemonic`]: userInput,
-        [`${this.pluginId}Key`]: Buffer.from(secretKey).toString('hex')
+        [`${pluginId}Mnemonic`]: userInput,
+        [`${pluginId}Key`]: Buffer.from(secretKey).toString('hex')
       }
     } else if (isHex(userInput)) {
       return {
-        [`${this.pluginId}Key`]: userInput
+        [`${pluginId}Key`]: userInput
       }
     } else {
       throw new Error('InvalidPrivateKey')
@@ -68,8 +66,9 @@ export class PolkadotPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     const keyring = new Keyring({ ss58Format: 0 })
-    const pair = keyring.addFromUri(walletInfo.keys[`${this.pluginId}Mnemonic`])
+    const pair = keyring.addFromUri(walletInfo.keys[`${pluginId}Mnemonic`])
     return {
       publicKey: pair.address
     }
@@ -80,7 +79,8 @@ export class PolkadotPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { [this.pluginId]: true }
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
 
     const { parsedUri, edgeParsedUri } = this.parseUriCommon(
       this.currencyInfo,
@@ -108,6 +108,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
     if (!isAddress(publicAddress)) {
@@ -127,7 +128,7 @@ export class PolkadotPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 10)
     }
-    const encodedUri = this.encodeUriCommon(obj, this.pluginId, amount)
+    const encodedUri = this.encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }
 
