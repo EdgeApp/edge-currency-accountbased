@@ -1,4 +1,6 @@
-import { add, eq, lt, mul } from 'biggystring'
+import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
+import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
+import { add, eq, gt, lt, mul } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
@@ -7,12 +9,15 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject
+  InsufficientFundsError,
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
 import {
   asyncWaterfall,
+  getDenomInfo,
   hexToDecimal,
   makeMutex,
   padHex,
@@ -22,6 +27,7 @@ import { TronTools } from './tronPlugin'
 import {
   asAccountResources,
   asChainParams,
+  asEstimateEnergy,
   asTransaction,
   asTRC20Balance,
   asTRC20Transaction,
@@ -34,9 +40,16 @@ import {
   ReferenceBlock,
   TronAccountResources,
   TronNetworkFees,
+  TronSettings,
+  TronTxParams,
   TxQueryCache
 } from './tronTypes'
-import { base58ToHexAddress, hexToBase58Address } from './tronUtils'
+import {
+  base58ToHexAddress,
+  encodeTRC20Transfer,
+  hexToBase58Address,
+  TronScan
+} from './tronUtils'
 
 const queryTxMutex = makeMutex()
 
@@ -48,6 +61,7 @@ const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000
 type TronFunction =
   | 'trx_blockNumber'
   | 'trx_chainParams'
+  | 'trx_estimateEnergy'
   | 'trx_getAccountResource'
   | 'trx_getBalance'
   | 'trx_getTransactionInfo'
@@ -56,9 +70,13 @@ type TronFunction =
 export class TronEngine extends CurrencyEngine<TronTools> {
   fetchCors: EdgeFetchFunction
   log: EdgeLog
-  recentBlock: ReferenceBlock
+  readonly recentBlock: ReferenceBlock
   accountResources: TronAccountResources
   networkFees: TronNetworkFees
+  settings: TronSettings
+  accountExistsCache: { [address: string]: boolean }
+  energyEstimateCache: { [addressAndContract: string]: number }
+  tronscan: TronScan
 
   constructor(
     currencyPlugin: TronTools,
@@ -69,6 +87,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     super(currencyPlugin, walletInfo, opts)
     this.fetchCors = fetchCors
     this.log = opts.log
+    this.settings = this.currencyInfo.defaultSettings
+      .otherSettings as TronSettings
     this.recentBlock = {
       hash: '0',
       number: 0,
@@ -83,6 +103,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       bandwidthFeeSUN: 1000, // network default
       energyFeeSUN: 280 // network default
     }
+    this.tronscan = new TronScan(this.recentBlock)
+    this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
+    this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
   }
@@ -572,6 +595,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         break
 
       case 'trx_blockNumber':
+      case 'trx_estimateEnergy':
       case 'trx_getAccountResource':
       case 'trx_getBalance':
       case 'trx_getTransactionInfo':
@@ -613,6 +637,199 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     return out.result
   }
 
+  // Determines how much TRX the tx will cost after accounting for bandwidth and energy
+  // TRX transfers to new accounts will consume TRX and bandwidth (or equivalent TRX)
+  // TRX transfers to existing accounts will bandwidth or TRX
+  // TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
+  // TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
+  async calcTxFee(
+    receiverAddress: string,
+    unsignedTxHex: string,
+    tokenOpts?: {
+      contractAddress: string
+      data: string
+    }
+  ): Promise<string> {
+    const denom = getDenomInfo(
+      this.currencyInfo,
+      this.currencyInfo.currencyCode
+    )
+    if (denom == null) throw new Error('calcTxFee unknown denom')
+
+    /// /////////
+    // Energy //
+    /// /////////
+
+    // Energy is only needed for smart contract calls
+
+    let energyNeeded = 0
+
+    if (tokenOpts != null) {
+      const { contractAddress, data } = tokenOpts
+
+      if (
+        this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ==
+        null
+      ) {
+        // If we don't have this address/contract address combo in the cache, go query it
+        const body = {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          contract_address: base58ToHexAddress(contractAddress),
+          function_selector: 'transfer(address,uint256)',
+          parameter: data.slice(8) // Remove function id bytes
+        }
+
+        try {
+          const res = await this.multicastServers(
+            'trx_estimateEnergy',
+            '/wallet/triggerconstantcontract',
+            body
+          )
+          const json = asEstimateEnergy(res)
+          const status = json.transaction.ret[0]?.ret
+
+          // In practice, ret is an empty object if successful. Other methods return SUCCESS in this field so we're looking for either option.
+          if (status != null && status !== 'SUCCESS') {
+            throw new Error('calcTxFee Failed to estimate fee')
+          }
+
+          this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] =
+            json.energy_used
+        } catch (e) {
+          this.log.warn('trx_estimateEnergy error. Using a high default.', e)
+        }
+      }
+
+      energyNeeded = Math.max(
+        (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
+          100000) - this.accountResources.energy,
+        0
+      )
+    }
+    this.log('Account energy: ', this.accountResources.energy)
+    this.log('Energy needed: ', energyNeeded)
+
+    /// ////////////
+    // Bandwidth //
+    /// ////////////
+
+    // Bandwidth is dependent on size of final transaction unless a TRX transaction creates a new account and then it's 100
+
+    let bandwidthNeeded =
+      unsignedTxHex.length / 2 + // hex2bytes
+      65 + // signature bytes
+      64 + // MAX_RESULT_SIZE_IN_TX
+      5 // protobuf overhead
+
+    if (this.accountExistsCache[receiverAddress] === undefined) {
+      try {
+        // Determine if recipient exists
+        const res = await this.multicastServers(
+          'trx_getAccountResource',
+          '/wallet/getaccountresource',
+          { address: base58ToHexAddress(receiverAddress) }
+        )
+
+        this.accountExistsCache[receiverAddress] =
+          asMaybe(asAccountResources)(res) != null
+      } catch (e: any) {
+        this.log.error(
+          'calcTxFee error: Failed to call trx_getAccountResource. Allowing the user to proceed assuming high fee.',
+          e
+        )
+      }
+    }
+
+    // The default bandwidth value is appropriate for all cases except for a TRX transaction that creates a new account
+    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+      bandwidthNeeded = 100
+    }
+
+    // Bandwidth is paid with bandwidth or TRX (unlike energy)
+    if (bandwidthNeeded < this.accountResources.bandwidth) {
+      bandwidthNeeded = 0
+    }
+
+    this.log('Account bandwidth: ', this.accountResources.bandwidth)
+    this.log('Bandwidth needed: ', bandwidthNeeded)
+
+    /// /////////////
+    // New Account //
+    /// /////////////
+
+    let createNewAccountFee = 0
+
+    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+      // Fee is the variable create account fee plus 1 TRX
+      createNewAccountFee =
+        this.networkFees.createAccountFeeSUN + parseInt(denom.multiplier)
+    }
+
+    this.log('Create account fee: ', createNewAccountFee)
+
+    // The fee isn't a transaction parameter so these calculations are to show the user ahead of time
+    // what the fee will be. Using a fallback value doesn't affect the actual transaction sent out.
+
+    const totalSUN =
+      energyNeeded * this.networkFees.energyFeeSUN +
+      bandwidthNeeded * this.networkFees.bandwidthFeeSUN +
+      createNewAccountFee
+
+    this.log('Total fee in SUN: ', totalSUN)
+
+    return totalSUN.toString()
+  }
+
+  // Returns unsigned transaction as object and hex string. Function is actually synchronous because of the overloaded troncan client.
+  async txBuilder(
+    params: TronTxParams
+  ): Promise<{ transaction: any; transactionHex: string }> {
+    const { currencyCode, toAddress, nativeAmount, data } = params
+
+    let feeLimit: number | undefined
+    let contractJson: any
+
+    if (currencyCode === this.currencyInfo.currencyCode) {
+      contractJson = {
+        parameter: {
+          value: {
+            to_address: base58ToHexAddress(toAddress),
+            owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+            amount: parseInt(nativeAmount)
+          }
+        },
+        type: 'TransferContract'
+      }
+    } else {
+      const metaToken = this.allTokens.find(
+        token => token.currencyCode === currencyCode
+      )
+      if (metaToken?.contractAddress == null) {
+        throw new Error(`txBuilder unknown currency code ${currencyCode}`)
+      }
+
+      contractJson = {
+        parameter: {
+          value: {
+            owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+            contract_address: base58ToHexAddress(metaToken.contractAddress),
+            data,
+            call_value: 0
+          }
+        },
+        type: 'TriggerSmartContract'
+      }
+      feeLimit = this.settings.defaultFeeLimit
+    }
+    const transaction = contractJsonToProtobuf(contractJson)
+    await this.tronscan.addRef(transaction, feeLimit)
+    const transactionHex = byteArray2hexStr(
+      transaction.getRawData().serializeBinary()
+    )
+
+    return { transaction, transactionHex }
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -651,7 +868,93 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
+      edgeSpendInfoIn
+    )
+
+    const isTokenTransfer = currencyCode !== this.currencyInfo.currencyCode
+
+    // Tron can only have one output
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const { nativeAmount, publicAddress, otherParams } =
+      edgeSpendInfo.spendTargets[0]
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+    const data: string | undefined =
+      otherParams?.data ??
+      (currencyCode !== this.currencyInfo.currencyCode
+        ? encodeTRC20Transfer(publicAddress, nativeAmount)
+        : undefined)
+    const metaToken = isTokenTransfer
+      ? this.allTokens.find(token => token.currencyCode === currencyCode)
+      : undefined
+
+    const txOtherParams: TronTxParams = {
+      currencyCode,
+      toAddress: publicAddress,
+      nativeAmount,
+      contractAddress: metaToken?.contractAddress,
+      data
+    }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+
+    const tokenOpts =
+      metaToken?.contractAddress != null && data != null
+        ? { contractAddress: metaToken?.contractAddress, data }
+        : undefined
+
+    const totalFeeSUN = await this.calcTxFee(
+      publicAddress,
+      transactionHex,
+      tokenOpts
+    )
+
+    const balanceTrx =
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+
+    if (gt(nativeAmount, balanceTrx)) {
+      throw new InsufficientFundsError({
+        currencyCode: this.currencyInfo.currencyCode,
+        networkFee: totalFeeSUN
+      })
+    }
+    let edgeNativeAmount: string
+    let networkFee: string
+    let parentNetworkFee: string | undefined
+
+    if (isTokenTransfer) {
+      edgeNativeAmount = nativeAmount
+      networkFee = '0'
+      parentNetworkFee = totalFeeSUN
+    } else {
+      edgeNativeAmount = add(nativeAmount, totalFeeSUN)
+      networkFee = totalFeeSUN
+    }
+
+    // **********************************
+    // Create the unsigned EdgeTransaction
+    const edgeTransaction: EdgeTransaction = {
+      txid: '', // txid
+      date: 0, // date
+      currencyCode, // currencyCode
+      blockHeight: 0, // blockHeight
+      nativeAmount: mul(edgeNativeAmount, '-1'), // nativeAmount
+      networkFee, // networkFee
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '', // signedTx
+      otherParams: txOtherParams // otherParams
+    }
+
+    if (parentNetworkFee != null) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
+    }
+
+    return edgeTransaction
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {

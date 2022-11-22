@@ -20,6 +20,7 @@ declare module '@fioprotocol/fiosdk' {
 declare module '@fioprotocol/fiosdk/lib/entities/EndPoint'
 declare module '@fioprotocol/fiosdk/lib/transactions/Transactions'
 declare module '@fioprotocol/fiosdk/lib/utils/constants'
+declare module '@tronscan/client'
 declare module '@tronscan/client/src/lib/code' {
   export const hexStr2byteArray: (address: string) => Uint8Array
 }
@@ -31,6 +32,9 @@ declare module '@tronscan/client/src/utils/crypto' {
   export const isAddressValid: (address: string) => boolean
   export const getBase58CheckAddress: (bytes: Uint8Array) => string
   export const pkToAddress: (privateKey: string) => string
+}
+declare module '@tronscan/client/src/utils/tronWeb' {
+  export const contractJsonToProtobuf: (json: Object) => any
 }
 declare module 'eosjs-api'
 declare module 'eosjs-ecc'
