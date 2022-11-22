@@ -1,4 +1,5 @@
-import { pkToAddress } from '@tronscan/client/src/utils/crypto'
+import { isAddressValid, pkToAddress } from '@tronscan/client/src/utils/crypto'
+import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import {
   EdgeCorePluginOptions,
@@ -17,7 +18,8 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
-import { getFetchCors } from '../common/utils'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
+import { getDenomInfo, getFetchCors } from '../common/utils'
 import { TronEngine } from './tronEngine'
 import { currencyInfo } from './tronInfo'
 import { TronOtherdata } from './tronTypes'
@@ -89,14 +91,48 @@ export class TronTools implements EdgeCurrencyTools {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const networks = { [this.currencyInfo.pluginId]: true }
+
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
+      this.currencyInfo,
+      uri,
+      networks,
+      currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
+    )
+    const address = edgeParsedUri.publicAddress ?? ''
+
+    if (!isAddressValid(address)) {
+      throw new Error('InvalidPublicAddressError')
+    }
+
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+    return edgeParsedUri
   }
 
   async encodeUri(
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const { publicAddress, nativeAmount, currencyCode } = obj
+
+    if (!isAddressValid(publicAddress)) {
+      throw new Error('InvalidPublicAddressError')
+    }
+    let amount
+    if (typeof nativeAmount === 'string') {
+      const denom = getDenomInfo(
+        this.currencyInfo,
+        currencyCode ?? this.currencyInfo.currencyCode,
+        customTokens
+      )
+      if (denom == null) {
+        throw new Error('InternalErrorInvalidCurrencyCode')
+      }
+      amount = div(nativeAmount, denom.multiplier, 18)
+    }
+    const encodedUri = encodeUriCommon(obj, this.currencyInfo.pluginId, amount)
+    return encodedUri
   }
 }
 
