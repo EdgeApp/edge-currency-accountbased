@@ -13,6 +13,7 @@ import { makePolkadotPlugin } from './polkadot/polkadotInfo'
 import { makeSolanaPlugin } from './solana/solanaInfo'
 import { makeStellarPlugin } from './stellar/stellarPlugin'
 import { makeTezosPlugin } from './tezos/tezosPlugin'
+import { makeTronPlugin } from './tron/tronPlugin'
 import { makeRipplePlugin } from './xrp/xrpPlugin'
 import { makeZcashPlugin } from './zcash/zecPlugin'
 
@@ -28,6 +29,7 @@ const plugins = {
   solana: makeSolanaPlugin,
   stellar: makeStellarPlugin,
   tezos: makeTezosPlugin,
+  tron: makeTronPlugin,
   zcash: makeZcashPlugin
 }
 
