@@ -1689,5 +1689,3 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
     return out
   }
 }
-
-export { CurrencyEngine }

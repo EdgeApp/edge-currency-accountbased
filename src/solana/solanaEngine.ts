@@ -443,5 +443,3 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

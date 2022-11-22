@@ -1253,5 +1253,3 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     super.addCustomToken(obj, contractAddress.toLowerCase())
   }
 }
-
-export { CurrencyEngine }

@@ -523,5 +523,3 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

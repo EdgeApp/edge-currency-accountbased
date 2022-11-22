@@ -517,5 +517,3 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

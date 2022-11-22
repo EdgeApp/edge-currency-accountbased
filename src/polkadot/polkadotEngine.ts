@@ -481,5 +481,3 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

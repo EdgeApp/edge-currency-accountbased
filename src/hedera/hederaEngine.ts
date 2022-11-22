@@ -572,5 +572,3 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

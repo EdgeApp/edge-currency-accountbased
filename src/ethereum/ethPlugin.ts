@@ -28,8 +28,6 @@ import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import { ethPlugins } from './ethInfos'
 
-export { calcMiningFee } from './fees/ethMiningFees' // may be tricky for RSK
-
 export class EthereumPlugin extends CurrencyPlugin {
   constructor(
     io: EdgeIo,

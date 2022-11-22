@@ -455,5 +455,3 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
     }
   }
 }
-
-export { CurrencyEngine }

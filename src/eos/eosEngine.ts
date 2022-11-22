@@ -1301,5 +1301,3 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     return out
   }
 }
-
-export { CurrencyEngine }

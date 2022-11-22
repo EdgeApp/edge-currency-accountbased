@@ -450,5 +450,3 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     return this.walletInfo.keys?.publicKey ?? ''
   }
 }
-
-export { CurrencyEngine }

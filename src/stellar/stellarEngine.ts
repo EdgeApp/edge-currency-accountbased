@@ -634,5 +634,3 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }
