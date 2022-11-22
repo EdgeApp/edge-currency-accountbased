@@ -761,12 +761,15 @@ export class EthereumNetwork {
         })
 
         evmScanApiServers.forEach(baseUrl => {
-          promises.push(
-            broadcastWrapper(
-              this.broadcastEtherscan(params[0], baseUrl),
-              'etherscan'
+          // blockscout doesn't support Geth/Parity Proxy (eth_sendRawTransaction/broadcasting tx) for both ethereum classic and rsk
+          if (!baseUrl.includes('blockscout')) {
+            promises.push(
+              broadcastWrapper(
+                this.broadcastEtherscan(params[0], baseUrl),
+                'etherscan'
+              )
             )
-          )
+          }
         })
 
         blockbookServers.forEach(baseUrl => {
