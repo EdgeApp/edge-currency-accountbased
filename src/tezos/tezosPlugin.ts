@@ -18,7 +18,7 @@ import { TezosEngine } from './tezosEngine'
 import { currencyInfo } from './tezosInfo'
 import { UriTransaction } from './tezosTypes'
 
-export class TezosPlugin implements EdgeCurrencyTools {
+export class TezosTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   tezosRpcNodes: Object[]
@@ -151,10 +151,10 @@ export function makeTezosPlugin(
   const { io } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<TezosPlugin>
-  async function makeCurrencyTools(): Promise<TezosPlugin> {
+  let toolsPromise: Promise<TezosTools>
+  async function makeCurrencyTools(): Promise<TezosTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new TezosPlugin(io))
+    toolsPromise = Promise.resolve(new TezosTools(io))
     return await toolsPromise
   }
   async function makeCurrencyEngine(

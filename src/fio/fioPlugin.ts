@@ -50,7 +50,7 @@ export function checkAddress(address: string): boolean {
   return start && length
 }
 
-export class FioPlugin implements EdgeCurrencyTools {
+export class FioTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -161,10 +161,10 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const baseUrl = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)[0]
   const connection = new FIOSDK('', '', baseUrl, fetchCors, undefined, tpid)
 
-  let toolsPromise: Promise<FioPlugin>
-  async function makeCurrencyTools(): Promise<FioPlugin> {
+  let toolsPromise: Promise<FioTools>
+  async function makeCurrencyTools(): Promise<FioTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new FioPlugin(io))
+    toolsPromise = Promise.resolve(new FioTools(io))
     return await toolsPromise
   }
 

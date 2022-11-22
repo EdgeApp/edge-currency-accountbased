@@ -28,7 +28,7 @@ import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import { ethPlugins } from './ethInfos'
 
-export class EthereumPlugin implements EdgeCurrencyTools {
+export class EthereumTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -374,10 +374,10 @@ export function makeEthereumBasedPluginInner(
   const { io, initOptions } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<EthereumPlugin>
-  async function makeCurrencyTools(): Promise<EthereumPlugin> {
+  let toolsPromise: Promise<EthereumTools>
+  async function makeCurrencyTools(): Promise<EthereumTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new EthereumPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new EthereumTools(io, currencyInfo))
 
     // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
     // a user from reconnecting to an "active" but invisible connection. Future enhancement

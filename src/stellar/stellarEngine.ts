@@ -21,7 +21,7 @@ import {
   getOtherParams,
   promiseAny
 } from '../common/utils'
-import { StellarPlugin } from '../stellar/stellarPlugin'
+import { StellarTools } from '../stellar/stellarPlugin'
 import {
   asFeeStats,
   StellarAccount,
@@ -44,8 +44,7 @@ type StellarServerFunction =
   | 'ledgers'
   | 'submitTransaction'
 
-export class StellarEngine extends CurrencyEngine<StellarPlugin> {
-  stellarPlugin: StellarPlugin
+export class StellarEngine extends CurrencyEngine<StellarTools> {
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
@@ -55,12 +54,11 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
   otherData: StellarWalletOtherData
 
   constructor(
-    currencyPlugin: StellarPlugin,
+    tools: StellarTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.stellarPlugin = currencyPlugin
+    super(tools, walletInfo, opts)
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -90,7 +88,7 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         break
 
       case 'loadAccount':
-        funcs = this.stellarPlugin.stellarApiServers.map(api => async () => {
+        funcs = this.tools.stellarApiServers.map(api => async () => {
           // @ts-expect-error
           const result = await api[func](...params)
           // @ts-expect-error
@@ -100,50 +98,46 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
         break
 
       case 'ledgers':
-        funcs = this.stellarPlugin.stellarApiServers.map(
-          serverApi => async () => {
-            const result = await serverApi
-              // @ts-expect-error
-              .ledgers()
-              .order('desc')
-              .limit(1)
-              .call()
-            const blockHeight = result.records[0].sequence
-            if (
-              this.walletLocalData.blockHeight <= blockHeight &&
-              this.currencyPlugin.highestTxHeight <= blockHeight
-            ) {
-              // @ts-expect-error
-              return { server: serverApi.serverName, result }
-            } else {
-              throw new Error('Height out of date')
-            }
+        funcs = this.tools.stellarApiServers.map(serverApi => async () => {
+          const result = await serverApi
+            // @ts-expect-error
+            .ledgers()
+            .order('desc')
+            .limit(1)
+            .call()
+          const blockHeight = result.records[0].sequence
+          if (
+            this.walletLocalData.blockHeight <= blockHeight &&
+            this.tools.highestTxHeight <= blockHeight
+          ) {
+            // @ts-expect-error
+            return { server: serverApi.serverName, result }
+          } else {
+            throw new Error('Height out of date')
           }
-        )
+        })
         out = await asyncWaterfall(funcs)
         break
 
       case 'payments':
-        funcs = this.stellarPlugin.stellarApiServers.map(
-          serverApi => async () => {
-            const result = await serverApi
-              // @ts-expect-error
-              .payments()
-              .limit(TX_QUERY_PAGING_LIMIT)
-              .cursor(this.otherData.lastPagingToken)
-              .forAccount(...params)
-              .call()
+        funcs = this.tools.stellarApiServers.map(serverApi => async () => {
+          const result = await serverApi
             // @ts-expect-error
-            return { server: serverApi.serverName, result }
-          }
-        )
+            .payments()
+            .limit(TX_QUERY_PAGING_LIMIT)
+            .cursor(this.otherData.lastPagingToken)
+            .forAccount(...params)
+            .call()
+          // @ts-expect-error
+          return { server: serverApi.serverName, result }
+        })
         out = await asyncWaterfall(funcs)
         break
 
       // Functions that should multicast to all servers
       case 'submitTransaction':
         out = await promiseAny(
-          this.stellarPlugin.stellarApiServers.map(async serverApi => {
+          this.tools.stellarApiServers.map(async serverApi => {
             // @ts-expect-error
             const result = await serverApi[func](...params)
             // @ts-expect-error
@@ -226,8 +220,8 @@ export class StellarEngine extends CurrencyEngine<StellarPlugin> {
       }
     }
 
-    if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
-      this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
+    if (edgeTransaction.blockHeight > this.tools.highestTxHeight) {
+      this.tools.highestTxHeight = edgeTransaction.blockHeight
     }
     this.addTransaction(currencyCode, edgeTransaction)
     return tx.paging_token

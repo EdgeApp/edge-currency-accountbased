@@ -11,7 +11,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { cleanTxLogs } from './../common/utils'
-import { ZcashPlugin } from './zecPlugin'
+import { ZcashTools } from './zecPlugin'
 import {
   ZcashInitializerConfig,
   ZcashOtherData,
@@ -22,7 +22,7 @@ import {
   ZcashTransaction
 } from './zecTypes'
 
-export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
+export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
   // @ts-expect-error
   otherData: ZcashOtherData
@@ -45,12 +45,12 @@ export class ZcashEngine extends CurrencyEngine<ZcashPlugin> {
   ) => Promise<ZcashSynchronizer>
 
   constructor(
-    currencyPlugin: ZcashPlugin,
+    tools: ZcashTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     makeSynchronizer: any
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(tools, walletInfo, opts)
     this.pluginId = this.currencyInfo.pluginId
     this.makeSynchronizer = makeSynchronizer
   }

@@ -35,7 +35,7 @@ const createKeyPair = async (
   return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
 }
 
-export class SolanaPlugin implements EdgeCurrencyTools {
+export class SolanaTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -151,10 +151,10 @@ export function makeSolanaPluginInner(
   const { io } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<SolanaPlugin>
-  async function makeCurrencyTools(): Promise<SolanaPlugin> {
+  let toolsPromise: Promise<SolanaTools>
+  async function makeCurrencyTools(): Promise<SolanaTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new SolanaPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new SolanaTools(io, currencyInfo))
     return await toolsPromise
   }
 

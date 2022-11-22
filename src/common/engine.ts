@@ -47,7 +47,7 @@ const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 export class CurrencyEngine<
   T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
 > {
-  currencyPlugin: T
+  tools: T
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
@@ -77,15 +77,15 @@ export class CurrencyEngine<
   otherData: Object
 
   constructor(
-    currencyPlugin: T,
+    tools: T,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const { io, currencyInfo } = currencyPlugin
+    const { io, currencyInfo } = tools
     const { currencyCode } = currencyInfo
     const { walletLocalDisklet, callbacks } = opts
 
-    this.currencyPlugin = currencyPlugin
+    this.tools = tools
     this.io = io
     this.log = opts.log
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
@@ -268,7 +268,7 @@ export class CurrencyEngine<
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.walletInfo.keys.publicKey) {
-      const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
+      const pubKeys = await this.tools.derivePublicKey(this.walletInfo)
       this.walletInfo.keys.publicKey = pubKeys.publicKey
     }
 
@@ -333,7 +333,7 @@ export class CurrencyEngine<
         currencyName,
         denominations
       }) =>
-        await this.currencyPlugin
+        await this.tools
           .getTokenId?.({
             currencyCode,
             displayName: currencyName,

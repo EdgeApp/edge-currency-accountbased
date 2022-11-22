@@ -16,7 +16,7 @@ import {
   getOtherParams,
   makeMutex
 } from '../common/utils'
-import { PolkadotPlugin } from './polkadotPlugin'
+import { PolkadotTools } from './polkadotPlugin'
 import {
   asSubscanResponse,
   asTransactions,
@@ -36,19 +36,19 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 const queryTxMutex = makeMutex()
 
-export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
+export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   settings: PolkadotSettings
   api!: ApiPromise
   keypair: Keyring | undefined
   nonce: number
 
   constructor(
-    currencyPlugin: PolkadotPlugin,
+    tools: PolkadotTools,
     walletInfo: EdgeWalletInfo,
     opts: any // EdgeCurrencyEngineOptions,
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    super(tools, walletInfo, opts)
+    this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.nonce = 0
   }
 
@@ -248,9 +248,9 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
-    await this.currencyPlugin.connectApi(this.walletId)
+    await this.tools.connectApi(this.walletId)
     // @ts-expect-error
-    this.api = this.currencyPlugin.polkadotApi
+    this.api = this.tools.polkadotApi
     this.initOtherData()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
@@ -265,7 +265,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     await super.killEngine()
-    await this.currencyPlugin.disconnectApi(this.walletId)
+    await this.tools.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain(): Promise<void> {

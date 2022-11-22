@@ -28,7 +28,7 @@ import {
   WsProvider
 } from './polkadotUtils'
 
-export class PolkadotPlugin implements EdgeCurrencyTools {
+export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -177,10 +177,10 @@ export function makePolkadotPluginInner(
 
   const { io } = opts
 
-  let toolsPromise: Promise<PolkadotPlugin>
-  async function makeCurrencyTools(): Promise<PolkadotPlugin> {
+  let toolsPromise: Promise<PolkadotTools>
+  async function makeCurrencyTools(): Promise<PolkadotTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new PolkadotPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new PolkadotTools(io, currencyInfo))
     return await toolsPromise
   }
 

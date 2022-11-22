@@ -21,7 +21,7 @@ import { ZcashEngine } from './zecEngine'
 import { currencyInfo } from './zecInfo'
 import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
 
-export class ZcashPlugin implements EdgeCurrencyTools {
+export class ZcashTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -178,10 +178,10 @@ export function makeZcashPlugin(
   }
   const RNAccountbased = opts.nativeIo['edge-currency-accountbased']
   const { KeyTool, AddressTool, makeSynchronizer } = RNAccountbased
-  let toolsPromise: Promise<ZcashPlugin>
-  async function makeCurrencyTools(): Promise<ZcashPlugin> {
+  let toolsPromise: Promise<ZcashTools>
+  async function makeCurrencyTools(): Promise<ZcashTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new ZcashPlugin(io, KeyTool, AddressTool))
+    toolsPromise = Promise.resolve(new ZcashTools(io, KeyTool, AddressTool))
     return await toolsPromise
   }
 

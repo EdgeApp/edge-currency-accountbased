@@ -29,7 +29,7 @@ import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { XrpEngine } from './xrpEngine'
 import { currencyInfo } from './xrpInfo'
 
-export class XrpPlugin implements EdgeCurrencyTools {
+export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   rippleApi: Object
@@ -179,10 +179,10 @@ export function makeRipplePlugin(
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
-  let toolsPromise: Promise<XrpPlugin>
-  async function makeCurrencyTools(): Promise<XrpPlugin> {
+  let toolsPromise: Promise<RippleTools>
+  async function makeCurrencyTools(): Promise<RippleTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new XrpPlugin(io))
+    toolsPromise = Promise.resolve(new RippleTools(io))
     return await toolsPromise
   }
 

@@ -32,7 +32,7 @@ const {
   validateMnemonic
 } = crypto
 
-export class BinancePlugin implements EdgeCurrencyTools {
+export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -135,10 +135,10 @@ export function makeBinancePlugin(
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
-  let toolsPromise: Promise<BinancePlugin>
-  async function makeCurrencyTools(): Promise<BinancePlugin> {
+  let toolsPromise: Promise<BinanceTools>
+  async function makeCurrencyTools(): Promise<BinanceTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new BinancePlugin(io))
+    toolsPromise = Promise.resolve(new BinanceTools(io))
     return await toolsPromise
   }
 

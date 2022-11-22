@@ -26,7 +26,7 @@ import { currencyInfo } from './stellarInfo'
 
 const URI_PREFIX = 'web+stellar'
 
-export class StellarPlugin implements EdgeCurrencyTools {
+export class StellarTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   highestTxHeight: number = 0
@@ -189,10 +189,10 @@ export function makeStellarPlugin(
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
-  let toolsPromise: Promise<StellarPlugin>
-  async function makeCurrencyTools(): Promise<StellarPlugin> {
+  let toolsPromise: Promise<StellarTools>
+  async function makeCurrencyTools(): Promise<StellarTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new StellarPlugin(io))
+    toolsPromise = Promise.resolve(new StellarTools(io))
     return await toolsPromise
   }
 

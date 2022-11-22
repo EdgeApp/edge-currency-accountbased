@@ -13,7 +13,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils'
-import { SolanaPlugin } from './solanaPlugin'
+import { SolanaTools } from './solanaPlugin'
 import {
   asRecentBlockHash,
   asRpcBalance,
@@ -36,7 +36,7 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
+export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -48,17 +48,17 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   progressRatio: number
 
   constructor(
-    currencyPlugin: SolanaPlugin,
+    tools: SolanaTools,
     walletInfo: EdgeWalletInfo,
     opts: any, // EdgeCurrencyEngineOptions
     fetchCors: EdgeFetchFunction
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.chainCode = currencyPlugin.currencyInfo.currencyCode
+    super(tools, walletInfo, opts)
+    this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
-    this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
   }

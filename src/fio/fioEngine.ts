@@ -49,7 +49,7 @@ import {
   TxOtherParams
 } from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
-import { FioPlugin } from './fioPlugin'
+import { FioTools } from './fioPlugin'
 import {
   asFioHistoryNodeAction,
   asGetFioBalanceResponse,
@@ -80,9 +80,8 @@ interface PreparedTrx {
   packed_trx: string
 }
 
-export class FioEngine extends CurrencyEngine<FioPlugin> {
+export class FioEngine extends CurrencyEngine<FioTools> {
   fetchCors: EdgeFetchFunction
-  fioPlugin: FioPlugin
   otherMethods: Object
   tpid: string
   recentFioFee: RecentFioFee
@@ -109,16 +108,15 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   }
 
   constructor(
-    currencyPlugin: FioPlugin,
+    tools: FioTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     fetchCors: Function,
     tpid: string
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(tools, walletInfo, opts)
     // @ts-expect-error
     this.fetchCors = fetchCors
-    this.fioPlugin = currencyPlugin
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
 

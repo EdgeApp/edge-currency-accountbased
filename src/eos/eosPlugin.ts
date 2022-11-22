@@ -34,7 +34,7 @@ export function checkAddress(address: string): boolean {
   return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
-export class EosPlugin implements EdgeCurrencyTools {
+export class EosTools implements EdgeCurrencyTools {
   eosServer: Object
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
@@ -184,11 +184,11 @@ export function makeEosBasedPluginInner(
   const { io, log } = opts
   const fetch = getFetchCors(opts)
 
-  let toolsPromise: Promise<EosPlugin>
-  async function makeCurrencyTools(): Promise<EosPlugin> {
+  let toolsPromise: Promise<EosTools>
+  async function makeCurrencyTools(): Promise<EosTools> {
     if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
-      new EosPlugin(io, fetch, currencyInfo, eosJsConfig)
+      new EosTools(io, fetch, currencyInfo, eosJsConfig)
     )
     return await toolsPromise
   }

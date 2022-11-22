@@ -24,7 +24,7 @@ import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
 const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
-export class HederaPlugin implements EdgeCurrencyTools {
+export class HederaTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
@@ -158,11 +158,11 @@ export function makeHederaPluginInner(
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
-  let toolsPromise: Promise<HederaPlugin>
+  let toolsPromise: Promise<HederaTools>
 
-  async function makeCurrencyTools(): Promise<HederaPlugin> {
+  async function makeCurrencyTools(): Promise<HederaTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new HederaPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new HederaTools(io, currencyInfo))
     return await toolsPromise
   }
 
