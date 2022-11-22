@@ -20,7 +20,11 @@ declare module '@fioprotocol/fiosdk' {
 declare module '@fioprotocol/fiosdk/lib/entities/EndPoint'
 declare module '@fioprotocol/fiosdk/lib/transactions/Transactions'
 declare module '@fioprotocol/fiosdk/lib/utils/constants'
+declare module '@tronscan/client/src/utils/bytes' {
+  export const byteArray2hexStr: (bytes: Uint8Array) => string
+}
 declare module '@tronscan/client/src/utils/crypto' {
+  export const decode58Check: (address: string) => Uint8Array
   export const isAddressValid: (address: string) => boolean
   export const pkToAddress: (privateKey: string) => string
 }

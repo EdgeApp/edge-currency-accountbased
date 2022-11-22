@@ -1,4 +1,5 @@
 import { eq } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
@@ -10,21 +11,38 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
-import { asyncWaterfall, shuffleArray } from '../common/utils'
+import {
+  asyncWaterfall,
+  hexToDecimal,
+  padHex,
+  shuffleArray
+} from '../common/utils'
 import { TronTools } from './tronPlugin'
-import { asTronBlockHeight, ReferenceBlock } from './tronTypes'
+import {
+  asAccountResources,
+  asTRC20Balance,
+  asTronBlockHeight,
+  asTRXBalance,
+  ReferenceBlock,
+  TronAccountResources
+} from './tronTypes'
+import { base58ToHexAddress } from './tronUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000
 
-type TronFunction = 'trx_blockNumber'
+type TronFunction =
+  | 'trx_blockNumber'
+  | 'trx_getAccountResource'
+  | 'trx_getBalance'
 
 export class TronEngine extends CurrencyEngine<TronTools> {
   fetchCors: EdgeFetchFunction
   log: EdgeLog
   recentBlock: ReferenceBlock
+  accountResources: TronAccountResources
 
   constructor(
     currencyPlugin: TronTools,
@@ -39,6 +57,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       hash: '0',
       number: 0,
       timestamp: 0
+    }
+    this.accountResources = {
+      bandwidth: 0,
+      energy: 0
     }
   }
 
@@ -107,11 +129,80 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async checkTokenBalances(): Promise<void> {
-    throw new Error('Must implement checkTokenBalances')
+    const address = base58ToHexAddress(this.walletLocalData.publicKey)
+
+    for (const currencyCode of this.enabledTokens) {
+      const metaToken = this.allTokens.find(
+        token => token.currencyCode === currencyCode
+      )
+      if (metaToken?.contractAddress == null) continue
+      const contractAddressHex = base58ToHexAddress(metaToken.contractAddress)
+      const body = {
+        contract_address: contractAddressHex,
+        function_selector: 'balanceOf(address)',
+        parameter: padHex(address, 32),
+        owner_address: address
+      }
+
+      try {
+        const res = await this.multicastServers(
+          'trx_getBalance',
+          '/wallet/triggerconstantcontract',
+          body
+        )
+
+        const balance = asTRC20Balance(res)
+
+        if (metaToken != null) {
+          this.updateBalance(
+            metaToken.currencyCode,
+            hexToDecimal(balance.constant_result[0])
+          )
+        }
+      } catch (e) {
+        this.log.error(`Failed to get balance of ${currencyCode}`, e)
+      }
+    }
   }
 
   async checkAccountInnerLoop(): Promise<void> {
-    throw new Error('Must implement checkAccountInnerLoop')
+    const body = { address: base58ToHexAddress(this.walletLocalData.publicKey) }
+    try {
+      const res = await this.multicastServers(
+        'trx_getBalance',
+        '/wallet/getaccount',
+        body
+      )
+      const balances = asMaybe(asTRXBalance)(res)
+
+      if (balances != null) {
+        this.updateBalance(
+          this.currencyInfo.currencyCode,
+          balances.balance.toString()
+        )
+      } else if (typeof res === 'object' && Object.keys(res).length === 0) {
+        // New accounts return an empty {} response
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
+      }
+    } catch (e: any) {
+      this.log.error('Error checking TRX address balance: ', e)
+    }
+
+    try {
+      const res = await this.multicastServers(
+        'trx_getAccountResource',
+        '/wallet/getaccountresource',
+        body
+      )
+      const resources = asAccountResources(res)
+
+      this.accountResources = {
+        bandwidth: resources.freeNetLimit,
+        energy: resources.EnergyLimit
+      }
+    } catch (e: any) {
+      this.log.error('Error checking TRX address resources: ', e)
+    }
   }
 
   async queryTransactions(): Promise<void> {
@@ -132,6 +223,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     switch (func) {
       case 'trx_blockNumber':
+      case 'trx_getAccountResource':
+      case 'trx_getBalance':
         funcs =
           this.currencyInfo.defaultSettings.otherSettings.tronNodeServers.map(
             (server: string) => async () => {
