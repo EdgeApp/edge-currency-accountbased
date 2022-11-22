@@ -46,8 +46,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   pendingTransactionsIndex: number
   pendingTransactionsMap: { [index: number]: Object }
   fees: { low: number; standard: number; high: number }
-  // @ts-expect-error
-  otherData: StellarWalletOtherData
+  otherData!: StellarWalletOtherData
 
   constructor(
     tools: StellarTools,

@@ -1,3 +1,5 @@
+import { EdgeFetchFunction } from 'edge-core-js'
+
 export interface EosSettings {
   eosHyperionNodes: string[]
   eosNodes: string[]
@@ -20,10 +22,8 @@ export interface EosTransactionSuperNode {
 
 export interface EosTransaction {
   block_time: string
-  // @ts-expect-error
   block_num: number
   account_action_seq: number
-  // @ts-expect-error
   trx_id: string
   act: {
     authorization: any
@@ -38,11 +38,7 @@ export interface EosTransaction {
     name: string
   }
   '@timestamp': string
-  // @ts-expect-error
-  block_num: number
   producer: string
-  // @ts-expect-error
-  trx_id: string
   parent: number
   global_sequence: number
   notified: string[]
@@ -85,6 +81,6 @@ export interface EosJsConfig {
   chainId: string
   keyProvider: any[]
   httpEndpoint: string
-  fetch: Function
+  fetch: EdgeFetchFunction
   verbose: boolean // verbose logging such as API activity
 }

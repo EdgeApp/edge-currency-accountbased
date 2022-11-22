@@ -24,22 +24,14 @@ import {
 
 export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
-  // @ts-expect-error
-  otherData: ZcashOtherData
-  // @ts-expect-error
-  synchronizer: ZcashSynchronizer
-  // @ts-expect-error
-  synchronizerStatus: ZcashSynchronizerStatus
-  // @ts-expect-error
-  availableZatoshi: string
-  // @ts-expect-error
-  initialNumBlocksToDownload: number
-  // @ts-expect-error
-  initializer: ZcashInitializerConfig
-  // @ts-expect-error
-  alias: string
-  // @ts-expect-error
-  progressRatio: number
+  otherData!: ZcashOtherData
+  synchronizer!: ZcashSynchronizer
+  synchronizerStatus!: ZcashSynchronizerStatus
+  availableZatoshi!: string
+  initialNumBlocksToDownload!: number
+  initializer!: ZcashInitializerConfig
+  alias!: string
+  progressRatio!: number
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>

@@ -51,8 +51,7 @@ type XrpFunction =
   | 'submit'
 
 export class XrpEngine extends CurrencyEngine<RippleTools> {
-  // @ts-expect-error
-  otherData: XrpWalletOtherData
+  otherData!: XrpWalletOtherData
   xrpSettings: XrpSettings
 
   constructor(

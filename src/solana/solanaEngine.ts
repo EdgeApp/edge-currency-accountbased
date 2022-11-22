@@ -41,8 +41,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
-  // @ts-expect-error
-  otherData: SolanaOtherData
+  otherData!: SolanaOtherData
   fetchCors: EdgeFetchFunction
   settings: SolanaSettings
   progressRatio: number

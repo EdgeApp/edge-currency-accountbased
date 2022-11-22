@@ -87,8 +87,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   recentFioFee: RecentFioFee
   fioSdk!: FIOSDK
   fioSdkPreparedTrx!: FIOSDK
-  // @ts-expect-error
-  otherData: {
+  otherData!: {
     highestTxHeight: number
     fioAddresses: FioAddress[]
     fioDomains: FioDomain[]

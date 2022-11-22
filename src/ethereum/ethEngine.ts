@@ -70,8 +70,7 @@ import {
 const walletConnectors: WalletConnectors = {}
 
 export class EthereumEngine extends CurrencyEngine<EthereumTools> {
-  // @ts-expect-error
-  otherData: EthereumWalletOtherData
+  otherData!: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit

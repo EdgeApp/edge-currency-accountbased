@@ -103,8 +103,7 @@ class CosignAuthorityProvider {
 }
 export class EosEngine extends CurrencyEngine<EosTools> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
-  // @ts-expect-error
-  otherData: EosWalletOtherData
+  otherData!: EosWalletOtherData
   otherMethods: Object
   eosJsConfig: EosJsConfig
   fetchCors: EdgeFetchFunction
@@ -689,9 +688,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
               // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!authorizersReply.ok) {
                 throw new Error(
-                  `${server} get_key_accounts failed with ${JSON.stringify(
-                    authorizersReply
-                  )}`
+                  `${server} get_key_accounts failed with ${authorizersReply.status}`
                 )
               }
               const authorizersData = await authorizersReply.json()
@@ -752,7 +749,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
               // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!accountReply.ok) {
                 throw new Error(
-                  `${server} get_account failed with ${authorizersReply}`
+                  `${server} get_account failed with ${accountReply.status}`
                 )
               }
               return { server, result: await accountReply.json() }
@@ -771,7 +768,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
               // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               if (!response.ok) {
                 throw new Error(
-                  `${server} get_account failed with ${response.code}`
+                  `${server} get_account failed with ${response.status}`
                 )
               }
               const responseJson = asDfuseGetKeyAccountsResponse(
@@ -818,9 +815,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
           randomNodes.map(server => async () => {
             // @ts-expect-error
             const rpc = new JsonRpc(server, {
-              fetch: (...args) => {
+              fetch: async (...args) => {
                 // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
-                return this.eosJsConfig.fetch(...args)
+                return await this.eosJsConfig.fetch(...args)
               }
             })
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
