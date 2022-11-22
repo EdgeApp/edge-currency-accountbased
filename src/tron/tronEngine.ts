@@ -21,6 +21,7 @@ import {
 import { TronTools } from './tronPlugin'
 import {
   asAccountResources,
+  asChainParams,
   asTransaction,
   asTRC20Balance,
   asTRC20Transaction,
@@ -32,6 +33,7 @@ import {
   asTRXTransferContract,
   ReferenceBlock,
   TronAccountResources,
+  TronNetworkFees,
   TxQueryCache
 } from './tronTypes'
 import { base58ToHexAddress, hexToBase58Address } from './tronUtils'
@@ -45,6 +47,7 @@ const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000
 
 type TronFunction =
   | 'trx_blockNumber'
+  | 'trx_chainParams'
   | 'trx_getAccountResource'
   | 'trx_getBalance'
   | 'trx_getTransactionInfo'
@@ -55,6 +58,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   log: EdgeLog
   recentBlock: ReferenceBlock
   accountResources: TronAccountResources
+  networkFees: TronNetworkFees
 
   constructor(
     currencyPlugin: TronTools,
@@ -73,6 +77,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.accountResources = {
       bandwidth: 0,
       energy: 0
+    }
+    this.networkFees = {
+      createAccountFeeSUN: 100000, // network default
+      bandwidthFeeSUN: 1000, // network default
+      energyFeeSUN: 280 // network default
     }
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
@@ -510,7 +519,38 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async checkUpdateNetworkFees(): Promise<void> {
-    throw new Error('Must implement checkUpdateNetworkFees')
+    try {
+      const res = await this.multicastServers(
+        'trx_chainParams',
+        '/wallet/getchainparameters'
+      )
+      const json = asChainParams(res).chainParameter
+
+      // Network fees
+      const createAccountFeeSUN = json.find(
+        param => param.key === 'getCreateAccountFee'
+      )
+      const bandwidthFeeSUN = json.find(
+        param => param.key === 'getTransactionFee'
+      )
+      const energyFeeSUN = json.find(param => param.key === 'getEnergyFee')
+
+      if (
+        createAccountFeeSUN?.value == null ||
+        bandwidthFeeSUN?.value == null ||
+        energyFeeSUN?.value == null
+      )
+        throw new Error('Error fetching networkFees')
+
+      // 1 SUN = 0.000001 TRX utilizing fromSun()
+      this.networkFees = {
+        createAccountFeeSUN: createAccountFeeSUN.value,
+        bandwidthFeeSUN: bandwidthFeeSUN.value,
+        energyFeeSUN: energyFeeSUN.value
+      }
+    } catch (e: any) {
+      this.log.error('checkUpdateNetworkFees error: ', e)
+    }
   }
 
   async multicastServers(
@@ -522,6 +562,15 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     let funcs: Array<() => Promise<any>> = []
 
     switch (func) {
+      case 'trx_chainParams':
+        funcs =
+          this.currencyInfo.defaultSettings.otherSettings.tronNodeServers.map(
+            (server: string) => async () => {
+              return await this.fetch(server, path)
+            }
+          )
+        break
+
       case 'trx_blockNumber':
       case 'trx_getAccountResource':
       case 'trx_getBalance':
