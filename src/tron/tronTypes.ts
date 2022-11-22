@@ -278,3 +278,9 @@ export const asEstimateEnergy = asObject({
     )
   })
 })
+
+export const asBroadcastResponse = asObject({
+  result: asBoolean,
+  txid: asString,
+  message: asString
+})

@@ -18,6 +18,7 @@ import { CurrencyEngine } from '../common/engine'
 import {
   asyncWaterfall,
   getDenomInfo,
+  getOtherParams,
   hexToDecimal,
   makeMutex,
   padHex,
@@ -26,6 +27,7 @@ import {
 import { TronTools } from './tronPlugin'
 import {
   asAccountResources,
+  asBroadcastResponse,
   asChainParams,
   asEstimateEnergy,
   asTransaction,
@@ -60,6 +62,7 @@ const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000
 
 type TronFunction =
   | 'trx_blockNumber'
+  | 'trx_broadcastTx'
   | 'trx_chainParams'
   | 'trx_estimateEnergy'
   | 'trx_getAccountResource'
@@ -595,6 +598,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         break
 
       case 'trx_blockNumber':
+      case 'trx_broadcastTx':
       case 'trx_estimateEnergy':
       case 'trx_getAccountResource':
       case 'trx_getBalance':
@@ -1010,13 +1014,52 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const otherParams: TronTxParams = getOtherParams(edgeTransaction)
+
+    const transaction = await this.txBuilder(otherParams)
+    const signer = this.tronscan.getSigner(this.walletInfo.keys.tronKey)
+    const { hex } = await signer.signTransaction(transaction.transaction)
+
+    edgeTransaction.signedTx = hex
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const body = {
+      transaction: edgeTransaction.signedTx
+    }
+
+    const res = await this.multicastServers(
+      'trx_broadcastTx',
+      '/wallet/broadcasthex',
+      body
+    )
+
+    const json = asBroadcastResponse(res)
+    if (!json.result) {
+      throw new Error(json.message)
+    }
+
+    // Update local caches
+    const { toAddress, contractAddress } =
+      getOtherParams<TronTxParams>(edgeTransaction)
+    if (
+      edgeTransaction.currencyCode === this.currencyInfo.currencyCode &&
+      edgeTransaction.otherParams?.toAddress != null
+    ) {
+      this.accountExistsCache[toAddress] = true
+    }
+    if (contractAddress != null) {
+      // The cost to send a token is greater when the recipient receives a token for the first time. That's why we
+      // need to query the node each time the user starts the transaction process and ensure we look again next time.
+      // eslint-disable-next-line
+      delete this.energyEstimateCache[`${toAddress}:${contractAddress}`]
+    }
+
+    edgeTransaction.txid = json.txid
+    return edgeTransaction
   }
 
   getDisplayPrivateSeed(): string {
