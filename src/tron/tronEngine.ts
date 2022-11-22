@@ -1,6 +1,6 @@
 import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
 import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
-import { add, eq, gt, lt, mul } from 'biggystring'
+import { add, div, eq, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngineOptions,
@@ -864,7 +864,59 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    const balance = this.getBalance({
+      currencyCode: spendInfo.currencyCode
+    })
+
+    if (spendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const { publicAddress } = spendInfo.spendTargets[0]
+
+    if (publicAddress == null || spendInfo.currencyCode == null) {
+      throw new Error('Error: need recipient address and/or currencyCode')
+    }
+
+    if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
+      // For mainnet currency, the fee can scale with the amount sent so we should find the
+      // appropriate amount by recursively calling calcMiningFee. This is adapted from the
+      // same function in edge-core-js.
+
+      const getMax = async (min: string, max: string): Promise<string> => {
+        const diff = sub(max, min)
+        if (lte(diff, '1')) {
+          return min
+        }
+        const mid = add(min, div(diff, '2'))
+
+        const txParams = {
+          toAddress: publicAddress,
+          currencyCode: this.currencyInfo.currencyCode,
+          nativeAmount: mid
+        }
+        const { transactionHex } = await this.txBuilder(txParams)
+
+        // Try the average:
+        spendInfo.spendTargets[0].nativeAmount = mid
+        const fee = await this.calcTxFee(publicAddress, transactionHex)
+
+        const totalAmount = add(mid, fee)
+        if (gt(totalAmount, balance)) {
+          return await getMax(min, mid)
+        } else {
+          return await getMax(mid, max)
+        }
+      }
+
+      return await getMax('0', add(balance, '1'))
+    } else {
+      // For tokens, the max amount is the balance but we should call makeSpend to make sure there's
+      // enough mainnet currency to pay the fee
+      spendInfo.spendTargets[0].nativeAmount = balance
+      await this.makeSpend(spendInfo)
+      return balance
+    }
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
