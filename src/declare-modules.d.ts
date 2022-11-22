@@ -20,6 +20,9 @@ declare module '@fioprotocol/fiosdk' {
 declare module '@fioprotocol/fiosdk/lib/entities/EndPoint'
 declare module '@fioprotocol/fiosdk/lib/transactions/Transactions'
 declare module '@fioprotocol/fiosdk/lib/utils/constants'
+declare module '@tronscan/client/src/utils/crypto' {
+  export const pkToAddress: (privateKey: string) => string
+}
 declare module 'eosjs-api'
 declare module 'eosjs-ecc'
 declare module 'ethereumjs-abi'

@@ -1,4 +1,5 @@
-import { mnemonicToSeed } from 'bip39'
+import { pkToAddress } from '@tronscan/client/src/utils/crypto'
+import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -13,6 +14,7 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { getFetchCors } from '../common/utils'
@@ -32,11 +34,36 @@ export class TronTools implements EdgeCurrencyTools {
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
+      // It looks like a private key, so validate the hex:
+      const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
+      if (EthereumUtil.isValidPrivate(tronKeyBuffer) === true) {
+        throw new Error('Invalid private key')
+      }
+      const tronKey = tronKeyBuffer.toString('hex')
+      return { tronKey }
+    } else {
+      // it looks like a mnemonic, so validate that way:
+      if (!validateMnemonic(userInput)) {
+        throw new Error('Invalid input')
+      }
+      const tronKey = await this._mnemonicToTronKey(userInput)
+      return {
+        tronMnemonic: userInput,
+        tronKey
+      }
+    }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    if (walletType !== this.currencyInfo.walletType) {
+      throw new Error('InvalidWalletType')
+    }
+
+    const entropy = Buffer.from(this.io.random(32)).toString('hex')
+    const tronMnemonic = entropyToMnemonic(entropy)
+    const tronKey = await this._mnemonicToTronKey(tronMnemonic)
+    return { tronMnemonic, tronKey }
   }
 
   async _mnemonicToTronKey(mnemonic: string): Promise<string> {
@@ -49,7 +76,12 @@ export class TronTools implements EdgeCurrencyTools {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    throw new Error('Must implement checkBlockchainInnerLoop')
+    if (walletInfo.type !== this.currencyInfo.pluginId) {
+      throw new Error('InvalidWalletType')
+    }
+
+    const publicKey = pkToAddress(walletInfo.keys.tronKey)
+    return { publicKey }
   }
 
   async parseUri(
