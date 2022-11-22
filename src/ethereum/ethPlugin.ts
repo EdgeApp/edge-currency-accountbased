@@ -20,9 +20,7 @@ import {
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
-// @ts-expect-error
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { CurrencyPlugin } from '../common/plugin'

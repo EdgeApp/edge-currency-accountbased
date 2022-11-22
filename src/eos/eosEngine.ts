@@ -16,7 +16,6 @@ import {
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
-// @ts-expect-error
 import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 

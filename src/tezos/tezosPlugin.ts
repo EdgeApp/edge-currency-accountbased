@@ -9,7 +9,6 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 

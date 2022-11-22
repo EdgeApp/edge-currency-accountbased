@@ -8,7 +8,6 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-// @ts-expect-error
 import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine'

@@ -1,12 +1,8 @@
 /* eslint camelcase: 0 */
 
-// @ts-expect-error
 import { FIOSDK } from '@fioprotocol/fiosdk'
-// @ts-expect-error
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
-// @ts-expect-error
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
-// @ts-expect-error
 import { Constants as FioConstants } from '@fioprotocol/fiosdk/lib/utils/constants'
 import { add, div, gt, max, mul, sub } from 'biggystring'
 import {
@@ -90,8 +86,8 @@ export class FioEngine extends CurrencyEngine<FioPlugin> {
   otherMethods: Object
   tpid: string
   recentFioFee: RecentFioFee
-  fioSdk: FIOSDK
-  fioSdkPreparedTrx: FIOSDK
+  fioSdk!: FIOSDK
+  fioSdkPreparedTrx!: FIOSDK
   // @ts-expect-error
   otherData: {
     highestTxHeight: number

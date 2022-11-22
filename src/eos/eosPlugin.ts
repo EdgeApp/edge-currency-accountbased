@@ -17,9 +17,7 @@ import {
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import EosApi from 'eosjs-api'
-// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'

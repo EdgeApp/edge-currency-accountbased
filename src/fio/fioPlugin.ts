@@ -1,8 +1,6 @@
 /* eslint camelcase: 0 */
 
-// @ts-expect-error
 import { FIOSDK } from '@fioprotocol/fiosdk'
-// @ts-expect-error
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -16,7 +14,6 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
 import { CurrencyPlugin } from '../common/plugin'

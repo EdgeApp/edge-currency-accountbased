@@ -19,11 +19,8 @@ import {
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
 import { signTypedData_v4 } from 'eth-sig-util'
-// @ts-expect-error
 import abi from 'ethereumjs-abi'
-// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
-// @ts-expect-error
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'

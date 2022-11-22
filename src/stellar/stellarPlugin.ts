@@ -13,7 +13,6 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
