@@ -23,7 +23,7 @@ import {
   asGetActivationCost,
   asGetActivationSupportedCurrencies
 } from './eosSchema'
-import { EosJsConfig } from './eosTypes'
+import { EosNetworkInfo } from './eosTypes'
 
 export function checkAddress(address: string): boolean {
   return /^[a-z0-9.]{1,12}$/.test(address)
@@ -33,20 +33,25 @@ export class EosTools implements EdgeCurrencyTools {
   eosServer: Object
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
+  networkInfo: EosNetworkInfo
 
   constructor(
     io: EdgeIo,
     fetchCors: EdgeFetchFunction,
     currencyInfo: EdgeCurrencyInfo,
-    eosJsConfig: EosJsConfig
+    networkInfo: EosNetworkInfo
   ) {
     this.io = io
     this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
 
-    eosJsConfig.httpEndpoint =
-      this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
-    eosJsConfig.fetch = fetchCors
-    this.eosServer = EosApi(eosJsConfig)
+    this.eosServer = EosApi({
+      chainId: networkInfo.chainId,
+      fetch: fetchCors,
+      httpEndpoint: this.networkInfo.eosNodes[0],
+      keyProvider: [],
+      verbose: false // verbose logging such as API activity
+    })
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {
@@ -109,7 +114,7 @@ export class EosTools implements EdgeCurrencyTools {
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = parseUriCommon(this.currencyInfo, uri, {
-      [this.currencyInfo.defaultSettings.otherSettings.uriProtocol]: true
+      [this.networkInfo.uriProtocol]: true
     })
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
@@ -137,7 +142,7 @@ export class EosTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(
       obj,
-      this.currencyInfo.defaultSettings.otherSettings.uriProtocol,
+      this.networkInfo.uriProtocol,
       amount
     )
     return encodedUri
@@ -174,16 +179,16 @@ export class EosTools implements EdgeCurrencyTools {
 export function makeEosBasedPluginInner(
   opts: EdgeCorePluginOptions,
   currencyInfo: EdgeCurrencyInfo,
-  eosJsConfig: EosJsConfig
+  networkInfo: EosNetworkInfo
 ): EdgeCurrencyPlugin {
   const { io, log } = opts
-  const fetch = getFetchCors(opts)
+  const fetchCors = getFetchCors(opts)
 
   let toolsPromise: Promise<EosTools>
   async function makeCurrencyTools(): Promise<EosTools> {
     if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
-      new EosTools(io, fetch, currencyInfo, eosJsConfig)
+      new EosTools(io, fetchCors, currencyInfo, networkInfo)
     )
     return await toolsPromise
   }
@@ -198,7 +203,7 @@ export function makeEosBasedPluginInner(
       walletInfo,
       opts,
       fetch,
-      eosJsConfig
+      networkInfo
     )
     await currencyEngine.loadEngine(tools, walletInfo, opts)
 
@@ -233,17 +238,14 @@ export function makeEosBasedPluginInner(
     getActivationSupportedCurrencies: async (): Object => {
       try {
         const out = await asyncWaterfall(
-          currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
-            // @ts-expect-error
-            server => async () => {
-              const uri = `${server}/api/v1/getSupportedCurrencies`
-              const response = await fetch(uri)
-              const result = await response.json()
-              return {
-                result
-              }
+          networkInfo.eosActivationServers.map(server => async () => {
+            const uri = `${server}/api/v1/getSupportedCurrencies`
+            const response = await fetch(uri)
+            const result = await response.json()
+            return {
+              result
             }
-          )
+          })
         )
         return asGetActivationSupportedCurrencies(out)
       } catch (e: any) {
@@ -257,28 +259,23 @@ export function makeEosBasedPluginInner(
     ): Promise<string> | undefined => {
       try {
         const out = await asyncWaterfall(
-          currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
-            // @ts-expect-error
-            server => async () => {
-              const uri = `${server}/api/v1/eosPrices/${currencyCode}`
-              const response = await fetch(uri)
-              const prices = asGetActivationCost(await response.json())
-              const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
-              const startingResourcesResponse = await fetch(
-                startingResourcesUri
-              )
-              const startingResources = asGetActivationCost(
-                await startingResourcesResponse.json()
-              )
-              const totalEos =
-                Number(prices.ram) * startingResources.ram +
-                Number(prices.net) * startingResources.net +
-                Number(prices.cpu) * startingResources.cpu
-              const totalEosString = totalEos.toString()
-              const price = toFixed(totalEosString, 0, 4)
-              return price
-            }
-          )
+          networkInfo.eosActivationServers.map(server => async () => {
+            const uri = `${server}/api/v1/eosPrices/${currencyCode}`
+            const response = await fetch(uri)
+            const prices = asGetActivationCost(await response.json())
+            const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
+            const startingResourcesResponse = await fetch(startingResourcesUri)
+            const startingResources = asGetActivationCost(
+              await startingResourcesResponse.json()
+            )
+            const totalEos =
+              Number(prices.ram) * startingResources.ram +
+              Number(prices.net) * startingResources.net +
+              Number(prices.cpu) * startingResources.cpu
+            const totalEosString = totalEos.toString()
+            const price = toFixed(totalEosString, 0, 4)
+            return price
+          })
         )
         return out
       } catch (e: any) {

@@ -1,8 +1,13 @@
-import { EdgeFetchFunction } from 'edge-core-js'
+export interface EosNetworkInfo {
+  chainId: string
 
-export interface EosSettings {
+  createAccountViaSingleApiEndpoints?: string[]
+  eosActivationServers: string[]
+  eosDfuseServers: string[]
+  eosFuelServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
+  uriProtocol: string
 }
 
 export interface EosTransactionSuperNode {
@@ -75,12 +80,4 @@ export interface EosWalletOtherData {
   lastQueryActionSeq: { [string]: number }
   // @ts-expect-error
   highestTxHeight: { [string]: number }
-}
-
-export interface EosJsConfig {
-  chainId: string
-  keyProvider: any[]
-  httpEndpoint: string
-  fetch: EdgeFetchFunction
-  verbose: boolean // verbose logging such as API activity
 }

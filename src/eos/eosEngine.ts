@@ -40,7 +40,7 @@ import {
   EosTransactionSuperNodeSchema
 } from './eosSchema'
 import {
-  EosJsConfig,
+  EosNetworkInfo,
   EosTransaction,
   EosTransactionSuperNode,
   EosWalletOtherData
@@ -105,7 +105,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData!: EosWalletOtherData
   otherMethods: Object
-  eosJsConfig: EosJsConfig
+  networkInfo: EosNetworkInfo
   fetchCors: EdgeFetchFunction
 
   constructor(
@@ -113,11 +113,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     fetchCors: EdgeFetchFunction,
-    eosJsConfig: EosJsConfig
+    networkInfo: EosNetworkInfo
   ) {
     super(tools, walletInfo, opts)
     this.fetchCors = fetchCors
-    this.eosJsConfig = eosJsConfig
+    this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
     const { currencyCode, denominations } = this.currencyInfo
     this.allTokens.push({
@@ -172,14 +172,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
         try {
           const out = await asyncWaterfall(
-            this.currencyInfo.defaultSettings.otherSettings.eosActivationServers.map(
-              // @ts-expect-error
-              server => async () => {
-                const uri = `${server}/api/v1/activateAccount`
-                const response = await fetchCors(uri, options)
-                return await response.json()
-              }
-            ),
+            this.networkInfo.eosActivationServers.map(server => async () => {
+              const uri = `${server}/api/v1/activateAccount`
+              const response = await fetchCors(uri, options)
+              return await response.json()
+            }),
             15000
           )
           return asGetAccountActivationQuote(out)
@@ -566,103 +563,91 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       case 'getIncomingTransactions':
       case 'getOutgoingTransactions': {
         const { direction, acct, currencyCode, skip, limit, low } = params[0]
-        const hyperionFuncs =
-          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-            // @ts-expect-error
-            server => async () => {
-              const url =
-                // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-                server +
-                `/v2/history/get_actions?transfer.${
-                  direction === 'outgoing' ? 'from' : 'to'
-                }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
-              const response = await this.eosJsConfig.fetch(url)
-              const parsedUrl = parse(url, {}, true)
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!response.ok) {
-                this.error('multicast in / out tx server error: ', server)
-                throw new Error(
-                  `The server returned error code ${response.status} for ${parsedUrl.hostname}`
-                )
-              }
-              const result = asHyperionGetTransactionResponse(
-                await response.json()
+        const hyperionFuncs = this.networkInfo.eosHyperionNodes.map(
+          server => async () => {
+            const url =
+              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+              server +
+              `/v2/history/get_actions?transfer.${
+                direction === 'outgoing' ? 'from' : 'to'
+              }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
+            const response = await this.fetchCors(url)
+            const parsedUrl = parse(url, {}, true)
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            if (!response.ok) {
+              this.error(`multicast in / out tx server error: ${server}`)
+              throw new Error(
+                `The server returned error code ${response.status} for ${parsedUrl.hostname}`
               )
-              return { server, result }
             }
-          )
-        const dfuseFuncs =
-          this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
-            // @ts-expect-error
-            server => async () => {
-              if (this.currencyInfo.currencyCode !== 'EOS')
-                throw new Error('dfuse only supports EOS')
-              const response = await this.eosJsConfig.fetch(
-                `${server}/graphql`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    query: dfuseGetTransactionsQueryString,
-                    variables: {
-                      query: `${
-                        direction === 'outgoing' ? 'auth' : 'receiver'
-                      }:${acct} action:transfer`,
-                      limit,
-                      low
-                    }
-                  })
+            const result = asHyperionGetTransactionResponse(
+              await response.json()
+            )
+            return { server, result }
+          }
+        )
+        const dfuseFuncs = this.networkInfo.eosDfuseServers.map(
+          server => async () => {
+            if (this.currencyInfo.currencyCode !== 'EOS')
+              throw new Error('dfuse only supports EOS')
+            const response = await this.fetchCors(`${server}/graphql`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                query: dfuseGetTransactionsQueryString,
+                variables: {
+                  query: `${
+                    direction === 'outgoing' ? 'auth' : 'receiver'
+                  }:${acct} action:transfer`,
+                  limit,
+                  low
                 }
+              })
+            })
+            const responseJson = asEither(
+              asDfuseGetTransactionsResponse,
+              asDfuseGetTransactionsErrorResponse
+            )(await response.json())
+            // @ts-expect-error
+            if (responseJson.errors != null) {
+              this.warn(
+                `dfuse ${server} get transactions failed: ${JSON.stringify(
+                  // @ts-expect-error
+                  responseJson.errors[0]
+                )}`
               )
-              const responseJson = asEither(
-                asDfuseGetTransactionsResponse,
-                asDfuseGetTransactionsErrorResponse
-              )(await response.json())
               // @ts-expect-error
-              if (responseJson.errors != null) {
-                this.warn(
-                  `dfuse ${server} get transactions failed: ${JSON.stringify(
-                    // @ts-expect-error
-                    responseJson.errors[0]
-                  )}`
-                )
-                // @ts-expect-error
-                throw new Error(responseJson.errors[0].message)
-              }
-              // Convert txs to Hyperion
-              const actions =
-                // @ts-expect-error
-                responseJson.data.searchTransactionsBackward.results.map(tx =>
-                  asHyperionTransaction({
-                    trx_id: tx.trace.id,
-                    '@timestamp': tx.trace.block.timestamp,
-                    block_num: tx.trace.block.num,
-                    act: {
-                      authorization:
-                        tx.trace.matchingActions[0].authorization[0],
-                      data: {
-                        from: tx.trace.matchingActions[0].json.from,
-                        to: tx.trace.matchingActions[0].json.to,
-                        // quantity: "0.0001 EOS"
-                        amount: Number(
-                          tx.trace.matchingActions[0].json.quantity.split(
-                            ' '
-                          )[0]
-                        ),
-                        symbol:
-                          tx.trace.matchingActions[0].json.quantity.split(
-                            ' '
-                          )[1],
-                        memo: tx.trace.matchingActions[0].json.memo
-                      }
-                    }
-                  })
-                )
-              return { server, result: { actions } }
+              throw new Error(responseJson.errors[0].message)
             }
-          )
+            // Convert txs to Hyperion
+            const actions =
+              // @ts-expect-error
+              responseJson.data.searchTransactionsBackward.results.map(tx =>
+                asHyperionTransaction({
+                  trx_id: tx.trace.id,
+                  '@timestamp': tx.trace.block.timestamp,
+                  block_num: tx.trace.block.num,
+                  act: {
+                    authorization: tx.trace.matchingActions[0].authorization[0],
+                    data: {
+                      from: tx.trace.matchingActions[0].json.from,
+                      to: tx.trace.matchingActions[0].json.to,
+                      // quantity: "0.0001 EOS"
+                      amount: Number(
+                        tx.trace.matchingActions[0].json.quantity.split(' ')[0]
+                      ),
+                      symbol:
+                        tx.trace.matchingActions[0].json.quantity.split(' ')[1],
+                      memo: tx.trace.matchingActions[0].json.memo
+                    }
+                  }
+                })
+              )
+            return { server, result: { actions } }
+          }
+        )
         out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
@@ -671,132 +656,128 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         const body = JSON.stringify({
           public_key: params[0]
         })
-        const hyperionFuncs =
-          this.currencyInfo.defaultSettings.otherSettings.eosHyperionNodes.map(
-            // @ts-expect-error
-            server => async () => {
-              const authorizersReply = await this.eosJsConfig.fetch(
-                `${server}/v1/history/get_key_accounts`,
-                {
-                  method: 'POST',
-                  body,
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
+        const hyperionFuncs = this.networkInfo.eosHyperionNodes.map(
+          server => async () => {
+            const authorizersReply = await this.fetchCors(
+              `${server}/v1/history/get_key_accounts`,
+              {
+                method: 'POST',
+                body,
+                headers: {
+                  'Content-Type': 'application/json'
                 }
-              )
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!authorizersReply.ok) {
-                throw new Error(
-                  `${server} get_key_accounts failed with ${authorizersReply.status}`
-                )
               }
-              const authorizersData = await authorizersReply.json()
-              // verify array order (chronological)?
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!authorizersData.account_names[0]) {
-                // indicates no activation has occurred
-                // set flag to indicate whether has hit activation API
-                // only do once per login (makeEngine)
-                if (
-                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                  this.currencyInfo.defaultSettings.otherSettings
-                    .createAccountViaSingleApiEndpoints &&
-                  this.currencyInfo.defaultSettings.otherSettings
-                    .createAccountViaSingleApiEndpoints.length > 0
-                ) {
-                  const { publicKey, ownerPublicKey } = this.walletInfo.keys
+            )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            if (!authorizersReply.ok) {
+              throw new Error(
+                `${server} get_key_accounts failed with ${authorizersReply.status}`
+              )
+            }
+            const authorizersData = await authorizersReply.json()
+            // verify array order (chronological)?
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            if (!authorizersData.account_names[0]) {
+              // indicates no activation has occurred
+              // set flag to indicate whether has hit activation API
+              // only do once per login (makeEngine)
+              if (
+                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+                this.networkInfo.createAccountViaSingleApiEndpoints &&
+                this.networkInfo.createAccountViaSingleApiEndpoints.length > 0
+              ) {
+                const { publicKey, ownerPublicKey } = this.walletInfo.keys
 
-                  const { createAccountViaSingleApiEndpoints } =
-                    this.currencyInfo.defaultSettings.otherSettings
-                  const request = await this.fetchCors(
-                    createAccountViaSingleApiEndpoints[0],
-                    {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        ownerPublicKey,
-                        activePublicKey: publicKey
-                      }),
-                      headers: {
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json'
-                      }
+                const { createAccountViaSingleApiEndpoints } = this.networkInfo
+                const request = await this.fetchCors(
+                  createAccountViaSingleApiEndpoints[0],
+                  {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      ownerPublicKey,
+                      activePublicKey: publicKey
+                    }),
+                    headers: {
+                      Accept: 'application/json',
+                      'Content-Type': 'application/json'
                     }
-                  )
-                  const response = await request.json()
-                  const { accountName, transactionId } = response
-                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                  if (!accountName) throw new Error(response)
-                  this.warn(
-                    `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
-                  )
-                }
-                throw new Error(
-                  `${server} could not find account with public key: ${params[0]}`
+                  }
+                )
+                const response = await request.json()
+                const { accountName, transactionId } = response
+                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+                if (!accountName) throw new Error(response)
+                this.warn(
+                  `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
                 )
               }
-              const accountName = authorizersData.account_names[0]
-              const getAccountBody = JSON.stringify({
-                account_name: accountName
-              })
-              const accountReply = await this.eosJsConfig.fetch(
-                `${server}/v1/chain/get_account`,
-                {
-                  method: 'POST',
-                  body: getAccountBody
-                }
+              throw new Error(
+                `${server} could not find account with public key: ${params[0]}`
               )
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!accountReply.ok) {
-                throw new Error(
-                  `${server} get_account failed with ${accountReply.status}`
-                )
-              }
-              return { server, result: await accountReply.json() }
             }
-          )
+            const accountName = authorizersData.account_names[0]
+            const getAccountBody = JSON.stringify({
+              account_name: accountName
+            })
+            const accountReply = await this.fetchCors(
+              `${server}/v1/chain/get_account`,
+              {
+                method: 'POST',
+                body: getAccountBody
+              }
+            )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            if (!accountReply.ok) {
+              throw new Error(
+                `${server} get_account failed with ${accountReply.status}`
+              )
+            }
+            return { server, result: await accountReply.json() }
+          }
+        )
         // dfuse API is EOS only
-        const dfuseFuncs =
-          this.currencyInfo.defaultSettings.otherSettings.eosDfuseServers.map(
-            // @ts-expect-error
-            server => async () => {
-              if (this.currencyInfo.currencyCode !== 'EOS')
-                throw new Error('dfuse only supports EOS')
-              const response = await this.eosJsConfig.fetch(
-                `${server}/v0/state/key_accounts?public_key=${params[0]}`
+        const dfuseFuncs = this.networkInfo.eosDfuseServers.map(
+          server => async () => {
+            if (this.currencyInfo.currencyCode !== 'EOS')
+              throw new Error('dfuse only supports EOS')
+            const response = await this.fetchCors(
+              `${server}/v0/state/key_accounts?public_key=${params[0]}`
+            )
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+            if (!response.ok) {
+              throw new Error(
+                `${server} get_account failed with ${response.status}`
               )
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (!response.ok) {
-                throw new Error(
-                  `${server} get_account failed with ${response.status}`
-                )
-              }
-              const responseJson = asDfuseGetKeyAccountsResponse(
-                await response.json()
-              )
-              if (responseJson.account_names.length === 0)
-                throw new Error('dfuse returned empty array')
-              return {
-                server,
-                result: {
-                  account_name: responseJson.account_names[0]
-                }
+            }
+            const responseJson = asDfuseGetKeyAccountsResponse(
+              await response.json()
+            )
+            if (responseJson.account_names.length === 0)
+              throw new Error('dfuse returned empty array')
+            return {
+              server,
+              result: {
+                account_name: responseJson.account_names[0]
               }
             }
-          )
+          }
+        )
         out = await asyncWaterfall([...hyperionFuncs, ...dfuseFuncs])
         break
       }
 
       case 'getCurrencyBalance':
       case 'getInfo': {
-        const { eosNodes } = this.currencyInfo.defaultSettings.otherSettings
+        const { eosNodes } = this.networkInfo
         const randomNodes = pickRandom(eosNodes, 3)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const eosServer = EosApi({
-              ...this.eosJsConfig,
-              httpEndpoint: server
+              chainId: this.networkInfo.chainId,
+              fetch: this.fetchCors,
+              httpEndpoint: server,
+              keyProvider: [],
+              verbose: false // verbose logging such as API activity
             })
             const result = await eosServer[func](...params)
             return { server, result }
@@ -805,19 +786,17 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         break
       }
       case 'transact': {
-        const { eosFuelServers, eosNodes } =
-          this.currencyInfo.defaultSettings.otherSettings
+        const { eosFuelServers, eosNodes } = this.networkInfo
         const randomNodes =
           eosFuelServers.length > 0
             ? pickRandom(eosFuelServers, 30)
             : pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            // @ts-expect-error
             const rpc = new JsonRpc(server, {
               fetch: async (...args) => {
                 // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
-                return await this.eosJsConfig.fetch(...args)
+                return await this.fetchCors(...args)
               }
             })
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
