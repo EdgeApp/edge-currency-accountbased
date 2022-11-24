@@ -1,5 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { BinanceTools } from './bnbPlugin'
 import { BinanceSettings } from './bnbTypes'
 
 const otherSettings: BinanceSettings = {
@@ -41,3 +43,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const binance = makeOuterPlugin<{}, BinanceTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./bnbPlugin')
+  }
+})

@@ -2,11 +2,7 @@ import * as hedera from '@hashgraph/sdk'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -15,10 +11,9 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { makeOtherMethods } from '../common/innerPlugin'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
-import { HederaEngine } from './hederaEngine'
 import { asGetActivationCost } from './hederaTypes'
 import { createChecksum, validAddress } from './hederaUtils'
 
@@ -32,8 +27,8 @@ export class HederaTools implements EdgeCurrencyTools {
   log: EdgeLog
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(opts: EdgeCorePluginOptions, currencyInfo: EdgeCurrencyInfo) {
-    const { io, log } = opts
+  constructor(opts: PluginEnvironment<{}>) {
+    const { currencyInfo, io, log } = opts
     this.io = io
     this.log = log
     this.currencyInfo = currencyInfo
@@ -188,50 +183,10 @@ export class HederaTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeHederaPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo
-): EdgeCurrencyPlugin {
-  const { io } = opts
-
-  let toolsPromise: Promise<HederaTools>
-
-  async function makeCurrencyTools(): Promise<HederaTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new HederaTools(opts, currencyInfo))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-
-    const currencyEngine = new HederaEngine(
-      tools,
-      walletInfo,
-      opts,
-      io,
-      currencyInfo
-    )
-
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  const otherMethods = makeOtherMethods(makeCurrencyTools, [
-    'getActivationSupportedCurrencies',
-    'getActivationCost',
-    'validateAccount'
-  ])
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools,
-    otherMethods
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<HederaTools> {
+  return new HederaTools(env)
 }
+
+export { makeCurrencyEngine } from './hederaEngine'

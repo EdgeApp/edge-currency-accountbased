@@ -1,7 +1,8 @@
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { makeEosBasedPluginInner } from './eosPlugin'
-import { EosNetworkInfo } from './eosTypes'
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { EosTools } from './eosPlugin'
+import { EosNetworkInfo, eosOtherMethodNames } from './eosTypes'
 
 // ----EOSIO MAIN NET----
 export const eosNetworkInfo: EosNetworkInfo = {
@@ -52,7 +53,12 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEosBasedPluginInner(opts, eosCurrencyInfo, eosNetworkInfo)
-}
+export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
+  currencyInfo: eosCurrencyInfo,
+  networkInfo: eosNetworkInfo,
+  otherMethodNames: eosOtherMethodNames,
+
+  async getInnerPlugin() {
+    return await import('./eosPlugin')
+  }
+})

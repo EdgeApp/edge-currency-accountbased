@@ -1,10 +1,7 @@
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo,
-  EdgeCurrencyPlugin
-} from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { makeTronPluginInner } from './tronPlugin'
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { TronTools } from './tronPlugin'
 import { TronNetworkInfo } from './tronTypes'
 
 export const networkInfo: TronNetworkInfo = {
@@ -129,8 +126,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const makeTronPlugin = (
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin => {
-  return makeTronPluginInner(opts, currencyInfo, networkInfo)
-}
+export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
+  currencyInfo,
+  networkInfo,
+
+  async getInnerPlugin() {
+    return await import('./tronPlugin')
+  }
+})

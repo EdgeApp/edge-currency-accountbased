@@ -4,10 +4,7 @@ import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
 import {
   EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeFetchFunction,
@@ -17,7 +14,7 @@ import {
 } from 'edge-core-js/types'
 import ecc from 'eosjs-ecc'
 
-import { makeOtherMethods } from '../common/innerPlugin'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
@@ -27,12 +24,7 @@ import {
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
-import {
-  DEFAULT_APR,
-  FIO_REG_API_ENDPOINTS,
-  FIO_REQUESTS_TYPES
-} from './fioConst'
-import { FioEngine } from './fioEngine'
+import { DEFAULT_APR, FIO_REG_API_ENDPOINTS } from './fioConst'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError'
 import { currencyInfo } from './fioInfo'
 
@@ -548,86 +540,10 @@ export class FioTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
-  const { initOptions, io } = opts
-  const { fetchCors = io.fetch } = io
-  const { tpid = 'finance@edge' } = initOptions
-
-  let toolsPromise: Promise<FioTools>
-  async function makeCurrencyTools(): Promise<FioTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new FioTools(opts))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new FioEngine(
-      tools,
-      walletInfo,
-      opts,
-      fetchCors,
-      tpid
-    )
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    // Initialize otherData defaults if they weren't on disk
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = 0
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.fioAddresses) {
-      currencyEngine.otherData.fioAddresses = []
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.fioDomains) {
-      currencyEngine.otherData.fioDomains = []
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.fioRequestsToApprove) {
-      currencyEngine.otherData.fioRequestsToApprove = {}
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.fioRequests) {
-      // @ts-expect-error
-      currencyEngine.otherData.fioRequests = {
-        [FIO_REQUESTS_TYPES.SENT]: [],
-        [FIO_REQUESTS_TYPES.PENDING]: []
-      }
-    }
-    if (currencyEngine.otherData.stakingStatus == null) {
-      currencyEngine.otherData.stakingStatus = {
-        stakedAmounts: []
-      }
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  const otherMethods = makeOtherMethods(makeCurrencyTools, [
-    'getConnectedPublicAddress',
-    'isFioAddressValid',
-    'validateAccount',
-    'isDomainPublic',
-    'doesAccountExist',
-    'buyAddressRequest',
-    'getDomains',
-    'getStakeEstReturn'
-  ])
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools,
-    otherMethods
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<FioTools> {
+  return new FioTools(env)
 }
+
+export { makeCurrencyEngine } from './fioEngine'

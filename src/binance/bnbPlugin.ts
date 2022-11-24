@@ -3,11 +3,7 @@ import { div } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -16,10 +12,9 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { BinanceEngine } from './bnbEngine'
-import { currencyInfo } from './bnbInfo'
 
 const {
   checkAddress,
@@ -32,7 +27,8 @@ export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(io: EdgeIo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
   }
@@ -83,7 +79,7 @@ export class BinanceTools implements EdgeCurrencyTools {
     const networks = { binance: true }
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       networks,
       currencyCode ?? 'BNB',
@@ -112,7 +108,7 @@ export class BinanceTools implements EdgeCurrencyTools {
     let amount
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
-        currencyInfo,
+        this.currencyInfo,
         currencyCode ?? 'BNB',
         customTokens
       )
@@ -126,44 +122,10 @@ export class BinanceTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeBinancePlugin(
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
-  const { io, initOptions } = opts
-
-  let toolsPromise: Promise<BinanceTools>
-  async function makeCurrencyTools(): Promise<BinanceTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new BinanceTools(io))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new BinanceEngine(
-      tools,
-      walletInfo,
-      initOptions,
-      opts
-    )
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    const out: EdgeCurrencyEngine = currencyEngine
-
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<BinanceTools> {
+  return new BinanceTools(env)
 }
+
+export { makeCurrencyEngine } from './bnbEngine'

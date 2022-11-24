@@ -1,10 +1,6 @@
 import { div, toFixed } from 'biggystring'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -16,10 +12,9 @@ import {
 import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
-import { makeOtherMethods } from '../common/innerPlugin'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
-import { EosEngine } from './eosEngine'
 import {
   asGetActivationCost,
   asGetActivationSupportedCurrencies
@@ -37,12 +32,8 @@ export class EosTools implements EdgeCurrencyTools {
   log: EdgeLog
   networkInfo: EosNetworkInfo
 
-  constructor(
-    opts: EdgeCorePluginOptions,
-    currencyInfo: EdgeCurrencyInfo,
-    networkInfo: EosNetworkInfo
-  ) {
-    const { io, log } = opts
+  constructor(env: PluginEnvironment<EosNetworkInfo>) {
+    const { currencyInfo, io, log, networkInfo } = env
     this.io = io
     this.log = log
     this.currencyInfo = currencyInfo
@@ -50,7 +41,7 @@ export class EosTools implements EdgeCurrencyTools {
 
     this.eosServer = EosApi({
       chainId: networkInfo.chainId,
-      fetch: getFetchCors(opts),
+      fetch: getFetchCors(env),
       httpEndpoint: this.networkInfo.eosNodes[0],
       keyProvider: [],
       verbose: false // verbose logging such as API activity
@@ -262,70 +253,10 @@ export class EosTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeEosBasedPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo,
-  networkInfo: EosNetworkInfo
-): EdgeCurrencyPlugin {
-  let toolsPromise: Promise<EosTools>
-  async function makeCurrencyTools(): Promise<EosTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(
-      new EosTools(opts, currencyInfo, networkInfo)
-    )
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new EosEngine(
-      tools,
-      walletInfo,
-      opts,
-      fetch,
-      networkInfo
-    )
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // currencyEngine.otherData is an opaque utility object for use for currency
-    // specific data that will be persisted to disk on this one device.
-    // Commonly stored data would be last queried block height or nonce values for accounts
-    // Edit the flow EosWalletOtherData and initialize those values here if they are
-    // undefined
-    // TODO: Initialize anything specific to this currency
-    // if (!currencyEngine.otherData.nonce) currencyEngine.otherData.nonce = 0
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.accountName) {
-      currencyEngine.otherData.accountName = ''
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.lastQueryActionSeq) {
-      currencyEngine.otherData.lastQueryActionSeq = {}
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.highestTxHeight) {
-      currencyEngine.otherData.highestTxHeight = {}
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  const otherMethods = makeOtherMethods(makeCurrencyTools, [
-    'getActivationCost',
-    'getActivationSupportedCurrencies',
-    'validateAccount'
-  ])
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools,
-    otherMethods
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<EosNetworkInfo>
+): Promise<EosTools> {
+  return new EosTools(env)
 }
+
+export { makeCurrencyEngine } from './eosEngine'

@@ -1,5 +1,6 @@
 import { add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -10,6 +11,7 @@ import {
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
 import { PluginError, pluginErrorCodes, pluginErrorName } from '../pluginError'
 import { RippleTools } from './xrpPlugin'
@@ -439,4 +441,24 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   getDisplayPublicSeed() {
     return this.walletInfo.keys?.publicKey ?? ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: RippleTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new XrpEngine(tools, walletInfo, opts)
+
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  if (engine.otherData.recommendedFee == null) {
+    engine.otherData.recommendedFee = '0'
+  }
+
+  return engine
 }

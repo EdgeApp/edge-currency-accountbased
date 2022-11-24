@@ -1,10 +1,6 @@
 import { div } from 'biggystring'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -20,10 +16,9 @@ import {
   xAddressToClassicAddress
 } from 'xrpl'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
-import { XrpEngine } from './xrpEngine'
-import { currencyInfo } from './xrpInfo'
 
 export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -31,7 +26,8 @@ export class RippleTools implements EdgeCurrencyTools {
   rippleApi: Object
   rippleApiSubscribers: { [walletId: string]: boolean }
 
-  constructor(io: EdgeIo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.rippleApi = {}
@@ -136,7 +132,7 @@ export class RippleTools implements EdgeCurrencyTools {
     }
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       networks
     )
@@ -159,7 +155,7 @@ export class RippleTools implements EdgeCurrencyTools {
     if (typeof obj.nativeAmount === 'string') {
       const currencyCode: string = 'XRP'
       const nativeAmount: string = obj.nativeAmount
-      const denom = getDenomInfo(currencyInfo, currencyCode)
+      const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
@@ -170,42 +166,10 @@ export class RippleTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeRipplePlugin(
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
-  const { io } = opts
-
-  let toolsPromise: Promise<RippleTools>
-  async function makeCurrencyTools(): Promise<RippleTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new RippleTools(io))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new XrpEngine(tools, walletInfo, opts)
-
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    if (currencyEngine.otherData.recommendedFee == null) {
-      currencyEngine.otherData.recommendedFee = '0'
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<RippleTools> {
+  return new RippleTools(env)
 }
+
+export { makeCurrencyEngine } from './xrpEngine'

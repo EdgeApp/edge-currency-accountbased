@@ -3,6 +3,7 @@
 import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither } from 'cleaners'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
   EdgeFetchFunction,
@@ -20,10 +21,12 @@ import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
   getDenomInfo,
+  getFetchCors,
   getOtherParams,
   pickRandom,
   validateObject
@@ -1246,4 +1249,41 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     return out
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<EosNetworkInfo>,
+  tools: EosTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new EosEngine(
+    tools,
+    walletInfo,
+    opts,
+    getFetchCors(env),
+    env.networkInfo
+  )
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  // engine.otherData is an opaque utility object for use for currency
+  // specific data that will be persisted to disk on this one device.
+  // Commonly stored data would be last queried block height or nonce values for accounts
+  // Edit the flow EosWalletOtherData and initialize those values here if they are
+  // undefined
+  // TODO: Initialize anything specific to this currency
+  // if (!engine.otherData.nonce) engine.otherData.nonce = 0
+  if (engine.otherData.accountName == null) {
+    engine.otherData.accountName = ''
+  }
+  if (engine.otherData.lastQueryActionSeq == null) {
+    engine.otherData.lastQueryActionSeq = {}
+  }
+  if (engine.otherData.highestTxHeight == null) {
+    engine.otherData.highestTxHeight = {}
+  }
+
+  return engine
 }

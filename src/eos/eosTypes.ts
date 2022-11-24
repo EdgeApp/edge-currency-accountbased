@@ -10,6 +10,12 @@ export interface EosNetworkInfo {
   uriProtocol: string
 }
 
+export const eosOtherMethodNames = [
+  'getActivationCost',
+  'getActivationSupportedCurrencies',
+  'validateAccount'
+] as const
+
 export interface EosTransactionSuperNode {
   act: {
     data: {

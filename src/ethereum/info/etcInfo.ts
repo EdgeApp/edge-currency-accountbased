@@ -1,6 +1,7 @@
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import { makeOuterPlugin } from '../../common/innerPlugin'
+import type { EthereumTools } from '../ethPlugin'
 import { EthereumFees, EthereumSettings } from '../ethTypes'
 
 const defaultNetworkFees: EthereumFees = {
@@ -115,7 +116,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeEthereumClassicPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEthereumBasedPluginInner(opts, currencyInfo)
-}
+export const ethereumclassic = makeOuterPlugin<{}, EthereumTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('../ethPlugin')
+  }
+})

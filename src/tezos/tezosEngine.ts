@@ -1,5 +1,6 @@
 import { add, div, eq, gt } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
@@ -11,9 +12,11 @@ import {
 import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
+  getFetchCors,
   getOtherParams,
   makeMutex,
   promiseAny
@@ -508,4 +511,24 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: TezosTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new TezosEngine(tools, walletInfo, opts, getFetchCors(env))
+
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData
+
+  if (engine.otherData.numberTransactions == null) {
+    engine.otherData.numberTransaction = 0
+  }
+
+  return engine
 }

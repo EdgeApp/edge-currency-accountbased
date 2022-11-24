@@ -6,6 +6,7 @@ import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { Constants as FioConstants } from '@fioprotocol/fiosdk/lib/utils/constants'
 import { add, div, gt, max, mul, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
   EdgeFetchFunction,
@@ -19,10 +20,12 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
   getDenomInfo,
+  getFetchCors,
   promiseAny,
   promiseNy,
   safeErrorMessage,
@@ -1680,4 +1683,45 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
     return out
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: FioTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const { tpid = 'finance@edge' } = env.initOptions
+  const engine = new FioEngine(tools, walletInfo, opts, getFetchCors(env), tpid)
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  // Initialize otherData defaults if they weren't on disk
+  if (engine.otherData.highestTxHeight == null) {
+    engine.otherData.highestTxHeight = 0
+  }
+  if (engine.otherData.fioAddresses == null) {
+    engine.otherData.fioAddresses = []
+  }
+  if (engine.otherData.fioDomains == null) {
+    engine.otherData.fioDomains = []
+  }
+  if (engine.otherData.fioRequestsToApprove == null) {
+    engine.otherData.fioRequestsToApprove = {}
+  }
+  if (engine.otherData.fioRequests == null) {
+    engine.otherData.fioRequests = {
+      SENT: [],
+      PENDING: []
+    }
+  }
+  if (engine.otherData.stakingStatus == null) {
+    engine.otherData.stakingStatus = {
+      stakedAmounts: []
+    }
+  }
+
+  return engine
 }

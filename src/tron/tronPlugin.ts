@@ -2,11 +2,7 @@ import { isAddressValid, pkToAddress } from '@tronscan/client/src/utils/crypto'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -19,17 +15,18 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo, getFetchCors } from '../common/utils'
-import { TronEngine } from './tronEngine'
-import { TronNetworkInfo, TronOtherdata } from './tronTypes'
+import { getDenomInfo } from '../common/utils'
+import { TronNetworkInfo } from './tronTypes'
 
 export class TronTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
 
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo, log: EdgeLog) {
+  constructor(env: PluginEnvironment<TronNetworkInfo>) {
+    const { currencyInfo, io, log } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.log = log
@@ -145,44 +142,10 @@ export class TronTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeTronPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo,
-  networkInfo: TronNetworkInfo
-): EdgeCurrencyPlugin {
-  const { io, log } = opts
-  const fetchCors = getFetchCors(opts)
-  let toolsPromise: Promise<TronTools>
-  async function makeCurrencyTools(): Promise<TronTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new TronTools(io, currencyInfo, log))
-    return await toolsPromise
-  }
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new TronEngine(
-      tools,
-      walletInfo,
-      opts,
-      fetchCors,
-      networkInfo
-    )
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-    // This is just to make sure otherData is type checked
-    currencyEngine.otherData = currencyEngine.walletLocalData
-      .otherData as TronOtherdata
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<TronNetworkInfo>
+): Promise<TronTools> {
+  return new TronTools(env)
 }
+
+export { makeCurrencyEngine } from './tronEngine'

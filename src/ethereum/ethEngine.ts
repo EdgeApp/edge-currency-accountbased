@@ -3,6 +3,7 @@ import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
 import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeFetchFunction,
@@ -20,12 +21,14 @@ import EthereumUtil from 'ethereumjs-util'
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { CustomToken } from '../common/types'
 import {
   biggyRoundToNearestInt,
   bufToHex,
   cleanTxLogs,
   decimalToHex,
+  getFetchCors,
   getOtherParams,
   hexToBuf,
   hexToDecimal,
@@ -1231,4 +1234,43 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.addCustomToken(obj, contractAddress.toLowerCase())
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: EthereumTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const { currencyInfo, initOptions } = env
+
+  const engine = new EthereumEngine(
+    tools,
+    walletInfo,
+    initOptions,
+    opts,
+    currencyInfo,
+    getFetchCors(env)
+  )
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  // Initialize otherData defaults if they weren't on disk
+  if (engine.otherData.nextNonce == null) {
+    engine.otherData.nextNonce = '0'
+  }
+  if (engine.otherData.unconfirmedNextNonce == null) {
+    engine.otherData.unconfirmedNextNonce = '0'
+  }
+  if (engine.otherData.networkFees == null) {
+    engine.otherData.networkFees = {
+      ...currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+    }
+  }
+
+  return engine
 }

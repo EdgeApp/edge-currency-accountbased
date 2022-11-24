@@ -1,10 +1,7 @@
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo,
-  EdgeCurrencyPlugin
-} from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import { makeOuterPlugin } from '../../common/innerPlugin'
+import type { EthereumTools } from '../ethPlugin'
 import { EthereumFees, EthereumSettings } from '../ethTypes'
 
 // Fees are in Wei
@@ -116,8 +113,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const makeCeloPlugin = (
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin => {
-  return makeEthereumBasedPluginInner(opts, currencyInfo)
-}
+export const celo = makeOuterPlugin<{}, EthereumTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('../ethPlugin')
+  }
+})

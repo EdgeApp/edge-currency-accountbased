@@ -1,6 +1,8 @@
 import { BncClient } from '@binance-chain/javascript-sdk'
 import { add, gt, mul, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -9,6 +11,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { asErrorMessage } from '../common/types'
 import {
   asyncWaterfall,
@@ -515,4 +518,22 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: BinanceTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const { initOptions } = env
+
+  const engine = new BinanceEngine(tools, walletInfo, initOptions, opts)
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  engine.otherData = engine.walletLocalData.otherData
+
+  return engine
 }

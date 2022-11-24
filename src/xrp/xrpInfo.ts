@@ -1,5 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { RippleTools } from './xrpPlugin'
 import { XrpSettings } from './xrpTypes'
 
 const otherSettings: XrpSettings = {
@@ -42,3 +44,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const ripple = makeOuterPlugin<{}, RippleTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./xrpPlugin')
+  }
+})

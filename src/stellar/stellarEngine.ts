@@ -1,6 +1,6 @@
 import { add, div, eq, gt, mul, sub } from 'biggystring'
-// import { currencyInfo } from './stellarInfo'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -8,8 +8,10 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import stellarApi from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -625,4 +627,29 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: StellarTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new StellarEngine(tools, walletInfo, opts)
+
+  engine.stellarApi = stellarApi
+
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  if (engine.otherData.accountSequence == null) {
+    engine.otherData.accountSequence = 0
+  }
+  if (engine.otherData.lastPagingToken == null) {
+    engine.otherData.lastPagingToken = '0'
+  }
+
+  return engine
 }

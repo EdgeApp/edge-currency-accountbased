@@ -1,39 +1,38 @@
 import 'regenerator-runtime/runtime'
 
-import { makeBinancePlugin } from './binance/bnbPlugin'
+import { binance } from './binance/bnbInfo'
 import { eosPlugins } from './eos/index'
 import { ethPlugins } from './ethereum/ethInfos'
-import { makeFioPlugin } from './fio/fioPlugin'
-import { makeHederaPlugin } from './hedera/hederaInfo'
-import { makePolkadotPlugin } from './polkadot/polkadotInfo'
-import { makeSolanaPlugin } from './solana/solanaInfo'
-import { makeStellarPlugin } from './stellar/stellarPlugin'
-import { makeTezosPlugin } from './tezos/tezosPlugin'
-import { makeTronPlugin } from './tron/tronInfo'
-import { makeRipplePlugin } from './xrp/xrpPlugin'
-import { makeZcashPlugin } from './zcash/zecPlugin'
+import { fio } from './fio/fioInfo'
+import { hedera } from './hedera/hederaInfo'
+import { polkadot } from './polkadot/polkadotInfo'
+import { solana } from './solana/solanaInfo'
+import { stellar } from './stellar/stellarInfo'
+import { tezos } from './tezos/tezosInfo'
+import { tron } from './tron/tronInfo'
+import { ripple } from './xrp/xrpInfo'
+import { zcash } from './zcash/zecInfo'
 
 const plugins = {
   ...eosPlugins,
   ...ethPlugins,
-  binance: makeBinancePlugin,
-  fio: makeFioPlugin,
-  hedera: makeHederaPlugin,
-  polkadot: makePolkadotPlugin,
+  binance,
+  fio,
+  hedera,
+  polkadot,
   // "ripple" is network name. XRP is just an asset:
-  ripple: makeRipplePlugin,
-  solana: makeSolanaPlugin,
-  stellar: makeStellarPlugin,
-  tezos: makeTezosPlugin,
-  tron: makeTronPlugin,
-  zcash: makeZcashPlugin
+  ripple,
+  solana,
+  stellar,
+  tezos,
+  tron,
+  zcash
 }
 
 if (
   typeof window !== 'undefined' &&
   typeof window.addEdgeCorePlugins === 'function'
 ) {
-  // @ts-expect-error
   window.addEdgeCorePlugins(plugins)
 }
 

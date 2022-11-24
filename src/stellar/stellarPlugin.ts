@@ -1,10 +1,6 @@
 import { add, div } from 'biggystring'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -15,10 +11,9 @@ import stellarApi from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { StellarEngine } from './stellarEngine'
-import { currencyInfo } from './stellarInfo'
 
 const URI_PREFIX = 'web+stellar'
 
@@ -28,7 +23,9 @@ export class StellarTools implements EdgeCurrencyTools {
   highestTxHeight: number = 0
 
   stellarApiServers: Object[]
-  constructor(io: EdgeIo) {
+
+  constructor(env: PluginEnvironment<{}>) {
+    const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
     stellarApi.Network.usePublicNetwork()
@@ -93,7 +90,7 @@ export class StellarTools implements EdgeCurrencyTools {
     }
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       networks
     )
@@ -143,7 +140,7 @@ export class StellarTools implements EdgeCurrencyTools {
     if (typeof obj.nativeAmount === 'string') {
       const currencyCode: string = 'XLM'
       const nativeAmount: string = obj.nativeAmount
-      const denom = getDenomInfo(currencyInfo, currencyCode)
+      const denom = getDenomInfo(this.currencyInfo, currencyCode)
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
@@ -180,48 +177,10 @@ export class StellarTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeStellarPlugin(
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
-  const { io } = opts
-
-  let toolsPromise: Promise<StellarTools>
-  async function makeCurrencyTools(): Promise<StellarTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new StellarTools(io))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new StellarEngine(tools, walletInfo, opts)
-
-    currencyEngine.stellarApi = stellarApi
-
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.accountSequence) {
-      currencyEngine.otherData.accountSequence = 0
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.lastPagingToken) {
-      currencyEngine.otherData.lastPagingToken = '0'
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<StellarTools> {
+  return new StellarTools(env)
 }
+
+export { makeCurrencyEngine } from './stellarEngine'

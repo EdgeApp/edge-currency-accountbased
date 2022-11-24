@@ -2,11 +2,7 @@ import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -16,9 +12,9 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
-import { PolkadotEngine } from './polkadotEngine'
 import {
   ApiPromise,
   ed25519PairFromSeed,
@@ -36,7 +32,8 @@ export class PolkadotTools implements EdgeCurrencyTools {
   polkadotApi: ApiPromise | undefined
   polkadotApiSubscribers: { [walletId: string]: boolean }
 
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.polkadotApiSubscribers = {}
@@ -162,49 +159,10 @@ export class PolkadotTools implements EdgeCurrencyTools {
   }
 }
 
-export function makePolkadotPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo
-): EdgeCurrencyPlugin | undefined {
-  if (
-    BigInt != null &&
-    typeof BigInt === 'function' &&
-    typeof BigInt(2) !== 'bigint'
-  ) {
-    // Return early if required bigint support isn't present
-    return
-  }
-
-  const { io } = opts
-
-  let toolsPromise: Promise<PolkadotTools>
-  async function makeCurrencyTools(): Promise<PolkadotTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new PolkadotTools(io, currencyInfo))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new PolkadotEngine(tools, walletInfo, opts)
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    const out: EdgeCurrencyEngine = currencyEngine
-
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<PolkadotTools> {
+  return new PolkadotTools(env)
 }
+
+export { makeCurrencyEngine } from './polkadotEngine'

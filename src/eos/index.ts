@@ -1,9 +1,9 @@
-import { makeEosPlugin } from './eosInfo'
-import { makeTelosPlugin } from './telosInfo'
-import { makeWaxPlugin } from './waxInfo'
+import { eos } from './eosInfo'
+import { telos } from './telosInfo'
+import { wax } from './waxInfo'
 
 export const eosPlugins = {
-  eos: makeEosPlugin,
-  telos: makeTelosPlugin,
-  wax: makeWaxPlugin
+  eos,
+  telos,
+  wax
 }
