@@ -1,4 +1,4 @@
-import { eq, gt, lt } from 'biggystring'
+import { add, eq, gt, lt } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
@@ -1015,10 +1015,28 @@ export class CurrencyEngine<
       currencyCode = this.currencyInfo.currencyCode
     }
 
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!skipChecks && (!nativeBalance || eq(nativeBalance, '0'))) {
-      throw new InsufficientFundsError()
+    const nativeBalance =
+      this.walletLocalData.totalBalances[currencyCode] ?? '0'
+
+    // Bucket all spendTarget nativeAmounts by currencyCode
+    const spendAmountMap: { [currencyCode: string]: string } = {}
+    for (const spendTarget of edgeSpendInfo.spendTargets) {
+      const { nativeAmount } = spendTarget
+      if (nativeAmount == null) continue
+      spendAmountMap[currencyCode] = spendAmountMap[currencyCode] ?? '0'
+      spendAmountMap[currencyCode] = add(
+        spendAmountMap[currencyCode],
+        nativeAmount
+      )
+    }
+
+    // Check each spend amount against relevant balance
+    for (const [currencyCode, nativeAmount] of Object.entries(spendAmountMap)) {
+      const nativeBalance =
+        this.walletLocalData.totalBalances[currencyCode] ?? '0'
+      if (!skipChecks && lt(nativeBalance, nativeAmount)) {
+        throw new InsufficientFundsError()
+      }
     }
 
     edgeSpendInfo.currencyCode = currencyCode
