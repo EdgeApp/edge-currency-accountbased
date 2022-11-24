@@ -9,6 +9,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -17,7 +18,7 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, getFetchCors } from '../common/utils'
 import { SolanaEngine } from './solanaEngine'
 
@@ -34,15 +35,17 @@ const createKeyPair = async (
   return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
 }
 
-export class SolanaPlugin extends CurrencyPlugin {
-  pluginId: string
+export class SolanaTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
 
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginId, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
 
@@ -52,37 +55,34 @@ export class SolanaPlugin extends CurrencyPlugin {
     )
 
     return {
-      [`${this.pluginId}Mnemonic`]: mnemonic,
-      [`${this.pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+      [`${pluginId}Mnemonic`]: mnemonic,
+      [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
       publicKey: keypair.publicKey.toBase58()
     }
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === this.pluginId) {
-      const entropy = Buffer.from(this.io.random(32))
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (
-      type === this.pluginId &&
-      walletInfo.keys[`${this.pluginId}Mnemonic`] != null
-    ) {
-      const keys = await this.importPrivateKey(
-        walletInfo.keys[`${this.pluginId}Mnemonic`]
-      )
-      return { publicKey: keys.publicKey.toString() }
-    } else {
+    const { pluginId } = this.currencyInfo
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+    if (walletInfo.keys[`${pluginId}Mnemonic`] == null) {
+      throw new Error('Missing mnemonic')
+    }
+    const keys = await this.importPrivateKey(
+      walletInfo.keys[`${pluginId}Mnemonic`]
+    )
+    return { publicKey: keys.publicKey.toString() }
   }
 
   async parseUri(
@@ -90,9 +90,10 @@ export class SolanaPlugin extends CurrencyPlugin {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { [this.pluginId]: true }
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
@@ -118,6 +119,7 @@ export class SolanaPlugin extends CurrencyPlugin {
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -137,7 +139,7 @@ export class SolanaPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, this.pluginId, amount)
+    const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }
 }
@@ -149,10 +151,10 @@ export function makeSolanaPluginInner(
   const { io } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<SolanaPlugin>
-  async function makeCurrencyTools(): Promise<SolanaPlugin> {
+  let toolsPromise: Promise<SolanaTools>
+  async function makeCurrencyTools(): Promise<SolanaTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new SolanaPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new SolanaTools(io, currencyInfo))
     return await toolsPromise
   }
 

@@ -1,8 +1,6 @@
 /* eslint camelcase: 0 */
 
-// @ts-expect-error
 import { FIOSDK } from '@fioprotocol/fiosdk'
-// @ts-expect-error
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -10,16 +8,17 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
   getDenomInfo,
@@ -51,12 +50,13 @@ export function checkAddress(address: string): boolean {
   return start && length
 }
 
-export class FioPlugin extends CurrencyPlugin {
-  // @ts-expect-error
-  otherMethods: Object
+export class FioTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
 
   constructor(io: EdgeIo) {
-    super(io, FIO_TYPE, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -116,7 +116,7 @@ export class FioPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = this.parseUriCommon(
+    const { edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       {
@@ -148,7 +148,7 @@ export class FioPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 16)
     }
-    const encodedUri = this.encodeUriCommon(obj, FIO_TYPE, amount)
+    const encodedUri = encodeUriCommon(obj, FIO_TYPE, amount)
     return encodedUri
   }
 }
@@ -161,10 +161,10 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
   const baseUrl = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)[0]
   const connection = new FIOSDK('', '', baseUrl, fetchCors, undefined, tpid)
 
-  let toolsPromise: Promise<FioPlugin>
-  async function makeCurrencyTools(): Promise<FioPlugin> {
+  let toolsPromise: Promise<FioTools>
+  async function makeCurrencyTools(): Promise<FioTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new FioPlugin(io))
+    toolsPromise = Promise.resolve(new FioTools(io))
     return await toolsPromise
   }
 

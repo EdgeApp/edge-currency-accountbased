@@ -19,11 +19,8 @@ import {
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
 import { signTypedData_v4 } from 'eth-sig-util'
-// @ts-expect-error
 import abi from 'ethereumjs-abi'
-// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
-// @ts-expect-error
 import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'
@@ -46,7 +43,7 @@ import {
 } from '../common/utils'
 import { NETWORK_FEES_POLL_MILLISECONDS, WEI_MULTIPLIER } from './ethConsts'
 import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
-import { EthereumPlugin } from './ethPlugin'
+import { EthereumTools } from './ethPlugin'
 import { EIP712TypedDataSchema } from './ethSchema'
 import {
   asWcSessionRequestParams,
@@ -76,7 +73,7 @@ import {
 
 const walletConnectors: WalletConnectors = {}
 
-export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
+export class EthereumEngine extends CurrencyEngine<EthereumTools> {
   // @ts-expect-error
   otherData: EthereumWalletOtherData
   initOptions: EthereumInitOptions
@@ -88,14 +85,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
   infoFeeProvider: () => Promise<EthereumFee>
   externalFeeProviders: FeeProviderFunction[]
   constructor(
-    currencyPlugin: EthereumPlugin,
+    tools: EthereumTools,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions,
     currencyInfo: EdgeCurrencyInfo,
     fetchCors: EdgeFetchFunction
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(tools, walletInfo, opts)
     const { pluginId } = this.currencyInfo
     if (typeof this.walletInfo.keys[`${pluginId}Key`] !== 'string') {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
@@ -104,7 +101,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
           walletInfo.keys.keys[`${pluginId}Key`]
       }
     }
-    this.currencyPlugin = currencyPlugin
     this.initOptions = initOptions
     this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
     this.lastEstimatedGasLimit = {
@@ -1256,5 +1252,3 @@ export class EthereumEngine extends CurrencyEngine<EthereumPlugin> {
     super.addCustomToken(obj, contractAddress.toLowerCase())
   }
 }
-
-export { CurrencyEngine }

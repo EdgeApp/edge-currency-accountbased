@@ -10,7 +10,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeMetaToken,
@@ -18,7 +20,7 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { BinanceEngine } from './bnbEngine'
 import { currencyInfo } from './bnbInfo'
@@ -30,9 +32,13 @@ const {
   validateMnemonic
 } = crypto
 
-export class BinancePlugin extends CurrencyPlugin {
+export class BinanceTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
+
   constructor(io: EdgeIo) {
-    super(io, 'binance', currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   // will actually use MNEMONIC version of private key
@@ -80,7 +86,7 @@ export class BinancePlugin extends CurrencyPlugin {
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       networks,
@@ -119,7 +125,7 @@ export class BinancePlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'binance', amount)
+    const encodedUri = encodeUriCommon(obj, 'binance', amount)
     return encodedUri
   }
 }
@@ -129,10 +135,10 @@ export function makeBinancePlugin(
 ): EdgeCurrencyPlugin {
   const { io, initOptions } = opts
 
-  let toolsPromise: Promise<BinancePlugin>
-  async function makeCurrencyTools(): Promise<BinancePlugin> {
+  let toolsPromise: Promise<BinanceTools>
+  async function makeCurrencyTools(): Promise<BinanceTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new BinancePlugin(io))
+    toolsPromise = Promise.resolve(new BinanceTools(io))
     return await toolsPromise
   }
 

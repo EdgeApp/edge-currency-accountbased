@@ -7,7 +7,9 @@ import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
@@ -22,17 +24,20 @@ import {
   xAddressToClassicAddress
 } from 'xrpl'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { XrpEngine } from './xrpEngine'
 import { currencyInfo } from './xrpInfo'
 
-export class XrpPlugin extends CurrencyPlugin {
+export class RippleTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
   rippleApi: Object
   rippleApiSubscribers: { [walletId: string]: boolean }
 
   constructor(io: EdgeIo) {
-    super(io, 'ripple', currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
     this.rippleApi = {}
     this.rippleApiSubscribers = {}
   }
@@ -134,7 +139,7 @@ export class XrpPlugin extends CurrencyPlugin {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       currencyInfo,
       uri,
       networks
@@ -164,7 +169,7 @@ export class XrpPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 6)
     }
-    const encodedUri = this.encodeUriCommon(obj, 'ripple', amount)
+    const encodedUri = encodeUriCommon(obj, 'ripple', amount)
     return encodedUri
   }
 }
@@ -174,10 +179,10 @@ export function makeRipplePlugin(
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
-  let toolsPromise: Promise<XrpPlugin>
-  async function makeCurrencyTools(): Promise<XrpPlugin> {
+  let toolsPromise: Promise<RippleTools>
+  async function makeCurrencyTools(): Promise<RippleTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new XrpPlugin(io))
+    toolsPromise = Promise.resolve(new RippleTools(io))
     return await toolsPromise
   }
 

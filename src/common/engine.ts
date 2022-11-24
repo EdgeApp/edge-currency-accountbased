@@ -20,7 +20,6 @@ import {
   SpendToSelfError
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from './plugin'
 import {
   asCurrencyCodeOptions,
   checkCustomToken,
@@ -45,10 +44,10 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
-type CurrencyPluginType<T> = T & CurrencyPlugin
-
-export class CurrencyEngine<T> {
-  currencyPlugin: CurrencyPluginType<T>
+export class CurrencyEngine<
+  T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
+> {
+  tools: T
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
@@ -78,15 +77,16 @@ export class CurrencyEngine<T> {
   otherData: Object
 
   constructor(
-    currencyPlugin: CurrencyPluginType<T>,
+    tools: T,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const currencyCode = currencyPlugin.currencyInfo.currencyCode
+    const { io, currencyInfo } = tools
+    const { currencyCode } = currencyInfo
     const { walletLocalDisklet, callbacks } = opts
 
-    this.currencyPlugin = currencyPlugin
-    this.io = currencyPlugin.io
+    this.tools = tools
+    this.io = io
     this.log = opts.log
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))
@@ -103,8 +103,8 @@ export class CurrencyEngine<T> {
     this.txIdList = {}
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id != null ? `${walletInfo.id} - ` : ''
-    this.currencyInfo = currencyPlugin.currencyInfo
-    this.allTokens = currencyPlugin.currencyInfo.metaTokens.slice(0)
+    this.currencyInfo = currencyInfo
+    this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
     this.customTokens = []
     this.timers = {}
@@ -268,8 +268,7 @@ export class CurrencyEngine<T> {
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.walletInfo.keys.publicKey) {
-      const pubKeys = await this.currencyPlugin.derivePublicKey(this.walletInfo)
-      // @ts-expect-error
+      const pubKeys = await this.tools.derivePublicKey(this.walletInfo)
       this.walletInfo.keys.publicKey = pubKeys.publicKey
     }
 
@@ -334,8 +333,8 @@ export class CurrencyEngine<T> {
         currencyName,
         denominations
       }) =>
-        await this.currencyPlugin
-          .getTokenId({
+        await this.tools
+          .getTokenId?.({
             currencyCode,
             displayName: currencyName,
             denominations,
@@ -410,11 +409,6 @@ export class CurrencyEngine<T> {
     }
     const txid = normalizeAddress(edgeTransaction.txid)
     const idx = this.findTransaction(currencyCode, txid)
-    // if blockHeight of transaction is higher than known blockHeight
-    // then set transaction's blockHeight as the highest known blockHeight
-    if (edgeTransaction.blockHeight > this.currencyPlugin.highestTxHeight) {
-      this.currencyPlugin.highestTxHeight = edgeTransaction.blockHeight
-    }
 
     let needsReSort = false
     // if transaction doesn't exist in database

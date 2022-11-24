@@ -16,7 +16,6 @@ import {
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
-// @ts-expect-error
 import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
@@ -29,7 +28,7 @@ import {
   pickRandom,
   validateObject
 } from '../common/utils'
-import { checkAddress, EosPlugin } from './eosPlugin'
+import { checkAddress, EosTools } from './eosPlugin'
 import {
   asDfuseGetKeyAccountsResponse,
   asDfuseGetTransactionsErrorResponse,
@@ -102,12 +101,7 @@ class CosignAuthorityProvider {
     )
   }
 }
-export class EosEngine extends CurrencyEngine<EosPlugin> {
-  // TODO: Add currency specific params
-  // Store any per wallet specific data in the `currencyEngine` object. Add any params
-  // to the EosEngine class definition in eosEngine.js and initialize them in the
-  // constructor()
-  eosPlugin: EosPlugin
+export class EosEngine extends CurrencyEngine<EosTools> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   // @ts-expect-error
   otherData: EosWalletOtherData
@@ -116,16 +110,15 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
   fetchCors: EdgeFetchFunction
 
   constructor(
-    currencyPlugin: EosPlugin,
+    tools: EosTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     fetchCors: EdgeFetchFunction,
     eosJsConfig: EosJsConfig
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(tools, walletInfo, opts)
     this.fetchCors = fetchCors
     this.eosJsConfig = eosJsConfig
-    this.eosPlugin = currencyPlugin
     this.activatedAccountsCache = {}
     const { currencyCode, denominations } = this.currencyInfo
     this.allTokens.push({
@@ -1038,7 +1031,7 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
       mustCreateAccount = true
     } else if (activated === undefined) {
       try {
-        await this.eosPlugin.getAccSystemStats(publicAddress)
+        await this.tools.getAccSystemStats(publicAddress)
         this.activatedAccountsCache[publicAddress] = true
       } catch (e: any) {
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -1302,5 +1295,3 @@ export class EosEngine extends CurrencyEngine<EosPlugin> {
     return out
   }
 }
-
-export { CurrencyEngine }

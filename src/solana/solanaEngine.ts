@@ -13,7 +13,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils'
-import { SolanaPlugin } from './solanaPlugin'
+import { SolanaTools } from './solanaPlugin'
 import {
   asRecentBlockHash,
   asRpcBalance,
@@ -36,7 +36,7 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
+export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -48,17 +48,17 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
   progressRatio: number
 
   constructor(
-    currencyPlugin: SolanaPlugin,
+    tools: SolanaTools,
     walletInfo: EdgeWalletInfo,
     opts: any, // EdgeCurrencyEngineOptions
     fetchCors: EdgeFetchFunction
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.chainCode = currencyPlugin.currencyInfo.currencyCode
+    super(tools, walletInfo, opts)
+    this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
-    this.settings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
   }
@@ -383,9 +383,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     const keypair = Keypair.fromSecretKey(
       Uint8Array.from(
         Buffer.from(
-          this.walletInfo.keys[
-            `${this.currencyPlugin.currencyInfo.pluginId}Key`
-          ],
+          this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
           'hex'
         )
       )
@@ -427,9 +425,9 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
       this.walletInfo.keys &&
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     ) {
-      return this.walletInfo.keys[`${this.currencyPlugin.pluginId}Mnemonic`]
+      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     }
     return ''
   }
@@ -443,5 +441,3 @@ export class SolanaEngine extends CurrencyEngine<SolanaPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

@@ -8,7 +8,6 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-// @ts-expect-error
 import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine'
@@ -19,7 +18,7 @@ import {
   makeMutex,
   promiseAny
 } from '../common/utils'
-import { TezosPlugin } from '../tezos/tezosPlugin'
+import { TezosTools } from '../tezos/tezosPlugin'
 import { currencyInfo } from './tezosInfo'
 import {
   asXtzGetTransaction,
@@ -45,18 +44,16 @@ type TezosFunction =
   | 'injectOperation'
   | 'silentInjection'
 
-export class TezosEngine extends CurrencyEngine<TezosPlugin> {
-  tezosPlugin: TezosPlugin
+export class TezosEngine extends CurrencyEngine<TezosTools> {
   fetchCors: EdgeFetchFunction
 
   constructor(
-    currencyPlugin: TezosPlugin,
+    tools: TezosTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     fetchCors: EdgeFetchFunction
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.tezosPlugin = currencyPlugin
+    super(tools, walletInfo, opts)
     this.fetchCors = fetchCors
   }
 
@@ -68,7 +65,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       case 'getHead': {
         // relevant nodes, disabling first node due to caching / polling issue
         // need to re-enable once that nodes issue is fixed
-        const nonCachedNodes = this.tezosPlugin.tezosRpcNodes
+        const nonCachedNodes = this.tools.tezosRpcNodes
         funcs = nonCachedNodes.map(server => async () => {
           const result = await this.io
             // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
@@ -86,7 +83,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       }
 
       case 'getBalance': {
-        const usableNodes = this.tezosPlugin.tezosRpcNodes
+        const usableNodes = this.tools.tezosRpcNodes
         funcs = usableNodes.map(server => async () => {
           eztz.node.setProvider(server)
           const result = await eztz.rpc.getBalance(params[0])
@@ -97,7 +94,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       }
 
       case 'getNumberOfOperations':
-        funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
+        funcs = this.tools.tezosApiServers.map(server => async () => {
           const result = await this.fetchCors(
             // eslint-disable-next-line @typescript-eslint/no-base-to-string
             `${server}/v1/accounts/${params[0]}`
@@ -114,7 +111,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         break
 
       case 'getTransactions':
-        funcs = this.tezosPlugin.tezosApiServers.map(server => async () => {
+        funcs = this.tools.tezosApiServers.map(server => async () => {
           // @ts-expect-error
           const pagination = /tzkt/.test(server)
             ? ''
@@ -132,7 +129,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
         break
 
       case 'createTransaction':
-        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+        funcs = this.tools.tezosRpcNodes.map(server => async () => {
           eztz.node.setProvider(server)
           const result = await eztz.rpc
             .transfer(
@@ -158,7 +155,7 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       // Functions that should multicast to all servers
       case 'injectOperation': {
         let preApplyError = ''
-        funcs = this.tezosPlugin.tezosRpcNodes.map(server => async () => {
+        funcs = this.tools.tezosRpcNodes.map(server => async () => {
           eztz.node.setProvider(server)
           const result = await eztz.rpc
             .inject(params[0], params[1])
@@ -188,10 +185,8 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
       }
 
       case 'silentInjection': {
-        const index = this.tezosPlugin.tezosRpcNodes.indexOf(params[0])
-        const remainingRpcNodes = this.tezosPlugin.tezosRpcNodes.slice(
-          index + 1
-        )
+        const index = this.tools.tezosRpcNodes.indexOf(params[0])
+        const remainingRpcNodes = this.tools.tezosRpcNodes.slice(index + 1)
         out = await promiseAny(
           remainingRpcNodes.map(async server => {
             eztz.node.setProvider(server)
@@ -518,5 +513,3 @@ export class TezosEngine extends CurrencyEngine<TezosPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

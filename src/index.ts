@@ -33,7 +33,6 @@ const plugins = {
 
 if (
   typeof window !== 'undefined' &&
-  // @ts-expect-error
   typeof window.addEdgeCorePlugins === 'function'
 ) {
   // @ts-expect-error

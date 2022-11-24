@@ -10,6 +10,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeFetchFunction,
   EdgeIo,
@@ -17,12 +18,10 @@ import {
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import EosApi from 'eosjs-api'
-// @ts-expect-error
 import ecc from 'eosjs-ecc'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
 import { EosEngine } from './eosEngine'
 import {
@@ -35,10 +34,10 @@ export function checkAddress(address: string): boolean {
   return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
-export class EosPlugin extends CurrencyPlugin {
-  // @ts-expect-error
-  otherMethods: Object
+export class EosTools implements EdgeCurrencyTools {
   eosServer: Object
+  currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
 
   constructor(
     io: EdgeIo,
@@ -46,7 +45,8 @@ export class EosPlugin extends CurrencyPlugin {
     currencyInfo: EdgeCurrencyInfo,
     eosJsConfig: EosJsConfig
   ) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+    this.io = io
+    this.currencyInfo = currencyInfo
 
     eosJsConfig.httpEndpoint =
       this.currencyInfo.defaultSettings.otherSettings.eosNodes[0]
@@ -113,7 +113,7 @@ export class EosPlugin extends CurrencyPlugin {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = this.parseUriCommon(this.currencyInfo, uri, {
+    const { edgeParsedUri } = parseUriCommon(this.currencyInfo, uri, {
       [this.currencyInfo.defaultSettings.otherSettings.uriProtocol]: true
     })
 
@@ -140,7 +140,7 @@ export class EosPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 4)
     }
-    const encodedUri = this.encodeUriCommon(
+    const encodedUri = encodeUriCommon(
       obj,
       this.currencyInfo.defaultSettings.otherSettings.uriProtocol,
       amount
@@ -150,12 +150,10 @@ export class EosPlugin extends CurrencyPlugin {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     const contractAddress = token?.networkLocation?.contractAddress
-    if (contractAddress != null) {
-      if (!checkAddress(contractAddress))
-        throw new Error('ErrorInvalidContractAddress')
-      return contractAddress.toLowerCase()
+    if (contractAddress == null || !checkAddress(contractAddress)) {
+      throw new Error('ErrorInvalidContractAddress')
     }
-    return await super.getTokenId(token)
+    return contractAddress.toLowerCase()
   }
 
   // change to fetch call in the future
@@ -186,11 +184,11 @@ export function makeEosBasedPluginInner(
   const { io, log } = opts
   const fetch = getFetchCors(opts)
 
-  let toolsPromise: Promise<EosPlugin>
-  async function makeCurrencyTools(): Promise<EosPlugin> {
+  let toolsPromise: Promise<EosTools>
+  async function makeCurrencyTools(): Promise<EosTools> {
     if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
-      new EosPlugin(io, fetch, currencyInfo, eosJsConfig)
+      new EosTools(io, fetch, currencyInfo, eosJsConfig)
     )
     return await toolsPromise
   }

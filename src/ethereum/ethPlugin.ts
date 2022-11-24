@@ -12,34 +12,29 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
-  EdgeFetchFunction,
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-// @ts-expect-error
 import EthereumUtil from 'ethereumjs-util'
-// @ts-expect-error
 import hdKey from 'ethereumjs-wallet/hdkey'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
 import { EthereumEngine } from './ethEngine'
 import { ethPlugins } from './ethInfos'
 
-export { calcMiningFee } from './fees/ethMiningFees' // may be tricky for RSK
+export class EthereumTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
 
-export class EthereumPlugin extends CurrencyPlugin {
-  constructor(
-    io: EdgeIo,
-    currencyInfo: EdgeCurrencyInfo,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    fetchCors: EdgeFetchFunction
-  ) {
-    super(io, currencyInfo.pluginId, currencyInfo)
+  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -166,7 +161,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
     )
 
-    const { parsedUri, edgeParsedUri } = this.parseUriCommon(
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
       networks,
@@ -350,11 +345,7 @@ export class EthereumPlugin extends CurrencyPlugin {
       }
       amount = div(nativeAmount, denom.multiplier, 18)
     }
-    const encodedUri = this.encodeUriCommon(
-      obj,
-      this.currencyInfo.pluginId,
-      amount
-    )
+    const encodedUri = encodeUriCommon(obj, this.currencyInfo.pluginId, amount)
     return encodedUri
   }
 
@@ -365,13 +356,14 @@ export class EthereumPlugin extends CurrencyPlugin {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     const contractAddress = token?.networkLocation?.contractAddress
-    if (contractAddress != null) {
+    if (
+      contractAddress == null ||
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!EthereumUtil.isValidAddress(contractAddress))
-        throw new Error('ErrorInvalidContractAddress')
-      return contractAddress.toLowerCase()
+      !EthereumUtil.isValidAddress(contractAddress)
+    ) {
+      throw new Error('ErrorInvalidContractAddress')
     }
-    return await super.getTokenId(token)
+    return contractAddress.toLowerCase()
   }
 }
 
@@ -382,12 +374,10 @@ export function makeEthereumBasedPluginInner(
   const { io, initOptions } = opts
   const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<EthereumPlugin>
-  async function makeCurrencyTools(): Promise<EthereumPlugin> {
+  let toolsPromise: Promise<EthereumTools>
+  async function makeCurrencyTools(): Promise<EthereumTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(
-      new EthereumPlugin(io, currencyInfo, fetchCors)
-    )
+    toolsPromise = Promise.resolve(new EthereumTools(io, currencyInfo))
 
     // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
     // a user from reconnecting to an "active" but invisible connection. Future enhancement

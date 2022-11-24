@@ -16,7 +16,7 @@ import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 import { CurrencyEngine } from '../common/engine'
 import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
 import { PluginError, pluginErrorCodes, pluginErrorName } from '../pluginError'
-import { XrpPlugin } from './xrpPlugin'
+import { RippleTools } from './xrpPlugin'
 import {
   asBalance,
   asFee,
@@ -54,20 +54,18 @@ type XrpFunction =
   | 'preparePayment'
   | 'submit'
 
-export class XrpEngine extends CurrencyEngine<XrpPlugin> {
-  xrpPlugin: XrpPlugin
+export class XrpEngine extends CurrencyEngine<RippleTools> {
   // @ts-expect-error
   otherData: XrpWalletOtherData
   xrpSettings: XrpSettings
 
   constructor(
-    currencyPlugin: XrpPlugin,
+    tools: RippleTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.xrpPlugin = currencyPlugin
-    this.xrpSettings = currencyPlugin.currencyInfo.defaultSettings.otherSettings
+    super(tools, walletInfo, opts)
+    this.xrpSettings = tools.currencyInfo.defaultSettings.otherSettings
   }
 
   async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
@@ -84,9 +82,9 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     }
     const out = {
       // @ts-expect-error
-      result: await this.xrpPlugin.rippleApi[method](...params),
+      result: await this.tools.rippleApi[method](...params),
       // @ts-expect-error
-      server: this.xrpPlugin.rippleApi.serverName
+      server: this.tools.rippleApi.serverName
     }
     this.log(`multicastServers ${func} ${out.server} won`)
     return out.result
@@ -144,7 +142,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash.toLowerCase(),
       date: rippleTimeToUnixTime(tx.date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-      currencyCode: this.xrpPlugin.currencyInfo.currencyCode,
+      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.ledger_index,
       nativeAmount,
       networkFee: tx.Fee,
@@ -152,10 +150,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
       signedTx: '',
       otherParams: {}
     }
-    this.addTransaction(
-      this.xrpPlugin.currencyInfo.currencyCode,
-      edgeTransaction
-    )
+    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -242,7 +237,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   async startEngine() {
     this.engineOn = true
     try {
-      await this.xrpPlugin.connectApi(this.walletId)
+      await this.tools.connectApi(this.walletId)
     } catch (e: any) {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
@@ -266,7 +261,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async killEngine() {
     await super.killEngine()
-    await this.xrpPlugin.disconnectApi(this.walletId)
+    await this.tools.disconnectApi(this.walletId)
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -280,7 +275,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     let spendableBalance = this.getBalance({
       currencyCode
     })
-    if (currencyCode === this.xrpPlugin.currencyInfo.currencyCode) {
+    if (currencyCode === this.currencyInfo.currencyCode) {
       spendableBalance = sub(spendableBalance, this.xrpSettings.baseReserve)
     }
     if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
@@ -325,7 +320,7 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
         memoMaxLength = Infinity,
         memoMaxValue,
         defaultSettings: { errorCodes }
-      } = this.xrpPlugin.currencyInfo
+      } = this.currencyInfo
 
       if (Number.isNaN(parseInt(uniqueIdentifier))) {
         throw new PluginError(
@@ -450,5 +445,3 @@ export class XrpEngine extends CurrencyEngine<XrpPlugin> {
     return this.walletInfo.keys?.publicKey ?? ''
   }
 }
-
-export { CurrencyEngine }

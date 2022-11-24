@@ -16,7 +16,7 @@ import { base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { bufToHex, hexToBuf, removeHexPrefix } from '../common/utils'
-import { HederaPlugin } from './hederaPlugin'
+import { HederaTools } from './hederaPlugin'
 import {
   asCheckAccountCreationStatus,
   asGetAccountActivationQuote,
@@ -26,8 +26,7 @@ import {
 
 const GENESIS = 1535068800 // '2018-08-24T00:00:00.000Z'
 
-export class HederaEngine extends CurrencyEngine<HederaPlugin> {
-  hederaPlugin: HederaPlugin
+export class HederaEngine extends CurrencyEngine<HederaTools> {
   client: hedera.Client
   accountId: hedera.AccountId | undefined | null
   otherMethods: Object
@@ -38,15 +37,14 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   maxFee: number
 
   constructor(
-    currencyPlugin: HederaPlugin,
+    tools: HederaTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     io: EdgeIo,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     currencyInfo: EdgeCurrencyInfo
   ) {
-    super(currencyPlugin, walletInfo, opts)
-    this.hederaPlugin = currencyPlugin
+    super(tools, walletInfo, opts)
     this.log = opts.log
 
     this.io = io
@@ -496,7 +494,7 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
       throw new Error('missing otherParam transferTx')
     }
 
-    const privateKey = this.walletInfo.keys[`${this.hederaPlugin.pluginId}Key`]
+    const privateKey = this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
 
     if (privateKey == null) {
       throw new Error('missing privateKey in walletInfo')
@@ -554,8 +552,8 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
   getDisplayPrivateSeed() {
     return (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.hederaPlugin.pluginId}Mnemonic`] ||
-      this.walletInfo.keys[`${this.hederaPlugin.pluginId}Key`] ||
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ||
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ||
       ''
     )
   }
@@ -572,5 +570,3 @@ export class HederaEngine extends CurrencyEngine<HederaPlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

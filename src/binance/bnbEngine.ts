@@ -23,7 +23,7 @@ import {
   shuffleArray
 } from '../common/utils'
 import { currencyInfo } from './bnbInfo'
-import { BinancePlugin } from './bnbPlugin'
+import { BinanceTools } from './bnbPlugin'
 import {
   asBinanceApiAccountBalance,
   asBinanceApiGetTransactions,
@@ -48,17 +48,14 @@ type BnbFunction =
   | 'bnb_getBalance'
   | 'bnb_getTransactions'
 
-export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
-  // @ts-expect-error
-  binancePlugin: BinancePlugin
-
+export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   constructor(
-    currencyPlugin: BinancePlugin,
+    tools: BinanceTools,
     walletInfo: EdgeWalletInfo,
     initOptions: any, // BinanceInitOptions,
     opts: any // EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(tools, walletInfo, opts)
   }
 
   async fetchGet(url: string): Promise<Object> {
@@ -523,5 +520,3 @@ export class BinanceEngine extends CurrencyEngine<BinancePlugin> {
     return ''
   }
 }
-
-export { CurrencyEngine }

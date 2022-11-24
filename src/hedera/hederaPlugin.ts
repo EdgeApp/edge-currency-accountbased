@@ -7,13 +7,14 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
+  EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
-import { CurrencyPlugin } from '../common/plugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
 import { HederaEngine } from './hederaEngine'
 import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
@@ -23,28 +24,28 @@ import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
 const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
-export class HederaPlugin extends CurrencyPlugin {
-  pluginId: string
+export class HederaTools implements EdgeCurrencyTools {
+  io: EdgeIo
+  currencyInfo: EdgeCurrencyInfo
 
   constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
-    super(io, currencyInfo.pluginId, currencyInfo)
-    this.pluginId = currencyInfo.pluginId
+    this.io = io
+    this.currencyInfo = currencyInfo
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === this.pluginId) {
-      const entropy = this.io.random(32)
-      // @ts-expect-error
-      const mnemonic = entropyToMnemonic(entropy)
-      return await this.importPrivateKey(mnemonic)
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = this.io.random(32)
+    // @ts-expect-error
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
+    const { pluginId } = this.currencyInfo
     try {
       let privateMnemonic
       let privateKey
@@ -69,8 +70,8 @@ export class HederaPlugin extends CurrencyPlugin {
       }
 
       return {
-        [`${this.pluginId}Mnemonic`]: privateMnemonic,
-        [`${this.pluginId}Key`]: privateKey
+        [`${pluginId}Mnemonic`]: privateMnemonic,
+        [`${pluginId}Key`]: privateKey
       }
     } catch (e: any) {
       throw new Error('InvalidPrivateKey')
@@ -78,35 +79,36 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const type = walletInfo.type.replace('wallet:', '')
-    if (type === this.pluginId) {
-      if (
-        walletInfo.keys == null ||
-        walletInfo.keys?.[`${this.pluginId}Key`] == null
-      ) {
-        throw new Error('Invalid private key')
-      }
-
-      const privateKey = hedera.Ed25519PrivateKey.fromString(
-        walletInfo.keys[`${this.pluginId}Key`]
-      )
-
-      return {
-        publicKey: privateKey.publicKey.toString()
-      }
-    } else {
+    const { pluginId } = this.currencyInfo
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
+    }
+
+    if (
+      walletInfo.keys == null ||
+      walletInfo.keys?.[`${pluginId}Key`] == null
+    ) {
+      throw new Error('Invalid private key')
+    }
+
+    const privateKey = hedera.Ed25519PrivateKey.fromString(
+      walletInfo.keys[`${pluginId}Key`]
+    )
+
+    return {
+      publicKey: privateKey.publicKey.toString()
     }
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
+    const { pluginId } = this.currencyInfo
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = this.parseUriCommon(
+    } = parseUriCommon(
       this.currencyInfo,
       uri,
-      { [`${this.pluginId}`]: true },
+      { [`${pluginId}`]: true },
       this.currencyInfo.currencyCode
     )
 
@@ -126,6 +128,7 @@ export class HederaPlugin extends CurrencyPlugin {
   }
 
   async encodeUri(obj: EdgeEncodeUri): Promise<string> {
+    const { pluginId } = this.currencyInfo
     const { publicAddress, nativeAmount } = obj
     if (!validAddress(publicAddress)) {
       throw new Error('InvalidPublicAddressError')
@@ -145,7 +148,7 @@ export class HederaPlugin extends CurrencyPlugin {
     }
     const amount = div(nativeAmount, denom.multiplier, 8)
 
-    return this.encodeUriCommon(obj, this.pluginId, amount)
+    return encodeUriCommon(obj, pluginId, amount)
   }
 }
 
@@ -155,11 +158,11 @@ export function makeHederaPluginInner(
 ): EdgeCurrencyPlugin {
   const { io } = opts
 
-  let toolsPromise: Promise<HederaPlugin>
+  let toolsPromise: Promise<HederaTools>
 
-  async function makeCurrencyTools(): Promise<HederaPlugin> {
+  async function makeCurrencyTools(): Promise<HederaTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new HederaPlugin(io, currencyInfo))
+    toolsPromise = Promise.resolve(new HederaTools(io, currencyInfo))
     return await toolsPromise
   }
 
