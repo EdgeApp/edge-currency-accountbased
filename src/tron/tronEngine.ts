@@ -42,7 +42,7 @@ import {
   ReferenceBlock,
   TronAccountResources,
   TronNetworkFees,
-  TronSettings,
+  TronNetworkInfo,
   TronTxParams,
   TxQueryCache
 } from './tronTypes'
@@ -76,7 +76,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   readonly recentBlock: ReferenceBlock
   accountResources: TronAccountResources
   networkFees: TronNetworkFees
-  settings: TronSettings
+  networkInfo: TronNetworkInfo
   accountExistsCache: { [address: string]: boolean }
   energyEstimateCache: { [addressAndContract: string]: number }
   tronscan: TronScan
@@ -85,13 +85,13 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     currencyPlugin: TronTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchCors: EdgeFetchFunction
+    fetchCors: EdgeFetchFunction,
+    networkInfo: TronNetworkInfo
   ) {
     super(currencyPlugin, walletInfo, opts)
     this.fetchCors = fetchCors
     this.log = opts.log
-    this.settings = this.currencyInfo.defaultSettings
-      .otherSettings as TronSettings
+    this.networkInfo = networkInfo
     this.recentBlock = {
       hash: '0',
       number: 0,
@@ -589,12 +589,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     switch (func) {
       case 'trx_chainParams':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.tronNodeServers.map(
-            (server: string) => async () => {
-              return await this.fetch(server, path)
-            }
-          )
+        funcs = this.networkInfo.tronNodeServers.map(
+          (server: string) => async () => {
+            return await this.fetch(server, path)
+          }
+        )
         break
 
       case 'trx_blockNumber':
@@ -603,34 +602,32 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       case 'trx_getAccountResource':
       case 'trx_getBalance':
       case 'trx_getTransactionInfo':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.tronNodeServers.map(
-            (server: string) => async () => {
-              const opts = {
-                method: 'POST',
-                headers: {
-                  Accept: 'application/json',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-              }
-              return await this.fetch(server, path, opts)
+        funcs = this.networkInfo.tronNodeServers.map(
+          (server: string) => async () => {
+            const opts = {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(body)
             }
-          )
+            return await this.fetch(server, path, opts)
+          }
+        )
         break
       case 'trx_getTransactions':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.tronApiServers.map(
-            (server: string) => async () => {
-              const opts = {
-                headers: {
-                  Accept: 'application/json',
-                  'Content-Type': 'application/json'
-                }
+        funcs = this.networkInfo.tronApiServers.map(
+          (server: string) => async () => {
+            const opts = {
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
               }
-              return await this.fetch(server, path, opts)
             }
-          )
+            return await this.fetch(server, path, opts)
+          }
+        )
         break
     }
 
@@ -823,7 +820,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         },
         type: 'TriggerSmartContract'
       }
-      feeLimit = this.settings.defaultFeeLimit
+      feeLimit = this.networkInfo.defaultFeeLimit
     }
     const transaction = contractJsonToProtobuf(contractJson)
     await this.tronscan.addRef(transaction, feeLimit)

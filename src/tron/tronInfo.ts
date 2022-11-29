@@ -1,8 +1,13 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import {
+  EdgeCorePluginOptions,
+  EdgeCurrencyInfo,
+  EdgeCurrencyPlugin
+} from 'edge-core-js/types'
 
-import { TronSettings } from './tronTypes'
+import { makeTronPluginInner } from './tronPlugin'
+import { TronNetworkInfo } from './tronTypes'
 
-const otherSettings: TronSettings = {
+export const networkInfo: TronNetworkInfo = {
   tronApiServers: ['https://api.trongrid.io'],
   tronNodeServers: [
     'http://3.225.171.164:8090',
@@ -25,10 +30,6 @@ const otherSettings: TronSettings = {
   defaultFeeLimit: 1000000000 // TODO: 1000 TRX. Should probably update.
 }
 
-const defaultSettings: any = {
-  otherSettings
-}
-
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'TRX',
@@ -36,7 +37,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'tron',
   walletType: 'wallet:tron',
 
-  defaultSettings,
+  defaultSettings: {},
 
   addressExplorer: 'https://tronscan.org/#/address/%s',
   transactionExplorer: 'https://tronscan.org/#/transaction/%s',
@@ -126,4 +127,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: 'TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT'
     }
   ]
+}
+
+export const makeTronPlugin = (
+  opts: EdgeCorePluginOptions
+): EdgeCurrencyPlugin => {
+  return makeTronPluginInner(opts, currencyInfo, networkInfo)
 }

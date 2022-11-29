@@ -12,7 +12,7 @@ import {
   Cleaner
 } from 'cleaners'
 
-export interface TronSettings {
+export interface TronNetworkInfo {
   tronApiServers: string[]
   tronNodeServers: string[]
   defaultFeeLimit: number

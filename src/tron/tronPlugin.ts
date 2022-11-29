@@ -21,15 +21,14 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, getFetchCors } from '../common/utils'
 import { TronEngine } from './tronEngine'
-import { currencyInfo } from './tronInfo'
-import { TronOtherdata } from './tronTypes'
+import { TronNetworkInfo, TronOtherdata } from './tronTypes'
 
 export class TronTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
 
-  constructor(io: EdgeIo, log: EdgeLog) {
+  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo, log: EdgeLog) {
     this.io = io
     this.currencyInfo = currencyInfo
     this.log = log
@@ -136,15 +135,17 @@ export class TronTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeTronPlugin(
-  opts: EdgeCorePluginOptions
+export function makeTronPluginInner(
+  opts: EdgeCorePluginOptions,
+  currencyInfo: EdgeCurrencyInfo,
+  networkInfo: TronNetworkInfo
 ): EdgeCurrencyPlugin {
   const { io, log } = opts
   const fetchCors = getFetchCors(opts)
   let toolsPromise: Promise<TronTools>
   async function makeCurrencyTools(): Promise<TronTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new TronTools(io, log))
+    toolsPromise = Promise.resolve(new TronTools(io, currencyInfo, log))
     return await toolsPromise
   }
   async function makeCurrencyEngine(
@@ -152,7 +153,13 @@ export function makeTronPlugin(
     opts: EdgeCurrencyEngineOptions
   ): Promise<EdgeCurrencyEngine> {
     const tools = await makeCurrencyTools()
-    const currencyEngine = new TronEngine(tools, walletInfo, opts, fetchCors)
+    const currencyEngine = new TronEngine(
+      tools,
+      walletInfo,
+      opts,
+      fetchCors,
+      networkInfo
+    )
     // Do any async initialization necessary for the engine
     await currencyEngine.loadEngine(tools, walletInfo, opts)
     // This is just to make sure otherData is type checked
