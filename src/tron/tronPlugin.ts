@@ -13,6 +13,7 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -132,6 +133,15 @@ export class TronTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, this.currencyInfo.pluginId, amount)
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    const contractAddress: string | undefined =
+      token?.networkLocation?.contractAddress
+    if (contractAddress == null || !isAddressValid(contractAddress)) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return contractAddress
   }
 }
 
