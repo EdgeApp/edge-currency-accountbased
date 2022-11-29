@@ -168,10 +168,8 @@ export function makeTezosPlugin(
 
     // This is just to make sure otherData is Flow checked
     currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!currencyEngine.otherData.numberTransactions) {
-      // @ts-expect-error
       currencyEngine.otherData.numberTransaction = 0
     }
     const out: TezosEngine = currencyEngine

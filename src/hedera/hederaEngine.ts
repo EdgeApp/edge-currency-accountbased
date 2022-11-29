@@ -65,7 +65,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         }
 
         // Activation requests don't expire (currently) so just return the address and amount if we already have it instead of overwriting the previous request
-        // @ts-expect-error
         const { accountActivationQuoteAmount, accountActivationQuoteAddress } =
           this.walletLocalData.otherData
         if (
@@ -107,11 +106,8 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
           const { request_id: requestId, address, amount } = json
           this.warn(`activationRequestId: ${requestId}`)
 
-          // @ts-expect-error
           this.walletLocalData.otherData.activationRequestId = requestId
-          // @ts-expect-error
           this.walletLocalData.otherData.accountActivationQuoteAddress = address
-          // @ts-expect-error
           this.walletLocalData.otherData.accountActivationQuoteAmount = amount
           this.walletLocalDataDirty = true
 
@@ -130,7 +126,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         }
       },
       submitActivationPayment: async (txn: EdgeTransaction) => {
-        // @ts-expect-error
         const requestId = this.walletLocalData.otherData.activationRequestId
         if (requestId == null) {
           // @ts-expect-error
@@ -164,7 +159,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
           throw e
         }
 
-        // @ts-expect-error
         this.walletLocalData.otherData.paymentSubmitted = true
         this.walletLocalDataDirty = true
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -176,7 +170,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   }
 
   async checkAccountCreationStatus(): Promise<void> {
-    // @ts-expect-error
     const { activationRequestId, paymentSubmitted, hederaAccount } =
       this.walletLocalData.otherData
 
@@ -212,12 +205,9 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         const json = asCheckAccountCreationStatus(await response.json())
 
         if (json.status === 'transaction_error') {
-          // @ts-expect-error
           this.walletLocalData.otherData.activationRequestId = undefined
-          // @ts-expect-error
           this.walletLocalData.otherData.accountActivationQuoteAddress =
             undefined
-          // @ts-expect-error
           this.walletLocalData.otherData.accountActivationQuoteAmount =
             undefined
           this.walletLocalDataDirty = true
@@ -243,7 +233,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     }
 
     if (accountId != null) {
-      // @ts-expect-error
       this.walletLocalData.otherData.hederaAccount = accountId
       this.walletLocalDataDirty = true
       this.currencyEngineCallbacks.onAddressChanged()
@@ -273,7 +262,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     try {
       for (;;) {
         const txs = await this.getTransactionsMirrorNode(
-          // @ts-expect-error
           this.walletLocalData.otherData.latestTimestamp
         )
 
@@ -300,11 +288,9 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       }
 
       if (
-        // @ts-expect-error
         this.walletLocalData.otherData.latestTimestamp !==
         latestTx.otherParams.consensusAt
       ) {
-        // @ts-expect-error
         this.walletLocalData.otherData.latestTimestamp =
           latestTx.otherParams.consensusAt
         this.walletLocalDataDirty = true
@@ -323,7 +309,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       throw new Error('no Hedera account ID')
     }
 
-    // @ts-expect-error
     const accountIdStr = this.walletLocalData.otherData.hederaAccount
 
     // we request transactions in ascending order by consensus timestamp
@@ -384,14 +369,10 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   async startEngine() {
     this.engineOn = true
 
-    // @ts-expect-error
     if (this.walletLocalData.otherData.latestTimestamp == null) {
-      // @ts-expect-error
       this.walletLocalData.otherData.latestTimestamp = GENESIS
     }
-    // @ts-expect-error
     if (this.walletLocalData.otherData.hederaAccount == null) {
-      // @ts-expect-error
       this.walletLocalData.otherData.hederaAccount = ''
     }
 
@@ -417,7 +398,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    // @ts-expect-error
     if (this.walletLocalData.otherData.hederaAccount == null) {
       throw Error('ErrorAccountNotActivated')
     }
@@ -458,7 +438,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     const transferTx = new hedera.TransferTransaction()
       .setTransactionId(txnId)
       .addHbarTransfer(
-        // @ts-expect-error
         this.walletLocalData.otherData.hederaAccount,
         hbar.negated()
       )
@@ -540,7 +519,6 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: Object): Promise<EdgeFreshAddress> {
-    // @ts-expect-error
     return { publicAddress: this.walletLocalData.otherData.hederaAccount }
   }
 

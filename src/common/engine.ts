@@ -74,7 +74,7 @@ export class CurrencyEngine<
   log: EdgeLog
   warn: (message: string, e?: Error) => void
   error: (message: string, e?: Error) => void
-  otherData: Object
+  otherData: { [key: string]: any }
 
   constructor(
     tools: T,

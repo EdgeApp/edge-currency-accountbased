@@ -253,11 +253,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     let nativeAmount = mul(exchangeAmount, denom.multiplier)
     let name = ''
-    // @ts-expect-error
     if (to === this.walletLocalData.otherData.accountName) {
       name = from
       ourReceiveAddresses.push(to)
-      // @ts-expect-error
       if (from === this.walletLocalData.otherData.accountName) {
         // This is a spend to self. Make amount 0
         nativeAmount = '0'
@@ -342,10 +340,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
       let nativeAmount = mul(exchangeAmount, denom.multiplier)
       // if sending to one's self
-      // @ts-expect-error
       if (to === this.walletLocalData.otherData.accountName) {
         ourReceiveAddresses.push(to)
-        // @ts-expect-error
         if (from === this.walletLocalData.otherData.accountName) {
           // This is a spend to self. Make amount 0
           nativeAmount = '0'
@@ -390,7 +386,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     let finish = false
 
     let newHighestTxHeight =
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
 
@@ -440,11 +435,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     // if there have been new valid actions then increase the last sequence number
     if (
       newHighestTxHeight >
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
     ) {
-      // @ts-expect-error
       this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] =
         newHighestTxHeight
       this.walletLocalDataDirty = true
@@ -460,7 +453,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight =
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
 
@@ -523,11 +515,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     if (
       newHighestTxHeight >
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
     ) {
-      // @ts-expect-error
       this.walletLocalData.otherData.highestTxHeight[currencyCode] =
         newHighestTxHeight
       this.walletLocalDataDirty = true
@@ -540,13 +530,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !this.walletLocalData.otherData ||
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !this.walletLocalData.otherData.accountName
     ) {
       return
     }
-    // @ts-expect-error
     const acct = this.walletLocalData.otherData.accountName
 
     for (const token of this.enabledTokens) {
@@ -873,20 +861,17 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (bogusAccounts[this.walletLocalData.otherData.accountName]) {
-        // @ts-expect-error
         this.walletLocalData.otherData.accountName = ''
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onAddressChanged()
       }
       // Check if the publicKey has an account accountName
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!this.walletLocalData.otherData.accountName) {
         const account = await this.multicastServers('getKeyAccounts', publicKey)
         // @ts-expect-error
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (account && !bogusAccounts[account.account_name]) {
-          // @ts-expect-error
           this.walletLocalData.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
@@ -894,7 +879,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
 
       // Check balance on account
-      // @ts-expect-error
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (this.walletLocalData.otherData.accountName) {
         for (const token of this.allTokens) {
@@ -902,7 +886,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
             const results = await this.multicastServers(
               'getCurrencyBalance',
               token.contractAddress,
-              // @ts-expect-error
               this.walletLocalData.otherData.accountName
             )
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -946,11 +929,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
-    // @ts-expect-error
     this.walletLocalData.otherData.lastQueryActionSeq = {}
-    // @ts-expect-error
     this.walletLocalData.otherData.highestTxHeight = {}
-    // @ts-expect-error
     this.walletLocalData.otherData.accountName = ''
   }
 
@@ -981,10 +961,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
-    // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.walletLocalData.otherData.accountName) {
-      // @ts-expect-error
       return { publicAddress: this.walletLocalData.otherData.accountName }
     } else {
       // Account is not yet active. Return the publicKeys so the user can activate the account
@@ -1074,13 +1052,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         name: 'transfer',
         authorization: [
           {
-            // @ts-expect-error
             actor: this.walletLocalData.otherData.accountName,
             permission: 'active'
           }
         ],
         data: {
-          // @ts-expect-error
           from: this.walletLocalData.otherData.accountName,
           to: publicAddress,
           quantity,

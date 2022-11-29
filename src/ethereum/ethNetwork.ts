@@ -1717,7 +1717,6 @@ export class EthereumNetwork {
         } won`
       )
       this.ethNeeds.nonceLastChecked = now
-      // @ts-expect-error
       this.ethEngine.walletLocalData.otherData.nextNonce =
         ethereumNetworkUpdate.newNonce
       this.ethEngine.walletLocalDataDirty = true

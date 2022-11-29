@@ -629,7 +629,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       meta: {}
     }
     const ourReceiveAddresses = []
-    // @ts-expect-error
     if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
       return action.block_num
     }
@@ -828,7 +827,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
       return false
-    // @ts-expect-error
     let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const actor = this.fioSdk.transactions.getActor(
@@ -905,7 +903,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           } else if (
             (blockNum === newHighestTxHeight &&
               i === HISTORY_NODE_OFFSET - 1) ||
-            // @ts-expect-error
             blockNum < this.walletLocalData.otherData.highestTxHeight
           ) {
             finish = true
@@ -922,9 +919,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         return await this.checkTransactions(++historyNodeIndex)
       }
     }
-    // @ts-expect-error
     if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
-      // @ts-expect-error
       this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
       this.localDataDirty()
     }
@@ -1263,7 +1258,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
         // check for removed / transferred addresses
         if (!areAddressesChanged) {
-          for (const fioAddress of this.walletLocalData.otherData // @ts-expect-error
+          for (const fioAddress of this.walletLocalData.otherData
             .fioAddresses) {
             if (
               result.fio_addresses.findIndex(
@@ -1446,7 +1441,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   async approveErroredFioRequests(): Promise<void> {
-    for (const fioRequestId in this.walletLocalData.otherData // @ts-expect-error
+    for (const fioRequestId in this.walletLocalData.otherData
       .fioRequestsToApprove) {
       try {
         // @ts-expect-error

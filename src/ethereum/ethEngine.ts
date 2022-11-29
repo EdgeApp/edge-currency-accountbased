@@ -523,9 +523,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           out[cur] = biggyRoundToNearestInt(ethereumFee[cur])
           return out
         }, {})
-        // @ts-expect-error
         this.walletLocalData.otherData.networkFees.default.gasPrice = {
-          // @ts-expect-error
           ...this.walletLocalData.otherData.networkFees.default.gasPrice,
           ...ethereumFeeInts
         }
@@ -570,9 +568,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     if (baseFeePerGas == null) return
     const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-    const networkFees: EthereumFees =
-      // @ts-expect-error
-      this.walletLocalData.otherData.networkFees
+    const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
 
     // Make sure there is a default network fee entry and gasPrice entry
     if (networkFees.default == null || networkFees.default.gasPrice == null) {
@@ -640,9 +636,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
       .then(info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
-        // @ts-expect-error
         this.walletLocalData.otherData.networkFees = mergeDeeply(
-          // @ts-expect-error
           this.walletLocalData.otherData.networkFees,
           info
         )
@@ -688,7 +682,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         spendInfo.spendTargets[0].nativeAmount = mid
         const { gasPrice, gasLimit } = calcMiningFee(
           spendInfo,
-          // @ts-expect-error
           this.walletLocalData.otherData.networkFees,
           this.currencyInfo
         )
@@ -792,7 +785,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     } else {
       const miningFees = calcMiningFee(
         edgeSpendInfo,
-        // @ts-expect-error
         this.walletLocalData.otherData.networkFees,
         this.currencyInfo
       )
@@ -1066,20 +1058,15 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         this.walletLocalData.numUnconfirmedSpendTxs &&
         gt(
-          // @ts-expect-error
           this.walletLocalData.otherData.unconfirmedNextNonce,
-          // @ts-expect-error
           this.walletLocalData.otherData.nextNonce
         )
       ) {
         const diff = sub(
-          // @ts-expect-error
           this.walletLocalData.otherData.unconfirmedNextNonce,
-          // @ts-expect-error
           this.walletLocalData.otherData.nextNonce
         )
         if (lte(diff, '5')) {
-          // @ts-expect-error
           nonce = this.walletLocalData.otherData.unconfirmedNextNonce
           this.walletLocalDataDirty = true
         } else {
@@ -1088,7 +1075,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           throw e
         }
       } else {
-        // @ts-expect-error
         nonce = this.walletLocalData.otherData.nextNonce
       }
     }
@@ -1227,7 +1213,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
       const nonceUsed: string | undefined =
         edgeTransaction.otherParams?.nonceUsed
       if (nonceUsed != null) {
-        // @ts-expect-error
         this.walletLocalData.otherData.unconfirmedNextNonce = add(
           nonceUsed,
           '1'
