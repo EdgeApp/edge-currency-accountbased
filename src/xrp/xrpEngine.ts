@@ -1,7 +1,3 @@
-/**
- * Created by paul on 7/7/17.
- */
-
 import { add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngineOptions,

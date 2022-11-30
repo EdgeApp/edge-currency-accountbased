@@ -1,7 +1,3 @@
-/**
- * Created by paul on 7/7/17.
- */
-
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'

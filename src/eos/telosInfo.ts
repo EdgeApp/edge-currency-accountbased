@@ -1,6 +1,3 @@
-/**
- * Created by on 2020-02-14
- */
 /* global fetch */
 
 import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'

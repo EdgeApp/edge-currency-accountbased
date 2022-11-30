@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- */
-
 export interface EosSettings {
   eosHyperionNodes: string[]
   eosNodes: string[]

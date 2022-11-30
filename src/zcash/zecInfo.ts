@@ -1,5 +1,3 @@
-/* global */
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { ZcashSettings } from './zecTypes'

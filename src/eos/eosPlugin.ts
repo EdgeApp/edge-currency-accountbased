@@ -1,8 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
-/* global */
-
 import { div, toFixed } from 'biggystring'
 import {
   EdgeCorePluginOptions,

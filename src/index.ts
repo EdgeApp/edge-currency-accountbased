@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
-
 import 'regenerator-runtime/runtime'
 
 import { makeBinancePlugin } from './binance/bnbPlugin'

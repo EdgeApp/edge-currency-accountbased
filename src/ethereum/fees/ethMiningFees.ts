@@ -1,8 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- * @flow
- */
-
 import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 

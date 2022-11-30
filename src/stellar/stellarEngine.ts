@@ -1,7 +1,3 @@
-/**
- * Created by paul on 7/7/17.
- */
-
 import { add, div, eq, gt, mul, sub } from 'biggystring'
 // import { currencyInfo } from './stellarInfo'
 import {

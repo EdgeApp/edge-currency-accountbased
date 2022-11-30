@@ -1,5 +1,3 @@
-/* global */
-
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyInfo,

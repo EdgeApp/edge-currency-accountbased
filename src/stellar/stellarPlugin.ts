@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
-
 import { add, div } from 'biggystring'
 import {
   EdgeCorePluginOptions,

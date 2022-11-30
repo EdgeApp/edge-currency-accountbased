@@ -1,7 +1,3 @@
-/**
- * Created by paul on 7/7/17.
- */
-
 import { BncClient } from '@binance-chain/javascript-sdk'
 import { add, gt, mul, sub } from 'biggystring'
 import {

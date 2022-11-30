@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
-
 import { getLocalStorage } from '@walletconnect/browser-utils'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'

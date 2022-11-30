@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/8/17.
- */
-
 import { crypto } from '@binance-chain/javascript-sdk'
 import { div } from 'biggystring'
 import { entropyToMnemonic } from 'bip39'

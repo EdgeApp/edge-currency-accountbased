@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/27/17.
- */
-
 import {
   asArray,
   asBoolean,

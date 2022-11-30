@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- */
-
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 
 export interface XrpSettings {
