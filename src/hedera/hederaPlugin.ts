@@ -10,14 +10,17 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
+  EdgeLog,
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
+import { makeOtherMethods } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
 import { HederaEngine } from './hederaEngine'
-import { createChecksum, getOtherMethods, validAddress } from './hederaUtils'
+import { asGetActivationCost } from './hederaTypes'
+import { createChecksum, validAddress } from './hederaUtils'
 
 // if users want to import their mnemonic phrase in e.g. MyHbarWallet.com
 // they can just leave the passphrase field blank
@@ -26,10 +29,13 @@ const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaTools implements EdgeCurrencyTools {
   io: EdgeIo
+  log: EdgeLog
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+  constructor(opts: EdgeCorePluginOptions, currencyInfo: EdgeCurrencyInfo) {
+    const { io, log } = opts
     this.io = io
+    this.log = log
     this.currencyInfo = currencyInfo
   }
 
@@ -150,6 +156,36 @@ export class HederaTools implements EdgeCurrencyTools {
 
     return encodeUriCommon(obj, pluginId, amount)
   }
+
+  //
+  // otherMethods
+  //
+
+  async getActivationSupportedCurrencies(): Promise<{
+    result: { [code: string]: boolean }
+  }> {
+    return { result: { ETH: true } }
+  }
+
+  async getActivationCost(): Promise<string | number> {
+    const creatorApiServer =
+      this.currencyInfo.defaultSettings.otherSettings.creatorApiServers[0]
+
+    try {
+      const response = await this.io.fetch(`${creatorApiServer}/account/cost`)
+      return asGetActivationCost(await response.json()).hbar
+    } catch (e: any) {
+      this.log.warn(
+        'getActivationCost error unable to get account activation cost',
+        e
+      )
+      throw new Error('ErrorUnableToGetCost')
+    }
+  }
+
+  async validateAccount(): Promise<{ result: '' | 'AccountAvailable' }> {
+    return { result: 'AccountAvailable' }
+  }
 }
 
 export function makeHederaPluginInner(
@@ -162,7 +198,7 @@ export function makeHederaPluginInner(
 
   async function makeCurrencyTools(): Promise<HederaTools> {
     if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new HederaTools(io, currencyInfo))
+    toolsPromise = Promise.resolve(new HederaTools(opts, currencyInfo))
     return await toolsPromise
   }
 
@@ -186,7 +222,11 @@ export function makeHederaPluginInner(
     return out
   }
 
-  const otherMethods = getOtherMethods(opts, currencyInfo)
+  const otherMethods = makeOtherMethods(makeCurrencyTools, [
+    'getActivationSupportedCurrencies',
+    'getActivationCost',
+    'validateAccount'
+  ])
 
   return {
     currencyInfo,

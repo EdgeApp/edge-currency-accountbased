@@ -7,8 +7,8 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
-  EdgeFetchFunction,
   EdgeIo,
+  EdgeLog,
   EdgeParsedUri,
   EdgeToken,
   EdgeWalletInfo
@@ -16,6 +16,7 @@ import {
 import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
+import { makeOtherMethods } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
 import { EosEngine } from './eosEngine'
@@ -33,21 +34,23 @@ export class EosTools implements EdgeCurrencyTools {
   eosServer: Object
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
+  log: EdgeLog
   networkInfo: EosNetworkInfo
 
   constructor(
-    io: EdgeIo,
-    fetchCors: EdgeFetchFunction,
+    opts: EdgeCorePluginOptions,
     currencyInfo: EdgeCurrencyInfo,
     networkInfo: EosNetworkInfo
   ) {
+    const { io, log } = opts
     this.io = io
+    this.log = log
     this.currencyInfo = currencyInfo
     this.networkInfo = networkInfo
 
     this.eosServer = EosApi({
       chainId: networkInfo.chainId,
-      fetch: fetchCors,
+      fetch: getFetchCors(opts),
       httpEndpoint: this.networkInfo.eosNodes[0],
       keyProvider: [],
       verbose: false // verbose logging such as API activity
@@ -174,6 +177,89 @@ export class EosTools implements EdgeCurrencyTools {
       })
     })
   }
+
+  //
+  // otherMethods
+  //
+
+  async getActivationSupportedCurrencies(): Promise<{
+    result: { [code: string]: boolean }
+  }> {
+    try {
+      const out = await asyncWaterfall(
+        this.networkInfo.eosActivationServers.map(server => async () => {
+          const uri = `${server}/api/v1/getSupportedCurrencies`
+          const response = await fetch(uri)
+          const result = await response.json()
+          return {
+            result
+          }
+        })
+      )
+      return asGetActivationSupportedCurrencies(out)
+    } catch (e: any) {
+      this.log.error(`UnableToGetSupportedCurrencies error: `, e)
+      throw new Error('UnableToGetSupportedCurrencies')
+    }
+  }
+
+  async getActivationCost(currencyCode: string): Promise<string | undefined> {
+    try {
+      const out = await asyncWaterfall(
+        this.networkInfo.eosActivationServers.map(server => async () => {
+          const uri = `${server}/api/v1/eosPrices/${currencyCode}`
+          const response = await fetch(uri)
+          const prices = asGetActivationCost(await response.json())
+          const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
+          const startingResourcesResponse = await fetch(startingResourcesUri)
+          const startingResources = asGetActivationCost(
+            await startingResourcesResponse.json()
+          )
+          const totalEos =
+            Number(prices.ram) * startingResources.ram +
+            Number(prices.net) * startingResources.net +
+            Number(prices.cpu) * startingResources.cpu
+          const totalEosString = totalEos.toString()
+          const price = toFixed(totalEosString, 0, 4)
+          return price
+        })
+      )
+      return out
+    } catch (e: any) {
+      this.log.error(`ErrorUnableToGetCost: `, e)
+      throw new Error('ErrorUnableToGetCost')
+    }
+  }
+
+  async validateAccount(
+    account: string
+  ): Promise<{ result: '' | 'AccountAvailable' }> {
+    const valid = checkAddress(account) && account.length === 12
+    const out: { result: '' | 'AccountAvailable' } = { result: '' }
+    if (!valid) {
+      const e = new Error('ErrorInvalidAccountName')
+      e.name = 'ErrorInvalidAccountName'
+      throw e
+    }
+    try {
+      const result = await this.getAccSystemStats(account)
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (result) {
+        const e = new Error('ErrorAccountUnavailable')
+        e.name = 'ErrorAccountUnavailable'
+        throw e
+      }
+      throw new Error('ErrorUnknownError')
+    } catch (e: any) {
+      if (e.code === 'ErrorUnknownAccount') {
+        out.result = 'AccountAvailable'
+      } else {
+        throw e
+      }
+    }
+    this.log(`validateAccount: result=${out.result}`)
+    return out
+  }
 }
 
 export function makeEosBasedPluginInner(
@@ -181,14 +267,11 @@ export function makeEosBasedPluginInner(
   currencyInfo: EdgeCurrencyInfo,
   networkInfo: EosNetworkInfo
 ): EdgeCurrencyPlugin {
-  const { io, log } = opts
-  const fetchCors = getFetchCors(opts)
-
   let toolsPromise: Promise<EosTools>
   async function makeCurrencyTools(): Promise<EosTools> {
     if (toolsPromise != null) return await toolsPromise
     toolsPromise = Promise.resolve(
-      new EosTools(io, fetchCors, currencyInfo, networkInfo)
+      new EosTools(opts, currencyInfo, networkInfo)
     )
     return await toolsPromise
   }
@@ -233,86 +316,11 @@ export function makeEosBasedPluginInner(
     return out
   }
 
-  const otherMethods = {
-    // @ts-expect-error
-    getActivationSupportedCurrencies: async (): Object => {
-      try {
-        const out = await asyncWaterfall(
-          networkInfo.eosActivationServers.map(server => async () => {
-            const uri = `${server}/api/v1/getSupportedCurrencies`
-            const response = await fetch(uri)
-            const result = await response.json()
-            return {
-              result
-            }
-          })
-        )
-        return asGetActivationSupportedCurrencies(out)
-      } catch (e: any) {
-        log.error(`UnableToGetSupportedCurrencies error: `, e)
-        throw new Error('UnableToGetSupportedCurrencies')
-      }
-    },
-    getActivationCost: async (
-      currencyCode: string
-      // @ts-expect-error
-    ): Promise<string> | undefined => {
-      try {
-        const out = await asyncWaterfall(
-          networkInfo.eosActivationServers.map(server => async () => {
-            const uri = `${server}/api/v1/eosPrices/${currencyCode}`
-            const response = await fetch(uri)
-            const prices = asGetActivationCost(await response.json())
-            const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
-            const startingResourcesResponse = await fetch(startingResourcesUri)
-            const startingResources = asGetActivationCost(
-              await startingResourcesResponse.json()
-            )
-            const totalEos =
-              Number(prices.ram) * startingResources.ram +
-              Number(prices.net) * startingResources.net +
-              Number(prices.cpu) * startingResources.cpu
-            const totalEosString = totalEos.toString()
-            const price = toFixed(totalEosString, 0, 4)
-            return price
-          })
-        )
-        return out
-      } catch (e: any) {
-        log.error(`ErrorUnableToGetCost: `, e)
-        throw new Error('ErrorUnableToGetCost')
-      }
-    },
-    validateAccount: async (account: string): Promise<boolean> => {
-      const valid = checkAddress(account) && account.length === 12
-      const out = { result: '' }
-      if (!valid) {
-        const e = new Error('ErrorInvalidAccountName')
-        e.name = 'ErrorInvalidAccountName'
-        throw e
-      }
-      try {
-        const tools = await makeCurrencyTools()
-        const result = await tools.getAccSystemStats(account)
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (result) {
-          const e = new Error('ErrorAccountUnavailable')
-          e.name = 'ErrorAccountUnavailable'
-          throw e
-        }
-        throw new Error('ErrorUnknownError')
-      } catch (e: any) {
-        if (e.code === 'ErrorUnknownAccount') {
-          out.result = 'AccountAvailable'
-        } else {
-          throw e
-        }
-      }
-      log.warn(`validateAccount: result=${out.result}`)
-      // @ts-expect-error
-      return out
-    }
-  }
+  const otherMethods = makeOtherMethods(makeCurrencyTools, [
+    'getActivationCost',
+    'getActivationSupportedCurrencies',
+    'validateAccount'
+  ])
 
   return {
     currencyInfo,

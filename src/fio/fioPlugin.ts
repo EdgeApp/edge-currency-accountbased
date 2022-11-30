@@ -1,5 +1,3 @@
-/* eslint camelcase: 0 */
-
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { div } from 'biggystring'
@@ -12,16 +10,19 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import ecc from 'eosjs-ecc'
 
+import { makeOtherMethods } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
   getDenomInfo,
+  getFetchCors,
   pickRandom,
   safeErrorMessage,
   shuffleArray
@@ -53,10 +54,29 @@ export function checkAddress(address: string): boolean {
 export class FioTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
+  connection: FIOSDK
+  fetchCors: EdgeFetchFunction
+  fioRegApiToken: string
 
-  constructor(io: EdgeIo) {
+  constructor(opts: EdgeCorePluginOptions) {
+    const { initOptions, io } = opts
+    const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
+      initOptions
+
     this.io = io
     this.currencyInfo = currencyInfo
+    this.fetchCors = getFetchCors(opts)
+    this.fioRegApiToken = fioRegApiToken
+
+    const [baseUrl] = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)
+    this.connection = new FIOSDK(
+      '',
+      '',
+      baseUrl,
+      this.fetchCors,
+      undefined,
+      tpid
+    )
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -151,24 +171,333 @@ export class FioTools implements EdgeCurrencyTools {
     const encodedUri = encodeUriCommon(obj, FIO_TYPE, amount)
     return encodedUri
   }
-}
 
-export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
-  const { initOptions, io } = opts
-  const { fetchCors = io.fetch } = io
-  const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
-    initOptions
-  const baseUrl = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)[0]
-  const connection = new FIOSDK('', '', baseUrl, fetchCors, undefined, tpid)
+  //
+  // otherMethods
+  //
 
-  let toolsPromise: Promise<FioTools>
-  async function makeCurrencyTools(): Promise<FioTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new FioTools(io))
-    return await toolsPromise
+  async getConnectedPublicAddress(
+    fioAddress: string,
+    chainCode: string,
+    tokenCode: string
+  ): Promise<any> {
+    try {
+      FIOSDK.isFioAddressValid(fioAddress)
+    } catch (e: any) {
+      throw new FioError(
+        '',
+        400,
+        currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+      )
+    }
+    try {
+      const isAvailableRes = await this.multicastServers('isAvailable', {
+        fioName: fioAddress
+      })
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!isAvailableRes.is_registered) {
+        throw new FioError(
+          '',
+          404,
+          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
+        )
+      }
+    } catch (e: any) {
+      if (
+        e.name === 'FioError' &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        e.json &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        e.json.fields &&
+        e.errorCode === 400
+      ) {
+        e.labelCode =
+          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+      }
+
+      throw e
+    }
+    try {
+      const result = await this.multicastServers('getPublicAddress', {
+        fioAddress,
+        chainCode,
+        tokenCode
+      })
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!result.public_address || result.public_address === '0') {
+        throw new FioError(
+          '',
+          404,
+          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
+        )
+      }
+      return result
+    } catch (e: any) {
+      if (
+        (e.name === 'FioError' &&
+          e.labelCode ===
+            currencyInfo.defaultSettings.errorCodes
+              .FIO_ADDRESS_IS_NOT_LINKED) ||
+        e.errorCode === 404
+      ) {
+        throw new FioError(
+          '',
+          404,
+          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
+        )
+      }
+      throw e
+    }
   }
 
-  async function multicastServers(
+  async isFioAddressValid(fioAddress: string): Promise<boolean> {
+    try {
+      return FIOSDK.isFioAddressValid(fioAddress)
+    } catch (e: any) {
+      return false
+    }
+  }
+
+  async validateAccount(
+    fioName: string,
+    isDomain: boolean = false
+  ): Promise<boolean> {
+    try {
+      if (isDomain) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (!FIOSDK.isFioDomainValid(fioName)) return false
+      } else {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (!FIOSDK.isFioAddressValid(fioName)) return false
+      }
+    } catch (e: any) {
+      throw new FioError(
+        '',
+        400,
+        currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+      )
+    }
+    try {
+      const isAvailableRes = await this.multicastServers('isAvailable', {
+        fioName
+      })
+
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      return !isAvailableRes.is_registered
+    } catch (e: any) {
+      if (
+        e.name === 'FioError' &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        e.json &&
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        e.json.fields &&
+        e.errorCode === 400
+      ) {
+        e.labelCode =
+          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+      }
+
+      throw e
+    }
+  }
+
+  async isDomainPublic(domain: string): Promise<boolean> {
+    const isAvailableRes = await this.multicastServers('isAvailable', {
+      fioName: domain
+    })
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (!isAvailableRes.is_registered)
+      throw new FioError(
+        '',
+        400,
+        currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
+      )
+    const result = await this.fetchCors(
+      `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
+      {
+        method: 'GET'
+      }
+    )
+    if (!result.ok) {
+      const data = await result.json()
+      throw new FioError(
+        '',
+        result.status,
+        currencyInfo.defaultSettings.errorCodes.IS_DOMAIN_PUBLIC_ERROR,
+        data
+      )
+    }
+    const { isPublic } = await result.json()
+    return isPublic
+  }
+
+  async doesAccountExist(fioName: string): Promise<boolean> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!FIOSDK.isFioAddressValid(fioName)) return false
+    } catch (e: any) {
+      return false
+    }
+    try {
+      const isAvailableRes = await this.multicastServers('isAvailable', {
+        fioName
+      })
+
+      return isAvailableRes.is_registered
+    } catch (e: any) {
+      // @ts-expect-error
+      this.error('doesAccountExist error: ', e)
+      return false
+    }
+  }
+
+  async buyAddressRequest(
+    options: {
+      address: string
+      referralCode: string
+      publicKey: string
+      apiToken?: string
+    },
+    isFree: boolean = false
+  ): Promise<any> {
+    const headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    }
+    if (isFree) {
+      options.apiToken = this.fioRegApiToken
+    }
+    try {
+      const result = await this.fetchCors(
+        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(options)
+        }
+      )
+      if (!result.ok) {
+        const data = await result.json()
+
+        // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (fioRegApiErrorCodes[data.errorCode]) {
+          throw new FioError(
+            data.error,
+            result.status,
+            // @ts-expect-error
+            fioRegApiErrorCodes[data.errorCode],
+            data
+          )
+        }
+
+        if (data.error === 'Already registered') {
+          throw new FioError(
+            data.error,
+            result.status,
+            // @ts-expect-error
+            fioRegApiErrorCodes.ALREADY_REGISTERED,
+            data
+          )
+        }
+
+        throw new Error(data.error)
+      }
+      return await result.json()
+    } catch (e: any) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (e.labelCode) throw e
+      throw new FioError(
+        safeErrorMessage(e),
+        500,
+        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+      )
+    }
+  }
+
+  async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (!ref) ref = currencyInfo.defaultSettings.defaultRef
+    try {
+      const result = await this.fetchCors(
+        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
+        {
+          method: 'GET'
+        }
+      )
+      const json = await result.json()
+      if (!result.ok) {
+        // @ts-expect-error
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (fioRegApiErrorCodes[json.errorCode]) {
+          throw new FioError(
+            json.error,
+            result.status,
+            // @ts-expect-error
+            fioRegApiErrorCodes[json.errorCode],
+            json
+          )
+        }
+
+        throw new Error(json.error)
+      }
+      return json.domains
+    } catch (e: any) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (e.labelCode) throw e
+      throw new FioError(
+        safeErrorMessage(e),
+        500,
+        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+      )
+    }
+  }
+
+  async getStakeEstReturn(): Promise<number | { error: any }> {
+    try {
+      const result = await this.fetchCors(
+        `${currencyInfo.defaultSettings.fioStakingApyUrl}`,
+        {
+          method: 'GET'
+        }
+      )
+      const json: {
+        staked_token_pool: number
+        outstanding_srps: number
+        rewards_token_pool: number
+        combined_token_pool: number
+        staking_rewards_reserves_minted: number
+        roe: number
+        activated: boolean
+        historical_apr: {
+          '1day': number | null
+          '7day': number | null
+          '30day': number | null
+        }
+      } = await result.json()
+      if (!result.ok) {
+        throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
+      }
+      const apr = json.historical_apr['7day']
+      return (apr != null && apr > DEFAULT_APR) || apr == null
+        ? DEFAULT_APR
+        : apr
+    } catch (e: any) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (e.labelCode) throw e
+      throw new FioError(
+        e.message,
+        500,
+        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+      )
+    }
+  }
+
+  //
+  // Helpers
+  //
+
+  private async multicastServers(
     actionName: string,
     params?: any
   ): Promise<any> {
@@ -181,7 +510,7 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
           Transactions.baseUrl = apiUrl
 
           try {
-            out = await connection.genericAction(actionName, params)
+            out = await this.connection.genericAction(actionName, params)
           } catch (e: any) {
             // handle FIO API error
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -216,6 +545,19 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     }
 
     return res
+  }
+}
+
+export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
+  const { initOptions, io } = opts
+  const { fetchCors = io.fetch } = io
+  const { tpid = 'finance@edge' } = initOptions
+
+  let toolsPromise: Promise<FioTools>
+  async function makeCurrencyTools(): Promise<FioTools> {
+    if (toolsPromise != null) return await toolsPromise
+    toolsPromise = Promise.resolve(new FioTools(opts))
+    return await toolsPromise
   }
 
   async function makeCurrencyEngine(
@@ -271,318 +613,16 @@ export function makeFioPlugin(opts: EdgeCorePluginOptions): EdgeCurrencyPlugin {
     return out
   }
 
-  const otherMethods = {
-    async getConnectedPublicAddress(
-      fioAddress: string,
-      chainCode: string,
-      tokenCode: string
-    ) {
-      try {
-        FIOSDK.isFioAddressValid(fioAddress)
-      } catch (e: any) {
-        throw new FioError(
-          '',
-          400,
-          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-        )
-      }
-      try {
-        const isAvailableRes = await multicastServers('isAvailable', {
-          fioName: fioAddress
-        })
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!isAvailableRes.is_registered) {
-          throw new FioError(
-            '',
-            404,
-            currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
-          )
-        }
-      } catch (e: any) {
-        if (
-          e.name === 'FioError' &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          e.json &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          e.json.fields &&
-          e.errorCode === 400
-        ) {
-          e.labelCode =
-            currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-        }
-
-        throw e
-      }
-      try {
-        const result = await multicastServers('getPublicAddress', {
-          fioAddress,
-          chainCode,
-          tokenCode
-        })
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!result.public_address || result.public_address === '0') {
-          throw new FioError(
-            '',
-            404,
-            currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
-          )
-        }
-        return result
-      } catch (e: any) {
-        if (
-          (e.name === 'FioError' &&
-            e.labelCode ===
-              currencyInfo.defaultSettings.errorCodes
-                .FIO_ADDRESS_IS_NOT_LINKED) ||
-          e.errorCode === 404
-        ) {
-          throw new FioError(
-            '',
-            404,
-            currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
-          )
-        }
-        throw e
-      }
-    },
-    async isFioAddressValid(fioAddress: string): Promise<boolean> {
-      try {
-        return FIOSDK.isFioAddressValid(fioAddress)
-      } catch (e: any) {
-        return false
-      }
-    },
-    async validateAccount(
-      fioName: string,
-      isDomain: boolean = false
-    ): Promise<boolean> {
-      try {
-        if (isDomain) {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!FIOSDK.isFioDomainValid(fioName)) return false
-        } else {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!FIOSDK.isFioAddressValid(fioName)) return false
-        }
-      } catch (e: any) {
-        throw new FioError(
-          '',
-          400,
-          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-        )
-      }
-      try {
-        const isAvailableRes = await multicastServers('isAvailable', {
-          fioName
-        })
-
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        return !isAvailableRes.is_registered
-      } catch (e: any) {
-        if (
-          e.name === 'FioError' &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          e.json &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          e.json.fields &&
-          e.errorCode === 400
-        ) {
-          e.labelCode =
-            currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
-        }
-
-        throw e
-      }
-    },
-    // @ts-expect-error
-    async isDomainPublic(domain): Promise<boolean> {
-      const isAvailableRes = await multicastServers('isAvailable', {
-        fioName: domain
-      })
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!isAvailableRes.is_registered)
-        throw new FioError(
-          '',
-          400,
-          currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
-        )
-      const result = await fetchCors(
-        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
-        {
-          method: 'GET'
-        }
-      )
-      if (!result.ok) {
-        const data = await result.json()
-        throw new FioError(
-          '',
-          result.status,
-          currencyInfo.defaultSettings.errorCodes.IS_DOMAIN_PUBLIC_ERROR,
-          data
-        )
-      }
-      const { isPublic } = await result.json()
-      return isPublic
-    },
-    async doesAccountExist(fioName: string): Promise<boolean> {
-      try {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!FIOSDK.isFioAddressValid(fioName)) return false
-      } catch (e: any) {
-        return false
-      }
-      try {
-        const isAvailableRes = await multicastServers('isAvailable', {
-          fioName
-        })
-
-        return isAvailableRes.is_registered
-      } catch (e: any) {
-        // @ts-expect-error
-        this.error('doesAccountExist error: ', e)
-        return false
-      }
-    },
-    async buyAddressRequest(
-      options: {
-        address: string
-        referralCode: string
-        publicKey: string
-        apiToken?: string
-      },
-      isFree: boolean = false
-    ): Promise<any> {
-      const headers = {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      }
-      if (isFree) {
-        options.apiToken = fioRegApiToken
-      }
-      try {
-        const result = await fetchCors(
-          `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
-          {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(options)
-          }
-        )
-        if (!result.ok) {
-          const data = await result.json()
-
-          // @ts-expect-error
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (fioRegApiErrorCodes[data.errorCode]) {
-            throw new FioError(
-              data.error,
-              result.status,
-              // @ts-expect-error
-              fioRegApiErrorCodes[data.errorCode],
-              data
-            )
-          }
-
-          if (data.error === 'Already registered') {
-            throw new FioError(
-              data.error,
-              result.status,
-              // @ts-expect-error
-              fioRegApiErrorCodes.ALREADY_REGISTERED,
-              data
-            )
-          }
-
-          throw new Error(data.error)
-        }
-        return await result.json()
-      } catch (e: any) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (e.labelCode) throw e
-        throw new FioError(
-          safeErrorMessage(e),
-          500,
-          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
-        )
-      }
-    },
-    async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!ref) ref = currencyInfo.defaultSettings.defaultRef
-      try {
-        const result = await fetchCors(
-          `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
-          {
-            method: 'GET'
-          }
-        )
-        const json = await result.json()
-        if (!result.ok) {
-          // @ts-expect-error
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (fioRegApiErrorCodes[json.errorCode]) {
-            throw new FioError(
-              json.error,
-              result.status,
-              // @ts-expect-error
-              fioRegApiErrorCodes[json.errorCode],
-              json
-            )
-          }
-
-          throw new Error(json.error)
-        }
-        return json.domains
-      } catch (e: any) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (e.labelCode) throw e
-        throw new FioError(
-          safeErrorMessage(e),
-          500,
-          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
-        )
-      }
-    },
-    async getStakeEstReturn(): Promise<number | { error: any }> {
-      try {
-        const result = await fetchCors(
-          `${currencyInfo.defaultSettings.fioStakingApyUrl}`,
-          {
-            method: 'GET'
-          }
-        )
-        const json: {
-          staked_token_pool: number
-          outstanding_srps: number
-          rewards_token_pool: number
-          combined_token_pool: number
-          staking_rewards_reserves_minted: number
-          roe: number
-          activated: boolean
-          historical_apr: {
-            '1day': number | null
-            '7day': number | null
-            '30day': number | null
-          }
-        } = await result.json()
-        if (!result.ok) {
-          throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
-        }
-        const apr = json.historical_apr['7day']
-        return (apr != null && apr > DEFAULT_APR) || apr == null
-          ? DEFAULT_APR
-          : apr
-      } catch (e: any) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (e.labelCode) throw e
-        throw new FioError(
-          e.message,
-          500,
-          currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
-        )
-      }
-    }
-  }
+  const otherMethods = makeOtherMethods(makeCurrencyTools, [
+    'getConnectedPublicAddress',
+    'isFioAddressValid',
+    'validateAccount',
+    'isDomainPublic',
+    'doesAccountExist',
+    'buyAddressRequest',
+    'getDomains',
+    'getStakeEstReturn'
+  ])
 
   return {
     currencyInfo,
