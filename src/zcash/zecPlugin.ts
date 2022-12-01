@@ -53,9 +53,8 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async isValidAddress(address: string): Promise<boolean> {
     return (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      (await this.AddressTool.isValidShieldedAddress(address)) ||
-      (await this.AddressTool.isValidTransparentAddress(address))
+      (await this.AddressTool.isValidShieldedAddress(address)) === true ||
+      (await this.AddressTool.isValidTransparentAddress(address)) === true
     )
   }
 
@@ -129,8 +128,7 @@ export class ZcashTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || `${this.currencyInfo.currencyCode}`,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
 
@@ -156,8 +154,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (nativeAmount != null) {
       const denom = getDenomInfo(
         this.currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || `${this.currencyInfo.currencyCode}`,
+        currencyCode ?? this.currencyInfo.currencyCode,
         customTokens
       )
       if (denom == null) {

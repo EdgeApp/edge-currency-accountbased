@@ -1,14 +1,18 @@
 import { asNumber, asObject } from 'cleaners'
 import { Subscriber } from 'yaob'
 
-export interface ZcashSettings {
+type ZcashNetworkName = 'mainnet' | 'testnet'
+
+export interface ZcashNetworkInfo {
   rpcNode: {
-    networkName: string
+    networkName: ZcashNetworkName
     defaultHost: string
     defaultPort: number
   }
-  blockchairServers: [string]
+  blockchairServers: string[]
+  defaultNetworkFee: string
   defaultBirthday: number
+  transactionQueryLimit: number
 }
 
 export interface ZcashSpendInfo {
@@ -16,7 +20,7 @@ export interface ZcashSpendInfo {
   toAddress: string
   memo: string
   fromAccountIndex: number
-  spendingKey?: string
+  spendingKey: string
 }
 
 export interface ZcashTransaction {
@@ -29,13 +33,11 @@ export interface ZcashTransaction {
 }
 
 export interface ZcashPendingTransaction {
-  alias: string
   txId: string
   raw: string
 }
 
 export interface ZcashWalletBalance {
-  alias: string
   availableZatoshi: string
   totalZatoshi: string
 }
@@ -46,7 +48,7 @@ export interface UnifiedViewingKey {
 }
 
 export interface ZcashInitializerConfig {
-  networkName: string
+  networkName: ZcashNetworkName
   defaultHost: string
   defaultPort: number
   fullViewingKey: UnifiedViewingKey
@@ -57,7 +59,6 @@ export interface ZcashInitializerConfig {
 export type ZcashSynchronizerStatus =
   | 'STOPPED'
   | 'DISCONNECTED'
-  | 'PREPARING'
   | 'DOWNLOADING'
   | 'VALIDATING'
   | 'SCANNING'
