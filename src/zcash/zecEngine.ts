@@ -16,8 +16,8 @@ import { cleanTxLogs } from './../common/utils'
 import { ZcashTools } from './zecPlugin'
 import {
   ZcashInitializerConfig,
+  ZcashNetworkInfo,
   ZcashOtherData,
-  ZcashSettings,
   ZcashSpendInfo,
   ZcashSynchronizer,
   ZcashSynchronizerStatus,
@@ -26,6 +26,7 @@ import {
 
 export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
+  networkInfo: ZcashNetworkInfo
   otherData!: ZcashOtherData
   synchronizer!: ZcashSynchronizer
   synchronizerStatus!: ZcashSynchronizerStatus
@@ -42,10 +43,12 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     tools: ZcashTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
+    networkInfo: ZcashNetworkInfo,
     makeSynchronizer: any
   ) {
     super(tools, walletInfo, opts)
     this.pluginId = this.currencyInfo.pluginId
+    this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
   }
 
@@ -200,15 +203,9 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
 
         first = last + 1
         last =
-          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-          last +
-            this.currencyInfo.defaultSettings.otherSettings
-              .transactionQueryLimit <
+          last + this.networkInfo.transactionQueryLimit <
           this.walletLocalData.blockHeight
-            ? // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-              last +
-              this.currencyInfo.defaultSettings.otherSettings
-                .transactionQueryLimit
+            ? last + this.networkInfo.transactionQueryLimit
             : this.walletLocalData.blockHeight
 
         this.otherData.blockRange = {
@@ -232,7 +229,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       // check if tx is a spend
       netNativeAmount = `-${add(
         netNativeAmount,
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+        this.networkInfo.defaultNetworkFee
       )}`
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
@@ -244,8 +241,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
-      networkFee:
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee,
+      networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       otherParams: {}
@@ -270,7 +266,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     this.synchronizer
       .rescan(
         this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
-          this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
+          this.networkInfo.defaultBirthday
       )
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
   }
@@ -278,7 +274,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   async getMaxSpendable(): Promise<string> {
     const spendableBalance = sub(
       this.availableZatoshi,
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+      this.networkInfo.defaultNetworkFee
     )
     if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
@@ -297,10 +293,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
 
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
-    const totalTxAmount = add(
-      nativeAmount,
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
-    )
+    const totalTxAmount = add(nativeAmount, this.networkInfo.defaultNetworkFee)
 
     if (
       gt(
@@ -332,8 +325,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount: `-${totalTxAmount}`, // nativeAmount
-      networkFee:
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee, // networkFee
+      networkFee: this.networkInfo.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       spendTargets
@@ -406,8 +398,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
         pubKeys.unifiedViewingKeys
     }
-    const { rpcNode, defaultBirthday }: ZcashSettings =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { rpcNode, defaultBirthday } = this.networkInfo
     this.initializer = {
       fullViewingKey: this.walletInfo.keys[`${this.pluginId}ViewKeys`],
       birthdayHeight:
@@ -419,14 +410,20 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   }
 }
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<ZcashNetworkInfo>,
   tools: ZcashTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased']
 
-  const engine = new ZcashEngine(tools, walletInfo, opts, makeSynchronizer)
+  const engine = new ZcashEngine(
+    tools,
+    walletInfo,
+    opts,
+    env.networkInfo,
+    makeSynchronizer
+  )
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

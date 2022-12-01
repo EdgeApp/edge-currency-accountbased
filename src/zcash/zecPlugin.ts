@@ -14,20 +14,25 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
+import {
+  asBlockchairInfo,
+  UnifiedViewingKey,
+  ZcashNetworkInfo
+} from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: ZcashNetworkInfo
 
   KeyTool: any
   AddressTool: any
-  network: string
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { currencyInfo, io } = env
+  constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
+    const { currencyInfo, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
 
     const RNAccountbased = env.nativeIo['edge-currency-accountbased']
     if (RNAccountbased == null) {
@@ -35,8 +40,6 @@ export class ZcashTools implements EdgeCurrencyTools {
     }
     const { KeyTool, AddressTool } = RNAccountbased
 
-    this.network =
-      currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool
   }
@@ -46,7 +49,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
 
     const response = await this.io.fetch(
-      `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${pluginId}/stats`
+      `${this.networkInfo.blockchairServers[0]}/${pluginId}/stats`
     )
     return asBlockchairInfo(await response.json()).data.best_block_height
   }
@@ -66,7 +69,10 @@ export class ZcashTools implements EdgeCurrencyTools {
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
     const hexBuffer = await mnemonicToSeed(userInput)
     const hex = hexBuffer.toString('hex')
-    const spendKey = await this.KeyTool.deriveSpendingKey(hex, this.network)
+    const spendKey = await this.KeyTool.deriveSpendingKey(
+      hex,
+      this.networkInfo.rpcNode.networkName
+    )
     if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
@@ -102,10 +108,13 @@ export class ZcashTools implements EdgeCurrencyTools {
     const hexBuffer = await mnemonicToSeed(mnemonic)
     const hex = hexBuffer.toString('hex')
     const unifiedViewingKeys: UnifiedViewingKey =
-      await this.KeyTool.deriveViewingKey(hex, this.network)
+      await this.KeyTool.deriveViewingKey(
+        hex,
+        this.networkInfo.rpcNode.networkName
+      )
     const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
       unifiedViewingKeys.extfvk,
-      this.network
+      this.networkInfo.rpcNode.networkName
     )
     return {
       publicKey: shieldedAddress,
@@ -168,7 +177,7 @@ export class ZcashTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<ZcashNetworkInfo>
 ): Promise<ZcashTools> {
   return new ZcashTools(env)
 }
