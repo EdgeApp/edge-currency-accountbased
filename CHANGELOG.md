@@ -1,5 +1,15 @@
 # edge-currency-accountbased
 
+## 0.19.0 (2022-12-01)
+
+- Add Tron (TRX) with TRC20 token support
+- Fix `getTokenId` logic error
+- Fix balance checking in `makeSpendCheck`
+- Rename Plugin to Tools
+- Make URI helpers standalone
+- Add type definitions for core globals and third-party modules
+- Various code cleanups
+
 ## 0.18.10 (2022-11-21)
 
 - AVAX: Add USDC token
