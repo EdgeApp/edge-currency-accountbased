@@ -13,6 +13,7 @@ const networkInfo: ZcashNetworkInfo = {
   blockchairServers: ['https://api.blockchair.com'],
   defaultBirthday: 1310000,
   defaultNetworkFee: '1000', // hardcoded default ZEC fee
+  nativeSdk: 'zcash',
   transactionQueryLimit: 999
 }
 

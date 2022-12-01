@@ -38,7 +38,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (RNAccountbased == null) {
       throw new Error('Need opts')
     }
-    const { KeyTool, AddressTool } = RNAccountbased
+    const { KeyTool, AddressTool } = RNAccountbased[this.networkInfo.nativeSdk]
 
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool

@@ -415,7 +415,8 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased']
+  const { makeSynchronizer } =
+    env.nativeIo['edge-currency-accountbased'][env.networkInfo.nativeSdk]
 
   const engine = new ZcashEngine(
     tools,
