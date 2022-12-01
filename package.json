@@ -23,8 +23,12 @@
   "react-native": "./lib/react-native-accountbased.js",
   "types": "./lib/src/index.d.ts",
   "files": [
+    "/android/build.gradle",
+    "/android/src/*",
     "/CHANGELOG.md",
+    "/edge-currency-accountbased.podspec",
     "/index.js",
+    "/ios/*",
     "/lib/*",
     "/LICENSE",
     "/package.json",
