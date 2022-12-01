@@ -1,17 +1,9 @@
-/**
- * Created by paul on 8/8/17.
- */
-
 import { getLocalStorage } from '@walletconnect/browser-utils'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -23,16 +15,17 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { biggyScience, getDenomInfo, getFetchCors } from '../common/utils'
-import { EthereumEngine } from './ethEngine'
+import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
 
 export class EthereumTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
   }
@@ -367,71 +360,18 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeEthereumBasedPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo
-): EdgeCurrencyPlugin {
-  const { io, initOptions } = opts
-  const fetchCors = getFetchCors(opts)
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<EthereumTools> {
+  const out = new EthereumTools(env)
 
-  let toolsPromise: Promise<EthereumTools>
-  async function makeCurrencyTools(): Promise<EthereumTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new EthereumTools(io, currencyInfo))
+  // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
+  // a user from reconnecting to an "active" but invisible connection. Future enhancement
+  // will restore these active sessions to the GUI
+  const wcStorage = getLocalStorage()
+  if (wcStorage != null) wcStorage.clear()
 
-    // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
-    // a user from reconnecting to an "active" but invisible connection. Future enhancement
-    // will restore these active sessions to the GUI
-    const wcStorage = getLocalStorage()
-    if (wcStorage != null) wcStorage.clear()
-
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new EthereumEngine(
-      tools,
-      walletInfo,
-      initOptions,
-      opts,
-      currencyInfo,
-      fetchCors
-    )
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    // Initialize otherData defaults if they weren't on disk
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.nextNonce) {
-      currencyEngine.otherData.nextNonce = '0'
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.unconfirmedNextNonce) {
-      currencyEngine.otherData.unconfirmedNextNonce = '0'
-    }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.networkFees) {
-      currencyEngine.otherData.networkFees = {
-        ...currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-      }
-    }
-
-    const out: EdgeCurrencyEngine = currencyEngine
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+  return out
 }
+
+export { makeCurrencyEngine } from './ethEngine'

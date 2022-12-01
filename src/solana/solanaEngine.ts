@@ -2,6 +2,8 @@ import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, mul } from 'biggystring'
 import { asNumber } from 'cleaners'
 import {
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -12,7 +14,13 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
-import { asyncWaterfall, cleanTxLogs, getOtherParams } from '../common/utils'
+import { PluginEnvironment } from '../common/innerPlugin'
+import {
+  asyncWaterfall,
+  cleanTxLogs,
+  getFetchCors,
+  getOtherParams
+} from '../common/utils'
 import { SolanaTools } from './solanaPlugin'
 import {
   asRecentBlockHash,
@@ -41,8 +49,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
-  // @ts-expect-error
-  otherData: SolanaOtherData
+  otherData!: SolanaOtherData
   fetchCors: EdgeFetchFunction
   settings: SolanaSettings
   progressRatio: number
@@ -440,4 +447,21 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: SolanaTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new SolanaEngine(tools, walletInfo, opts, getFetchCors(env))
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  return engine
 }

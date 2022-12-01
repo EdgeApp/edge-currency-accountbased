@@ -3,6 +3,7 @@ import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
 import { add, div, eq, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeLog,
@@ -15,9 +16,11 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   getDenomInfo,
+  getFetchCors,
   getOtherParams,
   hexToDecimal,
   makeMutex,
@@ -43,6 +46,7 @@ import {
   TronAccountResources,
   TronNetworkFees,
   TronNetworkInfo,
+  TronOtherdata,
   TronTxParams,
   TxQueryCache
 } from './tronTypes'
@@ -1068,4 +1072,25 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 }
 
-export { CurrencyEngine }
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<TronNetworkInfo>,
+  tools: TronTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new TronEngine(
+    tools,
+    walletInfo,
+    opts,
+    getFetchCors(env),
+    env.networkInfo
+  )
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is type checked
+  engine.otherData = engine.walletLocalData.otherData as TronOtherdata
+
+  return engine
+}

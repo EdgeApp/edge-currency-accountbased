@@ -1,8 +1,7 @@
-/* global */
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
-
-import { makePolkadotPluginInner } from './polkadotPlugin'
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { PolkadotTools } from './polkadotPlugin'
 import { PolkadotSettings } from './polkadotTypes'
 
 const otherSettings: PolkadotSettings = {
@@ -42,7 +41,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makePolkadotPlugin = (opts: EdgeCorePluginOptions) => {
-  return makePolkadotPluginInner(opts, currencyInfo)
-}
+export const polkadot = makeOuterPlugin<{}, PolkadotTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./polkadotPlugin')
+  }
+})

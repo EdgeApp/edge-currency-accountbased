@@ -1,6 +1,7 @@
 import * as hedera from '@hashgraph/sdk'
 import { add, eq, gt, toFixed } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeFreshAddress,
@@ -15,6 +16,7 @@ import {
 import { base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { bufToHex, hexToBuf, removeHexPrefix } from '../common/utils'
 import { HederaTools } from './hederaPlugin'
 import {
@@ -547,4 +549,18 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: HederaTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const { io, currencyInfo } = env
+  const engine = new HederaEngine(tools, walletInfo, opts, io, currencyInfo)
+
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  return engine
 }

@@ -1,45 +1,13 @@
-/**
- * Created by on 2020-02-14
- */
-/* global fetch */
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
-
-import { makeEosBasedPluginInner } from './eosPlugin'
-import { EosJsConfig, EosSettings } from './eosTypes'
-
-const GREYMASS_FUEL_ACTION = {
-  authorization: [
-    {
-      actor: 'greymassfuel',
-      permission: 'cosign'
-    }
-  ],
-  account: 'greymassnoop',
-  name: 'noop',
-  data: {}
-}
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { EosTools } from './eosPlugin'
+import { EosNetworkInfo, eosOtherMethodNames } from './eosTypes'
 
 // ----EOSIO MAIN NET----
-export const eosJsConfig: EosJsConfig = {
+export const eosNetworkInfo: EosNetworkInfo = {
   chainId: 'aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906', // eosio main net
-  keyProvider: [],
-  httpEndpoint: '', // main net
-  fetch: fetch,
-  verbose: false // verbose logging such as API activity
-}
 
-const denominations = [
-  // An array of Objects of the possible denominations for this currency
-  {
-    name: 'EOS',
-    multiplier: '10000',
-    symbol: 'E'
-  }
-]
-
-const otherSettings: EosSettings = {
-  // @ts-expect-error
   eosActivationServers: ['https://eospay.edge.app'],
   eosHyperionNodes: ['https://api.eossweden.org'],
   eosNodes: [
@@ -55,24 +23,26 @@ const otherSettings: EosSettings = {
   ],
   eosFuelServers: ['https://eos.greymass.com'],
   eosDfuseServers: ['https://eos.dfuse.eosnation.io'],
-  uriProtocol: 'eos',
-  fuelActions: [GREYMASS_FUEL_ACTION]
+  uriProtocol: 'eos'
 }
 
-const defaultSettings: any = {
-  otherSettings
-}
+const denominations = [
+  // An array of Objects of the possible denominations for this currency
+  {
+    name: 'EOS',
+    multiplier: '10000',
+    symbol: 'E'
+  }
+]
 
 export const eosCurrencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'EOS',
   displayName: 'EOS',
   pluginId: 'eos',
-  // @ts-expect-error
-  pluginName: 'eos',
   walletType: 'wallet:eos',
 
-  defaultSettings,
+  defaultSettings: {},
 
   memoMaxLength: 256,
 
@@ -83,7 +53,12 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeEosPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEosBasedPluginInner(opts, eosCurrencyInfo, eosJsConfig)
-}
+export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
+  currencyInfo: eosCurrencyInfo,
+  networkInfo: eosNetworkInfo,
+  otherMethodNames: eosOtherMethodNames,
+
+  async getInnerPlugin() {
+    return await import('./eosPlugin')
+  }
+})

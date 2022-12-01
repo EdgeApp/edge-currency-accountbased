@@ -1,37 +1,3 @@
-import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyInfo,
-  EdgeIo
-} from 'edge-core-js/types'
-
-import { asGetActivationCost } from './hederaTypes'
-
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const getOtherMethods = (
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo,
-  io: EdgeIo = opts.io
-) => ({
-  getActivationSupportedCurrencies: () => ({ result: { ETH: true } }),
-  getActivationCost: async () => {
-    const creatorApiServer =
-      currencyInfo.defaultSettings.otherSettings.creatorApiServers[0]
-
-    try {
-      const response = await io.fetch(`${creatorApiServer}/account/cost`)
-      return asGetActivationCost(await response.json()).hbar
-    } catch (e: any) {
-      opts.log.warn(
-        'getActivationCost error unable to get account activation cost',
-        e
-      )
-      throw new Error('ErrorUnableToGetCost')
-    }
-  },
-  validateAccount: async () =>
-    await Promise.resolve({ result: 'AccountAvailable' })
-})
-
 export const validAddress = (address: string = ''): boolean => {
   // HIP-15
   return /^(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))(?:-([a-z]{5}))?$/.test(

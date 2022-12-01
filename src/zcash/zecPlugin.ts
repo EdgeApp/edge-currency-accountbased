@@ -2,11 +2,7 @@ import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -15,10 +11,9 @@ import {
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { ZcashEngine } from './zecEngine'
-import { currencyInfo } from './zecInfo'
 import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
@@ -29,9 +24,16 @@ export class ZcashTools implements EdgeCurrencyTools {
   AddressTool: any
   network: string
 
-  constructor(io: EdgeIo, KeyTool: any, AddressTool: any) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
+
+    const RNAccountbased = env.nativeIo['edge-currency-accountbased']
+    if (RNAccountbased == null) {
+      throw new Error('Need opts')
+    }
+    const { KeyTool, AddressTool } = RNAccountbased
 
     this.network =
       currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
@@ -124,7 +126,7 @@ export class ZcashTools implements EdgeCurrencyTools {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
     } = parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       networks,
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
@@ -153,7 +155,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     let amount
     if (nativeAmount != null) {
       const denom = getDenomInfo(
-        currencyInfo,
+        this.currencyInfo,
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
         currencyCode || `${this.currencyInfo.currencyCode}`,
         customTokens
@@ -168,50 +170,10 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeZcashPlugin(
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
-  const { io } = opts
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-  if (!opts.nativeIo['edge-currency-accountbased']) {
-    throw new Error('Need opts')
-  }
-  const RNAccountbased = opts.nativeIo['edge-currency-accountbased']
-  const { KeyTool, AddressTool, makeSynchronizer } = RNAccountbased
-  let toolsPromise: Promise<ZcashTools>
-  async function makeCurrencyTools(): Promise<ZcashTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new ZcashTools(io, KeyTool, AddressTool))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new ZcashEngine(
-      tools,
-      walletInfo,
-      opts,
-      makeSynchronizer
-    )
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    const out: EdgeCurrencyEngine = currencyEngine
-
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<ZcashTools> {
+  return new ZcashTools(env)
 }
+
+export { makeCurrencyEngine } from './zecEngine'

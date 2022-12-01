@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- */
-
 import { add, mul } from 'biggystring'
 import { Buffer } from 'buffer'
 import { asArray, asObject, asOptional, asString } from 'cleaners'

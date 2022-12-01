@@ -1,8 +1,7 @@
-/* global */
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
-
-import { makeEthereumBasedPluginInner } from '../ethPlugin'
+import { makeOuterPlugin } from '../../common/innerPlugin'
+import type { EthereumTools } from '../ethPlugin'
 import { EthereumFees, EthereumSettings } from '../ethTypes'
 
 // Fees are in Wei
@@ -266,7 +265,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeAvalanchePlugin = (opts: EdgeCorePluginOptions) => {
-  return makeEthereumBasedPluginInner(opts, currencyInfo)
-}
+export const avalanche = makeOuterPlugin<{}, EthereumTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('../ethPlugin')
+  }
+})

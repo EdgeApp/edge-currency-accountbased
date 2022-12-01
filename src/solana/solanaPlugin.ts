@@ -4,11 +4,7 @@ import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import * as ed25519 from 'ed25519-hd-key'
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -18,9 +14,9 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
+import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo, getFetchCors } from '../common/utils'
-import { SolanaEngine } from './solanaEngine'
+import { getDenomInfo } from '../common/utils'
 
 const { Keypair, PublicKey } = solanaWeb3
 
@@ -39,7 +35,8 @@ export class SolanaTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(io: EdgeIo, currencyInfo: EdgeCurrencyInfo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
   }
@@ -144,42 +141,10 @@ export class SolanaTools implements EdgeCurrencyTools {
   }
 }
 
-export function makeSolanaPluginInner(
-  opts: EdgeCorePluginOptions,
-  currencyInfo: EdgeCurrencyInfo
-): EdgeCurrencyPlugin {
-  const { io } = opts
-  const fetchCors = getFetchCors(opts)
-
-  let toolsPromise: Promise<SolanaTools>
-  async function makeCurrencyTools(): Promise<SolanaTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new SolanaTools(io, currencyInfo))
-    return await toolsPromise
-  }
-
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new SolanaEngine(tools, walletInfo, opts, fetchCors)
-
-    // Do any async initialization necessary for the engine
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    // @ts-expect-error
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-
-    const out: EdgeCurrencyEngine = currencyEngine
-
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<SolanaTools> {
+  return new SolanaTools(env)
 }
+
+export { makeCurrencyEngine } from './solanaEngine'

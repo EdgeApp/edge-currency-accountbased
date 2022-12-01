@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- */
-
 import { asObject, asString } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 

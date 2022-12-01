@@ -8,6 +8,12 @@ export interface HederaSettings {
   maxFee: number
 }
 
+export const hederaOtherMethodNames = [
+  'getActivationSupportedCurrencies',
+  'getActivationCost',
+  'validateAccount'
+] as const
+
 export const asGetActivationCost = asObject({
   hbar: asString
 })

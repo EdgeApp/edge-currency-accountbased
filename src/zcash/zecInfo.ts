@@ -1,7 +1,7 @@
-/* global */
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { ZcashTools } from './zecPlugin'
 import { ZcashSettings } from './zecTypes'
 
 const otherSettings: ZcashSettings = {
@@ -45,3 +45,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const zcash = makeOuterPlugin<{}, ZcashTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./zecPlugin')
+  }
+})

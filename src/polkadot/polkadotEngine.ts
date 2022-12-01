@@ -1,5 +1,7 @@
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
+  EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -9,6 +11,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -474,4 +477,21 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     }
     return ''
   }
+}
+
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: PolkadotTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const engine = new PolkadotEngine(tools, walletInfo, opts)
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData
+
+  return engine
 }

@@ -1,9 +1,8 @@
-/* global */
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
-
-import { makeHederaPluginInner } from './hederaPlugin'
-import { HederaSettings } from './hederaTypes'
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { HederaTools } from './hederaPlugin'
+import { hederaOtherMethodNames, HederaSettings } from './hederaTypes'
 
 const otherSettings: HederaSettings = {
   creatorApiServers: ['https://creator.testnet.myhbarwallet.com'],
@@ -46,7 +45,12 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeHederaTestnetPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeHederaPluginInner(opts, currencyInfo)
-}
+export const hederatestnet = makeOuterPlugin<{}, HederaTools>({
+  currencyInfo,
+  networkInfo: {},
+  otherMethodNames: hederaOtherMethodNames,
+
+  async getInnerPlugin() {
+    return await import('./hederaPlugin')
+  }
+})

@@ -1,7 +1,3 @@
-/**
- * Created by paul on 8/26/17.
- */
-
 import WalletConnect from '@walletconnect/client'
 import {
   asArray,

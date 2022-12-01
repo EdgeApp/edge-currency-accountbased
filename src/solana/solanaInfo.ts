@@ -1,8 +1,7 @@
-/* global */
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { EdgeCorePluginOptions, EdgeCurrencyInfo } from 'edge-core-js/types'
-
-import { makeSolanaPluginInner } from './solanaPlugin'
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { SolanaTools } from './solanaPlugin'
 import { SolanaSettings } from './solanaTypes'
 
 const otherSettings: SolanaSettings = {
@@ -44,7 +43,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const makeSolanaPlugin = (opts: EdgeCorePluginOptions) => {
-  return makeSolanaPluginInner(opts, currencyInfo)
-}
+export const solana = makeOuterPlugin<{}, SolanaTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./solanaPlugin')
+  }
+})

@@ -1,8 +1,9 @@
-/* global */
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
 import { FIO_REQUESTS_TYPES } from './fioConst'
+import type { FioTools } from './fioPlugin'
+import { fioOtherMethodNames } from './fioTypes'
 
 const defaultSettings: any = {
   apiUrls: [
@@ -74,3 +75,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const fio = makeOuterPlugin<{}, FioTools>({
+  currencyInfo,
+  networkInfo: {},
+  otherMethodNames: fioOtherMethodNames,
+
+  async getInnerPlugin() {
+    return await import('./fioPlugin')
+  }
+})

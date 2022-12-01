@@ -1,7 +1,7 @@
-/* global */
-
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { StellarTools } from './stellarPlugin'
 import { StellarSettings } from './stellarTypes'
 
 const otherSettings: StellarSettings = {
@@ -36,3 +36,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const stellar = makeOuterPlugin<{}, StellarTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./stellarPlugin')
+  }
+})

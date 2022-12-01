@@ -1,5 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
+import { makeOuterPlugin } from '../common/innerPlugin'
+import type { TezosTools } from './tezosPlugin'
 import { TezosSettings } from './tezosTypes'
 
 const otherSettings: TezosSettings = {
@@ -58,3 +60,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: []
 }
+
+export const tezos = makeOuterPlugin<{}, TezosTools>({
+  currencyInfo,
+  networkInfo: {},
+
+  async getInnerPlugin() {
+    return await import('./tezosPlugin')
+  }
+})

@@ -1,5 +1,6 @@
 import { abs, add, eq, gt, lte, sub } from 'biggystring'
 import {
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
   EdgeSpendInfo,
@@ -10,6 +11,7 @@ import {
 } from 'edge-core-js/types'
 
 import { CurrencyEngine } from '../common/engine'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from './../common/utils'
 import { ZcashTools } from './zecPlugin'
 import {
@@ -24,22 +26,14 @@ import {
 
 export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
-  // @ts-expect-error
-  otherData: ZcashOtherData
-  // @ts-expect-error
-  synchronizer: ZcashSynchronizer
-  // @ts-expect-error
-  synchronizerStatus: ZcashSynchronizerStatus
-  // @ts-expect-error
-  availableZatoshi: string
-  // @ts-expect-error
-  initialNumBlocksToDownload: number
-  // @ts-expect-error
-  initializer: ZcashInitializerConfig
-  // @ts-expect-error
-  alias: string
-  // @ts-expect-error
-  progressRatio: number
+  otherData!: ZcashOtherData
+  synchronizer!: ZcashSynchronizer
+  synchronizerStatus!: ZcashSynchronizerStatus
+  availableZatoshi!: string
+  initialNumBlocksToDownload!: number
+  initializer!: ZcashInitializerConfig
+  alias!: string
+  progressRatio!: number
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>
@@ -454,4 +448,22 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       ...rpcNode
     }
   }
+}
+export async function makeCurrencyEngine(
+  env: PluginEnvironment<{}>,
+  tools: ZcashTools,
+  walletInfo: EdgeWalletInfo,
+  opts: EdgeCurrencyEngineOptions
+): Promise<EdgeCurrencyEngine> {
+  const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased']
+
+  const engine = new ZcashEngine(tools, walletInfo, opts, makeSynchronizer)
+
+  // Do any async initialization necessary for the engine
+  await engine.loadEngine(tools, walletInfo, opts)
+
+  // This is just to make sure otherData is Flow checked
+  engine.otherData = engine.walletLocalData.otherData as any
+
+  return engine
 }

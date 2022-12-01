@@ -1,9 +1,5 @@
 import {
-  EdgeCorePluginOptions,
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
-  EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
@@ -13,9 +9,7 @@ import {
 import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
-import { getFetchCors } from './../common/utils'
-import { TezosEngine } from './tezosEngine'
-import { currencyInfo } from './tezosInfo'
+import { PluginEnvironment } from '../common/innerPlugin'
 import { UriTransaction } from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
@@ -24,7 +18,8 @@ export class TezosTools implements EdgeCurrencyTools {
   tezosRpcNodes: Object[]
   tezosApiServers: Object[]
 
-  constructor(io: EdgeIo) {
+  constructor(env: PluginEnvironment<{}>) {
+    const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
 
@@ -145,40 +140,11 @@ export class TezosTools implements EdgeCurrencyTools {
     return uri
   }
 }
-export function makeTezosPlugin(
-  opts: EdgeCorePluginOptions
-): EdgeCurrencyPlugin {
-  const { io } = opts
-  const fetchCors = getFetchCors(opts)
 
-  let toolsPromise: Promise<TezosTools>
-  async function makeCurrencyTools(): Promise<TezosTools> {
-    if (toolsPromise != null) return await toolsPromise
-    toolsPromise = Promise.resolve(new TezosTools(io))
-    return await toolsPromise
-  }
-  async function makeCurrencyEngine(
-    walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<EdgeCurrencyEngine> {
-    const tools = await makeCurrencyTools()
-    const currencyEngine = new TezosEngine(tools, walletInfo, opts, fetchCors)
-
-    await currencyEngine.loadEngine(tools, walletInfo, opts)
-
-    // This is just to make sure otherData is Flow checked
-    currencyEngine.otherData = currencyEngine.walletLocalData.otherData
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!currencyEngine.otherData.numberTransactions) {
-      currencyEngine.otherData.numberTransaction = 0
-    }
-    const out: TezosEngine = currencyEngine
-    return out
-  }
-
-  return {
-    currencyInfo,
-    makeCurrencyEngine,
-    makeCurrencyTools
-  }
+export async function makeCurrencyTools(
+  env: PluginEnvironment<{}>
+): Promise<TezosTools> {
+  return new TezosTools(env)
 }
+
+export { makeCurrencyEngine } from './tezosEngine'

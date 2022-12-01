@@ -1,11 +1,20 @@
-/**
- * Created by paul on 8/26/17.
- */
+export interface EosNetworkInfo {
+  chainId: string
 
-export interface EosSettings {
+  createAccountViaSingleApiEndpoints?: string[]
+  eosActivationServers: string[]
+  eosDfuseServers: string[]
+  eosFuelServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
+  uriProtocol: string
 }
+
+export const eosOtherMethodNames = [
+  'getActivationCost',
+  'getActivationSupportedCurrencies',
+  'validateAccount'
+] as const
 
 export interface EosTransactionSuperNode {
   act: {
@@ -24,10 +33,8 @@ export interface EosTransactionSuperNode {
 
 export interface EosTransaction {
   block_time: string
-  // @ts-expect-error
   block_num: number
   account_action_seq: number
-  // @ts-expect-error
   trx_id: string
   act: {
     authorization: any
@@ -42,11 +49,7 @@ export interface EosTransaction {
     name: string
   }
   '@timestamp': string
-  // @ts-expect-error
-  block_num: number
   producer: string
-  // @ts-expect-error
-  trx_id: string
   parent: number
   global_sequence: number
   notified: string[]
@@ -83,12 +86,4 @@ export interface EosWalletOtherData {
   lastQueryActionSeq: { [string]: number }
   // @ts-expect-error
   highestTxHeight: { [string]: number }
-}
-
-export interface EosJsConfig {
-  chainId: string
-  keyProvider: any[]
-  httpEndpoint: string
-  fetch: Function
-  verbose: boolean // verbose logging such as API activity
 }
