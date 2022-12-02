@@ -75,7 +75,7 @@ export class TronTools implements EdgeCurrencyTools {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    if (walletInfo.type !== this.currencyInfo.pluginId) {
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
