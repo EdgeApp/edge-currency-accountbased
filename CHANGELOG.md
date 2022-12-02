@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+## 0.20.0 (2022-12-02)
+
+- Lay ground work for future dynamically imported currencies by breaking plugins into 'inner' and 'outer' portions
+  - 'outer' plugins contain currency details, network info, and list to optional plugin methods
+  - 'inner' plugins contain heavy lifting code to create wallets and interact with networks
+- TRX: Fix walletType check in `derivePublicKey`
+- Various code cleanups
+
 ## 0.19.0 (2022-12-01)
 
 - Add Tron (TRX) with TRC20 token support
