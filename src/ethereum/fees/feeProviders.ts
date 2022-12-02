@@ -6,18 +6,14 @@ import {
   JsonObject
 } from 'edge-core-js'
 
-import {
-  getEdgeInfoServer,
-  pickRandom,
-  validateObject
-} from '../../common/utils'
+import { getEdgeInfoServer, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
   GAS_STATION_WEI_MULTIPLIER,
   OPTIMAL_FEE_HIGH_MULTIPLIER,
   WEI_MULTIPLIER
 } from '../ethConsts'
-import { EthGasStationSchema } from '../ethSchema'
+import { asEthGasStation } from '../ethSchema'
 import {
   asEthereumFees,
   asEvmScanGasResponseResult,
@@ -136,11 +132,7 @@ export const fetchFeesFromEvmGasStation = async (
   const result = await fetch(`${ethGasStationUrl}${apiKeyParams}`)
   const jsonObj = await result.json()
 
-  if (!validateObject(jsonObj, EthGasStationSchema)) {
-    throw new Error(`Error: Fetched invalid networkFees from EthGasStation`)
-  }
-
-  const fees = { ...jsonObj }
+  const fees = asEthGasStation(jsonObj)
   // Special case for MATIC fast and fastest being equivalent from gas station
   if (currencyInfo.currencyCode === 'MATIC') {
     // Since the later code assumes EthGasStation's
@@ -168,33 +160,28 @@ export const fetchFeesFromEvmGasStation = async (
   }
 
   // Correct inconsistencies, set gas prices
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.average <= fees.safeLow) fees.average = fees.safeLow + 1
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.fast <= fees.average) fees.fast = fees.average + 1
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   if (fees.fastest <= fees.fast) fees.fastest = fees.fast + 1
 
   let lowFee = fees.safeLow
   let standardFeeLow = fees.fast
-  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   let standardFeeHigh = ((fees.fast + fees.fastest) * 0.5 + fees.fastest) * 0.5
   let highFee = standardFeeHigh > fees.fastest ? standardFeeHigh : fees.fastest
 
-  lowFee = (Math.round(lowFee) * GAS_STATION_WEI_MULTIPLIER).toString()
-  standardFeeLow = (
-    Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
-  ).toString()
-  // @ts-expect-error
-  standardFeeHigh = (
-    Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
-  ).toString()
-  highFee = (Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER).toString()
+  lowFee = Math.round(lowFee) * GAS_STATION_WEI_MULTIPLIER
+  standardFeeLow = Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
+  standardFeeHigh = Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
+  highFee = Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER
 
-  const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
+  const out = {
+    lowFee: lowFee.toString(),
+    standardFeeLow: standardFeeLow.toString(),
+    standardFeeHigh: standardFeeHigh.toString(),
+    highFee: highFee.toString()
+  }
   log.warn(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
   printFees(log, out)
-  // @ts-expect-error
   return out
 }
 

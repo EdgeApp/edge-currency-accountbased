@@ -10,7 +10,6 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
-import { validate } from 'jsonschema'
 
 function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
@@ -33,19 +32,6 @@ function shuffleArray<T>(array: T[]): T[] {
   }
 
   return array
-}
-function validateObject(object: any, schema: any): boolean {
-  const result = validate(object, schema)
-
-  if (result.errors.length === 0) {
-    return true
-  } else {
-    for (const error of result.errors) {
-      const errMsg = error.message
-      console.log('ERROR: validateObject:' + errMsg)
-    }
-    return false
-  }
 }
 
 export function isEmpty(map: Object): boolean {
@@ -411,7 +397,6 @@ export function biggyRoundToNearestInt(float: string): string {
 
 export {
   normalizeAddress,
-  validateObject,
   getDenomInfo,
   asyncWaterfall,
   snooze,

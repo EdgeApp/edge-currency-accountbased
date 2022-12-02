@@ -121,31 +121,17 @@ query ($query: String!, $limit: Int64, $low: Int64, $high: Int64) {
 }
 `
 
-// note that transfers are regular EOS transactions
-export const EosTransactionSuperNodeSchema = {
-  type: 'object',
-  properties: {
-    act: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            from: { type: 'string' },
-            to: { type: 'string' },
-            amount: { type: 'number' },
-            symbol: { type: 'string' },
-            memo: { type: 'string' }
-          },
-          required: ['from', 'to', 'amount'],
-          authorization: { type: 'object' }
-        }
-      },
-      required: ['data']
-    },
-    trx_id: { type: 'string' },
-    '@timestamp': { type: 'string' },
-    block_num: { type: 'number' },
-    required: ['act', 'trx_id', '@timestamp', 'block_num']
-  }
-}
+export const asEosTransactionSuperNodeSchema = asObject({
+  act: asObject({
+    data: asObject({
+      from: asString,
+      to: asString,
+      amount: asNumber,
+      symbol: asString,
+      memo: asOptional(asString)
+    })
+  }),
+  trx_id: asString,
+  '@timestamp': asString,
+  block_num: asNumber
+})
