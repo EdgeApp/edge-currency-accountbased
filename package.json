@@ -23,14 +23,14 @@
   "react-native": "./lib/react-native-accountbased.js",
   "types": "./lib/src/index.d.ts",
   "files": [
-    "CHANGELOG.md",
-    "index.js",
-    "lib/*",
-    "bin/*",
-    "LICENSE",
-    "package.json",
-    "postinstall.sh",
-    "README.md"
+    "/bin/*",
+    "/CHANGELOG.md",
+    "/index.js",
+    "/lib/*",
+    "/LICENSE",
+    "/package.json",
+    "/postinstall.sh",
+    "/README.md"
   ],
   "scripts": {
     "clean": "rimraf lib",
