@@ -15,7 +15,7 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
-import { PluginEnvironment } from '../common/innerPlugin'
+import { contractToTokenId, PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
@@ -356,7 +356,7 @@ export class EthereumTools implements EdgeCurrencyTools {
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    return contractAddress.toLowerCase()
+    return contractToTokenId(contractAddress)
   }
 }
 
