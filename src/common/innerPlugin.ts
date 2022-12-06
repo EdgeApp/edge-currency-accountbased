@@ -5,6 +5,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
+  EdgeMetaToken,
   EdgeOtherMethods,
   EdgeTokenMap,
   EdgeWalletInfo
@@ -42,10 +43,6 @@ export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
 
-  getBuiltinTokens?: (
-    env: PluginEnvironment<NetworkInfo>
-  ) => Promise<EdgeTokenMap>
-
   getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools>>
 
   otherMethodNames?: ReadonlyArray<string & keyof Tools>
@@ -78,9 +75,10 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
       return { plugin, tools }
     }
 
+    const builtinTokens = upgradeMetaTokens(currencyInfo.metaTokens)
+
     async function getBuiltinTokens(): Promise<EdgeTokenMap> {
-      if (template.getBuiltinTokens == null) return {}
-      return await template.getBuiltinTokens(innerEnv)
+      return builtinTokens
     }
 
     async function makeCurrencyTools(): Promise<Tools> {
@@ -132,4 +130,23 @@ export function makeOtherMethods<T>(
   }
 
   return out
+}
+
+function upgradeMetaTokens(metaTokens: EdgeMetaToken[]): EdgeTokenMap {
+  const out: EdgeTokenMap = {}
+  for (const metaToken of metaTokens) {
+    const { contractAddress } = metaToken
+    if (contractAddress == null) continue
+    out[contractToTokenId(contractAddress)] = {
+      currencyCode: metaToken.currencyCode,
+      denominations: metaToken.denominations,
+      displayName: metaToken.currencyName,
+      networkLocation: { contractAddress: metaToken.contractAddress }
+    }
+  }
+  return out
+}
+
+export function contractToTokenId(contractAddress: string): string {
+  return contractAddress.toLowerCase().replace(/^0x/, '')
 }
