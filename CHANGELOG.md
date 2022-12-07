@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.20.2 (2022-12-07)
+
+- ETH: Add new KNC token and rename old token to KNCV1
+
 ## 0.20.1 (2022-12-07)
 
 - Fix Ethereum and builtin token handling
