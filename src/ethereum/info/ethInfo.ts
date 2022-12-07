@@ -483,10 +483,16 @@ export const currencyInfo: EdgeCurrencyInfo = {
       contractAddress: '0x818Fc6C2Ec5986bc6E2CBf00939d90556aB12ce5'
     },
     {
+      currencyCode: 'KNCV1',
+      currencyName: 'Kyber Network',
+      denominations: [{ name: 'KNCV1', multiplier: '1000000000000000000' }],
+      contractAddress: '0xdd974D5C2e2928deA5F71b9825b8b646686BD200'
+    },
+    {
       currencyCode: 'KNC',
       currencyName: 'Kyber Network',
       denominations: [{ name: 'KNC', multiplier: '1000000000000000000' }],
-      contractAddress: '0xdd974D5C2e2928deA5F71b9825b8b646686BD200'
+      contractAddress: '0xdeFA4e8a7bcBA345F687a2f1456F5Edd9CE97202'
     },
     {
       currencyCode: 'LINK',
