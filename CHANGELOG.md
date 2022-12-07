@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.20.1 (2022-12-07)
+
+- Fix Ethereum and builtin token handling
+- Various code cleanups
+
 ## 0.20.0 (2022-12-02)
 
 - Lay ground work for future dynamically imported currencies by breaking plugins into 'inner' and 'outer' portions
