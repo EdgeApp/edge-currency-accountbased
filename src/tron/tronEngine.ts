@@ -1060,6 +1060,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     edgeTransaction.txid = json.txid
+    edgeTransaction.date = Date.now() / 1000
     return edgeTransaction
   }
 
