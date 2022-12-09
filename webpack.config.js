@@ -1,50 +1,81 @@
+const { exec } = require('child_process')
 const path = require('path')
-
 const webpack = require('webpack')
+const { ESBuildMinifyPlugin } = require('esbuild-loader')
 
-const babelOptions = {
-  // For debugging, just remove "@babel/preset-env":
-  presets: [
-    [
-      '@babel/preset-env',
-      {
-        targets: { chrome: '67' }
-      }
-    ]
-  ],
-  cacheDirectory: true
+const debug = process.env.WEBPACK_SERVE
+
+// Try exposing our socket to adb (errors are fine):
+if (process.env.WEBPACK_SERVE) {
+  console.log('adb reverse tcp:8082 tcp:8082')
+  exec('adb reverse tcp:8082 tcp:8082', () => {})
 }
 
+const bundlePath = path.resolve(
+  __dirname,
+  'android/src/main/assets/edge-currency-accountbased'
+)
+
 module.exports = {
-  devtool: 'source-map',
-  entry: './lib/index.js',
-  mode: 'development',
+  devtool: debug ? 'source-map' : undefined,
+  devServer: {
+    allowedHosts: 'all',
+    hot: false,
+    port: 8082,
+    static: bundlePath
+  },
+  entry: './src/index.ts',
+  mode: debug ? 'development' : 'production',
   module: {
     rules: [
       {
         test: /\.(ts|js)?$/,
-        use: { loader: 'babel-loader', options: babelOptions }
+        use: {
+          loader: 'esbuild-loader',
+          options: {
+            loader: 'ts',
+            target: 'chrome67'
+          }
+        }
       }
     ]
   },
+  optimization: {
+    minimizer: [
+      new ESBuildMinifyPlugin({
+        target: 'chrome67' // Syntax to compile to (see options below for possible values)
+      })
+    ]
+  },
   output: {
+    chunkFilename: '[name].chunk.js',
     filename: 'edge-currency-accountbased.js',
-    path: path.join(path.resolve(__dirname), 'lib/react-native')
+    path: bundlePath
   },
   plugins: [
-    new webpack.IgnorePlugin({ resourceRegExp: /^https-proxy-agent$/ })
+    new webpack.IgnorePlugin({ resourceRegExp: /^(https-proxy-agent)$/ }),
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer']
+    }),
+    new webpack.ProvidePlugin({
+      process: path.resolve('node_modules/process/browser.js')
+    })
   ],
   resolve: {
+    extensions: ['.ts', '.js'],
     fallback: {
-      fs: false,
-      vm: require.resolve('vm-browserify'),
+      // assert: require.resolve('assert'),
       crypto: require.resolve('crypto-browserify'),
-      stream: require.resolve('stream-browserify'),
-      https: require.resolve('https-browserify'),
+      fs: false,
       http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
       os: require.resolve('os-browserify/browser'),
+      path: require.resolve('path-browserify'),
+      stream: require.resolve('stream-browserify'),
       string_decoder: require.resolve('string_decoder'),
-      path: require.resolve('path-browserify')
+      // url: require.resolve('url'),
+      vm: require.resolve('vm-browserify')
     }
-  }
+  },
+  target: ['web', 'es5']
 }

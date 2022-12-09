@@ -1,3 +1,5 @@
+import { EdgeOtherMethods } from 'edge-core-js'
+import { NativeModules } from 'react-native'
 import {
   AddressTool as PiratechainAddressTool,
   KeyTool as PiratechainKeyTool,
@@ -13,6 +15,12 @@ import {
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
 import { ZcashInitializerConfig } from './zcash/zecTypes'
+
+const { EdgeCurrencyAccountbasedModule } = NativeModules
+const { sourceUri } = EdgeCurrencyAccountbasedModule.getConstants()
+
+export const pluginUri = sourceUri
+export const debugUri = 'http://localhost:8082/edge-currency-accountbased.js'
 
 type Synchronizer = ZcashSynchronizer | PirateSynchronizer
 
@@ -66,9 +74,7 @@ const makePluginSynchronizer = (pluginId: string) => {
   }
 }
 
-// TODO: Remove this entire file in the next breaking change.
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export default function makePluginIo() {
+export function makePluginIo(): EdgeOtherMethods {
   bridgifyObject(PiratechainKeyTool)
   bridgifyObject(PiratechainAddressTool)
   bridgifyObject(ZcashKeyTool)

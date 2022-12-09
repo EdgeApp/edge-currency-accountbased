@@ -1,16 +1,14 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "declarationDir": "lib",
-    "emitDeclarationOnly": true,
-    "sourceRoot": "src",
-    "sourceMap": true,
+    "noEmit": true,
+
     "esModuleInterop": true,
-    "module": "commonjs",
+    "module": "es2020",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "target": "es2017",
+    "target": "es2015",
     "skipLibCheck": true,
+
     "strict": true
   },
   "exclude": ["lib"]

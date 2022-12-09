@@ -1,9 +1,5 @@
-import {
-  ApiPromise,
-  Keyring,
-  utilCrypto,
-  WsProvider
-} from './polkadot-sdk-bundle'
+import { ApiPromise, Keyring, WsProvider } from '@polkadot/api'
+import * as utilCrypto from '@polkadot/util-crypto'
 
 const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 

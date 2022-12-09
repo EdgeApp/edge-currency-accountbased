@@ -16,10 +16,12 @@ Pod::Spec.new do |s|
     :git => "https://github.com/EdgeApp/edge-currency-accountbased.git",
     :tag => "v#{s.version}"
   }
-  s.source_files = []
+  s.source_files =
+    "ios/EdgeCurrencyAccountbasedModule.swift",
+    "ios/EdgeCurrencyAccountbasedModule.m"
 
   s.resource_bundles = {
-    "edge-core-js" => "android/src/main/assets/edge-core-js/edge-core.js"
+    "edge-currency-accountbased" => "android/src/main/assets/edge-currency-accountbased/*.js"
   }
 
   s.dependency "React-Core"

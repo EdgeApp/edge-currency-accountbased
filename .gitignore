@@ -1,10 +1,9 @@
 # Build output:
-.nyc_output
-/build
-/coverage
-/intermediate
-/lib
-/src/polkadot/polkadot-sdk-bundle.js
+/.nyc_output/
+/android/*.jar
+/android/src/main/assets/edge-currency-accountbased/
+/dist/
+/lib/
 
 # Package managers:
 node_modules/
@@ -17,4 +16,3 @@ stats.json
 .DS_Store
 .idea/
 .vscode/
-.vscode/settings.json
