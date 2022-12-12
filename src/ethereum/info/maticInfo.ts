@@ -7,7 +7,7 @@ import { EthereumFees, EthereumSettings } from '../ethTypes'
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
   default: {
-    baseFeeMultiplier: undefined,
+    baseFeemultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',
       tokenTransaction: '300000',
@@ -93,169 +93,169 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
   metaTokens: [
     {
-      currencyCode: 'USDC',
-      currencyName: 'USD Coin',
-      denominations: [
+    contractAddress: "0xd6df932a45c0f255f85145f286ea0b292b21c90b",
+    currencyCode: "AAVE",
+    currencyName: "Aave",
+    denominations: [
         {
-          name: 'USDC',
-          multiplier: '1000000'
+        multiplier: "1000000000000000000",
+        name: "AAVE"
         }
-      ],
-      contractAddress: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174'
+      ]
     },
     {
-      currencyCode: 'DAI',
-      currencyName: 'Dai Stablecoin',
-      denominations: [
+    contractAddress: "0x3BA4c387f786bFEE076A58914F5Bd38d668B42c3",
+    currencyCode: "BNB",
+    currencyName: "Binance",
+    denominations: [
         {
-          name: 'DAI',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "BNB"
         }
-      ],
-      contractAddress: '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063'
+      ]
     },
     {
-      currencyCode: 'USDT',
-      currencyName: 'Tether',
-      denominations: [
+    contractAddress: "0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7",
+    currencyCode: "BUSD",
+    currencyName: "Binance USD",
+    denominations: [
         {
-          name: 'USDT',
-          multiplier: '1000000'
+        multiplier: "1000000000000000000",
+        name: "BUSD"
         }
-      ],
-      contractAddress: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f'
+      ]
     },
     {
-      currencyCode: 'AAVE',
-      currencyName: 'Aave',
-      denominations: [
+    contractAddress: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+    currencyCode: "DAI",
+    currencyName: "Dai Stablecoin",
+    denominations: [
         {
-          name: 'AAVE',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "DAI"
         }
-      ],
-      contractAddress: '0xd6df932a45c0f255f85145f286ea0b292b21c90b'
+      ]
     },
     {
-      currencyCode: 'WBTC',
-      currencyName: 'Wrapped Bitcoin',
-      denominations: [
+    contractAddress: "0xc9c1c1c20b3658f8787cc2fd702267791f224ce1",
+    currencyCode: "FTM",
+    currencyName: "Fantom",
+    denominations: [
         {
-          name: 'WBTC',
-          multiplier: '100000000'
+        multiplier: "1000000000000000000",
+        name: "FTM"
         }
-      ],
-      contractAddress: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6'
+      ]
     },
     {
-      currencyCode: 'YFI',
-      currencyName: 'Yearn Finance',
-      denominations: [
+    contractAddress: "0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39",
+    currencyCode: "LINK",
+    currencyName: "Chainlink",
+    denominations: [
         {
-          name: 'YFI',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "LINK"
         }
-      ],
-      contractAddress: '0xda537104d6a5edd53c6fbba9a898708e465260b6'
+      ]
     },
     {
-      currencyCode: 'WETH',
-      currencyName: 'Wrapped ETH',
-      denominations: [
+    contractAddress: "0xa1c57f48f0deb89f569dfbe6e2b7f46d33606fd4",
+    currencyCode: "MANA",
+    currencyName: "Decentraland",
+    denominations: [
         {
-          name: 'WETH',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "MANA"
         }
-      ],
-      contractAddress: '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
+      ]
     },
     {
-      currencyCode: 'BUSD',
-      currencyName: 'Binance USD',
-      denominations: [
+    contractAddress: "0x6f7C932e7684666C9fd1d44527765433e01fF61d",
+    currencyCode: "MKR",
+    currencyName: "Maker",
+    denominations: [
         {
-          name: 'BUSD',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "MKR"
         }
-      ],
-      contractAddress: '0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7'
+      ]
     },
     {
-      currencyCode: 'UNI',
-      currencyName: 'Uniswap',
-      denominations: [
+    contractAddress: "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
+    currencyCode: "TUSD",
+    currencyName: "TrueUSD",
+    denominations: [
         {
-          name: 'UNI',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "TUSD"
         }
-      ],
-      contractAddress: '0xb33eaad8d922b1083446dc23f610c2567fb5180f'
+      ]
     },
     {
-      currencyCode: 'FTM',
-      currencyName: 'Fantom',
-      denominations: [
+    contractAddress: "0xb33eaad8d922b1083446dc23f610c2567fb5180f",
+    currencyCode: "UNI",
+    currencyName: "Uniswap",
+    denominations: [
         {
-          name: 'FTM',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "UNI"
         }
-      ],
-      contractAddress: '0xc9c1c1c20b3658f8787cc2fd702267791f224ce1'
+      ]
     },
     {
-      currencyCode: 'MKR',
-      currencyName: 'Maker',
-      denominations: [
+    contractAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+    currencyCode: "USDC",
+    currencyName: "USD Coin",
+    denominations: [
         {
-          name: 'MKR',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000",
+        name: "USDC"
         }
-      ],
-      contractAddress: '0x6f7C932e7684666C9fd1d44527765433e01fF61d'
+      ]
     },
     {
-      currencyCode: 'TUSD',
-      currencyName: 'TrueUSD',
-      denominations: [
+    contractAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+    currencyCode: "USDT",
+    currencyName: "Tether",
+    denominations: [
         {
-          name: 'TUSD',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000",
+        name: "USDT"
         }
-      ],
-      contractAddress: '0x2e1ad108ff1d8c782fcbbb89aad783ac49586756'
+      ]
     },
     {
-      currencyCode: 'BNB',
-      currencyName: 'Binance',
-      denominations: [
+    contractAddress: "0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6",
+    currencyCode: "WBTC",
+    currencyName: "Wrapped Bitcoin",
+    denominations: [
         {
-          name: 'BNB',
-          multiplier: '1000000000000000000'
+        multiplier: "100000000",
+        name: "WBTC"
         }
-      ],
-      contractAddress: '0x3BA4c387f786bFEE076A58914F5Bd38d668B42c3'
+      ]
     },
     {
-      currencyCode: 'MANA',
-      currencyName: 'Decentraland',
-      denominations: [
+    contractAddress: "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+    currencyCode: "WETH",
+    currencyName: "Wrapped ETH",
+    denominations: [
         {
-          name: 'MANA',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "WETH"
         }
-      ],
-      contractAddress: '0xa1c57f48f0deb89f569dfbe6e2b7f46d33606fd4'
+      ]
     },
     {
-      currencyCode: 'LINK',
-      currencyName: 'Chainlink',
-      denominations: [
+    contractAddress: "0xda537104d6a5edd53c6fbba9a898708e465260b6",
+    currencyCode: "YFI",
+    currencyName: "Yearn Finance",
+    denominations: [
         {
-          name: 'LINK',
-          multiplier: '1000000000000000000'
+        multiplier: "1000000000000000000",
+        name: "YFI"
         }
-      ],
-      contractAddress: '0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39'
+      ]
     }
   ]
 }
