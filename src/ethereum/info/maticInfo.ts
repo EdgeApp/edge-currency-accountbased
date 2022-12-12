@@ -247,6 +247,17 @@ export const currencyInfo: EdgeCurrencyInfo = {
       ]
     },
     {
+      contractAddress: '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
+      currencyCode: 'WMATIC',
+      currencyName: 'Wrapped Polygon',
+      denominations: [
+        {
+          name: 'WMATIC',
+          multiplier: '1000000000000000000'
+        }
+      ],
+    },
+    {
     contractAddress: "0xda537104d6a5edd53c6fbba9a898708e465260b6",
     currencyCode: "YFI",
     currencyName: "Yearn Finance",
