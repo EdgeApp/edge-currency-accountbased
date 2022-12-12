@@ -27,7 +27,10 @@ interface Options {
 const networks: { [pluginId: string]: Options } = {
   piratechain: {
     serviceProtoPath: path.join(__dirname, '/protos/piratechain/service.proto'),
-    checkpointsPath: path.join(__dirname, '../src/zcash/arrrCheckpoints'),
+    checkpointsPath: path.join(
+      __dirname,
+      '../android/src/main/assets/piratesaplingtree/mainnet/'
+    ),
     serverUrl: 'lightd1.pirate.black:9067',
     packagePath: 'pirate.wallet.sdk.rpc',
     lastSdkCheckpointHeight: 2040000,
@@ -36,7 +39,10 @@ const networks: { [pluginId: string]: Options } = {
   },
   zcash: {
     serviceProtoPath: path.join(__dirname, '/protos/zcash/service.proto'),
-    checkpointsPath: path.join(__dirname, '../src/zcash/zecCheckpoints'),
+    checkpointsPath: path.join(
+      __dirname,
+      '../android/src/main/assets/saplingtree/mainnet/'
+    ),
     serverUrl: 'mainnet.lightwalletd.com:9067',
     packagePath: 'cash.z.wallet.sdk.rpc',
     lastSdkCheckpointHeight: 1300000,
