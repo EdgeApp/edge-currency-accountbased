@@ -59,6 +59,9 @@ export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
   otherMethodNames: eosOtherMethodNames,
 
   async getInnerPlugin() {
-    return await import('./eosPlugin')
+    return await import(
+      /* webpackChunkName: "eos" */
+      './eosPlugin'
+    )
   }
 })

@@ -53,6 +53,9 @@ export const hedera = makeOuterPlugin<{}, HederaTools>({
   otherMethodNames: hederaOtherMethodNames,
 
   async getInnerPlugin() {
-    return await import('./hederaPlugin')
+    return await import(
+      /* webpackChunkName: "hedera" */
+      './hederaPlugin'
+    )
   }
 })

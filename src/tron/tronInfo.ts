@@ -131,6 +131,9 @@ export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('./tronPlugin')
+    return await import(
+      /* webpackChunkName: "tron" */
+      './tronPlugin'
+    )
   }
 })

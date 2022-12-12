@@ -82,6 +82,9 @@ export const fio = makeOuterPlugin<{}, FioTools>({
   otherMethodNames: fioOtherMethodNames,
 
   async getInnerPlugin() {
-    return await import('./fioPlugin')
+    return await import(
+      /* webpackChunkName: "fio" */
+      './fioPlugin'
+    )
   }
 })

@@ -42,6 +42,9 @@ export const stellar = makeOuterPlugin<{}, StellarTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./stellarPlugin')
+    return await import(
+      /* webpackChunkName: "stellar" */
+      './stellarPlugin'
+    )
   }
 })

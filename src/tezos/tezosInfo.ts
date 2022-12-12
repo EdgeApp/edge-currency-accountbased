@@ -66,6 +66,9 @@ export const tezos = makeOuterPlugin<{}, TezosTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./tezosPlugin')
+    return await import(
+      /* webpackChunkName: "tezos" */
+      './tezosPlugin'
+    )
   }
 })

@@ -48,6 +48,9 @@ export const solana = makeOuterPlugin<{}, SolanaTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./solanaPlugin')
+    return await import(
+      /* webpackChunkName: "solana" */
+      './solanaPlugin'
+    )
   }
 })
