@@ -25,6 +25,15 @@ interface Options {
 }
 
 const networks: { [pluginId: string]: Options } = {
+  piratechain: {
+    serviceProtoPath: path.join(__dirname, '/protos/piratechain/service.proto'),
+    checkpointsPath: path.join(__dirname, '../src/zcash/arrrCheckpoints'),
+    serverUrl: 'lightd1.pirate.black:9067',
+    packagePath: 'pirate.wallet.sdk.rpc',
+    lastSdkCheckpointHeight: 2040000,
+    blockTimeSeconds: 60,
+    ssl: false
+  },
   zcash: {
     serviceProtoPath: path.join(__dirname, '/protos/zcash/service.proto'),
     checkpointsPath: path.join(__dirname, '../src/zcash/zecCheckpoints'),

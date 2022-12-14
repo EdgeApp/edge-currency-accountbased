@@ -10,7 +10,7 @@ export interface ZcashNetworkInfo {
   }
   defaultNetworkFee: string
   defaultBirthday: number
-  nativeSdk: 'zcash'
+  nativeSdk: 'zcash' | 'piratechain'
   transactionQueryLimit: number
 }
 

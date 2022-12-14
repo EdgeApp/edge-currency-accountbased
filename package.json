@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "clean": "rimraf lib",
-    "checkpoints": "cp -R ./src/zcash/zecCheckpoints lib/zcash/",
+    "checkpoints": "cp -R ./src/zcash/zecCheckpoints lib/zcash/ && cp -R ./src/zcash/arrrCheckpoints lib/zcash/",
     "fix": "eslint . --fix",
     "lib": "sucrase -q -t typescript,imports -d ./lib ./src",
     "lint": "eslint .",
@@ -154,6 +154,7 @@
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "prettier": "^2.2.0",
+    "react-native-piratechain": "^0.3.2",
     "react-native-zcash": "^0.3.2",
     "readable-stream": "^4.0.0",
     "rimraf": "^3.0.2",
@@ -168,6 +169,7 @@
     "webpack-cli": "^4.10.0"
   },
   "peerDependencies": {
+    "react-native-piratechain": "^0.3.2",
     "react-native-zcash": "^0.3.2"
   }
 }

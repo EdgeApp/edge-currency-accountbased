@@ -1,4 +1,10 @@
 import {
+  AddressTool as PiratechainAddressTool,
+  KeyTool as PiratechainKeyTool,
+  makeSynchronizer as PiratechainMakeSynchronizer,
+  Synchronizer as PirateSynchronizer
+} from 'react-native-piratechain'
+import {
   AddressTool as ZcashAddressTool,
   KeyTool as ZcashKeyTool,
   makeSynchronizer as ZcashMakeSynchronizer,
@@ -8,13 +14,16 @@ import { bridgifyObject, emit, onMethod } from 'yaob'
 
 import { ZcashInitializerConfig } from './zcash/zecTypes'
 
-type Synchronizer = ZcashSynchronizer
+type Synchronizer = ZcashSynchronizer | PirateSynchronizer
 
 const makePluginSynchronizer = (pluginId: string) => {
   return async (config: ZcashInitializerConfig) => {
     let realSynchronizer: Synchronizer
 
     switch (pluginId) {
+      case 'piratechain':
+        realSynchronizer = await PiratechainMakeSynchronizer(config)
+        break
       case 'zcash':
         realSynchronizer = await ZcashMakeSynchronizer(config)
         break
@@ -60,6 +69,8 @@ const makePluginSynchronizer = (pluginId: string) => {
 // TODO: Remove this entire file in the next breaking change.
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export default function makePluginIo() {
+  bridgifyObject(PiratechainKeyTool)
+  bridgifyObject(PiratechainAddressTool)
   bridgifyObject(ZcashKeyTool)
   bridgifyObject(ZcashAddressTool)
 
@@ -76,6 +87,13 @@ export default function makePluginIo() {
           }))
       )
     },
+    piratechain: bridgifyObject({
+      KeyTool: PiratechainKeyTool,
+      AddressTool: PiratechainAddressTool,
+      async makeSynchronizer(config: ZcashInitializerConfig) {
+        return await makePluginSynchronizer('piratechain')(config)
+      }
+    }),
     zcash: bridgifyObject({
       KeyTool: ZcashKeyTool,
       AddressTool: ZcashAddressTool,
