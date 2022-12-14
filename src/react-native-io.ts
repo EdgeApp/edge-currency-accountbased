@@ -1,20 +1,18 @@
 import {
   AddressTool as ZcashAddressTool,
   KeyTool as ZcashKeyTool,
-  makeSynchronizer as ZcashMakeSynchronizer
+  makeSynchronizer as ZcashMakeSynchronizer,
+  Synchronizer as ZcashSynchronizer
 } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
-import {
-  ZcashInitializerConfig,
-  ZcashStatusEvent,
-  ZcashSynchronizer,
-  ZcashUpdateEvent
-} from './zcash/zecTypes'
+import { ZcashInitializerConfig } from './zcash/zecTypes'
+
+type Synchronizer = ZcashSynchronizer
 
 const makePluginSynchronizer = (pluginId: string) => {
   return async (config: ZcashInitializerConfig) => {
-    let realSynchronizer: any
+    let realSynchronizer: Synchronizer
 
     switch (pluginId) {
       case 'zcash':
@@ -25,33 +23,34 @@ const makePluginSynchronizer = (pluginId: string) => {
     }
 
     realSynchronizer.subscribe({
-      onStatusChanged(status: ZcashStatusEvent): void {
+      onStatusChanged(status): void {
         emit(out, 'statusChanged', status)
       },
-      onUpdate(event: ZcashUpdateEvent): void {
+      onUpdate(event): void {
         emit(out, 'update', event)
       }
     })
 
-    const out: ZcashSynchronizer = bridgifyObject({
+    const out: Synchronizer = bridgifyObject({
+      // @ts-expect-error
       on: onMethod,
-      start: () => {
-        return realSynchronizer.start()
+      start: async () => {
+        return await realSynchronizer.start()
       },
-      getTransactions: blockRange => {
-        return realSynchronizer.getTransactions(blockRange)
+      getTransactions: async blockRange => {
+        return await realSynchronizer.getTransactions(blockRange)
       },
       rescan: height => {
         return realSynchronizer.rescan(height)
       },
-      sendToAddress: spendInfo => {
-        return realSynchronizer.sendToAddress(spendInfo)
+      sendToAddress: async spendInfo => {
+        return await realSynchronizer.sendToAddress(spendInfo)
       },
-      getShieldedBalance: () => {
-        return realSynchronizer.getShieldedBalance()
+      getShieldedBalance: async () => {
+        return await realSynchronizer.getShieldedBalance()
       },
-      stop: () => {
-        return realSynchronizer.stop()
+      stop: async () => {
+        return await realSynchronizer.stop()
       }
     })
     return out

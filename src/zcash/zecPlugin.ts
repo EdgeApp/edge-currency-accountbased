@@ -10,6 +10,10 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import {
+  AddressTool as AddressToolType,
+  KeyTool as KeyToolType
+} from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -25,8 +29,8 @@ export class ZcashTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   networkInfo: ZcashNetworkInfo
 
-  KeyTool: any
-  AddressTool: any
+  KeyTool: typeof KeyToolType
+  AddressTool: typeof AddressToolType
 
   constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
     const { currencyInfo, io, networkInfo } = env
@@ -56,8 +60,8 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async isValidAddress(address: string): Promise<boolean> {
     return (
-      (await this.AddressTool.isValidShieldedAddress(address)) === true ||
-      (await this.AddressTool.isValidTransparentAddress(address)) === true
+      (await this.AddressTool.isValidShieldedAddress(address)) ||
+      (await this.AddressTool.isValidTransparentAddress(address))
     )
   }
 
