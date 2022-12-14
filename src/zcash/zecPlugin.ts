@@ -18,11 +18,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import {
-  asBlockchairInfo,
-  UnifiedViewingKey,
-  ZcashNetworkInfo
-} from './zecTypes'
+import { UnifiedViewingKey, ZcashNetworkInfo } from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -48,14 +44,18 @@ export class ZcashTools implements EdgeCurrencyTools {
     this.AddressTool = AddressTool
   }
 
-  // TODO: Replace with RPC method
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    const { pluginId } = this.currencyInfo
+    let birthdayHeight = this.networkInfo.defaultBirthday
+    try {
+      birthdayHeight = await this.KeyTool.getBirthdayHeight(
+        this.networkInfo.rpcNode.defaultHost,
+        this.networkInfo.rpcNode.defaultPort
+      )
+    } catch (e: any) {
+      // Using default birthday
+    }
 
-    const response = await this.io.fetch(
-      `${this.networkInfo.blockchairServers[0]}/${pluginId}/stats`
-    )
-    return asBlockchairInfo(await response.json()).data.best_block_height
+    return birthdayHeight
   }
 
   async isValidAddress(address: string): Promise<boolean> {

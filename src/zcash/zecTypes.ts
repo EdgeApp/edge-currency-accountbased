@@ -1,4 +1,3 @@
-import { asNumber, asObject } from 'cleaners'
 import { Subscriber } from 'yaob'
 
 type ZcashNetworkName = 'mainnet' | 'testnet'
@@ -9,7 +8,6 @@ export interface ZcashNetworkInfo {
     defaultHost: string
     defaultPort: number
   }
-  blockchairServers: string[]
   defaultNetworkFee: string
   defaultBirthday: number
   nativeSdk: 'zcash'
@@ -108,9 +106,3 @@ export interface ZcashSynchronizer {
 export type ZcashMakeSynchronizer = () => (
   config: ZcashInitializerConfig
 ) => Promise<ZcashSynchronizer>
-
-export const asBlockchairInfo = asObject({
-  data: asObject({
-    best_block_height: asNumber
-  })
-})

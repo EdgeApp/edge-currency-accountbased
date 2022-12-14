@@ -10,7 +10,6 @@ const networkInfo: ZcashNetworkInfo = {
     defaultHost: 'mainnet.lightwalletd.com',
     defaultPort: 9067
   },
-  blockchairServers: ['https://api.blockchair.com'],
   defaultBirthday: 1310000,
   defaultNetworkFee: '1000', // hardcoded default ZEC fee
   nativeSdk: 'zcash',
