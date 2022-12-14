@@ -13,6 +13,5 @@
     "skipLibCheck": true,
     "strict": true
   },
-  "include": ["./src/**/*", "./test/**/*", "./supressLintErrors.ts", "./supressTsErrors.ts"],
-  "exclude": ["./node_modules/**/*", "./lib/**/*"]
+  "exclude": ["lib"]
 }
