@@ -901,9 +901,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           [contractAddress || publicAddress, 'latest']
         )
+        // result === '0x' means we are sending to a plain address (no contract)
+        const sendingToContract = getCodeResult.result.result !== '0x'
 
         try {
-          if (getCodeResult.result.result !== '0x') {
+          if (!sendingToContract && !hasUserMemo) {
+            // Easy case of sending plain mainnet token with no memo/data
+            gasLimit = '21000'
+          } else {
             const estimateGasResult = await this.ethNetwork.multicastServers(
               'eth_estimateGas',
               estimateGasParams
@@ -912,20 +917,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
               parseInt(estimateGasResult.result.result, 16).toString(),
               '0'
             )
-            // Overestimate gas limit to reduce chance of failure when sending to a contract
-            if (currencyCode === this.currencyInfo.currencyCode) {
-              // Double gas limit estimate when sending ETH to contract
+            if (sendingToContract) {
+              // Overestimate (double) gas limit to reduce chance of failure when sending
+              // to a contract. This includes sending any ERC20 token, sending ETH
+              // to a contract, sending tokens to a contract, or any contract
+              // execution (ie approvals, unstaking, etc)
               gasLimit = mul(gasLimit, '2')
-            } else {
-              // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
-              gasLimit = lt(gasLimit, div(defaultGasLimit, '2'))
-                ? mul(gasLimit, '2')
-                : lt(gasLimit, defaultGasLimit)
-                ? defaultGasLimit
-                : gasLimit
             }
-          } else {
-            gasLimit = '21000'
           }
           cacheGasLimit = true
         } catch (e: any) {
