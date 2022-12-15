@@ -768,6 +768,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
 
     if (data === '') data = undefined
 
+    const hasUserMemo = data != null
+
     let otherParams: Object = {}
 
     let gasPrice: string
@@ -890,6 +892,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         },
         'latest'
       ]
+
+      let cacheGasLimit = false
       try {
         // Determine if recipient is a normal or contract address
         const getCodeResult = await this.ethNetwork.multicastServers(
@@ -897,9 +901,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           [contractAddress || publicAddress, 'latest']
         )
+        // result === '0x' means we are sending to a plain address (no contract)
+        const sendingToContract = getCodeResult.result.result !== '0x'
 
         try {
-          if (getCodeResult.result.result !== '0x') {
+          if (!sendingToContract && !hasUserMemo) {
+            // Easy case of sending plain mainnet token with no memo/data
+            gasLimit = '21000'
+          } else {
             const estimateGasResult = await this.ethNetwork.multicastServers(
               'eth_estimateGas',
               estimateGasParams
@@ -908,22 +917,25 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
               parseInt(estimateGasResult.result.result, 16).toString(),
               '0'
             )
-            // Overestimate gas limit to reduce chance of failure when sending to a contract
-            if (currencyCode === this.currencyInfo.currencyCode) {
-              // Double gas limit estimate when sending ETH to contract
+            if (sendingToContract) {
+              // Overestimate (double) gas limit to reduce chance of failure when sending
+              // to a contract. This includes sending any ERC20 token, sending ETH
+              // to a contract, sending tokens to a contract, or any contract
+              // execution (ie approvals, unstaking, etc)
               gasLimit = mul(gasLimit, '2')
-            } else {
-              // For tokens, double estimate if it's less than half of default, otherwise use default. For estimates beyond default value, use the estimate as-is.
-              gasLimit = lt(gasLimit, div(defaultGasLimit, '2'))
-                ? mul(gasLimit, '2')
-                : lt(gasLimit, defaultGasLimit)
-                ? defaultGasLimit
-                : gasLimit
             }
-          } else {
-            gasLimit = '21000'
           }
+          cacheGasLimit = true
         } catch (e: any) {
+          // If makeSpend received an explicit memo/data field from caller,
+          // assume this is a smart contract call that needs accurate gasLimit
+          // estimation and fail if we weren't able to get estimates from an
+          // RPC node.
+          if (hasUserMemo) {
+            throw new Error(
+              'Unable to estimate gas limit. Please try again later'
+            )
+          }
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
             this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
@@ -942,10 +954,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         }
 
         // Save locally to compare for future makeSpend() calls
-        this.lastEstimatedGasLimit = {
-          publicAddress,
-          contractAddress,
-          gasLimit
+        if (cacheGasLimit) {
+          this.lastEstimatedGasLimit = {
+            publicAddress,
+            contractAddress,
+            gasLimit
+          }
         }
       } catch (e: any) {
         this.error(`makeSpend Error determining gas limit `, e)
