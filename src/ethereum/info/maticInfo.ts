@@ -178,7 +178,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
           multiplier: '1000000000000000000'
         }
       ],
-      contractAddress: '0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7'
+      contractAddress: '0x9c9e5fd8bbc25984b178fdce6117defa39d2db39'
     },
     {
       currencyCode: 'UNI',
