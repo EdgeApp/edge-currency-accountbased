@@ -1,4 +1,4 @@
-import { add, div, mul, sub } from 'biggystring'
+import { add, div, gt, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeTransaction, JsonObject } from 'edge-core-js'
 import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
@@ -737,32 +737,48 @@ export class EthereumNetwork {
     }
   }
 
-  multiEstimateGas = async ([
-    params,
-    time
-  ]: EstimateGasParams): Promise<string> => {
-    const funcs = this.otherSettings.rpcServers.map(baseUrl => async () => {
+  multiEstimateGas = async (params: EstimateGasParams): Promise<string> => {
+    const promises = this.otherSettings.rpcServers.map(async baseUrl => {
+      // This function MUST not throw
       const result = await this.fetchPostRPC(
         'eth_estimateGas',
         params,
         this.chainId,
         baseUrl
-      )
+      ).catch(e => {
+        this.ethEngine.log.error(e.message)
+      })
+      if (result == null) return
 
       // Check if successful http response was actually an error
       if (result.error != null) {
         this.ethEngine.error(
           `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
         )
-        throw new Error(
-          'Successful eth_estimateGas response object included an error'
-        )
+        return
       }
       return { server: parse(baseUrl).hostname, result }
     })
-
-    const out = await asyncWaterfall(funcs, 21234)
-    return asEstimateGasResult(out).result.result
+    try {
+      const results = await Promise.all(promises)
+      const cleanedResults = results.map(result => asEstimateGasResult(result))
+      const cleanUndefined = cleanedResults.filter(r => r != null)
+      // Find highest value
+      const best = cleanUndefined.reduce((prev, r) => {
+        if (gt(r.result.result, prev.result.result)) {
+          return r
+        } else {
+          return prev
+        }
+      })
+      this.ethEngine.log(
+        `multiEstimateGas ${best.server} ${best.result.result}`
+      )
+      return best.result.result
+    } catch (e: any) {
+      this.ethEngine.log.error(e.message)
+    }
+    throw new Error('multiEstimateGas all servers failed')
   }
 
   // @ts-expect-error

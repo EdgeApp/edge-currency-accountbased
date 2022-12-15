@@ -25,6 +25,7 @@ export type EstimateGasParams = [
 ]
 
 export const asEstimateGasResult = asObject({
+  server: asString,
   result: asObject({
     result: asString
   })
