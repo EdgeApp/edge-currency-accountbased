@@ -13,6 +13,23 @@ import {
 } from 'cleaners'
 import { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
 
+export type EstimateGasParams = [
+  {
+    to: string
+    from: string
+    gas: string
+    value?: string
+    data: any
+  },
+  string
+]
+
+export const asEstimateGasResult = asObject({
+  result: asObject({
+    result: asString
+  })
+})
+
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
   evmScanApiKey?: string | string[]

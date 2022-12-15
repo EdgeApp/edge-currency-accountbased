@@ -28,6 +28,7 @@ import {
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
+  asEstimateGasResult,
   asEvmScancanTokenTransaction,
   asEvmScanInternalTransaction,
   asEvmScanTransaction,
@@ -35,6 +36,7 @@ import {
   BlockbookAddress,
   BlockbookTokenBalance,
   CheckTokenBalBlockchair,
+  EstimateGasParams,
   EthereumSettings,
   EthereumTxOtherParams,
   EvmScanInternalTransaction,
@@ -79,7 +81,6 @@ type EthFunction =
   | 'eth_getTransactionCount'
   | 'eth_getTransactionCount_RPC'
   | 'eth_getBalance'
-  | 'eth_estimateGas'
   | 'getTokenBalance'
   | 'getTransactions'
   | 'eth_getCode'
@@ -218,6 +219,9 @@ export class EthereumNetwork {
   currencyInfo: EdgeCurrencyInfo
   queryFuncs: QueryFuncs
 
+  otherSettings: EthereumSettings
+  chainId: number
+
   constructor(ethEngine: EthereumEngine, currencyInfo: EdgeCurrencyInfo) {
     this.ethEngine = ethEngine
     this.ethNeeds = {
@@ -227,6 +231,9 @@ export class EthereumNetwork {
       tokenTxsLastChecked: {}
     }
     this.currencyInfo = currencyInfo
+    this.otherSettings = currencyInfo.defaultSettings.otherSettings
+    this.chainId = this.otherSettings.chainParams.chainId
+
     // @ts-expect-error
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     // @ts-expect-error
@@ -730,6 +737,34 @@ export class EthereumNetwork {
     }
   }
 
+  multiEstimateGas = async ([
+    params,
+    time
+  ]: EstimateGasParams): Promise<string> => {
+    const funcs = this.otherSettings.rpcServers.map(baseUrl => async () => {
+      const result = await this.fetchPostRPC(
+        'eth_estimateGas',
+        params,
+        this.chainId,
+        baseUrl
+      )
+
+      // Check if successful http response was actually an error
+      if (result.error != null) {
+        this.ethEngine.error(
+          `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
+        )
+        throw new Error(
+          'Successful eth_estimateGas response object included an error'
+        )
+      }
+      return { server: parse(baseUrl).hostname, result }
+    })
+
+    const out = await asyncWaterfall(funcs, 21234)
+    return asEstimateGasResult(out).result.result
+  }
+
   // @ts-expect-error
   async multicastServers(func: EthFunction, ...params: any): Promise<any> {
     const otherSettings: EthereumSettings =
@@ -842,29 +877,6 @@ export class EthereumNetwork {
 
         // Randomize array
         funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'eth_estimateGas':
-        funcs = rpcServers.map(baseUrl => async () => {
-          const result = await this.fetchPostRPC(
-            'eth_estimateGas',
-            params[0],
-            chainId,
-            baseUrl
-          )
-          // Check if successful http response was actually an error
-          if (result.error != null) {
-            this.ethEngine.error(
-              `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
-            )
-            throw new Error(
-              'Successful eth_estimateGas response object included an error'
-            )
-          }
-          return { server: parse(baseUrl).hostname, result }
-        })
-
         out = await asyncWaterfall(funcs)
         break
 
@@ -1047,7 +1059,7 @@ export class EthereumNetwork {
           out = await asyncWaterfall(funcs)
         } else {
           /*
-          // HACK: If a currency doesn't have an etherscan API compatible 
+          // HACK: If a currency doesn't have an etherscan API compatible
           // server we need to return an empty array
           */
 

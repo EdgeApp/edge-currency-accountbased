@@ -47,6 +47,7 @@ import { EIP712TypedDataSchema } from './ethSchema'
 import {
   asWcSessionRequestParams,
   EIP712TypedDataParam,
+  EstimateGasParams,
   EthereumBaseMultiplier,
   EthereumFee,
   EthereumFees,
@@ -879,7 +880,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         data = '0x' + Buffer.from(dataArray).toString('hex')
       }
 
-      const estimateGasParams = [
+      const estimateGasParams: EstimateGasParams = [
         {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           to: contractAddress || publicAddress,
@@ -900,14 +901,10 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
 
         try {
           if (getCodeResult.result.result !== '0x') {
-            const estimateGasResult = await this.ethNetwork.multicastServers(
-              'eth_estimateGas',
+            const estimateGasResult = await this.ethNetwork.multiEstimateGas(
               estimateGasParams
             )
-            gasLimit = add(
-              parseInt(estimateGasResult.result.result, 16).toString(),
-              '0'
-            )
+            gasLimit = add(estimateGasResult, '0') // Convert hex to decimal
             // Overestimate gas limit to reduce chance of failure when sending to a contract
             if (currencyCode === this.currencyInfo.currencyCode) {
               // Double gas limit estimate when sending ETH to contract
