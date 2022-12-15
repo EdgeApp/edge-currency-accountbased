@@ -891,6 +891,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         },
         'latest'
       ]
+
+      let cacheGasLimit = false
       try {
         // Determine if recipient is a normal or contract address
         const getCodeResult = await this.ethNetwork.multicastServers(
@@ -920,6 +922,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           } else {
             gasLimit = '21000'
           }
+          cacheGasLimit = true
         } catch (e: any) {
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
@@ -939,10 +942,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         }
 
         // Save locally to compare for future makeSpend() calls
-        this.lastEstimatedGasLimit = {
-          publicAddress,
-          contractAddress,
-          gasLimit
+        if (cacheGasLimit) {
+          this.lastEstimatedGasLimit = {
+            publicAddress,
+            contractAddress,
+            gasLimit
+          }
         }
       } catch (e: any) {
         this.error(`makeSpend Error determining gas limit `, e)
