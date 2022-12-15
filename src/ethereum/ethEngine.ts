@@ -768,6 +768,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
 
     if (data === '') data = undefined
 
+    const hasUserMemo = data != null
+
     let otherParams: Object = {}
 
     let gasPrice: string
@@ -927,6 +929,15 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           }
           cacheGasLimit = true
         } catch (e: any) {
+          // If makeSpend received an explicit memo/data field from caller,
+          // assume this is a smart contract call that needs accurate gasLimit
+          // estimation and fail if we weren't able to get estimates from an
+          // RPC node.
+          if (hasUserMemo) {
+            throw new Error(
+              'Unable to estimate gas limit. Please try again later'
+            )
+          }
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
             this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
