@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.20.5 (2022-12-15)
+
+- TRX: Make sure to check the total native asset cost in makeSpend
+- FIO: Update server list
+
 ## 0.20.4 (2022-12-15)
 
 - EVM: Only cache gas limit if retrieved from network
