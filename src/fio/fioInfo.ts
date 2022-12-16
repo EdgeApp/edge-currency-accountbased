@@ -18,7 +18,7 @@ const defaultSettings: any = {
     'https://fio.cryptolions.io/v1/',
     'https://api.fio.currencyhub.io/v1/',
     'https://fio.eosdublin.io/v1/',
-    'https://fio-za.eostribe.io/v1/',
+    'https://fio.eostribe.io/v1/',
     'https://api.fio.greeneosio.com/v1/',
     'https://api.fio.services/v1/',
     'https://fio.eosusa.news/v1/'
