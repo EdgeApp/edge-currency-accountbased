@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.20.4 (2022-12-15)
+
+- EVM: Only cache gas limit if retrieved from network
+- EVM: Fail makeSpend for contract transactions if unable to estimate gas limit
+- EVM: Rework gasLimit calculation to double any estimate for transaction that interacts with a contract
+
 ## 0.20.3 (2022-12-14)
 
 - Update default Polygon BUSD address from Paxos (0xdab529f40e671a1d4bf91361c21bf9f0c9712ab7) to Binance (0x9c9e5fd8bbc25984b178fdce6117defa39d2db39)
