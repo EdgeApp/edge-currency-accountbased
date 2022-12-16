@@ -971,26 +971,29 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       tokenOpts
     )
 
-    const balanceTrx =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
-
-    if (gt(nativeAmount, balanceTrx)) {
-      throw new InsufficientFundsError({
-        currencyCode: this.currencyInfo.currencyCode,
-        networkFee: totalFeeSUN
-      })
-    }
     let edgeNativeAmount: string
     let networkFee: string
     let parentNetworkFee: string | undefined
+    let transactionCostSUN: string
 
     if (isTokenTransfer) {
       edgeNativeAmount = nativeAmount
       networkFee = '0'
       parentNetworkFee = totalFeeSUN
+      transactionCostSUN = parentNetworkFee
     } else {
       edgeNativeAmount = add(nativeAmount, totalFeeSUN)
       networkFee = totalFeeSUN
+      transactionCostSUN = edgeNativeAmount
+    }
+
+    const balanceSUN =
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+    if (gt(transactionCostSUN, balanceSUN)) {
+      throw new InsufficientFundsError({
+        currencyCode: this.currencyInfo.currencyCode,
+        networkFee: totalFeeSUN
+      })
     }
 
     // **********************************
