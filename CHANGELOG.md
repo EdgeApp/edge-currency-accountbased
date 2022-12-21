@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.21.0 (2022-12-20)
+
+- Add Piratechain (ARRR)
+- ZEC: Add getBirthdayHeight plugin method
+- Revamp checkpoint creation script to query treestate directly from lightwalletd nodes
+- Upgrade react-native-zcash to v0.3.2
+
 ## 0.20.5 (2022-12-15)
 
 - TRX: Make sure to check the total native asset cost in makeSpend
