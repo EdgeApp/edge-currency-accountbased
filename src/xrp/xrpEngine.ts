@@ -273,6 +273,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     let spendableBalance = this.getBalance({
       currencyCode
     })
+    // TODO: Look into this logic when adding token support
     if (currencyCode === this.currencyInfo.currencyCode) {
       spendableBalance = sub(spendableBalance, this.xrpSettings.baseReserve)
     }
