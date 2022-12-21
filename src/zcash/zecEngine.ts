@@ -16,8 +16,8 @@ import { cleanTxLogs } from './../common/utils'
 import { ZcashTools } from './zecPlugin'
 import {
   ZcashInitializerConfig,
+  ZcashNetworkInfo,
   ZcashOtherData,
-  ZcashSettings,
   ZcashSpendInfo,
   ZcashSynchronizer,
   ZcashSynchronizerStatus,
@@ -26,6 +26,7 @@ import {
 
 export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
+  networkInfo: ZcashNetworkInfo
   otherData!: ZcashOtherData
   synchronizer!: ZcashSynchronizer
   synchronizerStatus!: ZcashSynchronizerStatus
@@ -42,15 +43,16 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     tools: ZcashTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
+    networkInfo: ZcashNetworkInfo,
     makeSynchronizer: any
   ) {
     super(tools, walletInfo, opts)
     this.pluginId = this.currencyInfo.pluginId
+    this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  initData() {
+  initData(): void {
     const { birthdayHeight, alias } = this.initializer
 
     // walletLocalData
@@ -69,8 +71,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     this.progressRatio = 0
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  initSubscriptions() {
+  initSubscriptions(): void {
     this.synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
       this.onUpdateBlockHeight(networkBlockHeight)
@@ -87,15 +88,13 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryAll() {
+  async queryAll(): Promise<void> {
     await this.queryBalance()
     await this.queryTransactions()
     this.onUpdateTransactions()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  onUpdateBlockHeight(networkBlockHeight: number) {
+  onUpdateBlockHeight(networkBlockHeight: number): void {
     if (this.walletLocalData.blockHeight !== networkBlockHeight) {
       this.walletLocalData.blockHeight = networkBlockHeight
       this.walletLocalDataDirty = true
@@ -105,8 +104,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  onUpdateTransactions() {
+  onUpdateTransactions(): void {
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
         this.transactionsChangedArray
@@ -115,12 +113,11 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   onUpdateProgress(
     lastDownloadedHeight: number,
     scanProgress: number,
     networkBlockHeight: number
-  ) {
+  ): void {
     if (!this.addressesChecked && !this.isSynced()) {
       // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
       // getting balance (0.5%), and querying transactions (10%).
@@ -158,41 +155,33 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.initData()
     this.synchronizer = await this.makeSynchronizer(this.initializer)
     await this.synchronizer.start()
     this.initSubscriptions()
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    await super.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  isSynced() {
+  isSynced(): boolean {
     // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryBalance() {
+  async queryBalance(): Promise<void> {
     if (!this.isSynced()) return
     try {
       const balances = await this.synchronizer.getShieldedBalance()
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
-      this.updateBalance(
-        `${this.currencyInfo.currencyCode}`,
-        balances.totalZatoshi
-      )
+      this.updateBalance(this.currencyInfo.currencyCode, balances.totalZatoshi)
     } catch (e: any) {
       this.warn('Failed to update balances', e)
-      this.updateBalance(`${this.currencyInfo.currencyCode}`, '0')
+      this.updateBalance(this.currencyInfo.currencyCode, '0')
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryTransactions() {
+  async queryTransactions(): Promise<void> {
     try {
       let first = this.otherData.blockRange.first
       let last = this.otherData.blockRange.last
@@ -214,15 +203,9 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
 
         first = last + 1
         last =
-          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-          last +
-            this.currencyInfo.defaultSettings.otherSettings
-              .transactionQueryLimit <
+          last + this.networkInfo.transactionQueryLimit <
           this.walletLocalData.blockHeight
-            ? // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-              last +
-              this.currencyInfo.defaultSettings.otherSettings
-                .transactionQueryLimit
+            ? last + this.networkInfo.transactionQueryLimit
             : this.walletLocalData.blockHeight
 
         this.otherData.blockRange = {
@@ -239,15 +222,14 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processTransaction(tx: ZcashTransaction) {
+  processTransaction(tx: ZcashTransaction): void {
     let netNativeAmount = tx.value
     const ourReceiveAddresses = []
     if (tx.toAddress != null) {
       // check if tx is a spend
       netNativeAmount = `-${add(
         netNativeAmount,
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+        this.networkInfo.defaultNetworkFee
       )}`
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
@@ -256,20 +238,18 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     const edgeTransaction: EdgeTransaction = {
       txid: tx.rawTransactionId,
       date: tx.blockTimeInSeconds,
-      currencyCode: `${this.currencyInfo.currencyCode}`,
+      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
-      networkFee:
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee,
+      networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       otherParams: {}
     }
-    this.addTransaction(`${this.currencyInfo.currencyCode}`, edgeTransaction)
+    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async killEngine() {
+  async killEngine(): Promise<void> {
     await this.synchronizer.stop()
     await super.killEngine()
   }
@@ -283,26 +263,25 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.synchronizer.rescan(
-      this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
-        this.currencyInfo.defaultSettings.otherSettings.defaultBirthday
-    )
+    this.synchronizer
+      .rescan(
+        this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
+          this.networkInfo.defaultBirthday
+      )
+      .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+  async getMaxSpendable(): Promise<string> {
     const spendableBalance = sub(
       this.availableZatoshi,
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
+      this.networkInfo.defaultNetworkFee
     )
     if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
     return spendableBalance
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const spendTarget = edgeSpendInfo.spendTargets[0]
@@ -314,10 +293,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
 
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
-    const totalTxAmount = add(
-      nativeAmount,
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee
-    )
+    const totalTxAmount = add(nativeAmount, this.networkInfo.defaultNetworkFee)
 
     if (
       gt(
@@ -349,8 +325,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount: `-${totalTxAmount}`, // nativeAmount
-      networkFee:
-        this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFee, // networkFee
+      networkFee: this.networkInfo.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       spendTargets
@@ -398,26 +373,12 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.pluginId}Mnemonic`]
-    ) {
-      return this.walletInfo.keys[`${this.pluginId}Mnemonic`]
-    }
-    return ''
+  getDisplayPrivateSeed(): string {
+    return this.walletInfo.keys[`${this.pluginId}Mnemonic`] ?? ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.unifiedViewingKeys.extfvk
-    }
-    return ''
+  getDisplayPublicSeed(): string {
+    return this.walletInfo.keys.unifiedViewingKeys?.extfvk ?? ''
   }
 
   async loadEngine(
@@ -437,8 +398,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
         pubKeys.unifiedViewingKeys
     }
-    const { rpcNode, defaultBirthday }: ZcashSettings =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { rpcNode, defaultBirthday } = this.networkInfo
     this.initializer = {
       fullViewingKey: this.walletInfo.keys[`${this.pluginId}ViewKeys`],
       birthdayHeight:
@@ -450,14 +410,21 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   }
 }
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<ZcashNetworkInfo>,
   tools: ZcashTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased']
+  const { makeSynchronizer } =
+    env.nativeIo['edge-currency-accountbased'][env.networkInfo.nativeSdk]
 
-  const engine = new ZcashEngine(tools, walletInfo, opts, makeSynchronizer)
+  const engine = new ZcashEngine(
+    tools,
+    walletInfo,
+    opts,
+    env.networkInfo,
+    makeSynchronizer
+  )
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

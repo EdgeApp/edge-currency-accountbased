@@ -2,23 +2,18 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { ZcashTools } from './zecPlugin'
-import { ZcashSettings } from './zecTypes'
+import { ZcashNetworkInfo } from './zecTypes'
 
-const otherSettings: ZcashSettings = {
+const networkInfo: ZcashNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
     defaultHost: 'mainnet.lightwalletd.com',
     defaultPort: 9067
   },
-  blockchairServers: ['https://api.blockchair.com'],
   defaultBirthday: 1310000,
-  // @ts-expect-error
   defaultNetworkFee: '1000', // hardcoded default ZEC fee
+  nativeSdk: 'zcash',
   transactionQueryLimit: 999
-}
-
-const defaultSettings: any = {
-  otherSettings
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -29,7 +24,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   requiredConfirmations: 10,
   walletType: 'wallet:zcash',
 
-  defaultSettings,
+  defaultSettings: {},
 
   addressExplorer: 'https://blockchair.com/zcash/address/%s?from=edgeapp',
   transactionExplorer:
@@ -46,9 +41,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-export const zcash = makeOuterPlugin<{}, ZcashTools>({
+export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import('./zecPlugin')

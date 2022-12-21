@@ -10,50 +10,56 @@ import {
   EdgeParsedUri,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import {
+  AddressTool as AddressToolType,
+  KeyTool as KeyToolType
+} from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { asBlockchairInfo, UnifiedViewingKey } from './zecTypes'
+import { UnifiedViewingKey, ZcashNetworkInfo } from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: ZcashNetworkInfo
 
-  KeyTool: any
-  AddressTool: any
-  network: string
+  KeyTool: typeof KeyToolType
+  AddressTool: typeof AddressToolType
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { currencyInfo, io } = env
+  constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
+    const { currencyInfo, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
 
     const RNAccountbased = env.nativeIo['edge-currency-accountbased']
     if (RNAccountbased == null) {
       throw new Error('Need opts')
     }
-    const { KeyTool, AddressTool } = RNAccountbased
+    const { KeyTool, AddressTool } = RNAccountbased[this.networkInfo.nativeSdk]
 
-    this.network =
-      currencyInfo.defaultSettings.otherSettings.rpcNode.networkName
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool
   }
 
-  // TODO: Replace with RPC method
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    const { pluginId } = this.currencyInfo
+    let birthdayHeight = this.networkInfo.defaultBirthday
+    try {
+      birthdayHeight = await this.KeyTool.getBirthdayHeight(
+        this.networkInfo.rpcNode.defaultHost,
+        this.networkInfo.rpcNode.defaultPort
+      )
+    } catch (e: any) {
+      // Using default birthday
+    }
 
-    const response = await this.io.fetch(
-      `${this.currencyInfo.defaultSettings.otherSettings.blockchairServers[0]}/${pluginId}/stats`
-    )
-    return asBlockchairInfo(await response.json()).data.best_block_height
+    return birthdayHeight
   }
 
   async isValidAddress(address: string): Promise<boolean> {
     return (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       (await this.AddressTool.isValidShieldedAddress(address)) ||
       (await this.AddressTool.isValidTransparentAddress(address))
     )
@@ -67,7 +73,10 @@ export class ZcashTools implements EdgeCurrencyTools {
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
     const hexBuffer = await mnemonicToSeed(userInput)
     const hex = hexBuffer.toString('hex')
-    const spendKey = await this.KeyTool.deriveSpendingKey(hex, this.network)
+    const spendKey = await this.KeyTool.deriveSpendingKey(
+      hex,
+      this.networkInfo.rpcNode.networkName
+    )
     if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
@@ -103,10 +112,13 @@ export class ZcashTools implements EdgeCurrencyTools {
     const hexBuffer = await mnemonicToSeed(mnemonic)
     const hex = hexBuffer.toString('hex')
     const unifiedViewingKeys: UnifiedViewingKey =
-      await this.KeyTool.deriveViewingKey(hex, this.network)
+      await this.KeyTool.deriveViewingKey(
+        hex,
+        this.networkInfo.rpcNode.networkName
+      )
     const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
       unifiedViewingKeys.extfvk,
-      this.network
+      this.networkInfo.rpcNode.networkName
     )
     return {
       publicKey: shieldedAddress,
@@ -129,8 +141,7 @@ export class ZcashTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || `${this.currencyInfo.currencyCode}`,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
 
@@ -156,8 +167,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (nativeAmount != null) {
       const denom = getDenomInfo(
         this.currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || `${this.currencyInfo.currencyCode}`,
+        currencyCode ?? this.currencyInfo.currencyCode,
         customTokens
       )
       if (denom == null) {
@@ -171,7 +181,7 @@ export class ZcashTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<ZcashNetworkInfo>
 ): Promise<ZcashTools> {
   return new ZcashTools(env)
 }

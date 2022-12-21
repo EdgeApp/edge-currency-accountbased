@@ -11,6 +11,7 @@ import { stellar } from './stellar/stellarInfo'
 import { tezos } from './tezos/tezosInfo'
 import { tron } from './tron/tronInfo'
 import { ripple } from './xrp/xrpInfo'
+import { piratechain } from './zcash/arrrInfo'
 import { zcash } from './zcash/zecInfo'
 
 const plugins = {
@@ -19,6 +20,7 @@ const plugins = {
   binance,
   fio,
   hedera,
+  piratechain,
   polkadot,
   // "ripple" is network name. XRP is just an asset:
   ripple,
