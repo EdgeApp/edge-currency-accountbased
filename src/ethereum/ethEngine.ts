@@ -717,39 +717,6 @@ export class EthereumEngine
 
     const { pendingTxs = [] } = edgeSpendInfo
 
-    /**
-    For RBF transactions, get the gas price and limit (fees) of the existing
-    transaction as well as the current nonce. The fees and the nonce will be
-    used instead of the calculated equivalents.
-    */
-    let rbfGasPrice: string
-    let rbfGasLimit: string
-    let rbfNonce: string | undefined
-    const rbfTxid =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rbfTxid) {
-      const rbfTxIndex = this.findTransaction(currencyCode, rbfTxid)
-
-      if (rbfTxIndex > -1) {
-        const rbfTx = this.transactionList[currencyCode][rbfTxIndex]
-
-        if (rbfTx.otherParams != null) {
-          const { gasPrice, gas, nonceUsed } = rbfTx.otherParams
-          rbfGasPrice = mul(gasPrice, '2')
-          rbfGasLimit = gas
-          rbfNonce = nonceUsed
-        }
-      }
-
-      // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!rbfGasPrice || !rbfGasLimit || !rbfNonce) {
-        throw new Error('Missing data to complete RBF transaction.')
-      }
-    }
-
     // Ethereum can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -778,27 +745,14 @@ export class EthereumEngine
 
     let otherParams: Object = {}
 
-    let gasPrice: string
-    let gasLimit: string
-    let useDefaults: boolean = false
-
-    // Use RBF gas price and gas limit when present, otherwise, calculate mining fees
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rbfGasPrice && rbfGasLimit) {
-      gasPrice = rbfGasPrice
-      gasLimit = rbfGasLimit
-    } else {
-      const miningFees = calcMiningFee(
-        edgeSpendInfo,
-        this.walletLocalData.otherData.networkFees,
-        this.currencyInfo
-      )
-      gasPrice = miningFees.gasPrice
-      gasLimit = miningFees.gasLimit
-      useDefaults = miningFees.useDefaults
-    }
-
+    const miningFees = calcMiningFee(
+      edgeSpendInfo,
+      this.walletLocalData.otherData.networkFees,
+      this.currencyInfo
+    )
+    const gasPrice = miningFees.gasPrice
+    let gasLimit: string = miningFees.gasLimit
+    const useDefaults: boolean = miningFees.useDefaults
     const defaultGasLimit = gasLimit
 
     //
@@ -806,12 +760,9 @@ export class EthereumEngine
     //
 
     let nonceUsed: string | undefined
-    // Determining the nonce from the RBF takes precedence
-    if (rbfNonce != null) {
-      nonceUsed = rbfNonce
-    }
+
     // Determine the nonce to use from the number of pending transactions
-    else if (pendingTxs.length > 0) {
+    if (pendingTxs.length > 0) {
       // @ts-expect-error
       const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
       const baseNonce =
@@ -831,7 +782,6 @@ export class EthereumEngine
         gasPrice: gasPrice,
         gasUsed: '0',
         nonceUsed,
-        rbfTxid,
         data
       }
       otherParams = ethParams
@@ -863,7 +813,6 @@ export class EthereumEngine
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
-        rbfTxid,
         data
       }
       otherParams = ethParams
