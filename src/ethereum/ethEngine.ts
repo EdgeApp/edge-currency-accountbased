@@ -1138,10 +1138,13 @@ export class EthereumEngine
       normalizeAddress(replacedTxid)
     )
     if (replacedTxIndex === -1) {
-      if (txOtherParams?.rbfTxid != null && txOtherParams.rbfTxid !== '') {
+      if (
+        txOtherParams?.replacedTxid != null &&
+        txOtherParams.replacedTxid !== ''
+      ) {
         // If the tx parameter is not found, then perhaps it is a
         // replacement transaction itself
-        replacedTxid = txOtherParams.rbfTxid
+        replacedTxid = txOtherParams.replacedTxid
         replacedTxIndex = await this.findTransaction(
           currencyCode,
           normalizeAddress(replacedTxid)
@@ -1183,7 +1186,7 @@ export class EthereumEngine
       ...replacedTxOtherParams,
       gas: gasLimit,
       gasPrice,
-      rbfTxid: replacedTxid
+      replacedTxid
     }
 
     let { nativeAmount } = spendTarget
@@ -1258,17 +1261,14 @@ export class EthereumEngine
   // Overload saveTx to mutate replaced transactions by RBF
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveTx(edgeTransaction: EdgeTransaction) {
-    // We must check if this transaction replaces another transaction
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      edgeTransaction.otherParams != null &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeTransaction.otherParams.rbfTxid
-    ) {
-      const { currencyCode } = edgeTransaction
+    const txOtherParams = asMaybe(asEthereumTxOtherParams)(
+      edgeTransaction.otherParams
+    )
 
-      // Get the replaced transaction using the rbfTxid
-      const txid = normalizeAddress(edgeTransaction.otherParams.rbfTxid)
+    // We must check if this transaction replaces another transaction
+    if (txOtherParams?.replacedTxid != null) {
+      const { currencyCode } = edgeTransaction
+      const txid = normalizeAddress(txOtherParams.replacedTxid)
       const index = this.findTransaction(currencyCode, txid)
 
       if (index !== -1) {

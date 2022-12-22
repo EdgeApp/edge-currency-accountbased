@@ -209,7 +209,7 @@ export interface EthereumTxOtherParams {
   gasUsed: string
   tokenRecipientAddress?: string
   nonceUsed?: string
-  rbfTxid?: string
+  replacedTxid?: string
   data?: string | null
 }
 export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
@@ -220,7 +220,7 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   gasUsed: asString,
   tokenRecipientAddress: asOptional(asString),
   nonceUsed: asOptional(asString),
-  rbfTxid: asOptional(asString),
+  replacedTxid: asOptional(asString),
   data: asOptional(asEither(asString, asNull))
 })
 
