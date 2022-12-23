@@ -52,7 +52,7 @@ const networkInfo: EthereumNetworkInfo = {
   ercTokenStandard: 'RRC20',
   chainParams: {
     chainId: 30,
-    name: 'RSK Mainnet'
+    name: 'Rootstock Mainnet'
   },
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: { RIF: true },
@@ -71,7 +71,7 @@ const defaultSettings: any = {
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'RBTC',
-  displayName: 'RSK',
+  displayName: 'Rootstock',
   pluginId: 'rsk',
   walletType: 'wallet:rsk',
   memoType: 'hex',
