@@ -7,6 +7,7 @@ export interface EosNetworkInfo {
   eosFuelServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
+  fuelActions?: string[]
   uriProtocol: string
 }
 
