@@ -2,6 +2,7 @@ import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
 import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -45,6 +46,7 @@ import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumTools } from './ethPlugin'
 import { EIP712TypedDataSchema } from './ethSchema'
 import {
+  asEthereumTxOtherParams,
   asWcSessionRequestParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
@@ -72,7 +74,10 @@ import {
 
 const walletConnectors: WalletConnectors = {}
 
-export class EthereumEngine extends CurrencyEngine<EthereumTools> {
+export class EthereumEngine
+  extends CurrencyEngine<EthereumTools>
+  implements EdgeCurrencyEngine
+{
   otherData!: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   ethNetwork: EthereumNetwork
@@ -712,39 +717,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
 
     const { pendingTxs = [] } = edgeSpendInfo
 
-    /**
-    For RBF transactions, get the gas price and limit (fees) of the existing
-    transaction as well as the current nonce. The fees and the nonce will be
-    used instead of the calculated equivalents.
-    */
-    let rbfGasPrice: string
-    let rbfGasLimit: string
-    let rbfNonce: string | undefined
-    const rbfTxid =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeSpendInfo.rbfTxid && normalizeAddress(edgeSpendInfo.rbfTxid)
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rbfTxid) {
-      const rbfTxIndex = this.findTransaction(currencyCode, rbfTxid)
-
-      if (rbfTxIndex > -1) {
-        const rbfTx = this.transactionList[currencyCode][rbfTxIndex]
-
-        if (rbfTx.otherParams != null) {
-          const { gasPrice, gas, nonceUsed } = rbfTx.otherParams
-          rbfGasPrice = mul(gasPrice, '2')
-          rbfGasLimit = gas
-          rbfNonce = nonceUsed
-        }
-      }
-
-      // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!rbfGasPrice || !rbfGasLimit || !rbfNonce) {
-        throw new Error('Missing data to complete RBF transaction.')
-      }
-    }
-
     // Ethereum can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -773,27 +745,14 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
 
     let otherParams: Object = {}
 
-    let gasPrice: string
-    let gasLimit: string
-    let useDefaults: boolean = false
-
-    // Use RBF gas price and gas limit when present, otherwise, calculate mining fees
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (rbfGasPrice && rbfGasLimit) {
-      gasPrice = rbfGasPrice
-      gasLimit = rbfGasLimit
-    } else {
-      const miningFees = calcMiningFee(
-        edgeSpendInfo,
-        this.walletLocalData.otherData.networkFees,
-        this.currencyInfo
-      )
-      gasPrice = miningFees.gasPrice
-      gasLimit = miningFees.gasLimit
-      useDefaults = miningFees.useDefaults
-    }
-
+    const miningFees = calcMiningFee(
+      edgeSpendInfo,
+      this.walletLocalData.otherData.networkFees,
+      this.currencyInfo
+    )
+    const gasPrice = miningFees.gasPrice
+    let gasLimit: string = miningFees.gasLimit
+    const useDefaults: boolean = miningFees.useDefaults
     const defaultGasLimit = gasLimit
 
     //
@@ -801,12 +760,9 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     //
 
     let nonceUsed: string | undefined
-    // Determining the nonce from the RBF takes precedence
-    if (rbfNonce != null) {
-      nonceUsed = rbfNonce
-    }
+
     // Determine the nonce to use from the number of pending transactions
-    else if (pendingTxs.length > 0) {
+    if (pendingTxs.length > 0) {
       // @ts-expect-error
       const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
       const baseNonce =
@@ -826,7 +782,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         gasPrice: gasPrice,
         gasUsed: '0',
         nonceUsed,
-        rbfTxid,
         data
       }
       otherParams = ethParams
@@ -858,7 +813,6 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
-        rbfTxid,
         data
       }
       otherParams = ethParams
@@ -1169,6 +1123,119 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     return edgeTransaction
   }
 
+  async accelerate(
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction | null> {
+    const { currencyCode } = edgeTransaction
+
+    const txOtherParams = asMaybe(asEthereumTxOtherParams)(
+      edgeTransaction.otherParams
+    )
+
+    let replacedTxid = edgeTransaction.txid
+    let replacedTxIndex = await this.findTransaction(
+      currencyCode,
+      normalizeAddress(replacedTxid)
+    )
+    if (replacedTxIndex === -1) {
+      if (
+        txOtherParams?.replacedTxid != null &&
+        txOtherParams.replacedTxid !== ''
+      ) {
+        // If the tx parameter is not found, then perhaps it is a
+        // replacement transaction itself
+        replacedTxid = txOtherParams.replacedTxid
+        replacedTxIndex = await this.findTransaction(
+          currencyCode,
+          normalizeAddress(replacedTxid)
+        )
+      }
+
+      if (replacedTxIndex === -1) {
+        // Cannot allow an unsaved (unobserved) transaction to be replaced
+        return null
+      }
+    }
+    const replacedTx: EdgeTransaction =
+      this.transactionList[currencyCode][replacedTxIndex]
+
+    const replacedTxOtherParams = asMaybe(asEthereumTxOtherParams)(
+      replacedTx.otherParams
+    )
+
+    // Transaction checks
+    if (replacedTx == null || replacedTx.blockHeight > 0) {
+      return null
+    }
+    // Other params checks
+    if (
+      replacedTxOtherParams == null ||
+      replacedTxOtherParams.nonceUsed == null ||
+      replacedTxOtherParams.data != null
+    ) {
+      return null
+    }
+    // Must have a spend target
+    const spendTarget = (replacedTx.spendTargets ?? [])[0]
+    if (spendTarget == null) return null
+
+    // Accelerate transaction by doubling the gas price:
+    const gasPrice = mul(replacedTxOtherParams.gasPrice, '2')
+    const gasLimit = replacedTxOtherParams.gas
+    const newOtherParams: EthereumTxOtherParams = {
+      ...replacedTxOtherParams,
+      gas: gasLimit,
+      gasPrice,
+      replacedTxid
+    }
+
+    let { nativeAmount } = spendTarget
+    let nativeNetworkFee = mul(gasPrice, gasLimit)
+    let totalTxAmount = '0'
+    let parentNetworkFee: string | undefined
+
+    //
+    // Balance checks:
+    //
+
+    const parentNativeBalance =
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+
+    if (currencyCode === this.currencyInfo.currencyCode) {
+      totalTxAmount = add(nativeNetworkFee, nativeAmount)
+      if (gt(totalTxAmount, parentNativeBalance)) {
+        throw new InsufficientFundsError()
+      }
+      nativeAmount = mul(totalTxAmount, '-1')
+    } else {
+      parentNetworkFee = nativeNetworkFee
+      // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
+      if (gt(nativeNetworkFee, parentNativeBalance)) {
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee: nativeNetworkFee
+        })
+      }
+      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      if (gt(nativeAmount, balanceToken)) {
+        throw new InsufficientFundsError()
+      }
+      nativeNetworkFee = '0' // Do not show a fee for token transactions.
+      nativeAmount = mul(nativeAmount, '-1')
+    }
+
+    // Return a EdgeTransaction object with the updates
+    return {
+      ...edgeTransaction,
+      txid: '',
+      feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
+      nativeAmount,
+      networkFee: nativeNetworkFee,
+      otherParams: newOtherParams,
+      parentNetworkFee
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     if (
@@ -1194,32 +1261,33 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
   // Overload saveTx to mutate replaced transactions by RBF
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveTx(edgeTransaction: EdgeTransaction) {
+    const txOtherParams = asMaybe(asEthereumTxOtherParams)(
+      edgeTransaction.otherParams
+    )
+
     // We must check if this transaction replaces another transaction
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      edgeTransaction.otherParams != null &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeTransaction.otherParams.rbfTxid
-    ) {
+    if (txOtherParams?.replacedTxid != null) {
       const { currencyCode } = edgeTransaction
+      const txid = normalizeAddress(txOtherParams.replacedTxid)
+      const index = this.findTransaction(currencyCode, txid)
 
-      // Get the replaced transaction using the rbfTxid
-      const txid = edgeTransaction.otherParams.rbfTxid
-      const idx = this.findTransaction(currencyCode, txid)
-      const replacedEdgeTransaction = this.transactionList[currencyCode][idx]
+      if (index !== -1) {
+        const replacedEdgeTransaction =
+          this.transactionList[currencyCode][index]
 
-      // Use the RBF metadata because metadata for replaced transaction is not
-      // present in edge-currency-accountbased state
-      const metadata = edgeTransaction.metadata
+        // Use the RBF metadata because metadata for replaced transaction is not
+        // present in edge-currency-accountbased state
+        const metadata = edgeTransaction.metadata
 
-      // Update the transaction's blockHeight to -1 (drops the transaction)
-      const updatedEdgeTransaction: EdgeTransaction = {
-        ...replacedEdgeTransaction,
-        metadata,
-        blockHeight: -1
+        // Update the transaction's blockHeight to -1 (drops the transaction)
+        const updatedEdgeTransaction: EdgeTransaction = {
+          ...replacedEdgeTransaction,
+          metadata,
+          blockHeight: -1
+        }
+
+        this.addTransaction(currencyCode, updatedEdgeTransaction)
       }
-
-      this.addTransaction(currencyCode, updatedEdgeTransaction)
     }
 
     // Update the unconfirmed nonce if the transaction being saved is not confirmed
