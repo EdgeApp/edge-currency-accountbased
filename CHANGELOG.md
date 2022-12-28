@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.21.1 (2022-12-27)
+
+- Changed: Implement accelerate transaction feature using new core API
+
 ## 0.21.0 (2022-12-20)
 
 - Add Piratechain (ARRR)
