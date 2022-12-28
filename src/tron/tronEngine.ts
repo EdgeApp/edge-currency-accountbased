@@ -429,7 +429,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses: ourReceiveAddresses,
-          signedTx: ''
+          signedTx: '',
+          walletId: this.walletId
         }
 
         this.addTransaction(currencyCode, edgeTransaction)
@@ -466,7 +467,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses: [],
-          signedTx: ''
+          signedTx: '',
+          walletId: this.walletId
         }
 
         this.addTransaction(currencyCode, edgeTransaction)
@@ -536,7 +538,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       nativeAmount,
       networkFee: '0',
       ourReceiveAddresses,
-      signedTx: ''
+      signedTx: '',
+      walletId: this.walletId
     }
 
     // Record the parentNetworkFee if it's a send
@@ -1007,7 +1010,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams: txOtherParams // otherParams
+      otherParams: txOtherParams, // otherParams
+      walletId: this.walletId
     }
 
     if (parentNetworkFee != null) {

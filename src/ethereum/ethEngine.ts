@@ -319,7 +319,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
           date: Date.now(),
           txid: '',
           signedTx: params[0],
-          ourReceiveAddresses: []
+          ourReceiveAddresses: [],
+          walletId: this.walletId
         }
 
         return await this.broadcastTx(tx)
@@ -496,7 +497,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
       },
       wcGetConnections: () =>
         Object.keys(walletConnectors)
-          .filter(uri => walletConnectors[uri].walletId === this.walletInfo.id)
+          .filter(uri => walletConnectors[uri].walletId === this.walletId)
           .map(
             uri => ({
               ...walletConnectors[uri].dApp,
@@ -1019,7 +1020,8 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
       feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams // otherParams
+      otherParams, // otherParams
+      walletId: this.walletId
     }
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions

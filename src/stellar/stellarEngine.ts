@@ -214,7 +214,8 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
       otherParams: {
         fromAddress,
         toAddress
-      }
+      },
+      walletId: this.walletId
     }
 
     if (edgeTransaction.blockHeight > this.tools.highestTxHeight) {
@@ -528,7 +529,8 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
         idInternal,
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress
-      }
+      },
+      walletId: this.walletId
     }
     this.pendingTransactionsMap[idInternal] = transaction
     this.pendingTransactionsIndex++

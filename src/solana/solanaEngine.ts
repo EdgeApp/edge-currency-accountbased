@@ -171,7 +171,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
       nativeAmount: amount.toString(),
       networkFee: fee.toString(),
       ourReceiveAddresses,
-      signedTx: ''
+      signedTx: '',
+      walletId: this.walletId
     }
     this.addTransaction(this.chainCode, edgeTransaction)
   }
@@ -376,7 +377,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
       networkFee: nativeNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      otherParams
+      otherParams,
+      walletId: this.walletId
     }
 
     return edgeTransaction

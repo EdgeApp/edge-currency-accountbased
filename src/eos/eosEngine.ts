@@ -278,7 +278,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       metadata: {
         name,
         notes: memo
-      }
+      },
+      walletId: this.walletId
     }
 
     this.addTransaction(currencyCode, edgeTransaction)
@@ -362,7 +363,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         metadata: {
           notes: memo
         },
-        otherParams: { fromAddress: from, toAddress: to }
+        otherParams: { fromAddress: from, toAddress: to },
+        walletId: this.walletId
       }
 
       this.addTransaction(currencyCode, edgeTransaction)
@@ -1068,7 +1070,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       signedTx: '', // signedTx
       otherParams: {
         transactionJson
-      }
+      },
+      walletId: this.walletId
     }
     this.warn(
       `${this.currencyInfo.currencyCode} tx prepared: ${nativeAmount} ${this.walletLocalData.publicKey} -> ${publicAddress}`

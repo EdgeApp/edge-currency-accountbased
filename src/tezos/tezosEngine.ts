@@ -263,7 +263,8 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
       networkFee,
       ourReceiveAddresses,
       signedTx: '',
-      otherParams: {}
+      otherParams: {},
+      walletId: this.walletId
     }
     if (!failedOperation) {
       this.addTransaction(currencyCode, edgeTransaction)
@@ -457,7 +458,8 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress,
         fullOp: ops
-      }
+      },
+      walletId: this.walletId
     }
     return edgeTransaction
   }

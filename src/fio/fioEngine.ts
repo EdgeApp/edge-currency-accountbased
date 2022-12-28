@@ -723,7 +723,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         parentNetworkFee: '0',
         ourReceiveAddresses,
         signedTx: '',
-        otherParams
+        otherParams,
+        walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
     }
@@ -817,7 +818,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         networkFee,
         signedTx: '',
         ourReceiveAddresses: [],
-        otherParams
+        otherParams,
+        walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
     }
@@ -1617,7 +1619,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       signedTx: '',
       otherParams: {
         ...otherParams
-      }
+      },
+      walletId: this.walletId
     }
 
     return edgeTransaction

@@ -244,7 +244,8 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams: {}
+      otherParams: {},
+      walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
@@ -328,7 +329,8 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       networkFee: this.networkInfo.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      spendTargets
+      spendTargets,
+      walletId: this.walletId
     }
 
     return edgeTransaction

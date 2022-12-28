@@ -7,6 +7,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyPlugin,
   EdgeSpendInfo,
+  EdgeTransaction,
   EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
@@ -118,7 +119,7 @@ describe(`Tezos engine`, function () {
       }
     ]
   }
-  let edgeTransaction
+  let edgeTransaction: EdgeTransaction
   it('should create a transaction', async function () {
     engine.walletLocalData.totalBalances.XTZ = '4000000'
     this.timeout(10000)
@@ -178,7 +179,8 @@ describe(`Tezos engine`, function () {
             protocol: 'Pt24m4xiPbLDhVgVfABUjirbmda3yohdN82Sp9FeuAXJ4eV9otd'
           }
         }
-      }
+      },
+      walletId: ''
     }
     const signedOpBytes =
       'f1afab4d0508bf29f0bb162c74134d315986c7fcffd4c3af386619fad5547f9f07000052d9258b002678631bada74ab0d31f948288a2a1940ac0c066904e0000321e7b03dcf0e1baf805f2a393828fefcb519797b7abb29f9280c1956a0129bf08000052d9258b002678631bada74ab0d31f948288a2a1c60ac1c066e8529502c08db7010002358cbffa97149631cfb999fa47f0035fb1ea863600e742a0adcfa27c0198bc767e6cc0fe5bcd578ccc9afaa4d9f7a00a85ae818d0022579535018862412bea95b758fd19bf21d4cea7a9548998683c912d2ded6804'

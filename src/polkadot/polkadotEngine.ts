@@ -153,7 +153,8 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       nativeAmount: nativeAmount,
       networkFee: fee,
       ourReceiveAddresses,
-      signedTx: ''
+      signedTx: '',
+      walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
@@ -379,7 +380,8 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       networkFee: nativeNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      otherParams
+      otherParams,
+      walletId: this.walletId
     }
 
     return edgeTransaction

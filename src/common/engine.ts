@@ -712,7 +712,7 @@ export class CurrencyEngine<
       totalStatus = 1
       this.addressesChecked = true
     }
-    this.log(`${this.walletInfo.id} syncRatio of: ${totalStatus}`)
+    this.log(`${this.walletId} syncRatio of: ${totalStatus}`)
     // note that sometimes callback does not get triggered on Android debug
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
   }

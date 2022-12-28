@@ -186,7 +186,8 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
       signedTx: '',
       metadata: {
         notes: tx.memo
-      }
+      },
+      walletId: this.walletId
     }
 
     this.addTransaction(currencyCode, edgeTransaction)
@@ -436,7 +437,8 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams // otherParams
+      otherParams, // otherParams
+      walletId: this.walletId
     }
 
     return edgeTransaction

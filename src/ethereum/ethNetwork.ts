@@ -216,6 +216,7 @@ export class EthereumNetwork {
   // @ts-expect-error
   checkTxsAmberdata: (...any) => any
   currencyInfo: EdgeCurrencyInfo
+  walletId: string
   queryFuncs: QueryFuncs
 
   constructor(ethEngine: EthereumEngine, currencyInfo: EdgeCurrencyInfo) {
@@ -261,6 +262,7 @@ export class EthereumNetwork {
     this.queryFuncs = this.buildQueryFuncs(
       currencyInfo.defaultSettings.otherSettings
     )
+    this.walletId = ethEngine.walletInfo.id
   }
 
   processEvmScanTransaction(
@@ -349,7 +351,8 @@ export class EthereumNetwork {
       parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
-      otherParams
+      otherParams,
+      walletId: this.walletId
     }
 
     return edgeTransaction
@@ -438,7 +441,8 @@ export class EthereumNetwork {
       ourReceiveAddresses,
       signedTx: '',
       parentNetworkFee,
-      otherParams
+      otherParams,
+      walletId: this.walletId
     }
 
     return edgeTransaction

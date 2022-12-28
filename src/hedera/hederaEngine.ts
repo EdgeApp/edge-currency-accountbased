@@ -356,7 +356,8 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         signedTx: '', // signedTx
         otherParams: {
           consensusAt: tx.consensus_timestamp
-        }
+        },
+        walletId: this.walletId
       })
     }
 
@@ -462,7 +463,8 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress,
         transferTx: base64.stringify(transferTx.toBytes())
-      }
+      },
+      walletId: this.walletId
     }
     return edgeTransaction
   }

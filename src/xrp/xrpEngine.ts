@@ -145,7 +145,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       networkFee: tx.Fee,
       ourReceiveAddresses,
       signedTx: '',
-      otherParams: {}
+      otherParams: {},
+      walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
@@ -397,7 +398,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       networkFee: nativeNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams
+      otherParams,
+      walletId: this.walletId
     }
 
     this.warn('Payment transaction prepared...')
