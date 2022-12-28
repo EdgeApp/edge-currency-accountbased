@@ -4,6 +4,7 @@ import {
   asEither,
   asMap,
   asMaybe,
+  asNull,
   asNumber,
   asObject,
   asOptional,
@@ -211,6 +212,17 @@ export interface EthereumTxOtherParams {
   rbfTxid?: string
   data?: string | null
 }
+export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
+  from: asArray(asString),
+  to: asArray(asString),
+  gas: asString,
+  gasPrice: asString,
+  gasUsed: asString,
+  tokenRecipientAddress: asOptional(asString),
+  nonceUsed: asOptional(asString),
+  rbfTxid: asOptional(asString),
+  data: asOptional(asEither(asString, asNull))
+})
 
 export interface EthereumWalletOtherData {
   nextNonce: string
