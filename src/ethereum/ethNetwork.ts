@@ -14,12 +14,14 @@ import {
   removeHexPrefix,
   safeErrorMessage,
   shuffleArray,
-  snooze,
-  validateObject
+  snooze
 } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethConsts'
 import { EthereumEngine } from './ethEngine'
-import { EtherscanGetAccountNonce, EtherscanGetBlockHeight } from './ethSchema'
+import {
+  asEtherscanGetAccountNonce,
+  asEtherscanGetBlockHeight
+} from './ethSchema'
 import {
   AlethioTokenTransfer,
   asBlockbookAddress,
@@ -1051,7 +1053,7 @@ export class EthereumNetwork {
           out = await asyncWaterfall(funcs)
         } else {
           /*
-          // HACK: If a currency doesn't have an etherscan API compatible 
+          // HACK: If a currency doesn't have an etherscan API compatible
           // server we need to return an empty array
           */
 
@@ -1146,13 +1148,8 @@ export class EthereumNetwork {
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_blockNumber'
     )
-    const valid = validateObject(jsonObj, EtherscanGetBlockHeight)
-    if (valid && /0[xX][0-9a-fA-F]+/.test(jsonObj.result)) {
-      const blockHeight = parseInt(jsonObj.result, 16)
-      return { blockHeight, server }
-    } else {
-      throw new Error('Ethscan returned invalid JSON')
-    }
+    const clean = asEtherscanGetBlockHeight(jsonObj)
+    return { blockHeight: clean.result, server }
   }
 
   // @ts-expect-error
@@ -1226,13 +1223,8 @@ export class EthereumNetwork {
       'eth_getTransactionCount',
       address
     )
-    const valid = validateObject(jsonObj, EtherscanGetAccountNonce)
-    if (valid && /0[xX][0-9a-fA-F]+/.test(jsonObj.result)) {
-      const newNonce = add('0', jsonObj.result)
-      return { newNonce, server }
-    } else {
-      throw new Error('Ethscan returned invalid JSON')
-    }
+    const clean = asEtherscanGetAccountNonce(jsonObj)
+    return { newNonce: clean.result, server }
   }
 
   // @ts-expect-error

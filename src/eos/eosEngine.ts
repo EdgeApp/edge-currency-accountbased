@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 
 import { div, eq, gt, mul, toFixed } from 'biggystring'
-import { asEither } from 'cleaners'
+import { asEither, asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -28,19 +28,18 @@ import {
   getDenomInfo,
   getFetchCors,
   getOtherParams,
-  pickRandom,
-  validateObject
+  pickRandom
 } from '../common/utils'
 import { checkAddress, EosTools } from './eosPlugin'
 import {
   asDfuseGetKeyAccountsResponse,
   asDfuseGetTransactionsErrorResponse,
   asDfuseGetTransactionsResponse,
+  asEosTransactionSuperNodeSchema,
   asGetAccountActivationQuote,
   asHyperionGetTransactionResponse,
   asHyperionTransaction,
-  dfuseGetTransactionsQueryString,
-  EosTransactionSuperNodeSchema
+  dfuseGetTransactionsQueryString
 } from './eosSchema'
 import {
   EosNetworkInfo,
@@ -228,16 +227,16 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   processIncomingTransaction(action: EosTransactionSuperNode): number {
-    const result = validateObject(action, EosTransactionSuperNodeSchema)
-    if (!result) {
+    const clean = asMaybe(asEosTransactionSuperNodeSchema)(action)
+    if (clean == null) {
       this.error('Invalid supernode tx')
       return 0
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const { act, trx_id, block_num } = action
+    const { act, trx_id, block_num } = clean
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const block_time = action['@timestamp']
+    const block_time = clean['@timestamp']
 
     const { from, to, memo, symbol } = act.data
     const exchangeAmount = act.data.amount.toString()

@@ -1,54 +1,50 @@
-export const EtherscanGetBlockHeight = {
-  type: 'object',
-  properties: {
-    result: { type: 'string' }
-  },
-  required: ['result']
+import { add } from 'biggystring'
+import {
+  asArray,
+  asNumber,
+  asObject,
+  asString,
+  asUnknown,
+  Cleaner
+} from 'cleaners'
+
+const asHexNumber: Cleaner<number> = raw => {
+  const clean = asString(raw)
+  if (/0[xX][0-9a-fA-F]+/.test(clean)) return parseInt(clean, 16)
+  throw new TypeError('Expected a hex number')
 }
 
-export const EtherscanGetAccountNonce = {
-  type: 'object',
-  properties: {
-    result: { type: 'string' }
-  },
-  required: ['result']
+const asHexString: Cleaner<string> = raw => {
+  const clean = asString(raw)
+  if (/0[xX][0-9a-fA-F]+/.test(clean)) return add(raw, '0')
+  throw new TypeError('Expected a hex number')
 }
 
-export const EthGasStationSchema = {
-  type: 'object',
-  properties: {
-    safeLow: { type: 'number' },
-    average: { type: 'number' },
-    standard: { type: 'number' },
-    fastest: { type: 'number' }
-  },
-  required: ['safeLow', 'fastest']
-}
+export const asEtherscanGetBlockHeight = asObject({
+  result: asHexNumber
+})
 
-export const EIP712TypedDataSchema = {
-  type: 'object',
-  properties: {
-    types: {
-      type: 'object',
-      properties: {
-        EIP712Domain: { type: 'array' }
-      },
-      additionalProperties: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            name: { type: 'string' },
-            type: { type: 'string' }
-          },
-          required: ['name', 'type']
-        }
-      },
-      required: ['EIP712Domain']
-    },
-    primaryType: { type: 'string' },
-    domain: { type: 'object' },
-    message: { type: 'object' }
-  },
-  required: ['types', 'primaryType', 'domain', 'message']
-}
+export const asEtherscanGetAccountNonce = asObject({
+  result: asHexString
+})
+
+export const asEthGasStation = asObject({
+  safeLow: asNumber,
+  average: asNumber,
+  fast: asNumber,
+  fastest: asNumber
+})
+
+export const asEIP712TypedData = asObject({
+  types: asObject(
+    asArray(
+      asObject({
+        name: asString,
+        type: asString
+      })
+    )
+  ),
+  primaryType: asString,
+  domain: asUnknown,
+  message: asUnknown
+})

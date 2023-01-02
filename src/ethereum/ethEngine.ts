@@ -38,13 +38,12 @@ import {
   normalizeAddress,
   removeHexPrefix,
   timeout,
-  toHex,
-  validateObject
+  toHex
 } from '../common/utils'
 import { NETWORK_FEES_POLL_MILLISECONDS, WEI_MULTIPLIER } from './ethConsts'
 import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumTools } from './ethPlugin'
-import { EIP712TypedDataSchema } from './ethSchema'
+import { asEIP712TypedData } from './ethSchema'
 import {
   asEthereumTxOtherParams,
   asWcSessionRequestParams,
@@ -140,11 +139,10 @@ export class EthereumEngine
       // @ts-expect-error
       signTypedData: (typedData: EIP712TypedDataParam) => {
         // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
-        const valid = validateObject(typedData, EIP712TypedDataSchema)
-        if (!valid) throw new Error('ErrorInvalidTypedData')
+        const clean = asEIP712TypedData(typedData)
 
         const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
-        const types = typedData.types
+        const { types } = clean
 
         // Recursively finds all the dependencies of a type
         // @ts-expect-error
@@ -169,9 +167,8 @@ export class EthereumEngine
           return found
         }
 
-        // @ts-expect-error
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        function encodeType(primaryType) {
+        function encodeType(primaryType: string) {
           // Get dependencies primary first, then alphabetical
           let deps = dependencies(primaryType)
           deps = deps.filter(t => t !== primaryType)
@@ -189,15 +186,13 @@ export class EthereumEngine
           return result
         }
 
-        // @ts-expect-error
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        function typeHash(primaryType) {
+        function typeHash(primaryType: string) {
           return EthereumUtil.keccak256(encodeType(primaryType))
         }
 
-        // @ts-expect-error
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        function encodeData(primaryType, data) {
+        function encodeData(primaryType: string, data: any) {
           const encTypes = []
           const encValues = []
 
@@ -227,9 +222,8 @@ export class EthereumEngine
           return abi.rawEncode(encTypes, encValues)
         }
 
-        // @ts-expect-error
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        function structHash(primaryType, data) {
+        function structHash(primaryType: string, data: any) {
           return EthereumUtil.keccak256(encodeData(primaryType, data))
         }
 
@@ -238,8 +232,8 @@ export class EthereumEngine
           return EthereumUtil.keccak256(
             Buffer.concat([
               Buffer.from('1901', 'hex'),
-              structHash('EIP712Domain', typedData.domain),
-              structHash(typedData.primaryType, typedData.message)
+              structHash('EIP712Domain', clean.domain),
+              structHash(clean.primaryType, clean.message)
             ])
           )
         }
