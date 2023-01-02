@@ -960,7 +960,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { defaultSettings } = this.currencyInfo
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress } = tokenInfo
@@ -1045,7 +1044,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         }
       }
     ]
-    const { fuelActions = [] } = defaultSettings.otherSettings
+    const { fuelActions = [] } = this.networkInfo
     const transactionJson = {
       actions: [...fuelActions, ...transferActions]
     }
