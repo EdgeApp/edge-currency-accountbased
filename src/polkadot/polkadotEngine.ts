@@ -215,7 +215,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
         page * this.settings.subscanQueryLimit + transfers.length
 
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        count === 0 ? 1 : this.otherData.txCount / count
+        Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
       this.updateOnAddressesChecked()
 
       // count is the total number of transactions ever for an account
