@@ -24,6 +24,16 @@ export const asGetHederaAccount = asObject({
   )
 })
 
+export const asMirrorNodeQueryBalance = asObject({
+  balances: asArray(
+    asObject({
+      account: asString,
+      balance: asNumber
+      // tokens: []
+    })
+  )
+})
+
 export const asMirrorNodeTransactionResponse = asObject({
   transactions: asArray(
     asObject({
