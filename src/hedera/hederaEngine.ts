@@ -23,6 +23,7 @@ import {
   asCheckAccountCreationStatus,
   asGetAccountActivationQuote,
   asGetHederaAccount,
+  asMirrorNodeQueryBalance,
   asMirrorNodeTransactionResponse
 } from './hederaTypes'
 
@@ -248,12 +249,29 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       return
     }
 
-    const hbarBalance = await new hedera.AccountBalanceQuery()
-      .setAccountId(this.accountId)
-      .execute(this.client)
-    const nativeBalance: string = hbarBalance.asTinybar().toString()
+    const accountId = this.accountId.toString()
+    const url = `${this.mirrorNodes[0]}/api/v1/balances?account.id=${accountId}`
 
-    this.updateBalance(this.currencyInfo.currencyCode, nativeBalance)
+    try {
+      const response = await this.io.fetch(url)
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text)
+      }
+
+      const json = asMirrorNodeQueryBalance(await response.json())
+      const balanceObj = json.balances.find(obj => obj.account === accountId)
+      if (balanceObj == null)
+        throw new Error('Unable to find matching balanceObj')
+
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        balanceObj.balance.toString()
+      )
+    } catch (e: any) {
+      this.warn('queryBalance error checking balance:', e)
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
