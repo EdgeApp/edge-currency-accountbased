@@ -43,4 +43,17 @@ declare module 'ethereumjs-util'
 declare module 'ethereumjs-wallet'
 declare module 'ethereumjs-wallet/hdkey'
 declare module 'eztz.js'
+
+declare module 'react-native' {
+  interface EdgeCurrencyAccountbasedModule {
+    getConstants: () => {
+      sourceUri: string
+    }
+  }
+
+  declare const NativeModules: {
+    EdgeCurrencyAccountbasedModule: EdgeCurrencyAccountbasedModule
+  }
+}
+
 declare module 'stellar-sdk'

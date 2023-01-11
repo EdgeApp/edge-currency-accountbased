@@ -46,6 +46,9 @@ export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('./zecPlugin')
+    return await import(
+      /* webpackChunkName: "zcash" */
+      './zecPlugin'
+    )
   }
 })

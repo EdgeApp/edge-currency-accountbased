@@ -49,6 +49,9 @@ export const binance = makeOuterPlugin<{}, BinanceTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./bnbPlugin')
+    return await import(
+      /* webpackChunkName: "bnb" */
+      './bnbPlugin'
+    )
   }
 })

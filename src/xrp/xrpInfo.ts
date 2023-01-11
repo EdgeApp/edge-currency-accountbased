@@ -50,6 +50,9 @@ export const ripple = makeOuterPlugin<{}, RippleTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./xrpPlugin')
+    return await import(
+      /* webpackChunkName: "ripple" */
+      './xrpPlugin'
+    )
   }
 })

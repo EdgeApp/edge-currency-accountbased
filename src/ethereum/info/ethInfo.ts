@@ -760,6 +760,9 @@ export const ethereum = makeOuterPlugin<{}, EthereumTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('../ethPlugin')
+    return await import(
+      /* webpackChunkName: "ethereum" */
+      '../ethPlugin'
+    )
   }
 })

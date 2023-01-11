@@ -46,6 +46,9 @@ export const polkadot = makeOuterPlugin<{}, PolkadotTools>({
   networkInfo: {},
 
   async getInnerPlugin() {
-    return await import('./polkadotPlugin')
+    return await import(
+      /* webpackChunkName: "polkadot" */
+      './polkadotPlugin'
+    )
   }
 })
