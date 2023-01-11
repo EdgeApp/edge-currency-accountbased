@@ -1,5 +1,15 @@
 # edge-currency-accountbased
 
+## 0.22.0 (2023-01-11)
+
+- Convert library to React Native Module
+  - This package will automatically install itself using React Native autolinking and no longer requires Webpack for integration
+  - Plugins are broken out and can be loaded individually
+  - Move checkpoint files to android folder
+  - Stub away unwanted USB modules
+- ZEC: Update checkpoints
+- ARRR: Update checkpoints
+
 ## 0.21.2 (2023-01-10)
 
 - EOS: Fix destructure error when attempting to spend
