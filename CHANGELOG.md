@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.21.2 (2023-01-10)
+
+- EOS: Fix destructure error when attempting to spend
+- EVM: Remove recursion from `getMaxSpendable`
+- Replace remaining json-schema usage with cleaners
+- DOT: Add hard limit of 1 to transaction query progress
+
 ## 0.21.1 (2022-12-27)
 
 - Changed: Implement accelerate transaction feature using new core API
