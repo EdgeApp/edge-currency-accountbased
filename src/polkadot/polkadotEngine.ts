@@ -24,6 +24,7 @@ import {
   asSubscanResponse,
   asTransactions,
   asTransfer,
+  PolkadotOtherData,
   PolkadotSettings,
   SdkBalance,
   SdkBlockHeight,
@@ -41,6 +42,7 @@ const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   settings: PolkadotSettings
+  otherData!: PolkadotOtherData
   api!: ApiPromise
   keypair: Keyring | undefined
   nonce: number
@@ -493,7 +495,7 @@ export async function makeCurrencyEngine(
   await engine.loadEngine(tools, walletInfo, opts)
 
   // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData
+  engine.otherData = engine.walletLocalData.otherData as any
 
   return engine
 }
