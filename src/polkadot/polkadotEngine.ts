@@ -24,6 +24,7 @@ import {
   asSubscanResponse,
   asTransactions,
   asTransfer,
+  PolkadotOtherData,
   PolkadotSettings,
   SdkBalance,
   SdkBlockHeight,
@@ -41,6 +42,7 @@ const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   settings: PolkadotSettings
+  otherData!: PolkadotOtherData
   api!: ApiPromise
   keypair: Keyring | undefined
   nonce: number
@@ -213,7 +215,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
         page * this.settings.subscanQueryLimit + transfers.length
 
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        count === 0 ? 1 : this.otherData.txCount / count
+        Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
       this.updateOnAddressesChecked()
 
       // count is the total number of transactions ever for an account
@@ -493,7 +495,7 @@ export async function makeCurrencyEngine(
   await engine.loadEngine(tools, walletInfo, opts)
 
   // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData
+  engine.otherData = engine.walletLocalData.otherData as any
 
   return engine
 }

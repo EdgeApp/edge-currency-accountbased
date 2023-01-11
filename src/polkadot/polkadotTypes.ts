@@ -18,6 +18,10 @@ export interface PolkadotSettings {
   lengthFeePerByte: string
 }
 
+export interface PolkadotOtherData {
+  txCount: number
+}
+
 export const asSubscanResponse = asObject({
   code: asNumber,
   message: asString,
