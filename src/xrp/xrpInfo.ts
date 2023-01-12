@@ -2,16 +2,12 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { RippleTools } from './xrpPlugin'
-import { XrpSettings } from './xrpTypes'
+import { XrpNetworkInfo } from './xrpTypes'
 
-const otherSettings: XrpSettings = {
+const networkInfo: XrpNetworkInfo = {
   rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],
   defaultFee: '10', // in drops
   baseReserve: '10000000'
-}
-
-const defaultSettings: any = {
-  otherSettings
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -21,7 +17,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'ripple',
   walletType: 'wallet:ripple',
 
-  defaultSettings,
+  defaultSettings: {},
 
   memoMaxLength: 10,
   memoMaxValue: '4294967295',
@@ -40,9 +36,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-export const ripple = makeOuterPlugin<{}, RippleTools>({
+export const ripple = makeOuterPlugin<XrpNetworkInfo, RippleTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import(

@@ -1,6 +1,6 @@
 import { asArray, asNumber, asObject, asString } from 'cleaners'
 
-export interface XrpSettings {
+export interface XrpNetworkInfo {
   rippledServers: string[]
   defaultFee: string
   baseReserve: string

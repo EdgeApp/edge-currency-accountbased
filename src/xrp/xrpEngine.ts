@@ -25,7 +25,7 @@ import {
   asFee,
   asGetTransactionsResponse,
   asServerInfo,
-  XrpSettings,
+  XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
 } from './xrpTypes'
@@ -59,15 +59,16 @@ type XrpFunction =
 
 export class XrpEngine extends CurrencyEngine<RippleTools> {
   otherData!: XrpWalletOtherData
-  xrpSettings: XrpSettings
+  networkInfo: XrpNetworkInfo
 
   constructor(
     tools: RippleTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    networkInfo: XrpNetworkInfo
   ) {
     super(tools, walletInfo, opts)
-    this.xrpSettings = tools.currencyInfo.defaultSettings.otherSettings
+    this.networkInfo = networkInfo
   }
 
   async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
@@ -107,8 +108,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
           e
         )}. Using default fee.`
       )
-      if (this.otherData.recommendedFee !== this.xrpSettings.defaultFee) {
-        this.otherData.recommendedFee = this.xrpSettings.defaultFee
+      if (this.otherData.recommendedFee !== this.networkInfo.defaultFee) {
+        this.otherData.recommendedFee = this.networkInfo.defaultFee
         this.walletLocalDataDirty = true
       }
     }
@@ -280,7 +281,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     })
     // TODO: Look into this logic when adding token support
     if (currencyCode === this.currencyInfo.currencyCode) {
-      spendableBalance = sub(spendableBalance, this.xrpSettings.baseReserve)
+      spendableBalance = sub(spendableBalance, this.networkInfo.baseReserve)
     }
     if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
@@ -312,7 +313,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     // Make sure amount doesn't drop the balance below the reserve amount otherwise the
     // transaction is invalid. It is not necessary to consider the fee in this
     // calculation because the transaction fee can be taken out of the reserve balance.
-    if (gt(add(nativeAmount, this.xrpSettings.baseReserve), nativeBalance))
+    if (gt(add(nativeAmount, this.networkInfo.baseReserve), nativeBalance))
       throw new InsufficientFundsError()
 
     const uniqueIdentifier =
@@ -448,12 +449,12 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<XrpNetworkInfo>,
   tools: RippleTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new XrpEngine(tools, walletInfo, opts)
+  const engine = new XrpEngine(tools, walletInfo, opts, env.networkInfo)
 
   await engine.loadEngine(tools, walletInfo, opts)
 
