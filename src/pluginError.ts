@@ -2,6 +2,11 @@ export const pluginErrorCodes = [400, 403, 404]
 export const pluginErrorName = {
   XRP_ERROR: 'XrpError'
 }
+export const pluginErrorLabels = {
+  UNIQUE_IDENTIFIER_EXCEEDS_LENGTH: 'UNIQUE_IDENTIFIER_EXCEEDS_LENGTH',
+  UNIQUE_IDENTIFIER_EXCEEDS_LIMIT: 'UNIQUE_IDENTIFIER_EXCEEDS_LIMIT',
+  UNIQUE_IDENTIFIER_FORMAT: 'UNIQUE_IDENTIFIER_FORMAT'
+}
 
 export class PluginError extends Error {
   // @ts-expect-error

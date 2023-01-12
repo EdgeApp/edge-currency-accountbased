@@ -11,12 +11,7 @@ const otherSettings: XrpSettings = {
 }
 
 const defaultSettings: any = {
-  otherSettings,
-  errorCodes: {
-    UNIQUE_IDENTIFIER_EXCEEDS_LENGTH: 'UNIQUE_IDENTIFIER_EXCEEDS_LENGTH',
-    UNIQUE_IDENTIFIER_EXCEEDS_LIMIT: 'UNIQUE_IDENTIFIER_EXCEEDS_LIMIT',
-    UNIQUE_IDENTIFIER_FORMAT: 'UNIQUE_IDENTIFIER_FORMAT'
-  }
+  otherSettings
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

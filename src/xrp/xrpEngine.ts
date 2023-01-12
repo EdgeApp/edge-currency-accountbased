@@ -13,7 +13,12 @@ import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
-import { PluginError, pluginErrorCodes, pluginErrorName } from '../pluginError'
+import {
+  PluginError,
+  pluginErrorCodes,
+  pluginErrorLabels,
+  pluginErrorName
+} from '../pluginError'
 import { RippleTools } from './xrpPlugin'
 import {
   asBalance,
@@ -315,18 +320,14 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 
     if (uniqueIdentifier !== '') {
       // Destination Tag Checks
-      const {
-        memoMaxLength = Infinity,
-        memoMaxValue,
-        defaultSettings: { errorCodes }
-      } = this.currencyInfo
+      const { memoMaxLength = Infinity, memoMaxValue } = this.currencyInfo
 
       if (Number.isNaN(parseInt(uniqueIdentifier))) {
         throw new PluginError(
           'Please enter a valid Destination Tag',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          errorCodes.UNIQUE_IDENTIFIER_FORMAT
+          pluginErrorLabels.UNIQUE_IDENTIFIER_FORMAT
         )
       }
 
@@ -335,7 +336,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
           `Destination Tag must be ${memoMaxLength} characters or less`,
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
+          pluginErrorLabels.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
         )
       }
 
@@ -344,7 +345,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
           'XRP Destination Tag is above its maximum limit',
           pluginErrorName.XRP_ERROR,
           pluginErrorCodes[0],
-          errorCodes.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
+          pluginErrorLabels.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
         )
       }
     }
