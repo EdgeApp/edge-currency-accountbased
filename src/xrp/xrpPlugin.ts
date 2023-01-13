@@ -25,7 +25,7 @@ export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   networkInfo: XrpNetworkInfo
-  rippleApi: Object
+  rippleApi!: Client
   rippleApiSubscribers: { [walletId: string]: boolean }
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
@@ -33,25 +33,20 @@ export class RippleTools implements EdgeCurrencyTools {
     this.io = io
     this.currencyInfo = currencyInfo
     this.networkInfo = networkInfo
-    this.rippleApi = {}
     this.rippleApiSubscribers = {}
   }
 
   async connectApi(walletId: string): Promise<void> {
-    // @ts-expect-error
-    if (this.rippleApi.serverName == null) {
+    if (this.rippleApi == null) {
       const funcs = this.networkInfo.rippledServers.map(server => async () => {
         const api = new Client(server)
-        // @ts-expect-error
-        api.serverName = server
         await api.connect()
-        const out = { server, api }
-        return out
+        return api
       })
-      const result = await asyncWaterfall(funcs)
-      // @ts-expect-error
-      if (this.rippleApi.serverName == null) {
-        this.rippleApi = result.api
+      const result: Client = await asyncWaterfall(funcs)
+
+      if (this.rippleApi == null) {
+        this.rippleApi = result
       }
     }
     this.rippleApiSubscribers[walletId] = true
@@ -61,9 +56,9 @@ export class RippleTools implements EdgeCurrencyTools {
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
-      // @ts-expect-error
       await this.rippleApi.disconnect()
-      this.rippleApi = {}
+      // @ts-expect-error
+      this.rippleApi = undefined
     }
   }
 
