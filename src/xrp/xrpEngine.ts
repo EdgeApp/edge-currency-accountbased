@@ -12,7 +12,12 @@ import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
+import {
+  cleanTxLogs,
+  getDenomInfo,
+  getOtherParams,
+  safeErrorMessage
+} from '../common/utils'
 import {
   PluginError,
   pluginErrorCodes,
@@ -21,10 +26,7 @@ import {
 } from '../pluginError'
 import { RippleTools } from './xrpPlugin'
 import {
-  asBalance,
-  asFee,
   asGetTransactionsResponse,
-  asServerInfo,
   XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
@@ -48,15 +50,6 @@ interface XrpParams {
   preparedTx: Object
 }
 
-type XrpFunction =
-  | 'getFee'
-  | 'getServerInfo'
-  | 'getTransactions'
-  | 'getBalances'
-  | 'connect'
-  | 'preparePayment'
-  | 'submit'
-
 export class XrpEngine extends CurrencyEngine<RippleTools> {
   otherData!: XrpWalletOtherData
   networkInfo: XrpNetworkInfo
@@ -71,35 +64,11 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     this.networkInfo = networkInfo
   }
 
-  async multicastServers(func: XrpFunction, ...params: any): Promise<any> {
-    let method = 'request'
-    // Request is most commonly used SDK method for funcs but some are special
-    switch (func) {
-      case 'getBalances':
-      case 'submit':
-        method = func
-        break
-      case 'preparePayment':
-        method = 'autofill'
-        break
-    }
-    const out = {
-      // @ts-expect-error
-      result: await this.tools.rippleApi[method](...params),
-      // @ts-expect-error
-      server: this.tools.rippleApi.serverName
-    }
-    this.log(`multicastServers ${func} ${out.server} won`)
-    return out.result
-  }
-
   // Poll on the blockheight
   async checkServerInfoInnerLoop(): Promise<void> {
     try {
-      const options = { command: 'fee' }
-      const response = await this.multicastServers('getFee', options)
-      const fee = asFee(response).result.drops.minimum_fee
-      this.otherData.recommendedFee = fee
+      const response = await this.tools.rippleApi.request({ command: 'fee' })
+      this.otherData.recommendedFee = response.result.drops.minimum_fee
       this.walletLocalDataDirty = true
     } catch (e: any) {
       this.error(
@@ -113,10 +82,13 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       }
     }
     try {
-      const options = { command: 'server_info' }
-      const response = await this.multicastServers('getServerInfo', options)
-      const blockHeight =
-        asServerInfo(response).result.info.validated_ledger.seq
+      const response = await this.tools.rippleApi.request({
+        command: 'server_info'
+      })
+      const blockHeight = response.result.info.validated_ledger?.seq
+      if (blockHeight == null)
+        throw new Error('Received response without ledger info')
+
       this.log(`Got block height ${blockHeight}`)
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
@@ -170,13 +142,12 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
 
     try {
-      const options = {
+      const response = await this.tools.rippleApi.request({
         command: 'account_tx',
         account: address,
         forward: true, // returns oldest to newest
         ledger_index_min: startBlock
-      }
-      const response = await this.multicastServers('getTransactions', options)
+      })
       const transactions =
         asGetTransactionsResponse(response).result.transactions
       this.log(
@@ -185,6 +156,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       // Get transactions
       // Iterate over transactions in address
       for (const transaction of transactions) {
+        if (transaction.tx == null) continue
         this.processRippleTransaction(transaction.tx)
       }
       if (this.transactionsChangedArray.length > 0) {
@@ -205,15 +177,16 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
     try {
-      const jsonObj = await this.multicastServers('getBalances', address)
-      if (Array.isArray(jsonObj)) {
-        for (const bal of jsonObj) {
-          const { currency, value } = asBalance(bal)
-          const currencyCode = currency
-          const exchangeAmount = value
-          const nativeAmount = mul(exchangeAmount, '1000000')
-          this.updateBalance(currencyCode, nativeAmount)
-        }
+      const jsonObj = await this.tools.rippleApi.getBalances(address)
+      for (const bal of jsonObj) {
+        const { currency, value } = bal
+        const currencyCode = currency
+        const exchangeAmount = value
+        const denom = getDenomInfo(this.currencyInfo, currencyCode)
+        if (denom == null) continue
+
+        const nativeAmount = mul(exchangeAmount, denom.multiplier)
+        this.updateBalance(currencyCode, nativeAmount)
       }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
@@ -361,7 +334,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     while (true) {
       i--
       try {
-        preparedTx = await this.multicastServers('preparePayment', payment)
+        // @ts-expect-error
+        preparedTx = await this.tools.rippleApi.autofill(payment)
         break
       } catch (e: any) {
         if (
@@ -425,7 +399,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    await this.multicastServers('submit', edgeTransaction.signedTx)
+    await this.tools.rippleApi.submit(edgeTransaction.signedTx)
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }

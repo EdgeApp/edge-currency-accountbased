@@ -1,4 +1,4 @@
-import { asArray, asNumber, asObject, asString } from 'cleaners'
+import { asArray, asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface XrpNetworkInfo {
   rippledServers: string[]
@@ -17,24 +17,6 @@ export interface XrpWalletOtherData {
   recommendedFee: string // Floating point value in full XRP value
 }
 
-export const asFee = asObject({
-  result: asObject({
-    drops: asObject({
-      minimum_fee: asString
-    })
-  })
-})
-
-export const asServerInfo = asObject({
-  result: asObject({
-    info: asObject({
-      validated_ledger: asObject({
-        seq: asNumber
-      })
-    })
-  })
-})
-
 export const asXrpTransaction = asObject({
   Account: asString,
   Amount: asString,
@@ -51,10 +33,8 @@ export const asGetTransactionsResponse = asObject({
   result: asObject({
     transactions: asArray(
       asObject({
-        tx: asXrpTransaction
+        tx: asMaybe(asXrpTransaction)
       })
     )
   })
 })
-
-export const asBalance = asObject({ currency: asString, value: asString })
