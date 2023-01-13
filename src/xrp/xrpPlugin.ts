@@ -135,8 +135,7 @@ export class RippleTools implements EdgeCurrencyTools {
       uri,
       networks
     )
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-    const valid = isValidAddress(edgeParsedUri.publicAddress || '')
+    const valid = isValidAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }

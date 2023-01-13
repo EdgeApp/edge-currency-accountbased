@@ -94,8 +94,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   }
 
   // Poll on the blockheight
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkServerInfoInnerLoop() {
+  async checkServerInfoInnerLoop(): Promise<void> {
     try {
       const options = { command: 'fee' }
       const response = await this.multicastServers('getFee', options)
@@ -132,8 +131,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processRippleTransaction(tx: XrpTransaction) {
+  processRippleTransaction(tx: XrpTransaction): void {
     const ourReceiveAddresses = []
     let nativeAmount = tx.Amount
     if (tx.Destination === this.walletLocalData.publicKey) {
@@ -157,8 +155,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
     let startBlock: number = -1 // A value of -1 instructs the server to use the earliest validated ledger version available
@@ -204,12 +201,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkUnconfirmedTransactionsFetch() {}
-
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
     try {
       const jsonObj = await this.multicastServers('getBalances', address)
@@ -237,8 +230,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
     try {
       await this.tools.connectApi(this.walletId)
@@ -246,24 +238,26 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.startEngine()
+          this.startEngine().catch(() => {})
         }
       }, 10000)
       return
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    this.addToLoop(
+      'checkServerInfoInnerLoop',
+      BLOCKHEIGHT_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop(
+      'checkTransactionsInnerLoop',
+      TRANSACTION_POLL_MILLISECONDS
+    ).catch(() => {})
+    super.startEngine().catch(() => {})
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async killEngine() {
+  async killEngine(): Promise<void> {
     await super.killEngine()
     await this.tools.disconnectApi(this.walletId)
   }
@@ -288,8 +282,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return spendableBalance
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
 
@@ -437,13 +430,11 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(): string {
     return this.walletInfo.keys?.rippleKey ?? ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
+  getDisplayPublicSeed(): string {
     return this.walletInfo.keys?.publicKey ?? ''
   }
 }
