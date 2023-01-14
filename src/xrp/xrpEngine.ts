@@ -67,7 +67,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async checkServerInfoInnerLoop(): Promise<void> {
     try {
       const response = await this.tools.rippleApi.request({ command: 'fee' })
-      this.otherData.recommendedFee = response.result.drops.minimum_fee
+      this.otherData.recommendedFee = response.result.drops.open_ledger_fee
       this.walletLocalDataDirty = true
     } catch (e: any) {
       this.error(
