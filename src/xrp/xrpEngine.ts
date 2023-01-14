@@ -1,4 +1,4 @@
-import { add, eq, gt, lte, mul, sub } from 'biggystring'
+import { add, eq, gt, lte, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -12,12 +12,7 @@ import { rippleTimeToUnixTime, Wallet } from 'xrpl'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import {
-  cleanTxLogs,
-  getDenomInfo,
-  getOtherParams,
-  safeErrorMessage
-} from '../common/utils'
+import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
 import {
   PluginError,
   pluginErrorCodes,
@@ -53,6 +48,7 @@ interface XrpParams {
 export class XrpEngine extends CurrencyEngine<RippleTools> {
   otherData!: XrpWalletOtherData
   networkInfo: XrpNetworkInfo
+  nonce: number
 
   constructor(
     tools: RippleTools,
@@ -62,6 +58,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   ) {
     super(tools, walletInfo, opts)
     this.networkInfo = networkInfo
+    this.nonce = 0
   }
 
   // Poll on the blockheight
@@ -177,17 +174,15 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
     try {
-      const jsonObj = await this.tools.rippleApi.getBalances(address)
-      for (const bal of jsonObj) {
-        const { currency, value } = bal
-        const currencyCode = currency
-        const exchangeAmount = value
-        const denom = getDenomInfo(this.currencyInfo, currencyCode)
-        if (denom == null) continue
-
-        const nativeAmount = mul(exchangeAmount, denom.multiplier)
-        this.updateBalance(currencyCode, nativeAmount)
-      }
+      const accountInfo = await this.tools.rippleApi.request({
+        command: 'account_info',
+        account: address,
+        ledger_index: 'current'
+      })
+      const { Balance, Sequence } = accountInfo.result.account_data
+      // TODO: Token balances can be queried with this.tools.rippleApi.getBalances(address)
+      this.updateBalance(this.currencyInfo.currencyCode, Balance)
+      this.nonce = Sequence
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.warn('Account not found. Probably not activated w/minimum XRP')
