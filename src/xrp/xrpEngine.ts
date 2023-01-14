@@ -9,6 +9,7 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
+import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -31,6 +32,7 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
+const LEDGER_OFFSET = 20 // sdk constant
 
 interface PaymentJson {
   Amount: string
@@ -324,33 +326,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       payment.DestinationTag = parseInt(uniqueIdentifier)
     }
 
-    let preparedTx = {}
-    let i = 6
-    while (true) {
-      i--
-      try {
-        // @ts-expect-error
-        preparedTx = await this.tools.rippleApi.autofill(payment)
-        break
-      } catch (e: any) {
-        if (
-          safeErrorMessage(e).includes('has too many decimal places') &&
-          i > 0
-        ) {
-          // HACK: ripple-js seems to have a bug where this error is intermittently thrown for no reason.
-          // Just retrying seems to resolve it. -paulvp
-          this.warn(
-            `Got "too many decimal places" error. Retrying... ${i.toString()}`
-          )
-          continue
-        }
-        this.error(`makeSpend Error `, e)
-        throw new Error('Error in preparePayment')
-      }
-    }
-
     const otherParams: XrpParams = {
-      preparedTx
+      preparedTx: payment
     }
     nativeAmount = `-${add(nativeAmount, nativeNetworkFee)}`
 
@@ -374,12 +351,17 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
-    // Do signing
-    const txJson = otherParams.preparedTx
-    const privateKey = this.walletInfo.keys.rippleKey
+    const completeTxJson = {
+      ...otherParams.preparedTx,
+      Sequence: this.nonce,
+      LastLedgerSequence: this.walletLocalData.blockHeight + LEDGER_OFFSET
+    }
+    validatePayment(completeTxJson)
 
+    // Do signing
+    const privateKey = this.walletInfo.keys.rippleKey
     const wallet = Wallet.fromSeed(privateKey)
-    const { tx_blob: signedTransaction, hash: id } = wallet.sign(txJson)
+    const { tx_blob: signedTransaction, hash: id } = wallet.sign(completeTxJson)
 
     this.warn('Payment transaction signed...')
 
@@ -394,7 +376,17 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    await this.tools.rippleApi.submit(edgeTransaction.signedTx)
+    const response = await this.tools.rippleApi.submit(edgeTransaction.signedTx)
+    const {
+      engine_result_code: resultCode,
+      engine_result_message: resultMessage
+    } = response.result
+
+    if (resultCode !== 0) {
+      this.warn(`FAILURE broadcastTx ${resultCode} ${resultMessage}`)
+      throw new Error(resultMessage)
+    }
+
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
