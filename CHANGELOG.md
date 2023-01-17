@@ -1,5 +1,16 @@
 # edge-currency-accountbased
 
+## 0.22.1 (2023-01-17)
+
+- XRP: Replace use of `autofill` with local transaction creation
+- XRP: Replace currency settings with networkInfo
+- XRP: Clean up code for type-safety
+- XRP: Add broadcast failure handling
+- Replace forked ethereumjs-wallet library
+- Remove ethereumjs-util resolution
+- Cleanup old and redundant dependency resolutions
+- ARRR: Remove address explorer url
+
 ## 0.22.0 (2023-01-11)
 
 - Convert library to React Native Module
