@@ -28,7 +28,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings: {},
 
-  addressExplorer: 'https://explorer.pirate.black/address/%s',
+  addressExplorer: '',
   transactionExplorer: 'https://explorer.pirate.black/tx/%s',
 
   denominations: [
