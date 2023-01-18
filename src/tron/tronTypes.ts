@@ -51,6 +51,7 @@ export interface TronNetworkFees {
   getCreateAccountFee: number
   getTransactionFee: number
   getEnergyFee: number
+  getMemoFee: number
 }
 
 export interface TronOtherdata {
@@ -68,11 +69,13 @@ export interface TronTxParams {
   nativeAmount: string
   contractAddress?: string
   data?: string
+  note?: string
 }
 
 export interface CalcTxFeeOpts {
   receiverAddress: string
   unsignedTxHex: string
+  note?: string
   tokenOpts?: {
     contractAddress: string
     data: string

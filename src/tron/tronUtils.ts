@@ -74,6 +74,14 @@ export class TronScan extends Client {
     return this.recentBlock
   }
 
+  async addData(preTx: any, memo: string): Promise<any> {
+    const tx = await super.addRef(preTx)
+    const rawData = tx.getRawData()
+    rawData.setData(Uint8Array.from(Buffer.from(memo, 'ascii')))
+    tx.setRawData(rawData)
+    return tx
+  }
+
   // Need to add a fee limit to trc20 transactions
   async addRef(preTx: any, feeLimit?: number): Promise<any> {
     const tx = await super.addRef(preTx)

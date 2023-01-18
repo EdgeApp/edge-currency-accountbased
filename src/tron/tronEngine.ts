@@ -108,9 +108,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       energy: 0
     }
     this.networkFees = {
-      getCreateAccountFee: 100000, // network default
-      getTransactionFee: 1000, // network default
-      getEnergyFee: 280 // network default
+      // network defaults
+      getCreateAccountFee: 100000,
+      getTransactionFee: 1000,
+      getEnergyFee: 280,
+      getMemoFee: 1000000
     }
     this.tronscan = new TronScan(this.recentBlock)
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
@@ -638,7 +640,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   // TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
   // TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
   async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
-    const { receiverAddress, tokenOpts, unsignedTxHex } = opts
+    const { note, receiverAddress, tokenOpts, unsignedTxHex } = opts
 
     const denom = getDenomInfo(
       this.currencyInfo,
@@ -757,13 +759,23 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     this.log('Create account fee: ', createNewAccountFee)
 
+    /// /////////////
+    // Note /////////
+    /// /////////////
+
+    // Transaction notes always burn 1 TRX if it exists. In addition, it also contributes to the bandwidth cost but is already accounted for in unsignedTxHex
+    const transactionNoteFee = note != null ? this.networkFees.getMemoFee : 0
+
+    this.log('Transaction note fee: ', transactionNoteFee)
+
     // The fee isn't a transaction parameter so these calculations are to show the user ahead of time
     // what the fee will be. Using a fallback value doesn't affect the actual transaction sent out.
 
     const totalSUN =
       energyNeeded * this.networkFees.getEnergyFee +
       bandwidthNeeded * this.networkFees.getTransactionFee +
-      createNewAccountFee
+      createNewAccountFee +
+      transactionNoteFee
 
     this.log('Total fee in SUN: ', totalSUN)
 
@@ -774,7 +786,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   async txBuilder(
     params: TronTxParams
   ): Promise<{ transaction: any; transactionHex: string }> {
-    const { currencyCode, toAddress, nativeAmount, data } = params
+    const { currencyCode, toAddress, nativeAmount, data, note } = params
 
     let feeLimit: number | undefined
     let contractJson: any
@@ -813,6 +825,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
     const transaction = contractJsonToProtobuf(contractJson)
     await this.tronscan.addRef(transaction, feeLimit)
+    if (note != null) {
+      await this.tronscan.addData(transaction, note)
+    }
     const transactionHex = byteArray2hexStr(
       transaction.getRawData().serializeBinary()
     )
@@ -862,7 +877,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { publicAddress } = spendInfo.spendTargets[0]
+    const { publicAddress, memo } = spendInfo.spendTargets[0]
+    const note = memo === '' ? undefined : memo
 
     if (publicAddress == null || spendInfo.currencyCode == null) {
       throw new Error('Error: need recipient address and/or currencyCode')
@@ -891,7 +907,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         spendInfo.spendTargets[0].nativeAmount = mid
         const fee = await this.calcTxFee({
           receiverAddress: publicAddress,
-          unsignedTxHex: transactionHex
+          unsignedTxHex: transactionHex,
+          note
         })
 
         const totalAmount = add(mid, fee)
@@ -924,7 +941,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { nativeAmount, publicAddress, otherParams } =
+    const { nativeAmount, publicAddress, otherParams, memo } =
       edgeSpendInfo.spendTargets[0]
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -939,12 +956,15 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       ? this.allTokens.find(token => token.currencyCode === currencyCode)
       : undefined
 
+    const note = memo === '' ? undefined : memo
+
     const txOtherParams: TronTxParams = {
       currencyCode,
       toAddress: publicAddress,
       nativeAmount,
       contractAddress: metaToken?.contractAddress,
-      data
+      data,
+      note
     }
     const { transactionHex } = await this.txBuilder(txOtherParams)
 
@@ -956,7 +976,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     const totalFeeSUN = await this.calcTxFee({
       receiverAddress: publicAddress,
       unsignedTxHex: transactionHex,
-      tokenOpts
+      tokenOpts,
+      note
     })
 
     let edgeNativeAmount: string
