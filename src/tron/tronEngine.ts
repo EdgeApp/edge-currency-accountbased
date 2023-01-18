@@ -43,6 +43,7 @@ import {
   asTronQuery,
   asTRXBalance,
   asTRXTransferContract,
+  CalcTxFeeOpts,
   ReferenceBlock,
   TronAccountResources,
   TronNetworkFees,
@@ -651,14 +652,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   // TRX transfers to existing accounts will bandwidth or TRX
   // TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
   // TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
-  async calcTxFee(
-    receiverAddress: string,
-    unsignedTxHex: string,
-    tokenOpts?: {
-      contractAddress: string
-      data: string
-    }
-  ): Promise<string> {
+  async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
+    const { receiverAddress, tokenOpts, unsignedTxHex } = opts
+
     const denom = getDenomInfo(
       this.currencyInfo,
       this.currencyInfo.currencyCode
@@ -908,7 +904,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
-        const fee = await this.calcTxFee(publicAddress, transactionHex)
+        const fee = await this.calcTxFee({
+          receiverAddress: publicAddress,
+          unsignedTxHex: transactionHex
+        })
 
         const totalAmount = add(mid, fee)
         if (gt(totalAmount, balance)) {
@@ -969,11 +968,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         ? { contractAddress: metaToken?.contractAddress, data }
         : undefined
 
-    const totalFeeSUN = await this.calcTxFee(
-      publicAddress,
-      transactionHex,
+    const totalFeeSUN = await this.calcTxFee({
+      receiverAddress: publicAddress,
+      unsignedTxHex: transactionHex,
       tokenOpts
-    )
+    })
 
     let edgeNativeAmount: string
     let networkFee: string
