@@ -1,3 +1,5 @@
+import { ApiPromise, Keyring, WsProvider } from '@polkadot/api'
+import * as utilCrypto from '@polkadot/util-crypto'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -15,14 +17,8 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
-import {
-  ApiPromise,
-  ed25519PairFromSeed,
-  isAddress,
-  Keyring,
-  mnemonicToMiniSecret,
-  WsProvider
-} from './polkadotUtils'
+
+const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo

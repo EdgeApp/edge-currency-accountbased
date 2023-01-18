@@ -1,3 +1,4 @@
+import { ApiPromise, Keyring } from '@polkadot/api'
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -32,7 +33,6 @@ import {
   SubscanResponse,
   SubscanTx
 } from './polkadotTypes'
-import { ApiPromise, Keyring } from './polkadotUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
