@@ -48,9 +48,9 @@ export interface TronAccountResources {
 }
 
 export interface TronNetworkFees {
-  createAccountFeeSUN: number
-  bandwidthFeeSUN: number
-  energyFeeSUN: number
+  getCreateAccountFee: number
+  getTransactionFee: number
+  getEnergyFee: number
 }
 
 export interface TronOtherdata {

@@ -108,9 +108,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       energy: 0
     }
     this.networkFees = {
-      createAccountFeeSUN: 100000, // network default
-      bandwidthFeeSUN: 1000, // network default
-      energyFeeSUN: 280 // network default
+      getCreateAccountFee: 100000, // network default
+      getTransactionFee: 1000, // network default
+      getEnergyFee: 280 // network default
     }
     this.tronscan = new TronScan(this.recentBlock)
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
@@ -562,26 +562,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const json = asChainParams(res).chainParameter
 
       // Network fees
-      const createAccountFeeSUN = json.find(
-        param => param.key === 'getCreateAccountFee'
-      )
-      const bandwidthFeeSUN = json.find(
-        param => param.key === 'getTransactionFee'
-      )
-      const energyFeeSUN = json.find(param => param.key === 'getEnergyFee')
-
-      if (
-        createAccountFeeSUN?.value == null ||
-        bandwidthFeeSUN?.value == null ||
-        energyFeeSUN?.value == null
-      )
-        throw new Error('Error fetching networkFees')
-
-      // 1 SUN = 0.000001 TRX utilizing fromSun()
-      this.networkFees = {
-        createAccountFeeSUN: createAccountFeeSUN.value,
-        bandwidthFeeSUN: bandwidthFeeSUN.value,
-        energyFeeSUN: energyFeeSUN.value
+      for (const feeName of Object.keys(this.networkFees)) {
+        const feeObj = json.find(param => param.key === feeName)
+        if (feeObj != null) {
+          this.networkFees = { ...this.networkFees, [feeName]: feeObj.value }
+        }
       }
     } catch (e: any) {
       this.log.error('checkUpdateNetworkFees error: ', e)
@@ -767,7 +752,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
       // Fee is the variable create account fee plus 1 TRX
       createNewAccountFee =
-        this.networkFees.createAccountFeeSUN + parseInt(denom.multiplier)
+        this.networkFees.getCreateAccountFee + parseInt(denom.multiplier)
     }
 
     this.log('Create account fee: ', createNewAccountFee)
@@ -776,8 +761,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     // what the fee will be. Using a fallback value doesn't affect the actual transaction sent out.
 
     const totalSUN =
-      energyNeeded * this.networkFees.energyFeeSUN +
-      bandwidthNeeded * this.networkFees.bandwidthFeeSUN +
+      energyNeeded * this.networkFees.getEnergyFee +
+      bandwidthNeeded * this.networkFees.getTransactionFee +
       createNewAccountFee
 
     this.log('Total fee in SUN: ', totalSUN)
