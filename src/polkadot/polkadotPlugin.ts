@@ -88,15 +88,10 @@ export class PolkadotTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || this.currencyInfo.currencyCode,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
-    let address = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (edgeParsedUri.publicAddress) {
-      address = edgeParsedUri.publicAddress
-    }
+    const address = edgeParsedUri.publicAddress ?? ''
 
     if (!isAddress(address)) {
       throw new Error('InvalidPublicAddressError')
@@ -121,8 +116,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         this.currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || this.currencyInfo.currencyCode,
+        currencyCode ?? this.currencyInfo.currencyCode,
         customTokens
       )
       if (denom == null) {

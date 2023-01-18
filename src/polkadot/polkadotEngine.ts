@@ -80,8 +80,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return asSubscanResponse(out)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryBalance() {
+  async queryBalance(): Promise<void> {
     try {
       // @ts-expect-error
       const response: SdkBalance = await this.api.query.system.account(
@@ -97,8 +96,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryBlockheight() {
+  async queryBlockheight(): Promise<void> {
     try {
       // @ts-expect-error
       const response: SdkBlockHeight = await this.api.rpc.chain.getBlock()
@@ -115,8 +113,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processPolkadotTransaction(tx: SubscanTx) {
+  processPolkadotTransaction(tx: SubscanTx): void {
     const {
       from,
       to,
@@ -161,13 +158,11 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryTransactions() {
+  async queryTransactions(): Promise<void> {
     return await queryTxMutex(async () => await this.queryTransactionsInner())
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryTransactionsInner() {
+  async queryTransactionsInner(): Promise<void> {
     // Skip pages we don't need
     let page = Math.floor(
       this.otherData.txCount / this.settings.subscanQueryLimit
@@ -189,8 +184,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
         transfers = cleanResponse.transfers
       } catch (e: any) {
         if (
-          typeof e?.message === 'string' &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+          e instanceof Error &&
           e.message.includes('Subscan /scan/transfers failed with 429')
         ) {
           this.log(e.message)
@@ -234,8 +228,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  initOtherData() {
+  initOtherData(): void {
     if (this.otherData.txCount == null) {
       this.otherData.txCount = 0
     }
@@ -245,25 +238,23 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   // // Public methods
   // // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
     // @ts-expect-error
     this.api = this.tools.polkadotApi
     this.initOtherData()
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    await super.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async killEngine() {
+  async killEngine(): Promise<void> {
     await super.killEngine()
     await this.tools.disconnectApi(this.walletId)
   }
@@ -296,9 +287,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     const tx = await this.makeSpend(maxSpendInfo)
     const fee = tx.networkFee
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    const getMax = (min, max) => {
+    const getMax = (min: string, max: string): string => {
       const diff = sub(max, min)
       if (lte(diff, '1')) {
         return min
@@ -460,26 +449,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-    ) {
-      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-    }
-    return ''
+  getDisplayPrivateSeed(): string {
+    return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ?? ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+  getDisplayPublicSeed(): string {
+    return this.walletInfo.keys.publicKey ?? ''
   }
 }
 
