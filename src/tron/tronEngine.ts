@@ -39,6 +39,7 @@ import {
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
+  asTronKeys,
   asTronQuery,
   asTRXBalance,
   asTRXTransferContract,
@@ -1025,7 +1026,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     const otherParams: TronTxParams = getOtherParams(edgeTransaction)
 
     const transaction = await this.txBuilder(otherParams)
-    const signer = this.tronscan.getSigner(this.walletInfo.keys.tronKey)
+    const { tronKey } = asTronKeys(this.walletInfo.keys)
+    const signer = this.tronscan.getSigner(tronKey)
     const { hex } = await signer.signTransaction(transaction.transaction)
 
     edgeTransaction.signedTx = hex
