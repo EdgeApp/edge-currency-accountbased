@@ -34,7 +34,10 @@ export class TronTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
   }
 
-  async importPrivateKey(userInput: string): Promise<TronKeys> {
+  async importPrivateKey(
+    userInput: string,
+    opts?: { derivationPath?: string }
+  ): Promise<TronKeys> {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -48,11 +51,14 @@ export class TronTools implements EdgeCurrencyTools {
       if (!validateMnemonic(userInput)) {
         throw new Error('Invalid input')
       }
-      const tronKey = await this._mnemonicToTronKey(userInput)
+      const derivationPath =
+        opts?.derivationPath ?? this.networkInfo.defaultDerivationPath
+
+      const tronKey = await this._mnemonicToTronKey(userInput, derivationPath)
       return {
         tronMnemonic: userInput,
         tronKey,
-        derivationPath: this.networkInfo.defaultDerivationPath
+        derivationPath
       }
     }
   }
@@ -67,11 +73,10 @@ export class TronTools implements EdgeCurrencyTools {
     return await this.importPrivateKey(tronMnemonic)
   }
 
-  async _mnemonicToTronKey(mnemonic: string): Promise<string> {
+  async _mnemonicToTronKey(mnemonic: string, path: string): Promise<string> {
     const myMnemonicToSeed = await mnemonicToSeed(mnemonic)
     const hdwallet = hdKey.fromMasterSeed(myMnemonicToSeed)
-    const walletHDpath = this.networkInfo.defaultDerivationPath
-    const wallet = hdwallet.derivePath(walletHDpath).getWallet()
+    const wallet = hdwallet.derivePath(path).getWallet()
     const tronKey = wallet.getPrivateKeyString().replace('0x', '')
     return tronKey
   }
