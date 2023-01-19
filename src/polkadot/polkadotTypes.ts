@@ -49,33 +49,3 @@ export const asTransactions = asObject({
   count: asNumber,
   transfers: asMaybe(asArray(asTransfer), [])
 })
-
-export interface SdkBalance {
-  nonce: number
-  consumers: number
-  providers: number
-  sufficients: number
-  data: {
-    free: number
-    reserved: number
-    miscFrozen: number
-    feeFrozen: number
-  }
-}
-
-export interface SdkBlockHeight {
-  block: {
-    header: {
-      parentHash: string
-      number: number
-      stateRoot: string
-      extrinsicsRoot: string
-    }
-  }
-}
-
-export interface SdkPaymentInfo {
-  weight: number // 137709000,
-  class: string // 'Normal',
-  partialFee: number // s152000016
-}

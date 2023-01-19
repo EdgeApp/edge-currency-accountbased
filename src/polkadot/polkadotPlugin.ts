@@ -25,7 +25,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
 
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
-  polkadotApi: ApiPromise | undefined
+  polkadotApi!: ApiPromise
   polkadotApiSubscribers: Set<string>
 
   constructor(env: PluginEnvironment<{}>) {
@@ -140,8 +140,8 @@ export class PolkadotTools implements EdgeCurrencyTools {
   async disconnectApi(walletId: string): Promise<void> {
     this.polkadotApiSubscribers.delete(walletId)
     if (this.polkadotApiSubscribers.size === 0) {
+      await this.polkadotApi.disconnect()
       // @ts-expect-error
-      await this.polkadotApi.disconnectApi()
       this.polkadotApi = undefined
     }
   }

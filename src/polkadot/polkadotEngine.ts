@@ -1,3 +1,5 @@
+import '@polkadot/api-augment/polkadot'
+
 import { ApiPromise, Keyring } from '@polkadot/api'
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
@@ -27,9 +29,6 @@ import {
   asTransfer,
   PolkadotOtherData,
   PolkadotSettings,
-  SdkBalance,
-  SdkBlockHeight,
-  SdkPaymentInfo,
   SubscanResponse,
   SubscanTx
 } from './polkadotTypes'
@@ -44,7 +43,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   settings: PolkadotSettings
   otherData!: PolkadotOtherData
   api!: ApiPromise
-  keypair: Keyring | undefined
+  keypair!: Keyring
   nonce: number
 
   constructor(
@@ -81,26 +80,20 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   }
 
   async queryBalance(): Promise<void> {
-    try {
-      // @ts-expect-error
-      const response: SdkBalance = await this.api.query.system.account(
-        this.walletInfo.keys.publicKey
-      )
-      this.nonce = response.nonce
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        response.data.free.toString()
-      )
-    } catch (e: any) {
-      this.warn('queryBalance failed with error: ', e)
-    }
+    const response = await this.api.query.system.account(
+      this.walletInfo.keys.publicKey as string
+    )
+    this.nonce = response.nonce.toNumber()
+    this.updateBalance(
+      this.currencyInfo.currencyCode,
+      response.data.free.toString()
+    )
   }
 
   async queryBlockheight(): Promise<void> {
     try {
-      // @ts-expect-error
-      const response: SdkBlockHeight = await this.api.rpc.chain.getBlock()
-      const height = response.block.header.number
+      const response = await this.api.rpc.chain.getBlock()
+      const height = response.block.header.number.toNumber()
       if (height > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = height
         this.walletLocalDataDirty = true
@@ -241,7 +234,6 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
-    // @ts-expect-error
     this.api = this.tools.polkadotApi
     this.initOtherData()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
@@ -340,8 +332,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       nativeAmount
     )
 
-    // @ts-expect-error
-    const paymentInfo: SdkPaymentInfo = await transfer.paymentInfo(
+    const paymentInfo = await transfer.paymentInfo(
       this.walletInfo.keys.publicKey
     )
 
@@ -393,14 +384,6 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       nativeAmount
     )
 
-    if (this.keypair == null) {
-      const keyring = new Keyring({ ss58Format: 0 })
-      // @ts-expect-error
-      this.keypair = keyring.addFromUri(
-        this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-      )
-    }
-
     const signer = this.api.createType('SignerPayload', {
       method: transfer,
       nonce: this.nonce,
@@ -416,12 +399,19 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       { version: this.api.extrinsicVersion }
     )
 
-    // @ts-expect-error
-    const signedPayload = extrinsicPayload.sign(this.keypair)
+    if (this.keypair == null) {
+      this.keypair = new Keyring({ ss58Format: 0 })
+      this.keypair.addFromUri(
+        this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
+      )
+    }
+
+    const signedPayload = extrinsicPayload.sign(
+      this.keypair.getPair(this.walletInfo.keys.publicKey)
+    )
 
     transfer.addSignature(
-      // @ts-expect-error
-      this.keypair.address,
+      this.walletInfo.keys.publicKey,
       signedPayload.signature,
       signer.toPayload()
     )
