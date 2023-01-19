@@ -859,7 +859,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
-    super.startEngine().catch(() => {})
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
