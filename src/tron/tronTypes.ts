@@ -12,6 +12,18 @@ import {
   Cleaner
 } from 'cleaners'
 
+export interface TronKeys {
+  tronMnemonic?: string
+  tronKey: string
+  derivationPath?: string
+}
+
+export const asTronKeys = asObject<TronKeys>({
+  tronMnemonic: asOptional(asString),
+  tronKey: asString,
+  derivationPath: asOptional(asString)
+})
+
 export interface TronNetworkInfo {
   tronApiServers: string[]
   tronNodeServers: string[]

@@ -18,7 +18,7 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { TronNetworkInfo } from './tronTypes'
+import { asTronKeys, TronKeys, TronNetworkInfo } from './tronTypes'
 
 export class TronTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -34,7 +34,7 @@ export class TronTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
   }
 
-  async importPrivateKey(userInput: string): Promise<Object> {
+  async importPrivateKey(userInput: string): Promise<TronKeys> {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -51,20 +51,20 @@ export class TronTools implements EdgeCurrencyTools {
       const tronKey = await this._mnemonicToTronKey(userInput)
       return {
         tronMnemonic: userInput,
-        tronKey
+        tronKey,
+        derivationPath: this.networkInfo.defaultDerivationPath
       }
     }
   }
 
-  async createPrivateKey(walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<TronKeys> {
     if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
     const entropy = Buffer.from(this.io.random(32)).toString('hex')
     const tronMnemonic = entropyToMnemonic(entropy)
-    const tronKey = await this._mnemonicToTronKey(tronMnemonic)
-    return { tronMnemonic, tronKey }
+    return await this.importPrivateKey(tronMnemonic)
   }
 
   async _mnemonicToTronKey(mnemonic: string): Promise<string> {
@@ -81,7 +81,8 @@ export class TronTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
-    const publicKey = pkToAddress(walletInfo.keys.tronKey)
+    const { tronKey } = asTronKeys(walletInfo.keys)
+    const publicKey = pkToAddress(tronKey)
     return { publicKey }
   }
 
