@@ -24,12 +24,14 @@ export class TronTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
+  networkInfo: TronNetworkInfo
 
   constructor(env: PluginEnvironment<TronNetworkInfo>) {
-    const { currencyInfo, io, log } = env
+    const { currencyInfo, io, log, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.log = log
+    this.networkInfo = networkInfo
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -68,7 +70,7 @@ export class TronTools implements EdgeCurrencyTools {
   async _mnemonicToTronKey(mnemonic: string): Promise<string> {
     const myMnemonicToSeed = await mnemonicToSeed(mnemonic)
     const hdwallet = hdKey.fromMasterSeed(myMnemonicToSeed)
-    const walletHDpath = "m/44'/195'/0'/0" // 195 = Tron
+    const walletHDpath = this.networkInfo.defaultDerivationPath
     const wallet = hdwallet.derivePath(walletHDpath).getWallet()
     const tronKey = wallet.getPrivateKeyString().replace('0x', '')
     return tronKey

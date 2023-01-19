@@ -15,6 +15,7 @@ import {
 export interface TronNetworkInfo {
   tronApiServers: string[]
   tronNodeServers: string[]
+  defaultDerivationPath: string
   defaultFeeLimit: number
 }
 
