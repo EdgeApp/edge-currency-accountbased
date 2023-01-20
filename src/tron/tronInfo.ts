@@ -37,6 +37,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings: {},
 
+  memoType: 'text',
+
   addressExplorer: 'https://tronscan.org/#/address/%s',
   transactionExplorer: 'https://tronscan.org/#/transaction/%s',
 

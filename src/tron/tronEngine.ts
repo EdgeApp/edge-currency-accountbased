@@ -43,6 +43,7 @@ import {
   asTronQuery,
   asTRXBalance,
   asTRXTransferContract,
+  CalcTxFeeOpts,
   ReferenceBlock,
   TronAccountResources,
   TronNetworkFees,
@@ -107,9 +108,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       energy: 0
     }
     this.networkFees = {
-      createAccountFeeSUN: 100000, // network default
-      bandwidthFeeSUN: 1000, // network default
-      energyFeeSUN: 280 // network default
+      // network defaults
+      getCreateAccountFee: 100000,
+      getTransactionFee: 1000,
+      getEnergyFee: 280,
+      getMemoFee: 1000000
     }
     this.tronscan = new TronScan(this.recentBlock)
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
@@ -561,26 +564,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const json = asChainParams(res).chainParameter
 
       // Network fees
-      const createAccountFeeSUN = json.find(
-        param => param.key === 'getCreateAccountFee'
-      )
-      const bandwidthFeeSUN = json.find(
-        param => param.key === 'getTransactionFee'
-      )
-      const energyFeeSUN = json.find(param => param.key === 'getEnergyFee')
-
-      if (
-        createAccountFeeSUN?.value == null ||
-        bandwidthFeeSUN?.value == null ||
-        energyFeeSUN?.value == null
-      )
-        throw new Error('Error fetching networkFees')
-
-      // 1 SUN = 0.000001 TRX utilizing fromSun()
-      this.networkFees = {
-        createAccountFeeSUN: createAccountFeeSUN.value,
-        bandwidthFeeSUN: bandwidthFeeSUN.value,
-        energyFeeSUN: energyFeeSUN.value
+      for (const feeName of Object.keys(this.networkFees)) {
+        const feeObj = json.find(param => param.key === feeName)
+        if (feeObj != null) {
+          this.networkFees = { ...this.networkFees, [feeName]: feeObj.value }
+        }
       }
     } catch (e: any) {
       this.log.error('checkUpdateNetworkFees error: ', e)
@@ -651,14 +639,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   // TRX transfers to existing accounts will bandwidth or TRX
   // TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
   // TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
-  async calcTxFee(
-    receiverAddress: string,
-    unsignedTxHex: string,
-    tokenOpts?: {
-      contractAddress: string
-      data: string
-    }
-  ): Promise<string> {
+  async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
+    const { note, receiverAddress, tokenOpts, unsignedTxHex } = opts
+
     const denom = getDenomInfo(
       this.currencyInfo,
       this.currencyInfo.currencyCode
@@ -771,18 +754,28 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
       // Fee is the variable create account fee plus 1 TRX
       createNewAccountFee =
-        this.networkFees.createAccountFeeSUN + parseInt(denom.multiplier)
+        this.networkFees.getCreateAccountFee + parseInt(denom.multiplier)
     }
 
     this.log('Create account fee: ', createNewAccountFee)
+
+    /// /////////////
+    // Note /////////
+    /// /////////////
+
+    // Transaction notes always burn 1 TRX if it exists. In addition, it also contributes to the bandwidth cost but is already accounted for in unsignedTxHex
+    const transactionNoteFee = note != null ? this.networkFees.getMemoFee : 0
+
+    this.log('Transaction note fee: ', transactionNoteFee)
 
     // The fee isn't a transaction parameter so these calculations are to show the user ahead of time
     // what the fee will be. Using a fallback value doesn't affect the actual transaction sent out.
 
     const totalSUN =
-      energyNeeded * this.networkFees.energyFeeSUN +
-      bandwidthNeeded * this.networkFees.bandwidthFeeSUN +
-      createNewAccountFee
+      energyNeeded * this.networkFees.getEnergyFee +
+      bandwidthNeeded * this.networkFees.getTransactionFee +
+      createNewAccountFee +
+      transactionNoteFee
 
     this.log('Total fee in SUN: ', totalSUN)
 
@@ -793,7 +786,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   async txBuilder(
     params: TronTxParams
   ): Promise<{ transaction: any; transactionHex: string }> {
-    const { currencyCode, toAddress, nativeAmount, data } = params
+    const { currencyCode, toAddress, nativeAmount, data, note } = params
 
     let feeLimit: number | undefined
     let contractJson: any
@@ -832,6 +825,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
     const transaction = contractJsonToProtobuf(contractJson)
     await this.tronscan.addRef(transaction, feeLimit)
+    if (note != null) {
+      await this.tronscan.addData(transaction, note)
+    }
     const transactionHex = byteArray2hexStr(
       transaction.getRawData().serializeBinary()
     )
@@ -881,7 +877,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { publicAddress } = spendInfo.spendTargets[0]
+    const { publicAddress, memo } = spendInfo.spendTargets[0]
+    const note = memo === '' ? undefined : memo
 
     if (publicAddress == null || spendInfo.currencyCode == null) {
       throw new Error('Error: need recipient address and/or currencyCode')
@@ -908,7 +905,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
-        const fee = await this.calcTxFee(publicAddress, transactionHex)
+        const fee = await this.calcTxFee({
+          receiverAddress: publicAddress,
+          unsignedTxHex: transactionHex,
+          note
+        })
 
         const totalAmount = add(mid, fee)
         if (gt(totalAmount, balance)) {
@@ -940,7 +941,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { nativeAmount, publicAddress, otherParams } =
+    const { nativeAmount, publicAddress, otherParams, memo } =
       edgeSpendInfo.spendTargets[0]
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -955,12 +956,15 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       ? this.allTokens.find(token => token.currencyCode === currencyCode)
       : undefined
 
+    const note = memo === '' ? undefined : memo
+
     const txOtherParams: TronTxParams = {
       currencyCode,
       toAddress: publicAddress,
       nativeAmount,
       contractAddress: metaToken?.contractAddress,
-      data
+      data,
+      note
     }
     const { transactionHex } = await this.txBuilder(txOtherParams)
 
@@ -969,11 +973,12 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         ? { contractAddress: metaToken?.contractAddress, data }
         : undefined
 
-    const totalFeeSUN = await this.calcTxFee(
-      publicAddress,
-      transactionHex,
-      tokenOpts
-    )
+    const totalFeeSUN = await this.calcTxFee({
+      receiverAddress: publicAddress,
+      unsignedTxHex: transactionHex,
+      tokenOpts,
+      note
+    })
 
     let edgeNativeAmount: string
     let networkFee: string
