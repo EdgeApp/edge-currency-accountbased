@@ -1,5 +1,14 @@
 # edge-currency-accountbased
 
+## 0.22.2 (2023-01-20)
+
+- TRX: Add note support
+- TRX: Update derivation path to industry standard
+- EVM: Revert `getMaxSpendable` simplification changes in favor of recursion due to sliding standard fee scale
+- HBAR: Update explorer urls
+- DOT: Update @polkadot/api to v9.11.3
+- DOT: Improve type safety and various code cleanups
+
 ## 0.22.1 (2023-01-17)
 
 - XRP: Replace use of `autofill` with local transaction creation
