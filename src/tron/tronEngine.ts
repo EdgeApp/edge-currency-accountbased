@@ -237,18 +237,19 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         '/wallet/getaccount',
         body
       )
+
       const balances = asMaybe(asTRXBalance)(res)
 
-      if (balances != null) {
-        this.updateBalance(
-          this.currencyInfo.currencyCode,
-          balances.balance.toString()
-        )
-      } else if (typeof res === 'object' && Object.keys(res).length === 0) {
+      if (balances == null) {
         // New accounts return an empty {} response
         this.updateBalance(this.currencyInfo.currencyCode, '0')
         return
       }
+
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        balances.balance.toString()
+      )
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
     }
