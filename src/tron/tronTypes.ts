@@ -139,9 +139,24 @@ export const asTRXBalance = asObject({
   //   })
   // ),
   // free_net_usage: asMaybe(asNumber, 0), // 1362
-  // account_resource: asObject({
-  //   latest_consume_time_for_energy: asNumber // 1667960226000
-  // }),
+  frozen: asOptional(
+    asTuple(
+      asObject({
+        frozen_balance: asNumber,
+        expire_time: asNumber
+      })
+    )
+  ),
+  account_resource: asObject({
+    // energy_usage: 315,
+    frozen_balance_for_energy: asOptional(
+      asObject({
+        frozen_balance: asNumber,
+        expire_time: asNumber
+      })
+    )
+    // latest_consume_time_for_energy: asNumber // 1667960226000
+  }),
   // active_permission: asArray(
   //   asObject({
   //     operations: asString, // '7fff1fc0033e0300000000000000000000000000000000000000000000000000'

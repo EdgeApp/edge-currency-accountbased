@@ -8,6 +8,7 @@ import {
   EdgeFetchFunction,
   EdgeLog,
   EdgeSpendInfo,
+  EdgeStakingStatus,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -88,6 +89,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   energyEstimateCache: { [addressAndContract: string]: number }
   tronscan: TronScan
   otherData!: TronWalletOtherData
+  stakingStatus: EdgeStakingStatus
 
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
@@ -122,6 +124,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
+    this.stakingStatus = { stakedAmounts: [] }
   }
 
   setOtherData(raw: any): void {
@@ -250,6 +253,39 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         this.currencyInfo.currencyCode,
         balances.balance.toString()
       )
+
+      const {
+        frozen: frozenBalanceForBandwidth,
+        account_resource: { frozen_balance_for_energy: frozenBalanceForEnergy }
+      } = balances
+
+      const stakedAmounts: EdgeStakingStatus['stakedAmounts'] = []
+
+      if (frozenBalanceForBandwidth != null) {
+        const nativeAmount =
+          frozenBalanceForBandwidth[0].frozen_balance.toString()
+        const unlockDate = new Date(frozenBalanceForBandwidth[0].expire_time)
+        stakedAmounts.push({
+          nativeAmount,
+          unlockDate,
+          otherParams: { type: 'bandwidth' }
+        })
+      }
+
+      if (frozenBalanceForEnergy != null) {
+        const nativeAmount = frozenBalanceForEnergy.frozen_balance.toString()
+        const unlockDate = new Date(frozenBalanceForEnergy.expire_time)
+        stakedAmounts.push({
+          nativeAmount,
+          unlockDate,
+          otherParams: { type: 'energy' }
+        })
+      }
+
+      this.stakingStatus = { stakedAmounts }
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        ...this.stakingStatus
+      })
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
     }
@@ -858,6 +894,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       () => {}
     )
     await super.startEngine()
+  }
+
+  async getStakingStatus(): Promise<EdgeStakingStatus> {
+    return { ...this.stakingStatus }
   }
 
   async resyncBlockchain(): Promise<void> {
