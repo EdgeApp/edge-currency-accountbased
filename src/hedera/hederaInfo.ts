@@ -27,8 +27,9 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   memoMaxLength: 100,
 
-  addressExplorer: `https://explorer.kabuto.sh/mainnet/id/%s`,
-  transactionExplorer: `https://explorer.kabuto.sh/mainnet/transaction/%s`,
+  addressExplorer: 'https://hederaexplorer.io/search-details/account/%s',
+  transactionExplorer:
+    'https://hederaexplorer.io/search-details/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
