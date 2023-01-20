@@ -1,3 +1,5 @@
+import { ApiPromise, Keyring, WsProvider } from '@polkadot/api'
+import * as utilCrypto from '@polkadot/util-crypto'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -15,28 +17,22 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
-import {
-  ApiPromise,
-  ed25519PairFromSeed,
-  isAddress,
-  Keyring,
-  mnemonicToMiniSecret,
-  WsProvider
-} from './polkadotUtils'
+
+const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
-  polkadotApi: ApiPromise | undefined
-  polkadotApiSubscribers: { [walletId: string]: boolean }
+  polkadotApi!: ApiPromise
+  polkadotApiSubscribers: Set<string>
 
   constructor(env: PluginEnvironment<{}>) {
     const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
-    this.polkadotApiSubscribers = {}
+    this.polkadotApiSubscribers = new Set()
   }
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
@@ -88,15 +84,10 @@ export class PolkadotTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || this.currencyInfo.currencyCode,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
-    let address = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (edgeParsedUri.publicAddress) {
-      address = edgeParsedUri.publicAddress
-    }
+    const address = edgeParsedUri.publicAddress ?? ''
 
     if (!isAddress(address)) {
       throw new Error('InvalidPublicAddressError')
@@ -121,8 +112,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
     if (typeof nativeAmount === 'string') {
       const denom = getDenomInfo(
         this.currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || this.currencyInfo.currencyCode,
+        currencyCode ?? this.currencyInfo.currencyCode,
         customTokens
       )
       if (denom == null) {
@@ -143,17 +133,15 @@ export class PolkadotTools implements EdgeCurrencyTools {
         )
       })
     }
-    this.polkadotApiSubscribers[walletId] = true
+    this.polkadotApiSubscribers.add(walletId)
     return this.polkadotApi
   }
 
   async disconnectApi(walletId: string): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete this.polkadotApiSubscribers[walletId]
-    // @ts-expect-error
-    if (Object.keys(this.polkadotApiSubscribers) === 0) {
+    this.polkadotApiSubscribers.delete(walletId)
+    if (this.polkadotApiSubscribers.size === 0) {
+      await this.polkadotApi.disconnect()
       // @ts-expect-error
-      await this.polkadotApi.disconnectApi()
       this.polkadotApi = undefined
     }
   }

@@ -224,7 +224,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     ).catch(() => {})
-    super.startEngine().catch(() => {})
+    await super.startEngine()
   }
 
   async killEngine(): Promise<void> {
