@@ -665,15 +665,41 @@ export class EthereumEngine
     })
 
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
-      spendInfo.spendTargets[0].nativeAmount = '1'
+      // For mainnet currency, the fee can scale with the amount sent so we should find the
+      // appropriate amount by recursively calling calcMiningFee. This is adapted from the
+      // same function in edge-core-js.
+
+      const getMax = (min: string, max: string): string => {
+        const diff = sub(max, min)
+        if (lte(diff, '1')) {
+          return min
+        }
+        const mid = add(min, div(diff, '2'))
+
+        // Try the average:
+        spendInfo.spendTargets[0].nativeAmount = mid
+        const { gasPrice, gasLimit } = calcMiningFee(
+          spendInfo,
+          this.walletLocalData.otherData.networkFees,
+          this.currencyInfo
+        )
+        const fee = mul(gasPrice, gasLimit)
+        const totalAmount = add(mid, fee)
+        if (gt(totalAmount, balance)) {
+          return getMax(min, mid)
+        } else {
+          return getMax(mid, max)
+        }
+      }
+
+      return getMax('0', add(balance, '1'))
     } else {
       spendInfo.spendTargets[0].nativeAmount = balance
+      await this.makeSpend(spendInfo)
+      return this.getBalance({
+        currencyCode: spendInfo.currencyCode
+      })
     }
-
-    const tx = await this.makeSpend(spendInfo)
-    const spendableBalance = sub(balance, tx.networkFee)
-
-    return spendableBalance
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
