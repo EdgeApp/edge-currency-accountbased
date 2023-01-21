@@ -1,0 +1,21 @@
+{
+  "username": "xx",
+  "password": "xx",
+  "contextOptions": {
+    "apiKey": "",
+    "appId": "",
+    "plugins": {
+      "ethereum": {
+        "evmScanApiKey": [
+        ],
+        "infuraProjectId": "",
+        "blockchairApiKey": "",
+        "gasStationApiKey": "",
+        "ethGasStationApiKey": "",
+        "alchemyApiKey": "",
+        "quiknodeApiKey": ""
+      },
+      "ripple": true
+    }
+  }
+}

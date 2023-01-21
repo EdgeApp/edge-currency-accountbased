@@ -1,0 +1,90 @@
+{
+  "loginKey": "BAZ3g4wYwKuLwCGzaCpD8enjTPW2jhz5mRdhUZwLXZFp",
+  "data": {
+    "lastLogin": "2023-01-06T09:47:47.999Z",
+    "loginId": "c022nKBT/8jursqcbGB5mEaUVSQR87tB9q92qkelx1M=",
+    "loginKey": "lwdUyFST/rtI9h86tD+5mm7kZ5PRZ0W0QrJPgxaHU/s=",
+    "repos": {
+      "ccb2b5e21bfdc3f49669fe554a451d78aea965c0": {},
+      "22ed26ea2b6eaa2fbded4569e50c5e8b1ac75b62": {},
+      "13f5392006dff993161c5add65f02475183bc477": {}
+    },
+    "server": {
+      "appId": "",
+      "created": "2023-01-06T09:47:50.161Z",
+      "loginId": "c022nKBT/8jursqcbGB5mEaUVSQR87tB9q92qkelx1M=",
+      "children": [],
+      "passwordAuth": "DXKVL9TnxYNbycdPz1cSxrXK+CQ1dmL3aaE5598KYiA=",
+      "passwordAuthBox": {
+        "encryptionType": 0,
+        "data_base64": "pKP/EbcaSYSM0OGiyw1q41X0hTxBtXmeGI9fekXrfH5kGQELxd/5NTWBULfcUgtR79eCBmMvKYLSg965gjmjuulyxsDaDjtMpLv+s0NdgQfLJ0rpJyWYlzZXOLHdlKsm",
+        "iv_hex": "A96FBA9E9BBA55F958C14B1C65FFB564"
+      },
+      "passwordAuthSnrp": {
+        "salt_hex": "b5865ffb9fa7b3bfe4b2384d47ce831ee22a4a9d5c34c7ef7d21467cc758f81b",
+        "n": 16384,
+        "r": 1,
+        "p": 1
+      },
+      "passwordBox": {
+        "encryptionType": 0,
+        "data_base64": "2pWYXRC7D1UlXJlGwNmvYNC3yH8hPbTzWINJGle9/+EnO1+IdkyPqFFjgF1iRMuvK+W3vvM5VYxtyk95aHEIU5kjhE8UZScUPUE/KHhelDf+r95tOA8/Mb/GRtsT1JWy",
+        "iv_hex": "EF1F9FA4A9833BA804CAF6D499E441C9"
+      },
+      "passwordKeySnrp": {
+        "salt_hex": "033a28dc0ba57543a0a75a28e220810067361d07ee2294503bd373932f380ace",
+        "n": 131072,
+        "r": 8,
+        "p": 2
+      },
+      "pin2Id": "Kv/G/X2KbUXnAVRdRwH6YF+yMpfCGY+98dp7ou2GBSU=",
+      "pin2Auth": "Tuu6Ly94x8Y3mfbYGGQf4nHZlX6Z6oXkNvjiLmZ2Umw=",
+      "pin2Box": {
+        "encryptionType": 0,
+        "data_base64": "9NpTQpkKFy1otNkgC9DSxWAY+a47tsJjtZztNe+lSkjoO7G+6hvno3ipP8rX86Xk1+6NmS2wGZOx9T3MBzosG9THQI7rAoqEeia9zs+O/9uiwt95ygRQ09xWv8oENodeXpYRIKS4G2sLcSQLyzVfnA==",
+        "iv_hex": "546C02B60DDC2FE5544CE54868E7A409"
+      },
+      "pin2KeyBox": {
+        "encryptionType": 0,
+        "data_base64": "cqQR/0O1CtVpdUimc3mUBNuno+UA3onnfBsbnN8JqW/T+tolcampEA4bDbr9lJnl1lHkrM9AMolKh7lFAkCa+K31Xp4GquMoBJMtAPjDaDZ7Kh/fOdDmoIobJuAzTvxQe5p/y3daqMlIKYXAsv7k8g==",
+        "iv_hex": "D4CA0B1F2BED8BAD1639BC140B4D22E9"
+      },
+      "pin2TextBox": {
+        "encryptionType": 0,
+        "data_base64": "wuitewFgrRnRT66toD3/VHbcTmcE+AKzl9ddFb1po0a86uuHDi5TCgs/D/FL+hjdjP1mQJ9ct9NnlFbU0U87+MhGiX5HwYyZkEoe0oLKUXU=",
+        "iv_hex": "93F665B2300379DA0739AB92A8BBEA1B"
+      },
+      "loginAuth": "XfBnMHoCiN75eEtJxeZcM76SxcRJb8JgGMgXMsSEebM=",
+      "loginAuthBox": {
+        "encryptionType": 0,
+        "data_base64": "NJ//JSXfAU3zjpV2sCH/HrmG7xPWhhG4xXClnmkDSVctnNfETZ8efU9hVH9O13CJq5a0d96DTUuX7GwGPJT9liozBm4P48le9WyVbBlrssUsQnyt+jR7tJ9TolL1Llxy0G1+azIMcSfO0Z5n6ZWakw==",
+        "iv_hex": "64A9EC37AACF9E47CF835F8802D9BF89"
+      },
+      "userId": "cBZr4QmjcqKzb0P8bSn0xKyHYPJvYmhSgUO5X5KODUI=",
+      "userTextBox": {
+        "encryptionType": 0,
+        "data_base64": "Nnil3C9vX4QniuITcSq7oxMhcP+5ZPUl8yp4dQ+fGTSNCJOwc5XLLpJ0CJvuk9XDIRs/u2F92v3PeP54W5AcJw==",
+        "iv_hex": "3D92D2045F5B3B3C5891DBA6EE8B6662"
+      },
+      "keyBoxes": [
+        {
+          "encryptionType": 0,
+          "data_base64": "gtHtkiUl06a1jQsA/QuinBIrPPXy6mip81Vms/qzmqnSc0WLn2ERRtoxkMvqNqifb4o68CCZ44bAr3rgZYdbvus1sdQNYe8plBEjEvhrk32yX/VpgvmMxA6FG+U4WP8JVFzSbn4UNuK2Mfp4sjdF27erjaYXjdkykkfSUP8e8no47JnKuMOD/GabJfS5uXtbua9tr+WdlWk3Xm1Gzq2qIbC/mi12AWqbrA47s+JQwc+u+y+sv77RvHziQmQ9rLSdwjqxpQLC5NoXdmL2Eq6laXGaD3QHzrMnUrDtn7N9t6Y4ZZi4Zhfw8EJNjS1aV5jq6dMvmen2pgJytL6u9K2wZFr9RP4RaK4/zXopKB8566M=",
+          "iv_hex": "CFBF1846C1E1AF5E88B5260EEAF03778"
+        },
+        {
+          "encryptionType": 0,
+          "data_base64": "bS7DHeXuk/1yTEUQssGMu62u/cMESCGpiV+PBMvQeK2aCf3FEz4VCOxHI5MbHZbHAlUacabsm5ASZOzhc8XosrcOXtbdhOIiAmXmKtYNukcIVaYBk/SPAip0XtmtG1VgQAjvDPq49rnvmazRfNXNJJgtaqOXmaZH2/drBecAe4o8Vhkn2Q0k4Gp7SOm5RKdM9U8lqptr0zWhEsSf+eqfYkRF05bwU8FT1xf1Lwc95x1+CAqgQdlBVlFqRuRT37yzc5KxCIkrrzDMFcaqL9cWlr4fJ3rdUs8w7FyHYUzotaHG5voMh5Ratq1ZCwG+s9DpSB2Macj9s5h0ar0VrvHxTQZ6PfUu1EqglhAkUtdaXrH/4PwCnouVGWAHXpkX0S/sBgaZd29cxzeQNbCZ19mP83Cv+LN/R8nU7epCNOCMlsU=",
+          "iv_hex": "ADDE80953828144E8FAC4E00EB18EB6D"
+        },
+        {
+          "encryptionType": 0,
+          "data_base64": "dOBcB1B/+sN1fCkSP58cWzaWRRMJJzLBtjr0s94fmK6tegUbL1JxsfdYIS5ZA+ACeMk5hvLJYk1bpf/70McwdE7qukS1WQ4/q+L48xJZXDr4ws4IgvkxKjiVWumLzY1eKoXznl0d+YcGveGqpS98tU269qf19TzbGlx1GLhmAvjv72+AyJQN2kc4whc94ZO57pL2jVbmADhOg4oFfQMFd/iRoLX+aPBjVXycNGkUabzIkaN0ERU17r8EUOtwlNxyEDKVKYlune2qm5ZXYQLMC0MgSG9nvVUw7F16gFV1G5Dw3C2aWgc+pmevha1B22jLB9jdyDBYVzXFUJpMxt0bb69VK4TFB1/gaPw6+D3HKJdBK0TyRht7+rrXrGBeNGmTS3828ErWwmI6vKBEcaDn+sNhSTej/wWlSbjHWlEN70YMdVdWK5mOgneNvzhnCypaMsvxOk+s7fKCrIk8NcBKFBTRNnxBaNtEGjZzYap3AA1+8mD28c1Ou8hrI2iT0i2LplwKa68cftvtZfNpN/C+9i3Z8MePENhSadRcYyouR/gwvCfbZpGq1g6bvlpwGsrzpVxIdaL4ObvQYc+SO/bqiOB58d36rnQxJsfbwF7pybsH490s6CQ4sVLy21sr7K19g9wsJFllbB9ZCJmFkguW0cuonO65clDsthbVAHv1Ho4MFTmy1W7tmkfjSBQx81mA",
+          "iv_hex": "03EF366F6EB87BD3B6BF3C345191B503"
+        }
+      ],
+      "vouchers": []
+    },
+    "username": "bob"
+  }
+}

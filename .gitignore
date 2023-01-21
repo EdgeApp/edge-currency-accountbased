@@ -11,6 +11,7 @@ npm-debug.log
 package-lock.json
 yarn-error.log
 stats.json
+testConfig.json
 
 # Editors:
 .DS_Store
