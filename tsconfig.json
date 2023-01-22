@@ -11,5 +11,5 @@
 
     "strict": true
   },
-  "exclude": ["lib"]
+  "exclude": ["lib", "bin"]
 }

@@ -409,6 +409,9 @@ export function biggyRoundToNearestInt(float: string): string {
   return int
 }
 
+export const prettyPrintObject = (obj: any): void =>
+  console.log(JSON.stringify(obj, null, 2))
+
 export {
   normalizeAddress,
   getDenomInfo,

@@ -1,0 +1,10 @@
+{
+  "xrpTsConfig": {
+    "server": "wss://s2.ripple.com",
+    "address1": "rNaFY8MEzCK9N8XqkyESf5GL1Hpskp9rAF",
+    "privateKey1": "sEdTxxx",
+    "address2": "rPcyVRChgwkHZHtFUvvBUoqqUkRDjkfS7U",
+    "privateKey2": "sEdVxxx",
+    "issuerAddress": "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq"
+  }
+}
