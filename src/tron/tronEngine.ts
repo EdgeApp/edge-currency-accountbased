@@ -40,18 +40,22 @@ import {
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
+  asTronFreezeAction,
   asTronKeys,
   asTronQuery,
+  asTronUnfreezeAction,
   asTronWalletOtherData,
   asTRXBalance,
   asTRXTransferContract,
   CalcTxFeeOpts,
   ReferenceBlock,
   TronAccountResources,
+  TronFreezeAction,
   TronNetworkFees,
   TronNetworkInfo,
   TronTransaction,
   TronTransferParams,
+  TronUnfreezeAction,
   TronWalletOtherData,
   TxBuilderParams,
   TxQueryCache
@@ -111,8 +115,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       timestamp: 0
     }
     this.accountResources = {
-      bandwidth: 0,
-      energy: 0
+      BANDWIDTH: 0,
+      ENERGY: 0
     }
     this.networkFees = {
       // network defaults
@@ -126,7 +130,18 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
-    this.stakingStatus = { stakedAmounts: [] }
+    this.stakingStatus = {
+      stakedAmounts: [
+        {
+          nativeAmount: '0',
+          otherParams: { type: 'BANDWIDTH' }
+        },
+        {
+          nativeAmount: '0',
+          otherParams: { type: 'ENERGY' }
+        }
+      ]
+    }
   }
 
   setOtherData(raw: any): void {
@@ -270,7 +285,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         stakedAmounts.push({
           nativeAmount,
           unlockDate,
-          otherParams: { type: 'bandwidth' }
+          otherParams: { type: 'BANDWIDTH' }
         })
       }
 
@@ -280,7 +295,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         stakedAmounts.push({
           nativeAmount,
           unlockDate,
-          otherParams: { type: 'energy' }
+          otherParams: { type: 'ENERGY' }
         })
       }
 
@@ -301,8 +316,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const resources = asAccountResources(res)
 
       this.accountResources = {
-        bandwidth: resources.freeNetLimit - resources.freeNetUsed,
-        energy: resources.EnergyLimit - resources.EnergyUsed
+        BANDWIDTH: resources.freeNetLimit - resources.freeNetUsed,
+        ENERGY: resources.EnergyLimit - resources.EnergyUsed
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address resources: ', e)
@@ -726,11 +741,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
       energyNeeded = Math.max(
         (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
-          100000) - this.accountResources.energy,
+          100000) - this.accountResources.ENERGY,
         0
       )
     }
-    this.log('Account energy: ', this.accountResources.energy)
+    this.log('Account energy: ', this.accountResources.ENERGY)
     this.log('Energy needed: ', energyNeeded)
 
     /// ////////////
@@ -782,11 +797,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     // Bandwidth is paid with bandwidth or TRX (unlike energy)
-    if (bandwidthNeeded < this.accountResources.bandwidth) {
+    if (bandwidthNeeded < this.accountResources.BANDWIDTH) {
       bandwidthNeeded = 0
     }
 
-    this.log('Account bandwidth: ', this.accountResources.bandwidth)
+    this.log('Account bandwidth: ', this.accountResources.BANDWIDTH)
     this.log('Bandwidth needed: ', bandwidthNeeded)
 
     /// /////////////
@@ -886,6 +901,93 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     return { contractJson, feeLimit, note }
+  }
+
+  async makeFreezeTransaction(
+    action: TronFreezeAction
+  ): Promise<EdgeTransaction> {
+    const {
+      params: { nativeAmount, resource }
+    } = action
+
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          frozen_balance: parseInt(nativeAmount),
+          frozen_duration: this.networkInfo.defaultFreezeDurationInDays,
+          resource: resource
+        }
+      },
+      type: 'FreezeBalanceContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: mul(nativeAmount, '-1'),
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: resource
+      }
+    }
+
+    return edgeTransaction
+  }
+
+  async makeUnfreezeTransaction(
+    action: TronUnfreezeAction
+  ): Promise<EdgeTransaction> {
+    const {
+      params: { resource }
+    } = action
+
+    const stakedAmount = this.stakingStatus.stakedAmounts.find(
+      amount => amount.otherParams?.type === resource
+    )
+    if (stakedAmount == null) throw new Error('Nothing to unfreeze')
+
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          resource: resource
+        }
+      },
+      type: 'UnfreezeBalanceContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: stakedAmount.nativeAmount,
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: resource
+      }
+    }
+
+    return edgeTransaction
   }
 
   // // ****************************************************************************
@@ -991,6 +1093,17 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    // Check for other transaction types first
+    if (edgeSpendInfoIn.otherParams != null) {
+      let action: TronFreezeAction | TronUnfreezeAction | undefined
+
+      action = asMaybe(asTronFreezeAction)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeFreezeTransaction(action)
+
+      action = asMaybe(asTronUnfreezeAction)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeUnfreezeTransaction(action)
+    }
+
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
       edgeSpendInfoIn
     )

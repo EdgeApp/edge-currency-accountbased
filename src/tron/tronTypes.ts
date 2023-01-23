@@ -30,6 +30,7 @@ export interface TronNetworkInfo {
   tronNodeServers: string[]
   defaultDerivationPath: string
   defaultFeeLimit: number
+  defaultFreezeDurationInDays: number
 }
 
 export const asTxQueryCache = asObject({
@@ -46,8 +47,8 @@ export interface ReferenceBlock {
 }
 
 export interface TronAccountResources {
-  bandwidth: number
-  energy: number
+  BANDWIDTH: number
+  ENERGY: number
 }
 
 export interface TronNetworkFees {
@@ -86,6 +87,34 @@ export interface TronTransferParams {
   data?: string
   note?: string
 }
+
+const asResource = asValue('BANDWIDTH', 'ENERGY')
+type Resource = ReturnType<typeof asResource>
+
+export interface TronFreezeAction {
+  type: 'add'
+  params: { nativeAmount: string; resource: Resource }
+}
+
+export const asTronFreezeAction = asObject<TronFreezeAction>({
+  type: asValue('add'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResource
+  })
+})
+
+export interface TronUnfreezeAction {
+  type: 'remove'
+  params: { resource: Resource }
+}
+
+export const asTronUnfreezeAction = asObject<TronUnfreezeAction>({
+  type: asValue('remove'),
+  params: asObject({
+    resource: asResource
+  })
+})
 
 export interface CalcTxFeeOpts {
   receiverAddress?: string
