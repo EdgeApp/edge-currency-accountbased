@@ -50,8 +50,10 @@ import {
   TronAccountResources,
   TronNetworkFees,
   TronNetworkInfo,
-  TronTxParams,
+  TronTransaction,
+  TronTransferParams,
   TronWalletOtherData,
+  TxBuilderParams,
   TxQueryCache
 } from './tronTypes'
 import {
@@ -818,9 +820,22 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   // Returns unsigned transaction as object and hex string. Function is actually synchronous because of the overloaded troncan client.
-  async txBuilder(
-    params: TronTxParams
-  ): Promise<{ transaction: any; transactionHex: string }> {
+  async txBuilder(params: TxBuilderParams): Promise<TronTransaction> {
+    const { contractJson, feeLimit, note } = params
+
+    const transaction = contractJsonToProtobuf(contractJson)
+    await this.tronscan.addRef(transaction, feeLimit)
+    if (note != null) {
+      await this.tronscan.addData(transaction, note)
+    }
+    const transactionHex = byteArray2hexStr(
+      transaction.getRawData().serializeBinary()
+    )
+
+    return { transaction, transactionHex }
+  }
+
+  async makeTransferJson(params: TronTransferParams): Promise<TxBuilderParams> {
     const { currencyCode, toAddress, nativeAmount, data, note } = params
 
     let feeLimit: number | undefined
@@ -858,16 +873,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       }
       feeLimit = this.networkInfo.defaultFeeLimit
     }
-    const transaction = contractJsonToProtobuf(contractJson)
-    await this.tronscan.addRef(transaction, feeLimit)
-    if (note != null) {
-      await this.tronscan.addData(transaction, note)
-    }
-    const transactionHex = byteArray2hexStr(
-      transaction.getRawData().serializeBinary()
-    )
 
-    return { transaction, transactionHex }
+    return { contractJson, feeLimit, note }
   }
 
   // // ****************************************************************************
@@ -939,7 +946,12 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           currencyCode: this.currencyInfo.currencyCode,
           nativeAmount: mid
         }
-        const { transactionHex } = await this.txBuilder(txParams)
+        const { contractJson, feeLimit } = await this.makeTransferJson(txParams)
+        const { transactionHex } = await this.txBuilder({
+          contractJson,
+          feeLimit,
+          note
+        })
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
@@ -996,7 +1008,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     const note = memo === '' ? undefined : memo
 
-    const txOtherParams: TronTxParams = {
+    const txTransferParams: TronTransferParams = {
       currencyCode,
       toAddress: publicAddress,
       nativeAmount,
@@ -1004,7 +1016,14 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       data,
       note
     }
-    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const { contractJson, feeLimit } = await this.makeTransferJson(
+      txTransferParams
+    )
+    const { transactionHex } = await this.txBuilder({
+      contractJson,
+      feeLimit,
+      note
+    })
 
     const tokenOpts =
       metaToken?.contractAddress != null && data != null
@@ -1043,6 +1062,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       })
     }
 
+    const txOtherParams: TxBuilderParams = { contractJson, feeLimit, note }
+
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
@@ -1066,7 +1087,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams: TronTxParams = getOtherParams(edgeTransaction)
+    const otherParams: TxBuilderParams = getOtherParams(edgeTransaction)
 
     const transaction = await this.txBuilder(otherParams)
     const { tronKey } = asTronKeys(this.walletInfo.keys)
@@ -1097,10 +1118,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     // Update local caches
     const { toAddress, contractAddress } =
-      getOtherParams<TronTxParams>(edgeTransaction)
+      getOtherParams<TxBuilderParams>(edgeTransaction)
     if (
       edgeTransaction.currencyCode === this.currencyInfo.currencyCode &&
-      edgeTransaction.otherParams?.toAddress != null
+      toAddress != null
     ) {
       this.accountExistsCache[toAddress] = true
     }
