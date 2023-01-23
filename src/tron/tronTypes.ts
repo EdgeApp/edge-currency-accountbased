@@ -88,7 +88,7 @@ export interface TronTransferParams {
 }
 
 export interface CalcTxFeeOpts {
-  receiverAddress: string
+  receiverAddress?: string
   unsignedTxHex: string
   note?: string
   tokenOpts?: {

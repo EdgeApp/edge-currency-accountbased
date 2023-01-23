@@ -688,7 +688,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     let energyNeeded = 0
 
-    if (tokenOpts != null) {
+    if (tokenOpts != null && receiverAddress != null) {
       const { contractAddress, data } = tokenOpts
 
       if (
@@ -750,7 +750,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       bandwidthNeeded--
     }
 
-    if (this.accountExistsCache[receiverAddress] === undefined) {
+    if (
+      receiverAddress != null &&
+      this.accountExistsCache[receiverAddress] === undefined
+    ) {
       try {
         // Determine if recipient exists
         const res = await this.multicastServers(
@@ -770,7 +773,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     // The default bandwidth value is appropriate for all cases except for a TRX transaction that creates a new account
-    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+    if (
+      tokenOpts == null &&
+      receiverAddress != null &&
+      !this.accountExistsCache[receiverAddress]
+    ) {
       bandwidthNeeded = 100
     }
 
@@ -788,7 +795,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     let createNewAccountFee = 0
 
-    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+    if (
+      tokenOpts == null &&
+      receiverAddress != null &&
+      !this.accountExistsCache[receiverAddress]
+    ) {
       // Fee is the variable create account fee plus 1 TRX
       createNewAccountFee =
         this.networkFees.getCreateAccountFee + parseInt(denom.multiplier)
