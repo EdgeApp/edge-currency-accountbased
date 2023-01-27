@@ -1,4 +1,4 @@
-import { API, APIClient, FetchProvider } from '@greymass/eosio'
+import { API, APIClient, FetchProvider, PrivateKey } from '@greymass/eosio'
 import { div, toFixed } from 'biggystring'
 import {
   EdgeCurrencyInfo,
@@ -12,7 +12,6 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import ecc from 'eosjs-ecc'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
@@ -60,10 +59,7 @@ export class EosTools implements EdgeCurrencyTools {
     if (strippedPrivateKey.length !== 51) {
       throw new Error('Private key wrong length')
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!ecc.isValidPrivate(strippedPrivateKey)) {
-      throw new Error('Invalid private key')
-    }
+    PrivateKey.fromString(strippedPrivateKey) // will throw if invalid
     return {
       // best practice not to import owner key, only active
       // note that signing is done by active key (eosKey, not eosOwnerKey)
@@ -81,9 +77,9 @@ export class EosTools implements EdgeCurrencyTools {
       // Multiple keys can be created and stored here. ie. If there is both a mnemonic and key format,
       // Generate and store them here by returning an arbitrary object with them.
       let entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const eosOwnerKey = ecc.seedPrivate(entropy) // returns WIF format
+      const eosOwnerKey = PrivateKey.from(entropy).toWif()
       entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const eosKey = ecc.seedPrivate(entropy)
+      const eosKey = PrivateKey.from(entropy).toWif()
       return { eosOwnerKey, eosKey }
     } else {
       throw new Error('InvalidWalletType')
@@ -99,13 +95,17 @@ export class EosTools implements EdgeCurrencyTools {
       // but rather just different versions of the master public key
       // const publicKey = derivePubkey(walletInfo.keys.eosKey)
       // const publicKey = deriveAddress(walletInfo.keys.eosKey)
-      const publicKey = ecc.privateToPublic(walletInfo.keys.eosKey)
+      const publicKey = PrivateKey.from(walletInfo.keys.eosKey)
+        .toPublic()
+        .toLegacyString()
       let ownerPublicKey
       // usage of eosOwnerKey must be protected by conditional
       // checking for its existence
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (walletInfo.keys.eosOwnerKey) {
-        ownerPublicKey = ecc.privateToPublic(walletInfo.keys.eosOwnerKey)
+        ownerPublicKey = PrivateKey.from(walletInfo.keys.eosOwnerKey)
+          .toPublic()
+          .toLegacyString()
       }
       return { publicKey, ownerPublicKey }
     } else {
