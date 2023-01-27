@@ -86,3 +86,8 @@ export interface EosWalletOtherData {
   // @ts-expect-error
   highestTxHeight: { [string]: number }
 }
+
+export interface ReferenceBlock {
+  ref_block_num: number
+  ref_block_prefix: number
+}
