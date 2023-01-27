@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 
+import { API, Asset } from '@greymass/eosio'
 import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither, asMaybe } from 'cleaners'
 import {
@@ -16,7 +17,6 @@ import {
 } from 'edge-core-js/types'
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
-import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
@@ -30,7 +30,7 @@ import {
   getOtherParams,
   pickRandom
 } from '../common/utils'
-import { checkAddress, EosTools } from './eosPlugin'
+import { checkAddress, EosTools, getClient } from './eosPlugin'
 import {
   asDfuseGetKeyAccountsResponse,
   asDfuseGetTransactionsErrorResponse,
@@ -183,8 +183,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
-      const result = await this.multicastServers('getInfo', {})
-      const blockHeight = result.head_block_num
+      const result: API.v1.GetInfoResponse = await this.multicastServers(
+        'getInfo'
+      )
+      const blockHeight = result.head_block_num.toNumber()
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
         this.walletLocalData.blockHeight = blockHeight
@@ -728,20 +730,29 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         break
       }
 
-      case 'getCurrencyBalance':
+      case 'getCurrencyBalance': {
+        const contractAddress = params[0]
+        out = await asyncWaterfall(
+          this.networkInfo.eosNodes.map(server => async () => {
+            const client = getClient(this.fetchCors, server)
+            const result = await client.v1.chain.get_currency_balance(
+              contractAddress,
+              this.otherData.accountName
+            )
+
+            return { server, result }
+          })
+        )
+        break
+      }
       case 'getInfo': {
         const { eosNodes } = this.networkInfo
         const randomNodes = pickRandom(eosNodes, 3)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const eosServer = EosApi({
-              chainId: this.networkInfo.chainId,
-              fetch: this.fetchCors,
-              httpEndpoint: server,
-              keyProvider: [],
-              verbose: false // verbose logging such as API activity
-            })
-            const result = await eosServer[func](...params)
+            const client = getClient(this.fetchCors, server)
+            const result = await client.v1.chain.get_info()
+
             return { server, result }
           })
         )
@@ -810,40 +821,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       if (this.otherData.accountName != null) {
         for (const token of this.allTokens) {
           if (this.enabledTokens.includes(token.currencyCode)) {
-            const results = await this.multicastServers(
+            const results: Asset[] = await this.multicastServers(
               'getCurrencyBalance',
-              token.contractAddress,
-              this.otherData.accountName
+              token.contractAddress
             )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (results && results.length > 0) {
-              for (const r of results) {
-                if (typeof r === 'string') {
-                  const balanceArray = r.split(' ')
-                  if (balanceArray.length === 2) {
-                    const exchangeAmount = balanceArray[0]
-                    const currencyCode = balanceArray[1]
-                    let nativeAmount = ''
-
-                    // Convert exchange amount to native amount
-                    const denom = getDenomInfo(
-                      this.currencyInfo,
-                      currencyCode,
-                      [...this.customTokens, ...this.allTokens]
-                    )
-                    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-                    if (denom != null && denom.multiplier) {
-                      nativeAmount = mul(exchangeAmount, denom.multiplier)
-                    } else {
-                      this.log(
-                        `Received balance for unsupported currencyCode: ${currencyCode}`
-                      )
-                    }
-                    this.updateBalance(currencyCode, nativeAmount)
-                  }
-                }
-              }
-            }
+            const nativeAmount = results[0]?.units?.toString() ?? '0'
+            this.updateBalance(token.currencyCode, nativeAmount)
           }
         }
       }
