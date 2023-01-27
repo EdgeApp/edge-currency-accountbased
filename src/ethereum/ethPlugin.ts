@@ -19,15 +19,18 @@ import { contractToTokenId, PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
+import { WalletConnectors } from './ethTypes'
 
 export class EthereumTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
+  walletConnectors: WalletConnectors
 
   constructor(env: PluginEnvironment<{}>) {
     const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
+    this.walletConnectors = {}
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
