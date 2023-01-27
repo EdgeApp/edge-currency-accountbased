@@ -36,7 +36,6 @@ declare module '@tronscan/client/src/utils/crypto' {
 declare module '@tronscan/client/src/utils/tronWeb' {
   export const contractJsonToProtobuf: (json: Object) => any
 }
-declare module 'eosjs-api'
 declare module 'eosjs-ecc'
 declare module 'ethereumjs-abi'
 declare module 'ethereumjs-util'
