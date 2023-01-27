@@ -6,10 +6,8 @@ export interface EosNetworkInfo {
   createAccountViaSingleApiEndpoints?: string[]
   eosActivationServers: string[]
   eosDfuseServers: string[]
-  eosFuelServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
-  fuelActions?: string[]
   uriProtocol: string
 }
 
