@@ -1,15 +1,16 @@
+import { API, APIClient, FetchProvider } from '@greymass/eosio'
 import { div, toFixed } from 'biggystring'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeLog,
   EdgeParsedUri,
   EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -26,9 +27,18 @@ export function checkAddress(address: string): boolean {
   return /^[a-z0-9.]{1,12}$/.test(address)
 }
 
+export function getClient(fetch: EdgeFetchFunction, server: string): APIClient {
+  const provider = new FetchProvider(server, {
+    fetch
+  })
+  return new APIClient({
+    provider
+  })
+}
+
 export class EosTools implements EdgeCurrencyTools {
-  eosServer: Object
   currencyInfo: EdgeCurrencyInfo
+  fetchCors: EdgeFetchFunction
   io: EdgeIo
   log: EdgeLog
   networkInfo: EosNetworkInfo
@@ -39,14 +49,7 @@ export class EosTools implements EdgeCurrencyTools {
     this.log = log
     this.currencyInfo = currencyInfo
     this.networkInfo = networkInfo
-
-    this.eosServer = EosApi({
-      chainId: networkInfo.chainId,
-      fetch: getFetchCors(env),
-      httpEndpoint: this.networkInfo.eosNodes[0],
-      keyProvider: [],
-      verbose: false // verbose logging such as API activity
-    })
+    this.fetchCors = getFetchCors(env)
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {
@@ -151,23 +154,13 @@ export class EosTools implements EdgeCurrencyTools {
     return cleanLocation.contractAddress.toLowerCase()
   }
 
-  // change to fetch call in the future
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async getAccSystemStats(account: string) {
-    return await new Promise((resolve, reject) => {
-      // @ts-expect-error
-      this.eosServer.getAccount(account, (error, result) => {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (error) {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (error.message.includes('unknown key')) {
-            error.code = 'ErrorUnknownAccount'
-          }
-          reject(error)
-        }
-        resolve(result)
+  async getAccSystemStats(account: string): Promise<API.v1.AccountObject> {
+    return await asyncWaterfall(
+      this.networkInfo.eosNodes.map(server => async () => {
+        const client = getClient(this.fetchCors, server)
+        return await client.v1.chain.get_account(account)
       })
-    })
+    )
   }
 
   //
@@ -181,7 +174,7 @@ export class EosTools implements EdgeCurrencyTools {
       const out = await asyncWaterfall(
         this.networkInfo.eosActivationServers.map(server => async () => {
           const uri = `${server}/api/v1/getSupportedCurrencies`
-          const response = await fetch(uri)
+          const response = await this.fetchCors(uri)
           const result = await response.json()
           return {
             result
@@ -200,10 +193,12 @@ export class EosTools implements EdgeCurrencyTools {
       const out = await asyncWaterfall(
         this.networkInfo.eosActivationServers.map(server => async () => {
           const uri = `${server}/api/v1/eosPrices/${currencyCode}`
-          const response = await fetch(uri)
+          const response = await this.fetchCors(uri)
           const prices = asGetActivationCost(await response.json())
           const startingResourcesUri = `${server}/api/v1/startingResources/${currencyCode}`
-          const startingResourcesResponse = await fetch(startingResourcesUri)
+          const startingResourcesResponse = await this.fetchCors(
+            startingResourcesUri
+          )
           const startingResources = asGetActivationCost(
             await startingResourcesResponse.json()
           )

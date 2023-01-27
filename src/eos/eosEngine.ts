@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 
+import { API } from '@greymass/eosio'
 import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither, asMaybe } from 'cleaners'
 import {
@@ -16,7 +17,6 @@ import {
 } from 'edge-core-js/types'
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
-import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
@@ -29,7 +29,7 @@ import {
   getOtherParams,
   pickRandom
 } from '../common/utils'
-import { checkAddress, EosTools } from './eosPlugin'
+import { checkAddress, EosTools, getClient } from './eosPlugin'
 import {
   asDfuseGetKeyAccountsResponse,
   asDfuseGetTransactionsErrorResponse,
@@ -177,8 +177,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkBlockchainInnerLoop() {
     try {
-      const result = await this.multicastServers('getInfo', {})
-      const blockHeight = result.head_block_num
+      const result: API.v1.GetInfoResponse = await this.multicastServers(
+        'getInfo',
+        {}
+      )
+      const blockHeight = result.head_block_num.toNumber()
       if (this.walletLocalData.blockHeight !== blockHeight) {
         this.checkDroppedTransactionsThrottled()
         this.walletLocalData.blockHeight = blockHeight
@@ -742,14 +745,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         const randomNodes = pickRandom(eosNodes, 3)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const eosServer = EosApi({
-              chainId: this.networkInfo.chainId,
-              fetch: this.fetchCors,
-              httpEndpoint: server,
-              keyProvider: [],
-              verbose: false // verbose logging such as API activity
-            })
-            const result = await eosServer[func](...params)
+            const client = getClient(this.fetchCors, server)
+            const result = await client.v1.chain.get_info()
+
             return { server, result }
           })
         )
