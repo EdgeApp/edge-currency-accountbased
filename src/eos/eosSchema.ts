@@ -1,10 +1,13 @@
+import { ABIDef } from '@greymass/eosio'
 import {
   asArray,
   asBoolean,
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  asTuple,
+  asValue
 } from 'cleaners'
 
 export const asGetAccountActivationQuote = asObject({
@@ -134,3 +137,45 @@ export const asEosTransactionSuperNodeSchema = asObject({
   '@timestamp': asString,
   block_num: asNumber
 })
+
+export const asEosTransfer = asObject({
+  account: asString,
+  name: asValue('transfer'),
+  authorization: asTuple(
+    asObject({
+      actor: asString,
+      permission: asValue('active')
+    })
+  ),
+  data: asObject({
+    from: asString,
+    to: asString,
+    quantity: asString,
+    memo: asOptional(asString)
+  })
+})
+
+export type EosTransfer = ReturnType<typeof asEosTransfer>
+
+export const asEosOtherParams = asObject({
+  actions: asArray(asEosTransfer),
+  signatures: asArray(asString)
+})
+
+export type EosOtherParams = ReturnType<typeof asEosOtherParams>
+
+export const transferAbi: ABIDef = {
+  structs: [
+    {
+      base: '',
+      name: 'transfer',
+      fields: [
+        { name: 'from', type: 'name' },
+        { name: 'to', type: 'name' },
+        { name: 'quantity', type: 'asset' },
+        { name: 'memo', type: 'string' }
+      ]
+    }
+  ],
+  actions: [{ name: 'transfer', type: 'transfer', ricardian_contract: '' }]
+}

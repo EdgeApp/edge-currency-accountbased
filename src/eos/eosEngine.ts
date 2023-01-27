@@ -1,6 +1,14 @@
 /* eslint-disable camelcase */
 
-import { API, Asset } from '@greymass/eosio'
+import {
+  API,
+  APIError,
+  Asset,
+  PackedTransaction,
+  PrivateKey,
+  SignedTransaction,
+  Transaction
+} from '@greymass/eosio'
 import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither, asMaybe } from 'cleaners'
 import {
@@ -15,8 +23,6 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { Api, JsonRpc, RpcError } from 'eosjs'
-import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
@@ -39,14 +45,18 @@ import {
   asGetAccountActivationQuote,
   asHyperionGetTransactionResponse,
   asHyperionTransaction,
-  dfuseGetTransactionsQueryString
+  dfuseGetTransactionsQueryString,
+  EosOtherParams,
+  EosTransfer,
+  transferAbi
 } from './eosSchema'
 import {
   asEosWalletOtherData,
   EosNetworkInfo,
   EosTransaction,
   EosTransactionSuperNode,
-  EosWalletOtherData
+  EosWalletOtherData,
+  ReferenceBlock
 } from './eosTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -76,6 +86,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   otherMethods: Object
   networkInfo: EosNetworkInfo
   fetchCors: EdgeFetchFunction
+  referenceBlock: ReferenceBlock
 
   constructor(
     env: PluginEnvironment<EosNetworkInfo>,
@@ -90,6 +101,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
     const { currencyCode, denominations } = this.currencyInfo
+    this.referenceBlock = {
+      ref_block_num: 0,
+      ref_block_prefix: 0
+    }
     this.allTokens.push({
       ...denominations[0],
       currencyCode,
@@ -194,6 +209,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         this.currencyEngineCallbacks.onBlockHeightChanged(
           this.walletLocalData.blockHeight
         )
+      }
+
+      const header = result.getTransactionHeader()
+      this.referenceBlock = {
+        ref_block_num: header.ref_block_num.toNumber(),
+        ref_block_prefix: header.ref_block_prefix.toNumber()
       }
     } catch (e: any) {
       this.error(`Error fetching height: `, e)
@@ -763,29 +784,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         const randomNodes = pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
-            const rpc = new JsonRpc(server, {
-              fetch: async (...args) => {
-                // this.log(`LoggedFetch: ${JSON.stringify(args)}`)
-                return await this.fetchCors(...args)
-              }
-            })
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            const keys = params[1].keyProvider ? params[1].keyProvider : []
-            params[1] = {
-              ...params[1],
-              blocksBehind: 3,
-              expireSeconds: 30
-            }
-            const signatureProvider = new JsSignatureProvider(keys)
-            const eos = new Api({
-              // Pass in new authorityProvider
-              rpc,
-              signatureProvider,
-              textDecoder: new TextDecoder(),
-              textEncoder: new TextEncoder()
-            })
-            // @ts-expect-error
-            const result = await eos[func](...params)
+            const tx: PackedTransaction = params[0]
+            const client = getClient(this.fetchCors, server)
+            const result = await client.v1.chain.send_transaction(tx)
+
             return { server, result }
           })
         )
@@ -891,7 +893,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
-    const { contractAddress } = tokenInfo
+    const { contractAddress = 'eosio.token' } = tokenInfo
     const nativeDenomination = getDenomInfo(
       this.currencyInfo,
       currencyCode,
@@ -955,7 +957,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
     }
 
-    const transferActions = [
+    const transferActions: EosTransfer[] = [
       {
         account: contractAddress,
         name: 'transfer',
@@ -974,10 +976,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
     ]
 
-    const transactionJson = {
-      actions: [...transferActions]
-    }
-
     nativeAmount = `-${nativeAmount}`
 
     // const idInternal = Buffer.from(this.io.random(32)).toString('hex')
@@ -991,7 +989,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams: {
-        transactionJson
+        actions: transferActions,
+        signatures: []
       },
       walletId: this.walletId
     }
@@ -1057,61 +1056,54 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
+    const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
 
-    // Do signing
-    // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
-    const keyProvider = []
-    if (this.walletInfo.keys.eosKey != null) {
-      keyProvider.push(this.walletInfo.keys.eosKey)
-    }
-    if (this.walletInfo.keys.eosOwnerKey != null) {
-      keyProvider.push(this.walletInfo.keys.eosOwnerKey)
-    }
-
-    await this.multicastServers('transact', otherParams.transactionJson, {
-      keyProvider,
-      sign: true,
-      broadcast: false
+    const transaction = Transaction.from(
+      {
+        ...this.referenceBlock,
+        expiration: new Date(new Date().getTime() + 30000),
+        actions: otherParams.actions
+      },
+      transferAbi
+    )
+    const txDigest = transaction.signingDigest(this.networkInfo.chainId)
+    const privateKey = PrivateKey.from(this.walletInfo.keys.eosKey)
+    const signature = privateKey.signDigest(txDigest)
+    const signedTransaction = SignedTransaction.from({
+      ...transaction,
+      signatures: [signature]
     })
+    otherParams.signatures.push(signature.toString())
+    const packed = PackedTransaction.fromSigned(signedTransaction)
+    const signedHex = packed.packed_trx.hexString
 
-    // Complete edgeTransaction.txid params if possible at this state
+    edgeTransaction.signedTx = signedHex
+    edgeTransaction.otherParams = otherParams
     return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
-    // Broadcast transaction and add date
-    const keyProvider = []
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.walletInfo.keys.eosKey) {
-      keyProvider.push(this.walletInfo.keys.eosKey)
-    }
-    // usage of eosOwnerKey must be protected by conditional
-    // checking for its existence
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.walletInfo.keys.eosOwnerKey) {
-      keyProvider.push(this.walletInfo.keys.eosOwnerKey)
-    }
+    const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
+    const { signatures } = otherParams
+
+    const packedTx = PackedTransaction.from({
+      signatures,
+      packed_trx: edgeTransaction.signedTx
+    })
+
     try {
-      const signedTx = await this.multicastServers(
-        'transact',
-        otherParams.transactionJson,
-        {
-          keyProvider,
-          sign: true,
-          broadcast: true
-        }
-      )
+      const response: API.v1.SendTransactionResponse =
+        await this.multicastServers('transact', packedTx)
+
       edgeTransaction.date = Date.now() / 1000
-      edgeTransaction.txid = signedTx.transaction_id
+      edgeTransaction.txid = response.transaction_id
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
       return edgeTransaction
     } catch (e: any) {
       this.error('\nCaught exception: ', e)
-      if (e instanceof RpcError) this.error(JSON.stringify(e.json, null, 2))
+      if (e instanceof APIError) this.error(JSON.stringify(e.error, null, 2))
       let err = e
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (err.error) {
