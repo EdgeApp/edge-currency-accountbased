@@ -34,7 +34,7 @@
     "/README.md"
   ],
   "scripts": {
-    "clean": "rimraf dist lib",
+    "clean": "rimraf dist lib android/src/main/assets/edge-currency-accountbased",
     "fix": "eslint . --fix",
     "lint": "eslint .",
     "make-checkpoints": "node -r sucrase/register scripts/makeCheckpoints.ts",
