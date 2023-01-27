@@ -88,3 +88,8 @@ export const asEosWalletOtherData = asObject({
 })
 
 export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>
+
+export interface ReferenceBlock {
+  ref_block_num: number
+  ref_block_prefix: number
+}
