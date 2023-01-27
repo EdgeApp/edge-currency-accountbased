@@ -16,7 +16,6 @@ import {
 } from 'edge-core-js/types'
 import { Api, JsonRpc, RpcError } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
-import { convertLegacyPublicKeys } from 'eosjs/dist/eosjs-numeric'
 import EosApi from 'eosjs-api'
 import parse from 'url-parse'
 
@@ -68,41 +67,7 @@ const bogusAccounts = {
   krpj4avazggi: true,
   fobleos13125: true
 }
-class CosignAuthorityProvider {
-  rpc: JsonRpc
-  constructor(rpc: JsonRpc) {
-    this.rpc = rpc
-  }
 
-  // @ts-expect-error
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async getRequiredKeys(args) {
-    const { transaction } = args
-    // Iterate over the actions and authorizations
-    // @ts-expect-error
-    transaction.actions.forEach((action, ti) => {
-      // @ts-expect-error
-      action.authorization.forEach((auth, ai) => {
-        // If the authorization matches the expected cosigner
-        // then remove it from the transaction while checking
-        // for what public keys are required
-        if (auth.actor === 'greymassfuel' && auth.permission === 'cosign') {
-          // @ts-expect-error
-          delete transaction.actions[ti].authorization.splice(ai, 1)
-        }
-      })
-    })
-    // the rpc below should be an already configured JsonRPC client from eosjs
-    return convertLegacyPublicKeys(
-      (
-        await this.rpc.fetch('/v1/chain/get_required_keys', {
-          transaction,
-          available_keys: args.availableKeys
-        })
-      ).required_keys
-    )
-  }
-}
 export class EosEngine extends CurrencyEngine<EosTools> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData!: EosWalletOtherData
@@ -791,11 +756,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         break
       }
       case 'transact': {
-        const { eosFuelServers, eosNodes } = this.networkInfo
-        const randomNodes =
-          eosFuelServers.length > 0
-            ? pickRandom(eosFuelServers, 30)
-            : pickRandom(eosNodes, 30)
+        const { eosNodes } = this.networkInfo
+        const randomNodes = pickRandom(eosNodes, 30)
         out = await asyncWaterfall(
           randomNodes.map(server => async () => {
             const rpc = new JsonRpc(server, {
@@ -814,7 +776,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
             const signatureProvider = new JsSignatureProvider(keys)
             const eos = new Api({
               // Pass in new authorityProvider
-              authorityProvider: new CosignAuthorityProvider(rpc),
               rpc,
               signatureProvider,
               textDecoder: new TextDecoder(),
@@ -1044,16 +1005,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         }
       }
     ]
-    const { fuelActions = [] } = this.networkInfo
+
     const transactionJson = {
-      actions: [...fuelActions, ...transferActions]
+      actions: [...transferActions]
     }
-    // XXX Greymass doesn't let us hit their servers too often
-    // Create an unsigned transaction to catch any errors
-    // await this.multicastServers('transact', transactionJson, {
-    //   sign: false,
-    //   broadcast: false
-    // })
 
     nativeAmount = `-${nativeAmount}`
 
@@ -1134,24 +1089,23 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // const otherParams = getOtherParams(edgeTransaction)
+    const otherParams = getOtherParams(edgeTransaction)
 
     // Do signing
     // Take the private key from this.walletInfo.keys.eosKey and sign the transaction
-    // const privateKey = this.walletInfo.keys.eosKey
-    // const keyProvider = []
-    // if (this.walletInfo.keys.eosKey) {
-    //   keyProvider.push(this.walletInfo.keys.eosKey)
-    // }
-    // if (this.walletInfo.keys.eosOwnerKey) {
-    //   keyProvider.push(this.walletInfo.keys.eosOwnerKey)
-    // }
-    // XXX Greymass doesn't let us hit their servers too often
-    // await this.multicastServers('transact', otherParams.transactionJson, {
-    //   keyProvider,
-    //   sign: true,
-    //   broadcast: false
-    // })
+    const keyProvider = []
+    if (this.walletInfo.keys.eosKey != null) {
+      keyProvider.push(this.walletInfo.keys.eosKey)
+    }
+    if (this.walletInfo.keys.eosOwnerKey != null) {
+      keyProvider.push(this.walletInfo.keys.eosOwnerKey)
+    }
+
+    await this.multicastServers('transact', otherParams.transactionJson, {
+      keyProvider,
+      sign: true,
+      broadcast: false
+    })
 
     // Complete edgeTransaction.txid params if possible at this state
     return edgeTransaction

@@ -21,7 +21,6 @@ export const eosNetworkInfo: EosNetworkInfo = {
     'https://node1.zbeos.com',
     'https://api.eosn.io'
   ],
-  eosFuelServers: ['https://eos.greymass.com'],
   eosDfuseServers: ['https://eos.dfuse.eosnation.io'],
   uriProtocol: 'eos'
 }
