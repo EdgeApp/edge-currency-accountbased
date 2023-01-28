@@ -185,8 +185,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   // Poll on the blockheight
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkBlockchainInnerLoop() {
+  async checkBlockchainInnerLoop(): Promise<void> {
     try {
       const result: API.v1.GetInfoResponse = await this.multicastServers(
         'getInfo',
@@ -511,8 +510,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     return true
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !this.walletLocalData.otherData ||
@@ -530,7 +528,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
       } catch (e: any) {
         this.error(`checkTransactionsInnerLoop fetches failed with error: `, e)
-        return false
+        return
       }
 
       if (incomingResult && outgoingResult) {
@@ -792,8 +790,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const publicKey = this.walletLocalData.publicKey
     try {
       // @ts-expect-error
@@ -877,8 +874,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -913,8 +909,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const tokenInfo = this.getTokenInfo(currencyCode)
@@ -1151,8 +1146,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(): string {
     let out = ''
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
@@ -1169,8 +1163,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     return out
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
+  getDisplayPublicSeed(): string {
     let out = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
     if (this.walletInfo.keys && this.walletInfo.keys.ownerPublicKey) {
