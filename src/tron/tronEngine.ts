@@ -420,30 +420,26 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       return out
     }
 
-    let transfer:
-      | ReturnType<typeof asTRXTransferContract>
-      | ReturnType<typeof asTriggerSmartContract>
-      | undefined
+    if (retArray.length < 1) return out
+
+    const ourReceiveAddresses: string[] = []
 
     // Find the relevant item in the array
     for (const contract of contractArray) {
-      transfer = asMaybe(asTRXTransferContract)(contract)
-      if (transfer != null) {
+      const trxTransfer = asMaybe(asTRXTransferContract)(contract)
+      if (trxTransfer != null) {
         const {
           parameter: {
             value: { amount, owner_address: fromAddress, to_address: toAddress }
           }
-        } = transfer
+        } = trxTransfer
 
-        if (retArray.length < 1) return out
         const { contractRet: status, fee } = retArray[0]
 
         let feeNativeAmount = fee.toString()
 
         const from = hexToBase58Address(fromAddress)
         const to = hexToBase58Address(toAddress)
-
-        const ourReceiveAddresses: string[] = []
 
         let nativeAmount = amount.toString()
 
@@ -490,21 +486,19 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
       // Other types of transaction may incur a TRX fee the user paid. The code below only decodes 'triggersmartcontract' transactions (TRC20)
       // There are other types (ie. TRC10) that are ignored for now
-      transfer = asMaybe(asTriggerSmartContract)(contract)
-      if (transfer != null) {
+      const smartContractTransaction = asMaybe(asTriggerSmartContract)(contract)
+      if (smartContractTransaction != null) {
         const {
           parameter: {
             value: { owner_address: fromAddress }
           }
-        } = transfer
+        } = smartContractTransaction
 
         if (
           hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
         ) {
           break
         }
-
-        if (retArray.length < 1) return out
 
         const feeNativeAmount = retArray[0].fee.toString()
 
@@ -517,7 +511,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           blockHeight: blockNumber,
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
-          ourReceiveAddresses: [],
+          ourReceiveAddresses,
           signedTx: '',
           walletId: this.walletId
         }
