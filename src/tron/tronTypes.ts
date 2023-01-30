@@ -280,6 +280,7 @@ export const asTransaction = asObject({
   // "raw_data_hex": "0a0230292208cf53f47765aeb93840c8c0b5c9b6305a66080112620a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412310a15413282aad9080d202829c8facad65a2affa26781f0121541c17c2daa0e750051c4c109e01fa54da97a06805d18e807709d83b2c9b630",
   // "net_fee": 100000,
   // "energy_usage": 0,
+  unfreeze_amount: asOptional(asNumber), // for unfreeze txs only
   blockNumber: asNumber, // 44445757
   block_timestamp: asNumber, // 1663916871000
   // energy_fee: asNumber, // 0
@@ -339,6 +340,34 @@ export const asTriggerSmartContract = asObject({
     // type_url: 'type.googleapis.com/protocol.TriggerSmartContract'
   }),
   type: asValue('TriggerSmartContract')
+})
+
+export const asFreezeBalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      // resource: 0,
+      // frozen_duration: 3,
+      frozen_balance: asNumber,
+      resource_type: asResource,
+      // resource_value: 0,
+      owner_address: asString
+    })
+    // type_url: 'type.googleapis.com/protocol.FreezeBalanceContract'
+  }),
+  type: asValue('FreezeBalanceContract')
+})
+
+export const asUnfreezeBalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      // resource: 0,,
+      resource_type: asResource,
+      // resource_value: 0,
+      owner_address: asString
+    })
+    // type_url: 'type.googleapis.com/protocol.FreezeBalanceContract'
+  }),
+  type: asValue('UnfreezeBalanceContract')
 })
 
 export interface TronGridQuery<T> {

@@ -34,6 +34,7 @@ import {
   asBroadcastResponse,
   asChainParams,
   asEstimateEnergy,
+  asFreezeBalanceContract,
   asTransaction,
   asTRC20Balance,
   asTRC20Transaction,
@@ -47,6 +48,7 @@ import {
   asTronWalletOtherData,
   asTRXBalance,
   asTRXTransferContract,
+  asUnfreezeBalanceContract,
   CalcTxFeeOpts,
   ReferenceBlock,
   TronAccountResources,
@@ -410,6 +412,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       block_timestamp: timestamp,
       blockNumber,
       ret: retArray,
+      unfreeze_amount: unfreezeAmount,
       raw_data: { contract: contractArray }
     } = tx
 
@@ -466,7 +469,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           feeNativeAmount = '0'
         }
 
-        const currencyCode = this.currencyInfo.currencyCode
+        const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
           txid,
@@ -502,7 +505,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
         const feeNativeAmount = retArray[0].fee.toString()
 
-        const currencyCode = this.currencyInfo.currencyCode
+        const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
           txid,
@@ -510,6 +513,76 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           currencyCode,
           blockHeight: blockNumber,
           nativeAmount: mul(feeNativeAmount, '-1'),
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse freeze transactions
+      const freezeTransaction = asMaybe(asFreezeBalanceContract)(contract)
+      if (freezeTransaction != null) {
+        const {
+          parameter: {
+            value: { owner_address: fromAddress, frozen_balance: frozenAmount }
+          }
+        } = freezeTransaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const nativeAmount = add(frozenAmount.toString(), feeNativeAmount)
+        const { currencyCode } = this.currencyInfo
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount: mul(nativeAmount, '-1'),
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse unfreeze transactions
+      const unfreezeTransaction = asMaybe(asUnfreezeBalanceContract)(contract)
+      if (unfreezeTransaction != null) {
+        if (unfreezeAmount == null) return out
+        const {
+          parameter: {
+            value: { owner_address: fromAddress }
+          }
+        } = unfreezeTransaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const { currencyCode } = this.currencyInfo
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount: sub(unfreezeAmount.toString(), feeNativeAmount),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
