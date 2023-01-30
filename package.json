@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "0.22.2",
+  "version": "0.22.3",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
@@ -23,12 +23,12 @@
   "types": "./lib/src/index.d.ts",
   "files": [
     "/android/build.gradle",
-    "/android/src/*",
+    "/android/src/",
     "/CHANGELOG.md",
     "/edge-currency-accountbased.podspec",
     "/index.js",
-    "/ios/*",
-    "/lib/*",
+    "/ios/",
+    "/lib/",
     "/LICENSE",
     "/package.json",
     "/README.md"

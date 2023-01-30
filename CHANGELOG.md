@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.3 (2023-01-30)
+
+- fixed: Adjust build settings to provide better support for iPhone 12.
+- fixed: Track EVM wallet connections at the EdgeCurrencyTools level, to prevent active connections from disappearing.
+
 ## 0.22.2 (2023-01-20)
 
 - TRX: Add note support
