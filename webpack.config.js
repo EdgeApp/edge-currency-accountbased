@@ -29,13 +29,11 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(ts|js)?$/,
+        exclude: /\/node_modules\//,
+        test: /\.ts$/,
         use: {
           loader: 'esbuild-loader',
-          options: {
-            loader: 'ts',
-            target: 'chrome67'
-          }
+          options: { loader: 'ts' }
         }
       }
     ]
@@ -43,7 +41,7 @@ module.exports = {
   optimization: {
     minimizer: [
       new ESBuildMinifyPlugin({
-        target: 'chrome67' // Syntax to compile to (see options below for possible values)
+        target: 'chrome67'
       })
     ]
   },
