@@ -1,7 +1,7 @@
 import 'regenerator-runtime/runtime'
 
 import { binance } from './binance/bnbInfo'
-import { eosPlugins } from './eos/index'
+import { eosPlugins } from './eos/eosInfos'
 import { ethPlugins } from './ethereum/ethInfos'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
