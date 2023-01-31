@@ -269,8 +269,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const resources = asAccountResources(res)
 
       this.accountResources = {
-        bandwidth: resources.freeNetLimit,
-        energy: resources.EnergyLimit
+        bandwidth: resources.freeNetLimit - resources.freeNetUsed,
+        energy: resources.EnergyLimit - resources.EnergyUsed
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address resources: ', e)

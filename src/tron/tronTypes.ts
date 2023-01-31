@@ -102,6 +102,7 @@ export const asTronBlockHeight = asObject({
 export const asAccountResources = asObject({
   freeNetUsed: asMaybe(asNumber, 0), // 983,
   freeNetLimit: asNumber, // 1500,
+  EnergyUsed: asMaybe(asNumber, 0),
   EnergyLimit: asMaybe(asNumber, 0) // 474699462,
 })
 
