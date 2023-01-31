@@ -1,8 +1,11 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumSettings } from '../ethTypes'
+
+const builtinTokens: EdgeTokenMap = {}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -131,10 +134,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mΞ'
     }
   ],
-  metaTokens: []
+  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
 export const rinkeby = makeOuterPlugin<{}, EthereumTools>({
+  builtinTokens,
   currencyInfo,
   networkInfo: {},
 

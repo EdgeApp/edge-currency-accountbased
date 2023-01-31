@@ -40,7 +40,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: '◎'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const solana = makeOuterPlugin<{}, SolanaTools>({

@@ -43,7 +43,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({

@@ -42,7 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'tℏ'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const hederatestnet = makeOuterPlugin<{}, HederaTools>({

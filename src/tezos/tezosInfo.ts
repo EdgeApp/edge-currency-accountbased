@@ -58,7 +58,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 't'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const tezos = makeOuterPlugin<{}, TezosTools>({

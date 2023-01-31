@@ -38,7 +38,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'Z'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({

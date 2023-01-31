@@ -33,7 +33,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'X'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const ripple = makeOuterPlugin<XrpNetworkInfo, RippleTools>({

@@ -50,7 +50,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({

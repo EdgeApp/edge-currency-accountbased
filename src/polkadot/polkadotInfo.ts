@@ -38,7 +38,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: ''
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const polkadot = makeOuterPlugin<{}, PolkadotTools>({

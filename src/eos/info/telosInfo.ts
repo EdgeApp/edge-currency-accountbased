@@ -42,7 +42,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const telos = makeOuterPlugin<EosNetworkInfo, EosTools>({
