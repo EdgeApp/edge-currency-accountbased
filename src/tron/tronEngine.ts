@@ -713,6 +713,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       64 + // MAX_RESULT_SIZE_IN_TX
       5 // protobuf overhead
 
+    if (unsignedTxHex.length / 2 < 128) {
+      // short transactions save a byte in len-prefix
+      bandwidthNeeded--
+    }
+
     if (this.accountExistsCache[receiverAddress] === undefined) {
       try {
         // Determine if recipient exists
