@@ -255,6 +255,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       } else if (typeof res === 'object' && Object.keys(res).length === 0) {
         // New accounts return an empty {} response
         this.updateBalance(this.currencyInfo.currencyCode, '0')
+        return
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
