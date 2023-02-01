@@ -1,8 +1,8 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
-import { makeOuterPlugin } from '../common/innerPlugin'
-import type { EosTools } from './eosPlugin'
-import { EosNetworkInfo, eosOtherMethodNames } from './eosTypes'
+import { makeOuterPlugin } from '../../common/innerPlugin'
+import type { EosTools } from '../eosPlugin'
+import { EosNetworkInfo, eosOtherMethodNames } from '../eosTypes'
 
 // ----EOSIO MAIN NET----
 export const eosNetworkInfo: EosNetworkInfo = {
@@ -50,7 +50,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
   denominations,
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
@@ -61,7 +61,7 @@ export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "eos" */
-      './eosPlugin'
+      '../eosPlugin'
     )
   }
 })

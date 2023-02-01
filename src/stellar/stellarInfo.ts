@@ -34,7 +34,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: '*'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const stellar = makeOuterPlugin<{}, StellarTools>({

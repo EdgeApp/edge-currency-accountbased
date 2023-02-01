@@ -1,8 +1,28 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumSettings } from '../ethTypes'
+
+const builtinTokens: EdgeTokenMap = {
+  '765de816845861e75a25fca122bb6898b8b1282a': {
+    currencyCode: 'CUSD',
+    displayName: 'Celo Dollar',
+    denominations: [{ name: 'CUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x765DE816845861e75A25fCA122bb6898B8B1282a'
+    }
+  },
+  d8763cba276a3738e6de85b4b3bf5fded6d6ca73: {
+    currencyCode: 'CEUR',
+    displayName: 'Celo Euro',
+    denominations: [{ name: 'CEUR', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73'
+    }
+  }
+}
 
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
@@ -87,33 +107,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'CELO'
     }
   ],
-  metaTokens: [
-    {
-      currencyCode: 'CUSD',
-      currencyName: 'Celo Dollar',
-      denominations: [
-        {
-          name: 'CUSD',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0x765DE816845861e75A25fCA122bb6898B8B1282a'
-    },
-    {
-      currencyCode: 'CEUR',
-      currencyName: 'Celo Euro',
-      denominations: [
-        {
-          name: 'CEUR',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73'
-    }
-  ]
+  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
 export const celo = makeOuterPlugin<{}, EthereumTools>({
+  builtinTokens,
   currencyInfo,
   networkInfo: {},
 

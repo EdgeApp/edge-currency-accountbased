@@ -5,7 +5,6 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
-  EdgeMetaToken,
   EdgeOtherMethods,
   EdgeTokenMap,
   EdgeWalletInfo
@@ -16,6 +15,7 @@ import {
  * so we can share the same instance between sibling networks.
  */
 export interface PluginEnvironment<NetworkInfo> extends EdgeCorePluginOptions {
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
 }
@@ -40,6 +40,7 @@ export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
  * so we don't have to load any crypto libraries.
  */
 export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
+  builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
 
@@ -54,8 +55,13 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
   template: OuterPlugin<NetworkInfo, Tools>
 ): EdgeCorePluginFactory {
   return (env: EdgeCorePluginOptions): EdgeCurrencyPlugin => {
-    const { currencyInfo, networkInfo, otherMethodNames = [] } = template
-    const innerEnv = { ...env, currencyInfo, networkInfo }
+    const {
+      builtinTokens = {},
+      currencyInfo,
+      networkInfo,
+      otherMethodNames = []
+    } = template
+    const innerEnv = { ...env, builtinTokens, currencyInfo, networkInfo }
 
     // Logic to load the inner plugin:
     let pluginPromise: Promise<InnerPlugin<NetworkInfo, Tools>> | undefined
@@ -74,8 +80,6 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
       const tools = await toolsPromise
       return { plugin, tools }
     }
-
-    const builtinTokens = upgradeMetaTokens(currencyInfo.metaTokens)
 
     async function getBuiltinTokens(): Promise<EdgeTokenMap> {
       return builtinTokens
@@ -130,23 +134,4 @@ export function makeOtherMethods<T>(
   }
 
   return out
-}
-
-function upgradeMetaTokens(metaTokens: EdgeMetaToken[]): EdgeTokenMap {
-  const out: EdgeTokenMap = {}
-  for (const metaToken of metaTokens) {
-    const { contractAddress } = metaToken
-    if (contractAddress == null) continue
-    out[contractToTokenId(contractAddress)] = {
-      currencyCode: metaToken.currencyCode,
-      denominations: metaToken.denominations,
-      displayName: metaToken.currencyName,
-      networkLocation: { contractAddress: metaToken.contractAddress }
-    }
-  }
-  return out
-}
-
-export function contractToTokenId(contractAddress: string): string {
-  return contractAddress.toLowerCase().replace(/^0x/, '')
 }

@@ -73,7 +73,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'ᵮ'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const fio = makeOuterPlugin<{}, FioTools>({

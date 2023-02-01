@@ -15,7 +15,8 @@ import {
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
-import { contractToTokenId, PluginEnvironment } from '../common/innerPlugin'
+import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
@@ -351,15 +352,15 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
-    const contractAddress = token?.networkLocation?.contractAddress
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
     if (
-      contractAddress == null ||
+      cleanLocation == null ||
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      !EthereumUtil.isValidAddress(contractAddress)
+      !EthereumUtil.isValidAddress(cleanLocation.contractAddress)
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    return contractToTokenId(contractAddress)
+    return cleanLocation.contractAddress.toLowerCase().replace(/^0x/, '')
   }
 }
 

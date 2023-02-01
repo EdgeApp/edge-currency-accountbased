@@ -1,8 +1,88 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
+import { makeMetaTokens } from '../common/tokenHelpers'
 import type { TronTools } from './tronPlugin'
-import { TronNetworkInfo } from './tronTypes'
+import type { TronNetworkInfo } from './tronTypes'
+
+const builtinTokens: EdgeTokenMap = {
+  TPYmHEhy5n8TCEfYGqW2rPxsghSfzghPDn: {
+    currencyCode: 'USDD',
+    displayName: 'Decentralized USD',
+    denominations: [{ name: 'USDD', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TPYmHEhy5n8TCEfYGqW2rPxsghSfzghPDn' }
+  },
+
+  TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t: {
+    currencyCode: 'USDT',
+    displayName: 'Tether',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+    networkLocation: { contractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' }
+  },
+
+  TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8: {
+    currencyCode: 'USDC',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+    networkLocation: { contractAddress: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8' }
+  },
+
+  TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR: {
+    currencyCode: 'WTRX',
+    displayName: 'Wrapped TRX',
+    denominations: [{ name: 'WTRX', multiplier: '1000000' }],
+    networkLocation: { contractAddress: 'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR' }
+  },
+
+  TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4: {
+    currencyCode: 'TUSD',
+    displayName: 'TrueUSD',
+    denominations: [{ name: 'TUSD', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4' }
+  },
+
+  TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4: {
+    currencyCode: 'BTT',
+    displayName: 'BitTorrent',
+    denominations: [{ name: 'BTT', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4' }
+  },
+
+  TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9: {
+    currencyCode: 'JST',
+    displayName: 'JUST',
+    denominations: [{ name: 'JST', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9' }
+  },
+
+  TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7: {
+    currencyCode: 'WIN',
+    displayName: 'WINkLink',
+    denominations: [{ name: 'WIN', multiplier: '1000000' }],
+    networkLocation: { contractAddress: 'TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7' }
+  },
+
+  TFczxzPhnThNSqr5by8tvxsdCFRRz6cPNq: {
+    currencyCode: 'NFT',
+    displayName: 'APENFT',
+    denominations: [{ name: 'NFT', multiplier: '1000000' }],
+    networkLocation: { contractAddress: 'TFczxzPhnThNSqr5by8tvxsdCFRRz6cPNq' }
+  },
+
+  TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S: {
+    currencyCode: 'SUN',
+    displayName: 'SUN',
+    denominations: [{ name: 'SUN', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S' }
+  },
+
+  TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT: {
+    currencyCode: 'USDJ',
+    displayName: 'JUST Stablecoin',
+    denominations: [{ name: 'USDJ', multiplier: '1000000000000000000' }],
+    networkLocation: { contractAddress: 'TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT' }
+  }
+}
 
 export const networkInfo: TronNetworkInfo = {
   tronApiServers: ['https://api.trongrid.io'],
@@ -51,85 +131,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: [
-    {
-      currencyCode: 'USDD',
-      currencyName: 'Decentralized USD',
-      denominations: [{ name: 'USDD', multiplier: '1000000000000000000' }],
-      contractAddress: 'TPYmHEhy5n8TCEfYGqW2rPxsghSfzghPDn'
-    },
-    {
-      currencyCode: 'USDT',
-      currencyName: 'Tether',
-      denominations: [{ name: 'USDT', multiplier: '1000000' }],
-      contractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
-    },
-    {
-      currencyCode: 'USDC',
-      currencyName: 'USD Coin',
-      denominations: [{ name: 'USDC', multiplier: '1000000' }],
-      contractAddress: 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8'
-    },
-
-    {
-      currencyCode: 'WTRX',
-      currencyName: 'Wrapped TRX',
-      denominations: [{ name: 'WTRX', multiplier: '1000000' }],
-      contractAddress: 'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR'
-    },
-
-    {
-      currencyCode: 'TUSD',
-      currencyName: 'TrueUSD',
-      denominations: [{ name: 'TUSD', multiplier: '1000000000000000000' }],
-      contractAddress: 'TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4'
-    },
-
-    {
-      currencyCode: 'BTT',
-      currencyName: 'BitTorrent',
-      denominations: [{ name: 'BTT', multiplier: '1000000000000000000' }],
-      contractAddress: 'TAFjULxiVgT4qWk6UZwjqwZXTSaGaqnVp4'
-    },
-
-    {
-      currencyCode: 'JST',
-      currencyName: 'JUST',
-      denominations: [{ name: 'JST', multiplier: '1000000000000000000' }],
-      contractAddress: 'TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9'
-    },
-
-    {
-      currencyCode: 'WIN',
-      currencyName: 'WINkLink',
-      denominations: [{ name: 'WIN', multiplier: '1000000' }],
-      contractAddress: 'TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7'
-    },
-
-    {
-      currencyCode: 'NFT',
-      currencyName: 'APENFT',
-      denominations: [{ name: 'NFT', multiplier: '1000000' }],
-      contractAddress: 'TFczxzPhnThNSqr5by8tvxsdCFRRz6cPNq'
-    },
-
-    {
-      currencyCode: 'SUN',
-      currencyName: 'SUN',
-      denominations: [{ name: 'SUN', multiplier: '1000000000000000000' }],
-      contractAddress: 'TSSMHYeV2uE9qYH95DqyoCuNCzEL1NvU3S'
-    },
-
-    {
-      currencyCode: 'USDJ',
-      currencyName: 'JUST Stablecoin',
-      denominations: [{ name: 'USDJ', multiplier: '1000000000000000000' }],
-      contractAddress: 'TMwFHYXLJaRUPeW6421aqXL4ZEzPRFGkGT'
-    }
-  ]
+  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
 export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
+  builtinTokens,
   currencyInfo,
   networkInfo,
 

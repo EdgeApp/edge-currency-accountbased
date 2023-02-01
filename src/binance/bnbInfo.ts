@@ -41,7 +41,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'B'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const binance = makeOuterPlugin<{}, BinanceTools>({

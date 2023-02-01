@@ -39,7 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'P'
     }
   ],
-  metaTokens: []
+  metaTokens: [] // Deprecated
 }
 
 export const piratechain = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({

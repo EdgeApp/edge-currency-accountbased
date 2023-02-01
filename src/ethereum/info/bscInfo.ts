@@ -1,8 +1,11 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumSettings } from '../ethTypes'
+
+const builtinTokens: EdgeTokenMap = {}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -82,12 +85,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'BNB'
     }
   ],
-  metaTokens: [
-    // Array of objects describing the supported metatokens
-  ]
+  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
 export const binancesmartchain = makeOuterPlugin<{}, EthereumTools>({
+  builtinTokens,
   currencyInfo,
   networkInfo: {},
 

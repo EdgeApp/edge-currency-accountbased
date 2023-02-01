@@ -1,8 +1,20 @@
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumSettings } from '../ethTypes'
+
+const builtinTokens: EdgeTokenMap = {
+  '2acc95758f8b5f583470ba265eb685a8f45fc9d5': {
+    currencyCode: 'RIF',
+    displayName: 'RIF Token',
+    denominations: [{ name: 'RIF', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -78,23 +90,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'RBTC'
     }
   ],
-  metaTokens: [
-    // Array of objects describing the supported metatokens
-    {
-      currencyCode: 'RIF',
-      currencyName: 'RIF Token',
-      denominations: [
-        {
-          name: 'RIF',
-          multiplier: '1000000000000000000'
-        }
-      ],
-      contractAddress: '0x2acc95758f8b5f583470ba265eb685a8f45fc9d5'
-    }
-  ]
+  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
 export const rsk = makeOuterPlugin<{}, EthereumTools>({
+  builtinTokens,
   currencyInfo,
   networkInfo: {},
 
