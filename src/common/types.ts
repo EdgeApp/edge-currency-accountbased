@@ -1,5 +1,5 @@
 import { asObject, asString } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
@@ -10,12 +10,7 @@ export const asErrorMessage = asObject({
   message: asString
 })
 
-export interface CustomToken {
-  currencyCode: string
-  currencyName: string
-  multiplier: string
-  contractAddress: string
-}
+export type CustomToken = EdgeTokenInfo & EdgeToken
 
 export interface TxIdMap {
   [currencyCode: string]: { [txid: string]: number }

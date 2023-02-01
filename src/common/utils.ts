@@ -7,9 +7,12 @@ import {
   EdgeDenomination,
   EdgeFetchFunction,
   EdgeMetaToken,
+  EdgeTokenMap,
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
+
+import { getTokenIdFromCurrencyCode } from './tokenHelpers'
 
 function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
@@ -85,12 +88,23 @@ export function bufToHex(buf: Buffer): string {
 function getDenomInfo(
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
-  customTokens?: EdgeMetaToken[]
+  customTokens?: EdgeMetaToken[],
+  allTokensMap?: EdgeTokenMap
 ): EdgeDenomination | undefined {
   // Look in the primary currency denoms
   let edgeDenomination = currencyInfo.denominations.find(element => {
     return element.name === denom
   })
+
+  // Look in the allTokensMap
+  if (allTokensMap != null) {
+    const tokenId = getTokenIdFromCurrencyCode(denom, allTokensMap)
+    if (tokenId != null) {
+      edgeDenomination = allTokensMap[tokenId].denominations.find(
+        d => d.name === denom
+      )
+    }
+  }
 
   // Look in the currencyInfo tokens
   if (edgeDenomination == null) {

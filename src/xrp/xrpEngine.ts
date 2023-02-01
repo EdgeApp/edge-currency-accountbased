@@ -53,12 +53,13 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   nonce: number
 
   constructor(
+    env: PluginEnvironment<XrpNetworkInfo>,
     tools: RippleTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    networkInfo: XrpNetworkInfo
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
+    const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
   }
@@ -406,7 +407,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new XrpEngine(tools, walletInfo, opts, env.networkInfo)
+  const engine = new XrpEngine(env, tools, walletInfo, opts)
 
   await engine.loadEngine(tools, walletInfo, opts)
 

@@ -49,12 +49,13 @@ type BnbFunction =
 
 export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   constructor(
+    env: PluginEnvironment<{}>,
     tools: BinanceTools,
     walletInfo: EdgeWalletInfo,
     initOptions: any, // BinanceInitOptions,
-    opts: any // EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
   }
 
   async fetchGet(url: string): Promise<Object> {
@@ -530,7 +531,7 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const { initOptions } = env
 
-  const engine = new BinanceEngine(tools, walletInfo, initOptions, opts)
+  const engine = new BinanceEngine(env, tools, walletInfo, initOptions, opts)
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

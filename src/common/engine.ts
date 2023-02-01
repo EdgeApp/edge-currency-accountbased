@@ -14,12 +14,14 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeSpendInfo,
+  EdgeTokenMap,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
   SpendToSelfError
 } from 'edge-core-js/types'
 
+import { PluginEnvironment } from './innerPlugin'
 import {
   asCurrencyCodeOptions,
   checkCustomToken,
@@ -65,6 +67,7 @@ export class CurrencyEngine<
   transactionsChangedArray: EdgeTransaction[] // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
   allTokens: EdgeMetaToken[]
+  allTokensMap: EdgeTokenMap
   customTokens: EdgeMetaToken[]
   enabledTokens: string[]
   currentSettings: any
@@ -77,13 +80,14 @@ export class CurrencyEngine<
   otherData: { [key: string]: any }
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: T,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     const { io, currencyInfo } = tools
     const { currencyCode } = currencyInfo
-    const { walletLocalDisklet, callbacks } = opts
+    const { walletLocalDisklet, callbacks, customTokens } = opts
 
     this.tools = tools
     this.io = io
@@ -107,6 +111,7 @@ export class CurrencyEngine<
     this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
     this.customTokens = []
+    this.allTokensMap = { ...customTokens, ...env.builtinTokens }
     this.timers = {}
 
     this.transactionList[currencyCode] = []
@@ -290,7 +295,10 @@ export class CurrencyEngine<
       this.addCustomToken({
         currencyCode,
         currencyName: displayName,
+        denominations,
+        displayName,
         multiplier: denominations[0].multiplier,
+        networkLocation,
         contractAddress: networkLocation?.contractAddress
       }).catch(e => this.log(e.message))
     }
@@ -726,6 +734,24 @@ export class CurrencyEngine<
         )
       }
     }
+
+    // For now, also check the allTokensMap and hopefully remove allTokens
+    // in the future
+    for (const edgeToken of Object.values(this.allTokensMap)) {
+      const { currencyCode } = edgeToken
+      if (
+        tokenMap[currencyCode] &&
+        !this.enabledTokens.includes(currencyCode)
+      ) {
+        this.enabledTokens.push(currencyCode)
+        // Initialize balance
+        this.walletLocalData.totalBalances[currencyCode] = '0'
+        this.currencyEngineCallbacks.onBalanceChanged(
+          currencyCode,
+          this.walletLocalData.totalBalances[currencyCode]
+        )
+      }
+    }
   }
 
   async enableTokens(tokens: string[]): Promise<void> {
@@ -815,6 +841,11 @@ export class CurrencyEngine<
 
     this.customTokens.push(edgeMetaToken)
     this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
+
+    if (this.tools.getTokenId != null) {
+      const tokenId = await this.tools.getTokenId(obj)
+      this.allTokensMap = { [tokenId]: obj, ...this.allTokensMap }
+    }
     this.enableTokensSync([edgeMetaToken.currencyCode])
   }
 
@@ -970,7 +1001,8 @@ export class CurrencyEngine<
     const denom = getDenomInfo(
       this.currencyInfo,
       currencyCode,
-      this.customTokens
+      this.customTokens,
+      this.allTokensMap
     )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')

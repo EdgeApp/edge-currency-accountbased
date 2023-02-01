@@ -47,11 +47,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   nonce: number
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: PolkadotTools,
     walletInfo: EdgeWalletInfo,
-    opts: any // EdgeCurrencyEngineOptions,
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
     this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.nonce = 0
   }
@@ -454,7 +455,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new PolkadotEngine(tools, walletInfo, opts)
+  const engine = new PolkadotEngine(env, tools, walletInfo, opts)
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
