@@ -1,0 +1,31 @@
+diff --git a/node_modules/@tronscan/client/src/utils/tronWeb.js b/node_modules/@tronscan/client/src/utils/tronWeb.js
+index 6b1bc38..3f48a11 100644
+--- a/node_modules/@tronscan/client/src/utils/tronWeb.js
++++ b/node_modules/@tronscan/client/src/utils/tronWeb.js
+@@ -25,7 +25,7 @@ const {
+ const fromHexString = hexString =>
+   new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+ 
+-export function transactionJsonToProtoBuf(transaction) {
++function transactionJsonToProtoBuf(transaction) {
+   const rawData = transaction["raw_data"];
+   const contractJson = rawData.contract[0];
+   const transactionObj = contractJsonToProtobuf(contractJson);
+@@ -52,7 +52,7 @@ export function transactionJsonToProtoBuf(transaction) {
+   return transactionObj;
+ }
+ 
+-export function contractJsonToProtobuf(contract) {
++function contractJsonToProtobuf(contract) {
+   const value = contract.parameter.value;
+   switch (contract.type) {
+ 
+@@ -365,3 +365,8 @@ export function contractJsonToProtobuf(contract) {
+ 
+   }
+ }
++
++module.exports = {
++  transactionJsonToProtoBuf,
++  contractJsonToProtobuf
++};
