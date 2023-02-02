@@ -46,6 +46,7 @@ import { EthereumTools } from './ethPlugin'
 import { asEIP712TypedData } from './ethSchema'
 import {
   asEthereumTxOtherParams,
+  asEthereumWalletOtherData,
   asWcSessionRequestParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
@@ -57,6 +58,7 @@ import {
   EthereumTxOtherParams,
   EthereumUtils,
   EthereumWalletOtherData,
+  KeysOfEthereumBaseMultiplier,
   LastEstimatedGasLimit,
   TxRpcParams,
   WcDappDetails,
@@ -506,6 +508,16 @@ export class EthereumEngine
     }
   }
 
+  setOtherData(raw: any): void {
+    this.otherData = asEthereumWalletOtherData(raw)
+
+    if (this.otherData.networkFees.default.gasPrice == null) {
+      this.otherData.networkFees = {
+        ...this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+      }
+    }
+  }
+
   /**
    *  Fetch network fees from various providers in order of priority, stopping
    *  and writing upon successful result.
@@ -516,14 +528,17 @@ export class EthereumEngine
       try {
         const ethereumFee = await externalFeeProvider()
         if (ethereumFee == null) continue
-        const ethereumFeeInts = Object.keys(ethereumFee).reduce((out, cur) => {
-          // @ts-expect-error
-          out[cur] = biggyRoundToNearestInt(ethereumFee[cur])
-          return out
-        }, {})
-        this.walletLocalData.otherData.networkFees.default.gasPrice = {
-          ...this.walletLocalData.otherData.networkFees.default.gasPrice,
-          ...ethereumFeeInts
+
+        const ethereumFeeInts: { [key: string]: string } = {}
+        Object.keys(ethereumFee).forEach(key => {
+          const k = key as KeysOfEthereumBaseMultiplier
+          ethereumFeeInts[k] = biggyRoundToNearestInt(ethereumFee[k])
+        })
+        if (this.otherData.networkFees.default.gasPrice != null) {
+          this.otherData.networkFees.default.gasPrice = {
+            ...this.otherData.networkFees.default.gasPrice,
+            ...ethereumFeeInts
+          }
         }
         this.walletLocalDataDirty = true
         break
@@ -566,7 +581,7 @@ export class EthereumEngine
     if (baseFeePerGas == null) return
     const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-    const networkFees: EthereumFees = this.walletLocalData.otherData.networkFees
+    const networkFees: EthereumFees = this.otherData.networkFees
 
     // Make sure there is a default network fee entry and gasPrice entry
     if (networkFees.default == null || networkFees.default.gasPrice == null) {
@@ -634,8 +649,8 @@ export class EthereumEngine
       .then(info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
-        this.walletLocalData.otherData.networkFees = mergeDeeply(
-          this.walletLocalData.otherData.networkFees,
+        this.otherData.networkFees = mergeDeeply(
+          this.otherData.networkFees,
           info
         )
         this.walletLocalDataDirty = true
@@ -680,7 +695,7 @@ export class EthereumEngine
         spendInfo.spendTargets[0].nativeAmount = mid
         const { gasPrice, gasLimit } = calcMiningFee(
           spendInfo,
-          this.walletLocalData.otherData.networkFees,
+          this.otherData.networkFees,
           this.currencyInfo
         )
         const fee = mul(gasPrice, gasLimit)
@@ -739,7 +754,7 @@ export class EthereumEngine
 
     const miningFees = calcMiningFee(
       edgeSpendInfo,
-      this.walletLocalData.otherData.networkFees,
+      this.otherData.networkFees,
       this.currencyInfo
     )
     const gasPrice = miningFees.gasPrice
@@ -1017,17 +1032,14 @@ export class EthereumEngine
       if (
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         this.walletLocalData.numUnconfirmedSpendTxs &&
-        gt(
-          this.walletLocalData.otherData.unconfirmedNextNonce,
-          this.walletLocalData.otherData.nextNonce
-        )
+        gt(this.otherData.unconfirmedNextNonce, this.otherData.nextNonce)
       ) {
         const diff = sub(
-          this.walletLocalData.otherData.unconfirmedNextNonce,
-          this.walletLocalData.otherData.nextNonce
+          this.otherData.unconfirmedNextNonce,
+          this.otherData.nextNonce
         )
         if (lte(diff, '5')) {
-          nonce = this.walletLocalData.otherData.unconfirmedNextNonce
+          nonce = this.otherData.unconfirmedNextNonce
           this.walletLocalDataDirty = true
         } else {
           const e = new Error('Excessive pending spend transactions')
@@ -1035,11 +1047,10 @@ export class EthereumEngine
           throw e
         }
       } else {
-        nonce = this.walletLocalData.otherData.nextNonce
+        nonce = this.otherData.nextNonce
       }
     }
     // Convert nonce to hex for tsParams
-    // @ts-expect-error
     const nonceHex = toHex(nonce)
 
     // Data:
@@ -1287,10 +1298,7 @@ export class EthereumEngine
       const nonceUsed: string | undefined =
         edgeTransaction.otherParams?.nonceUsed
       if (nonceUsed != null) {
-        this.walletLocalData.otherData.unconfirmedNextNonce = add(
-          nonceUsed,
-          '1'
-        )
+        this.otherData.unconfirmedNextNonce = add(nonceUsed, '1')
       }
     }
 
@@ -1331,22 +1339,6 @@ export async function makeCurrencyEngine(
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
-
-  // Initialize otherData defaults if they weren't on disk
-  if (engine.otherData.nextNonce == null) {
-    engine.otherData.nextNonce = '0'
-  }
-  if (engine.otherData.unconfirmedNextNonce == null) {
-    engine.otherData.unconfirmedNextNonce = '0'
-  }
-  if (engine.otherData.networkFees == null) {
-    engine.otherData.networkFees = {
-      ...currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-    }
-  }
 
   return engine
 }

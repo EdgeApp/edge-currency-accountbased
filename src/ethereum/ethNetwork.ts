@@ -1713,8 +1713,7 @@ export class EthereumNetwork {
         } won`
       )
       this.ethNeeds.nonceLastChecked = now
-      this.ethEngine.walletLocalData.otherData.nextNonce =
-        ethereumNetworkUpdate.newNonce
+      this.ethEngine.otherData.nextNonce = ethereumNetworkUpdate.newNonce
       this.ethEngine.walletLocalDataDirty = true
     }
 

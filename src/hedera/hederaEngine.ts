@@ -22,11 +22,13 @@ import {
   asCheckAccountCreationStatus,
   asGetAccountActivationQuote,
   asGetHederaAccount,
+  asHederaWalletOtherData,
   asMirrorNodeQueryBalance,
-  asMirrorNodeTransactionResponse
+  asMirrorNodeTransactionResponse,
+  HederaWalletOtherData
 } from './hederaTypes'
 
-const GENESIS = 1535068800 // '2018-08-24T00:00:00.000Z'
+const GENESIS = '1535068800' // '2018-08-24T00:00:00.000Z'
 
 export class HederaEngine extends CurrencyEngine<HederaTools> {
   client: hedera.Client
@@ -37,6 +39,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   mirrorNodes: [string]
   log: EdgeLog
   maxFee: number
+  otherData!: HederaWalletOtherData
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -67,7 +70,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 
         // Activation requests don't expire (currently) so just return the address and amount if we already have it instead of overwriting the previous request
         const { accountActivationQuoteAmount, accountActivationQuoteAddress } =
-          this.walletLocalData.otherData
+          this.otherData
         if (
           accountActivationQuoteAmount != null &&
           accountActivationQuoteAddress != null
@@ -107,9 +110,9 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
           const { request_id: requestId, address, amount } = json
           this.warn(`activationRequestId: ${requestId}`)
 
-          this.walletLocalData.otherData.activationRequestId = requestId
-          this.walletLocalData.otherData.accountActivationQuoteAddress = address
-          this.walletLocalData.otherData.accountActivationQuoteAmount = amount
+          this.otherData.activationRequestId = requestId
+          this.otherData.accountActivationQuoteAddress = address
+          this.otherData.accountActivationQuoteAmount = amount
           this.walletLocalDataDirty = true
 
           return {
@@ -127,7 +130,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         }
       },
       submitActivationPayment: async (txn: EdgeTransaction) => {
-        const requestId = this.walletLocalData.otherData.activationRequestId
+        const requestId = this.otherData.activationRequestId
         if (requestId == null) {
           // @ts-expect-error
           throw new Error({
@@ -160,7 +163,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
           throw e
         }
 
-        this.walletLocalData.otherData.paymentSubmitted = true
+        this.otherData.paymentSubmitted = true
         this.walletLocalDataDirty = true
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.addToLoop('checkAccountCreationStatus', 5000)
@@ -172,7 +175,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 
   async checkAccountCreationStatus(): Promise<void> {
     const { activationRequestId, paymentSubmitted, hederaAccount } =
-      this.walletLocalData.otherData
+      this.otherData
 
     if (hederaAccount != null && this.accountId != null) {
       clearTimeout(this.timers.checkAccountCreationStatus)
@@ -206,11 +209,9 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         const json = asCheckAccountCreationStatus(await response.json())
 
         if (json.status === 'transaction_error') {
-          this.walletLocalData.otherData.activationRequestId = undefined
-          this.walletLocalData.otherData.accountActivationQuoteAddress =
-            undefined
-          this.walletLocalData.otherData.accountActivationQuoteAmount =
-            undefined
+          this.otherData.activationRequestId = undefined
+          this.otherData.accountActivationQuoteAddress = undefined
+          this.otherData.accountActivationQuoteAmount = undefined
           this.walletLocalDataDirty = true
           clearTimeout(this.timers.checkAccountCreationStatus)
           this.warn(
@@ -234,12 +235,16 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     }
 
     if (accountId != null) {
-      this.walletLocalData.otherData.hederaAccount = accountId
+      this.otherData.hederaAccount = accountId
       this.walletLocalDataDirty = true
       this.currencyEngineCallbacks.onAddressChanged()
       this.accountId = new hedera.AccountId(accountId)
       clearTimeout(this.timers.checkAccountCreationStatus)
     }
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asHederaWalletOtherData(raw)
   }
 
   async queryBalance(): Promise<void> {
@@ -280,7 +285,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     try {
       for (;;) {
         const txs = await this.getTransactionsMirrorNode(
-          this.walletLocalData.otherData.latestTimestamp
+          this.otherData.latestTimestamp ?? GENESIS
         )
 
         if (txs.length > 0) {
@@ -305,12 +310,8 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
         throw new Error('hederaEngine: EdgeTransaction must have otherParams')
       }
 
-      if (
-        this.walletLocalData.otherData.latestTimestamp !==
-        latestTx.otherParams.consensusAt
-      ) {
-        this.walletLocalData.otherData.latestTimestamp =
-          latestTx.otherParams.consensusAt
+      if (this.otherData.latestTimestamp !== latestTx.otherParams.consensusAt) {
+        this.otherData.latestTimestamp = latestTx.otherParams.consensusAt
         this.walletLocalDataDirty = true
       }
 
@@ -327,7 +328,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       throw new Error('no Hedera account ID')
     }
 
-    const accountIdStr = this.walletLocalData.otherData.hederaAccount
+    const accountIdStr = this.otherData.hederaAccount ?? ''
 
     // we request transactions in ascending order by consensus timestamp
     const url = `${this.mirrorNodes[0]}/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${timestamp}`
@@ -388,11 +389,11 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   async startEngine() {
     this.engineOn = true
 
-    if (this.walletLocalData.otherData.latestTimestamp == null) {
-      this.walletLocalData.otherData.latestTimestamp = GENESIS
+    if (this.otherData.latestTimestamp == null) {
+      this.otherData.latestTimestamp = GENESIS
     }
-    if (this.walletLocalData.otherData.hederaAccount == null) {
-      this.walletLocalData.otherData.hederaAccount = ''
+    if (this.otherData.hederaAccount == null) {
+      this.otherData.hederaAccount = ''
     }
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -417,7 +418,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    if (this.walletLocalData.otherData.hederaAccount == null) {
+    if (this.otherData.hederaAccount == null) {
       throw Error('ErrorAccountNotActivated')
     }
 
@@ -456,10 +457,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 
     const transferTx = new hedera.TransferTransaction()
       .setTransactionId(txnId)
-      .addHbarTransfer(
-        this.walletLocalData.otherData.hederaAccount,
-        hbar.negated()
-      )
+      .addHbarTransfer(this.otherData.hederaAccount, hbar.negated())
       .addHbarTransfer(publicAddress, hbar)
       .setMaxTransactionFee(txnFee)
       .setTransactionMemo(uniqueIdentifier)
@@ -539,7 +537,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: Object): Promise<EdgeFreshAddress> {
-    return { publicAddress: this.walletLocalData.otherData.hederaAccount }
+    return { publicAddress: this.otherData.hederaAccount ?? '' }
   }
 
   getBlockHeight(): number {
@@ -549,9 +547,8 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPrivateSeed() {
     return (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ||
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ||
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ??
+      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ??
       ''
     )
   }

@@ -38,6 +38,7 @@ import {
 import {
   cleanTxLogs,
   getDenomInfo,
+  matchJson,
   normalizeAddress,
   safeErrorMessage
 } from './utils'
@@ -77,7 +78,7 @@ export class CurrencyEngine<
   log: EdgeLog
   warn: (message: string, e?: Error) => void
   error: (message: string, e?: Error) => void
-  otherData: { [key: string]: any }
+  otherData: unknown
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -113,6 +114,7 @@ export class CurrencyEngine<
     this.customTokens = []
     this.allTokensMap = { ...customTokens, ...env.builtinTokens }
     this.timers = {}
+    this.otherData = undefined
 
     this.transactionList[currencyCode] = []
     this.txIdMap[currencyCode] = {}
@@ -140,9 +142,8 @@ export class CurrencyEngine<
       lastCheckedTxsDropped: 0,
       numUnconfirmedSpendTxs: 0,
       numTransactions: {},
-      otherData: {}
+      otherData: undefined
     }
-    this.otherData = {}
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginId}`
     )
@@ -166,6 +167,10 @@ export class CurrencyEngine<
       }
     }
     return out
+  }
+
+  setOtherData(raw: any): void {
+    throw new Error(`Unimplemented setOtherData for ${this.walletInfo.type}`)
   }
 
   async loadTransactions(): Promise<void> {
@@ -276,6 +281,11 @@ export class CurrencyEngine<
         throw e
       }
     }
+    this.setOtherData(this.walletLocalData.otherData ?? {})
+    this.walletLocalDataDirty = !matchJson(
+      this.otherData,
+      this.walletLocalData.otherData
+    )
 
     // Add the native token currency
     this.tokenCheckBalanceStatus[currencyCode] = 0
@@ -577,6 +587,7 @@ export class CurrencyEngine<
     }
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
+      this.walletLocalData.otherData = this.otherData
       const jsonString = JSON.stringify(this.walletLocalData)
       await disklet
         .setText(DATA_STORE_FILE, jsonString)
@@ -704,7 +715,7 @@ export class CurrencyEngine<
     this.txIdList = {}
     this.txIdMap = {}
     this.transactionListDirty = true
-    this.otherData = this.walletLocalData.otherData
+    this.setOtherData({})
     await this.saveWalletLoop()
   }
 

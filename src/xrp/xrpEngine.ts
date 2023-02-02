@@ -29,6 +29,7 @@ import { RippleTools } from './xrpPlugin'
 import {
   asXrpNetworkLocation,
   asXrpTransaction,
+  asXrpWalletOtherData,
   XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
@@ -80,6 +81,10 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asXrpWalletOtherData(raw)
   }
 
   // Poll on the blockheight
@@ -561,13 +566,6 @@ export async function makeCurrencyEngine(
   const engine = new XrpEngine(env, tools, walletInfo, opts)
 
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
-
-  if (engine.otherData.recommendedFee == null) {
-    engine.otherData.recommendedFee = '0'
-  }
 
   return engine
 }

@@ -1,4 +1,4 @@
-import { asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface XrpNetworkInfo {
   rippledServers: string[]
@@ -13,9 +13,11 @@ export interface XrpCustomToken {
   contractAddress: string
 }
 
-export interface XrpWalletOtherData {
-  recommendedFee: string // Floating point value in full XRP value
-}
+export const asXrpWalletOtherData = asObject({
+  recommendedFee: asMaybe(asString, '0') // Floating point value in full XRP value
+})
+
+export type XrpWalletOtherData = ReturnType<typeof asXrpWalletOtherData>
 
 export const asXrpTransaction = asObject({
   date: asNumber,

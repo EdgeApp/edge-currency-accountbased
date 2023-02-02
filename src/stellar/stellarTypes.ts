@@ -1,4 +1,4 @@
-import { asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface StellarSettings {
   stellarServers: string[]
@@ -57,10 +57,12 @@ export interface StellarTransaction {
   memo_type: string
   ledger_attr: number
 }
-export interface StellarWalletOtherData {
-  lastPagingToken: string
-  accountSequence: number
-}
+export const asStellarWalletOtherData = asObject({
+  lastPagingToken: asMaybe(asString, '0'),
+  accountSequence: asMaybe(asNumber, 0)
+})
+
+export type StellarWalletOtherData = ReturnType<typeof asStellarWalletOtherData>
 
 export const asFeeStats = asObject({
   fee_charged: asObject({

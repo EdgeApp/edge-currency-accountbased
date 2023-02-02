@@ -1,3 +1,4 @@
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 import { Subscriber } from 'yaob'
 
 type ZcashNetworkName = 'mainnet' | 'testnet'
@@ -80,15 +81,22 @@ export interface ZcashUpdateEvent {
 }
 
 // Block range is inclusive
-export interface ZcashBlockRange {
-  first: number
-  last: number
-}
+export const asZcashBlockRange = asObject({
+  first: asNumber,
+  last: asNumber
+})
 
-export interface ZcashOtherData {
-  alias: string
-  blockRange: ZcashBlockRange
-}
+export type ZcashBlockRange = ReturnType<typeof asZcashBlockRange>
+
+export const asZcashWalletOtherData = asObject({
+  alias: asMaybe(asString),
+  blockRange: asMaybe(asZcashBlockRange, {
+    first: 0,
+    last: 0
+  })
+})
+
+export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
 
 export interface ZcashSynchronizer {
   on: Subscriber<{

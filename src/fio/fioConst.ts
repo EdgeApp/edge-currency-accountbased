@@ -1,3 +1,17 @@
+import {
+  asArray,
+  asBoolean,
+  asDate,
+  asMap,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
+
+import { asAny } from '../common/types'
+
 export const FIO_REG_API_ENDPOINTS = {
   buyAddress: 'buy-address',
   getDomains: 'get-domains',
@@ -125,29 +139,35 @@ export const STAKING_REWARD_MEMO = 'Paying Staking Rewards'
 export const STAKING_LOCK_PERIOD = 1000 * 60 * 60 * 24 * 7 // 7 days
 export const DAY_INTERVAL = 1000 * 60 * 60 * 24
 
-export interface FioRequest {
-  fio_request_id: string
-  payer_fio_address: string
-  payee_fio_address: string
-  payee_fio_public_key: string
-  payer_fio_public_key: string
-  amount: string
-  token_code: string
-  metadata: string
-  time_stamp: string
-  content: string
-}
+export const asFioRequest = asObject({
+  fio_request_id: asString,
+  payer_fio_address: asString,
+  payee_fio_address: asString,
+  payee_fio_public_key: asString,
+  payer_fio_public_key: asString,
+  amount: asString,
+  token_code: asString,
+  metadata: asString,
+  time_stamp: asString,
+  content: asString
+})
 
-export interface FioAddress {
-  name: string
-  bundledTxs?: number
-}
+export type FioRequest = ReturnType<typeof asFioRequest>
 
-export interface FioDomain {
-  name: string
-  expiration: string
-  isPublic: boolean
-}
+export const asFioAddress = asObject({
+  name: asString,
+  bundledTxs: asOptional(asNumber)
+})
+
+export type FioAddress = ReturnType<typeof asFioAddress>
+
+export const asFioDomain = asObject({
+  name: asString,
+  expiration: asString,
+  isPublic: asBoolean
+})
+
+export type FioDomain = ReturnType<typeof asFioDomain>
 
 export interface TxOtherParams {
   account: string
@@ -169,3 +189,37 @@ export interface TxOtherParams {
   }
   ui?: any
 }
+
+export const asEdgeStakingStatus = asObject({
+  stakedAmounts: asArray(
+    asObject({
+      nativeAmount: asString,
+      unlockDate: asOptional(asDate),
+      otherParams: asOptional(asAny)
+    })
+  )
+})
+
+export const asFioWalletOtherData = asObject({
+  highestTxHeight: asMaybe(asNumber, 0),
+  fioAddresses: asMaybe(asArray(asFioAddress), []),
+  fioDomains: asMaybe(asArray(asFioDomain), []),
+  fioRequests: asMaybe(
+    asObject({
+      PENDING: asArray(asFioRequest),
+      SENT: asArray(asFioRequest)
+    }),
+    {
+      SENT: [],
+      PENDING: []
+    }
+  ),
+  fioRequestsToApprove: asMaybe(asMap(asAny), {}),
+  srps: asMaybe(asNumber, 0),
+  stakingRoe: asMaybe(asString, ''),
+  stakingStatus: asMaybe(asEdgeStakingStatus, {
+    stakedAmounts: []
+  })
+})
+
+export type FioWalletOtherData = ReturnType<typeof asFioWalletOtherData>

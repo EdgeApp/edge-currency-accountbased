@@ -6,6 +6,10 @@ export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
 export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
 export const TRANSACTION_STORE_FILE = 'txEngineFolder/transactionList.json'
 
+// Same as asOptional but will not throw if cleaner fails but will
+// return the fallback instead
+export const asAny = (raw: any): any => raw
+
 export const asErrorMessage = asObject({
   message: asString
 })
@@ -13,7 +17,6 @@ export const asErrorMessage = asObject({
 export interface BooleanMap {
   readonly [key: string]: boolean
 }
-
 export type CustomToken = EdgeTokenInfo & EdgeToken
 
 export interface TxIdMap {
@@ -36,7 +39,7 @@ export class WalletLocalData {
   lastCheckedTxsDropped: number
   numUnconfirmedSpendTxs: number
   numTransactions: { [currencyCode: string]: number }
-  otherData: { [key: string]: any }
+  otherData: unknown
 
   constructor(jsonString: string | null) {
     this.blockHeight = 0
@@ -48,7 +51,7 @@ export class WalletLocalData {
     this.lastCheckedTxsDropped = 0
     this.numUnconfirmedSpendTxs = 0
     this.numTransactions = {}
-    this.otherData = {}
+    this.otherData = undefined
     this.publicKey = ''
     if (jsonString !== null) {
       const data = JSON.parse(jsonString)

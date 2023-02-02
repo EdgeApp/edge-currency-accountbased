@@ -1,7 +1,14 @@
-import { asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+
 export interface TezosSettings {
   tezosRpcNodes: string[]
 }
+
+export const asTezosWalletOtherData = asObject({
+  numberTransactions: asMaybe(asNumber, 0)
+})
+
+export type TezosWalletOtherData = ReturnType<typeof asTezosWalletOtherData>
 
 export const asXtzGetTransaction = asObject({
   level: asNumber,
