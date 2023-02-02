@@ -208,7 +208,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
-          this.startEngine().catch(() => {})
+          this.startEngine().catch(e => console.log(e.message))
         }
       }, 10000)
       return
@@ -216,14 +216,14 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     this.addToLoop(
       'checkServerInfoInnerLoop',
       BLOCKHEIGHT_POLL_MILLISECONDS
-    ).catch(() => {})
+    ).catch(e => console.log(e.message))
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
+      e => console.log(e.message)
     )
     this.addToLoop(
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
+    ).catch(e => console.log(e.message))
     await super.startEngine()
   }
 

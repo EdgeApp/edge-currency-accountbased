@@ -15,6 +15,7 @@ import {
   Wallet,
   xAddressToClassicAddress
 } from 'xrpl'
+import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -57,8 +58,7 @@ export class RippleTools implements EdgeCurrencyTools {
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
       await this.rippleApi.disconnect()
-      // @ts-expect-error
-      this.rippleApi = undefined
+      // this.rippleApi = undefined
     }
   }
 
@@ -80,9 +80,8 @@ export class RippleTools implements EdgeCurrencyTools {
 
     if (type === 'ripple' || type === 'ripple-secp256k1') {
       const algorithm =
-        type === 'ripple-secp256k1' ? 'ecdsa-secp256k1' : 'ed25519'
+        type === 'ripple-secp256k1' ? ECDSA.secp256k1 : ECDSA.ed25519
       const entropy = Array.from(this.io.random(32))
-      // @ts-expect-error
       const keys = Wallet.fromEntropy(entropy, { algorithm })
       return { rippleKey: keys.seed }
     } else {
