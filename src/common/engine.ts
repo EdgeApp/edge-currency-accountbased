@@ -108,7 +108,7 @@ export class CurrencyEngine<
     this.txIdMap = {}
     this.txIdList = {}
     this.walletInfo = walletInfo
-    this.walletId = walletInfo.id != null ? `${walletInfo.id} - ` : ''
+    this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
     this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
