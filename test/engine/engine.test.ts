@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
-import { WalletLocalData } from '../../src/common/types'
+import { asWalletLocalData } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
 import { FakeTools } from '../fake/FakeTools'
@@ -317,11 +317,7 @@ describe('Test transaction list updating', () => {
       walletInfo,
       currencyEngineOptions
     )
-    engine.walletLocalData = new WalletLocalData(
-      '{"publicKey": "0x123456"}',
-      // @ts-expect-error
-      'ETH'
-    )
+    engine.walletLocalData = asWalletLocalData({ publicKey: '0x123456' })
 
     for (const tx of engineTestTxs.ETH) {
       // @ts-expect-error

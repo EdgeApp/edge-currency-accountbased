@@ -28,6 +28,7 @@ import {
   checkEdgeSpendInfo
 } from './schema'
 import {
+  asWalletLocalData,
   CustomToken,
   DATA_STORE_FILE,
   TRANSACTION_STORE_FILE,
@@ -265,12 +266,12 @@ export class CurrencyEngine<
     const disklet = this.walletLocalDisklet
     try {
       const result = await disklet.getText(DATA_STORE_FILE)
-      this.walletLocalData = new WalletLocalData(result)
+      this.walletLocalData = asWalletLocalData(JSON.parse(result))
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
         this.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(null)
+        this.walletLocalData = asWalletLocalData({})
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
         await disklet.setText(
           DATA_STORE_FILE,
@@ -705,8 +706,9 @@ export class CurrencyEngine<
   }
 
   async clearBlockchainCache(): Promise<void> {
-    const temp = JSON.stringify({ publicKey: this.walletLocalData.publicKey })
-    this.walletLocalData = new WalletLocalData(temp)
+    this.walletLocalData = asWalletLocalData({
+      publicKey: this.walletLocalData.publicKey
+    })
     this.walletLocalDataDirty = true
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}

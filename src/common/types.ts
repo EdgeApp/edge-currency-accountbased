@@ -1,4 +1,12 @@
-import { asObject, asString } from 'cleaners'
+import {
+  asMap,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown
+} from 'cleaners'
 import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
@@ -29,57 +37,17 @@ export interface TransactionList {
   [currencyCode: string]: EdgeTransaction[]
 }
 
-export class WalletLocalData {
-  blockHeight: number
-  lastAddressQueryHeight: number
-  lastTransactionQueryHeight: { [currencyCode: string]: number }
-  lastTransactionDate: { [currencyCode: string]: number }
-  publicKey: string
-  totalBalances: { [currencyCode: string]: string }
-  lastCheckedTxsDropped: number
-  numUnconfirmedSpendTxs: number
-  numTransactions: { [currencyCode: string]: number }
-  otherData: unknown
+export const asWalletLocalData = asObject({
+  blockHeight: asMaybe(asNumber, 0),
+  lastAddressQueryHeight: asMaybe(asNumber, 0),
+  lastTransactionQueryHeight: asMaybe(asMap(asNumber), {}),
+  lastTransactionDate: asMaybe(asMap(asNumber), {}),
+  publicKey: asMaybe(asString, ''),
+  totalBalances: asMaybe(asMap(asString), {}),
+  lastCheckedTxsDropped: asMaybe(asNumber, 0),
+  numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
+  numTransactions: asMaybe(asMap(asNumber), {}),
+  otherData: asOptional(asUnknown, {})
+})
 
-  constructor(jsonString: string | null) {
-    this.blockHeight = 0
-    const totalBalances: { [currencyCode: string]: string } = {}
-    this.totalBalances = totalBalances
-    this.lastAddressQueryHeight = 0
-    this.lastTransactionQueryHeight = {}
-    this.lastTransactionDate = {}
-    this.lastCheckedTxsDropped = 0
-    this.numUnconfirmedSpendTxs = 0
-    this.numTransactions = {}
-    this.otherData = undefined
-    this.publicKey = ''
-    if (jsonString !== null) {
-      const data = JSON.parse(jsonString)
-
-      if (typeof data.blockHeight === 'number') {
-        this.blockHeight = data.blockHeight
-      }
-      if (typeof data.lastCheckedTxsDropped === 'number') {
-        this.lastCheckedTxsDropped = data.lastCheckedTxsDropped
-      }
-      if (typeof data.numUnconfirmedSpendTxs === 'number') {
-        this.numUnconfirmedSpendTxs = data.numUnconfirmedSpendTxs
-      }
-      if (typeof data.numTransactions === 'object') {
-        this.numTransactions = data.numTransactions
-      }
-      if (typeof data.lastAddressQueryHeight === 'number') {
-        this.lastAddressQueryHeight = data.lastAddressQueryHeight
-      }
-      if (typeof data.publicKey === 'string') this.publicKey = data.publicKey
-      if (typeof data.totalBalances !== 'undefined') {
-        this.totalBalances = data.totalBalances
-      }
-      if (typeof data.otherData !== 'undefined') this.otherData = data.otherData
-      if (typeof data.lastTransactionQueryHeight === 'object')
-        this.lastTransactionQueryHeight = data.lastTransactionQueryHeight
-      if (typeof data.lastTransactionDate === 'object')
-        this.lastTransactionDate = data.lastTransactionDate
-    }
-  }
-}
+export type WalletLocalData = ReturnType<typeof asWalletLocalData>
