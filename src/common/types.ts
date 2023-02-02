@@ -10,6 +10,10 @@ export const asErrorMessage = asObject({
   message: asString
 })
 
+export interface BooleanMap {
+  readonly [key: string]: boolean
+}
+
 export type CustomToken = EdgeTokenInfo & EdgeToken
 
 export interface TxIdMap {

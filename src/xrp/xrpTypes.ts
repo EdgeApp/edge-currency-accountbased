@@ -1,4 +1,4 @@
-import { asArray, asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { asNumber, asObject, asString } from 'cleaners'
 
 export interface XrpNetworkInfo {
   rippledServers: string[]
@@ -18,23 +18,9 @@ export interface XrpWalletOtherData {
 }
 
 export const asXrpTransaction = asObject({
-  Account: asString,
-  Amount: asString,
-  Destination: asString,
-  Fee: asString,
   date: asNumber,
   hash: asString,
   ledger_index: asNumber
 })
 
 export type XrpTransaction = ReturnType<typeof asXrpTransaction>
-
-export const asGetTransactionsResponse = asObject({
-  result: asObject({
-    transactions: asArray(
-      asObject({
-        tx: asMaybe(asXrpTransaction)
-      })
-    )
-  })
-})

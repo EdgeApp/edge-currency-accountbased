@@ -1,4 +1,4 @@
-import { add, eq, gt, lte, sub } from 'biggystring'
+import { add, eq, gt, lte, mul, sub, toFixed } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -9,7 +9,11 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { rippleTimeToUnixTime, Wallet } from 'xrpl'
-import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
+import { AccountTxResponse } from 'xrpl/dist/npm/models/methods/accountTx'
+import {
+  Payment,
+  validatePayment
+} from 'xrpl/dist/npm/models/transactions/payment'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -22,11 +26,14 @@ import {
 } from '../pluginError'
 import { RippleTools } from './xrpPlugin'
 import {
-  asGetTransactionsResponse,
+  asXrpTransaction,
   XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
 } from './xrpTypes'
+import { makeTokenId } from './xrpUtils'
+
+type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
@@ -103,28 +110,90 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
   }
 
-  processRippleTransaction(tx: XrpTransaction): void {
+  processRippleTransaction(accountTx: AccountTransaction): void {
+    if (accountTx.tx == null) return
+
+    // For some reason, XRPL types exclude Transaction hash, date, and ledger_index.
+    // Check if the tx has these undocumented fields and throw if not
+    asXrpTransaction(accountTx.tx)
+
+    if (accountTx.tx.TransactionType !== 'Payment') {
+      return
+    }
+
+    const tx: Payment & XrpTransaction = accountTx.tx as any
+
     const ourReceiveAddresses = []
-    let nativeAmount = tx.Amount
+    let nativeAmount = typeof tx.Amount === 'string' ? tx.Amount : '0'
+    let { currencyCode } = this.currencyInfo
+    let tokenTx = false
+    if (typeof tx.Amount === 'string') {
+      nativeAmount = tx.Amount
+    } else {
+      const { meta } = accountTx
+      if (typeof meta === 'string') {
+        this.log.warn(`**** WARNING: String meta field in txid ${tx.hash}`)
+        return
+      }
+
+      const { DeliveredAmount } = meta
+      if (DeliveredAmount == null) {
+        this.log.warn(
+          `**** WARNING: Undefined DeliveredAmount in txid ${tx.hash}`
+        )
+        return
+      }
+
+      if (typeof DeliveredAmount === 'string') {
+        this.log.warn(`**** WARNING: String DeliveredAmount in txid ${tx.hash}`)
+        return
+      }
+
+      const { currency, issuer, value } = DeliveredAmount
+
+      // Special case that we can't yet validate:
+      // If issuer === recipient account, then ignore this tx
+      if (issuer === tx.Account) return
+
+      tokenTx = true
+      const tokenId = makeTokenId({ currency, issuer })
+      const edgeToken = this.allTokensMap[tokenId]
+      if (edgeToken == null) return
+      currencyCode = edgeToken.currencyCode
+      nativeAmount = mul(value, edgeToken.denominations[0].multiplier)
+    }
+
+    let networkFee = '0'
+    let parentNetworkFee
     if (tx.Destination === this.walletLocalData.publicKey) {
       ourReceiveAddresses.push(this.walletLocalData.publicKey)
+    } else if (tx.Account !== this.walletLocalData.publicKey) {
+      // Error. If we're not the destination, we should be the source account
+      throw new Error('tx is neither Destination or source Account')
     } else {
-      nativeAmount = `-${add(nativeAmount, tx.Fee)}`
+      if (tokenTx) {
+        parentNetworkFee = tx.Fee
+        nativeAmount = `-${nativeAmount}`
+      } else {
+        networkFee = tx.Fee ?? '0'
+        nativeAmount = `-${add(nativeAmount, tx.Fee ?? '0')}`
+      }
     }
 
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash.toLowerCase(),
       date: rippleTimeToUnixTime(tx.date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-      currencyCode: this.currencyInfo.currencyCode,
+      currencyCode,
       blockHeight: tx.ledger_index,
       nativeAmount,
-      networkFee: tx.Fee,
+      networkFee,
+      parentNetworkFee,
       ourReceiveAddresses,
       signedTx: '',
       otherParams: {},
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+    this.addTransaction(currencyCode, edgeTransaction)
   }
 
   async checkTransactionsInnerLoop(): Promise<void> {
@@ -148,8 +217,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
         forward: true, // returns oldest to newest
         ledger_index_min: startBlock
       })
-      const transactions =
-        asGetTransactionsResponse(response).result.transactions
+      const { transactions } = response.result
       this.log(
         `Fetched transactions count: ${transactions.length} startBlock:${startBlock}`
       )
@@ -157,7 +225,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       // Iterate over transactions in address
       for (const transaction of transactions) {
         if (transaction.tx == null) continue
-        this.processRippleTransaction(transaction.tx)
+        this.processRippleTransaction(transaction)
       }
       if (this.transactionsChangedArray.length > 0) {
         this.currencyEngineCallbacks.onTransactionsChanged(
@@ -167,6 +235,16 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       }
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
+      this.enabledTokens.forEach(tokenCurrencyCode => {
+        const tokenId = getTokenIdFromCurrencyCode(
+          tokenCurrencyCode,
+          this.allTokensMap
+        )
+        if (tokenId == null) return
+        const currencyCode = this.allTokensMap[tokenId].currencyCode
+        if (currencyCode == null) return
+        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      })
       this.updateOnAddressesChecked()
     } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
@@ -183,9 +261,21 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
         ledger_index: 'current'
       })
       const { Balance, Sequence } = accountInfo.result.account_data
-      // TODO: Token balances can be queried with this.tools.rippleApi.getBalances(address)
       this.updateBalance(this.currencyInfo.currencyCode, Balance)
       this.nonce = Sequence
+
+      const getBalInfo = await this.tools.rippleApi.getBalances(address)
+      getBalInfo.forEach(({ currency, issuer, value }) => {
+        if (issuer == null) return
+        const tokenId = makeTokenId({ currency, issuer })
+        const edgeToken = this.allTokensMap[tokenId]
+        if (edgeToken != null) {
+          const multiplier = edgeToken.denominations[0].multiplier
+          if (multiplier == null) return
+          const assetAmount = toFixed(mul(value, multiplier), 0, 0)
+          this.updateBalance(edgeToken.currencyCode, assetAmount)
+        }
+      })
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.warn('Account not found. Probably not activated w/minimum XRP')

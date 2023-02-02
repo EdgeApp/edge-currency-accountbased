@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { EdgeCorePluginOptions, makeFakeIo } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import { BooleanMap } from '../src/common/types'
 import plugins from '../src/index'
 import { fakeLog } from './fake/fakeLog'
 
@@ -20,9 +21,11 @@ const fakePluginOptions: EdgeCorePluginOptions = {
 }
 
 const pluginIds = Object.keys(plugins) as Array<keyof typeof plugins>
+const pluginsWithoutMetatokens: BooleanMap = { ripple: true }
 
 describe('builtinTokens', function () {
   for (const pluginId of pluginIds) {
+    if (pluginsWithoutMetatokens[pluginId]) continue
     const plugin = plugins[pluginId](fakePluginOptions)
 
     it(`${pluginId} has the right tokenId's`, async function () {
