@@ -255,6 +255,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       } else if (typeof res === 'object' && Object.keys(res).length === 0) {
         // New accounts return an empty {} response
         this.updateBalance(this.currencyInfo.currencyCode, '0')
+        return
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
@@ -269,8 +270,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const resources = asAccountResources(res)
 
       this.accountResources = {
-        bandwidth: resources.freeNetLimit,
-        energy: resources.EnergyLimit
+        bandwidth: resources.freeNetLimit - resources.freeNetUsed,
+        energy: resources.EnergyLimit - resources.EnergyUsed
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address resources: ', e)
@@ -712,6 +713,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       65 + // signature bytes
       64 + // MAX_RESULT_SIZE_IN_TX
       5 // protobuf overhead
+
+    if (unsignedTxHex.length / 2 < 128) {
+      // short transactions save a byte in len-prefix
+      bandwidthNeeded--
+    }
 
     if (this.accountExistsCache[receiverAddress] === undefined) {
       try {
