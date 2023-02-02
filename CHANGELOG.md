@@ -1,5 +1,16 @@
 # edge-currency-accountbased
 
+## Upcoming changes
+
+- Add native `builtinTokens` support and deprecate `metaTokens`
+- Use patch-package to fix @tronscan/client errors
+
+## 0.22.4 (2023-02-01)
+
+- TRX: Fix resource handling
+- TRX: Fix fee calculation for low value transactions
+- Update checkpoint files
+
 ## 0.22.3 (2023-01-30)
 
 - fixed: Adjust build settings to provide better support for iPhone 12.
