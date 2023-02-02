@@ -1,4 +1,4 @@
-import { add, eq, gt, lte, mul, sub, toFixed } from 'biggystring'
+import { add, div, eq, gt, log10, lte, mul, sub, toFixed } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -17,6 +17,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
 import {
   PluginError,
@@ -26,6 +27,7 @@ import {
 } from '../pluginError'
 import { RippleTools } from './xrpPlugin'
 import {
+  asXrpNetworkLocation,
   asXrpTransaction,
   XrpNetworkInfo,
   XrpTransaction,
@@ -40,14 +42,23 @@ const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 const LEDGER_OFFSET = 20 // sdk constant
+const TOKEN_FEE = '12'
+const tfSetNoRipple = 131072 // No Rippling Flag for token sends
 
 interface PaymentJson {
-  Amount: string
+  Amount:
+    | string
+    | {
+        currency: string
+        issuer: string
+        value: string
+      }
   TransactionType: string
   Account: string
   Destination: string
   Fee: string
   DestinationTag?: number
+  Flags?: number
 }
 
 interface XrpParams {
@@ -211,7 +222,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
 
     try {
-      const response = await this.tools.rippleApi.request({
+      const response: AccountTxResponse = await this.tools.rippleApi.request({
         command: 'account_tx',
         account: address,
         forward: true, // returns oldest to newest
@@ -334,7 +345,6 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     let spendableBalance = this.getBalance({
       currencyCode
     })
-    // TODO: Look into this logic when adding token support
     if (currencyCode === this.currencyInfo.currencyCode) {
       spendableBalance = sub(spendableBalance, this.networkInfo.baseReserve)
     }
@@ -346,6 +356,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const parentCurrencyCode = this.currencyInfo.currencyCode
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -362,16 +373,36 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       throw new NoAmountSpecifiedError()
     }
 
-    const nativeNetworkFee = this.otherData.recommendedFee
+    let networkFee: string = '0'
+    let parentNetworkFee: string | undefined
 
     // Make sure amount doesn't drop the balance below the reserve amount otherwise the
     // transaction is invalid. It is not necessary to consider the fee in this
     // calculation because the transaction fee can be taken out of the reserve balance.
-    if (gt(add(nativeAmount, this.networkInfo.baseReserve), nativeBalance))
-      throw new InsufficientFundsError()
+    if (currencyCode === parentCurrencyCode) {
+      networkFee = this.otherData.recommendedFee
+      if (gt(add(nativeAmount, this.networkInfo.baseReserve), nativeBalance))
+        throw new InsufficientFundsError()
+    } else {
+      parentNetworkFee = TOKEN_FEE
+      // Tokens
+      if (gt(nativeAmount, nativeBalance)) throw new InsufficientFundsError()
+      const parentBalance =
+        this.walletLocalData.totalBalances[parentCurrencyCode] ?? '0'
+
+      if (gt(parentNetworkFee, parentBalance)) {
+        throw new InsufficientFundsError({
+          currencyCode: parentCurrencyCode,
+          networkFee: parentNetworkFee
+        })
+      }
+    }
 
     const uniqueIdentifier =
-      edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier ?? ''
+      edgeSpendInfo.spendTargets[0].memo ??
+      edgeSpendInfo.spendTargets[0].uniqueIdentifier ??
+      edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier ??
+      ''
 
     if (uniqueIdentifier !== '') {
       // Destination Tag Checks
@@ -405,12 +436,42 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       }
     }
 
-    const payment: PaymentJson = {
-      Amount: nativeAmount,
-      TransactionType: 'Payment',
-      Account: this.walletLocalData.publicKey,
-      Destination: publicAddress,
-      Fee: nativeNetworkFee
+    let payment: PaymentJson
+    if (currencyCode === parentCurrencyCode) {
+      payment = {
+        Amount: nativeAmount,
+        TransactionType: 'Payment',
+        Account: this.walletLocalData.publicKey,
+        Destination: publicAddress,
+        Fee: networkFee
+      }
+      nativeAmount = `-${add(nativeAmount, networkFee)}`
+    } else {
+      const tokenId = getTokenIdFromCurrencyCode(
+        currencyCode,
+        this.allTokensMap
+      )
+      if (tokenId == null) {
+        throw new Error('Error: Token not supported')
+      }
+      const edgeToken = this.allTokensMap[tokenId]
+      const {
+        networkLocation,
+        denominations: [denom]
+      } = edgeToken
+      const { currency, issuer } = asXrpNetworkLocation(networkLocation)
+      payment = {
+        TransactionType: 'Payment',
+        Account: this.walletLocalData.publicKey,
+        Fee: parentNetworkFee ?? TOKEN_FEE,
+        Amount: {
+          currency,
+          issuer,
+          value: div(nativeAmount, denom.multiplier, log10(denom.multiplier))
+        },
+        Destination: publicAddress,
+        Flags: tfSetNoRipple
+      }
     }
 
     if (uniqueIdentifier !== '') {
@@ -420,7 +481,6 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     const otherParams: XrpParams = {
       preparedTx: payment
     }
-    nativeAmount = `-${add(nativeAmount, nativeNetworkFee)}`
 
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
@@ -428,7 +488,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      networkFee: nativeNetworkFee, // networkFee
+      networkFee,
+      parentNetworkFee,
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams,

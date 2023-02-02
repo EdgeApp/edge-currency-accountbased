@@ -21,7 +21,8 @@ import ECDSA from 'xrpl/dist/npm/ECDSA'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
-import { XrpNetworkInfo } from './xrpTypes'
+import { asXrpNetworkLocation, XrpNetworkInfo } from './xrpTypes'
+import { makeTokenId } from './xrpUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -166,8 +167,8 @@ export class RippleTools implements EdgeCurrencyTools {
     if (location == null) {
       throw new Error('ErrorInvalidNetworkLocation')
     }
-    const { currency, issuer } = location
-    return `${currency}-${issuer}`
+    const asset = asXrpNetworkLocation(location)
+    return makeTokenId(asset)
   }
 }
 

@@ -24,3 +24,8 @@ export const asXrpTransaction = asObject({
 })
 
 export type XrpTransaction = ReturnType<typeof asXrpTransaction>
+
+export const asXrpNetworkLocation = asObject({
+  currency: asString,
+  issuer: asString
+})
