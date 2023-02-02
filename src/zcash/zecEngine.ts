@@ -40,13 +40,14 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   ) => Promise<ZcashSynchronizer>
 
   constructor(
+    env: PluginEnvironment<ZcashNetworkInfo>,
     tools: ZcashTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    networkInfo: ZcashNetworkInfo,
     makeSynchronizer: any
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
+    const { networkInfo } = env
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
@@ -420,13 +421,7 @@ export async function makeCurrencyEngine(
   const { makeSynchronizer } =
     env.nativeIo['edge-currency-accountbased'][env.networkInfo.nativeSdk]
 
-  const engine = new ZcashEngine(
-    tools,
-    walletInfo,
-    opts,
-    env.networkInfo,
-    makeSynchronizer
-  )
+  const engine = new ZcashEngine(env, tools, walletInfo, opts, makeSynchronizer)
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

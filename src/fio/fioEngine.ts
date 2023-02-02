@@ -110,14 +110,14 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: FioTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    fetchCors: Function,
     tpid: string
   ) {
-    super(tools, walletInfo, opts)
-    // @ts-expect-error
+    super(env, tools, walletInfo, opts)
+    const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
@@ -1695,7 +1695,7 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { tpid = 'finance@edge' } = env.initOptions
-  const engine = new FioEngine(tools, walletInfo, opts, getFetchCors(env), tpid)
+  const engine = new FioEngine(env, tools, walletInfo, opts, tpid)
   await engine.loadEngine(tools, walletInfo, opts)
 
   // This is just to make sure otherData is Flow checked

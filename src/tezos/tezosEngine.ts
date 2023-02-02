@@ -51,12 +51,13 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   fetchCors: EdgeFetchFunction
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: TezosTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    fetchCors: EdgeFetchFunction
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
+    const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
   }
 
@@ -521,7 +522,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TezosEngine(tools, walletInfo, opts, getFetchCors(env))
+  const engine = new TezosEngine(env, tools, walletInfo, opts)
 
   await engine.loadEngine(tools, walletInfo, opts)
 

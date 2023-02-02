@@ -15,6 +15,7 @@ import { beforeEach, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
+import { PluginEnvironment } from '../../src/common/innerPlugin'
 import { WalletLocalData } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
@@ -270,6 +271,17 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   enabledTokenIds: []
 }
 const walletInfo = { id: '', type: '', keys: {} }
+const env: PluginEnvironment<{}> = {
+  initOptions: {},
+  io: {} as any,
+  log: {} as any,
+  nativeIo: {} as any,
+  pluginDisklet: {} as any,
+
+  builtinTokens: {},
+  currencyInfo: {} as any,
+  networkInfo: {}
+}
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function validateTxidListMap(engine: CurrencyEngine<FakeTools>) {
@@ -298,6 +310,7 @@ describe('Test transaction list updating', () => {
   let engine
   beforeEach(() => {
     engine = new CurrencyEngine(
+      env,
       new FakeTools(),
       walletInfo,
       currencyEngineOptions

@@ -111,13 +111,14 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   fetchCors: EdgeFetchFunction
 
   constructor(
+    env: PluginEnvironment<EosNetworkInfo>,
     tools: EosTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    fetchCors: EdgeFetchFunction,
-    networkInfo: EosNetworkInfo
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    const fetchCors = getFetchCors(env)
+    super(env, tools, walletInfo, opts)
+    const { networkInfo } = env
     this.fetchCors = fetchCors
     this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
@@ -1258,13 +1259,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new EosEngine(
-    tools,
-    walletInfo,
-    opts,
-    getFetchCors(env),
-    env.networkInfo
-  )
+  const engine = new EosEngine(env, tools, walletInfo, opts)
   await engine.loadEngine(tools, walletInfo, opts)
 
   engine.otherData = engine.walletLocalData.otherData as any

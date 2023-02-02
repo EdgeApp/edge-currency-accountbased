@@ -88,13 +88,14 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   tronscan: TronScan
 
   constructor(
+    env: PluginEnvironment<TronNetworkInfo>,
     currencyPlugin: TronTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    fetchCors: EdgeFetchFunction,
-    networkInfo: TronNetworkInfo
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(currencyPlugin, walletInfo, opts)
+    super(env, currencyPlugin, walletInfo, opts)
+    const fetchCors = getFetchCors(env)
+    const { networkInfo } = env
     this.fetchCors = fetchCors
     this.log = opts.log
     this.networkInfo = networkInfo
@@ -1099,13 +1100,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TronEngine(
-    tools,
-    walletInfo,
-    opts,
-    getFetchCors(env),
-    env.networkInfo
-  )
+  const engine = new TronEngine(env, tools, walletInfo, opts)
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

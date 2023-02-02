@@ -84,14 +84,14 @@ export class EthereumEngine
   infoFeeProvider: () => Promise<EthereumFee>
   externalFeeProviders: FeeProviderFunction[]
   constructor(
+    env: PluginEnvironment<{}>,
     tools: EthereumTools,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions,
-    currencyInfo: EdgeCurrencyInfo,
-    fetchCors: EdgeFetchFunction
+    currencyInfo: EdgeCurrencyInfo
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
     const { pluginId } = this.currencyInfo
     if (typeof this.walletInfo.keys[`${pluginId}Key`] !== 'string') {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
@@ -107,7 +107,7 @@ export class EthereumEngine
       contractAddress: '',
       gasLimit: ''
     }
-    this.fetchCors = fetchCors
+    this.fetchCors = getFetchCors(env)
 
     // Update network fees from other providers
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
@@ -1321,12 +1321,12 @@ export async function makeCurrencyEngine(
   const { currencyInfo, initOptions } = env
 
   const engine = new EthereumEngine(
+    env,
     tools,
     walletInfo,
     initOptions,
     opts,
-    currencyInfo,
-    getFetchCors(env)
+    currencyInfo
   )
 
   // Do any async initialization necessary for the engine

@@ -3,7 +3,6 @@ import { add, eq, gt, toFixed } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyInfo,
   EdgeFreshAddress,
   EdgeIo,
   EdgeLog,
@@ -40,14 +39,13 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   maxFee: number
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: HederaTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    io: EdgeIo,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    currencyInfo: EdgeCurrencyInfo
+    io: EdgeIo
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
     this.log = opts.log
 
     this.io = io
@@ -577,8 +575,8 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const { io, currencyInfo } = env
-  const engine = new HederaEngine(tools, walletInfo, opts, io, currencyInfo)
+  const { io } = env
+  const engine = new HederaEngine(env, tools, walletInfo, opts, io)
 
   await engine.loadEngine(tools, walletInfo, opts)
 

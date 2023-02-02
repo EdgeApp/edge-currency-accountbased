@@ -55,12 +55,13 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   progressRatio: number
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: SolanaTools,
     walletInfo: EdgeWalletInfo,
-    opts: any, // EdgeCurrencyEngineOptions
-    fetchCors: EdgeFetchFunction
+    opts: any // EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
+    const fetchCors = getFetchCors(env)
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
@@ -457,7 +458,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new SolanaEngine(tools, walletInfo, opts, getFetchCors(env))
+  const engine = new SolanaEngine(env, tools, walletInfo, opts)
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)

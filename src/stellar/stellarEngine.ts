@@ -51,11 +51,12 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   otherData!: StellarWalletOtherData
 
   constructor(
+    env: PluginEnvironment<{}>,
     tools: StellarTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -637,7 +638,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new StellarEngine(tools, walletInfo, opts)
+  const engine = new StellarEngine(env, tools, walletInfo, opts)
 
   engine.stellarApi = stellarApi
 

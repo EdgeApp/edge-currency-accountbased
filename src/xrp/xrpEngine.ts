@@ -53,12 +53,13 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   nonce: number
 
   constructor(
+    env: PluginEnvironment<XrpNetworkInfo>,
     tools: RippleTools,
     walletInfo: EdgeWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    networkInfo: XrpNetworkInfo
+    opts: EdgeCurrencyEngineOptions
   ) {
-    super(tools, walletInfo, opts)
+    super(env, tools, walletInfo, opts)
+    const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
   }
@@ -208,7 +209,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
-          this.startEngine().catch(() => {})
+          this.startEngine().catch(e => console.log(e.message))
         }
       }, 10000)
       return
@@ -216,14 +217,14 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     this.addToLoop(
       'checkServerInfoInnerLoop',
       BLOCKHEIGHT_POLL_MILLISECONDS
-    ).catch(() => {})
+    ).catch(e => console.log(e.message))
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
+      e => console.log(e.message)
     )
     this.addToLoop(
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
+    ).catch(e => console.log(e.message))
     await super.startEngine()
   }
 
@@ -406,7 +407,7 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new XrpEngine(tools, walletInfo, opts, env.networkInfo)
+  const engine = new XrpEngine(env, tools, walletInfo, opts)
 
   await engine.loadEngine(tools, walletInfo, opts)
 

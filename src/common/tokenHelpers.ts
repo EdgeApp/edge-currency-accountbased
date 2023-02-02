@@ -31,3 +31,12 @@ export function makeMetaTokens(tokens: EdgeTokenMap): EdgeMetaToken[] {
   }
   return out
 }
+
+export const getTokenIdFromCurrencyCode = (
+  currencyCode: string,
+  allTokensMap: EdgeTokenMap
+): string | undefined => {
+  for (const tokenId of Object.keys(allTokensMap)) {
+    if (allTokensMap[tokenId].currencyCode === currencyCode) return tokenId
+  }
+}
