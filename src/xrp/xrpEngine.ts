@@ -1,14 +1,20 @@
 import { add, div, eq, gt, log10, lte, mul, sub, toFixed } from 'biggystring'
 import {
+  EdgeActivationApproveOptions,
+  EdgeActivationQuote,
+  EdgeActivationResult,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineActivationOptions,
+  EdgeEngineGetActivationAssetsOptions,
+  EdgeGetActivationAssetsResults,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { rippleTimeToUnixTime, Wallet } from 'xrpl'
+import { rippleTimeToUnixTime, TrustSet, Wallet } from 'xrpl'
 import { AccountTxResponse } from 'xrpl/dist/npm/models/methods/accountTx'
 import {
   Payment,
@@ -50,6 +56,8 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 const LEDGER_OFFSET = 20 // sdk constant
 const TOKEN_FEE = '12'
 const tfSetNoRipple = 131072 // No Rippling Flag for token sends
+const TRUST_LINE_APPROVAL_AMOUNT = '1000000'
+const SET_TRUST_LINE_FEE = '12'
 
 interface PaymentJson {
   Amount:
@@ -619,6 +627,118 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 
   getDisplayPublicSeed(): string {
     return this.walletInfo.keys?.publicKey ?? ''
+  }
+
+  engineGetActivationAssets = async (
+    options: EdgeEngineGetActivationAssetsOptions
+  ): Promise<EdgeGetActivationAssetsResults> => {
+    // We can only activate with XRP with the current wallet
+    return {
+      assetOptions: [
+        {
+          paymentWalletId: this.walletId,
+          currencyPluginId: this.currencyInfo.pluginId
+        }
+      ]
+    }
+  }
+
+  engineActivateWallet = async ({
+    activateTokenIds,
+    paymentTokenId,
+    paymentWallet
+  }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
+    if (activateTokenIds == null)
+      throw new Error(
+        `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
+      )
+    if (paymentTokenId != null)
+      throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
+    if (paymentWallet?.id !== this.walletId)
+      throw new Error('Must pay with same wallet you are activating token with')
+
+    for (const activateTokenId of activateTokenIds) {
+      if (this.allTokensMap[activateTokenId] == null)
+        throw new Error(`Invalid tokenId to activate ${activateTokenId}`)
+    }
+
+    const out = {
+      paymentWalletId: this.walletId,
+      fromNativeAmount: '0',
+      networkFee: {
+        nativeAmount: mul(
+          SET_TRUST_LINE_FEE,
+          activateTokenIds.length.toString()
+        ),
+        currencyPluginId: this.currencyInfo.pluginId
+      },
+      approve: async (
+        options: EdgeActivationApproveOptions = {}
+      ): Promise<EdgeActivationResult> => {
+        const { metadata } = options
+        const transactions: EdgeTransaction[] = []
+        for (const activateTokenId of activateTokenIds) {
+          const edgeToken = this.allTokensMap[activateTokenId]
+          const { currency, issuer } = asXrpNetworkLocation(
+            edgeToken.networkLocation
+          )
+          const networkFee = SET_TRUST_LINE_FEE
+          const payment: TrustSet = {
+            TransactionType: 'TrustSet',
+            Account: this.walletLocalData.publicKey,
+            Fee: networkFee,
+            Flags: tfSetNoRipple,
+            LimitAmount: {
+              currency,
+              issuer,
+              value: TRUST_LINE_APPROVAL_AMOUNT
+            }
+            // Sequence: 12
+          }
+          const sendTx = await this.tools.rippleApi.autofill(payment)
+          const rippleWallet = Wallet.fromSeed(this.walletInfo.keys.rippleKey)
+          const { tx_blob: signedTx, hash: txid } = rippleWallet.sign(sendTx)
+          const response = await this.tools.rippleApi.submit(signedTx)
+          const {
+            engine_result_code: resultCode,
+            engine_result_message: resultMessage
+          } = response.result
+
+          if (resultCode !== 0) {
+            this.warn(
+              `FAILURE activateWallet.approve() ${resultCode} ${resultMessage}`
+            )
+            throw new Error(resultMessage)
+          }
+
+          const otherParams: XrpParams = {
+            preparedTx: payment
+          }
+
+          const edgeTransaction: EdgeTransaction = {
+            txid: txid.toLowerCase(),
+            date: Date.now() / 1000,
+            currencyCode: this.currencyInfo.currencyCode,
+            blockHeight: 0, // blockHeight,
+            metadata,
+            nativeAmount: `-${networkFee}`,
+            networkFee,
+            ourReceiveAddresses: [],
+            signedTx,
+            otherParams,
+            walletId: this.walletId
+          }
+          this.warn(
+            `SUCCESS activateWallet.approve()\n${cleanTxLogs(edgeTransaction)}`
+          )
+          transactions.push(edgeTransaction)
+          await this.saveTx(edgeTransaction)
+        }
+        return { transactions }
+      },
+      close: async (): Promise<void> => {}
+    }
+    return out
   }
 }
 
