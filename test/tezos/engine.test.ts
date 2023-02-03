@@ -52,6 +52,7 @@ describe(`Tezos engine`, function () {
     onAddressChanged() {
       emitter.emit('addressChanged')
     },
+    onUnactivatedTokenIdsChanged() {},
     onWcNewContractCall(payload) {
       emitter.emit('wcNewContractCall', payload)
     }

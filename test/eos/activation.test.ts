@@ -56,6 +56,7 @@ describe(`EOS activation`, function () {
     onAddressChanged() {
       emitter.emit('addressChanged')
     },
+    onUnactivatedTokenIdsChanged() {},
     onWcNewContractCall(payload) {
       emitter.emit('wcNewContractCall', payload)
     }
