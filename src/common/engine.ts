@@ -143,6 +143,7 @@ export class CurrencyEngine<
       lastCheckedTxsDropped: 0,
       numUnconfirmedSpendTxs: 0,
       numTransactions: {},
+      unactivatedTokenIds: [],
       otherData: undefined
     }
     this.log(
@@ -353,6 +354,7 @@ export class CurrencyEngine<
     await Promise.all(addTokenPromises)
 
     this.doInitialBalanceCallback()
+    this.doInitialUnactivatedTokenIdsCallback()
   }
 
   findTransaction(currencyCode: string, txid: string): number {
@@ -614,6 +616,21 @@ export class CurrencyEngine<
           e
         )
       }
+    }
+  }
+
+  doInitialUnactivatedTokenIdsCallback(): void {
+    try {
+      if (
+        this.walletLocalData.unactivatedTokenIds != null &&
+        this.walletLocalData.unactivatedTokenIds.length > 0
+      ) {
+        this.currencyEngineCallbacks.onUnactivatedTokenIdsChanged(
+          this.walletLocalData.unactivatedTokenIds
+        )
+      }
+    } catch (e: any) {
+      this.error(`doInitialUnactivatedTokenIdsCallback Error`, e)
     }
   }
 

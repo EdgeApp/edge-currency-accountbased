@@ -18,7 +18,12 @@ import {
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
-import { cleanTxLogs, getOtherParams, safeErrorMessage } from '../common/utils'
+import {
+  cleanTxLogs,
+  getOtherParams,
+  matchJson,
+  safeErrorMessage
+} from '../common/utils'
 import {
   PluginError,
   pluginErrorCodes,
@@ -252,14 +257,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
       this.enabledTokens.forEach(tokenCurrencyCode => {
-        const tokenId = getTokenIdFromCurrencyCode(
-          tokenCurrencyCode,
-          this.allTokensMap
-        )
-        if (tokenId == null) return
-        const currencyCode = this.allTokensMap[tokenId].currencyCode
-        if (currencyCode == null) return
-        this.tokenCheckTransactionsStatus[currencyCode] = 1
+        this.tokenCheckTransactionsStatus[tokenCurrencyCode] = 1
       })
       this.updateOnAddressesChecked()
     } catch (e: any) {
@@ -270,6 +268,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
     const address = this.walletLocalData.publicKey
+    const newUnactivatedTokenIds: string[] = []
+
     try {
       const accountInfo = await this.tools.rippleApi.request({
         command: 'account_info',
@@ -292,14 +292,79 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
           this.updateBalance(edgeToken.currencyCode, assetAmount)
         }
       })
+
+      // If get here, we've checked balances for all possible tokens the user
+      // could have enabled. Mark all assets as checked
+      this.enabledTokens.forEach(tokenCurrencyCode => {
+        this.tokenCheckBalanceStatus[tokenCurrencyCode] = 1
+      })
+      this.updateOnAddressesChecked()
+
+      if (this.enabledTokens.length > 1) {
+        // Check for unactivated tokens
+        const acctLinesResponse = await this.tools.rippleApi.request({
+          command: 'account_lines',
+          account: address
+        })
+
+        this.enabledTokens.forEach(tokenCurrencyCode => {
+          const match = acctLinesResponse.result.lines.find(line => {
+            const { account: issuer, currency } = line
+            const lineTokenId = makeTokenId({ currency, issuer })
+            const edgeToken = this.allTokensMap[lineTokenId]
+            if (
+              edgeToken != null &&
+              tokenCurrencyCode === edgeToken.currencyCode
+            ) {
+              return true
+            }
+            return false
+          })
+          if (match == null) {
+            const tokenId = getTokenIdFromCurrencyCode(
+              tokenCurrencyCode,
+              this.allTokensMap
+            )
+            if (tokenId != null) {
+              newUnactivatedTokenIds.push(tokenId)
+            }
+          }
+        })
+      }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.warn('Account not found. Probably not activated w/minimum XRP')
-        this.tokenCheckBalanceStatus.XRP = 1
+        this.enabledTokens.forEach(tokenCurrencyCode => {
+          this.tokenCheckBalanceStatus[tokenCurrencyCode] = 1
+          if (tokenCurrencyCode !== this.currencyInfo.currencyCode) {
+            // All tokens are not activated if this address is not activated
+            const tokenId = getTokenIdFromCurrencyCode(
+              tokenCurrencyCode,
+              this.allTokensMap
+            )
+            if (tokenId != null) {
+              newUnactivatedTokenIds.push(tokenId)
+            }
+          }
+        })
         this.updateOnAddressesChecked()
+      } else {
+        this.error(`Error fetching address info: `, e)
         return
       }
-      this.error(`Error fetching address info: `, e)
+    }
+
+    if (
+      !matchJson(
+        newUnactivatedTokenIds,
+        this.walletLocalData.unactivatedTokenIds
+      )
+    ) {
+      this.walletLocalData.unactivatedTokenIds = newUnactivatedTokenIds
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onUnactivatedTokenIdsChanged(
+        this.walletLocalData.unactivatedTokenIds
+      )
     }
   }
 

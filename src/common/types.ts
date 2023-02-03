@@ -1,4 +1,5 @@
 import {
+  asArray,
   asMap,
   asMaybe,
   asNumber,
@@ -47,6 +48,7 @@ export const asWalletLocalData = asObject({
   lastCheckedTxsDropped: asMaybe(asNumber, 0),
   numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
   numTransactions: asMaybe(asMap(asNumber), {}),
+  unactivatedTokenIds: asMaybe(asArray(asString), []),
   otherData: asOptional(asUnknown, {})
 })
 
