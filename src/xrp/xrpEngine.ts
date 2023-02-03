@@ -24,6 +24,7 @@ import {
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
+import { BooleanMap } from '../common/types'
 import {
   cleanTxLogs,
   getOtherParams,
@@ -58,6 +59,10 @@ const TOKEN_FEE = '12'
 const tfSetNoRipple = 131072 // No Rippling Flag for token sends
 const TRUST_LINE_APPROVAL_AMOUNT = '1000000'
 const SET_TRUST_LINE_FEE = '12'
+const SUPPORTED_TRANSACTION_TYPES: BooleanMap = {
+  Payment: true,
+  TrustSet: true
+}
 
 interface PaymentJson {
   Amount:
@@ -146,9 +151,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     // Check if the tx has these undocumented fields and throw if not
     asXrpTransaction(accountTx.tx)
 
-    if (accountTx.tx.TransactionType !== 'Payment') {
-      return
-    }
+    if (!SUPPORTED_TRANSACTION_TYPES[accountTx.tx.TransactionType]) return
 
     const tx: Payment & XrpTransaction = accountTx.tx as any
 
@@ -158,7 +161,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     let tokenTx = false
     if (typeof tx.Amount === 'string') {
       nativeAmount = tx.Amount
-    } else {
+    } else if (tx.Amount != null) {
       const { meta } = accountTx
       if (typeof meta === 'string') {
         this.log.warn(`**** WARNING: String meta field in txid ${tx.hash}`)
