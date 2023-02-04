@@ -2,8 +2,6 @@ import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface EosNetworkInfo {
   chainId: string
-
-  createAccountViaSingleApiEndpoints?: string[]
   eosActivationServers: string[]
   eosDfuseServers: string[]
   eosHyperionNodes: string[]

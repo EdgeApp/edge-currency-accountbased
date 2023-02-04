@@ -27,7 +27,6 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { BooleanMap } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -74,7 +73,7 @@ type EosFunction =
   | 'getOutgoingTransactions'
   | 'transact'
 
-const bogusAccounts: BooleanMap = {
+const bogusAccounts: { readonly [name: string]: true } = {
   ramdeathtest: true,
   krpj4avazggi: true,
   fobleos13125: true
@@ -638,86 +637,19 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
 
       case 'getKeyAccounts': {
-        const body = JSON.stringify({
-          public_key: params[0]
-        })
+        const publicKey = params[0]
         const hyperionFuncs = this.networkInfo.eosHyperionNodes.map(
           server => async () => {
-            const authorizersReply = await this.fetchCors(
-              `${server}/v1/history/get_key_accounts`,
-              {
-                method: 'POST',
-                body,
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              }
-            )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (!authorizersReply.ok) {
-              throw new Error(
-                `${server} get_key_accounts failed with ${authorizersReply.status}`
-              )
-            }
-            const authorizersData = await authorizersReply.json()
-            // verify array order (chronological)?
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (!authorizersData.account_names[0]) {
-              // indicates no activation has occurred
-              // set flag to indicate whether has hit activation API
-              // only do once per login (makeEngine)
-              if (
-                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                this.networkInfo.createAccountViaSingleApiEndpoints &&
-                this.networkInfo.createAccountViaSingleApiEndpoints.length > 0
-              ) {
-                const { publicKey, ownerPublicKey } = this.walletInfo.keys
+            const client = getClient(this.fetchCors, server)
+            const accounts = await client.v1.history.get_key_accounts(publicKey)
 
-                const { createAccountViaSingleApiEndpoints } = this.networkInfo
-                const request = await this.fetchCors(
-                  createAccountViaSingleApiEndpoints[0],
-                  {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      ownerPublicKey,
-                      activePublicKey: publicKey
-                    }),
-                    headers: {
-                      Accept: 'application/json',
-                      'Content-Type': 'application/json'
-                    }
-                  }
-                )
-                const response = await request.json()
-                const { accountName, transactionId } = response
-                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                if (!accountName) throw new Error(response)
-                this.warn(
-                  `Account created with accountName: ${accountName} and transactionId: ${transactionId}`
-                )
-              }
+            if (accounts.account_names.length === 0) {
               throw new Error(
-                `${server} could not find account with public key: ${params[0]}`
+                `${server} could not find account with public key: ${publicKey}`
               )
             }
-            const accountName = authorizersData.account_names[0]
-            const getAccountBody = JSON.stringify({
-              account_name: accountName
-            })
-            const accountReply = await this.fetchCors(
-              `${server}/v1/chain/get_account`,
-              {
-                method: 'POST',
-                body: getAccountBody
-              }
-            )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (!accountReply.ok) {
-              throw new Error(
-                `${server} get_account failed with ${accountReply.status}`
-              )
-            }
-            return { server, result: await accountReply.json() }
+
+            return { server, result: accounts.account_names[0].toString() }
           }
         )
         // dfuse API is EOS only
@@ -726,7 +658,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
             if (this.currencyInfo.currencyCode !== 'EOS')
               throw new Error('dfuse only supports EOS')
             const response = await this.fetchCors(
-              `${server}/v0/state/key_accounts?public_key=${params[0]}`
+              `${server}/v0/state/key_accounts?public_key=${publicKey}`
             )
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (!response.ok) {
@@ -741,9 +673,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
               throw new Error('dfuse returned empty array')
             return {
               server,
-              result: {
-                account_name: responseJson.account_names[0]
-              }
+              result: responseJson.account_names[0]
             }
           }
         )
@@ -811,9 +741,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
       // Check if the publicKey has an account accountName
       if (this.otherData.accountName == null) {
-        const account = await this.multicastServers('getKeyAccounts', publicKey)
-        if (account != null && !bogusAccounts[account.account_name]) {
-          this.otherData.accountName = account.account_name
+        const accountName: string | undefined = await this.multicastServers(
+          'getKeyAccounts',
+          publicKey
+        )
+        if (accountName != null && bogusAccounts[accountName] == null) {
+          this.otherData.accountName = accountName
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
         }
