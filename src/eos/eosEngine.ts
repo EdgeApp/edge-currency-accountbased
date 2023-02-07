@@ -1151,13 +1151,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     let out = ''
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.eosOwnerKey) {
+    if (this.walletInfo.keys?.eosOwnerKey != null) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.eosKey) {
+    if (this.walletInfo.keys?.eosKey != null) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'active key\n' + this.walletInfo.keys.eosKey + '\n\n'
     }
@@ -1166,13 +1164,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
   getDisplayPublicSeed(): string {
     let out = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.ownerPublicKey) {
+    if (this.walletInfo.keys?.ownerPublicKey != null) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'owner publicKey\n' + this.walletInfo.keys.ownerPublicKey + '\n\n'
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+    if (this.walletInfo.keys?.publicKey != null) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
       out += 'active publicKey\n' + this.walletInfo.keys.publicKey + '\n\n'
     }
