@@ -536,7 +536,5 @@ export async function makeCurrencyEngine(
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
 
-  engine.otherData = engine.walletLocalData.otherData
-
   return engine
 }

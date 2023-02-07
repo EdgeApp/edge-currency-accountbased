@@ -22,6 +22,7 @@ import {
 import { StellarTools } from '../stellar/stellarPlugin'
 import {
   asFeeStats,
+  asStellarWalletOtherData,
   StellarAccount,
   StellarOperation,
   StellarTransaction,
@@ -62,6 +63,10 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asStellarWalletOtherData(raw)
   }
 
   async multicastServers(
@@ -643,16 +648,6 @@ export async function makeCurrencyEngine(
   engine.stellarApi = stellarApi
 
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
-
-  if (engine.otherData.accountSequence == null) {
-    engine.otherData.accountSequence = 0
-  }
-  if (engine.otherData.lastPagingToken == null) {
-    engine.otherData.lastPagingToken = '0'
-  }
 
   return engine
 }

@@ -1,3 +1,5 @@
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+
 export interface EosNetworkInfo {
   chainId: string
 
@@ -81,10 +83,10 @@ export interface EosAction {
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface EosParams {}
 
-export interface EosWalletOtherData {
-  accountName: string
-  // @ts-expect-error
-  lastQueryActionSeq: { [string]: number }
-  // @ts-expect-error
-  highestTxHeight: { [string]: number }
-}
+export const asEosWalletOtherData = asObject({
+  accountName: asMaybe(asString, ''),
+  lastQueryActionSeq: asMaybe(asObject(asNumber), {}),
+  highestTxHeight: asMaybe(asObject(asNumber), {})
+})
+
+export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>

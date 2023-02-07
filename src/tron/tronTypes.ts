@@ -31,10 +31,12 @@ export interface TronNetworkInfo {
   defaultFeeLimit: number
 }
 
-export interface TxQueryCache {
-  txid: string
-  timestamp: number
-}
+export const asTxQueryCache = asObject({
+  txid: asString,
+  timestamp: asNumber
+})
+
+export type TxQueryCache = ReturnType<typeof asTxQueryCache>
 
 export interface ReferenceBlock {
   hash: string
@@ -54,14 +56,26 @@ export interface TronNetworkFees {
   getMemoFee: number
 }
 
-export interface TronOtherdata {
-  lastAddressQueryHeight: number
-  mostRecentTxid: string
-  txQueryCache: {
-    mainnet: TxQueryCache
-    trc20: TxQueryCache
-  }
-}
+export const asTronWalletOtherData = asObject({
+  txQueryCache: asMaybe(
+    asObject({
+      mainnet: asTxQueryCache,
+      trc20: asTxQueryCache
+    }),
+    {
+      mainnet: {
+        txid: '',
+        timestamp: 0
+      },
+      trc20: {
+        txid: '',
+        timestamp: 0
+      }
+    }
+  )
+})
+
+export type TronWalletOtherData = ReturnType<typeof asTronWalletOtherData>
 
 export interface TronTxParams {
   toAddress: string

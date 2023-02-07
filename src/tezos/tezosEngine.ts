@@ -24,10 +24,12 @@ import {
 import { TezosTools } from '../tezos/tezosPlugin'
 import { currencyInfo } from './tezosInfo'
 import {
+  asTezosWalletOtherData,
   asXtzGetTransaction,
   HeadInfo,
   OperationsContainer,
   TezosOperation,
+  TezosWalletOtherData,
   XtzGetTransaction
 } from './tezosTypes'
 
@@ -49,6 +51,7 @@ type TezosFunction =
 
 export class TezosEngine extends CurrencyEngine<TezosTools> {
   fetchCors: EdgeFetchFunction
+  otherData!: TezosWalletOtherData
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -59,6 +62,10 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
     super(env, tools, walletInfo, opts)
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asTezosWalletOtherData(raw)
   }
 
   async multicastServers(func: TezosFunction, ...params: any): Promise<any> {
@@ -525,13 +532,6 @@ export async function makeCurrencyEngine(
   const engine = new TezosEngine(env, tools, walletInfo, opts)
 
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData
-
-  if (engine.otherData.numberTransactions == null) {
-    engine.otherData.numberTransaction = 0
-  }
 
   return engine
 }

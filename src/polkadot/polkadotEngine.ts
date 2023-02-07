@@ -24,11 +24,12 @@ import {
 } from '../common/utils'
 import { PolkadotTools } from './polkadotPlugin'
 import {
+  asPolkadotWalletOtherData,
   asSubscanResponse,
   asTransactions,
   asTransfer,
-  PolkadotOtherData,
   PolkadotSettings,
+  PolkadotWalletOtherData,
   SubscanResponse,
   SubscanTx
 } from './polkadotTypes'
@@ -41,7 +42,7 @@ const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   settings: PolkadotSettings
-  otherData!: PolkadotOtherData
+  otherData!: PolkadotWalletOtherData
   api!: ApiPromise
   keypair!: Keyring
   nonce: number
@@ -55,6 +56,10 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     super(env, tools, walletInfo, opts)
     this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.nonce = 0
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asPolkadotWalletOtherData(raw)
   }
 
   async fetchSubscan(
@@ -222,12 +227,6 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     }
   }
 
-  initOtherData(): void {
-    if (this.otherData.txCount == null) {
-      this.otherData.txCount = 0
-    }
-  }
-
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -236,7 +235,6 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
-    this.initOtherData()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
@@ -459,9 +457,6 @@ export async function makeCurrencyEngine(
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
 
   return engine
 }

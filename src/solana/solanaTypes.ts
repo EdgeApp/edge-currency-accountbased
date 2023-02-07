@@ -1,5 +1,6 @@
 import {
   asArray,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
@@ -15,9 +16,11 @@ export interface SolanaSettings {
   memoPublicKey: string
 }
 
-export interface SolanaOtherData {
-  newestTxid: string
-}
+export const asSolanaWalletOtherData = asObject({
+  newestTxid: asMaybe(asString, '')
+})
+
+export type SolanaWalletOtherData = ReturnType<typeof asSolanaWalletOtherData>
 
 export const asRpcBalance = asObject({
   value: asNumber

@@ -26,10 +26,11 @@ import {
   asRecentBlockHash,
   asRpcBalance,
   asRpcGetTransaction,
+  asSolanaWalletOtherData,
   RpcGetTransaction,
   RpcSignatureForAddress,
-  SolanaOtherData,
-  SolanaSettings
+  SolanaSettings,
+  SolanaWalletOtherData
 } from './solanaTypes'
 
 const {
@@ -49,7 +50,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
-  otherData!: SolanaOtherData
+  otherData!: SolanaWalletOtherData
   fetchCors: EdgeFetchFunction
   settings: SolanaSettings
   progressRatio: number
@@ -69,6 +70,10 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asSolanaWalletOtherData(raw)
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -276,13 +281,6 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  initOtherData() {
-    if (this.otherData.newestTxid == null) {
-      this.otherData.newestTxid = ''
-    }
-  }
-
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -290,7 +288,6 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
-    this.initOtherData()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -462,9 +459,6 @@ export async function makeCurrencyEngine(
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
 
   return engine
 }

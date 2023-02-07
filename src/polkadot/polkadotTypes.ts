@@ -18,9 +18,13 @@ export interface PolkadotSettings {
   lengthFeePerByte: string
 }
 
-export interface PolkadotOtherData {
-  txCount: number
-}
+export const asPolkadotWalletOtherData = asObject({
+  txCount: asMaybe(asNumber, 0)
+})
+
+export type PolkadotWalletOtherData = ReturnType<
+  typeof asPolkadotWalletOtherData
+>
 
 export const asSubscanResponse = asObject({
   code: asNumber,

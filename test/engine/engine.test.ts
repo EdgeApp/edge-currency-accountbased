@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
-import { WalletLocalData } from '../../src/common/types'
+import { asWalletLocalData } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
 import { FakeTools } from '../fake/FakeTools'
@@ -72,9 +72,11 @@ for (const fixture of fixtures) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)
     },
-    onUnactivatedTokenIdsChanged() {},
     onAddressChanged() {
       emitter.emit('addressChanged')
+    },
+    onUnactivatedTokenIdsChanged(payload) {
+      emitter.emit('onUnactivatedTokenIdsChanged', payload)
     },
     onWcNewContractCall(payload) {
       emitter.emit('wcNewContractCall', payload)
@@ -256,7 +258,9 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
     // console.log('onTransactionsChanged:', transactionList)
     emitter.emit('addressChanged')
   },
-  onUnactivatedTokenIdsChanged() {},
+  onUnactivatedTokenIdsChanged(payload) {
+    emitter.emit('onUnactivatedTokenIdsChanged', payload)
+  },
   onWcNewContractCall(payload) {
     emitter.emit('wcNewContractCall', payload)
   }
@@ -317,11 +321,7 @@ describe('Test transaction list updating', () => {
       walletInfo,
       currencyEngineOptions
     )
-    engine.walletLocalData = new WalletLocalData(
-      '{"publicKey": "0x123456"}',
-      // @ts-expect-error
-      'ETH'
-    )
+    engine.walletLocalData = asWalletLocalData({ publicKey: '0x123456' })
 
     for (const tx of engineTestTxs.ETH) {
       // @ts-expect-error

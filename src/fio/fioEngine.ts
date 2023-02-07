@@ -37,6 +37,7 @@ import {
   ACTIONS_TO_END_POINT_KEYS,
   ACTIONS_TO_FEE_END_POINT_KEYS,
   ACTIONS_TO_TX_ACTION_NAME,
+  asFioWalletOtherData,
   BROADCAST_ACTIONS,
   DAY_INTERVAL,
   DEFAULT_BUNDLED_TXS_AMOUNT,
@@ -45,6 +46,7 @@ import {
   FioAddress,
   FioDomain,
   FioRequest,
+  FioWalletOtherData,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET,
   STAKING_LOCK_PERIOD,
@@ -90,19 +92,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   recentFioFee: RecentFioFee
   fioSdk!: FIOSDK
   fioSdkPreparedTrx!: FIOSDK
-  otherData!: {
-    highestTxHeight: number
-    fioAddresses: FioAddress[]
-    fioDomains: FioDomain[]
-    fioRequests: {
-      PENDING: FioRequest[]
-      SENT: FioRequest[]
-    }
-    fioRequestsToApprove: { [requestId: string]: any }
-    srps: number
-    stakingRoe: string
-    stakingStatus: EdgeStakingStatus
-  }
+  otherData!: FioWalletOtherData
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -218,7 +208,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             )
             if (addressAlreadyAdded == null) {
               this.otherData.fioAddresses.push({
-                name: params.fioAddress
+                name: params.fioAddress as string,
+                bundledTxs: undefined
               })
               this.localDataDirty()
             }
@@ -335,6 +326,10 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         )
       }
     }
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asFioWalletOtherData(raw)
   }
 
   // Normalize date if not exists "Z" parameter
@@ -561,7 +556,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
         nativeAmount: '0'
       }
-      // @ts-expect-error
       const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
         // @ts-expect-error
         ({ txId: itemTxId, txName: itemTxName }) =>
@@ -569,7 +563,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       )
 
       if (addedTxIndex < 0) {
-        // @ts-expect-error
         stakedAmount.otherParams.txs.push({
           txId,
           nativeAmount,
@@ -577,7 +570,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           txName
         })
       } else {
-        // @ts-expect-error
         stakedAmount.otherParams.txs[addedTxIndex] = {
           txId,
           nativeAmount,
@@ -586,7 +578,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         }
       }
 
-      // @ts-expect-error
       for (const tx of stakedAmount.otherParams.txs) {
         stakedAmount.nativeAmount = add(
           stakedAmount.nativeAmount,
@@ -631,7 +622,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       meta: {}
     }
     const ourReceiveAddresses = []
-    if (action.block_num <= this.walletLocalData.otherData.highestTxHeight) {
+    if (action.block_num <= this.otherData.highestTxHeight) {
       return action.block_num
     }
 
@@ -831,7 +822,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
       return false
-    let newHighestTxHeight = this.walletLocalData.otherData.highestTxHeight
+    let newHighestTxHeight = this.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const actor = this.fioSdk.transactions.getActor(
       this.walletInfo.keys.publicKey
@@ -907,7 +898,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           } else if (
             (blockNum === newHighestTxHeight &&
               i === HISTORY_NODE_OFFSET - 1) ||
-            blockNum < this.walletLocalData.otherData.highestTxHeight
+            blockNum < this.otherData.highestTxHeight
           ) {
             finish = true
             break
@@ -923,8 +914,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         return await this.checkTransactions(++historyNodeIndex)
       }
     }
-    if (newHighestTxHeight > this.walletLocalData.otherData.highestTxHeight) {
-      this.walletLocalData.otherData.highestTxHeight = newHighestTxHeight
+    if (newHighestTxHeight > this.otherData.highestTxHeight) {
+      this.otherData.highestTxHeight = newHighestTxHeight
       this.localDataDirty()
     }
     return true
@@ -1262,8 +1253,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
         // check for removed / transferred addresses
         if (!areAddressesChanged) {
-          for (const fioAddress of this.walletLocalData.otherData
-            .fioAddresses) {
+          for (const fioAddress of this.otherData.fioAddresses) {
             if (
               result.fio_addresses.findIndex(
                 // @ts-expect-error
@@ -1445,8 +1435,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   async approveErroredFioRequests(): Promise<void> {
-    for (const fioRequestId in this.walletLocalData.otherData
-      .fioRequestsToApprove) {
+    for (const fioRequestId in this.otherData.fioRequestsToApprove) {
       try {
         // @ts-expect-error
         await this.otherMethods.fioAction(
@@ -1697,34 +1686,6 @@ export async function makeCurrencyEngine(
   const { tpid = 'finance@edge' } = env.initOptions
   const engine = new FioEngine(env, tools, walletInfo, opts, tpid)
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
-
-  // Initialize otherData defaults if they weren't on disk
-  if (engine.otherData.highestTxHeight == null) {
-    engine.otherData.highestTxHeight = 0
-  }
-  if (engine.otherData.fioAddresses == null) {
-    engine.otherData.fioAddresses = []
-  }
-  if (engine.otherData.fioDomains == null) {
-    engine.otherData.fioDomains = []
-  }
-  if (engine.otherData.fioRequestsToApprove == null) {
-    engine.otherData.fioRequestsToApprove = {}
-  }
-  if (engine.otherData.fioRequests == null) {
-    engine.otherData.fioRequests = {
-      SENT: [],
-      PENDING: []
-    }
-  }
-  if (engine.otherData.stakingStatus == null) {
-    engine.otherData.stakingStatus = {
-      stakedAmounts: []
-    }
-  }
 
   return engine
 }

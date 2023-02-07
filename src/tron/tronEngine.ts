@@ -41,6 +41,7 @@ import {
   asTronBlockHeight,
   asTronKeys,
   asTronQuery,
+  asTronWalletOtherData,
   asTRXBalance,
   asTRXTransferContract,
   CalcTxFeeOpts,
@@ -48,8 +49,8 @@ import {
   TronAccountResources,
   TronNetworkFees,
   TronNetworkInfo,
-  TronOtherdata,
   TronTxParams,
+  TronWalletOtherData,
   TxQueryCache
 } from './tronTypes'
 import {
@@ -86,6 +87,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   accountExistsCache: { [address: string]: boolean }
   energyEstimateCache: { [addressAndContract: string]: number }
   tronscan: TronScan
+  otherData!: TronWalletOtherData
 
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
@@ -122,6 +124,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
   }
 
+  setOtherData(raw: any): void {
+    this.otherData = asTronWalletOtherData(raw)
+  }
+
   async fetch(
     server: string,
     path: string,
@@ -142,21 +148,6 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       throw new Error(msg)
     }
     return { server, result }
-  }
-
-  initOtherData(): void {
-    if (this.otherData.txQueryCache == null) {
-      this.otherData.txQueryCache = {
-        mainnet: {
-          txid: '',
-          timestamp: 0
-        },
-        trc20: {
-          txid: '',
-          timestamp: 0
-        }
-      }
-    }
   }
 
   async checkBlockchainInnerLoop(): Promise<void> {
@@ -848,7 +839,6 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
   async startEngine(): Promise<void> {
     this.engineOn = true
-    this.initOtherData()
     this.addToLoop(
       'checkBlockchainInnerLoop',
       BLOCKCHAIN_POLL_MILLISECONDS
@@ -1104,9 +1094,6 @@ export async function makeCurrencyEngine(
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is type checked
-  engine.otherData = engine.walletLocalData.otherData as TronOtherdata
 
   return engine
 }

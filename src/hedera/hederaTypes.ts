@@ -1,4 +1,12 @@
-import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 export interface HederaSettings {
   creatorApiServers: [string]
@@ -7,6 +15,17 @@ export interface HederaSettings {
   checksumNetworkID: string
   maxFee: number
 }
+
+export const asHederaWalletOtherData = asObject({
+  activationRequestId: asMaybe(asString),
+  accountActivationQuoteAddress: asMaybe(asString),
+  accountActivationQuoteAmount: asMaybe(asString),
+  hederaAccount: asMaybe(asString),
+  latestTimestamp: asMaybe(asString),
+  paymentSubmitted: asMaybe(asBoolean)
+})
+
+export type HederaWalletOtherData = ReturnType<typeof asHederaWalletOtherData>
 
 export const hederaOtherMethodNames = [
   'getActivationSupportedCurrencies',

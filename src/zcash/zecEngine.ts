@@ -15,19 +15,20 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from './../common/utils'
 import { ZcashTools } from './zecPlugin'
 import {
+  asZcashWalletOtherData,
   ZcashInitializerConfig,
   ZcashNetworkInfo,
-  ZcashOtherData,
   ZcashSpendInfo,
   ZcashSynchronizer,
   ZcashSynchronizerStatus,
-  ZcashTransaction
+  ZcashTransaction,
+  ZcashWalletOtherData
 } from './zecTypes'
 
 export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   pluginId: string
   networkInfo: ZcashNetworkInfo
-  otherData!: ZcashOtherData
+  otherData!: ZcashWalletOtherData
   synchronizer!: ZcashSynchronizer
   synchronizerStatus!: ZcashSynchronizerStatus
   availableZatoshi!: string
@@ -53,11 +54,15 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     this.makeSynchronizer = makeSynchronizer
   }
 
+  setOtherData(raw: any): void {
+    this.otherData = asZcashWalletOtherData(raw)
+  }
+
   initData(): void {
     const { birthdayHeight, alias } = this.initializer
 
     // walletLocalData
-    if (this.otherData.blockRange == null) {
+    if (this.otherData.blockRange.first === 0) {
       this.otherData.blockRange = {
         first: birthdayHeight,
         last: birthdayHeight
@@ -425,9 +430,6 @@ export async function makeCurrencyEngine(
 
   // Do any async initialization necessary for the engine
   await engine.loadEngine(tools, walletInfo, opts)
-
-  // This is just to make sure otherData is Flow checked
-  engine.otherData = engine.walletLocalData.otherData as any
 
   return engine
 }

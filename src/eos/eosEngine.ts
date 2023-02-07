@@ -22,6 +22,7 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { BooleanMap } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -42,6 +43,7 @@ import {
   dfuseGetTransactionsQueryString
 } from './eosSchema'
 import {
+  asEosWalletOtherData,
   EosNetworkInfo,
   EosTransaction,
   EosTransactionSuperNode,
@@ -63,7 +65,7 @@ type EosFunction =
   | 'getOutgoingTransactions'
   | 'transact'
 
-const bogusAccounts = {
+const bogusAccounts: BooleanMap = {
   ramdeathtest: true,
   krpj4avazggi: true,
   fobleos13125: true
@@ -191,6 +193,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
+  setOtherData(raw: unknown): void {
+    this.otherData = asEosWalletOtherData(raw)
+  }
+
   async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: EdgeWalletInfo,
@@ -252,10 +258,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     let nativeAmount = mul(exchangeAmount, denom.multiplier)
     let name = ''
-    if (to === this.walletLocalData.otherData.accountName) {
+    if (to === this.otherData.accountName) {
       name = from
       ourReceiveAddresses.push(to)
-      if (from === this.walletLocalData.otherData.accountName) {
+      if (from === this.otherData.accountName) {
         // This is a spend to self. Make amount 0
         nativeAmount = '0'
       }
@@ -340,9 +346,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
       let nativeAmount = mul(exchangeAmount, denom.multiplier)
       // if sending to one's self
-      if (to === this.walletLocalData.otherData.accountName) {
+      if (to === this.otherData.accountName) {
         ourReceiveAddresses.push(to)
-        if (from === this.walletLocalData.otherData.accountName) {
+        if (from === this.otherData.accountName) {
           // This is a spend to self. Make amount 0
           nativeAmount = '0'
         }
@@ -387,8 +393,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     let finish = false
 
     let newHighestTxHeight =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0
+      this.otherData.lastQueryActionSeq[currencyCode] ?? 0
 
     while (!finish) {
       // query the server / node
@@ -436,11 +441,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     // if there have been new valid actions then increase the last sequence number
     if (
       newHighestTxHeight >
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      (this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] || 0)
+      (this.otherData.lastQueryActionSeq[currencyCode] ?? 0)
     ) {
-      this.walletLocalData.otherData.lastQueryActionSeq[currencyCode] =
-        newHighestTxHeight
+      this.otherData.lastQueryActionSeq[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
@@ -453,9 +456,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   ): Promise<boolean> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
-    let newHighestTxHeight =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0
+    let newHighestTxHeight = this.otherData.highestTxHeight[currencyCode] ?? 0
 
     const limit = 10
     let skip = 0
@@ -515,28 +516,19 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       skip += 10
     }
     if (
-      newHighestTxHeight >
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      (this.walletLocalData.otherData.highestTxHeight[currencyCode] || 0)
+      newHighestTxHeight > (this.otherData.highestTxHeight[currencyCode] ?? 0)
     ) {
-      this.walletLocalData.otherData.highestTxHeight[currencyCode] =
-        newHighestTxHeight
+      this.otherData.highestTxHeight[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
     return true
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      !this.walletLocalData.otherData ||
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      !this.walletLocalData.otherData.accountName
-    ) {
+  async checkTransactionsInnerLoop(): Promise<void> {
+    if (this.otherData == null || this.otherData.accountName == null) {
       return
     }
-    const acct = this.walletLocalData.otherData.accountName
+    const acct = this.otherData.accountName
 
     for (const token of this.enabledTokens) {
       let incomingResult, outgoingResult
@@ -545,7 +537,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         outgoingResult = await this.checkOutgoingTransactions(acct, token)
       } catch (e: any) {
         this.error(`checkTransactionsInnerLoop fetches failed with error: `, e)
-        return false
+        return
       }
 
       if (incomingResult && outgoingResult) {
@@ -835,39 +827,32 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const publicKey = this.walletLocalData.publicKey
     try {
-      // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (bogusAccounts[this.walletLocalData.otherData.accountName]) {
-        this.walletLocalData.otherData.accountName = ''
+      if (bogusAccounts[this.otherData.accountName ?? '']) {
+        this.otherData.accountName = ''
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onAddressChanged()
       }
       // Check if the publicKey has an account accountName
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!this.walletLocalData.otherData.accountName) {
+      if (this.otherData.accountName == null) {
         const account = await this.multicastServers('getKeyAccounts', publicKey)
-        // @ts-expect-error
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (account && !bogusAccounts[account.account_name]) {
-          this.walletLocalData.otherData.accountName = account.account_name
+        if (account != null && !bogusAccounts[account.account_name]) {
+          this.otherData.accountName = account.account_name
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
         }
       }
 
       // Check balance on account
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (this.walletLocalData.otherData.accountName) {
+      if (this.otherData.accountName != null) {
         for (const token of this.allTokens) {
           if (this.enabledTokens.includes(token.currencyCode)) {
             const results = await this.multicastServers(
               'getCurrencyBalance',
               token.contractAddress,
-              this.walletLocalData.otherData.accountName
+              this.otherData.accountName
             )
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (results && results.length > 0) {
@@ -910,9 +895,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async clearBlockchainCache(): Promise<void> {
     this.activatedAccountsCache = {}
     await super.clearBlockchainCache()
-    this.walletLocalData.otherData.lastQueryActionSeq = {}
-    this.walletLocalData.otherData.highestTxHeight = {}
-    this.walletLocalData.otherData.accountName = ''
+    this.otherData.lastQueryActionSeq = {}
+    this.otherData.highestTxHeight = {}
+    this.otherData.accountName = ''
   }
 
   // ****************************************************************************
@@ -943,8 +928,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.walletLocalData.otherData.accountName) {
-      return { publicAddress: this.walletLocalData.otherData.accountName }
+    if (this.otherData.accountName) {
+      return { publicAddress: this.otherData.accountName }
     } else {
       // Account is not yet active. Return the publicKeys so the user can activate the account
       return {
@@ -1032,12 +1017,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         name: 'transfer',
         authorization: [
           {
-            actor: this.walletLocalData.otherData.accountName,
+            actor: this.otherData.accountName,
             permission: 'active'
           }
         ],
         data: {
-          from: this.walletLocalData.otherData.accountName,
+          from: this.otherData.accountName,
           to: publicAddress,
           quantity,
           memo
@@ -1261,25 +1246,6 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const engine = new EosEngine(env, tools, walletInfo, opts)
   await engine.loadEngine(tools, walletInfo, opts)
-
-  engine.otherData = engine.walletLocalData.otherData as any
-
-  // engine.otherData is an opaque utility object for use for currency
-  // specific data that will be persisted to disk on this one device.
-  // Commonly stored data would be last queried block height or nonce values for accounts
-  // Edit the flow EosWalletOtherData and initialize those values here if they are
-  // undefined
-  // TODO: Initialize anything specific to this currency
-  // if (!engine.otherData.nonce) engine.otherData.nonce = 0
-  if (engine.otherData.accountName == null) {
-    engine.otherData.accountName = ''
-  }
-  if (engine.otherData.lastQueryActionSeq == null) {
-    engine.otherData.lastQueryActionSeq = {}
-  }
-  if (engine.otherData.highestTxHeight == null) {
-    engine.otherData.highestTxHeight = {}
-  }
 
   return engine
 }

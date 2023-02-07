@@ -28,6 +28,7 @@ import {
   checkEdgeSpendInfo
 } from './schema'
 import {
+  asWalletLocalData,
   CustomToken,
   DATA_STORE_FILE,
   TRANSACTION_STORE_FILE,
@@ -38,6 +39,7 @@ import {
 import {
   cleanTxLogs,
   getDenomInfo,
+  matchJson,
   normalizeAddress,
   safeErrorMessage
 } from './utils'
@@ -77,7 +79,7 @@ export class CurrencyEngine<
   log: EdgeLog
   warn: (message: string, e?: Error) => void
   error: (message: string, e?: Error) => void
-  otherData: { [key: string]: any }
+  otherData: unknown
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -106,13 +108,14 @@ export class CurrencyEngine<
     this.txIdMap = {}
     this.txIdList = {}
     this.walletInfo = walletInfo
-    this.walletId = walletInfo.id != null ? `${walletInfo.id} - ` : ''
+    this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
     this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
     this.customTokens = []
     this.allTokensMap = { ...customTokens, ...env.builtinTokens }
     this.timers = {}
+    this.otherData = undefined
 
     this.transactionList[currencyCode] = []
     this.txIdMap[currencyCode] = {}
@@ -140,9 +143,9 @@ export class CurrencyEngine<
       lastCheckedTxsDropped: 0,
       numUnconfirmedSpendTxs: 0,
       numTransactions: {},
-      otherData: {}
+      unactivatedTokenIds: [],
+      otherData: undefined
     }
-    this.otherData = {}
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginId}`
     )
@@ -166,6 +169,10 @@ export class CurrencyEngine<
       }
     }
     return out
+  }
+
+  setOtherData(raw: any): void {
+    throw new Error(`Unimplemented setOtherData for ${this.walletInfo.type}`)
   }
 
   async loadTransactions(): Promise<void> {
@@ -260,12 +267,12 @@ export class CurrencyEngine<
     const disklet = this.walletLocalDisklet
     try {
       const result = await disklet.getText(DATA_STORE_FILE)
-      this.walletLocalData = new WalletLocalData(result)
+      this.walletLocalData = asWalletLocalData(JSON.parse(result))
       this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
     } catch (err) {
       try {
         this.log('No walletLocalData setup yet: Failure is ok')
-        this.walletLocalData = new WalletLocalData(null)
+        this.walletLocalData = asWalletLocalData({})
         this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
         await disklet.setText(
           DATA_STORE_FILE,
@@ -276,6 +283,11 @@ export class CurrencyEngine<
         throw e
       }
     }
+    this.setOtherData(this.walletLocalData.otherData ?? {})
+    this.walletLocalDataDirty = !matchJson(
+      this.otherData,
+      this.walletLocalData.otherData
+    )
 
     // Add the native token currency
     this.tokenCheckBalanceStatus[currencyCode] = 0
@@ -342,6 +354,7 @@ export class CurrencyEngine<
     await Promise.all(addTokenPromises)
 
     this.doInitialBalanceCallback()
+    this.doInitialUnactivatedTokenIdsCallback()
   }
 
   findTransaction(currencyCode: string, txid: string): number {
@@ -577,6 +590,7 @@ export class CurrencyEngine<
     }
     if (this.walletLocalDataDirty) {
       this.log('walletLocalDataDirty. Saving...')
+      this.walletLocalData.otherData = this.otherData
       const jsonString = JSON.stringify(this.walletLocalData)
       await disklet
         .setText(DATA_STORE_FILE, jsonString)
@@ -602,6 +616,21 @@ export class CurrencyEngine<
           e
         )
       }
+    }
+  }
+
+  doInitialUnactivatedTokenIdsCallback(): void {
+    try {
+      if (
+        this.walletLocalData.unactivatedTokenIds != null &&
+        this.walletLocalData.unactivatedTokenIds.length > 0
+      ) {
+        this.currencyEngineCallbacks.onUnactivatedTokenIdsChanged(
+          this.walletLocalData.unactivatedTokenIds
+        )
+      }
+    } catch (e: any) {
+      this.error(`doInitialUnactivatedTokenIdsCallback Error`, e)
     }
   }
 
@@ -694,8 +723,9 @@ export class CurrencyEngine<
   }
 
   async clearBlockchainCache(): Promise<void> {
-    const temp = JSON.stringify({ publicKey: this.walletLocalData.publicKey })
-    this.walletLocalData = new WalletLocalData(temp)
+    this.walletLocalData = asWalletLocalData({
+      publicKey: this.walletLocalData.publicKey
+    })
     this.walletLocalDataDirty = true
     this.addressesChecked = false
     this.tokenCheckBalanceStatus = {}
@@ -704,7 +734,7 @@ export class CurrencyEngine<
     this.txIdList = {}
     this.txIdMap = {}
     this.transactionListDirty = true
-    this.otherData = this.walletLocalData.otherData
+    this.setOtherData({})
     await this.saveWalletLoop()
   }
 

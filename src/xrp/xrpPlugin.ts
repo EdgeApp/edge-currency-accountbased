@@ -5,6 +5,7 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
+  EdgeToken,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import parse from 'url-parse'
@@ -20,7 +21,8 @@ import ECDSA from 'xrpl/dist/npm/ECDSA'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
-import { XrpNetworkInfo } from './xrpTypes'
+import { asXrpNetworkLocation, XrpNetworkInfo } from './xrpTypes'
+import { makeTokenId } from './xrpUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -155,6 +157,18 @@ export class RippleTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, 'ripple', amount)
     return encodedUri
+  }
+
+  // Token ID format is currencyCode-issuerAddress
+  // issuer addresses can issue more than one token so we need
+  // the currency code to make the token id unique
+  async getTokenId(token: EdgeToken): Promise<string> {
+    const location = token?.networkLocation
+    if (location == null) {
+      throw new Error('ErrorInvalidNetworkLocation')
+    }
+    const asset = asXrpNetworkLocation(location)
+    return makeTokenId(asset)
   }
 }
 

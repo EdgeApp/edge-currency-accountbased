@@ -2,7 +2,6 @@ import WalletConnect from '@walletconnect/client'
 import {
   asArray,
   asEither,
-  asMap,
   asMaybe,
   asNull,
   asNumber,
@@ -98,6 +97,8 @@ export type EthereumBaseMultiplier = ReturnType<
   typeof asEthereumBaseFeeMultiplier
 >
 
+export type KeysOfEthereumBaseMultiplier = keyof EthereumBaseMultiplier
+
 export const asEthereumFee = asObject({
   baseFeeMultiplier: asOptional(asEthereumBaseFeeMultiplier),
   gasLimit: asEthereumFeesGasLimit,
@@ -105,6 +106,12 @@ export const asEthereumFee = asObject({
   minPriorityFee: asOptional(asString)
 })
 
+export const blankEthereumFee: EthereumFee = {
+  baseFeeMultiplier: undefined,
+  gasLimit: { minGasLimit: '', regularTransaction: '', tokenTransaction: '' },
+  gasPrice: undefined,
+  minPriorityFee: undefined
+}
 export type EthereumFee = ReturnType<typeof asEthereumFee>
 
 export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
@@ -224,11 +231,15 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   data: asOptional(asEither(asString, asNull))
 })
 
-export interface EthereumWalletOtherData {
-  nextNonce: string
-  unconfirmedNextNonce: string
-  networkFees: EthereumFees
-}
+export const asEthereumWalletOtherData = asObject({
+  nextNonce: asMaybe(asString, '0'),
+  unconfirmedNextNonce: asMaybe(asString, '0'),
+  networkFees: asMaybe(asEthereumFees, { default: blankEthereumFee })
+})
+
+export type EthereumWalletOtherData = ReturnType<
+  typeof asEthereumWalletOtherData
+>
 
 export interface AlethioTokenTransferAttributes {
   blockCreationTime: number
@@ -291,7 +302,7 @@ export const asBlockChairAddress = asObject({
 export type BlockChairAddress = ReturnType<typeof asBlockChairAddress>
 
 export const asCheckTokenBalBlockchair = asObject({
-  data: asMap(
+  data: asObject(
     asObject({
       address: asObject({
         balance: asString
