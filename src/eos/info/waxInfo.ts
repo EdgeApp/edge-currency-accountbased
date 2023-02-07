@@ -12,6 +12,7 @@ export const waxNetworkInfo: EosNetworkInfo = {
   eosDfuseServers: [],
   eosHyperionNodes: ['https://api.waxsweden.org'],
   eosNodes: ['https://api.waxsweden.org'],
+  powerUpServers: [],
   uriProtocol: 'wax'
 }
 

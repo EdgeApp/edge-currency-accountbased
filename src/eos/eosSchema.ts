@@ -179,3 +179,21 @@ export const transferAbi: ABIDef = {
   ],
   actions: [{ name: 'transfer', type: 'transfer', ricardian_contract: '' }]
 }
+
+export const powerupAbi: ABIDef = {
+  structs: [
+    {
+      base: '',
+      name: 'powerup',
+      fields: [
+        { name: 'payer', type: 'name' },
+        { name: 'receiver', type: 'name' },
+        { name: 'days', type: 'int32' },
+        { name: 'net_frac', type: 'int64' },
+        { name: 'cpu_frac', type: 'int64' },
+        { name: 'max_payment', type: 'asset' }
+      ]
+    }
+  ],
+  actions: [{ name: 'powerup', type: 'powerup', ricardian_contract: '' }]
+}
