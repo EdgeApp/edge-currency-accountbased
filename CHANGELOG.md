@@ -1,7 +1,8 @@
 # edge-currency-accountbased
 
-## Upcoming changes
+## 0.22.5 (2023-01-06)
 
+- Add XRP token support
 - Add native `builtinTokens` support and deprecate `metaTokens`
 - Use patch-package to fix @tronscan/client errors
 
