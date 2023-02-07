@@ -72,10 +72,6 @@ export class EosTools implements EdgeCurrencyTools {
 
     const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
     if (type === currencyInfoType) {
-      // TODO: User currency library to create private key as a string
-      // Use io.random() for random number generation
-      // Multiple keys can be created and stored here. ie. If there is both a mnemonic and key format,
-      // Generate and store them here by returning an arbitrary object with them.
       let entropy = Buffer.from(this.io.random(32)).toString('hex')
       const eosOwnerKey = PrivateKey.from(entropy).toWif()
       entropy = Buffer.from(this.io.random(32)).toString('hex')
@@ -90,11 +86,6 @@ export class EosTools implements EdgeCurrencyTools {
     const type = walletInfo.type.replace('wallet:', '')
     const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
     if (type === currencyInfoType) {
-      // TODO: User currency library to derive the public keys/addresses from the private key.
-      // Multiple keys can be generated and stored if needed. Do not store an HD chain
-      // but rather just different versions of the master public key
-      // const publicKey = derivePubkey(walletInfo.keys.eosKey)
-      // const publicKey = deriveAddress(walletInfo.keys.eosKey)
       const publicKey = PrivateKey.from(walletInfo.keys.eosKey)
         .toPublic()
         .toLegacyString()
