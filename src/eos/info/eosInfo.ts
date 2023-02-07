@@ -22,6 +22,7 @@ export const eosNetworkInfo: EosNetworkInfo = {
     'https://api.eosn.io'
   ],
   eosDfuseServers: ['https://eos.dfuse.eosnation.io'],
+  powerUpServers: ['https://api.eospowerup.io/freePowerup'],
   uriProtocol: 'eos'
 }
 

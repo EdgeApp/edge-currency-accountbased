@@ -9,6 +9,7 @@ import {
   SignedTransaction,
   Transaction
 } from '@greymass/eosio'
+import { PowerUpState, Resources, SampleUsage } from '@greymass/eosio-resources'
 import { div, eq, gt, mul, toFixed } from 'biggystring'
 import { asEither, asMaybe } from 'cleaners'
 import {
@@ -47,9 +48,11 @@ import {
   dfuseGetTransactionsQueryString,
   EosOtherParams,
   EosTransfer,
+  powerupAbi,
   transferAbi
 } from './eosSchema'
 import {
+  AccountResources,
   asEosWalletOtherData,
   EosNetworkInfo,
   EosTransaction,
@@ -66,11 +69,14 @@ const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 
 type EosFunction =
+  | 'getAccount'
   | 'getCurrencyBalance'
   | 'getIncomingTransactions'
   | 'getInfo'
   | 'getKeyAccounts'
   | 'getOutgoingTransactions'
+  | 'getPowerUpState'
+  | 'getResourceUsage'
   | 'transact'
 
 const bogusAccounts: { [name: string]: true } = {
@@ -86,6 +92,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   networkInfo: EosNetworkInfo
   fetchCors: EdgeFetchFunction
   referenceBlock: ReferenceBlock
+  accountResources: AccountResources
+  getResourcesMutex: boolean
 
   constructor(
     env: PluginEnvironment<EosNetworkInfo>,
@@ -104,6 +112,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       ref_block_num: 0,
       ref_block_prefix: 0
     }
+    this.accountResources = {
+      cpu: 0,
+      net: 0
+    }
+    this.getResourcesMutex = false
     this.allTokens.push({
       ...denominations[0],
       currencyCode,
@@ -544,6 +557,19 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     const { currencyCode } = this.currencyInfo
     let out = { result: '', server: 'no server' }
     switch (func) {
+      case 'getAccount': {
+        out = await asyncWaterfall(
+          this.networkInfo.eosNodes.map(server => async () => {
+            const client = getClient(this.fetchCors, server)
+            const result = await client.v1.chain.get_account(
+              this.otherData.accountName
+            )
+
+            return { server, result }
+          })
+        )
+        break
+      }
       case 'getIncomingTransactions':
       case 'getOutgoingTransactions': {
         const { direction, acct, currencyCode, skip, limit, low } = params[0]
@@ -709,6 +735,30 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         )
         break
       }
+      case 'getPowerUpState': {
+        out = await asyncWaterfall(
+          this.networkInfo.eosNodes.map(server => async () => {
+            const client = getClient(this.fetchCors, server)
+            const resources = new Resources({ api: client })
+            const result = await resources.v1.powerup.get_state()
+
+            return { server, result }
+          })
+        )
+        break
+      }
+      case 'getResourceUsage': {
+        out = await asyncWaterfall(
+          this.networkInfo.eosNodes.map(server => async () => {
+            const client = getClient(this.fetchCors, server)
+            const resources = new Resources({ api: client })
+            const result = await resources.getSampledUsage()
+
+            return { server, result }
+          })
+        )
+        break
+      }
       case 'transact': {
         const { eosNodes } = this.networkInfo
         const randomNodes = pickRandom(eosNodes, 30)
@@ -766,9 +816,105 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         }
       }
       this.updateOnAddressesChecked()
+
+      // Check available resources on account
+      const accountStats: API.v1.AccountObject = await this.multicastServers(
+        'getAccount'
+      )
+
+      const { cpu_limit: cpuLimit, net_limit: netLimit } = accountStats
+      this.accountResources = {
+        cpu: cpuLimit.available.toNumber(),
+        net: netLimit.available.toNumber()
+      }
     } catch (e: any) {
       this.error(`Error fetching account: `, e)
     }
+  }
+
+  async getResources(): Promise<void> {
+    if (this.getResourcesMutex) return
+    const { cpu, net } = this.accountResources
+    if (cpu > 500 && net > 500) {
+      // Can afford a typical transaction
+      return
+    }
+
+    // This service allows 2 topups per day
+    if (
+      this.otherData.lastFreePowerUp >
+      Date.now() - 1000 * 60 * 60 * 12 /* 12 hours */
+    ) {
+      const server = pickRandom(this.networkInfo.powerUpServers, 1)
+      try {
+        const response = await this.fetchCors(
+          `${server}/${this.otherData.accountName}`
+        )
+        if (!response.ok) {
+          throw new Error(`getResources error ${response.status}`)
+        }
+
+        this.otherData.lastFreePowerUp = Date.now()
+        this.walletLocalDataDirty = true
+        this.log.warn('getResources freePowerUp SUCCESS')
+        return
+      } catch (e) {
+        this.log.warn('getResources lastFreePowerUp error', e)
+      }
+    }
+
+    // Pay for resources
+    try {
+      const powerUpState: PowerUpState = await this.multicastServers(
+        'getPowerUpState'
+      )
+      const usage: SampleUsage = await this.multicastServers('getResourceUsage')
+      const cpuFraction = powerUpState.cpu.frac(usage, 1000)
+      const netFraction = powerUpState.net.frac(usage, 1000)
+
+      const transferActions = [
+        {
+          account: 'eosio',
+          name: 'powerup',
+          authorization: [
+            {
+              actor: this.otherData.accountName,
+              permission: 'active'
+            }
+          ],
+          data: {
+            payer: this.otherData.accountName,
+            receiver: this.otherData.accountName,
+            days: 1,
+            cpu_frac: cpuFraction,
+            net_frac: netFraction,
+            max_payment: '0.0003 EOS'
+          }
+        }
+      ]
+      const edgeTransaction: EdgeTransaction = {
+        txid: '',
+        date: 0,
+        currencyCode: this.currencyInfo.currencyCode,
+        blockHeight: 0,
+        nativeAmount: '-3',
+        networkFee: '0',
+        ourReceiveAddresses: [],
+        signedTx: '',
+        otherParams: {
+          actions: transferActions,
+          signatures: []
+        },
+        walletId: this.walletId
+      }
+      const signedTx = await this.signTx(edgeTransaction)
+      this.getResourcesMutex = true
+      await this.broadcastTx(signedTx)
+      this.log.warn('getResources purchase SUCCESS')
+    } catch (e) {
+      this.log.warn('getResources purchase FAILURE\n', e)
+    }
+    this.getResourcesMutex = false
   }
 
   async clearBlockchainCache(): Promise<void> {
@@ -991,13 +1137,16 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
 
+    const abi =
+      otherParams.actions[0].name === 'transfer' ? transferAbi : powerupAbi
+
     const transaction = Transaction.from(
       {
         ...this.referenceBlock,
         expiration: new Date(new Date().getTime() + 30000),
         actions: otherParams.actions
       },
-      transferAbi
+      abi
     )
     const txDigest = transaction.signingDigest(this.networkInfo.chainId)
     const privateKey = PrivateKey.from(this.walletInfo.keys.eosKey)
@@ -1018,6 +1167,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
+    if (!this.getResourcesMutex) {
+      await this.getResources()
+    }
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
     const { signatures } = otherParams
 

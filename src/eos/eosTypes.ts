@@ -6,6 +6,7 @@ export interface EosNetworkInfo {
   eosDfuseServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
+  powerUpServers: string[]
   uriProtocol: string
 }
 
@@ -82,7 +83,8 @@ export interface EosParams {}
 export const asEosWalletOtherData = asObject({
   accountName: asMaybe(asString, ''),
   lastQueryActionSeq: asMaybe(asObject(asNumber), {}),
-  highestTxHeight: asMaybe(asObject(asNumber), {})
+  highestTxHeight: asMaybe(asObject(asNumber), {}),
+  lastFreePowerUp: asMaybe(asNumber, 0)
 })
 
 export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>
@@ -90,4 +92,9 @@ export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>
 export interface ReferenceBlock {
   ref_block_num: number
   ref_block_prefix: number
+}
+
+export interface AccountResources {
+  cpu: number
+  net: number
 }
