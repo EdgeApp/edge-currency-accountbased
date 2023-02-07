@@ -2,7 +2,6 @@ import {
   asArray,
   asBoolean,
   asDate,
-  asMap,
   asMaybe,
   asNumber,
   asObject,
@@ -214,7 +213,7 @@ export const asFioWalletOtherData = asObject({
       PENDING: []
     }
   ),
-  fioRequestsToApprove: asMaybe(asMap(asAny), {}),
+  fioRequestsToApprove: asMaybe(asObject(asAny), {}),
   srps: asMaybe(asNumber, 0),
   stakingRoe: asMaybe(asString, ''),
   stakingStatus: asMaybe(asEdgeStakingStatus, {

@@ -2,7 +2,6 @@ import WalletConnect from '@walletconnect/client'
 import {
   asArray,
   asEither,
-  asMap,
   asMaybe,
   asNull,
   asNumber,
@@ -303,7 +302,7 @@ export const asBlockChairAddress = asObject({
 export type BlockChairAddress = ReturnType<typeof asBlockChairAddress>
 
 export const asCheckTokenBalBlockchair = asObject({
-  data: asMap(
+  data: asObject(
     asObject({
       address: asObject({
         balance: asString

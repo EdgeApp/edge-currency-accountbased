@@ -1,7 +1,6 @@
 import {
   asArray,
   asBoolean,
-  asMap,
   asNumber,
   asObject,
   asOptional,
@@ -16,7 +15,7 @@ export const asGetAccountActivationQuote = asObject({
 })
 
 export const asGetActivationSupportedCurrencies = asObject({
-  result: asMap(asBoolean)
+  result: asObject(asBoolean)
 })
 
 export const asGetActivationCost = asObject({

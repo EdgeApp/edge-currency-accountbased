@@ -1,4 +1,4 @@
-import { asMap, asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface EosNetworkInfo {
   chainId: string
@@ -85,8 +85,8 @@ export interface EosParams {}
 
 export const asEosWalletOtherData = asObject({
   accountName: asMaybe(asString, ''),
-  lastQueryActionSeq: asMaybe(asMap(asNumber), {}),
-  highestTxHeight: asMaybe(asMap(asNumber), {})
+  lastQueryActionSeq: asMaybe(asObject(asNumber), {}),
+  highestTxHeight: asMaybe(asObject(asNumber), {})
 })
 
 export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>

@@ -1,6 +1,5 @@
 import {
   asArray,
-  asMap,
   asMaybe,
   asNumber,
   asObject,
@@ -41,13 +40,13 @@ export interface TransactionList {
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),
   lastAddressQueryHeight: asMaybe(asNumber, 0),
-  lastTransactionQueryHeight: asMaybe(asMap(asNumber), {}),
-  lastTransactionDate: asMaybe(asMap(asNumber), {}),
+  lastTransactionQueryHeight: asMaybe(asObject(asNumber), {}),
+  lastTransactionDate: asMaybe(asObject(asNumber), {}),
   publicKey: asMaybe(asString, ''),
-  totalBalances: asMaybe(asMap(asString), {}),
+  totalBalances: asMaybe(asObject(asString), {}),
   lastCheckedTxsDropped: asMaybe(asNumber, 0),
   numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
-  numTransactions: asMaybe(asMap(asNumber), {}),
+  numTransactions: asMaybe(asObject(asNumber), {}),
   unactivatedTokenIds: asMaybe(asArray(asString), []),
   otherData: asOptional(asUnknown, {})
 })
