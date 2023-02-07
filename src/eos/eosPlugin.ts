@@ -1,4 +1,10 @@
-import { API, APIClient, FetchProvider, PrivateKey } from '@greymass/eosio'
+import {
+  API,
+  APIClient,
+  APIError,
+  FetchProvider,
+  PrivateKey
+} from '@greymass/eosio'
 import { div, toFixed } from 'biggystring'
 import {
   EdgeCurrencyInfo,
@@ -89,8 +95,7 @@ export class EosTools implements EdgeCurrencyTools {
       let ownerPublicKey
       // usage of eosOwnerKey must be protected by conditional
       // checking for its existence
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (walletInfo.keys.eosOwnerKey) {
+      if (walletInfo.keys.eosOwnerKey != null) {
         ownerPublicKey = PrivateKey.from(walletInfo.keys.eosOwnerKey)
           .toPublic()
           .toLegacyString()
@@ -106,9 +111,7 @@ export class EosTools implements EdgeCurrencyTools {
       [this.networkInfo.uriProtocol]: true
     })
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-    const valid = checkAddress(edgeParsedUri.publicAddress || '')
-    if (!valid) {
+    if (checkAddress(edgeParsedUri.publicAddress ?? '')) {
       throw new Error('InvalidPublicAddressError')
     }
     return edgeParsedUri
@@ -222,15 +225,17 @@ export class EosTools implements EdgeCurrencyTools {
     }
     try {
       const result = await this.getAccSystemStats(account)
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (result) {
+      if (result != null) {
         const e = new Error('ErrorAccountUnavailable')
         e.name = 'ErrorAccountUnavailable'
         throw e
       }
       throw new Error('ErrorUnknownError')
     } catch (e: any) {
-      if (e.code === 'ErrorUnknownAccount') {
+      if (
+        e instanceof APIError &&
+        e.details[0].message.includes('unknown key')
+      ) {
         out.result = 'AccountAvailable'
       } else {
         throw e

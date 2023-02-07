@@ -137,12 +137,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
           activePublicKey,
           requestedAccountCurrencyCode
         } = params
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!currencyCode || !requestedAccountName) {
+        if (currencyCode == null || requestedAccountName == null) {
           throw new Error('ErrorInvalidParams')
         }
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!ownerPublicKey && !activePublicKey) {
+        if (ownerPublicKey == null && activePublicKey == null) {
           throw new Error('ErrorInvalidParams')
         }
         if (!checkAddress(requestedAccountName)) {
@@ -195,8 +193,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
     if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (walletInfo.keys.ownerPublicKey) {
+      if (walletInfo.keys.ownerPublicKey != null) {
         this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
       } else {
         const pubKeys = await plugin.derivePublicKey(this.walletInfo)
@@ -238,10 +235,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       return 0
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    const { act, trx_id, block_num } = clean
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    const block_time = clean['@timestamp']
+    const { act, trx_id: trxId, block_num: blockNum } = clean
+    const blockTime = clean['@timestamp']
 
     const { from, to, memo, symbol } = act.data
     const exchangeAmount = act.data.amount.toString()
@@ -269,10 +264,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: trx_id,
-      date: Date.parse(block_time) / 1000,
+      txid: trxId,
+      date: Date.parse(blockTime) / 1000,
       currencyCode,
-      blockHeight: block_num > 0 ? block_num : 0,
+      blockHeight: blockNum > 0 ? blockNum : 0,
       nativeAmount,
       networkFee: '0',
       parentNetworkFee: '0',
@@ -298,8 +293,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       : action['@timestamp']
     const date = Date.parse(timestamp) / 1000
     const blockHeight = action.block_num > 0 ? action.block_num : 0
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!action.block_num) {
+    if (action.block_num == null) {
       this.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No tx block_num`
       )
@@ -307,8 +301,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     const txid = action.trx_id
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!action.act) {
+    if (action.act == null) {
       this.error(
         `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act`
       )
@@ -316,8 +309,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
     const name = action.act.name
     if (name === 'transfer') {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!action.act.data) {
+      if (action.act.data == null) {
         this.error(
           `Invalid ${this.currencyInfo.currencyCode} transaction data. No action.act.data`
         )
@@ -392,7 +384,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         currencyCode,
         skip,
         limit,
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         low: newHighestTxHeight + 1
       }
       const actionsObject = await this.multicastServers(
@@ -401,8 +392,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       )
       let actions = []
       // if the actions array is not empty, then set the actions variable
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (actionsObject.actions && actionsObject.actions.length > 0) {
+      if (actionsObject.actions != null && actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
         break
@@ -421,8 +411,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         }
       }
       // if there are no actions or it's less than the limit (we're at the end)
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!actions.length || actions.length < limit) {
+      if (actions == null || actions.length < limit) {
         break
       }
       skip += 10
@@ -464,7 +453,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         currencyCode,
         skip,
         limit,
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         low: newHighestTxHeight + 1
       }
       const actionsObject: HyperionGetTransactionResponse =
@@ -474,8 +462,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
 
       // if there are no actions
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (actionsObject.actions && actionsObject.actions.length > 0) {
+      if (actionsObject.actions.length > 0) {
         actions = actionsObject.actions
       } else {
         break
@@ -495,8 +482,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
           break
         }
       }
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!actions.length || actions.length < limit) {
+      if (actions.length === 0 || actions.length < limit) {
         break
       }
       skip += 10
@@ -562,14 +548,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         const hyperionFuncs = this.networkInfo.eosHyperionNodes.map(
           server => async () => {
             const url =
-              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
               server +
               `/v2/history/get_actions?transfer.${
                 direction === 'outgoing' ? 'from' : 'to'
               }=${acct}&transfer.symbol=${currencyCode}&skip=${skip}&limit=${limit}&sort=desc`
             const response = await this.fetchCors(url)
             const parsedUrl = parse(url, {}, true)
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (!response.ok) {
               this.error(`multicast in / out tx server error: ${server}`)
               throw new Error(
@@ -667,7 +651,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
             const response = await this.fetchCors(
               `${server}/v0/state/key_accounts?public_key=${publicKey}`
             )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             if (!response.ok) {
               throw new Error(
                 `${server} get_account failed with ${response.status}`
@@ -933,14 +916,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     await this.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getFreshAddress(
-    options: any
-  ): Promise<
+  async getFreshAddress(): Promise<
     EdgeFreshAddress & { publicKey?: string; ownerPublicKey?: string }
   > {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (this.otherData.accountName) {
+    if (this.otherData.accountName != null) {
       return { publicAddress: this.otherData.accountName }
     } else {
       // Account is not yet active. Return the publicKeys so the user can activate the account
@@ -987,8 +966,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         await this.tools.getAccSystemStats(publicAddress)
         this.activatedAccountsCache[publicAddress] = true
       } catch (e: any) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (e.code.includes('ErrorUnknownAccount')) {
+        if (
+          e instanceof APIError &&
+          e.details[0].message.includes('unknown key')
+        ) {
           this.activatedAccountsCache[publicAddress] = false
           mustCreateAccount = true
         } else {
@@ -1118,8 +1099,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       this.error('\nCaught exception: ', e)
       if (e instanceof APIError) this.error(JSON.stringify(e.error, null, 2))
       let err = e
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (err.error) {
+      if (err.error != null) {
         this.error(`err.error= ${err.error}`)
         this.error(`err.error.name= ${err.error.name}`)
       }
@@ -1128,16 +1108,13 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       } catch (e2) {
         throw e
       }
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (err.error && err.error.name === 'tx_net_usage_exceeded') {
+      if (err.error?.name === 'tx_net_usage_exceeded') {
         err = new Error('Insufficient NET available to send EOS transaction')
         err.name = 'ErrorEosInsufficientNet'
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      } else if (err.error && err.error.name === 'tx_cpu_usage_exceeded') {
+      } else if (err.error?.name === 'tx_cpu_usage_exceeded') {
         err = new Error('Insufficient CPU available to send EOS transaction')
         err.name = 'ErrorEosInsufficientCpu'
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      } else if (err.error && err.error.name === 'ram_usage_exceeded') {
+      } else if (err.error?.name === 'ram_usage_exceeded') {
         err = new Error('Insufficient RAM available to send EOS transaction')
         err.name = 'ErrorEosInsufficientRam'
       }
@@ -1150,12 +1127,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
     if (this.walletInfo.keys?.eosOwnerKey != null) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += 'owner key\n' + this.walletInfo.keys.eosOwnerKey + '\n\n'
+      out += 'owner key\n' + String(this.walletInfo.keys.eosOwnerKey) + '\n\n'
     }
     if (this.walletInfo.keys?.eosKey != null) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += 'active key\n' + this.walletInfo.keys.eosKey + '\n\n'
+      out += 'active key\n' + String(this.walletInfo.keys.eosKey) + '\n\n'
     }
     return out
   }
@@ -1163,12 +1138,14 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   getDisplayPublicSeed(): string {
     let out = ''
     if (this.walletInfo.keys?.ownerPublicKey != null) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += 'owner publicKey\n' + this.walletInfo.keys.ownerPublicKey + '\n\n'
+      out +=
+        'owner publicKey\n' +
+        String(this.walletInfo.keys.ownerPublicKey) +
+        '\n\n'
     }
     if (this.walletInfo.keys?.publicKey != null) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += 'active publicKey\n' + this.walletInfo.keys.publicKey + '\n\n'
+      out +=
+        'active publicKey\n' + String(this.walletInfo.keys.publicKey) + '\n\n'
     }
     return out
   }
