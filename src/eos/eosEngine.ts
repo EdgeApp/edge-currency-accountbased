@@ -525,7 +525,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   async checkTransactionsInnerLoop(): Promise<void> {
-    if (this.otherData == null || this.otherData.accountName == null) {
+    if (this.otherData == null || this.otherData.accountName === '') {
       return
     }
     const acct = this.otherData.accountName
@@ -790,7 +790,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         this.currencyEngineCallbacks.onAddressChanged()
       }
       // Check if the publicKey has an account accountName
-      if (this.otherData.accountName == null) {
+      if (this.otherData.accountName === '') {
         const accountName: string | undefined = await this.multicastServers(
           'getKeyAccounts',
           publicKey
@@ -803,18 +803,17 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
 
       // Check balance on account
-      if (this.otherData.accountName != null) {
-        for (const token of this.allTokens) {
-          if (this.enabledTokens.includes(token.currencyCode)) {
-            const results: Asset[] = await this.multicastServers(
-              'getCurrencyBalance',
-              token.contractAddress
-            )
-            const nativeAmount = results[0]?.units?.toString() ?? '0'
-            this.updateBalance(token.currencyCode, nativeAmount)
-          }
+      for (const token of this.allTokens) {
+        if (this.enabledTokens.includes(token.currencyCode)) {
+          const results: Asset[] = await this.multicastServers(
+            'getCurrencyBalance',
+            token.contractAddress
+          )
+          const nativeAmount = results[0]?.units?.toString() ?? '0'
+          this.updateBalance(token.currencyCode, nativeAmount)
         }
       }
+
       this.updateOnAddressesChecked()
 
       // Check available resources on account
