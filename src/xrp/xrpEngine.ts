@@ -345,8 +345,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.warn('Account not found. Probably not activated w/minimum XRP')
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
         this.enabledTokens.forEach(tokenCurrencyCode => {
-          this.tokenCheckBalanceStatus[tokenCurrencyCode] = 1
           if (tokenCurrencyCode !== this.currencyInfo.currencyCode) {
             // All tokens are not activated if this address is not activated
             const tokenId = getTokenIdFromCurrencyCode(
@@ -356,9 +356,9 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
             if (tokenId != null) {
               newUnactivatedTokenIds.push(tokenId)
             }
+            this.updateBalance(tokenCurrencyCode, '0')
           }
         })
-        this.updateOnAddressesChecked()
       } else {
         this.error(`Error fetching address info: `, e)
         return
