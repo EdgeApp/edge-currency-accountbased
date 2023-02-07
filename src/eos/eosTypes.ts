@@ -16,21 +16,6 @@ export const eosOtherMethodNames = [
   'validateAccount'
 ] as const
 
-export interface EosTransactionSuperNode {
-  act: {
-    data: {
-      from: string
-      to: string
-      amount: string
-      symbol: string
-      memo?: string
-    }
-  }
-  trx_id: string
-  '@timestamp': string
-  block_num: number
-}
-
 export interface EosTransaction {
   block_time: string
   block_num: number
