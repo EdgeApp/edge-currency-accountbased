@@ -628,7 +628,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
                   '@timestamp': tx.trace.block.timestamp,
                   block_num: tx.trace.block.num,
                   act: {
-                    authorization: tx.trace.matchingActions[0].authorization[0],
                     data: {
                       from: tx.trace.matchingActions[0].json.from,
                       to: tx.trace.matchingActions[0].json.to,
