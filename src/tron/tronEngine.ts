@@ -8,6 +8,7 @@ import {
   EdgeFetchFunction,
   EdgeLog,
   EdgeSpendInfo,
+  EdgeStakingStatus,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -33,24 +34,32 @@ import {
   asBroadcastResponse,
   asChainParams,
   asEstimateEnergy,
+  asFreezeBalanceContract,
   asTransaction,
   asTRC20Balance,
   asTRC20Transaction,
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
+  asTronFreezeAction,
   asTronKeys,
   asTronQuery,
+  asTronUnfreezeAction,
   asTronWalletOtherData,
   asTRXBalance,
   asTRXTransferContract,
+  asUnfreezeBalanceContract,
   CalcTxFeeOpts,
   ReferenceBlock,
   TronAccountResources,
+  TronFreezeAction,
   TronNetworkFees,
   TronNetworkInfo,
-  TronTxParams,
+  TronTransaction,
+  TronTransferParams,
+  TronUnfreezeAction,
   TronWalletOtherData,
+  TxBuilderParams,
   TxQueryCache
 } from './tronTypes'
 import {
@@ -88,6 +97,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   energyEstimateCache: { [addressAndContract: string]: number }
   tronscan: TronScan
   otherData!: TronWalletOtherData
+  stakingStatus: EdgeStakingStatus
 
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
@@ -107,8 +117,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       timestamp: 0
     }
     this.accountResources = {
-      bandwidth: 0,
-      energy: 0
+      BANDWIDTH: 0,
+      ENERGY: 0
     }
     this.networkFees = {
       // network defaults
@@ -122,6 +132,18 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
     this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
+    this.stakingStatus = {
+      stakedAmounts: [
+        {
+          nativeAmount: '0',
+          otherParams: { type: 'BANDWIDTH' }
+        },
+        {
+          nativeAmount: '0',
+          otherParams: { type: 'ENERGY' }
+        }
+      ]
+    }
   }
 
   setOtherData(raw: any): void {
@@ -237,18 +259,52 @@ export class TronEngine extends CurrencyEngine<TronTools> {
         '/wallet/getaccount',
         body
       )
+
       const balances = asMaybe(asTRXBalance)(res)
 
-      if (balances != null) {
-        this.updateBalance(
-          this.currencyInfo.currencyCode,
-          balances.balance.toString()
-        )
-      } else if (typeof res === 'object' && Object.keys(res).length === 0) {
+      if (balances == null) {
         // New accounts return an empty {} response
         this.updateBalance(this.currencyInfo.currencyCode, '0')
         return
       }
+
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        balances.balance.toString()
+      )
+
+      const {
+        frozen: frozenBalanceForBandwidth,
+        account_resource: { frozen_balance_for_energy: frozenBalanceForEnergy }
+      } = balances
+
+      const stakedAmounts: EdgeStakingStatus['stakedAmounts'] = []
+
+      if (frozenBalanceForBandwidth != null) {
+        const nativeAmount =
+          frozenBalanceForBandwidth[0].frozen_balance.toString()
+        const unlockDate = new Date(frozenBalanceForBandwidth[0].expire_time)
+        stakedAmounts.push({
+          nativeAmount,
+          unlockDate,
+          otherParams: { type: 'BANDWIDTH' }
+        })
+      }
+
+      if (frozenBalanceForEnergy != null) {
+        const nativeAmount = frozenBalanceForEnergy.frozen_balance.toString()
+        const unlockDate = new Date(frozenBalanceForEnergy.expire_time)
+        stakedAmounts.push({
+          nativeAmount,
+          unlockDate,
+          otherParams: { type: 'ENERGY' }
+        })
+      }
+
+      this.stakingStatus = { stakedAmounts }
+      this.currencyEngineCallbacks.onStakingStatusChanged({
+        ...this.stakingStatus
+      })
     } catch (e: any) {
       this.log.error('Error checking TRX address balance: ', e)
     }
@@ -262,8 +318,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       const resources = asAccountResources(res)
 
       this.accountResources = {
-        bandwidth: resources.freeNetLimit - resources.freeNetUsed,
-        energy: resources.EnergyLimit - resources.EnergyUsed
+        BANDWIDTH: resources.freeNetLimit - resources.freeNetUsed,
+        ENERGY: resources.EnergyLimit - resources.EnergyUsed
       }
     } catch (e: any) {
       this.log.error('Error checking TRX address resources: ', e)
@@ -356,6 +412,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       block_timestamp: timestamp,
       blockNumber,
       ret: retArray,
+      unfreeze_amount: unfreezeAmount,
       raw_data: { contract: contractArray }
     } = tx
 
@@ -366,30 +423,26 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       return out
     }
 
-    let transfer:
-      | ReturnType<typeof asTRXTransferContract>
-      | ReturnType<typeof asTriggerSmartContract>
-      | undefined
+    if (retArray.length < 1) return out
+
+    const ourReceiveAddresses: string[] = []
 
     // Find the relevant item in the array
     for (const contract of contractArray) {
-      transfer = asMaybe(asTRXTransferContract)(contract)
-      if (transfer != null) {
+      const trxTransfer = asMaybe(asTRXTransferContract)(contract)
+      if (trxTransfer != null) {
         const {
           parameter: {
             value: { amount, owner_address: fromAddress, to_address: toAddress }
           }
-        } = transfer
+        } = trxTransfer
 
-        if (retArray.length < 1) return out
         const { contractRet: status, fee } = retArray[0]
 
         let feeNativeAmount = fee.toString()
 
         const from = hexToBase58Address(fromAddress)
         const to = hexToBase58Address(toAddress)
-
-        const ourReceiveAddresses: string[] = []
 
         let nativeAmount = amount.toString()
 
@@ -416,7 +469,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           feeNativeAmount = '0'
         }
 
-        const currencyCode = this.currencyInfo.currencyCode
+        const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
           txid,
@@ -436,13 +489,13 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
       // Other types of transaction may incur a TRX fee the user paid. The code below only decodes 'triggersmartcontract' transactions (TRC20)
       // There are other types (ie. TRC10) that are ignored for now
-      transfer = asMaybe(asTriggerSmartContract)(contract)
-      if (transfer != null) {
+      const smartContractTransaction = asMaybe(asTriggerSmartContract)(contract)
+      if (smartContractTransaction != null) {
         const {
           parameter: {
             value: { owner_address: fromAddress }
           }
-        } = transfer
+        } = smartContractTransaction
 
         if (
           hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
@@ -450,11 +503,9 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           break
         }
 
-        if (retArray.length < 1) return out
-
         const feeNativeAmount = retArray[0].fee.toString()
 
-        const currencyCode = this.currencyInfo.currencyCode
+        const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
           txid,
@@ -463,7 +514,77 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           blockHeight: blockNumber,
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
-          ourReceiveAddresses: [],
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse freeze transactions
+      const freezeTransaction = asMaybe(asFreezeBalanceContract)(contract)
+      if (freezeTransaction != null) {
+        const {
+          parameter: {
+            value: { owner_address: fromAddress, frozen_balance: frozenAmount }
+          }
+        } = freezeTransaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const nativeAmount = add(frozenAmount.toString(), feeNativeAmount)
+        const { currencyCode } = this.currencyInfo
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount: mul(nativeAmount, '-1'),
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse unfreeze transactions
+      const unfreezeTransaction = asMaybe(asUnfreezeBalanceContract)(contract)
+      if (unfreezeTransaction != null) {
+        if (unfreezeAmount == null) return out
+        const {
+          parameter: {
+            value: { owner_address: fromAddress }
+          }
+        } = unfreezeTransaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const { currencyCode } = this.currencyInfo
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount: sub(unfreezeAmount.toString(), feeNativeAmount),
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
           signedTx: '',
           walletId: this.walletId
         }
@@ -649,7 +770,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     let energyNeeded = 0
 
-    if (tokenOpts != null) {
+    if (tokenOpts != null && receiverAddress != null) {
       const { contractAddress, data } = tokenOpts
 
       if (
@@ -687,11 +808,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
       energyNeeded = Math.max(
         (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
-          100000) - this.accountResources.energy,
+          100000) - this.accountResources.ENERGY,
         0
       )
     }
-    this.log('Account energy: ', this.accountResources.energy)
+    this.log('Account energy: ', this.accountResources.ENERGY)
     this.log('Energy needed: ', energyNeeded)
 
     /// ////////////
@@ -711,7 +832,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       bandwidthNeeded--
     }
 
-    if (this.accountExistsCache[receiverAddress] === undefined) {
+    if (
+      receiverAddress != null &&
+      this.accountExistsCache[receiverAddress] === undefined
+    ) {
       try {
         // Determine if recipient exists
         const res = await this.multicastServers(
@@ -731,16 +855,20 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     // The default bandwidth value is appropriate for all cases except for a TRX transaction that creates a new account
-    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+    if (
+      tokenOpts == null &&
+      receiverAddress != null &&
+      !this.accountExistsCache[receiverAddress]
+    ) {
       bandwidthNeeded = 100
     }
 
     // Bandwidth is paid with bandwidth or TRX (unlike energy)
-    if (bandwidthNeeded < this.accountResources.bandwidth) {
+    if (bandwidthNeeded < this.accountResources.BANDWIDTH) {
       bandwidthNeeded = 0
     }
 
-    this.log('Account bandwidth: ', this.accountResources.bandwidth)
+    this.log('Account bandwidth: ', this.accountResources.BANDWIDTH)
     this.log('Bandwidth needed: ', bandwidthNeeded)
 
     /// /////////////
@@ -749,7 +877,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     let createNewAccountFee = 0
 
-    if (tokenOpts == null && !this.accountExistsCache[receiverAddress]) {
+    if (
+      tokenOpts == null &&
+      receiverAddress != null &&
+      !this.accountExistsCache[receiverAddress]
+    ) {
       // Fee is the variable create account fee plus 1 TRX
       createNewAccountFee =
         this.networkFees.getCreateAccountFee + parseInt(denom.multiplier)
@@ -781,9 +913,22 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   // Returns unsigned transaction as object and hex string. Function is actually synchronous because of the overloaded troncan client.
-  async txBuilder(
-    params: TronTxParams
-  ): Promise<{ transaction: any; transactionHex: string }> {
+  async txBuilder(params: TxBuilderParams): Promise<TronTransaction> {
+    const { contractJson, feeLimit, note } = params
+
+    const transaction = contractJsonToProtobuf(contractJson)
+    await this.tronscan.addRef(transaction, feeLimit)
+    if (note != null) {
+      await this.tronscan.addData(transaction, note)
+    }
+    const transactionHex = byteArray2hexStr(
+      transaction.getRawData().serializeBinary()
+    )
+
+    return { transaction, transactionHex }
+  }
+
+  async makeTransferJson(params: TronTransferParams): Promise<TxBuilderParams> {
     const { currencyCode, toAddress, nativeAmount, data, note } = params
 
     let feeLimit: number | undefined
@@ -821,16 +966,95 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       }
       feeLimit = this.networkInfo.defaultFeeLimit
     }
-    const transaction = contractJsonToProtobuf(contractJson)
-    await this.tronscan.addRef(transaction, feeLimit)
-    if (note != null) {
-      await this.tronscan.addData(transaction, note)
-    }
-    const transactionHex = byteArray2hexStr(
-      transaction.getRawData().serializeBinary()
-    )
 
-    return { transaction, transactionHex }
+    return { contractJson, feeLimit, note }
+  }
+
+  async makeFreezeTransaction(
+    action: TronFreezeAction
+  ): Promise<EdgeTransaction> {
+    const {
+      params: { nativeAmount, resource }
+    } = action
+
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          frozen_balance: parseInt(nativeAmount),
+          frozen_duration: this.networkInfo.defaultFreezeDurationInDays,
+          resource: resource
+        }
+      },
+      type: 'FreezeBalanceContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: mul(nativeAmount, '-1'),
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: resource
+      }
+    }
+
+    return edgeTransaction
+  }
+
+  async makeUnfreezeTransaction(
+    action: TronUnfreezeAction
+  ): Promise<EdgeTransaction> {
+    const {
+      params: { resource }
+    } = action
+
+    const stakedAmount = this.stakingStatus.stakedAmounts.find(
+      amount => amount.otherParams?.type === resource
+    )
+    if (stakedAmount == null) throw new Error('Nothing to unfreeze')
+
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          resource: resource
+        }
+      },
+      type: 'UnfreezeBalanceContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: stakedAmount.nativeAmount,
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: resource
+      }
+    }
+
+    return edgeTransaction
   }
 
   // // ****************************************************************************
@@ -857,6 +1081,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       () => {}
     )
     await super.startEngine()
+  }
+
+  async getStakingStatus(): Promise<EdgeStakingStatus> {
+    return { ...this.stakingStatus }
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -898,7 +1126,12 @@ export class TronEngine extends CurrencyEngine<TronTools> {
           currencyCode: this.currencyInfo.currencyCode,
           nativeAmount: mid
         }
-        const { transactionHex } = await this.txBuilder(txParams)
+        const { contractJson, feeLimit } = await this.makeTransferJson(txParams)
+        const { transactionHex } = await this.txBuilder({
+          contractJson,
+          feeLimit,
+          note
+        })
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
@@ -927,6 +1160,17 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    // Check for other transaction types first
+    if (edgeSpendInfoIn.otherParams != null) {
+      let action: TronFreezeAction | TronUnfreezeAction | undefined
+
+      action = asMaybe(asTronFreezeAction)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeFreezeTransaction(action)
+
+      action = asMaybe(asTronUnfreezeAction)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeUnfreezeTransaction(action)
+    }
+
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
       edgeSpendInfoIn
     )
@@ -955,7 +1199,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     const note = memo === '' ? undefined : memo
 
-    const txOtherParams: TronTxParams = {
+    const txTransferParams: TronTransferParams = {
       currencyCode,
       toAddress: publicAddress,
       nativeAmount,
@@ -963,7 +1207,14 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       data,
       note
     }
-    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const { contractJson, feeLimit } = await this.makeTransferJson(
+      txTransferParams
+    )
+    const { transactionHex } = await this.txBuilder({
+      contractJson,
+      feeLimit,
+      note
+    })
 
     const tokenOpts =
       metaToken?.contractAddress != null && data != null
@@ -1002,6 +1253,8 @@ export class TronEngine extends CurrencyEngine<TronTools> {
       })
     }
 
+    const txOtherParams: TxBuilderParams = { contractJson, feeLimit, note }
+
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
@@ -1025,7 +1278,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    const otherParams: TronTxParams = getOtherParams(edgeTransaction)
+    const otherParams: TxBuilderParams = getOtherParams(edgeTransaction)
 
     const transaction = await this.txBuilder(otherParams)
     const { tronKey } = asTronKeys(this.walletInfo.keys)
@@ -1056,10 +1309,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
 
     // Update local caches
     const { toAddress, contractAddress } =
-      getOtherParams<TronTxParams>(edgeTransaction)
+      getOtherParams<TxBuilderParams>(edgeTransaction)
     if (
       edgeTransaction.currencyCode === this.currencyInfo.currencyCode &&
-      edgeTransaction.otherParams?.toAddress != null
+      toAddress != null
     ) {
       this.accountExistsCache[toAddress] = true
     }

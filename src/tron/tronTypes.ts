@@ -11,6 +11,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
+import { JsonObject } from 'edge-core-js'
 
 export interface TronKeys {
   tronMnemonic?: string
@@ -29,6 +30,7 @@ export interface TronNetworkInfo {
   tronNodeServers: string[]
   defaultDerivationPath: string
   defaultFeeLimit: number
+  defaultFreezeDurationInDays: number
 }
 
 export const asTxQueryCache = asObject({
@@ -45,8 +47,8 @@ export interface ReferenceBlock {
 }
 
 export interface TronAccountResources {
-  bandwidth: number
-  energy: number
+  BANDWIDTH: number
+  ENERGY: number
 }
 
 export interface TronNetworkFees {
@@ -77,7 +79,7 @@ export const asTronWalletOtherData = asObject({
 
 export type TronWalletOtherData = ReturnType<typeof asTronWalletOtherData>
 
-export interface TronTxParams {
+export interface TronTransferParams {
   toAddress: string
   currencyCode: string
   nativeAmount: string
@@ -86,14 +88,57 @@ export interface TronTxParams {
   note?: string
 }
 
+const asResource = asValue('BANDWIDTH', 'ENERGY')
+type Resource = ReturnType<typeof asResource>
+
+export interface TronFreezeAction {
+  type: 'add'
+  params: { nativeAmount: string; resource: Resource }
+}
+
+export const asTronFreezeAction = asObject<TronFreezeAction>({
+  type: asValue('add'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResource
+  })
+})
+
+export interface TronUnfreezeAction {
+  type: 'remove'
+  params: { resource: Resource }
+}
+
+export const asTronUnfreezeAction = asObject<TronUnfreezeAction>({
+  type: asValue('remove'),
+  params: asObject({
+    resource: asResource
+  })
+})
+
 export interface CalcTxFeeOpts {
-  receiverAddress: string
+  receiverAddress?: string
   unsignedTxHex: string
   note?: string
   tokenOpts?: {
     contractAddress: string
     data: string
   }
+}
+
+export interface TxBuilderParams {
+  contractJson: JsonObject
+  feeLimit?: number
+  note?: string
+
+  // Useful for local caches
+  toAddress?: string
+  contractAddress?: string
+}
+
+export interface TronTransaction {
+  transaction: any
+  transactionHex: string
 }
 
 //  { "chainParameter": [ { "key": "getMaintenanceTimeInterval", "value": 21600000 }, { "key": "getAccountUpgradeCost", "value": 9999000000 }, { "key": "getCreateAccountFee", "value": 100000 }, { "key": "getTransactionFee", "value": 1000 }, { "key": "getAssetIssueFee", "value": 1024000000 }, { "key": "getWitnessPayPerBlock", "value": 16000000 }, { "key": "getWitnessStandbyAllowance", "value": 115200000000 }, { "key": "getCreateNewAccountFeeInSystemContract", "value": 1000000 }, { "key": "getCreateNewAccountBandwidthRate", "value": 1 }, { "key": "getAllowCreationOfContracts", "value": 1 }, { "key": "getRemoveThePowerOfTheGr", "value": -1 }, { "key": "getEnergyFee", "value": 280 }, { "key": "getExchangeCreateFee", "value": 1024000000 }, { "key": "getMaxCpuTimeOfOneTx", "value": 80 }, { "key": "getAllowUpdateAccountName" }, { "key": "getAllowSameTokenName", "value": 1 }, { "key": "getAllowDelegateResource", "value": 1 }, { "key": "getTotalEnergyLimit", "value": 90000000000 }, { "key": "getAllowTvmTransferTrc10", "value": 1 }, { "key": "getTotalEnergyCurrentLimit", "value": 90000000000 }, { "key": "getAllowMultiSign", "value": 1 }, { "key": "getAllowAdaptiveEnergy" }, { "key": "getTotalEnergyTargetLimit", "value": 6250000 }, { "key": "getTotalEnergyAverageUsage" }, { "key": "getUpdateAccountPermissionFee", "value": 100000000 }, { "key": "getMultiSignFee", "value": 1000000 }, { "key": "getAllowAccountStateRoot" }, { "key": "getAllowProtoFilterNum" }, { "key": "getAllowTvmConstantinople", "value": 1 }, { "key": "getAllowTvmSolidity059", "value": 1 }, { "key": "getAllowTvmIstanbul", "value": 1 }, { "key": "getAllowShieldedTRC20Transaction", "value": 1 }, { "key": "getForbidTransferToContract" }, { "key": "getAdaptiveResourceLimitTargetRatio", "value": 10 }, { "key": "getAdaptiveResourceLimitMultiplier", "value": 1000 }, { "key": "getChangeDelegation", "value": 1 }, { "key": "getWitness127PayPerBlock", "value": 160000000 }, { "key": "getAllowMarketTransaction" }, { "key": "getMarketSellFee" }, { "key": "getMarketCancelFee" }, { "key": "getAllowPBFT" }, { "key": "getAllowTransactionFeePool" }, { "key": "getMaxFeeLimit", "value": 10000000000 }, { "key": "getAllowOptimizeBlackHole", "value": 1 }, { "key": "getAllowNewResourceModel" }, { "key": "getAllowTvmFreeze" }, { "key": "getAllowTvmVote" }, { "key": "getAllowTvmLondon", "value": 1 }, { "key": "getAllowTvmCompatibleEvm" }, { "key": "getAllowAccountAssetOptimization" }, { "key": "getFreeNetLimit", "value": 1500 }, { "key": "getTotalNetLimit", "value": 43200000000 }, { "key": "getAllowHigherLimitForMaxCpuTimeOfOneTx", "value": 1 }, { "key": "getAllowAssetOptimization" } ]}
@@ -139,9 +184,24 @@ export const asTRXBalance = asObject({
   //   })
   // ),
   // free_net_usage: asMaybe(asNumber, 0), // 1362
-  // account_resource: asObject({
-  //   latest_consume_time_for_energy: asNumber // 1667960226000
-  // }),
+  frozen: asOptional(
+    asTuple(
+      asObject({
+        frozen_balance: asNumber,
+        expire_time: asNumber
+      })
+    )
+  ),
+  account_resource: asObject({
+    // energy_usage: 315,
+    frozen_balance_for_energy: asOptional(
+      asObject({
+        frozen_balance: asNumber,
+        expire_time: asNumber
+      })
+    )
+    // latest_consume_time_for_energy: asNumber // 1667960226000
+  }),
   // active_permission: asArray(
   //   asObject({
   //     operations: asString, // '7fff1fc0033e0300000000000000000000000000000000000000000000000000'
@@ -220,6 +280,7 @@ export const asTransaction = asObject({
   // "raw_data_hex": "0a0230292208cf53f47765aeb93840c8c0b5c9b6305a66080112620a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412310a15413282aad9080d202829c8facad65a2affa26781f0121541c17c2daa0e750051c4c109e01fa54da97a06805d18e807709d83b2c9b630",
   // "net_fee": 100000,
   // "energy_usage": 0,
+  unfreeze_amount: asOptional(asNumber), // for unfreeze txs only
   blockNumber: asNumber, // 44445757
   block_timestamp: asNumber, // 1663916871000
   // energy_fee: asNumber, // 0
@@ -279,6 +340,34 @@ export const asTriggerSmartContract = asObject({
     // type_url: 'type.googleapis.com/protocol.TriggerSmartContract'
   }),
   type: asValue('TriggerSmartContract')
+})
+
+export const asFreezeBalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      // resource: 0,
+      // frozen_duration: 3,
+      frozen_balance: asNumber,
+      resource_type: asResource,
+      // resource_value: 0,
+      owner_address: asString
+    })
+    // type_url: 'type.googleapis.com/protocol.FreezeBalanceContract'
+  }),
+  type: asValue('FreezeBalanceContract')
+})
+
+export const asUnfreezeBalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      // resource: 0,,
+      resource_type: asResource,
+      // resource_value: 0,
+      owner_address: asString
+    })
+    // type_url: 'type.googleapis.com/protocol.FreezeBalanceContract'
+  }),
+  type: asValue('UnfreezeBalanceContract')
 })
 
 export interface TronGridQuery<T> {

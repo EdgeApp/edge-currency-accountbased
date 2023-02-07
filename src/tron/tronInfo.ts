@@ -105,7 +105,8 @@ export const networkInfo: TronNetworkInfo = {
     'http://34.237.210.82:8090'
   ],
   defaultDerivationPath: "m/44'/195'/0'/0/0", // Default for initial release was "m/44'/195'/0'/0",
-  defaultFeeLimit: 1000000000 // TODO: 1000 TRX. Should probably update.
+  defaultFeeLimit: 1000000000, // TODO: 1000 TRX. Should probably update.
+  defaultFreezeDurationInDays: 3
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
