@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 import {
   API,
   APIError,
@@ -64,7 +62,6 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-// const ADDRESS_QUERY_LOOKBACK_BLOCKS = 0
 const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 
@@ -317,9 +314,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       return 0
     }
     const name = action.act.name
-    // this.log('------------------------------------------------')
-    // this.log(`Txid: ${txid}`)
-    // this.log(`Action type: ${name}`)
     if (name === 'transfer') {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!action.act.data) {
@@ -374,11 +368,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       }
 
       this.addTransaction(currencyCode, edgeTransaction)
-      // this.log(`From: ${from}`)
-      // this.log(`To: ${to}`)
-      // this.log(`Memo: ${memo}`)
-      // this.log(`Amount: ${exchangeAmount}`)
-      // this.log(`currencyCode: ${currencyCode}`)
     }
     return blockHeight
   }
@@ -396,7 +385,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       this.otherData.lastQueryActionSeq[currencyCode] ?? 0
 
     while (!finish) {
-      // query the server / node
       const params = {
         direction: 'outgoing',
         acct,
@@ -1057,7 +1045,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
     nativeAmount = `-${nativeAmount}`
 
-    // const idInternal = Buffer.from(this.io.random(32)).toString('hex')
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
@@ -1078,61 +1065,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     )
     return edgeTransaction
   }
-
-  // async makeSpend (edgeSpendInfo: EdgeSpendInfo) {
-  //   // // Validate the spendInfo
-  //   const valid = validateObject(edgeSpendInfo, MakeSpendSchema)
-
-  //   if (!valid) {
-  //     throw (new Error('Error: invalid EdgeSpendInfo'))
-  //   }
-
-  //   // TODO: Validate the number of destination targets supported by this currency.
-  //   // ie. Bitcoin can do multiple targets. Ethereum only one
-  //   // edgeSpendInfo.spendTargets.length
-
-  //   // TODO: Validate for valid currencyCode which will be in
-  //   // edgeSpendInfo.currencyCode if specified by user. Otherwise use native currency
-
-  //   // TODO: Get nativeAmount which is denoted is small currency unit. ie satoshi/wei
-  //   // edgeSpendInfo.spendTargets[0].nativeAmount
-  //   //
-  //   // Throw if this currency cannot spend a 0 amount
-  //   // if (eq(nativeAmount, '0')) {
-  //   //   throw (new error.NoAmountSpecifiedError())
-  //   // }
-
-  //   // TODO: Get current wallet balance and make sure there are sufficient funds including fees
-  //   // const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
-
-  //   // TODO: Extract unique identifier for this transaction. This is known as a Payment ID for
-  //   // Monero, Destination Tag for Ripple, and Memo ID for Stellar. Use if currency is capable
-  //   // edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-
-  //   // TODO: Create an EdgeTransaction object with the following params filled out:
-  //   // currencyCode
-  //   // blockHeight = 0
-  //   // nativeAmount (which includes fee)
-  //   // networkFee (in smallest unit of currency)
-  //   // ourReceiveAddresses = []
-  //   // signedTx = ''
-  //   // otherParams. Object declared in this currency's types.js file (ie. eosTypes.js)
-  //   //  which are additional params useful for signing and broadcasting transaction
-  //   const edgeTransaction: EdgeTransaction = {
-  //     txid: '', // txid
-  //     date: 0, // date
-  //     currencyCode: '', // currencyCode
-  //     blockHeight: 0, // blockHeight
-  //     nativeAmount: '', // nativeAmount
-  //     networkFee: '', // networkFee
-  //     ourReceiveAddresses: [], // ourReceiveAddresses
-  //     signedTx: '', // signedTx
-  //     otherParams: {}
-  //   }
-
-  //   this.log('Payment transaction prepared...')
-  //   return edgeTransaction
-  // }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
