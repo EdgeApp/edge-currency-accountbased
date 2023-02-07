@@ -1,6 +1,10 @@
 # edge-currency-accountbased
 
-## 0.22.5 (2023-01-06)
+## 0.22.6 (2023-02-07)
+
+- TRX: Add bandwidth and energy staking support
+
+## 0.22.5 (2023-02-06)
 
 - Add XRP token support
 - Add native `builtinTokens` support and deprecate `metaTokens`
