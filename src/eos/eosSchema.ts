@@ -32,14 +32,14 @@ export const asHyperionTransaction = asObject({
   '@timestamp': asString,
   block_num: asNumber,
   act: asObject({
-    authorization: asOptional(
-      asArray(
-        asObject({
-          actor: asString,
-          permission: asString
-        })
-      )
-    ),
+    // authorization: asOptional(
+    //   asArray(
+    //     asObject({
+    //       actor: asString,
+    //       permission: asString
+    //     })
+    //   )
+    // ),
     data: asObject({
       from: asString,
       to: asString,
@@ -72,13 +72,15 @@ export const asDfuseTransaction = asObject({
           memo: asString,
           quantity: asString,
           to: asString
-        }),
-        authorization: asArray(
-          asObject({
-            actor: asString,
-            permission: asString
-          })
-        )
+        })
+        // authorization: asOptional(
+        //   asArray(
+        //     asObject({
+        //       actor: asString,
+        //       permission: asString
+        //     })
+        //   )
+        // )
       })
     )
   })
