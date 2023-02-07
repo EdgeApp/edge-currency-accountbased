@@ -54,7 +54,6 @@ import {
   asEosWalletOtherData,
   EosNetworkInfo,
   EosTransaction,
-  EosTransactionSuperNode,
   EosWalletOtherData,
   ReferenceBlock
 } from './eosTypes'
@@ -122,17 +121,18 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       denominations
     })
     this.otherMethods = {
-      getAccountActivationQuote: async (params: Object): Promise<Object> => {
+      getAccountActivationQuote: async (params: {
+        requestedAccountName: string
+        currencyCode: string
+        ownerPublicKey: string
+        activePublicKey: string
+        requestedAccountCurrencyCode: string
+      }): Promise<Object> => {
         const {
-          // @ts-expect-error
           requestedAccountName,
-          // @ts-expect-error
           currencyCode,
-          // @ts-expect-error
           ownerPublicKey,
-          // @ts-expect-error
           activePublicKey,
-          // @ts-expect-error
           requestedAccountCurrencyCode
         } = params
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -229,7 +229,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  processIncomingTransaction(action: EosTransactionSuperNode): number {
+  processIncomingTransaction(
+    action: ReturnType<typeof asHyperionTransaction>
+  ): number {
     const clean = asMaybe(asEosTransactionSuperNodeSchema)(action)
     if (clean == null) {
       this.error('Invalid supernode tx')
@@ -465,13 +467,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         low: newHighestTxHeight + 1
       }
-      const actionsObject = await this.multicastServers(
-        'getIncomingTransactions',
-        params
-      )
+      const actionsObject: ReturnType<typeof asHyperionGetTransactionResponse> =
+        await this.multicastServers('getIncomingTransactions', params)
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
-      // @ts-expect-error
       actionsObject.actions.sort((a, b) => b.block_num - a.block_num)
 
       // if there are no actions
@@ -607,20 +606,16 @@ export class EosEngine extends CurrencyEngine<EosTools> {
               asDfuseGetTransactionsResponse,
               asDfuseGetTransactionsErrorResponse
             )(await response.json())
-            // @ts-expect-error
-            if (responseJson.errors != null) {
+            if ('errors' in responseJson) {
               this.warn(
                 `dfuse ${server} get transactions failed: ${JSON.stringify(
-                  // @ts-expect-error
                   responseJson.errors[0]
                 )}`
               )
-              // @ts-expect-error
               throw new Error(responseJson.errors[0].message)
             }
             // Convert txs to Hyperion
             const actions =
-              // @ts-expect-error
               responseJson.data.searchTransactionsBackward.results.map(tx =>
                 asHyperionTransaction({
                   trx_id: tx.trace.id,
@@ -938,7 +933,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
+  async getFreshAddress(
+    options: any
+  ): Promise<
+    EdgeFreshAddress & { publicKey?: string; ownerPublicKey?: string }
+  > {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (this.otherData.accountName) {
       return { publicAddress: this.otherData.accountName }
@@ -946,7 +945,6 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       // Account is not yet active. Return the publicKeys so the user can activate the account
       return {
         publicAddress: '',
-        // @ts-expect-error
         publicKey: this.walletInfo.keys.publicKey,
         ownerPublicKey: this.walletInfo.keys.ownerPublicKey
       }
