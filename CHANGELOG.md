@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.7 (2023-02-07)
+
+- Fix: BNB Beacon Chain missing setOtherData method causing login errors
+
 ## 0.22.6 (2023-02-07)
 
 - TRX: Add bandwidth and energy staking support
