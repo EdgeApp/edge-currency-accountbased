@@ -58,6 +58,10 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     super(env, tools, walletInfo, opts)
   }
 
+  setOtherData(_raw: any): void {
+    this.otherData = {}
+  }
+
   async fetchGet(url: string): Promise<Object> {
     const response = await this.io.fetch(url, {
       method: 'GET'
