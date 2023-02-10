@@ -72,7 +72,9 @@ export function removeHexPrefix(value: string): string {
 }
 
 export function hexToDecimal(num: string): string {
-  return add(num, '0', 10)
+  const safeNum = num.toLowerCase()
+  const hexNum = safeNum.startsWith('0x') ? safeNum : `0x${safeNum}`
+  return add(hexNum, '0', 10)
 }
 
 export function decimalToHex(num: string): string {
