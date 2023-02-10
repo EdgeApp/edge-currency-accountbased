@@ -1,5 +1,6 @@
 import 'regenerator-runtime/runtime'
 
+import { algorand } from './algorand/algorandInfo'
 import { binance } from './binance/bnbInfo'
 import { eosPlugins } from './eos/eosInfos'
 import { ethPlugins } from './ethereum/ethInfos'
@@ -17,6 +18,7 @@ import { zcash } from './zcash/zecInfo'
 const plugins = {
   ...eosPlugins,
   ...ethPlugins,
+  algorand,
   binance,
   fio,
   hedera,
