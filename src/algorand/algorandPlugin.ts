@@ -1,4 +1,5 @@
 import algosdk from 'algosdk'
+import { div } from 'biggystring'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -11,9 +12,11 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
+import { getDenomInfo } from '../common/utils'
 import { asAlgorandPrivateKeys } from './algorandTypes'
 
-const { mnemonicFromSeed } = algosdk
+const { isValidAddress, mnemonicFromSeed } = algosdk
 
 export class AlgorandTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -62,14 +65,53 @@ export class AlgorandTools implements EdgeCurrencyTools {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    throw new Error('parseUri not implemented')
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
+
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
+      this.currencyInfo,
+      uri,
+      networks,
+      currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
+    )
+    let address = ''
+
+    if (edgeParsedUri.publicAddress != null) {
+      address = edgeParsedUri.publicAddress
+    }
+
+    if (!isValidAddress(address)) throw new Error('InvalidPublicAddressError')
+
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+    return edgeParsedUri
   }
 
   async encodeUri(
     obj: EdgeEncodeUri,
     customTokens?: EdgeMetaToken[]
   ): Promise<string> {
-    throw new Error('encodeUri not implemented')
+    const { pluginId } = this.currencyInfo
+    const { nativeAmount, currencyCode, publicAddress } = obj
+
+    if (!isValidAddress(publicAddress))
+      throw new Error('InvalidPublicAddressError')
+
+    let amount
+    if (typeof nativeAmount === 'string') {
+      const denom = getDenomInfo(
+        this.currencyInfo,
+
+        currencyCode ?? this.currencyInfo.currencyCode,
+        customTokens
+      )
+      if (denom == null) {
+        throw new Error('InternalErrorInvalidCurrencyCode')
+      }
+      amount = div(nativeAmount, denom.multiplier, 18)
+    }
+    const encodedUri = encodeUriCommon(obj, pluginId, amount)
+    return encodedUri
   }
 }
 
