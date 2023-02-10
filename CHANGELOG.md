@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.8 (2023-02-10)
+
+- Improve `hexToDecimal` safety
+
 ## 0.22.7 (2023-02-07)
 
 - Fix: BNB Beacon Chain missing setOtherData method causing login errors
