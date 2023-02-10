@@ -1,3 +1,4 @@
+import algosdk from 'algosdk'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -10,6 +11,9 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asAlgorandPrivateKeys } from './algorandTypes'
+
+const { mnemonicFromSeed } = algosdk
 
 export class AlgorandTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -22,15 +26,35 @@ export class AlgorandTools implements EdgeCurrencyTools {
   }
 
   async importPrivateKey(input: string): Promise<JsonObject> {
-    throw new Error('importPrivateKey not implemented')
+    const { pluginId } = this.currencyInfo
+
+    algosdk.mnemonicToSecretKey(input) // Validate input
+
+    return {
+      [`${pluginId}Mnemonic`]: input
+    }
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    throw new Error('createPrivateKey not implemented')
+    if (walletType !== this.currencyInfo.walletType) {
+      throw new Error('InvalidWalletType')
+    }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = mnemonicFromSeed(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    throw new Error('derivePublicKey not implemented')
+    const { pluginId } = this.currencyInfo
+
+    if (walletInfo.type !== this.currencyInfo.walletType) {
+      throw new Error('InvalidWalletType')
+    }
+    const keys = asAlgorandPrivateKeys(pluginId)(walletInfo.keys)
+
+    const account = algosdk.mnemonicToSecretKey(keys.mnemonic)
+    return { publicKey: account.addr }
   }
 
   async parseUri(
