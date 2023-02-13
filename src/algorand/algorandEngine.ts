@@ -1,3 +1,4 @@
+import algosdk from 'algosdk'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -9,24 +10,32 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asyncWaterfall } from '../common/utils'
 import { AlgorandTools } from './algorandPlugin'
 import {
+  AccountInformation,
+  AlgorandNetworkInfo,
   AlgorandWalletOtherData,
+  asAccountInformation,
   asAlgorandPrivateKeys,
   asAlgorandWalletOtherData,
   asSafeAlgorandWalletInfo,
   SafeAlgorandWalletInfo
 } from './algorandTypes'
 
+const { Algodv2 } = algosdk
+
+const ACCOUNT_POLL_MILLISECONDS = 5000
+
 export class AlgorandEngine extends CurrencyEngine<
   AlgorandTools,
   SafeAlgorandWalletInfo
 > {
   otherData!: AlgorandWalletOtherData
-  networkInfo: {}
+  networkInfo: AlgorandNetworkInfo
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<AlgorandNetworkInfo>,
     tools: AlgorandTools,
     walletInfo: SafeAlgorandWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -39,12 +48,37 @@ export class AlgorandEngine extends CurrencyEngine<
     this.otherData = asAlgorandWalletOtherData(raw)
   }
 
-  async queryBalance(): Promise<void> {
-    throw new Error('queryBalance not implemented')
+  async fetchAccountInfo(account: string): Promise<AccountInformation> {
+    return await asyncWaterfall(
+      this.networkInfo.algodServers.map(server => async () => {
+        const client = new Algodv2('', server, '')
+        const response = await client.accountInformation(account).do()
+        const out = asAccountInformation(response)
+        return out
+      })
+    )
   }
 
-  async queryBlockheight(): Promise<void> {
-    throw new Error('queryBlockheight not implemented')
+  async queryBalance(): Promise<void> {
+    try {
+      const accountInfo: AccountInformation = await this.fetchAccountInfo(
+        this.walletLocalData.publicKey
+      )
+
+      const { amount, round } = accountInfo
+
+      this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+
+      if (round > this.walletLocalData.blockHeight) {
+        this.walletLocalData.blockHeight = round
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
+        )
+      }
+    } catch (e: any) {
+      this.log.warn(`queryBalance Error `, e)
+    }
   }
 
   async queryTransactionParams(): Promise<void> {
@@ -64,7 +98,9 @@ export class AlgorandEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    throw new Error('startEngine not implemented')
+    this.engineOn = true
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -103,7 +139,7 @@ export class AlgorandEngine extends CurrencyEngine<
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<AlgorandNetworkInfo>,
   tools: AlgorandTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

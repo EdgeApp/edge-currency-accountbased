@@ -3,10 +3,17 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import type { AlgorandTools } from './algorandPlugin'
+import { AlgorandNetworkInfo } from './algorandTypes'
 
 const builtinTokens: EdgeTokenMap = {}
 
-const networkInfo = {}
+const networkInfo: AlgorandNetworkInfo = {
+  algodServers: [
+    'https://mainnet-api.algonode.cloud',
+    'http://node.algoexplorerapi.io',
+    'https://xna-mainnet-api.algonode.cloud'
+  ]
+}
 
 const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
@@ -34,7 +41,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
-export const algorand = makeOuterPlugin<{}, AlgorandTools>({
+export const algorand = makeOuterPlugin<AlgorandNetworkInfo, AlgorandTools>({
   builtinTokens,
   currencyInfo,
   networkInfo,

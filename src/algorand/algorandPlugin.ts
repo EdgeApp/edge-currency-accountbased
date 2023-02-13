@@ -14,7 +14,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { asAlgorandPrivateKeys } from './algorandTypes'
+import { AlgorandNetworkInfo, asAlgorandPrivateKeys } from './algorandTypes'
 
 const { isValidAddress, mnemonicFromSeed } = algosdk
 
@@ -22,7 +22,7 @@ export class AlgorandTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<AlgorandNetworkInfo>) {
     const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -116,7 +116,7 @@ export class AlgorandTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<AlgorandNetworkInfo>
 ): Promise<AlgorandTools> {
   return new AlgorandTools(env)
 }
