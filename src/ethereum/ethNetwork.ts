@@ -984,7 +984,7 @@ export class EthereumNetwork {
               )
             }
             // Convert to decimal
-            result.result = add(result.result, '0')
+            result.result = hexToDecimal(result.result)
             return { server: parse(baseUrl).hostname, result }
           })
         )
@@ -1568,13 +1568,10 @@ export class EthereumNetwork {
         `checkTokenBalRpc invalid ${tk} response ${JSON.stringify(jsonObj)}`
       )
     }
-    if (isHex(cleanedResponseObj.result)) {
-      return {
-        tokenBal: { [tk]: hexToDecimal(cleanedResponseObj.result) },
-        server
-      }
-    } else {
-      throw new Error(`checkTokenBalRpc returned invalid JSON for ${tk}`)
+
+    return {
+      tokenBal: { [tk]: cleanedResponseObj.result },
+      server
     }
   }
 
