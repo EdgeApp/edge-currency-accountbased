@@ -168,7 +168,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
         return
       }
 
-      const { DeliveredAmount } = meta
+      const DeliveredAmount = meta.DeliveredAmount ?? meta.delivered_amount
       if (DeliveredAmount == null) {
         this.log.warn(
           `**** WARNING: Undefined DeliveredAmount in txid ${tx.hash}`
