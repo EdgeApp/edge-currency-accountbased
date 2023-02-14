@@ -2,7 +2,12 @@ import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
 import { normalizeAddress } from '../../common/utils'
-import { EthereumCalcedFees, EthereumFee, EthereumFees } from '../ethTypes'
+import {
+  EthereumCalcedFees,
+  EthereumFee,
+  EthereumFees,
+  EthereumNetworkInfo
+} from '../ethTypes'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'
@@ -14,7 +19,8 @@ const WEI_MULTIPLIER = '1000000000'
 export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
-  currencyInfo: EdgeCurrencyInfo
+  currencyInfo: EdgeCurrencyInfo,
+  networkInfo: EthereumNetworkInfo
 ): EthereumCalcedFees {
   let useDefaults = true
   let customGasLimit, customGasPrice
@@ -47,15 +53,16 @@ export function calcMiningFee(
       if (gasPrice != null && gasPrice !== '') {
         const minGasPrice =
           networkFees.default?.gasPrice?.minGasPrice ??
-          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-            .gasPrice.minGasPrice
-        const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
-        if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
-          const e = new Error(
-            `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
-          )
-          e.name = 'ErrorBelowMinimumFee'
-          throw e
+          networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
+        if (minGasPrice != null) {
+          const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
+          if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
+            const e = new Error(
+              `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+            )
+            e.name = 'ErrorBelowMinimumFee'
+            throw e
+          }
         }
 
         customGasPrice = mul(gasPrice, WEI_MULTIPLIER)
@@ -64,9 +71,11 @@ export function calcMiningFee(
       if (gasLimit != null && gasLimit !== '') {
         const minGasLimit =
           networkFees.default?.gasLimit?.minGasLimit ??
-          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-            .gasLimit.minGasLimit
-        if (lt(gasLimit, minGasLimit) || /^\s*$/.test(gasLimit)) {
+          networkInfo.defaultNetworkFees.default.gasLimit.minGasLimit
+        if (
+          (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
+          /^\s*$/.test(gasLimit)
+        ) {
           const e = new Error(
             `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
           )

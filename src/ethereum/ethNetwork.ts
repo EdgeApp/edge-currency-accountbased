@@ -1,5 +1,5 @@
 import { add, div, mul, sub } from 'biggystring'
-import { EdgeCurrencyInfo, EdgeTransaction, JsonObject } from 'edge-core-js'
+import { EdgeTransaction, JsonObject } from 'edge-core-js'
 import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
@@ -37,7 +37,7 @@ import {
   BlockbookAddress,
   BlockbookTokenBalance,
   CheckTokenBalBlockchair,
-  EthereumSettings,
+  EthereumNetworkInfo,
   EthereumTxOtherParams,
   EvmScanInternalTransaction,
   EvmScanTransaction,
@@ -217,11 +217,10 @@ export class EthereumNetwork {
   processEthereumNetworkUpdate: (...any) => any
   // @ts-expect-error
   checkTxsAmberdata: (...any) => any
-  currencyInfo: EdgeCurrencyInfo
   walletId: string
   queryFuncs: QueryFuncs
 
-  constructor(ethEngine: EthereumEngine, currencyInfo: EdgeCurrencyInfo) {
+  constructor(ethEngine: EthereumEngine) {
     this.ethEngine = ethEngine
     this.ethNeeds = {
       blockHeightLastChecked: 0,
@@ -229,7 +228,6 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
-    this.currencyInfo = currencyInfo
     // @ts-expect-error
     this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
     // @ts-expect-error
@@ -261,9 +259,7 @@ export class EthereumNetwork {
     this.processEthereumNetworkUpdate =
       // @ts-expect-error
       this.processEthereumNetworkUpdate.bind(this)
-    this.queryFuncs = this.buildQueryFuncs(
-      currencyInfo.defaultSettings.otherSettings
-    )
+    this.queryFuncs = this.buildQueryFuncs(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
 
@@ -378,7 +374,7 @@ export class EthereumNetwork {
     const fromAddress = tokenTransfer.relationships.from.data.id
     const toAddress = tokenTransfer.relationships.to.data.id
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
       nativeNetworkFee = fee
     } else {
       nativeNetworkFee = '0'
@@ -455,7 +451,7 @@ export class EthereumNetwork {
   async fetchGetEtherscan(server: string, cmd: string) {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
-      this.currencyInfo,
+      this.ethEngine.currencyInfo,
       this.ethEngine.log
     )
     const apiKey = `&apikey=${
@@ -564,8 +560,7 @@ export class EthereumNetwork {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetBlockchair(path: string, includeKey: boolean = false) {
     const { blockchairApiKey } = this.ethEngine.initOptions
-    const { blockchairApiServers } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { blockchairApiServers } = this.ethEngine.networkInfo
 
     const keyParam =
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -579,8 +574,7 @@ export class EthereumNetwork {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchPostAmberdataRpc(method: string, params: string[] = []) {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
-    const { amberdataRpcServers } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { amberdataRpcServers } = this.ethEngine.networkInfo
 
     const url = `${amberdataRpcServers[0]}`
     const body = {
@@ -592,7 +586,7 @@ export class EthereumNetwork {
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id':
-          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
+          this.ethEngine.networkInfo.amberDataBlockchainId,
         'x-api-key': amberdataApiKey,
         'Content-Type': 'application/json'
       },
@@ -611,13 +605,12 @@ export class EthereumNetwork {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchGetAmberdataApi(path: string) {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
-    const { amberdataApiServers } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { amberdataApiServers } = this.ethEngine.networkInfo
     const url = `${amberdataApiServers[0]}${path}`
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
         'x-amberdata-blockchain-id':
-          this.currencyInfo.defaultSettings.otherSettings.amberDataBlockchainId,
+          this.ethEngine.networkInfo.amberDataBlockchainId,
         'x-api-key': amberdataApiKey
       }
     })
@@ -645,8 +638,7 @@ export class EthereumNetwork {
     useApiKey: boolean
   ) {
     const { alethioApiKey = '' } = this.ethEngine.initOptions
-    const { alethioApiServers } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { alethioApiServers } = this.ethEngine.networkInfo
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
 
     const response = await this.ethEngine.io.fetch(
@@ -689,7 +681,7 @@ export class EthereumNetwork {
     edgeTransaction: EdgeTransaction,
     baseUrl: string
   ): Promise<BroadcastResults> {
-    const urlSuffix = `v1/${this.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
+    const urlSuffix = `v1/${this.ethEngine.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
     const hexTx = edgeTransaction.signedTx.replace('0x', '')
     const jsonObj = await this.fetchPostBlockcypher(
       urlSuffix,
@@ -738,16 +730,14 @@ export class EthereumNetwork {
 
   // @ts-expect-error
   async multicastServers(func: EthFunction, ...params: any): Promise<any> {
-    const otherSettings: EthereumSettings =
-      this.currencyInfo.defaultSettings.otherSettings
     const {
       rpcServers,
       blockcypherApiServers,
       evmScanApiServers,
       blockbookServers,
-      chainParams
-    } = otherSettings
-    const { chainId } = chainParams
+      chainParams: { chainId }
+    } = this.ethEngine.networkInfo
+
     let out = { result: '', server: 'no server' }
     // @ts-expect-error
     let funcs, url
@@ -797,7 +787,7 @@ export class EthereumNetwork {
         out = await promiseAny(promises)
 
         this.ethEngine.log(
-          `${this.currencyInfo.currencyCode} multicastServers ${func} ${out.server} won`
+          `${this.ethEngine.currencyInfo.currencyCode} multicastServers ${func} ${out.server} won`
         )
         break
       }
@@ -1023,7 +1013,7 @@ export class EthereumNetwork {
           searchRegularTxs
         } = params[0]
         let startUrl
-        if (currencyCode === this.currencyInfo.currencyCode) {
+        if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
           startUrl = `?action=${
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
             searchRegularTxs ? 'txlist' : 'txlistinternal'
@@ -1115,10 +1105,9 @@ export class EthereumNetwork {
     const {
       rpcServers,
       chainParams: { chainId }
-    } = this.currencyInfo.defaultSettings.otherSettings
+    } = this.ethEngine.networkInfo
 
     const funcs = rpcServers.map(
-      // @ts-expect-error
       baseUrl => async () =>
         await this.fetchPostRPC(
           'eth_getBlockByNumber',
@@ -1172,7 +1161,7 @@ export class EthereumNetwork {
   async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
     try {
       const jsonObj = await this.fetchGetBlockchair(
-        `/${this.currencyInfo.pluginId}/stats`,
+        `/${this.ethEngine.currencyInfo.pluginId}/stats`,
         false
       )
       const blockHeight = parseInt(
@@ -1313,7 +1302,7 @@ export class EthereumNetwork {
     let server
     let allTransactions
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
       const txsRegularResp = await this.getAllTxsEthscan(
         startBlock,
         currencyCode,
@@ -1366,7 +1355,7 @@ export class EthereumNetwork {
   getTokenCurrencyCode(txnContractAddress: string): string | undefined {
     const address = this.ethEngine.walletLocalData.publicKey
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
-      return this.currencyInfo.currencyCode
+      return this.ethEngine.currencyInfo.currencyCode
     } else {
       for (const tk of this.ethEngine.enabledTokens) {
         const tokenInfo = this.ethEngine.getTokenInfo(tk)
@@ -1418,7 +1407,7 @@ export class EthereumNetwork {
     const { nonce, tokens, balance } = addressInfo
     out.newNonce = nonce
     // @ts-expect-error
-    out.tokenBal[this.currencyInfo.currencyCode] = balance
+    out.tokenBal[this.ethEngine.currencyInfo.currencyCode] = balance
     out.server = server
 
     // Token balances
@@ -1450,7 +1439,7 @@ export class EthereumNetwork {
     let server
     let cleanedResponseObj: RpcResultString
     try {
-      if (tk === this.currencyInfo.currencyCode) {
+      if (tk === this.ethEngine.currencyInfo.currencyCode) {
         response = await this.multicastServers('eth_getBalance', address)
         jsonObj = response.result
         server = response.server
@@ -1493,7 +1482,7 @@ export class EthereumNetwork {
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
-    const path = `/${this.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
+    const path = `/${this.ethEngine.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
     try {
       const jsonObj = await this.fetchGetBlockchair(path, false)
       cleanedResponseObj = asCheckTokenBalBlockchair(jsonObj)
@@ -1502,7 +1491,7 @@ export class EthereumNetwork {
       throw new Error('checkTokenBalBlockchair response is invalid')
     }
     const response = {
-      [this.currencyInfo.currencyCode]:
+      [this.ethEngine.currencyInfo.currencyCode]:
         cleanedResponseObj.data[address].address.balance
     }
     for (const tokenData of cleanedResponseObj.data[address].layer_2.erc_20) {
@@ -1537,7 +1526,7 @@ export class EthereumNetwork {
     let server
     const address = this.ethEngine.walletLocalData.publicKey
     try {
-      if (tk === this.currencyInfo.currencyCode) {
+      if (tk === this.ethEngine.currencyInfo.currencyCode) {
         response = await this.multicastServers('eth_getBalance', address)
         jsonObj = response.result
         server = response.server
@@ -1629,7 +1618,7 @@ export class EthereumNetwork {
         async () => await this.check('nonce')
       )
 
-      const { currencyCode } = this.currencyInfo
+      const { currencyCode } = this.ethEngine.currencyInfo
       const currencyCodes = this.ethEngine.enabledTokens
 
       if (!currencyCodes.includes(currencyCode)) {
@@ -1678,7 +1667,7 @@ export class EthereumNetwork {
     if (ethereumNetworkUpdate.blockHeight) {
       this.ethEngine.log(
         `${
-          this.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate blockHeight ${
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
@@ -1704,7 +1693,9 @@ export class EthereumNetwork {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (ethereumNetworkUpdate.newNonce) {
       this.ethEngine.log(
-        `${this.currencyInfo.currencyCode} processEthereumNetworkUpdate nonce ${
+        `${
+          this.ethEngine.currencyInfo.currencyCode
+        } processEthereumNetworkUpdate nonce ${
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
         } won`
@@ -1718,7 +1709,7 @@ export class EthereumNetwork {
       const tokenBal = ethereumNetworkUpdate.tokenBal
       this.ethEngine.log(
         `${
-          this.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenBal ${
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
@@ -1734,7 +1725,7 @@ export class EthereumNetwork {
       const tokenTxs = ethereumNetworkUpdate.tokenTxs
       this.ethEngine.log(
         `${
-          this.currencyInfo.currencyCode
+          this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenTxs ${
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
           ethereumNetworkUpdate.server || 'no server'
@@ -1765,7 +1756,7 @@ export class EthereumNetwork {
     }
   }
 
-  buildQueryFuncs(settings: EthereumSettings): QueryFuncs {
+  buildQueryFuncs(settings: EthereumNetworkInfo): QueryFuncs {
     const {
       rpcServers,
       evmScanApiServers,

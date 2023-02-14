@@ -25,7 +25,7 @@ export interface EthereumInitOptions {
   alchemyApiKey?: string
 }
 
-export interface EthereumSettings {
+export interface EthereumNetworkInfo {
   alethioApiServers: string[]
   feeUpdateFrequencyMs?: number
   alethioCurrencies: {

@@ -20,24 +20,25 @@ import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
-import { WalletConnectors } from './ethTypes'
+import { EthereumNetworkInfo, WalletConnectors } from './ethTypes'
 
 export class EthereumTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: EthereumNetworkInfo
   walletConnectors: WalletConnectors
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { io, currencyInfo } = env
+  constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
+    const { io, currencyInfo, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
     this.walletConnectors = {}
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
     const { pluginId } = this.currencyInfo
-    const { pluginMnemonicKeyName, pluginRegularKeyName } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { pluginMnemonicKeyName, pluginRegularKeyName } = this.networkInfo
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const keyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
@@ -74,8 +75,7 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const { pluginMnemonicKeyName, pluginRegularKeyName } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { pluginMnemonicKeyName, pluginRegularKeyName } = this.networkInfo
     const type = walletType.replace('wallet:', '')
 
     if (type !== this.currencyInfo.pluginId) {
@@ -93,9 +93,9 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const { pluginId, defaultSettings } = this.currencyInfo
+    const { pluginId } = this.currencyInfo
     const { hdPathCoinType, pluginMnemonicKeyName, pluginRegularKeyName } =
-      defaultSettings.otherSettings
+      this.networkInfo
     if (walletInfo.type !== `wallet:${pluginId}`) {
       throw new Error('Invalid wallet type')
     }
@@ -132,8 +132,7 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   async _mnemonicToHex(mnemonic: string): Promise<string> {
-    const { defaultSettings } = this.currencyInfo
-    const { hdPathCoinType } = defaultSettings.otherSettings
+    const { hdPathCoinType } = this.networkInfo
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
     const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
     // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
@@ -150,13 +149,10 @@ export class EthereumTools implements EdgeCurrencyTools {
   ): Promise<EdgeParsedUri> {
     // By default, all EVM clones should be WalletConnect compatible.
     const networks = { wc: true }
-    this.currencyInfo.defaultSettings.otherSettings.uriNetworks.forEach(
+    this.networkInfo.uriNetworks.forEach(network => {
       // @ts-expect-error
-      network => {
-        // @ts-expect-error
-        networks[network] = true
-      }
-    )
+      networks[network] = true
+    })
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
@@ -233,9 +229,7 @@ export class EthereumTools implements EdgeCurrencyTools {
       }
       multiplier = '1' + '0'.repeat(decimals)
 
-      const type =
-        parsedUri.query.type ??
-        this.currencyInfo.defaultSettings.otherSettings.ercTokenStandard
+      const type = parsedUri.query.type ?? this.networkInfo.ercTokenStandard
 
       const edgeParsedUriToken: EdgeParsedUri = {
         token: {
@@ -365,7 +359,7 @@ export class EthereumTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<EthereumNetworkInfo>
 ): Promise<EthereumTools> {
   const out = new EthereumTools(env)
 

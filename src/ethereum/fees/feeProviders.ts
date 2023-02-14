@@ -20,6 +20,7 @@ import {
   EthereumBaseMultiplier,
   EthereumFee,
   EthereumInitOptions,
+  EthereumNetworkInfo,
   EvmScanGasResponse
 } from '../ethTypes'
 
@@ -46,7 +47,8 @@ export const FeeProviders = (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): FeeProviderMap => {
   const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
 
@@ -55,7 +57,7 @@ export const FeeProviders = (
       await fetchFeesFromInfoServer(fetch, currencyInfo),
     externalFeeProviders: providerFns.map(
       provider => async () =>
-        await provider(fetch, currencyInfo, initOptions, log)
+        await provider(fetch, currencyInfo, initOptions, log, networkInfo)
     )
   }
 }
@@ -65,10 +67,10 @@ export const fetchFeesFromEvmScan = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const evmScanApiServers =
-    currencyInfo.defaultSettings.otherSettings.evmScanApiServers
+  const evmScanApiServers = networkInfo.evmScanApiServers
   const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log)
   if (evmScanApiServers == null || scanApiKey == null) return
 
@@ -118,9 +120,10 @@ export const fetchFeesFromEvmGasStation = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const { ethGasStationUrl } = currencyInfo.defaultSettings.otherSettings
+  const { ethGasStationUrl } = networkInfo
   const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
   if (ethGasStationUrl == null || gasStationApiKey == null) return
 

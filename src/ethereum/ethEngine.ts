@@ -53,8 +53,8 @@ import {
   EthereumFee,
   EthereumFees,
   EthereumInitOptions,
+  EthereumNetworkInfo,
   EthereumOtherMethods,
-  EthereumSettings,
   EthereumTxOtherParams,
   EthereumUtils,
   EthereumWalletOtherData,
@@ -78,6 +78,7 @@ export class EthereumEngine
 {
   otherData!: EthereumWalletOtherData
   initOptions: EthereumInitOptions
+  networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
   lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
@@ -86,7 +87,7 @@ export class EthereumEngine
   infoFeeProvider: () => Promise<EthereumFee>
   externalFeeProviders: FeeProviderFunction[]
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
     walletInfo: EdgeWalletInfo,
     initOptions: EthereumInitOptions,
@@ -103,7 +104,8 @@ export class EthereumEngine
       }
     }
     this.initOptions = initOptions
-    this.ethNetwork = new EthereumNetwork(this, this.currencyInfo)
+    this.networkInfo = env.networkInfo
+    this.ethNetwork = new EthereumNetwork(this)
     this.lastEstimatedGasLimit = {
       publicAddress: '',
       contractAddress: '',
@@ -116,7 +118,8 @@ export class EthereumEngine
       this.io.fetch,
       this.currencyInfo,
       this.initOptions,
-      this.log
+      this.log,
+      this.networkInfo
     )
     this.infoFeeProvider = infoFeeProvider
     this.externalFeeProviders = [
@@ -424,8 +427,7 @@ export class EthereumEngine
       wcConnect: (uri: string, publicKey: string, walletId: string) => {
         this.tools.walletConnectors[uri].connector.approveSession({
           accounts: [publicKey],
-          chainId:
-            this.currencyInfo.defaultSettings.otherSettings.chainParams.chainId // required
+          chainId: this.networkInfo.chainParams.chainId // required
         })
         this.tools.walletConnectors[uri].walletId = walletId
       },
@@ -513,7 +515,7 @@ export class EthereumEngine
 
     if (this.otherData.networkFees.default.gasPrice == null) {
       this.otherData.networkFees = {
-        ...this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+        ...this.networkInfo.defaultNetworkFees
       }
     }
   }
@@ -572,8 +574,7 @@ export class EthereumEngine
   > => {
     // Get base fees from 'rpcServers' and convert to our network fees format.
     // * Supported for post EIP-1559 chains only
-    const { supportsEIP1559 = false } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { supportsEIP1559 = false } = this.networkInfo
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!supportsEIP1559) return
 
@@ -589,7 +590,7 @@ export class EthereumEngine
     }
 
     const defaultNetworkFee: EthereumFee =
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
+      this.networkInfo.defaultNetworkFees.default
 
     // The minimum priority fee for slow transactions
     const minPriorityFee =
@@ -630,8 +631,7 @@ export class EthereumEngine
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
     this.otherData.unconfirmedNextNonce = '0'
-    this.otherData.networkFees =
-      this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
+    this.otherData.networkFees = this.networkInfo.defaultNetworkFees
   }
 
   // ****************************************************************************
@@ -642,8 +642,7 @@ export class EthereumEngine
   async startEngine() {
     this.engineOn = true
     const feeUpdateFrequencyMs =
-      this.currencyInfo.defaultSettings.otherSettings.feeUpdateFrequencyMs ??
-      NETWORK_FEES_POLL_MILLISECONDS
+      this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
     this.infoFeeProvider()
       .then(info => {
@@ -696,7 +695,8 @@ export class EthereumEngine
         const { gasPrice, gasLimit } = calcMiningFee(
           spendInfo,
           this.otherData.networkFees,
-          this.currencyInfo
+          this.currencyInfo,
+          this.networkInfo
         )
         const fee = mul(gasPrice, gasLimit)
         const totalAmount = add(mid, fee)
@@ -755,7 +755,8 @@ export class EthereumEngine
     const miningFees = calcMiningFee(
       edgeSpendInfo,
       this.otherData.networkFees,
-      this.currencyInfo
+      this.currencyInfo,
+      this.networkInfo
     )
     const gasPrice = miningFees.gasPrice
     let gasLimit: string = miningFees.gasLimit
@@ -900,12 +901,12 @@ export class EthereumEngine
           }
           // If we know the address is a contract but estimateGas fails use the default token gas limit
           if (
-            this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-              .default.gasLimit.tokenTransaction != null
+            this.networkInfo.defaultNetworkFees.default.gasLimit
+              .tokenTransaction != null
           )
             gasLimit =
-              this.currencyInfo.defaultSettings.otherSettings.defaultNetworkFees
-                .default.gasLimit.tokenTransaction
+              this.networkInfo.defaultNetworkFees.default.gasLimit
+                .tokenTransaction
         }
 
         // Sanity check calculated value
@@ -1077,9 +1078,7 @@ export class EthereumEngine
     }
 
     // Select the chain
-    const otherSettings: EthereumSettings =
-      this.currencyInfo.defaultSettings.otherSettings
-    const { chainParams } = otherSettings
+    const { chainParams } = this.networkInfo
     const common = Common.custom(chainParams)
 
     // Transaction Parameters
@@ -1321,7 +1320,7 @@ export class EthereumEngine
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<EthereumNetworkInfo>,
   tools: EthereumTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

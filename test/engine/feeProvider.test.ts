@@ -7,8 +7,14 @@ import {
   fetchFeesFromEvmScan,
   fetchFeesFromInfoServer
 } from '../../src/ethereum/fees/feeProviders'
-import { currencyInfo as ethCurrencyInfo } from '../../src/ethereum/info/ethInfo'
-import { currencyInfo as ftmCurrencyInfo } from '../../src/ethereum/info/ftmInfo'
+import {
+  currencyInfo as ethCurrencyInfo,
+  networkInfo as ethNetworkInfo
+} from '../../src/ethereum/info/ethInfo'
+import {
+  currencyInfo as ftmCurrencyInfo,
+  networkInfo as ftmNetworkInfo
+} from '../../src/ethereum/info/ftmInfo'
 import { fakeLog } from '../fake/fakeLog'
 
 // TODO: Loop for all plugins
@@ -31,7 +37,8 @@ describe(`FTM Network Fees`, function () {
       {
         gasStationApiKey: 'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
       },
-      fakeLog
+      fakeLog,
+      ethNetworkInfo
     )
     validateGasPrices(fees)
   })
@@ -47,7 +54,8 @@ describe(`FTM Network Fees`, function () {
           'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
         ]
       },
-      fakeLog
+      fakeLog,
+      ftmNetworkInfo
     )
     validateGasPrices(fees)
   })
