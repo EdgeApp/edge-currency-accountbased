@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.9 (2023-02-14)
+
+- Fix: Missing XRP token transactions
+
 ## 0.22.8 (2023-02-10)
 
 - Improve `hexToDecimal` safety
