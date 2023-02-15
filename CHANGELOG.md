@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.10 (2023-02-15)
+
+- Fix: Include per token reserve in calculation of getMaxSpendable and makeSpend
+- Add: Built in tokens for BSC, ETHW, and ETC to allow for custom tokens
+
 ## 0.22.9 (2023-02-14)
 
 - Fix: Missing XRP token transactions
