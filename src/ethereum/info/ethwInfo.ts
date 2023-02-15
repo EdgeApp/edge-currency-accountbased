@@ -5,7 +5,16 @@ import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
 import type { EthereumFees, EthereumSettings } from '../ethTypes'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '2ad7868ca212135c6119fd7ad1ce51cfc5702892': {
+    currencyCode: 'USDT',
+    displayName: 'Tether',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x2ad7868ca212135c6119fd7ad1ce51cfc5702892'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
