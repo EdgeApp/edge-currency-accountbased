@@ -7,7 +7,8 @@ import { XrpNetworkInfo } from './xrpTypes'
 const networkInfo: XrpNetworkInfo = {
   rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],
   defaultFee: '10', // in drops
-  baseReserve: '10000000'
+  baseReserve: '10000000',
+  baseReservePerToken: '2000000'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

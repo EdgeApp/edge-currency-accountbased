@@ -105,6 +105,19 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     this.otherData = asXrpWalletOtherData(raw)
   }
 
+  getTotalReserve(): string {
+    const numActivatedTokens =
+      this.enabledTokens.length -
+      1 -
+      this.walletLocalData.unactivatedTokenIds.length
+
+    const tokenReserve = mul(
+      this.networkInfo.baseReservePerToken,
+      numActivatedTokens.toString()
+    )
+    return add(this.networkInfo.baseReserve, tokenReserve)
+  }
+
   // Poll on the blockheight
   async checkServerInfoInnerLoop(): Promise<void> {
     try {
@@ -426,8 +439,11 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     let spendableBalance = this.getBalance({
       currencyCode
     })
+
+    const totalReserve = this.getTotalReserve()
+
     if (currencyCode === this.currencyInfo.currencyCode) {
-      spendableBalance = sub(spendableBalance, this.networkInfo.baseReserve)
+      spendableBalance = sub(spendableBalance, totalReserve)
     }
     if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
 
@@ -462,7 +478,10 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     // calculation because the transaction fee can be taken out of the reserve balance.
     if (currencyCode === parentCurrencyCode) {
       networkFee = this.otherData.recommendedFee
-      if (gt(add(nativeAmount, this.networkInfo.baseReserve), nativeBalance))
+
+      const totalReserve = this.getTotalReserve()
+
+      if (gt(add(nativeAmount, totalReserve), nativeBalance))
         throw new InsufficientFundsError()
     } else {
       parentNetworkFee = TOKEN_FEE

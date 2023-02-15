@@ -4,6 +4,7 @@ export interface XrpNetworkInfo {
   rippledServers: string[]
   defaultFee: string
   baseReserve: string
+  baseReservePerToken: string
 }
 
 export interface XrpCustomToken {
