@@ -1,4 +1,5 @@
-import { div } from 'biggystring'
+import { div, mul } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeFetchFunction,
@@ -6,7 +7,7 @@ import {
   JsonObject
 } from 'edge-core-js'
 
-import { getEdgeInfoServer, pickRandom } from '../../common/utils'
+import { getEdgeInfoServer, hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
   GAS_STATION_WEI_MULTIPLIER,
@@ -17,6 +18,7 @@ import { asEthGasStation } from '../ethSchema'
 import {
   asEthereumFees,
   asEvmScanGasResponseResult,
+  asRpcResultString,
   EthereumBaseMultiplier,
   EthereumFee,
   EthereumInitOptions,
@@ -50,7 +52,11 @@ export const FeeProviders = (
   log: EdgeLog,
   networkInfo: EthereumNetworkInfo
 ): FeeProviderMap => {
-  const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
+  const providerFns = [
+    fetchFeesFromEvmScan,
+    fetchFeesFromEvmGasStation,
+    fetchFeesFromRpc
+  ]
 
   return {
     infoFeeProvider: async () =>
@@ -60,6 +66,59 @@ export const FeeProviders = (
         await provider(fetch, currencyInfo, initOptions, log, networkInfo)
     )
   }
+}
+
+export const fetchFeesFromRpc = async (
+  fetch: EdgeFetchFunction,
+  currencyInfo: EdgeCurrencyInfo,
+  initOptions: EthereumInitOptions,
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
+): Promise<EthereumBaseMultiplier | undefined> => {
+  const { rpcServers, supportsEIP1559 = false } = networkInfo
+  if (supportsEIP1559) return
+
+  const server = pickRandom(rpcServers, 1)[0]
+
+  const opts = {
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      method: 'eth_gasPrice',
+      params: [],
+      id: 1,
+      jsonrpc: '2.0'
+    })
+  }
+
+  const fetchResponse = await fetch(server, opts)
+  if (!fetchResponse.ok) {
+    const text = await fetchResponse.text()
+    throw new Error(`fetchFeesFromRpc fetch error: ${text}`)
+  }
+
+  const json = await fetchResponse.json()
+  const rpcGasResponse = asMaybe(asRpcResultString)(json)
+
+  if (rpcGasResponse == null) {
+    throw new Error(`fetchFeesFromRpc ${server} returned invalid json: ${json}`)
+  }
+
+  const { result } = rpcGasResponse
+  const gasPrice = hexToDecimal(result)
+
+  const out = {
+    lowFee: mul(gasPrice, '1'),
+    standardFeeLow: mul(gasPrice, '1.06'),
+    standardFeeHigh: mul(gasPrice, '1.12'),
+    highFee: mul(gasPrice, '1.25')
+  }
+  log(`fetchFeesFromRpc: ${currencyInfo.currencyCode}`)
+  printFees(log, out)
+  return out
 }
 
 // This method is deprecated for ETH and other chains that hard forked to EIP 1559
