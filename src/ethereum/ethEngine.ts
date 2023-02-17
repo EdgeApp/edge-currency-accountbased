@@ -810,7 +810,16 @@ export class EthereumEngine
         }
 
         contractAddress = tokenInfo.contractAddress
+        value = decimalToHex(nativeAmount)
+
+        const dataArray = abi.simpleEncode(
+          'transfer(address,uint256):(uint256)',
+          publicAddress,
+          value
+        )
+
         value = '0x0'
+        data = '0x' + Buffer.from(dataArray).toString('hex')
       }
 
       const ethParams: EthereumTxOtherParams = {
@@ -833,17 +842,6 @@ export class EthereumEngine
         this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
         this.lastEstimatedGasLimit.gasLimit === '')
     ) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!data) {
-        const dataArray = abi.simpleEncode(
-          'transfer(address,uint256):(uint256)',
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          contractAddress || publicAddress,
-          value
-        )
-        data = '0x' + Buffer.from(dataArray).toString('hex')
-      }
-
       const estimateGasParams = [
         {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
