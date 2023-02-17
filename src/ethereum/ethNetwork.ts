@@ -6,6 +6,7 @@ import parse from 'url-parse'
 import {
   asyncWaterfall,
   cleanTxLogs,
+  decimalToHex,
   hexToDecimal,
   isHex,
   padHex,
@@ -33,6 +34,7 @@ import {
   asEvmScancanTokenTransaction,
   asEvmScanInternalTransaction,
   asEvmScanTransaction,
+  asGetTransactionReceipt,
   asRpcResultString,
   BlockbookAddress,
   BlockbookTokenBalance,
@@ -80,6 +82,7 @@ type EthFunction =
   | 'eth_call'
   | 'eth_getTransactionCount'
   | 'eth_getTransactionCount_RPC'
+  | 'eth_getTransactionReceipt'
   | 'eth_getBalance'
   | 'eth_estimateGas'
   | 'getTokenBalance'
@@ -264,10 +267,10 @@ export class EthereumNetwork {
     this.walletId = ethEngine.walletInfo.id
   }
 
-  processEvmScanTransaction(
+  async processEvmScanTransaction(
     tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string
-  ): EdgeTransaction {
+  ): Promise<EdgeTransaction> {
     const ourReceiveAddresses: string[] = []
 
     const txid = tx.hash ?? tx.transactionHash
@@ -284,6 +287,16 @@ export class EthereumNetwork {
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
 
+    let l1RollupFee = '0'
+    if (isSpend && this.ethEngine.networkInfo.l1RollupParams != null) {
+      const response = await this.multicastServers(
+        'eth_getTransactionReceipt',
+        [txid]
+      )
+      const json = asGetTransactionReceipt(response.result.result)
+      l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
+    }
+
     let nativeAmount: string
     let networkFee: string
     let parentNetworkFee: string | undefined
@@ -292,15 +305,18 @@ export class EthereumNetwork {
       if (tokenTx) {
         nativeAmount = sub('0', tx.value)
         networkFee = '0'
-        parentNetworkFee = nativeNetworkFee
+        parentNetworkFee = add(nativeNetworkFee, l1RollupFee)
       } else {
         // Spend to self. netNativeAmount is just the fee
         if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-          nativeAmount = sub('0', nativeNetworkFee)
-          networkFee = nativeNetworkFee
+          nativeAmount = sub(sub('0', nativeNetworkFee), l1RollupFee)
+          networkFee = add(nativeNetworkFee, l1RollupFee)
         } else {
-          nativeAmount = sub(sub('0', tx.value), nativeNetworkFee)
-          networkFee = nativeNetworkFee
+          nativeAmount = sub(
+            sub(sub('0', tx.value), nativeNetworkFee),
+            l1RollupFee
+          )
+          networkFee = add(nativeNetworkFee, l1RollupFee)
         }
       }
     } else {
@@ -855,6 +871,7 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
 
+      case 'eth_getTransactionReceipt':
       case 'rollup_gasPrices':
       case 'eth_getCode':
         funcs = rpcServers.map(baseUrl => async () => {
@@ -1268,7 +1285,10 @@ export class EthereumNetwork {
       for (let i = 0; i < transactions.length; i++) {
         try {
           const cleanedTx = cleanerFunc(transactions[i])
-          const tx = this.processEvmScanTransaction(cleanedTx, currencyCode)
+          const tx = await this.processEvmScanTransaction(
+            cleanedTx,
+            currencyCode
+          )
           allTransactions.push(tx)
         } catch (e: any) {
           this.ethEngine.error(

@@ -374,6 +374,10 @@ export const asRpcResultString = asObject({
 
 export type RpcResultString = ReturnType<typeof asRpcResultString>
 
+export const asGetTransactionReceipt = asObject({
+  l1Fee: asString
+})
+
 export const asRollupGasPrices = asObject({
   l1GasPrice: asString
   // l2GasPrice: asString
