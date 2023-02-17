@@ -25,6 +25,11 @@ export interface EthereumInitOptions {
   alchemyApiKey?: string
 }
 
+export interface ChainParams {
+  chainId: number
+  name: string
+}
+
 export interface EthereumNetworkInfo {
   alethioApiServers: string[]
   feeUpdateFrequencyMs?: number
@@ -38,10 +43,7 @@ export interface EthereumNetworkInfo {
   blockbookServers: string[]
   blockchairApiServers: string[]
   blockcypherApiServers: string[]
-  chainParams: {
-    chainId: number
-    name: string
-  }
+  chainParams: ChainParams
   supportsEIP1559?: boolean
   l1RollupParams?: L1RollupParams
   checkUnconfirmedTransactions: boolean
@@ -131,6 +133,18 @@ export interface L1RollupParams {
   dynamicOverhead: string
   oracleContractAddress: string
   dynamicOverheadMethod: string
+}
+
+export interface CalcL1RollupFeeParams {
+  nonce?: string
+  gasLimit: string
+  to: string
+  value?: string
+  data?: string | null | undefined
+  chainParams: ChainParams
+  dynamicOverhead: string
+  fixedOverhead: string
+  gasPriceL1Wei: string
 }
 
 export interface LastEstimatedGasLimit {

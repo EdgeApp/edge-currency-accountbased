@@ -54,6 +54,7 @@ import {
   asRollupGasPrices,
   asRpcResultString,
   asWcSessionRequestParams,
+  CalcL1RollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
   EthereumFee,
@@ -72,7 +73,7 @@ import {
   WcProps,
   WcRpcPayload
 } from './ethTypes'
-import { calcMiningFee } from './fees/ethMiningFees'
+import { calcL1RollupFees, calcMiningFee } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
   FeeProviders,
@@ -801,7 +802,7 @@ export class EthereumEngine
 
     const hasUserMemo = data != null
 
-    let otherParams: Object = {}
+    let otherParams: EthereumTxOtherParams
 
     const miningFees = calcMiningFee(
       edgeSpendInfo,
@@ -980,7 +981,6 @@ export class EthereumEngine
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
       gasLimit = this.lastEstimatedGasLimit.gasLimit
     }
-    // @ts-expect-error
     otherParams.gas = gasLimit
 
     const nativeBalance =
@@ -1015,6 +1015,27 @@ export class EthereumEngine
       }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = mul(nativeAmount, '-1')
+    }
+
+    if (this.l1RollupParams != null) {
+      const txData: CalcL1RollupFeeParams = {
+        nonce: otherParams.nonceUsed,
+        gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
+        gasLimit: otherParams.gas,
+        to: otherParams.to[0],
+        value: value,
+        data: otherParams.data,
+        chainParams: this.networkInfo.chainParams,
+        dynamicOverhead: this.l1RollupParams.dynamicOverhead,
+        fixedOverhead: this.l1RollupParams.fixedOverhead
+      }
+      const l1Fee = calcL1RollupFees(txData)
+
+      if (parentNetworkFee != null) {
+        parentNetworkFee = add(parentNetworkFee, l1Fee)
+      } else {
+        nativeNetworkFee = add(nativeNetworkFee, l1Fee)
+      }
     }
 
     //

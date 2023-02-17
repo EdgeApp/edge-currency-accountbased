@@ -1,8 +1,11 @@
+import Common from '@ethereumjs/common'
+import { Transaction } from '@ethereumjs/tx'
 import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
-import { normalizeAddress } from '../../common/utils'
+import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
+  CalcL1RollupFeeParams,
   EthereumCalcedFees,
   EthereumFee,
   EthereumFees,
@@ -209,4 +212,65 @@ export function calcMiningFee(
   } else {
     throw new Error('ErrorInvalidSpendInfo')
   }
+}
+
+const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s, v signatures to raw transaction
+
+// This is a naive (optimistic??) implementation but is good enough as an
+// estimate since it isn't possible to calculate this exactly without having
+// signatures yet.
+export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
+  const {
+    chainParams,
+    data,
+    dynamicOverhead,
+    fixedOverhead,
+    gasPriceL1Wei,
+    gasLimit,
+    nonce,
+    to,
+    value = '0x0'
+  } = params
+
+  const common = Common.custom(chainParams)
+  const tx = Transaction.fromTxData(
+    {
+      nonce: nonce != null ? decimalToHex(nonce) : undefined,
+      gasPrice: decimalToHex(gasPriceL1Wei),
+      gasLimit: decimalToHex(gasLimit),
+      to,
+      value,
+      data
+    },
+    { common }
+  )
+
+  const unsignedRawTxData = tx
+    .raw()
+    .map(buff => buff.toString('hex'))
+    .join()
+  const unsignedRawTxBytesArray = unsignedRawTxData.match(/(.{1,2})/g)
+  if (unsignedRawTxBytesArray == null) {
+    throw new Error('Invalid rawTx string')
+  }
+
+  let rawTxCost = 0
+  for (let i = 0; i < unsignedRawTxBytesArray.length; i++) {
+    if (unsignedRawTxBytesArray[i] === '00') {
+      rawTxCost += 4 // cost for zero byte
+    } else {
+      rawTxCost += 16 // cost for non-zero byte
+    }
+  }
+
+  const gasUsed = add(
+    add(rawTxCost.toString(), fixedOverhead),
+    MAX_SIGNATURE_COST
+  )
+
+  const scalar = div(dynamicOverhead, '1000000', 18)
+
+  const total = mul(mul(gasPriceL1Wei, gasUsed), scalar)
+
+  return total
 }
