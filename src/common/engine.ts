@@ -815,6 +815,7 @@ export class CurrencyEngine<
     checkCustomToken(obj)
 
     const tokenObj: CustomToken = obj
+
     // If token is already in currencyInfo, error as it cannot be changed
     for (const tk of this.currencyInfo.metaTokens) {
       if (
@@ -823,23 +824,6 @@ export class CurrencyEngine<
       ) {
         throw new Error('ErrorCannotModifyToken')
       }
-    }
-
-    // Validate the token object
-    if (tokenObj.currencyCode.toUpperCase() !== tokenObj.currencyCode) {
-      throw new Error('ErrorInvalidCurrencyCode')
-    }
-    if (tokenObj.currencyCode.length < 2 || tokenObj.currencyCode.length > 7) {
-      throw new Error('ErrorInvalidCurrencyCodeLength')
-    }
-    if (tokenObj.currencyName.length < 3 || tokenObj.currencyName.length > 20) {
-      throw new Error('ErrorInvalidCurrencyNameLength')
-    }
-    if (
-      lt(tokenObj.multiplier, '1') ||
-      gt(tokenObj.multiplier, '100000000000000000000000000000000')
-    ) {
-      throw new Error('ErrorInvalidMultiplier')
     }
 
     for (const tk of this.customTokens) {

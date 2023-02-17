@@ -16,7 +16,7 @@ import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation } from '../common/tokenHelpers'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
@@ -346,6 +346,7 @@ export class EthereumTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
     const cleanLocation = asMaybeContractLocation(token.networkLocation)
     if (
       cleanLocation == null ||

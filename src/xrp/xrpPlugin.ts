@@ -19,6 +19,7 @@ import {
 import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
 import { asXrpNetworkLocation, XrpNetworkInfo } from './xrpTypes'
@@ -163,6 +164,7 @@ export class RippleTools implements EdgeCurrencyTools {
   // issuer addresses can issue more than one token so we need
   // the currency code to make the token id unique
   async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
     const location = token?.networkLocation
     if (location == null) {
       throw new Error('ErrorInvalidNetworkLocation')
