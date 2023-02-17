@@ -268,84 +268,74 @@ export class EthereumNetwork {
     tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string
   ): EdgeTransaction {
-    let netNativeAmount: string // Amount received into wallet
     const ourReceiveAddresses: string[] = []
-    let nativeNetworkFee: string = '0'
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!tx.contractAddress && tx.gasPrice) {
-      // @ts-expect-error
-      nativeNetworkFee = mul(tx.gasPrice, tx.gasUsed)
+    const txid = tx.hash ?? tx.transactionHash
+    if (txid == null) {
+      throw new Error('Invalid transaction result format')
     }
 
     const isSpend =
       tx.from.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
+    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
+
+    const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
+    const nativeNetworkFee: string =
+      gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
+
+    let nativeAmount: string
+    let networkFee: string
+    let parentNetworkFee: string | undefined
 
     if (isSpend) {
-      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-        // Spend to self. netNativeAmount is just the fee
-        netNativeAmount = mul(nativeNetworkFee, '-1')
+      if (tokenTx) {
+        nativeAmount = sub('0', tx.value)
+        networkFee = '0'
+        parentNetworkFee = nativeNetworkFee
       } else {
-        // spend to someone else
-        netNativeAmount = sub('0', tx.value)
-
-        // For spends, include the network fee in the transaction amount if not a token tx
-        if (!tokenTx) {
-          netNativeAmount = sub(netNativeAmount, nativeNetworkFee)
+        // Spend to self. netNativeAmount is just the fee
+        if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
+          nativeAmount = sub('0', nativeNetworkFee)
+          networkFee = nativeNetworkFee
+        } else {
+          nativeAmount = sub(sub('0', tx.value), nativeNetworkFee)
+          networkFee = nativeNetworkFee
         }
       }
     } else {
-      // Receive transaction
-      netNativeAmount = add('0', tx.value)
-      ourReceiveAddresses.push(
-        this.ethEngine.walletLocalData.publicKey.toLowerCase()
-      )
+      // Receive
+      if (tokenTx) {
+        nativeAmount = tx.value
+        networkFee = '0'
+      } else {
+        nativeAmount = tx.value
+        networkFee = '0'
+      }
+      ourReceiveAddresses.push(this.ethEngine.walletLocalData.publicKey)
     }
 
     const otherParams: EthereumTxOtherParams = {
       from: [tx.from],
       to: [tx.to],
       gas: tx.gas,
-      // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      gasPrice: tx.gasPrice || '',
+      gasPrice: gasPrice ?? '',
       gasUsed: tx.gasUsed
     }
 
     let blockHeight = parseInt(tx.blockNumber)
     if (blockHeight < 0) blockHeight = 0
-    let txid
-    if (tx.hash != null) {
-      txid = tx.hash
-    } else if (tx.transactionHash != null) {
-      txid = tx.transactionHash
-    } else {
-      throw new Error('Invalid transaction result format')
-    }
-
-    let parentNetworkFee
-    let networkFee = '0'
-    if (tokenTx && isSpend) {
-      parentNetworkFee = nativeNetworkFee
-    } else {
-      networkFee = nativeNetworkFee
-    }
 
     const edgeTransaction: EdgeTransaction = {
       txid,
       date: parseInt(tx.timeStamp),
       currencyCode,
       blockHeight,
-      nativeAmount: netNativeAmount,
+      nativeAmount,
       networkFee,
       feeRateUsed:
-        // @ts-expect-error
-        tx.gasPrice != null
-          ? // @ts-expect-error
-            getFeeRateUsed(tx.gasPrice, tx.gas, tx.gasUsed)
+        gasPrice != null
+          ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
           : undefined,
       parentNetworkFee,
       ourReceiveAddresses,
