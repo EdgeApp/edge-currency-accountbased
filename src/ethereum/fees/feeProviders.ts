@@ -31,7 +31,7 @@ export const printFees = (log: EdgeLog, fees: Object) => {
     // @ts-expect-error
     const value = fees[key]
     if (typeof value === 'string')
-      log.warn(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
+      log(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
   }
 }
 
@@ -111,7 +111,7 @@ export const fetchFeesFromEvmScan = async (
   const highFee = `${(newFast * WEI_MULTIPLIER) / OPTIMAL_FEE_HIGH_MULTIPLIER}`
 
   const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
-  log.warn(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
   printFees(log, out)
   return out
 }
@@ -183,7 +183,7 @@ export const fetchFeesFromEvmGasStation = async (
     standardFeeHigh: standardFeeHigh.toString(),
     highFee: highFee.toString()
   }
-  log.warn(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
   printFees(log, out)
   return out
 }

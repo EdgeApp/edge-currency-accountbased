@@ -619,7 +619,7 @@ export class EthereumEngine
       out[feeType] = div(totalFee, '1')
     }
 
-    this.log.warn(
+    this.log(
       `updateNetworkFeesFromBaseFeePerGas ${this.currencyInfo.currencyCode}`
     )
     printFees(this.log, out)
