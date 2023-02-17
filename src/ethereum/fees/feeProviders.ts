@@ -1,4 +1,5 @@
-import { div } from 'biggystring'
+import { div, mul } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeFetchFunction,
@@ -6,7 +7,7 @@ import {
   JsonObject
 } from 'edge-core-js'
 
-import { getEdgeInfoServer, pickRandom } from '../../common/utils'
+import { getEdgeInfoServer, hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
   GAS_STATION_WEI_MULTIPLIER,
@@ -17,9 +18,11 @@ import { asEthGasStation } from '../ethSchema'
 import {
   asEthereumFees,
   asEvmScanGasResponseResult,
+  asRpcResultString,
   EthereumBaseMultiplier,
   EthereumFee,
   EthereumInitOptions,
+  EthereumNetworkInfo,
   EvmScanGasResponse
 } from '../ethTypes'
 
@@ -30,7 +33,7 @@ export const printFees = (log: EdgeLog, fees: Object) => {
     // @ts-expect-error
     const value = fees[key]
     if (typeof value === 'string')
-      log.warn(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
+      log(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
   }
 }
 
@@ -46,18 +49,76 @@ export const FeeProviders = (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): FeeProviderMap => {
-  const providerFns = [fetchFeesFromEvmScan, fetchFeesFromEvmGasStation]
+  const providerFns = [
+    fetchFeesFromEvmScan,
+    fetchFeesFromEvmGasStation,
+    fetchFeesFromRpc
+  ]
 
   return {
     infoFeeProvider: async () =>
       await fetchFeesFromInfoServer(fetch, currencyInfo),
     externalFeeProviders: providerFns.map(
       provider => async () =>
-        await provider(fetch, currencyInfo, initOptions, log)
+        await provider(fetch, currencyInfo, initOptions, log, networkInfo)
     )
   }
+}
+
+export const fetchFeesFromRpc = async (
+  fetch: EdgeFetchFunction,
+  currencyInfo: EdgeCurrencyInfo,
+  initOptions: EthereumInitOptions,
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
+): Promise<EthereumBaseMultiplier | undefined> => {
+  const { rpcServers, supportsEIP1559 = false } = networkInfo
+  if (supportsEIP1559) return
+
+  const server = pickRandom(rpcServers, 1)[0]
+
+  const opts = {
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      method: 'eth_gasPrice',
+      params: [],
+      id: 1,
+      jsonrpc: '2.0'
+    })
+  }
+
+  const fetchResponse = await fetch(server, opts)
+  if (!fetchResponse.ok) {
+    const text = await fetchResponse.text()
+    throw new Error(`fetchFeesFromRpc fetch error: ${text}`)
+  }
+
+  const json = await fetchResponse.json()
+  const rpcGasResponse = asMaybe(asRpcResultString)(json)
+
+  if (rpcGasResponse == null) {
+    throw new Error(`fetchFeesFromRpc ${server} returned invalid json: ${json}`)
+  }
+
+  const { result } = rpcGasResponse
+  const gasPrice = hexToDecimal(result)
+
+  const out = {
+    lowFee: mul(gasPrice, '1'),
+    standardFeeLow: mul(gasPrice, '1.06'),
+    standardFeeHigh: mul(gasPrice, '1.12'),
+    highFee: mul(gasPrice, '1.25')
+  }
+  log(`fetchFeesFromRpc: ${currencyInfo.currencyCode}`)
+  printFees(log, out)
+  return out
 }
 
 // This method is deprecated for ETH and other chains that hard forked to EIP 1559
@@ -65,10 +126,10 @@ export const fetchFeesFromEvmScan = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const evmScanApiServers =
-    currencyInfo.defaultSettings.otherSettings.evmScanApiServers
+  const evmScanApiServers = networkInfo.evmScanApiServers
   const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log)
   if (evmScanApiServers == null || scanApiKey == null) return
 
@@ -109,7 +170,7 @@ export const fetchFeesFromEvmScan = async (
   const highFee = `${(newFast * WEI_MULTIPLIER) / OPTIMAL_FEE_HIGH_MULTIPLIER}`
 
   const out = { lowFee, standardFeeLow, standardFeeHigh, highFee }
-  log.warn(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmScan: ${currencyInfo.currencyCode}`)
   printFees(log, out)
   return out
 }
@@ -118,9 +179,10 @@ export const fetchFeesFromEvmGasStation = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
   initOptions: EthereumInitOptions,
-  log: EdgeLog
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const { ethGasStationUrl } = currencyInfo.defaultSettings.otherSettings
+  const { ethGasStationUrl } = networkInfo
   const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
   if (ethGasStationUrl == null || gasStationApiKey == null) return
 
@@ -180,7 +242,7 @@ export const fetchFeesFromEvmGasStation = async (
     standardFeeHigh: standardFeeHigh.toString(),
     highFee: highFee.toString()
   }
-  log.warn(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
+  log(`fetchFeesFromEvmGasStation: ${currencyInfo.currencyCode}`)
   printFees(log, out)
   return out
 }

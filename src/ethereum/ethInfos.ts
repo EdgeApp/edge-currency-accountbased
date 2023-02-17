@@ -9,6 +9,7 @@ import { fantom } from './info/ftmInfo'
 import { goerli } from './info/goerliInfo'
 import { kovan } from './info/kovanInfo'
 import { polygon } from './info/maticInfo'
+import { optimism } from './info/optimismInfo'
 import { rinkeby } from './info/rinkebyInfo'
 import { ropsten } from './info/ropstenInfo'
 import { rsk } from './info/rskInfo'
@@ -24,6 +25,7 @@ export const ethPlugins = {
   fantom,
   goerli,
   kovan,
+  optimism,
   polygon,
   rinkeby,
   ropsten,

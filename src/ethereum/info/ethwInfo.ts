@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import type { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumNetworkInfo } from '../ethTypes'
 
 const builtinTokens: EdgeTokenMap = {
   '2ad7868ca212135c6119fd7ad1ce51cfc5702892': {
@@ -42,7 +42,7 @@ const defaultNetworkFees: EthereumFees = {
   }
 }
 
-const otherSettings: EthereumSettings = {
+const networkInfo: EthereumNetworkInfo = {
   rpcServers: ['https://mainnet.ethereumpow.org'],
 
   evmScanApiServers: [
@@ -74,7 +74,7 @@ const otherSettings: EthereumSettings = {
 
 const defaultSettings: any = {
   customFeeSettings: ['gasLimit', 'gasPrice'],
-  otherSettings
+  otherSettings: { ...networkInfo }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -107,10 +107,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
-export const ethereumpow = makeOuterPlugin<{}, EthereumTools>({
+export const ethereumpow = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import('../ethPlugin')

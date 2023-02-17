@@ -1,8 +1,16 @@
+import Common from '@ethereumjs/common'
+import { Transaction } from '@ethereumjs/tx'
 import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
-import { normalizeAddress } from '../../common/utils'
-import { EthereumCalcedFees, EthereumFee, EthereumFees } from '../ethTypes'
+import { decimalToHex, normalizeAddress } from '../../common/utils'
+import {
+  CalcL1RollupFeeParams,
+  EthereumCalcedFees,
+  EthereumFee,
+  EthereumFees,
+  EthereumNetworkInfo
+} from '../ethTypes'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'
@@ -14,7 +22,8 @@ const WEI_MULTIPLIER = '1000000000'
 export function calcMiningFee(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
-  currencyInfo: EdgeCurrencyInfo
+  currencyInfo: EdgeCurrencyInfo,
+  networkInfo: EthereumNetworkInfo
 ): EthereumCalcedFees {
   let useDefaults = true
   let customGasLimit, customGasPrice
@@ -47,15 +56,16 @@ export function calcMiningFee(
       if (gasPrice != null && gasPrice !== '') {
         const minGasPrice =
           networkFees.default?.gasPrice?.minGasPrice ??
-          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-            .gasPrice.minGasPrice
-        const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
-        if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
-          const e = new Error(
-            `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
-          )
-          e.name = 'ErrorBelowMinimumFee'
-          throw e
+          networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
+        if (minGasPrice != null) {
+          const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
+          if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
+            const e = new Error(
+              `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+            )
+            e.name = 'ErrorBelowMinimumFee'
+            throw e
+          }
         }
 
         customGasPrice = mul(gasPrice, WEI_MULTIPLIER)
@@ -64,9 +74,11 @@ export function calcMiningFee(
       if (gasLimit != null && gasLimit !== '') {
         const minGasLimit =
           networkFees.default?.gasLimit?.minGasLimit ??
-          currencyInfo.defaultSettings.otherSettings.defaultNetworkFees.default
-            .gasLimit.minGasLimit
-        if (lt(gasLimit, minGasLimit) || /^\s*$/.test(gasLimit)) {
+          networkInfo.defaultNetworkFees.default.gasLimit.minGasLimit
+        if (
+          (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
+          /^\s*$/.test(gasLimit)
+        ) {
           const e = new Error(
             `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
           )
@@ -200,4 +212,65 @@ export function calcMiningFee(
   } else {
     throw new Error('ErrorInvalidSpendInfo')
   }
+}
+
+const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s, v signatures to raw transaction
+
+// This is a naive (optimistic??) implementation but is good enough as an
+// estimate since it isn't possible to calculate this exactly without having
+// signatures yet.
+export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
+  const {
+    chainParams,
+    data,
+    dynamicOverhead,
+    fixedOverhead,
+    gasPriceL1Wei,
+    gasLimit,
+    nonce,
+    to,
+    value = '0x0'
+  } = params
+
+  const common = Common.custom(chainParams)
+  const tx = Transaction.fromTxData(
+    {
+      nonce: nonce != null ? decimalToHex(nonce) : undefined,
+      gasPrice: decimalToHex(gasPriceL1Wei),
+      gasLimit: decimalToHex(gasLimit),
+      to,
+      value,
+      data
+    },
+    { common }
+  )
+
+  const unsignedRawTxData = tx
+    .raw()
+    .map(buff => buff.toString('hex'))
+    .join()
+  const unsignedRawTxBytesArray = unsignedRawTxData.match(/(.{1,2})/g)
+  if (unsignedRawTxBytesArray == null) {
+    throw new Error('Invalid rawTx string')
+  }
+
+  let rawTxCost = 0
+  for (let i = 0; i < unsignedRawTxBytesArray.length; i++) {
+    if (unsignedRawTxBytesArray[i] === '00') {
+      rawTxCost += 4 // cost for zero byte
+    } else {
+      rawTxCost += 16 // cost for non-zero byte
+    }
+  }
+
+  const gasUsed = add(
+    add(rawTxCost.toString(), fixedOverhead),
+    MAX_SIGNATURE_COST
+  )
+
+  const scalar = div(dynamicOverhead, '1000000', 18)
+
+  const total = mul(mul(gasPriceL1Wei, gasUsed), scalar)
+
+  return total
 }

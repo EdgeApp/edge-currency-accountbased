@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../ethPlugin'
-import type { EthereumFees, EthereumSettings } from '../ethTypes'
+import type { EthereumFees, EthereumNetworkInfo } from '../ethTypes'
 
 const builtinTokens: EdgeTokenMap = {
   '511d35c52a3c244e7b8bd92c0c297755fbd89212': {
@@ -229,7 +229,8 @@ const defaultNetworkFees: EthereumFees = {
   }
 }
 
-const otherSettings: EthereumSettings = {
+// Exported for fee provider test
+export const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
     'https://polished-empty-cloud.fantom.quiknode.pro',
     'https://rpc.ftm.tools'
@@ -262,7 +263,7 @@ const otherSettings: EthereumSettings = {
 
 const defaultSettings: any = {
   customFeeSettings: ['gasLimit', 'gasPrice'],
-  otherSettings
+  otherSettings: { ...networkInfo }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -290,10 +291,10 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens) // Deprecated
 }
 
-export const fantom = makeOuterPlugin<{}, EthereumTools>({
+export const fantom = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import('../ethPlugin')

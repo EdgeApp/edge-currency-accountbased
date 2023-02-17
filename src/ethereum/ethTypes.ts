@@ -25,7 +25,12 @@ export interface EthereumInitOptions {
   alchemyApiKey?: string
 }
 
-export interface EthereumSettings {
+export interface ChainParams {
+  chainId: number
+  name: string
+}
+
+export interface EthereumNetworkInfo {
   alethioApiServers: string[]
   feeUpdateFrequencyMs?: number
   alethioCurrencies: {
@@ -38,11 +43,9 @@ export interface EthereumSettings {
   blockbookServers: string[]
   blockchairApiServers: string[]
   blockcypherApiServers: string[]
-  chainParams: {
-    chainId: number
-    name: string
-  }
+  chainParams: ChainParams
   supportsEIP1559?: boolean
+  l1RollupParams?: L1RollupParams
   checkUnconfirmedTransactions: boolean
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
@@ -122,6 +125,26 @@ export interface EthereumCalcedFees {
   gasPrice: string
   gasLimit: string
   useDefaults: boolean
+}
+
+export interface L1RollupParams {
+  gasPriceL1Wei: string
+  fixedOverhead: string
+  dynamicOverhead: string
+  oracleContractAddress: string
+  dynamicOverheadMethod: string
+}
+
+export interface CalcL1RollupFeeParams {
+  nonce?: string
+  gasLimit: string
+  to: string
+  value?: string
+  data?: string | null | undefined
+  chainParams: ChainParams
+  dynamicOverhead: string
+  fixedOverhead: string
+  gasPriceL1Wei: string
 }
 
 export interface LastEstimatedGasLimit {
@@ -350,6 +373,15 @@ export const asRpcResultString = asObject({
 })
 
 export type RpcResultString = ReturnType<typeof asRpcResultString>
+
+export const asGetTransactionReceipt = asObject({
+  l1Fee: asString
+})
+
+export const asRollupGasPrices = asObject({
+  l1GasPrice: asString
+  // l2GasPrice: asString
+})
 
 export interface TxRpcParams {
   from?: string
