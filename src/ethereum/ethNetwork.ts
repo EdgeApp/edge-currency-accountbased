@@ -87,6 +87,7 @@ type EthFunction =
   | 'eth_getCode'
   | 'blockbookBlockHeight'
   | 'blockbookAddress'
+  | 'rollup_gasPrices'
 
 interface BroadcastResults {
   incrementNonce: boolean
@@ -864,10 +865,11 @@ export class EthereumNetwork {
         out = await asyncWaterfall(funcs)
         break
 
+      case 'rollup_gasPrices':
       case 'eth_getCode':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(
-            'eth_getCode',
+            func,
             params[0],
             chainId,
             baseUrl
@@ -875,10 +877,10 @@ export class EthereumNetwork {
           // Check if successful http response was actually an error
           if (result.error != null) {
             this.ethEngine.error(
-              `Successful eth_getCode response object from ${baseUrl} included an error ${result.error}`
+              `Successful ${func} response object from ${baseUrl} included an error ${result.error}`
             )
             throw new Error(
-              'Successful eth_getCode response object included an error'
+              `Successful ${func} response object included an error`
             )
           }
           return { server: parse(baseUrl).hostname, result }

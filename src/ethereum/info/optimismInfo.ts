@@ -134,6 +134,14 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 10,
     name: 'Optimism'
   },
+  l1RollupParams: {
+    gasPriceL1Wei: '1000000000',
+    fixedOverhead: '2100',
+    dynamicOverhead: '1000000',
+    oracleContractAddress: '0x420000000000000000000000000000000000000F',
+    dynamicOverheadMethod:
+      '0xf45e65d800000000000000000000000000000000000000000000000000000000'
+  },
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},

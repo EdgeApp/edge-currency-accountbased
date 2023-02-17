@@ -40,13 +40,19 @@ import {
   timeout,
   toHex
 } from '../common/utils'
-import { NETWORK_FEES_POLL_MILLISECONDS, WEI_MULTIPLIER } from './ethConsts'
+import {
+  NETWORK_FEES_POLL_MILLISECONDS,
+  ROLLUP_FEE_PARAMS,
+  WEI_MULTIPLIER
+} from './ethConsts'
 import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumTools } from './ethPlugin'
 import { asEIP712TypedData } from './ethSchema'
 import {
   asEthereumTxOtherParams,
   asEthereumWalletOtherData,
+  asRollupGasPrices,
+  asRpcResultString,
   asWcSessionRequestParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
@@ -59,6 +65,7 @@ import {
   EthereumUtils,
   EthereumWalletOtherData,
   KeysOfEthereumBaseMultiplier,
+  L1RollupParams,
   LastEstimatedGasLimit,
   TxRpcParams,
   WcDappDetails,
@@ -86,6 +93,7 @@ export class EthereumEngine
   utils: EthereumUtils
   infoFeeProvider: () => Promise<EthereumFee>
   externalFeeProviders: FeeProviderFunction[]
+  l1RollupParams?: L1RollupParams
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
@@ -110,6 +118,9 @@ export class EthereumEngine
       publicAddress: '',
       contractAddress: '',
       gasLimit: ''
+    }
+    if (this.networkInfo.l1RollupParams != null) {
+      this.l1RollupParams = this.networkInfo.l1RollupParams
     }
     this.fetchCors = getFetchCors(env)
 
@@ -554,6 +565,46 @@ export class EthereumEngine
     }
   }
 
+  async updateL1RollupParams(): Promise<void> {
+    if (this.l1RollupParams == null) return
+
+    // L1GasPrice
+    try {
+      const response = await this.ethNetwork.multicastServers(
+        'rollup_gasPrices'
+      )
+      const gasPrices = asRollupGasPrices(response.result.result)
+      const { l1GasPrice } = gasPrices
+
+      this.l1RollupParams = {
+        ...this.l1RollupParams,
+        gasPriceL1Wei: hexToDecimal(l1GasPrice)
+      }
+    } catch (e: any) {
+      this.log.warn('Failed to update l1GasPrice', e)
+    }
+
+    // Dynamic overhead (scalar)
+    try {
+      const params = {
+        to: this.l1RollupParams.oracleContractAddress,
+        data: this.l1RollupParams.dynamicOverheadMethod
+      }
+      const response = await this.ethNetwork.multicastServers(
+        'eth_call',
+        params
+      )
+
+      const result = asRpcResultString(response.result)
+      this.l1RollupParams = {
+        ...this.l1RollupParams,
+        dynamicOverhead: hexToDecimal(result.result)
+      }
+    } catch (e: any) {
+      this.log.warn('Failed to update dynamicOverhead', e)
+    }
+  }
+
   /*
   This algorithm calculates fee amounts using the base multiplier from the
   info server.
@@ -660,7 +711,7 @@ export class EthereumEngine
         async () =>
           await this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs)
       )
-
+    this.addToLoop('updateL1RollupParams', ROLLUP_FEE_PARAMS).catch(() => {})
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.ethNetwork.needsLoop()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises

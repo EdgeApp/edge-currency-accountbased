@@ -43,6 +43,7 @@ export interface EthereumNetworkInfo {
     name: string
   }
   supportsEIP1559?: boolean
+  l1RollupParams?: L1RollupParams
   checkUnconfirmedTransactions: boolean
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
@@ -122,6 +123,14 @@ export interface EthereumCalcedFees {
   gasPrice: string
   gasLimit: string
   useDefaults: boolean
+}
+
+export interface L1RollupParams {
+  gasPriceL1Wei: string
+  fixedOverhead: string
+  dynamicOverhead: string
+  oracleContractAddress: string
+  dynamicOverheadMethod: string
 }
 
 export interface LastEstimatedGasLimit {
@@ -350,6 +359,11 @@ export const asRpcResultString = asObject({
 })
 
 export type RpcResultString = ReturnType<typeof asRpcResultString>
+
+export const asRollupGasPrices = asObject({
+  l1GasPrice: asString
+  // l2GasPrice: asString
+})
 
 export interface TxRpcParams {
   from?: string
