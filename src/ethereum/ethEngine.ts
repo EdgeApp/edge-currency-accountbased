@@ -845,7 +845,7 @@ export class EthereumEngine
         data
       }
       otherParams = ethParams
-      value = add(nativeAmount, '0', 16)
+      value = decimalToHex(nativeAmount)
     } else {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (data) {
