@@ -1375,8 +1375,7 @@ export class EthereumEngine
     super.saveTx(edgeTransaction)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async addCustomToken(obj: CustomToken) {
+  async addCustomToken(obj: CustomToken): Promise<void> {
     const { contractAddress } = obj
     if (
       !isHex(contractAddress) ||
@@ -1384,8 +1383,7 @@ export class EthereumEngine
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.addCustomToken(obj, contractAddress.toLowerCase())
+    await super.addCustomToken(obj, contractAddress.toLowerCase())
   }
 }
 

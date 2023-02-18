@@ -13,7 +13,7 @@ import EosApi from 'eosjs-api'
 import ecc from 'eosjs-ecc'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation } from '../common/tokenHelpers'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, getFetchCors } from '../common/utils'
 import {
@@ -144,6 +144,7 @@ export class EosTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
     const cleanLocation = asMaybeContractLocation(token.networkLocation)
     if (cleanLocation == null || !checkAddress(cleanLocation.contractAddress)) {
       throw new Error('ErrorInvalidContractAddress')

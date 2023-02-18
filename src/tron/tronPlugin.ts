@@ -16,7 +16,7 @@ import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation } from '../common/tokenHelpers'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import { asTronKeys, TronKeys, TronNetworkInfo } from './tronTypes'
@@ -142,6 +142,7 @@ export class TronTools implements EdgeCurrencyTools {
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
     const cleanLocation = asMaybeContractLocation(token.networkLocation)
     if (
       cleanLocation == null ||
