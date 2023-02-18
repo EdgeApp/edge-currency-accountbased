@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.12 (2023-02-17)
+
+- added: Add Optimism currency plugin.
+- changed: Loosen restrictions on custom token currency codes.
+
 ## 0.22.11 (2023-02-17)
 
 - fixed: Correctly report ETHW balances.
