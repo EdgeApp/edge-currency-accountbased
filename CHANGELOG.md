@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.11 (2023-02-17)
+
+- fixed: Correctly report ETHW balances.
+
 ## 0.22.10 (2023-02-15)
 
 - Fix: Include per token reserve in calculation of getMaxSpendable and makeSpend
