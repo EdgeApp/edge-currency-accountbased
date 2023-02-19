@@ -1554,6 +1554,13 @@ export class EthereumNetwork {
           }
 
           const response = await this.multicastServers('eth_call', params)
+          const result: string = response.result.result
+
+          if (!result.startsWith('0x')) {
+            throw new Error('Invalid return value. Result not hex')
+          }
+          response.result.result = hexToDecimal(result)
+
           jsonObj = response.result
           server = response.server
         }
