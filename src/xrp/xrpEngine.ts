@@ -170,7 +170,8 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 
     const ourReceiveAddresses = []
     let nativeAmount = typeof tx.Amount === 'string' ? tx.Amount : '0'
-    let { currencyCode } = this.currencyInfo
+    const chainCode = this.currencyInfo.currencyCode
+    let currencyCode = chainCode
     let tokenTx = false
     if (typeof tx.Amount === 'string') {
       nativeAmount = tx.Amount
@@ -239,6 +240,16 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       walletId: this.walletId
     }
     this.addTransaction(currencyCode, edgeTransaction)
+    if (tokenTx && nativeAmount.startsWith('-')) {
+      // Also add the mainnet fee transaction if this is a token spend
+      this.addTransaction(chainCode, {
+        ...edgeTransaction,
+        currencyCode: chainCode,
+        nativeAmount: `-${parentNetworkFee ?? ''}`,
+        networkFee: parentNetworkFee ?? '',
+        parentNetworkFee: undefined
+      })
+    }
   }
 
   async checkTransactionsInnerLoop(): Promise<void> {

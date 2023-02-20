@@ -634,21 +634,6 @@ export class CurrencyEngine<
     }
   }
 
-  doInitialTransactionsCallback(): void {
-    for (const currencyCode of this.enabledTokens) {
-      try {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionList[currencyCode]
-        )
-      } catch (e: any) {
-        this.error(
-          `doInitialTransactionsCallback Error for currencyCode ${currencyCode}`,
-          e
-        )
-      }
-    }
-  }
-
   async addToLoop(func: string, timer: number): Promise<boolean> {
     try {
       // @ts-expect-error
