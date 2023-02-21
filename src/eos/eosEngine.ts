@@ -1077,9 +1077,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    if (!this.getResourcesMutex) {
-      await this.getResources()
-    }
+    await this.getResources()
+
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
     const { signatures } = otherParams
 
