@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.11-1 (2023-02-21)
+
+- EVM: Fix hex to decimal conversion in eth_call
+
 ## 0.22.11 (2023-02-17)
 
 - fixed: Correctly report ETHW balances.
