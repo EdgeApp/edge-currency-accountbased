@@ -75,7 +75,7 @@ type EosFunction =
   | 'getResourceUsage'
   | 'transact'
 
-const bogusAccounts: { [name: string]: true } = {
+const bogusAccounts: { readonly [name: string]: true } = {
   ramdeathtest: true,
   krpj4avazggi: true,
   fobleos13125: true
