@@ -876,8 +876,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       this.log.warn('getResources purchase SUCCESS')
     } catch (e) {
       this.log.warn('getResources purchase FAILURE\n', e)
+    } finally {
+      this.getResourcesMutex = false
     }
-    this.getResourcesMutex = false
   }
 
   async clearBlockchainCache(): Promise<void> {
