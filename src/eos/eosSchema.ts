@@ -50,9 +50,15 @@ export const asHyperionTransaction = asObject({
   })
 })
 
+export type HyperionTransaction = ReturnType<typeof asHyperionTransaction>
+
 export const asHyperionGetTransactionResponse = asObject({
   actions: asArray(asHyperionTransaction)
 })
+
+export type HyperionGetTransactionResponse = ReturnType<
+  typeof asHyperionGetTransactionResponse
+>
 
 export const asDfuseGetKeyAccountsResponse = asObject({
   account_names: asArray(asString)

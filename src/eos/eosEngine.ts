@@ -46,6 +46,8 @@ import {
   dfuseGetTransactionsQueryString,
   EosOtherParams,
   EosTransfer,
+  HyperionGetTransactionResponse,
+  HyperionTransaction,
   powerupAbi,
   transferAbi
 } from './eosSchema'
@@ -226,9 +228,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  processIncomingTransaction(
-    action: ReturnType<typeof asHyperionTransaction>
-  ): number {
+  processIncomingTransaction(action: HyperionTransaction): number {
     const clean = asMaybe(asEosTransactionSuperNodeSchema)(action)
     if (clean == null) {
       this.error('Invalid supernode tx')
@@ -455,7 +455,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         limit,
         low: newHighestTxHeight + 1
       }
-      const actionsObject: ReturnType<typeof asHyperionGetTransactionResponse> =
+      const actionsObject: HyperionGetTransactionResponse =
         await this.multicastServers('getIncomingTransactions', params)
       let actions = []
       // sort transactions by block height (blockNum) since they can be out of order
