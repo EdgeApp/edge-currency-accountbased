@@ -1393,7 +1393,7 @@ export class EthereumNetwork {
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    const out = {
+    const out: EthereumNetworkUpdate = {
       newNonce: '0',
       tokenBal: {},
       server: ''
@@ -1418,8 +1418,8 @@ export class EthereumNetwork {
     }
     const { nonce, tokens, balance } = addressInfo
     out.newNonce = nonce
-    // @ts-expect-error
-    out.tokenBal[this.ethEngine.currencyInfo.currencyCode] = balance
+    if (out.tokenBal != null)
+      out.tokenBal[this.ethEngine.currencyInfo.currencyCode] = balance
     out.server = server
 
     // Token balances
