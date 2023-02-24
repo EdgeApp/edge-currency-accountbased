@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.13 (2023-02-23)
+
+- EVM: Fix race condition of undefined balance for ETH-based currencies
+- ARRR: Update checkpoint files
+
 ## 0.22.11-1 (2023-02-21)
 
 - EVM: Fix hex to decimal conversion in eth_call
