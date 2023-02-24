@@ -608,7 +608,7 @@ export class CurrencyEngine<
       try {
         this.currencyEngineCallbacks.onBalanceChanged(
           currencyCode,
-          this.walletLocalData.totalBalances[currencyCode]
+          this.walletLocalData.totalBalances[currencyCode] ?? '0'
         )
       } catch (e: any) {
         this.error(
