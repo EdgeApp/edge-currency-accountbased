@@ -1,10 +1,12 @@
 import {
   asArray,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
+  asUndefined,
   asUnknown
 } from 'cleaners'
 import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
@@ -43,7 +45,7 @@ export const asWalletLocalData = asObject({
   lastTransactionQueryHeight: asMaybe(asObject(asNumber), {}),
   lastTransactionDate: asMaybe(asObject(asNumber), {}),
   publicKey: asMaybe(asString, ''),
-  totalBalances: asMaybe(asObject(asString), {}),
+  totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), {}),
   lastCheckedTxsDropped: asMaybe(asNumber, 0),
   numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
   numTransactions: asMaybe(asObject(asNumber), {}),

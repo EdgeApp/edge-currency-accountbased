@@ -984,7 +984,7 @@ export class EthereumEngine
     otherParams.gas = gasLimit
 
     const nativeBalance =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
     let nativeNetworkFee = mul(gasPrice, gasLimit)
     let totalTxAmount = '0'
@@ -1009,7 +1009,8 @@ export class EthereumEngine
           networkFee: nativeNetworkFee
         })
       }
-      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      const balanceToken =
+        this.walletLocalData.totalBalances[currencyCode] ?? '0'
       if (!skipChecks && gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError()
       }
@@ -1271,7 +1272,7 @@ export class EthereumEngine
     //
 
     const parentNativeBalance =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
     if (currencyCode === this.currencyInfo.currencyCode) {
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
@@ -1288,7 +1289,8 @@ export class EthereumEngine
           networkFee: nativeNetworkFee
         })
       }
-      const balanceToken = this.walletLocalData.totalBalances[currencyCode]
+      const balanceToken =
+        this.walletLocalData.totalBalances[currencyCode] ?? '0'
       if (gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError()
       }

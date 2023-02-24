@@ -1501,10 +1501,9 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const lockedBalance =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       this.walletLocalData.totalBalances[
         this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
-      ] || '0'
+      ] ?? '0'
     const availableBalance = sub(nativeBalance, lockedBalance)
 
     // Set common vars
@@ -1579,7 +1578,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       const stakedBalance =
         this.walletLocalData.totalBalances[
           this.currencyInfo.defaultSettings.balanceCurrencyCodes.staked
-        ]
+        ] ?? '0'
       if (gt(quantity, stakedBalance)) {
         throw new InsufficientFundsError()
       }

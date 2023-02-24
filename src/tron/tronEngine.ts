@@ -202,10 +202,11 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   }
 
   updateBalance(tk: string, balance: string): void {
+    const currentBalance = this.walletLocalData.totalBalances[tk]
     if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
       this.walletLocalData.totalBalances[tk] = '0'
     }
-    if (!eq(balance, this.walletLocalData.totalBalances[tk])) {
+    if (currentBalance == null || !eq(balance, currentBalance)) {
       this.walletLocalData.totalBalances[tk] = balance
       this.log(tk + ': token Address balance: ' + balance)
       this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
@@ -1245,7 +1246,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     }
 
     const balanceSUN =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
     if (gt(transactionCostSUN, balanceSUN)) {
       throw new InsufficientFundsError({
         currencyCode: this.currencyInfo.currencyCode,
