@@ -421,7 +421,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     ErrorInsufficientFundsMoreBnb.name = 'ErrorInsufficientFundsMoreBnb'
 
     const balanceBnb =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
     let totalTxAmount = '0'
     totalTxAmount = add(nativeAmount, nativeNetworkFee)

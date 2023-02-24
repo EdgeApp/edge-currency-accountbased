@@ -445,7 +445,9 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     const networkFee = txnFee.asTinybar().toString()
     nativeAmount = add(nativeAmount, networkFee)
 
-    if (gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode])) {
+    if (
+      gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode] ?? '0')
+    ) {
       throw new InsufficientFundsError()
     }
 

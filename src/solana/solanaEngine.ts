@@ -321,7 +321,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
 
     const nativeNetworkFee = this.feePerSignature
 
-    const balanceSol = this.walletLocalData.totalBalances[this.chainCode]
+    const balanceSol = this.walletLocalData.totalBalances[this.chainCode] ?? '0'
     let totalTxAmount = '0'
     totalTxAmount = add(nativeAmount, nativeNetworkFee)
     if (gt(totalTxAmount, balanceSol)) {

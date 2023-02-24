@@ -305,7 +305,8 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     if (
       gt(
         totalTxAmount,
-        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode]
+        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ??
+          '0'
       )
     ) {
       throw new InsufficientFundsError()

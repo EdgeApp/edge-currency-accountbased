@@ -533,10 +533,11 @@ export class CurrencyEngine<
   }
 
   updateBalance(tk: string, balance: string): void {
+    const currentBalance = this.walletLocalData.totalBalances[tk]
     if (this.walletLocalData.totalBalances[tk] == null) {
       this.walletLocalData.totalBalances[tk] = '0'
     }
-    if (!eq(balance, this.walletLocalData.totalBalances[tk])) {
+    if (currentBalance == null || !eq(balance, currentBalance)) {
       this.walletLocalData.totalBalances[tk] = balance
       this.walletLocalDataDirty = true
       this.warn(`${tk}: token Address balance: ${balance}`)
@@ -742,10 +743,11 @@ export class CurrencyEngine<
       ) {
         this.enabledTokens.push(currencyCode)
         // Initialize balance
-        this.walletLocalData.totalBalances[currencyCode] = '0'
+        const updatedBalance = '0'
+        this.walletLocalData.totalBalances[currencyCode] = updatedBalance
         this.currencyEngineCallbacks.onBalanceChanged(
           currencyCode,
-          this.walletLocalData.totalBalances[currencyCode]
+          updatedBalance
         )
       }
     }
@@ -760,11 +762,9 @@ export class CurrencyEngine<
       ) {
         this.enabledTokens.push(currencyCode)
         // Initialize balance
-        this.walletLocalData.totalBalances[currencyCode] = '0'
-        this.currencyEngineCallbacks.onBalanceChanged(
-          currencyCode,
-          this.walletLocalData.totalBalances[currencyCode]
-        )
+        const newBalance = '0'
+        this.walletLocalData.totalBalances[currencyCode] = newBalance
+        this.currencyEngineCallbacks.onBalanceChanged(currencyCode, newBalance)
       }
     }
   }
@@ -856,10 +856,10 @@ export class CurrencyEngine<
     const cleanOptions = asCurrencyCodeOptions(options)
     const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
 
-    if (this.walletLocalData.totalBalances[currencyCode] == null) {
+    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (nativeBalance == null) {
       return '0'
     }
-    const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     return nativeBalance
   }
 
