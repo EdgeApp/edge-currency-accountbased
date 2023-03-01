@@ -43,7 +43,7 @@ export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
-
+  checkEnvironment?: () => void
   getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools>>
 
   otherMethodNames?: ReadonlyArray<string & keyof Tools>
@@ -59,7 +59,8 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
       builtinTokens = {},
       currencyInfo,
       networkInfo,
-      otherMethodNames = []
+      otherMethodNames = [],
+      checkEnvironment = () => {}
     } = template
     const innerEnv = { ...env, builtinTokens, currencyInfo, networkInfo }
 
@@ -70,6 +71,7 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
       plugin: InnerPlugin<NetworkInfo, Tools>
       tools: Tools
     }> {
+      checkEnvironment()
       if (pluginPromise == null) {
         pluginPromise = template.getInnerPlugin()
       }
