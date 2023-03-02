@@ -7,7 +7,8 @@ import {
   JsonObject
 } from 'edge-core-js'
 
-import { getEdgeInfoServer, hexToDecimal, pickRandom } from '../../common/utils'
+import { fetchInfo } from '../../common/network'
+import { hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
   GAS_STATION_WEI_MULTIPLIER,
@@ -251,10 +252,9 @@ export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
   { currencyCode }: EdgeCurrencyInfo
 ): Promise<EthereumFees> => {
-  const infoServer = getEdgeInfoServer()
-  const url = `${infoServer}/v1/networkFees/${currencyCode}`
-  const result = await fetch(url)
-  return asEthereumFees(await result.json())
+  const result = await fetchInfo(`v1/networkFees/${currencyCode}`)
+  const json = await result.json()
+  return asEthereumFees(json)
 }
 
 // Backwards compatibility with deprecated etherscan api keys

@@ -286,10 +286,6 @@ export function pickRandom<T>(list: T[], count: number): T[] {
   return out
 }
 
-function getEdgeInfoServer(): string {
-  return 'https://info1.edgesecure.co:8444'
-}
-
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
@@ -469,7 +465,6 @@ export {
   snooze,
   shuffleArray,
   snoozeReject,
-  getEdgeInfoServer,
   promiseAny,
   getFetchCors,
   promiseNy,
