@@ -989,19 +989,36 @@ export class EthereumEngine
     let nativeNetworkFee = mul(gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee = null
+    let l1Fee = '0'
+
+    if (this.l1RollupParams != null) {
+      const txData: CalcL1RollupFeeParams = {
+        nonce: otherParams.nonceUsed,
+        gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
+        gasLimit: otherParams.gas,
+        to: otherParams.to[0],
+        value: value,
+        data: otherParams.data,
+        chainParams: this.networkInfo.chainParams,
+        dynamicOverhead: this.l1RollupParams.dynamicOverhead,
+        fixedOverhead: this.l1RollupParams.fixedOverhead
+      }
+      l1Fee = calcL1RollupFees(txData)
+    }
 
     //
     // Balance checks:
     //
 
     if (currencyCode === this.currencyInfo.currencyCode) {
+      nativeNetworkFee = add(nativeNetworkFee, l1Fee)
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
       if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
         throw new InsufficientFundsError()
       }
       nativeAmount = mul(totalTxAmount, '-1')
     } else {
-      parentNetworkFee = nativeNetworkFee
+      parentNetworkFee = add(nativeNetworkFee, l1Fee)
       // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
       if (!skipChecks && gt(nativeNetworkFee, nativeBalance)) {
         throw new InsufficientFundsError({
@@ -1016,27 +1033,6 @@ export class EthereumEngine
       }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = mul(nativeAmount, '-1')
-    }
-
-    if (this.l1RollupParams != null) {
-      const txData: CalcL1RollupFeeParams = {
-        nonce: otherParams.nonceUsed,
-        gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
-        gasLimit: otherParams.gas,
-        to: otherParams.to[0],
-        value: value,
-        data: otherParams.data,
-        chainParams: this.networkInfo.chainParams,
-        dynamicOverhead: this.l1RollupParams.dynamicOverhead,
-        fixedOverhead: this.l1RollupParams.fixedOverhead
-      }
-      const l1Fee = calcL1RollupFees(txData)
-
-      if (parentNetworkFee != null) {
-        parentNetworkFee = add(parentNetworkFee, l1Fee)
-      } else {
-        nativeNetworkFee = add(nativeNetworkFee, l1Fee)
-      }
     }
 
     //
