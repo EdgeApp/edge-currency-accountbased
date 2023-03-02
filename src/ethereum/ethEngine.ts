@@ -92,7 +92,7 @@ export class EthereumEngine
   fetchCors: EdgeFetchFunction
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
-  infoFeeProvider: () => Promise<EthereumFee>
+  infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
   l1RollupParams?: L1RollupParams
   constructor(

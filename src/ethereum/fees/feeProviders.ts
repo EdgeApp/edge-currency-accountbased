@@ -20,7 +20,7 @@ import {
   asEvmScanGasResponseResult,
   asRpcResultString,
   EthereumBaseMultiplier,
-  EthereumFee,
+  EthereumFees,
   EthereumInitOptions,
   EthereumNetworkInfo,
   EvmScanGasResponse
@@ -41,7 +41,7 @@ export type FeeProviderFunction = () => Promise<
   EthereumBaseMultiplier | undefined
 >
 interface FeeProviderMap {
-  infoFeeProvider: () => Promise<EthereumFee>
+  infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
 }
 
@@ -250,11 +250,10 @@ export const fetchFeesFromEvmGasStation = async (
 export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
   { currencyCode }: EdgeCurrencyInfo
-): Promise<EthereumFee> => {
+): Promise<EthereumFees> => {
   const infoServer = getEdgeInfoServer()
   const url = `${infoServer}/v1/networkFees/${currencyCode}`
   const result = await fetch(url)
-  // @ts-expect-error
   return asEthereumFees(await result.json())
 }
 
