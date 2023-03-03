@@ -26,6 +26,7 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -96,11 +97,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   constructor(
     env: PluginEnvironment<EosNetworkInfo>,
     tools: EosTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
     const fetchCors = getFetchCors(env)
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     const { networkInfo } = env
     this.fetchCors = fetchCors
     this.networkInfo = networkInfo
@@ -188,17 +189,12 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      if (walletInfo.keys.ownerPublicKey != null) {
-        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
-      } else {
-        const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
-      }
+    await super.loadEngine(plugin, publicKeys, opts)
+    if (typeof this.publicKeys.keys.ownerPublicKey !== 'string') {
+      this.publicKeys.keys.ownerPublicKey = publicKeys.keys.ownerPublicKey
     }
   }
 
@@ -870,6 +866,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         },
         walletId: this.walletId
       }
+      // TODO: this engine self maintains its resources
       const signedTx = await this.signTx(edgeTransaction)
       this.getResourcesMutex = true
       await this.broadcastTx(signedTx)
@@ -925,8 +922,8 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       // Account is not yet active. Return the publicKeys so the user can activate the account
       return {
         publicAddress: '',
-        publicKey: this.walletInfo.keys.publicKey,
-        ownerPublicKey: this.walletInfo.keys.ownerPublicKey
+        publicKey: this.publicKeys.keys.publicKey,
+        ownerPublicKey: this.publicKeys.keys.ownerPublicKey
       }
     }
   }
@@ -1044,7 +1041,10 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
 
     const abi =
@@ -1059,7 +1059,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       abi
     )
     const txDigest = transaction.signingDigest(this.networkInfo.chainId)
-    const privateKey = PrivateKey.from(this.walletInfo.keys.eosKey)
+    const privateKey = PrivateKey.from(walletInfo.keys.eosKey)
     const signature = privateKey.signDigest(txDigest)
     const signedTransaction = SignedTransaction.from({
       ...transaction,
@@ -1122,30 +1122,30 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  getDisplayPrivateSeed(): string {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo): string {
     let out = ''
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
-    if (this.walletInfo.keys?.eosOwnerKey != null) {
-      out += 'owner key\n' + String(this.walletInfo.keys.eosOwnerKey) + '\n\n'
+    if (walletInfo.keys?.eosOwnerKey != null) {
+      out += 'owner key\n' + String(walletInfo.keys.eosOwnerKey) + '\n\n'
     }
-    if (this.walletInfo.keys?.eosKey != null) {
-      out += 'active key\n' + String(this.walletInfo.keys.eosKey) + '\n\n'
+    if (walletInfo.keys?.eosKey != null) {
+      out += 'active key\n' + String(walletInfo.keys.eosKey) + '\n\n'
     }
     return out
   }
 
   getDisplayPublicSeed(): string {
     let out = ''
-    if (this.walletInfo.keys?.ownerPublicKey != null) {
+    if (this.publicKeys.keys?.ownerPublicKey != null) {
       out +=
         'owner publicKey\n' +
-        String(this.walletInfo.keys.ownerPublicKey) +
+        String(this.publicKeys.keys.ownerPublicKey) +
         '\n\n'
     }
-    if (this.walletInfo.keys?.publicKey != null) {
+    if (this.publicKeys.keys?.publicKey != null) {
       out +=
-        'active publicKey\n' + String(this.walletInfo.keys.publicKey) + '\n\n'
+        'active publicKey\n' + String(this.publicKeys.keys.publicKey) + '\n\n'
     }
     return out
   }
@@ -1154,11 +1154,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<EosNetworkInfo>,
   tools: EosTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new EosEngine(env, tools, walletInfo, opts)
-  await engine.loadEngine(tools, walletInfo, opts)
+  const engine = new EosEngine(env, tools, publicKeys, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }
