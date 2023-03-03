@@ -2,14 +2,11 @@ import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface EosNetworkInfo {
   chainId: string
-
-  createAccountViaSingleApiEndpoints?: string[]
   eosActivationServers: string[]
   eosDfuseServers: string[]
-  eosFuelServers: string[]
   eosHyperionNodes: string[]
   eosNodes: string[]
-  fuelActions?: string[]
+  powerUpServers: string[]
   uriProtocol: string
 }
 
@@ -18,21 +15,6 @@ export const eosOtherMethodNames = [
   'getActivationSupportedCurrencies',
   'validateAccount'
 ] as const
-
-export interface EosTransactionSuperNode {
-  act: {
-    data: {
-      from: string
-      to: string
-      amount: string
-      symbol: string
-      memo?: string
-    }
-  }
-  trx_id: string
-  '@timestamp': string
-  block_num: number
-}
 
 export interface EosTransaction {
   block_time: string
@@ -80,13 +62,21 @@ export interface EosAction {
   notified: string[]
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface EosParams {}
-
 export const asEosWalletOtherData = asObject({
   accountName: asMaybe(asString, ''),
   lastQueryActionSeq: asMaybe(asObject(asNumber), {}),
-  highestTxHeight: asMaybe(asObject(asNumber), {})
+  highestTxHeight: asMaybe(asObject(asNumber), {}),
+  lastFreePowerUp: asMaybe(asNumber, 0)
 })
 
 export type EosWalletOtherData = ReturnType<typeof asEosWalletOtherData>
+
+export interface ReferenceBlock {
+  ref_block_num: number
+  ref_block_prefix: number
+}
+
+export interface AccountResources {
+  cpu: number
+  net: number
+}

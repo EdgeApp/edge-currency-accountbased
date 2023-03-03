@@ -14,7 +14,7 @@ export const telosNetworkInfo: EosNetworkInfo = {
   ],
   eosHyperionNodes: ['https://telos.caleos.io'],
   eosNodes: ['https://telos.caleos.io'],
-  eosFuelServers: [], // this will need to be fixed
+  powerUpServers: [],
   eosDfuseServers: [],
   uriProtocol: 'telos'
 }
