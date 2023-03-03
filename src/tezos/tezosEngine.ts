@@ -13,6 +13,7 @@ import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -56,10 +57,10 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: TezosTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
   }
@@ -411,8 +412,8 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
       throw new NoAmountSpecifiedError()
     }
     const keys = {
-      pk: this.walletInfo.keys.publicKeyEd,
-      pkh: this.walletInfo.keys.publicKey,
+      pk: this.publicKeys.keys.publicKeyEd,
+      pkh: this.publicKeys.keys.publicKey,
       sk: false
     }
     let ops: OperationsContainer | typeof undefined
@@ -472,11 +473,14 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
     if (edgeTransaction.signedTx === '') {
-      const sk = this.walletInfo.keys.privateKey
+      const sk = walletInfo.keys.privateKey
       const signed = eztz.crypto.sign(
         otherParams.fullOp.opbytes,
         sk,
@@ -505,10 +509,10 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo) {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.mnemonic) {
-      return this.walletInfo.keys.mnemonic
+    if (walletInfo.keys && walletInfo.keys.mnemonic) {
+      return walletInfo.keys.mnemonic
     }
     return ''
   }
@@ -516,8 +520,8 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+    if (this.publicKeys.keys && this.publicKeys.keys.publicKey) {
+      return this.publicKeys.keys.publicKey
     }
     return ''
   }
@@ -526,12 +530,12 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: TezosTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TezosEngine(env, tools, walletInfo, opts)
+  const engine = new TezosEngine(env, tools, publicKeys, opts)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

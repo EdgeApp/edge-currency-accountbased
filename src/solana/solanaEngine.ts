@@ -15,6 +15,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -58,17 +59,17 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: SolanaTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: any // EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     const fetchCors = getFetchCors(env)
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.settings = tools.currencyInfo.defaultSettings.otherSettings
-    this.base58PublicKey = walletInfo.keys.publicKey
+    this.base58PublicKey = publicKeys.keys.publicKey
     this.progressRatio = 0
   }
 
@@ -382,17 +383,17 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const { unsignedSerializedSolTx } = getOtherParams(edgeTransaction)
     if (unsignedSerializedSolTx == null)
       throw new Error('Missing unsignedSerializedSolTx')
 
     const keypair = Keypair.fromSecretKey(
       Uint8Array.from(
-        Buffer.from(
-          this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
-          'hex'
-        )
+        Buffer.from(walletInfo.keys[`${this.currencyInfo.pluginId}Key`], 'hex')
       )
     )
 
@@ -427,14 +428,14 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo) {
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys &&
+      walletInfo.keys &&
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
+      walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     ) {
-      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
+      return walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
     }
     return ''
   }
@@ -442,8 +443,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+    if (this.publicKeys.keys && this.publicKeys.keys.publicKey) {
+      return this.publicKeys.keys.publicKey
     }
     return ''
   }
@@ -452,13 +453,13 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: SolanaTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new SolanaEngine(env, tools, walletInfo, opts)
+  const engine = new SolanaEngine(env, tools, publicKeys, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

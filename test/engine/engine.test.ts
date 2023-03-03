@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
-import { asWalletLocalData } from '../../src/common/types'
+import { asWalletLocalData, PublicKeys } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
 import { FakeTools } from '../fake/FakeTools'
@@ -35,7 +35,6 @@ const opts: EdgeCorePluginOptions = {
 for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
   let engine: EdgeCurrencyEngine
-  // @ts-expect-error
   let keys
 
   const WALLET_TYPE = fixture.WALLET_TYPE
@@ -117,11 +116,11 @@ for (const fixture of fixtures) {
   describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
     it('Make Engine', async function () {
       if (WALLET_TYPE === 'wallet:fio') this.timeout(60000)
-      const info: EdgeWalletInfo = {
+      const info: PublicKeys = {
         id: '1',
         type: WALLET_TYPE,
         // @ts-expect-error
-        keys
+        keys2
       }
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!plugin) throw new Error('ErrorNoPlugin')
@@ -276,7 +275,7 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   customTokens: {},
   enabledTokenIds: []
 }
-const walletInfo = { id: '', type: '', keys: {} }
+const publicKeys = { id: '', type: '', keys: { publicKey: '' } }
 const env: PluginEnvironment<{}> = {
   initOptions: {},
   io: {} as any,
@@ -318,7 +317,7 @@ describe('Test transaction list updating', () => {
     engine = new CurrencyEngine(
       env,
       new FakeTools(),
-      walletInfo,
+      publicKeys,
       currencyEngineOptions
     )
     engine.walletLocalData = asWalletLocalData({ publicKey: '0x123456' })

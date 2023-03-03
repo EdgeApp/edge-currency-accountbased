@@ -21,6 +21,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -102,11 +103,11 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: FioTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions,
     tpid: string
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
     this.tpid = tpid
@@ -197,7 +198,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             if (
               // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               params.ownerPublicKey &&
-              params.ownerPublicKey !== this.walletInfo.keys.publicKey
+              params.ownerPublicKey !== this.publicKeys.keys.publicKey
             ) {
               return {
                 feeCollected: res.fee_collected
@@ -360,18 +361,12 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (walletInfo.keys.ownerPublicKey) {
-        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
-      } else {
-        const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
-      }
+    await super.loadEngine(plugin, publicKeys, opts)
+    if (typeof this.publicKeys.keys.ownerPublicKey !== 'string') {
+      this.publicKeys.keys.ownerPublicKey = publicKeys.keys.ownerPublicKey
     }
 
     await this.checkAbiAccounts()
@@ -386,7 +381,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
     this.fioSdk = new FIOSDK(
       this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
+      this.publicKeys.keys.publicKey,
       baseUrl,
       this.fetchCors,
       undefined,
@@ -394,7 +389,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     )
     this.fioSdkPreparedTrx = new FIOSDK(
       this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
+      this.publicKeys.keys.publicKey,
       baseUrl,
       this.fetchCors,
       undefined,
@@ -635,8 +630,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       ) {
         nativeAmount = data.amount.toString()
         actorSender = data.actor
-        if (data.payee_public_key === this.walletInfo.keys.publicKey) {
-          ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        if (data.payee_public_key === this.publicKeys.keys.publicKey) {
+          ourReceiveAddresses.push(this.publicKeys.keys.publicKey)
           if (actorSender === actor) {
             nativeAmount = '0'
           }
@@ -825,7 +820,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     let newHighestTxHeight = this.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const actor = this.fioSdk.transactions.getActor(
-      this.walletInfo.keys.publicKey
+      this.publicKeys.keys.publicKey
     )
     try {
       const lastActionObject = await this.requestHistory(
@@ -1222,7 +1217,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     // Fio Addresses
     try {
       const result = await this.multicastServers('getFioNames', {
-        fioPublicKey: this.walletInfo.keys.publicKey
+        fioPublicKey: this.publicKeys.keys.publicKey
       })
 
       let isChanged = false
@@ -1362,7 +1357,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         const { requests } = await this.multicastServers(
           ACTION_TYPE_MAP[type],
           {
-            fioPublicKey: this.walletInfo.keys.publicKey,
+            fioPublicKey: this.publicKeys.keys.publicKey,
             limit: ITEMS_PER_PAGE,
             offset: (requestsLastPage - 1) * ITEMS_PER_PAGE
           }
@@ -1650,16 +1645,16 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
-    return { publicAddress: this.walletInfo.keys.publicKey }
+    return { publicAddress: this.publicKeys.keys.publicKey }
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo) {
     let out = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.fioKey) {
+    if (walletInfo.keys && walletInfo.keys.fioKey) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += this.walletInfo.keys.fioKey
+      out += walletInfo.keys.fioKey
     }
     return out
   }
@@ -1668,9 +1663,9 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   getDisplayPublicSeed() {
     let out = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
+    if (this.publicKeys.keys && this.publicKeys.keys.publicKey) {
       // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += this.walletInfo.keys.publicKey
+      out += this.publicKeys.keys.publicKey
     }
     return out
   }
@@ -1679,12 +1674,12 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: FioTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { tpid = 'finance@edge' } = env.initOptions
-  const engine = new FioEngine(env, tools, walletInfo, opts, tpid)
-  await engine.loadEngine(tools, walletInfo, opts)
+  const engine = new FioEngine(env, tools, publicKeys, opts, tpid)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

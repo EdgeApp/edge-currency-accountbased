@@ -11,7 +11,11 @@ import {
   asUnknown,
   asValue
 } from 'cleaners'
-import { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeSpendInfo,
+  EdgeTransaction,
+  EdgeWalletInfo
+} from 'edge-core-js/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -409,8 +413,8 @@ export interface EIP712TypedDataParam {
 }
 
 export interface EthereumUtils {
-  signMessage: (message: string) => string
-  signTypedData: (typedData: Object) => string
+  signMessage: (message: string, walletInfo: EdgeWalletInfo) => string
+  signTypedData: (typedData: Object, walletInfo: EdgeWalletInfo) => string
   txRpcParamsToSpendInfo: (
     params: TxRpcParams,
     currencyCode: string
@@ -472,17 +476,19 @@ export const asWcSessionRequestParams = asObject({
 })
 
 export interface EthereumOtherMethods {
-  personal_sign: (params: string[]) => string
-  eth_sign: (params: string[]) => string
-  eth_signTypedData: (params: string[]) => string
-  eth_signTypedData_v4: (params: string[]) => string
+  personal_sign: (params: string[], walletInfo: EdgeWalletInfo) => string
+  eth_sign: (params: string[], walletInfo: EdgeWalletInfo) => string
+  eth_signTypedData: (params: string[], walletInfo: EdgeWalletInfo) => string
+  eth_signTypedData_v4: (params: string[], walletInfo: EdgeWalletInfo) => string
   eth_sendTransaction: (
-    params: TxRpcParams,
-    currencyCode: string
+    params: TxRpcParams[],
+    currencyCode: string,
+    walletInfo: EdgeWalletInfo
   ) => Promise<EdgeTransaction>
   eth_signTransaction: (
-    params: TxRpcParams,
-    currencyCode: string
+    params: TxRpcParams[],
+    currencyCode: string,
+    walletInfo: EdgeWalletInfo
   ) => Promise<EdgeTransaction>
   eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
   wcInit: (wcProps: WcProps) => Promise<WcDappDetails>

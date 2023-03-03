@@ -51,10 +51,10 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: PolkadotTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.nonce = 0
   }
@@ -88,7 +88,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 
   async queryBalance(): Promise<void> {
     const response = await this.api.query.system.account(
-      this.walletInfo.keys.publicKey as string
+      this.publicKeys.keys.publicKey
     )
     this.nonce = response.nonce.toNumber()
     this.updateBalance(
@@ -138,7 +138,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     const ourReceiveAddresses = []
 
     let nativeAmount = mul(amount, denom.multiplier)
-    if (from === this.walletInfo.keys.publicKey) {
+    if (from === this.publicKeys.keys.publicKey) {
       nativeAmount = `-${add(nativeAmount, fee)}`
     } else {
       ourReceiveAddresses.push(to)
@@ -172,7 +172,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       const payload = {
         row: this.settings.subscanQueryLimit,
         page,
-        address: this.walletInfo.keys.publicKey
+        address: this.publicKeys.keys.publicKey
       }
 
       let count = 0
@@ -333,7 +333,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     )
 
     const paymentInfo = await transfer.paymentInfo(
-      this.walletInfo.keys.publicKey
+      this.publicKeys.keys.publicKey
     )
 
     // The fee returned from partial fee is always off by the length fee, because reasons
@@ -369,7 +369,10 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const { publicAddress } = getOtherParams(edgeTransaction)
     if (publicAddress == null)
       throw new Error('Missing publicAddress from makeSpend')
@@ -402,16 +405,16 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     if (this.keypair == null) {
       this.keypair = new Keyring({ ss58Format: 0 })
       this.keypair.addFromUri(
-        this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
+        walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
       )
     }
 
     const signedPayload = extrinsicPayload.sign(
-      this.keypair.getPair(this.walletInfo.keys.publicKey)
+      this.keypair.getPair(this.publicKeys.keys.publicKey)
     )
 
     transfer.addSignature(
-      this.walletInfo.keys.publicKey,
+      this.publicKeys.keys.publicKey,
       signedPayload.signature,
       signer.toPayload()
     )
@@ -439,8 +442,8 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ?? ''
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo): string {
+    return walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ?? ''
   }
 
   getDisplayPublicSeed(): string {

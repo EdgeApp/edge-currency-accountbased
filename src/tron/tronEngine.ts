@@ -18,6 +18,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   getDenomInfo,
@@ -102,10 +103,10 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
     currencyPlugin: TronTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, currencyPlugin, walletInfo, opts)
+    super(env, currencyPlugin, publicKeys, opts)
     const fetchCors = getFetchCors(env)
     const { networkInfo } = env
     this.fetchCors = fetchCors
@@ -1278,11 +1279,14 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams: TxBuilderParams = getOtherParams(edgeTransaction)
 
     const transaction = await this.txBuilder(otherParams)
-    const { tronKey } = asTronKeys(this.walletInfo.keys)
+    const { tronKey } = asTronKeys(walletInfo.keys)
     const signer = this.tronscan.getSigner(tronKey)
     const { hex } = await signer.signTransaction(transaction.transaction)
 
@@ -1329,25 +1333,25 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys?.tronMnemonic ?? this.walletInfo.keys?.tronKey
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo): string {
+    return walletInfo.keys?.tronMnemonic ?? walletInfo.keys?.tronKey
   }
 
   getDisplayPublicSeed(): string {
-    return this.walletInfo.keys?.publicKey ?? ''
+    return this.publicKeys.keys?.publicKey ?? ''
   }
 }
 
 export async function makeCurrencyEngine(
   env: PluginEnvironment<TronNetworkInfo>,
   tools: TronTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TronEngine(env, tools, walletInfo, opts)
+  const engine = new TronEngine(env, tools, publicKeys, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

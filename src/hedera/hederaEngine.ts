@@ -16,6 +16,7 @@ import { base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import { bufToHex, hexToBuf, removeHexPrefix } from '../common/utils'
 import { HederaTools } from './hederaPlugin'
 import {
@@ -44,11 +45,11 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: HederaTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions,
     io: EdgeIo
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     this.log = opts.log
 
     this.io = io
@@ -187,11 +188,11 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     // Use mirror node to see if there's an account associated with the public key
     try {
       const response = await this.io.fetch(
-        `${this.mirrorNodes[0]}/api/v1/accounts?account.publickey=${this.walletInfo.keys.publicKey}`
+        `${this.mirrorNodes[0]}/api/v1/accounts?account.publickey=${this.publicKeys.keys.publicKey}`
       )
       const { accounts } = asGetHederaAccount(await response.json())
       for (const account of accounts) {
-        if (this.walletInfo.keys.publicKey.indexOf(account.key.key) >= 0) {
+        if (this.publicKeys.keys.publicKey.includes(account.key.key)) {
           accountId = account.account
         }
       }
@@ -485,7 +486,10 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     if (
       edgeTransaction.otherParams == null ||
       edgeTransaction.otherParams.transferTx == null
@@ -493,7 +497,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       throw new Error('missing otherParam transferTx')
     }
 
-    const privateKey = this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
+    const privateKey = walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
 
     if (privateKey == null) {
       throw new Error('missing privateKey in walletInfo')
@@ -547,10 +551,10 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo) {
     return (
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ??
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ??
+      walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ??
+      walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ??
       ''
     )
   }
@@ -559,10 +563,10 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   getDisplayPublicSeed() {
     if (
       // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys != null &&
-      this.walletInfo.keys.publicKey != null
+      this.publicKeys.keys != null &&
+      this.publicKeys.keys.publicKey != null
     ) {
-      return this.walletInfo.keys.publicKey
+      return this.publicKeys.keys.publicKey
     }
     return ''
   }
@@ -571,13 +575,13 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: HederaTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { io } = env
-  const engine = new HederaEngine(env, tools, walletInfo, opts, io)
+  const engine = new HederaEngine(env, tools, publicKeys, opts, io)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

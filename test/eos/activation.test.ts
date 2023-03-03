@@ -6,13 +6,13 @@ import {
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyPlugin,
-  EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
+import { PublicKeys } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
 
@@ -75,7 +75,7 @@ describe(`EOS activation`, function () {
     enabledTokenIds: []
   }
 
-  const info: EdgeWalletInfo = {
+  const info: PublicKeys = {
     id: '1',
     type: 'wallet:eos',
     keys: {

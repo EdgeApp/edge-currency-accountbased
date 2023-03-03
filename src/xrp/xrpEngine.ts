@@ -24,7 +24,7 @@ import {
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
-import { BooleanMap } from '../common/types'
+import { BooleanMap, PublicKeys } from '../common/types'
 import {
   cleanTxLogs,
   getOtherParams,
@@ -92,10 +92,10 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   constructor(
     env: PluginEnvironment<XrpNetworkInfo>,
     tools: RippleTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
@@ -611,7 +611,10 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
     const completeTxJson = {
@@ -622,7 +625,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     validatePayment(completeTxJson)
 
     // Do signing
-    const privateKey = this.walletInfo.keys.rippleKey
+    const privateKey = walletInfo.keys.rippleKey
     const wallet = Wallet.fromSeed(privateKey)
     const { tx_blob: signedTransaction, hash: id } = wallet.sign(completeTxJson)
 
@@ -654,12 +657,12 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys?.rippleKey ?? ''
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo): string {
+    return walletInfo.keys?.rippleKey ?? ''
   }
 
   getDisplayPublicSeed(): string {
-    return this.walletInfo.keys?.publicKey ?? ''
+    return this.publicKeys.keys?.publicKey ?? ''
   }
 
   engineGetActivationAssets = async (
@@ -679,6 +682,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   engineActivateWallet = async ({
     activateTokenIds,
     paymentTokenId,
+    // TODO: add walletInfo here
     paymentWallet
   }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
     if (activateTokenIds == null)
@@ -778,12 +782,12 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<XrpNetworkInfo>,
   tools: RippleTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new XrpEngine(env, tools, walletInfo, opts)
+  const engine = new XrpEngine(env, tools, publicKeys, opts)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

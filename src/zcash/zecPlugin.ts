@@ -120,9 +120,13 @@ export class ZcashTools implements EdgeCurrencyTools {
       unifiedViewingKeys.extfvk,
       this.networkInfo.rpcNode.networkName
     )
+
     return {
       publicKey: shieldedAddress,
-      unifiedViewingKeys
+      unifiedViewingKeys,
+      [`${pluginId}BirthdayHeight`]:
+        walletInfo.keys[`${pluginId}BirthdayHeight`] ??
+        this.networkInfo.defaultBirthday
     }
   }
 

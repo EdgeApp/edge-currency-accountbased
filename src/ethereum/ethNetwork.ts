@@ -264,7 +264,7 @@ export class EthereumNetwork {
       // @ts-expect-error
       this.processEthereumNetworkUpdate.bind(this)
     this.queryFuncs = this.buildQueryFuncs(this.ethEngine.networkInfo)
-    this.walletId = ethEngine.walletInfo.id
+    this.walletId = ethEngine.publicKeys.id
   }
 
   async processEvmScanTransaction(

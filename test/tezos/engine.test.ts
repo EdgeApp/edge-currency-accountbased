@@ -8,13 +8,13 @@ import {
   EdgeCurrencyPlugin,
   EdgeSpendInfo,
   EdgeTransaction,
-  EdgeWalletInfo,
   makeFakeIo
 } from 'edge-core-js'
 import EventEmitter from 'events'
 import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
+import { PublicKeys } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { TezosEngine } from '../../src/tezos/tezosEngine'
 import { fakeLog } from '../fake/fakeLog'
@@ -72,7 +72,7 @@ describe(`Tezos engine`, function () {
     enabledTokenIds: []
   }
 
-  const info: EdgeWalletInfo = {
+  const info: PublicKeys = {
     id: '1',
     type: 'wallet:xtz',
     keys: {
@@ -193,7 +193,7 @@ describe(`Tezos engine`, function () {
     this.timeout(10000)
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (engine) {
-      edgeTransaction = await engine.signTx(edgeTransaction)
+      edgeTransaction = await engine.signTx(edgeTransaction, info)
       assert.equal(edgeTransaction.signedTx === signedOpBytes, true)
       const { otherParams = {} } = edgeTransaction
       assert.equal(otherParams.fullOp.opbytes, signedOpBytes)

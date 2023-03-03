@@ -12,6 +12,7 @@ import stellarApi from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -54,10 +55,10 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: StellarTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -556,7 +557,10 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
     // Do signing
@@ -570,7 +574,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
       this.warn('Signing...')
       // @ts-expect-error
       const keypair = this.stellarApi.Keypair.fromSecret(
-        this.walletInfo.keys.stellarKey
+        walletInfo.keys.stellarKey
       )
       // @ts-expect-error
       await transaction.sign(keypair)
@@ -619,10 +623,10 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo) {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.stellarKey) {
-      return this.walletInfo.keys.stellarKey
+    if (walletInfo.keys && walletInfo.keys.stellarKey) {
+      return walletInfo.keys.stellarKey
     }
     return ''
   }
@@ -630,8 +634,8 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   getDisplayPublicSeed() {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
+    if (this.publicKeys.keys && this.publicKeys.keys.publicKey) {
+      return this.publicKeys.keys.publicKey
     }
     return ''
   }
@@ -640,14 +644,14 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: StellarTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new StellarEngine(env, tools, walletInfo, opts)
+  const engine = new StellarEngine(env, tools, publicKeys, opts)
 
   engine.stellarApi = stellarApi
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }
