@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 0.22.14 (2023-03-02)
+
+- EVM: Fix nativeAmount calculation when paying an L1 fee
+- Add optional checkEnvironment method to OuterPlugin to allow a plugin to fail after loading and during initialization
+- Update checkpoint files
+
 ## 0.22.13 (2023-02-23)
 
 - EVM: Fix race condition of undefined balance for ETH-based currencies
