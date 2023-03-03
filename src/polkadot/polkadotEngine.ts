@@ -15,6 +15,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { PublicKeys } from '../common/types'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -443,20 +444,20 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   }
 
   getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey ?? ''
+    return this.publicKeys.keys.publicKey ?? ''
   }
 }
 
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: PolkadotTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new PolkadotEngine(env, tools, walletInfo, opts)
+  const engine = new PolkadotEngine(env, tools, publicKeys, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

@@ -6,9 +6,10 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeOtherMethods,
-  EdgeTokenMap,
-  EdgeWalletInfo
+  EdgeTokenMap
 } from 'edge-core-js/types'
+
+import { PublicKeys } from './types'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -28,7 +29,7 @@ export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   makeCurrencyEngine: (
     env: PluginEnvironment<NetworkInfo>,
     tools: Tools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) => Promise<EdgeCurrencyEngine>
 
@@ -93,11 +94,11 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
     }
 
     async function makeCurrencyEngine(
-      walletInfo: EdgeWalletInfo,
+      publicKeys: PublicKeys,
       opts: EdgeCurrencyEngineOptions
     ): Promise<EdgeCurrencyEngine> {
       const { tools, plugin } = await loadInnerPlugin()
-      return await plugin.makeCurrencyEngine(innerEnv, tools, walletInfo, opts)
+      return await plugin.makeCurrencyEngine(innerEnv, tools, publicKeys, opts)
     }
 
     const otherMethods = makeOtherMethods(makeCurrencyTools, otherMethodNames)

@@ -12,7 +12,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asErrorMessage } from '../common/types'
+import { asErrorMessage, PublicKeys } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -51,11 +51,11 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   constructor(
     env: PluginEnvironment<{}>,
     tools: BinanceTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     initOptions: any, // BinanceInitOptions,
     opts: EdgeCurrencyEngineOptions
   ) {
-    super(env, tools, walletInfo, opts)
+    super(env, tools, publicKeys, opts)
   }
 
   setOtherData(_raw: any): void {
@@ -449,14 +449,17 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    walletInfo: EdgeWalletInfo
+  ): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
     const bnbClient = new BncClient(
       currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
     )
     bnbClient.chooseNetwork('mainnet')
-    const privKey = this.walletInfo.keys.binanceKey
+    const privKey = walletInfo.keys.binanceKey
     await bnbClient.setPrivateKey(privKey)
     await bnbClient.initChain()
     const currencyCode = edgeTransaction.currencyCode
@@ -510,8 +513,8 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    const { keys } = this.walletInfo
+  getDisplayPrivateSeed(walletInfo: EdgeWalletInfo): string {
+    const { keys } = walletInfo
     if (keys.binanceMnemonic != null) {
       return keys.binanceMnemonic
     }
@@ -519,7 +522,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   }
 
   getDisplayPublicSeed(): string {
-    const { keys } = this.walletInfo
+    const { keys } = this.publicKeys
     if (keys.publicKey != null) {
       return keys.publicKey
     }
@@ -530,15 +533,15 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
 export async function makeCurrencyEngine(
   env: PluginEnvironment<{}>,
   tools: BinanceTools,
-  walletInfo: EdgeWalletInfo,
+  publicKeys: PublicKeys,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { initOptions } = env
 
-  const engine = new BinanceEngine(env, tools, walletInfo, initOptions, opts)
+  const engine = new BinanceEngine(env, tools, publicKeys, initOptions, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, publicKeys, opts)
 
   return engine
 }

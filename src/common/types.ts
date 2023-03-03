@@ -9,7 +9,12 @@ import {
   asUndefined,
   asUnknown
 } from 'cleaners'
-import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeToken,
+  EdgeTokenInfo,
+  EdgeTransaction,
+  JsonObject
+} from 'edge-core-js/types'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
@@ -54,3 +59,9 @@ export const asWalletLocalData = asObject({
 })
 
 export type WalletLocalData = ReturnType<typeof asWalletLocalData>
+
+export interface PublicKeys {
+  id: string
+  keys: JsonObject & { publicKey: string }
+  type: string
+}

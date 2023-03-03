@@ -16,7 +16,6 @@ import {
   EdgeSpendInfo,
   EdgeTokenMap,
   EdgeTransaction,
-  EdgeWalletInfo,
   InsufficientFundsError,
   SpendToSelfError
 } from 'edge-core-js/types'
@@ -31,6 +30,7 @@ import {
   asWalletLocalData,
   CustomToken,
   DATA_STORE_FILE,
+  PublicKeys,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
   TXID_MAP_FILE,
@@ -52,7 +52,7 @@ export class CurrencyEngine<
   T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
 > {
   tools: T
-  walletInfo: EdgeWalletInfo
+  publicKeys: PublicKeys
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
   engineOn: boolean
@@ -84,7 +84,7 @@ export class CurrencyEngine<
   constructor(
     env: PluginEnvironment<{}>,
     tools: T,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ) {
     const { io, currencyInfo } = tools
@@ -107,8 +107,8 @@ export class CurrencyEngine<
     this.transactionsLoaded = false
     this.txIdMap = {}
     this.txIdList = {}
-    this.walletInfo = walletInfo
-    this.walletId = walletInfo.id
+    this.publicKeys = publicKeys
+    this.walletId = publicKeys.id
     this.currencyInfo = currencyInfo
     this.allTokens = currencyInfo.metaTokens.slice(0)
     this.enabledTokens = []
@@ -130,8 +130,8 @@ export class CurrencyEngine<
     this.currencyEngineCallbacks = callbacks
     this.walletLocalDisklet = walletLocalDisklet
 
-    if (typeof this.walletInfo.keys.publicKey !== 'string') {
-      this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
+    if (typeof this.publicKeys.keys.publicKey !== 'string') {
+      this.publicKeys.keys.publicKey = publicKeys.keys.publicKey
     }
     this.walletLocalData = {
       blockHeight: 0,
@@ -147,7 +147,7 @@ export class CurrencyEngine<
       otherData: undefined
     }
     this.log(
-      `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginId}`
+      `Created Wallet Type ${this.publicKeys.type} for Currency Plugin ${this.currencyInfo.pluginId}`
     )
   }
 
@@ -172,7 +172,7 @@ export class CurrencyEngine<
   }
 
   setOtherData(raw: any): void {
-    throw new Error(`Unimplemented setOtherData for ${this.walletInfo.type}`)
+    throw new Error(`Unimplemented setOtherData for ${this.publicKeys.type}`)
   }
 
   async loadTransactions(): Promise<void> {
@@ -254,26 +254,25 @@ export class CurrencyEngine<
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    publicKeys: PublicKeys,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     const { currencyCode } = this.currencyInfo
 
-    if (this.walletInfo.keys.publicKey == null) {
-      const pubKeys = await this.tools.derivePublicKey(this.walletInfo)
-      this.walletInfo.keys.publicKey = pubKeys.publicKey
+    if (this.publicKeys.keys.publicKey == null) {
+      this.publicKeys.keys.publicKey = publicKeys.keys.publicKey
     }
 
     const disklet = this.walletLocalDisklet
     try {
       const result = await disklet.getText(DATA_STORE_FILE)
       this.walletLocalData = asWalletLocalData(JSON.parse(result))
-      this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+      this.walletLocalData.publicKey = this.publicKeys.keys.publicKey
     } catch (err) {
       try {
         this.log('No walletLocalData setup yet: Failure is ok')
         this.walletLocalData = asWalletLocalData({})
-        this.walletLocalData.publicKey = this.walletInfo.keys.publicKey
+        this.walletLocalData.publicKey = this.publicKeys.keys.publicKey
         await disklet.setText(
           DATA_STORE_FILE,
           JSON.stringify(this.walletLocalData)
@@ -935,7 +934,7 @@ export class CurrencyEngine<
   async dumpData(): Promise<EdgeDataDump> {
     const dataDump: EdgeDataDump = {
       walletId: this.walletId.split(' - ')[0],
-      walletType: this.walletInfo.type,
+      walletType: this.publicKeys.type,
       data: {
         pluginType: { pluginId: this.currencyInfo.pluginId },
         walletLocalData: this.walletLocalData
