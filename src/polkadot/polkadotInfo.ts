@@ -45,6 +45,12 @@ export const polkadot = makeOuterPlugin<{}, PolkadotTools>({
   currencyInfo,
   networkInfo: {},
 
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Polkadot requires bigint support')
+    }
+  },
+
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "polkadot" */
