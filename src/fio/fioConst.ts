@@ -71,7 +71,7 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   [ACTIONS.stakeFioTokens]: 'pushTransaction',
   [ACTIONS.unStakeFioTokens]: 'pushTransaction',
   addBundledTransactions: 'addBundledTransactions'
-}
+} as const
 
 export const ACTIONS_TO_FEE_END_POINT_KEYS = {
   [ACTIONS.requestFunds]: 'newFundsRequest',
@@ -89,7 +89,7 @@ export const ACTIONS_TO_FEE_END_POINT_KEYS = {
   [ACTIONS.addBundledTransactions]: 'addBundledTransactions',
   [ACTIONS.stakeFioTokens]: 'stakeFioTokens',
   [ACTIONS.unStakeFioTokens]: 'unStakeFioTokens'
-}
+} as const
 
 export const ACTIONS_TO_TX_ACTION_NAME = {
   [ACTIONS.transferTokens]: 'trnsfiopubky',

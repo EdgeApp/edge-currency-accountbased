@@ -1,5 +1,4 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
-import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { PrivateKey } from '@greymass/eosio'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -19,7 +18,6 @@ import {
   asyncWaterfall,
   getDenomInfo,
   getFetchCors,
-  pickRandom,
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
@@ -46,10 +44,10 @@ export function checkAddress(address: string): boolean {
 export class FioTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
-  connection: FIOSDK
   fetchCors: EdgeFetchFunction
   fioRegApiToken: string
   networkInfo: FioNetworkInfo
+  tpid: string
 
   constructor(env: PluginEnvironment<FioNetworkInfo>) {
     const { initOptions, io, networkInfo } = env
@@ -61,16 +59,13 @@ export class FioTools implements EdgeCurrencyTools {
     this.fetchCors = getFetchCors(env)
     this.fioRegApiToken = fioRegApiToken
     this.networkInfo = networkInfo
+    this.tpid = tpid
 
-    const [baseUrl] = pickRandom(this.networkInfo.apiUrls, 1)
-    this.connection = new FIOSDK(
-      '',
-      '',
-      baseUrl,
-      this.fetchCors,
-      undefined,
-      tpid
-    )
+    // The sdk constructor will fetch and store abi definitions for future instances
+    for (const baseUrl of this.networkInfo.apiUrls) {
+      // eslint-disable-next-line
+      new FIOSDK('', '', baseUrl, this.fetchCors, undefined, tpid)
+    }
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -107,11 +102,15 @@ export class FioTools implements EdgeCurrencyTools {
     return keys
   }
 
-  async createPrivateKey(walletType: string): Promise<Object> {
+  async createPrivateKey(
+    walletType: string
+  ): Promise<{ fioKey: string; mnemonic: string }> {
     const type = walletType.replace('wallet:', '')
     if (type === FIO_TYPE) {
       const buffer = Buffer.from(this.io.random(32))
-      return FIOSDK.createPrivateKey(buffer)
+      const out: { fioKey: string; mnemonic: string } =
+        await FIOSDK.createPrivateKey(buffer)
+      return out
     } else {
       throw new Error('InvalidWalletType')
     }
@@ -490,10 +489,17 @@ export class FioTools implements EdgeCurrencyTools {
         this.networkInfo.apiUrls.map(apiUrl => async () => {
           let out
 
-          Transactions.baseUrl = apiUrl
+          const connection = new FIOSDK(
+            '',
+            '',
+            apiUrl,
+            this.fetchCors,
+            undefined,
+            this.tpid
+          )
 
           try {
-            out = await this.connection.genericAction(actionName, params)
+            out = await connection.genericAction(actionName, params)
           } catch (e: any) {
             // handle FIO API error
             // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
