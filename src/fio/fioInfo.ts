@@ -2,6 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { FIO_REQUESTS_TYPES } from './fioConst'
+import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './fioPlugin'
 import { fioOtherMethodNames } from './fioTypes'
 
@@ -35,16 +36,7 @@ const defaultSettings: any = {
   defaultRef: 'edge',
   fallbackRef: 'edge',
   freeAddressRef: 'edgefree',
-  errorCodes: {
-    INVALID_FIO_ADDRESS: 'INVALID_FIO_ADDRESS',
-    ALREADY_REGISTERED: 'ALREADY_REGISTERED',
-    FIO_ADDRESS_IS_NOT_EXIST: 'FIO_ADDRESS_IS_NOT_EXIST',
-    FIO_DOMAIN_IS_NOT_EXIST: 'FIO_DOMAIN_IS_NOT_EXIST',
-    FIO_DOMAIN_IS_NOT_PUBLIC: 'FIO_DOMAIN_IS_NOT_PUBLIC',
-    IS_DOMAIN_PUBLIC_ERROR: 'IS_DOMAIN_PUBLIC_ERROR',
-    FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED',
-    SERVER_ERROR: 'SERVER_ERROR'
-  },
+  errorCodes: fioRegApiErrorCodes,
   fioRequestsTypes: FIO_REQUESTS_TYPES,
   balanceCurrencyCodes: {
     // TODO: Remove these currencyCodes in favor of adding a dedicated locked balances field to the API
