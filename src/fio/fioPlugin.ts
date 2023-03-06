@@ -25,7 +25,7 @@ import {
   shuffleArray
 } from '../common/utils'
 import { DEFAULT_APR, FIO_REG_API_ENDPOINTS } from './fioConst'
-import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError'
+import { fioApiErrorCodes, FioError } from './fioError'
 import { currencyInfo } from './fioInfo'
 import { FioNetworkInfo } from './fioTypes'
 
@@ -375,14 +375,11 @@ export class FioTools implements EdgeCurrencyTools {
       if (!result.ok) {
         const data = await result.json()
 
-        // @ts-expect-error
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (fioRegApiErrorCodes[data.errorCode]) {
+        if (currencyInfo.defaultSettings.errorCodes[data.errorCode] != null) {
           throw new FioError(
             data.error,
             result.status,
-            // @ts-expect-error
-            fioRegApiErrorCodes[data.errorCode],
+            currencyInfo.defaultSettings.errorCodes[data.errorCode],
             data
           )
         }
@@ -391,8 +388,7 @@ export class FioTools implements EdgeCurrencyTools {
           throw new FioError(
             data.error,
             result.status,
-            // @ts-expect-error
-            fioRegApiErrorCodes.ALREADY_REGISTERED,
+            currencyInfo.defaultSettings.errorCodes.ALREADY_REGISTERED,
             data
           )
         }
@@ -423,14 +419,11 @@ export class FioTools implements EdgeCurrencyTools {
       )
       const json = await result.json()
       if (!result.ok) {
-        // @ts-expect-error
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (fioRegApiErrorCodes[json.errorCode]) {
+        if (currencyInfo.defaultSettings.errorCodes[json.errorCode] != null) {
           throw new FioError(
             json.error,
             result.status,
-            // @ts-expect-error
-            fioRegApiErrorCodes[json.errorCode],
+            currencyInfo.defaultSettings.errorCodes[json.errorCode],
             json
           )
         }

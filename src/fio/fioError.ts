@@ -1,20 +1,17 @@
-import { currencyInfo } from './fioInfo'
-
 export const fioApiErrorCodes = [400, 403, 404]
-// @ts-expect-error
-export const fioRegApiErrorCodes: { [string]: string } = {
-  INVALID_FIO_NAME: currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS,
-  ALREADY_REGISTERED:
-    currencyInfo.defaultSettings.errorCodes.ALREADY_REGISTERED,
-  DOMAIN_IS_NOT_REGISTERED:
-    currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST,
-  DOMAIN_IS_NOT_PUBLIC:
-    currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_PUBLIC,
-  SERVER_ERROR: currencyInfo.defaultSettings.errorCodes.SERVER_ERROR,
+
+export const fioRegApiErrorCodes = {
+  INVALID_FIO_ADDRESS: 'INVALID_FIO_ADDRESS',
+  ALREADY_REGISTERED: 'ALREADY_REGISTERED',
+  FIO_ADDRESS_IS_NOT_EXIST: 'FIO_ADDRESS_IS_NOT_EXIST',
+  FIO_DOMAIN_IS_NOT_EXIST: 'FIO_DOMAIN_IS_NOT_EXIST',
+  FIO_DOMAIN_IS_NOT_PUBLIC: 'FIO_DOMAIN_IS_NOT_PUBLIC',
+  IS_DOMAIN_PUBLIC_ERROR: 'IS_DOMAIN_PUBLIC_ERROR',
+  FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED',
+  SERVER_ERROR: 'SERVER_ERROR',
   ALREADY_SENT_REGISTRATION_REQ_FOR_DOMAIN:
-    currencyInfo.defaultSettings.errorCodes
-      .ALREADY_SENT_REGISTRATION_REQ_FOR_DOMAIN
-}
+    'ALREADY_SENT_REGISTRATION_REQ_FOR_DOMAIN'
+} as const
 
 export class FioError extends Error {
   // @ts-expect-error
