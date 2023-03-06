@@ -129,6 +129,7 @@ export interface EthereumCalcedFees {
 
 export interface L1RollupParams {
   gasPriceL1Wei: string
+  maxGasPriceL1Multiplier: string
   fixedOverhead: string
   dynamicOverhead: string
   oracleContractAddress: string

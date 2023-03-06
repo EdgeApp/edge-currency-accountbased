@@ -1,7 +1,7 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
-import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
+import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -579,7 +579,13 @@ export class EthereumEngine
 
       this.l1RollupParams = {
         ...this.l1RollupParams,
-        gasPriceL1Wei: hexToDecimal(l1GasPrice)
+        gasPriceL1Wei: ceil(
+          mul(
+            hexToDecimal(l1GasPrice),
+            this.l1RollupParams.maxGasPriceL1Multiplier
+          ),
+          0
+        )
       }
     } catch (e: any) {
       this.log.warn('Failed to update l1GasPrice', e)
