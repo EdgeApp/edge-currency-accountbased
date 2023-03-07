@@ -76,3 +76,16 @@ export const fetchInfo = async (
 ): Promise<EdgeFetchResponse> => {
   return await multiFetch(INFO_SERVERS, path, options, timeout, doFetch)
 }
+
+export interface QueryParams {
+  [key: string]: string | number | boolean | null
+}
+
+export const makeQueryParams = (params: QueryParams): string => {
+  return Object.keys(params)
+    .map(key => {
+      const value = params[key]
+      return value == null ? key : `${key}=${encodeURIComponent(value)}`
+    })
+    .join('&')
+}

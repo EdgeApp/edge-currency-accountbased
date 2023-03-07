@@ -25,6 +25,16 @@ export const asTronKeys = asObject<TronKeys>({
   derivationPath: asOptional(asString)
 })
 
+export const asTronInitOptions = asObject({
+  smartPayPublicAddress: asOptional(
+    asString,
+    'TUmgPbM5J6om7Z2PJjzrbSEbXit84ZhVCj'
+  ),
+  smartPayUserId: asOptional(asString, 'edge')
+})
+
+export type TronInitOptions = ReturnType<typeof asTronInitOptions>
+
 export interface TronNetworkInfo {
   tronApiServers: string[]
   tronNodeServers: string[]

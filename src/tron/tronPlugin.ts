@@ -10,29 +10,42 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { parsePixKey } from '../common/smartPay'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { asTronKeys, TronKeys, TronNetworkInfo } from './tronTypes'
+import {
+  asTronInitOptions,
+  asTronKeys,
+  TronInitOptions,
+  TronKeys,
+  TronNetworkInfo
+} from './tronTypes'
 
 export class TronTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   log: EdgeLog
   networkInfo: TronNetworkInfo
+  initOptions: TronInitOptions
 
   constructor(env: PluginEnvironment<TronNetworkInfo>) {
-    const { currencyInfo, io, log, networkInfo } = env
+    const { builtinTokens, currencyInfo, io, log, networkInfo, initOptions } =
+      env
     this.io = io
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.log = log
     this.networkInfo = networkInfo
+    this.initOptions = asTronInitOptions(initOptions)
   }
 
   async importPrivateKey(
@@ -98,6 +111,17 @@ export class TronTools implements EdgeCurrencyTools {
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
     const networks = { [this.currencyInfo.pluginId]: true }
+    const { smartPayPublicAddress, smartPayUserId } = this.initOptions
+
+    // Look for PIX addresses
+    const pixResults = await parsePixKey(
+      this.io,
+      this.builtinTokens,
+      uri,
+      smartPayPublicAddress,
+      smartPayUserId
+    )
+    if (pixResults != null) return pixResults
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
