@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.15 (2023-03-08)
+
+- EVM: Add L1 gas price multiplier
+
 ## 0.22.14 (2023-03-02)
 
 - EVM: Fix nativeAmount calculation when paying an L1 fee
