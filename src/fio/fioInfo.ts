@@ -42,7 +42,8 @@ const networkInfo: FioNetworkInfo = {
     // TODO: Remove these currencyCodes in favor of adding a dedicated locked balances field to the API
     staked: 'FIO:STAKED',
     locked: 'FIO:LOCKED'
-  }
+  },
+  chainId: '21dcae42c0182200e93f954a074011f9048a7624c6fe81d3c9541a614a88bd1c'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

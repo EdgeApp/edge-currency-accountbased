@@ -28,4 +28,11 @@ export interface FioNetworkInfo {
     staked: 'FIO:STAKED'
     locked: 'FIO:LOCKED'
   }
+  chainId: string
+}
+
+export interface FioRefBlock {
+  expiration: string
+  ref_block_num: number
+  ref_block_prefix: number
 }

@@ -62,7 +62,7 @@ import {
   FioHistoryNodeAction,
   GetFioName
 } from './fioSchema'
-import { FioNetworkInfo } from './fioTypes'
+import { FioNetworkInfo, FioRefBlock } from './fioTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
@@ -94,6 +94,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   fioSdkPreparedTrx!: FIOSDK
   otherData!: FioWalletOtherData
   networkInfo: FioNetworkInfo
+  refBlock: FioRefBlock
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -113,6 +114,11 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
     this.networkInfo = env.networkInfo
+    this.refBlock = {
+      expiration: '',
+      ref_block_num: 0,
+      ref_block_prefix: 0
+    }
 
     this.fioSdkInit()
 
@@ -420,6 +426,17 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         this.currencyEngineCallbacks.onBlockHeightChanged(
           this.walletLocalData.blockHeight
         )
+      }
+
+      const block = await this.multicastServers('getBlock', info)
+      const expiration = new Date(`${info.head_block_time}Z`)
+      expiration.setSeconds(expiration.getSeconds() + 180)
+      const expirationStr = expiration.toISOString()
+
+      this.refBlock = {
+        expiration: expirationStr.substring(0, expirationStr.length - 1),
+        ref_block_num: block.block_num & 0xffff,
+        ref_block_prefix: block.ref_block_prefix
       }
     } catch (e: any) {
       this.error(`checkBlockchainInnerLoop Error fetching height: `, e)
@@ -954,6 +971,9 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       switch (actionName) {
         case 'getChainInfo':
           res = await fioSdk.transactions.getChainInfo()
+          break
+        case 'getBlock':
+          res = await fioSdk.transactions.getBlock(params)
           break
         case 'getFioBalance':
           res = await fioSdk.genericAction(actionName, params)
