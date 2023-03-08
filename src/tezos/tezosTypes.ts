@@ -1,12 +1,17 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface TezosNetworkInfo {
-  // TODO: Replace this placeholder with `typeof otherSettings`:
-  tezos: true
-}
-
-export interface TezosSettings {
   tezosRpcNodes: string[]
+  tezosApiServers: string[]
+  fee: {
+    burn: string
+    reveal: string
+    transaction: string
+  }
+  limit: {
+    gas: string
+    storage: string
+  }
 }
 
 export const asTezosWalletOtherData = asObject({

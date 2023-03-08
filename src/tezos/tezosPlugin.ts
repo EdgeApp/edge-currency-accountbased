@@ -19,8 +19,8 @@ export class TezosTools implements EdgeCurrencyTools {
   io: EdgeIo
   networkInfo: TezosNetworkInfo
 
-  tezosRpcNodes: Object[]
-  tezosApiServers: Object[]
+  tezosRpcNodes: string[]
+  tezosApiServers: string[]
 
   constructor(env: PluginEnvironment<TezosNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -29,17 +29,8 @@ export class TezosTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
-    this.tezosRpcNodes = []
-    for (const rpcNode of currencyInfo.defaultSettings.otherSettings
-      .tezosRpcNodes) {
-      this.tezosRpcNodes.push(rpcNode)
-    }
-
-    this.tezosApiServers = []
-    for (const apiServer of currencyInfo.defaultSettings.otherSettings
-      .tezosApiServers) {
-      this.tezosApiServers.push(apiServer)
-    }
+    this.tezosRpcNodes = [...this.networkInfo.tezosRpcNodes]
+    this.tezosApiServers = [...this.networkInfo.tezosApiServers]
   }
 
   checkAddress(address: string): boolean {
