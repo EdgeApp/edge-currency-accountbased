@@ -7,7 +7,8 @@ import {
   JsonObject
 } from 'edge-core-js'
 
-import { getEdgeInfoServer, hexToDecimal, pickRandom } from '../../common/utils'
+import { fetchInfo } from '../../common/network'
+import { hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
   GAS_STATION_WEI_MULTIPLIER,
@@ -20,7 +21,7 @@ import {
   asEvmScanGasResponseResult,
   asRpcResultString,
   EthereumBaseMultiplier,
-  EthereumFee,
+  EthereumFees,
   EthereumInitOptions,
   EthereumNetworkInfo,
   EvmScanGasResponse
@@ -41,7 +42,7 @@ export type FeeProviderFunction = () => Promise<
   EthereumBaseMultiplier | undefined
 >
 interface FeeProviderMap {
-  infoFeeProvider: () => Promise<EthereumFee>
+  infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
 }
 
@@ -250,12 +251,10 @@ export const fetchFeesFromEvmGasStation = async (
 export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
   { currencyCode }: EdgeCurrencyInfo
-): Promise<EthereumFee> => {
-  const infoServer = getEdgeInfoServer()
-  const url = `${infoServer}/v1/networkFees/${currencyCode}`
-  const result = await fetch(url)
-  // @ts-expect-error
-  return asEthereumFees(await result.json())
+): Promise<EthereumFees> => {
+  const result = await fetchInfo(`v1/networkFees/${currencyCode}`)
+  const json = await result.json()
+  return asEthereumFees(json)
 }
 
 // Backwards compatibility with deprecated etherscan api keys

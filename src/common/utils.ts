@@ -286,10 +286,6 @@ export function pickRandom<T>(list: T[], count: number): T[] {
   return out
 }
 
-function getEdgeInfoServer(): string {
-  return 'https://info1.edgesecure.co:8444'
-}
-
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */
@@ -462,6 +458,26 @@ export function matchJson(a: any, b: any): boolean {
   return true
 }
 
+// Checks that all keys in obj1 exist in obj2 and have the same values
+export const objectCheckOneWay = (obj1: any, obj2: any): boolean => {
+  for (const key of Object.keys(obj1)) {
+    if (typeof obj1[key] === 'object') {
+      if (typeof obj2[key] !== 'object') {
+        return false
+      }
+      const result = objectCheckOneWay(obj1[key], obj2[key])
+      if (!result) {
+        return false
+      }
+      continue
+    }
+    if (obj1[key] !== obj2[key]) {
+      return false
+    }
+  }
+  return true
+}
+
 export {
   normalizeAddress,
   getDenomInfo,
@@ -469,7 +485,6 @@ export {
   snooze,
   shuffleArray,
   snoozeReject,
-  getEdgeInfoServer,
   promiseAny,
   getFetchCors,
   promiseNy,

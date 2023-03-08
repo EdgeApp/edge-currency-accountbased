@@ -21,12 +21,9 @@ import { fakeLog } from '../fake/fakeLog'
 describe(`FTM Network Fees`, function () {
   it('Validate Info Server Fees', async function () {
     const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo)
-    // @ts-expect-error
     validateGasPrices(fees.default.gasPrice, true)
     // Info server should provide gas limit as well
-    // @ts-expect-error
     assert.equal(fees.default.gasLimit.regularTransaction, '21000')
-    // @ts-expect-error
     assert.equal(fees.default.gasLimit.tokenTransaction, '300000')
   })
 
