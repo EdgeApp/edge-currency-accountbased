@@ -1,7 +1,7 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
-import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
+import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -579,7 +579,13 @@ export class EthereumEngine
 
       this.l1RollupParams = {
         ...this.l1RollupParams,
-        gasPriceL1Wei: hexToDecimal(l1GasPrice)
+        gasPriceL1Wei: ceil(
+          mul(
+            hexToDecimal(l1GasPrice),
+            this.l1RollupParams.maxGasPriceL1Multiplier
+          ),
+          0
+        )
       }
     } catch (e: any) {
       this.log.warn('Failed to update l1GasPrice', e)
@@ -730,6 +736,11 @@ export class EthereumEngine
       currencyCode: spendInfo.currencyCode
     })
 
+    const publicAddress = spendInfo.spendTargets[0].publicAddress
+    if (publicAddress == null) {
+      throw new Error('makeSpend Missing publicAddress')
+    }
+
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
       // For mainnet currency, the fee can scale with the amount sent so we should find the
       // appropriate amount by recursively calling calcMiningFee. This is adapted from the
@@ -751,7 +762,22 @@ export class EthereumEngine
           this.networkInfo
         )
         const fee = mul(gasPrice, gasLimit)
-        const totalAmount = add(mid, fee)
+        let l1Fee = '0'
+
+        if (this.l1RollupParams != null) {
+          const txData: CalcL1RollupFeeParams = {
+            nonce: this.otherData.unconfirmedNextNonce,
+            gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
+            gasLimit,
+            to: publicAddress,
+            value: decimalToHex(mid),
+            chainParams: this.networkInfo.chainParams,
+            dynamicOverhead: this.l1RollupParams.dynamicOverhead,
+            fixedOverhead: this.l1RollupParams.fixedOverhead
+          }
+          l1Fee = calcL1RollupFees(txData)
+        }
+        const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
           return getMax(min, mid)
         } else {

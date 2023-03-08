@@ -136,6 +136,7 @@ const networkInfo: EthereumNetworkInfo = {
   },
   l1RollupParams: {
     gasPriceL1Wei: '1000000000',
+    maxGasPriceL1Multiplier: '1.25',
     fixedOverhead: '2100',
     dynamicOverhead: '1000000',
     oracleContractAddress: '0x420000000000000000000000000000000000000F',
