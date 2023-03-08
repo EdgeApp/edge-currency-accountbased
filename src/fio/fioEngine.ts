@@ -4,6 +4,7 @@ import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { add, div, gt, max, mul, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -25,6 +26,7 @@ import {
   cleanTxLogs,
   getDenomInfo,
   getFetchCors,
+  getOtherParams,
   promiseAny,
   promiseNy,
   safeErrorMessage,
@@ -62,7 +64,17 @@ import {
   FioHistoryNodeAction,
   GetFioName
 } from './fioSchema'
-import { FioNetworkInfo, FioRefBlock } from './fioTypes'
+import {
+  asFioAction,
+  asFioFee,
+  asFioSignedTx,
+  asFioTxParams,
+  FioActionFees,
+  FioNetworkInfo,
+  FioRefBlock,
+  FioSignedTx,
+  FioTxParams
+} from './fioTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
@@ -72,11 +84,6 @@ const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
 ]
-
-interface RecentFioFee {
-  publicAddress: string
-  fee: number
-}
 
 interface PreparedTrx {
   signatures: string[]
@@ -89,12 +96,11 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   fetchCors: EdgeFetchFunction
   otherMethods: Object
   tpid: string
-  recentFioFee: RecentFioFee
   fioSdk!: FIOSDK
-  fioSdkPreparedTrx!: FIOSDK
   otherData!: FioWalletOtherData
   networkInfo: FioNetworkInfo
   refBlock: FioRefBlock
+  fees: FioActionFees
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -112,13 +118,13 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
     this.tpid = tpid
-    this.recentFioFee = { publicAddress: '', fee: 0 }
     this.networkInfo = env.networkInfo
     this.refBlock = {
       expiration: '',
       ref_block_num: 0,
       ref_block_prefix: 0
     }
+    this.fees = new Map()
 
     this.fioSdkInit()
 
@@ -397,20 +403,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       undefined,
       this.tpid
     )
-    this.fioSdkPreparedTrx = new FIOSDK(
-      this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
-      baseUrl,
-      this.fetchCors,
-      undefined,
-      this.tpid,
-      true
-    )
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  setFioSdkBaseUrl(apiUrl: string) {
-    Transactions.baseUrl = apiUrl
   }
 
   // Poll on the blockheight
@@ -962,8 +954,15 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     params?: any,
     returnPreparedTrx: boolean = false
   ): Promise<any | PreparedTrx> {
-    const fioSdk = returnPreparedTrx ? this.fioSdkPreparedTrx : this.fioSdk
-    this.setFioSdkBaseUrl(apiUrl)
+    const fioSdk = new FIOSDK(
+      '',
+      this.walletInfo.keys.publicKey,
+      apiUrl,
+      this.fetchCors,
+      undefined,
+      this.tpid,
+      returnPreparedTrx
+    )
 
     let res
 
@@ -1034,7 +1033,16 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     endpoint: string,
     preparedTrx: PreparedTrx
   ) {
-    this.setFioSdkBaseUrl(apiUrl)
+    const fioSdk = new FIOSDK(
+      this.walletInfo.keys.fioKey,
+      this.walletInfo.keys.publicKey,
+      apiUrl,
+      this.fetchCors,
+      undefined,
+      this.tpid,
+      true
+    )
+
     let res
 
     this.warn(
@@ -1043,7 +1051,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       )} - apiUrl: ${apiUrl}`
     )
     try {
-      res = await this.fioSdk.executePreparedTrx(endpoint, preparedTrx)
+      res = await fioSdk.executePreparedTrx(endpoint, preparedTrx)
       this.warn(
         `executePreparedTrx. res: ${JSON.stringify(
           res
@@ -1090,19 +1098,22 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
     if (BROADCAST_ACTIONS[actionName]) {
-      this.warn(
-        `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
-          params
-        )}`
-      )
-      const preparedTrx = await asyncWaterfall(
-        shuffleArray(
-          this.networkInfo.apiUrls.map(
-            apiUrl => async () =>
-              await this.fioApiRequest(apiUrl, actionName, params, true)
+      let preparedTrx = asMaybe(asFioSignedTx)(params)
+      if (preparedTrx == null) {
+        this.warn(
+          `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
+            params
+          )}`
+        )
+        preparedTrx = await asyncWaterfall(
+          shuffleArray(
+            this.networkInfo.apiUrls.map(
+              apiUrl => async () =>
+                await this.fioApiRequest(apiUrl, actionName, params, true)
+            )
           )
         )
-      )
+      }
       this.warn(
         `multicastServers executePreparedTrx. actionName: ${actionName} - res: ${JSON.stringify(
           preparedTrx
@@ -1115,7 +1126,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
               await this.executePreparedTrx(
                 apiUrl,
                 EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                preparedTrx
+                preparedTrx as FioSignedTx
               )
           )
         )
@@ -1143,6 +1154,27 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           }
         },
         2
+      )
+    } else if (actionName === 'getFees') {
+      res = await asyncWaterfall(
+        shuffleArray(
+          this.networkInfo.apiUrls.map(apiUrl => async () => {
+            const fioSdk = new FIOSDK(
+              '',
+              this.walletInfo.keys.publicKey,
+              apiUrl,
+              this.fetchCors,
+              undefined,
+              this.tpid
+            )
+            const { endpoint, param } = params
+
+            const res = await fioSdk.getFee(endpoint, param)
+            const fee = asFioFee(res).fee
+
+            return fee.toString()
+          })
+        )
       )
     } else {
       res = await asyncWaterfall(
@@ -1454,6 +1486,19 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
   }
 
+  // https://developers.fioprotocol.io/docs/fio-protocol/fio-fees
+  async getFee(endpoint: EndPoint, param?: string): Promise<string> {
+    let cachedFee = this.fees.get(endpoint)
+    if (cachedFee == null || cachedFee.expiration + 30 * 1000 < Date.now()) {
+      const fee = await this.multicastServers('getFees', { endpoint, param })
+      const newFee = { fee: fee, expiration: Date.now() }
+
+      this.fees.set(endpoint, newFee)
+      cachedFee = newFee
+    }
+    return cachedFee.fee
+  }
+
   // ****************************************************************************
   // Public methods
   // ****************************************************************************
@@ -1501,44 +1546,32 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       throw new Error('makeSpend Missing publicAddress')
     if (quantity == null) throw new NoAmountSpecifiedError()
 
-    const { otherParams = {} } = edgeSpendInfo
-
-    // Set default action if not specified
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!otherParams.action) {
-      otherParams.action = {
-        name: ACTIONS.transferTokens,
-        params: {
-          payeeFioPublicKey: publicAddress,
-          amount: quantity,
-          maxFee: 0
+    const {
+      otherParams = {
+        action: {
+          name: ACTIONS.transferTokens,
+          params: {
+            payeeFioPublicKey: publicAddress,
+            amount: quantity,
+            maxFee: 0
+          }
         }
       }
-    }
+    } = edgeSpendInfo
 
-    const { name, params }: { name: string; params: any } = otherParams.action
+    const { name, params } = asFioAction(otherParams.action)
 
     // Only query FIO fee if the public address is different from last makeSpend()
     let fee
-    if (
-      name === ACTIONS.transferTokens &&
-      publicAddress === this.recentFioFee.publicAddress // todo: ask why such condition
-    ) {
-      fee = this.recentFioFee.fee
-    } else {
+    if (name !== ACTIONS.transferTokens) {
       let feeFioAddress = ''
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (FEE_ACTION_MAP[name] != null && params) {
-        feeFioAddress = params[FEE_ACTION_MAP[name].propName]
+        feeFioAddress = params[FEE_ACTION_MAP[name].propName] as string
       }
       // @ts-expect-error
       fee = await this.otherMethods.getFee(name, feeFioAddress)
-    }
-    params.maxFee = fee
-
-    // Set recent fee for transferTokens action
-    if (name === ACTIONS.transferTokens) {
-      this.recentFioFee = { publicAddress, fee }
+      params.maxFee = fee
     }
 
     // We don't need to check the available balance for an unstake action (because that's handled separately below).
@@ -1582,6 +1615,37 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       }
     }
 
+    let txParams: FioTxParams | undefined
+    switch (name) {
+      case ACTIONS.transferTokens: {
+        fee = await this.getFee(EndPoint.transferTokens)
+        txParams = {
+          account: 'fio.token',
+          action: ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
+          data: {
+            payee_public_key: publicAddress,
+            amount: quantity,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      default: {
+        // Do nothing
+      }
+    }
+
+    if (fee == null) {
+      let feeFioAddress = ''
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (FEE_ACTION_MAP[name] != null && params) {
+        feeFioAddress = params[FEE_ACTION_MAP[name].propName] as string
+      }
+      // @ts-expect-error
+      fee = await this.otherMethods.getFee(name, feeFioAddress)
+      params.maxFee = fee
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: '',
       date: 0,
@@ -1592,7 +1656,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       ourReceiveAddresses: [],
       signedTx: '',
       otherParams: {
-        ...otherParams
+        ...otherParams,
+        txParams
       },
       walletId: this.walletId
     }
@@ -1601,7 +1666,34 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
-    // Do nothing
+    const otherParams = getOtherParams(edgeTransaction)
+    const txParams = asMaybe(asFioTxParams)(otherParams.txParams)
+
+    if (txParams != null) {
+      const transactions = new Transactions()
+
+      const rawTx = await transactions.createRawTransaction({
+        action: txParams.action,
+        account: txParams.account,
+        data: { ...txParams.data, tpid: this.tpid },
+        publicKey: this.walletInfo.keys.publicKey,
+        chainData: this.refBlock
+      })
+      const { serializedContextFreeData, serializedTransaction } =
+        await transactions.serialize({
+          chainId: this.networkInfo.chainId,
+          transaction: rawTx
+        })
+      const signedTx = await transactions.sign({
+        chainId: this.networkInfo.chainId,
+        privateKeys: [this.walletInfo.keys.fioKey],
+        transaction: rawTx,
+        serializedTransaction,
+        serializedContextFreeData
+      })
+
+      edgeTransaction.otherParams = { ...edgeTransaction.otherParams, signedTx }
+    }
     return edgeTransaction
   }
 
@@ -1609,23 +1701,28 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     let trx
-    const { otherParams } = edgeTransaction
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
-    if (otherParams != null && otherParams.action && otherParams.action.name) {
-      // @ts-expect-error
-      trx = await this.otherMethods.fioAction(
-        otherParams.action.name,
-        otherParams.action.params
-      )
-      edgeTransaction.metadata = {
-        notes: trx.transaction_id
-      }
-    } else {
+    const otherParams = getOtherParams(edgeTransaction)
+
+    if (otherParams.action?.name == null) {
       throw new Error(
         'Action is not set, "action" prop of otherParams is required for FIO actions'
       )
     }
 
+    if ('signedTx' in otherParams) {
+      const signedTx = asFioSignedTx(otherParams.signedTx)
+      trx = await this.multicastServers(otherParams.action.name, signedTx)
+    } else {
+      // @ts-expect-error
+      trx = await this.otherMethods.fioAction(
+        otherParams.action.name,
+        otherParams.action.params
+      )
+    }
+
+    edgeTransaction.metadata = {
+      notes: trx.transaction_id
+    }
     edgeTransaction.txid = trx.transaction_id
     edgeTransaction.date = Date.now() / 1000
     edgeTransaction.blockHeight = trx.block_num
