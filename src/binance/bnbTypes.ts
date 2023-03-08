@@ -8,8 +8,8 @@ import {
 } from 'cleaners'
 
 export interface BinanceNetworkInfo {
-  // TODO: Replace this placeholder with `typeof otherSettings`:
-  binance: true
+  binanceApiServers: string[]
+  beaconChainApiServers: string[]
 }
 
 export const asBinanceApiNodeInfo = asObject({
@@ -60,10 +60,6 @@ export const asBroadcastTxResponse = asObject({
     })
   )
 })
-export interface BinanceSettings {
-  binanceApiServers: string[]
-  beaconChainApiServers: string[]
-}
 
 export interface BinanceTxOtherParams {
   from: string[]

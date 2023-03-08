@@ -21,7 +21,6 @@ import {
   promiseAny,
   shuffleArray
 } from '../common/utils'
-import { currencyInfo } from './bnbInfo'
 import { BinanceTools } from './bnbPlugin'
 import {
   asBinanceApiAccountBalance,
@@ -33,7 +32,6 @@ import {
   BinanceTxOtherParams
 } from './bnbTypes'
 
-const PRIMARY_CURRENCY = currencyInfo.currencyCode
 const ACCOUNT_POLL_MILLISECONDS = 20000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
@@ -49,6 +47,8 @@ type BnbFunction =
   | 'bnb_getTransactions'
 
 export class BinanceEngine extends CurrencyEngine<BinanceTools> {
+  networkInfo: BinanceNetworkInfo
+
   constructor(
     env: PluginEnvironment<BinanceNetworkInfo>,
     tools: BinanceTools,
@@ -57,6 +57,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.networkInfo = env.networkInfo
   }
 
   setOtherData(_raw: any): void {
@@ -285,8 +286,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     switch (func) {
       case 'bnb_broadcastTx': {
         const promises = []
-        const broadcastServers =
-          this.currencyInfo.defaultSettings.otherSettings.binanceApiServers
+        const broadcastServers = this.networkInfo.binanceApiServers
         for (const bnbServer of broadcastServers) {
           const endpoint = `${bnbServer}/api/v1/broadcast?sync=true`
           promises.push(
@@ -315,41 +315,37 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
 
       case 'bnb_blockNumber':
       case 'bnb_getBalance':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.binanceApiServers.map(
-            (server: string) => async () => {
-              const path: string = params[0]
-              const result = await this.fetchGet(server + path)
-              if (typeof result !== 'object') {
-                const msg = `Invalid return value ${func} in ${server}`
-                this.error(msg)
-                throw new Error(msg)
-              }
-              return { server, result }
+        funcs = this.networkInfo.binanceApiServers.map(
+          (server: string) => async () => {
+            const path: string = params[0]
+            const result = await this.fetchGet(server + path)
+            if (typeof result !== 'object') {
+              const msg = `Invalid return value ${func} in ${server}`
+              this.error(msg)
+              throw new Error(msg)
             }
-          )
+            return { server, result }
+          }
+        )
         // Randomize array
         funcs = shuffleArray(funcs)
-        // @ts-expect-error
         out = await asyncWaterfall(funcs)
         break
       case 'bnb_getTransactions':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.beaconChainApiServers.map(
-            (server: string) => async () => {
-              const path: string = params[0]
-              const result = await this.fetchCorsGet(server + path)
-              if (typeof result !== 'object') {
-                const msg = `Invalid return value ${func} in ${server}`
-                this.error(msg)
-                throw new Error(msg)
-              }
-              return { server, result }
+        funcs = this.networkInfo.beaconChainApiServers.map(
+          (server: string) => async () => {
+            const path: string = params[0]
+            const result = await this.fetchCorsGet(server + path)
+            if (typeof result !== 'object') {
+              const msg = `Invalid return value ${func} in ${server}`
+              this.error(msg)
+              throw new Error(msg)
             }
-          )
+            return { server, result }
+          }
+        )
         // Randomize array
         funcs = shuffleArray(funcs)
-        // @ts-expect-error
         out = await asyncWaterfall(funcs)
         break
     }
@@ -406,7 +402,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
       data: data
     }
 
-    if (currencyCode !== PRIMARY_CURRENCY) {
+    if (currencyCode !== this.currencyInfo.currencyCode) {
       throw new Error('Binance Beacon Chain token transfers not supported')
     }
 
@@ -453,9 +449,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
-    const bnbClient = new BncClient(
-      currencyInfo.defaultSettings.otherSettings.binanceApiServers[0]
-    )
+    const bnbClient = new BncClient(this.networkInfo.binanceApiServers[0])
     bnbClient.chooseNetwork('mainnet')
     const privKey = this.walletInfo.keys.binanceKey
     await bnbClient.setPrivateKey(privKey)

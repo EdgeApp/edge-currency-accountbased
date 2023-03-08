@@ -2,13 +2,9 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { BinanceTools } from './bnbPlugin'
-import type { BinanceNetworkInfo, BinanceSettings } from './bnbTypes'
+import type { BinanceNetworkInfo } from './bnbTypes'
 
 const networkInfo: BinanceNetworkInfo = {
-  binance: true
-}
-
-const otherSettings: BinanceSettings = {
   binanceApiServers: [
     'https://dex.binance.org',
     'https://dex-atlantic.binance.org',
@@ -18,18 +14,14 @@ const otherSettings: BinanceSettings = {
   beaconChainApiServers: ['https://api.binance.org']
 }
 
-const defaultSettings: any = {
-  otherSettings
-}
-
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'BNB',
   displayName: 'BNB Beacon Chain',
   pluginId: 'binance',
   walletType: 'wallet:binance',
 
-  defaultSettings,
+  defaultSettings: {},
 
   memoMaxLength: 128,
 
