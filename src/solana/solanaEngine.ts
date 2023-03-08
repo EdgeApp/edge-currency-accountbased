@@ -29,6 +29,7 @@ import {
   asSolanaWalletOtherData,
   RpcGetTransaction,
   RpcSignatureForAddress,
+  SolanaNetworkInfo,
   SolanaSettings,
   SolanaWalletOtherData
 } from './solanaTypes'
@@ -56,7 +57,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   progressRatio: number
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<SolanaNetworkInfo>,
     tools: SolanaTools,
     walletInfo: EdgeWalletInfo,
     opts: any // EdgeCurrencyEngineOptions
@@ -450,7 +451,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<SolanaNetworkInfo>,
   tools: SolanaTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

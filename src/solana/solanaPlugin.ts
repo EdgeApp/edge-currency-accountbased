@@ -17,6 +17,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { SolanaNetworkInfo } from './solanaTypes'
 
 const { Keypair, PublicKey } = solanaWeb3
 
@@ -35,7 +36,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
     const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -142,7 +143,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<SolanaNetworkInfo>
 ): Promise<SolanaTools> {
   return new SolanaTools(env)
 }

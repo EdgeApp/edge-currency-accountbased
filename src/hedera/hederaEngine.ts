@@ -25,6 +25,7 @@ import {
   asHederaWalletOtherData,
   asMirrorNodeQueryBalance,
   asMirrorNodeTransactionResponse,
+  HederaNetworkInfo,
   HederaWalletOtherData
 } from './hederaTypes'
 
@@ -42,7 +43,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   otherData!: HederaWalletOtherData
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<HederaNetworkInfo>,
     tools: HederaTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
@@ -569,7 +570,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<HederaNetworkInfo>,
   tools: HederaTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

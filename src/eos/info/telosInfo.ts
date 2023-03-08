@@ -2,7 +2,8 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../eosPlugin'
-import { EosNetworkInfo, eosOtherMethodNames } from '../eosTypes'
+import type { EosNetworkInfo } from '../eosTypes'
+import { eosOtherMethodNames } from '../eosTypes'
 
 // ----TELOS MAIN NET----
 export const telosNetworkInfo: EosNetworkInfo = {

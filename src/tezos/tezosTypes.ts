@@ -1,5 +1,10 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
+export interface TezosNetworkInfo {
+  // TODO: Replace this placeholder with `typeof otherSettings`:
+  tezos: true
+}
+
 export interface TezosSettings {
   tezosRpcNodes: string[]
 }

@@ -1,5 +1,10 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
+export interface StellarNetworkInfo {
+  // TODO: Replace this placeholder with `typeof otherSettings`:
+  stellar: true
+}
+
 export interface StellarSettings {
   stellarServers: string[]
 }

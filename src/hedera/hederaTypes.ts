@@ -8,6 +8,11 @@ import {
   asString
 } from 'cleaners'
 
+export interface HederaNetworkInfo {
+  // TODO: Replace this placeholder with `typeof otherSettings`:
+  hedera: true
+}
+
 export interface HederaSettings {
   creatorApiServers: [string]
   mirrorNodes: [string]

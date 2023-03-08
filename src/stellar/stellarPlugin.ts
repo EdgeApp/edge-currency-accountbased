@@ -14,6 +14,7 @@ import parse from 'url-parse'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { StellarNetworkInfo } from './stellarTypes'
 
 const URI_PREFIX = 'web+stellar'
 
@@ -24,7 +25,7 @@ export class StellarTools implements EdgeCurrencyTools {
 
   stellarApiServers: Object[]
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<StellarNetworkInfo>) {
     const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -178,7 +179,7 @@ export class StellarTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<StellarNetworkInfo>
 ): Promise<StellarTools> {
   return new StellarTools(env)
 }

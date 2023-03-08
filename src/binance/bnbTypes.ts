@@ -7,6 +7,11 @@ import {
   asString
 } from 'cleaners'
 
+export interface BinanceNetworkInfo {
+  // TODO: Replace this placeholder with `typeof otherSettings`:
+  binance: true
+}
+
 export const asBinanceApiNodeInfo = asObject({
   sync_info: asObject({
     latest_block_height: asNumber

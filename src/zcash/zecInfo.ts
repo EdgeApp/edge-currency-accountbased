@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { ZcashTools } from './zecPlugin'
-import { ZcashNetworkInfo } from './zecTypes'
+import type { ZcashNetworkInfo } from './zecTypes'
 
 const networkInfo: ZcashNetworkInfo = {
   rpcNode: {

@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { SolanaTools } from './solanaPlugin'
-import { SolanaSettings } from './solanaTypes'
+import type { SolanaNetworkInfo, SolanaSettings } from './solanaTypes'
+
+const networkInfo: SolanaNetworkInfo = {
+  solana: true
+}
 
 const otherSettings: SolanaSettings = {
   rpcNodes: [
@@ -43,9 +47,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [] // Deprecated
 }
 
-export const solana = makeOuterPlugin<{}, SolanaTools>({
+export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import(

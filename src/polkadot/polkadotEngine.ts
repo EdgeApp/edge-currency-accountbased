@@ -28,6 +28,7 @@ import {
   asSubscanResponse,
   asTransactions,
   asTransfer,
+  PolkadotNetworkInfo,
   PolkadotSettings,
   PolkadotWalletOtherData,
   SubscanResponse,
@@ -48,7 +49,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   nonce: number
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<PolkadotNetworkInfo>,
     tools: PolkadotTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -448,7 +449,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<PolkadotNetworkInfo>,
   tools: PolkadotTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

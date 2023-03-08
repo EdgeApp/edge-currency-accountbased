@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { StellarTools } from './stellarPlugin'
-import { StellarSettings } from './stellarTypes'
+import type { StellarNetworkInfo, StellarSettings } from './stellarTypes'
+
+const networkInfo: StellarNetworkInfo = {
+  stellar: true
+}
 
 const otherSettings: StellarSettings = {
   stellarServers: ['https://horizon.stellar.org']
@@ -37,9 +41,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [] // Deprecated
 }
 
-export const stellar = makeOuterPlugin<{}, StellarTools>({
+export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import(

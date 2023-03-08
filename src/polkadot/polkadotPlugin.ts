@@ -17,6 +17,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
+import { PolkadotNetworkInfo } from './polkadotTypes'
 
 const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
@@ -28,7 +29,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
   polkadotApi!: ApiPromise
   polkadotApiSubscribers: Set<string>
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<PolkadotNetworkInfo>) {
     const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -148,7 +149,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<PolkadotNetworkInfo>
 ): Promise<PolkadotTools> {
   return new PolkadotTools(env)
 }

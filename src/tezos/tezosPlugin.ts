@@ -10,7 +10,7 @@ import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { UriTransaction } from './tezosTypes'
+import type { TezosNetworkInfo, UriTransaction } from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -18,7 +18,7 @@ export class TezosTools implements EdgeCurrencyTools {
   tezosRpcNodes: Object[]
   tezosApiServers: Object[]
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<TezosNetworkInfo>) {
     const { currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -142,7 +142,7 @@ export class TezosTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<TezosNetworkInfo>
 ): Promise<TezosTools> {
   return new TezosTools(env)
 }

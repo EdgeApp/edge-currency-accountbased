@@ -2,7 +2,15 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { HederaTools } from './hederaPlugin'
-import { hederaOtherMethodNames, HederaSettings } from './hederaTypes'
+import {
+  HederaNetworkInfo,
+  hederaOtherMethodNames,
+  HederaSettings
+} from './hederaTypes'
+
+const networkInfo: HederaNetworkInfo = {
+  hedera: true
+}
 
 const otherSettings: HederaSettings = {
   creatorApiServers: ['https://creator.testnet.myhbarwallet.com'],
@@ -45,9 +53,9 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [] // Deprecated
 }
 
-export const hederatestnet = makeOuterPlugin<{}, HederaTools>({
+export const hederatestnet = makeOuterPlugin<HederaNetworkInfo, HederaTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
   otherMethodNames: hederaOtherMethodNames,
 
   async getInnerPlugin() {

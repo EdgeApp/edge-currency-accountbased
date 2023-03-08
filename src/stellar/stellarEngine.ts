@@ -24,6 +24,7 @@ import {
   asFeeStats,
   asStellarWalletOtherData,
   StellarAccount,
+  StellarNetworkInfo,
   StellarOperation,
   StellarTransaction,
   StellarWalletOtherData
@@ -52,7 +53,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   otherData!: StellarWalletOtherData
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<StellarNetworkInfo>,
     tools: StellarTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -638,7 +639,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<StellarNetworkInfo>,
   tools: StellarTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

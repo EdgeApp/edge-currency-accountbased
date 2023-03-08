@@ -3,7 +3,6 @@ import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
 import {
-  EdgeCorePluginOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
@@ -27,6 +26,7 @@ import {
 import { DEFAULT_APR, FIO_REG_API_ENDPOINTS } from './fioConst'
 import { fioApiErrorCodes, FioError, fioRegApiErrorCodes } from './fioError'
 import { currencyInfo } from './fioInfo'
+import { FioNetworkInfo } from './fioTypes'
 
 const FIO_CURRENCY_CODE = 'FIO'
 const FIO_TYPE = 'fio'
@@ -50,14 +50,14 @@ export class FioTools implements EdgeCurrencyTools {
   fetchCors: EdgeFetchFunction
   fioRegApiToken: string
 
-  constructor(opts: EdgeCorePluginOptions) {
-    const { initOptions, io } = opts
+  constructor(env: PluginEnvironment<FioNetworkInfo>) {
+    const { initOptions, io } = env
     const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
       initOptions
 
     this.io = io
     this.currencyInfo = currencyInfo
-    this.fetchCors = getFetchCors(opts)
+    this.fetchCors = getFetchCors(env)
     this.fioRegApiToken = fioRegApiToken
 
     const [baseUrl] = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)
@@ -541,7 +541,7 @@ export class FioTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<FioNetworkInfo>
 ): Promise<FioTools> {
   return new FioTools(env)
 }

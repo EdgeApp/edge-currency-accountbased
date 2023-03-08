@@ -29,6 +29,7 @@ import {
   asBinanceApiNodeInfo,
   asBroadcastTxResponse,
   BinanceApiTransaction,
+  BinanceNetworkInfo,
   BinanceTxOtherParams
 } from './bnbTypes'
 
@@ -49,7 +50,7 @@ type BnbFunction =
 
 export class BinanceEngine extends CurrencyEngine<BinanceTools> {
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<BinanceNetworkInfo>,
     tools: BinanceTools,
     walletInfo: EdgeWalletInfo,
     initOptions: any, // BinanceInitOptions,
@@ -528,7 +529,7 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<BinanceNetworkInfo>,
   tools: BinanceTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

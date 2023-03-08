@@ -28,6 +28,7 @@ import {
   asXtzGetTransaction,
   HeadInfo,
   OperationsContainer,
+  TezosNetworkInfo,
   TezosOperation,
   TezosWalletOtherData,
   XtzGetTransaction
@@ -54,7 +55,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
   otherData!: TezosWalletOtherData
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<TezosNetworkInfo>,
     tools: TezosTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
@@ -524,7 +525,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<TezosNetworkInfo>,
   tools: TezosTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

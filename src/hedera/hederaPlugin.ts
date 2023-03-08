@@ -14,7 +14,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
-import { asGetActivationCost } from './hederaTypes'
+import { asGetActivationCost, HederaNetworkInfo } from './hederaTypes'
 import { createChecksum, validAddress } from './hederaUtils'
 
 // if users want to import their mnemonic phrase in e.g. MyHbarWallet.com
@@ -27,8 +27,8 @@ export class HederaTools implements EdgeCurrencyTools {
   log: EdgeLog
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(opts: PluginEnvironment<{}>) {
-    const { currencyInfo, io, log } = opts
+  constructor(env: PluginEnvironment<HederaNetworkInfo>) {
+    const { currencyInfo, io, log } = env
     this.io = io
     this.log = log
     this.currencyInfo = currencyInfo
@@ -184,7 +184,7 @@ export class HederaTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<HederaNetworkInfo>
 ): Promise<HederaTools> {
   return new HederaTools(env)
 }

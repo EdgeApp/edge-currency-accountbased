@@ -15,6 +15,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { BinanceNetworkInfo } from './bnbTypes'
 
 const {
   checkAddress,
@@ -27,7 +28,7 @@ export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
 
-  constructor(env: PluginEnvironment<{}>) {
+  constructor(env: PluginEnvironment<BinanceNetworkInfo>) {
     const { io, currencyInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
@@ -123,7 +124,7 @@ export class BinanceTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<BinanceNetworkInfo>
 ): Promise<BinanceTools> {
   return new BinanceTools(env)
 }
