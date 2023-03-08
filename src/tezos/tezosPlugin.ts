@@ -4,6 +4,7 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import { eztz } from 'eztz.js'
@@ -13,15 +14,20 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import type { TezosNetworkInfo, UriTransaction } from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
+  networkInfo: TezosNetworkInfo
+
   tezosRpcNodes: Object[]
   tezosApiServers: Object[]
 
   constructor(env: PluginEnvironment<TezosNetworkInfo>) {
-    const { currencyInfo, io } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
 
     this.tezosRpcNodes = []
     for (const rpcNode of currencyInfo.defaultSettings.otherSettings

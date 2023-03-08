@@ -9,6 +9,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -26,12 +27,16 @@ const {
 
 export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: BinanceNetworkInfo
 
   constructor(env: PluginEnvironment<BinanceNetworkInfo>) {
-    const { io, currencyInfo } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
   }
 
   // will actually use MNEMONIC version of private key

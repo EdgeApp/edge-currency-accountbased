@@ -7,6 +7,7 @@ import {
   EdgeLog,
   EdgeParsedUri,
   EdgeToken,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EosApi from 'eosjs-api'
@@ -27,17 +28,20 @@ export function checkAddress(address: string): boolean {
 }
 
 export class EosTools implements EdgeCurrencyTools {
-  eosServer: Object
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   log: EdgeLog
   networkInfo: EosNetworkInfo
 
+  eosServer: Object
+
   constructor(env: PluginEnvironment<EosNetworkInfo>) {
-    const { currencyInfo, io, log, networkInfo } = env
+    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
+    this.builtinTokens = builtinTokens
+    this.currencyInfo = currencyInfo
     this.io = io
     this.log = log
-    this.currencyInfo = currencyInfo
     this.networkInfo = networkInfo
 
     this.eosServer = EosApi({

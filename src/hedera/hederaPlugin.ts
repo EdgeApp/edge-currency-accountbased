@@ -8,6 +8,7 @@ import {
   EdgeIo,
   EdgeLog,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
@@ -23,15 +24,19 @@ const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaTools implements EdgeCurrencyTools {
+  builtinTokens: EdgeTokenMap
+  currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   log: EdgeLog
-  currencyInfo: EdgeCurrencyInfo
+  networkInfo: HederaNetworkInfo
 
   constructor(env: PluginEnvironment<HederaNetworkInfo>) {
-    const { currencyInfo, io, log } = env
+    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
+    this.builtinTokens = builtinTokens
+    this.currencyInfo = currencyInfo
     this.io = io
     this.log = log
-    this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {

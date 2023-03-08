@@ -10,6 +10,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -33,13 +34,17 @@ const createKeyPair = async (
 }
 
 export class SolanaTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
+  networkInfo: SolanaNetworkInfo
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
-    const { currencyInfo, io } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {

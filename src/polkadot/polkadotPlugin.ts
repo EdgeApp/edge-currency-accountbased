@@ -10,6 +10,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -23,16 +24,21 @@ const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: PolkadotNetworkInfo
 
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
   polkadotApi!: ApiPromise
   polkadotApiSubscribers: Set<string>
 
   constructor(env: PluginEnvironment<PolkadotNetworkInfo>) {
-    const { io, currencyInfo } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
+
     this.polkadotApiSubscribers = new Set()
   }
 
