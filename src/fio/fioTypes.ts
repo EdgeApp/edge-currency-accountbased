@@ -68,3 +68,7 @@ interface FioFee {
   expiration: number
 }
 export type FioActionFees = Map<string, FioFee>
+
+export const asFioAddressParam = asObject({
+  fioAddress: asString
+})

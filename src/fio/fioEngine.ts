@@ -66,6 +66,7 @@ import {
 } from './fioSchema'
 import {
   asFioAction,
+  asFioAddressParam,
   asFioFee,
   asFioSignedTx,
   asFioTxParams,
@@ -101,6 +102,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   networkInfo: FioNetworkInfo
   refBlock: FioRefBlock
   fees: FioActionFees
+  actor: string
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -125,6 +127,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       ref_block_prefix: 0
     }
     this.fees = new Map()
+    this.actor = FIOSDK.accountHash(this.walletInfo.keys.publicKey).accountnm
 
     this.fioSdkInit()
 
@@ -1561,60 +1564,13 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
     const { name, params } = asFioAction(otherParams.action)
 
-    // Only query FIO fee if the public address is different from last makeSpend()
-    let fee
-    if (name !== ACTIONS.transferTokens) {
-      let feeFioAddress = ''
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (FEE_ACTION_MAP[name] != null && params) {
-        feeFioAddress = params[FEE_ACTION_MAP[name].propName] as string
-      }
-      // @ts-expect-error
-      fee = await this.otherMethods.getFee(name, feeFioAddress)
-      params.maxFee = fee
-    }
-
-    // We don't need to check the available balance for an unstake action (because that's handled separately below).
-    if (
-      name !== ACTIONS.unStakeFioTokens &&
-      gt(add(quantity, `${fee}`), availableBalance)
-    ) {
-      throw new InsufficientFundsError()
-    }
-
     if (
       [ACTIONS.transferFioAddress, ACTIONS.transferFioDomain].includes(name)
     ) {
       params.newOwnerKey = publicAddress // todo: move this to the gui
     }
 
-    if (name === ACTIONS.stakeFioTokens) {
-      params.amount = quantity
-    }
-
-    if (name === ACTIONS.unStakeFioTokens) {
-      const unlockDate = this.getUnlockDate(new Date())
-      const stakedBalance =
-        this.walletLocalData.totalBalances[
-          this.networkInfo.balanceCurrencyCodes.staked
-        ] ?? '0'
-      if (gt(quantity, stakedBalance)) {
-        throw new InsufficientFundsError()
-      }
-
-      params.amount = quantity
-      const accrued = mul(
-        mul(div(quantity, stakedBalance, 18), `${this.otherData.srps}`),
-        this.otherData.stakingRoe
-      )
-      const estReward = max(sub(accrued, quantity), '0')
-      otherParams.ui = {
-        accrued,
-        estReward,
-        unlockDate
-      }
-    }
-
+    let fee
     let txParams: FioTxParams | undefined
     switch (name) {
       case ACTIONS.transferTokens: {
@@ -1627,6 +1583,59 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             amount: quantity,
             max_fee: fee
           }
+        }
+        break
+      }
+      case ACTIONS.stakeFioTokens: {
+        const { fioAddress } = asFioAddressParam(params)
+        fee = await this.getFee(EndPoint.stakeFioTokens, fioAddress)
+        txParams = {
+          account: 'fio.staking',
+          action: ACTIONS_TO_TX_ACTION_NAME[name],
+          data: {
+            amount: quantity,
+            fio_address: fioAddress,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      case ACTIONS.unStakeFioTokens: {
+        const { fioAddress } = asFioAddressParam(params)
+        fee = await this.getFee(EndPoint.unStakeFioTokens, fioAddress)
+        txParams = {
+          account: 'fio.staking',
+          action: ACTIONS_TO_TX_ACTION_NAME[name],
+          data: {
+            amount: quantity,
+            fio_address: fioAddress,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+
+        const unlockDate = this.getUnlockDate(new Date())
+        const stakedBalance =
+          this.walletLocalData.totalBalances[
+            this.networkInfo.balanceCurrencyCodes.staked
+          ] ?? '0'
+        if (
+          gt(quantity, stakedBalance) ||
+          gt(add(quantity, `${fee}`), availableBalance)
+        ) {
+          throw new InsufficientFundsError()
+        }
+
+        const accrued = mul(
+          mul(div(quantity, stakedBalance, 18), `${this.otherData.srps}`),
+          this.otherData.stakingRoe
+        )
+        const estReward = max(sub(accrued, quantity), '0')
+        otherParams.ui = {
+          accrued,
+          estReward,
+          unlockDate
         }
         break
       }
