@@ -27,6 +27,7 @@ import {
   checkCustomToken,
   checkEdgeSpendInfo
 } from './schema'
+import { validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
   CustomToken,
@@ -297,13 +298,22 @@ export class CurrencyEngine<
     const { customTokens = {}, enabledTokenIds = [] } = opts
 
     // Add all of the custom tokens
-    for (const token of Object.keys(customTokens)) {
+    for (const tokenId of Object.keys(customTokens)) {
+      const token = customTokens[tokenId]
+      try {
+        validateToken(token)
+      } catch (e) {
+        this.log.warn(
+          `Dropping custom token "${token.currencyCode}" / ${tokenId}`
+        )
+        continue
+      }
       const {
         currencyCode,
         denominations,
         displayName,
         networkLocation = {}
-      } = customTokens[token]
+      } = token
       this.addCustomToken({
         currencyCode,
         currencyName: displayName,
