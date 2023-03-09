@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.17 (2023-03-09)
+
+- HBAR: Update explorer URL
+
 ## 0.22.16 (2023-03-08)
 
 - added: Parse/quote Smartpay PIX QR codes for Tron/USDT
