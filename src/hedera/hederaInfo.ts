@@ -27,9 +27,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   memoMaxLength: 100,
 
-  addressExplorer: 'https://hederaexplorer.io/search-details/account/%s',
-  transactionExplorer:
-    'https://hederaexplorer.io/search-details/transaction/%s',
+  addressExplorer: 'https://hashscan.io/mainnet/account/%s',
+  transactionExplorer: 'https://hashscan.io/mainnet/transaction/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
