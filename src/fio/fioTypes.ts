@@ -76,3 +76,14 @@ export const asFioAddressParam = asObject({
 export const asFioTransferDomainParams = asObject({
   fioDomain: asString
 })
+
+export const asFioConnectAddressesParams = asObject({
+  fioAddress: asString,
+  publicAddresses: asArray(
+    asObject({
+      token_code: asString,
+      chain_code: asString,
+      public_address: asString
+    })
+  )
+})

@@ -67,6 +67,7 @@ import {
 import {
   asFioAction,
   asFioAddressParam,
+  asFioConnectAddressesParams,
   asFioFee,
   asFioSignedTx,
   asFioTransferDomainParams,
@@ -135,8 +136,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
         switch (actionName) {
-          case 'addPublicAddresses':
-          case 'addPublicAddress':
           case 'requestFunds': {
             const { fee } = await this.multicastServers(
               // @ts-expect-error
@@ -1633,6 +1632,38 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           data: {
             fio_domain: fioDomain,
             new_owner_fio_public_key: publicAddress,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      case ACTIONS.addPublicAddresses: {
+        const { fioAddress, publicAddresses } =
+          asFioConnectAddressesParams(params)
+        fee = await this.getFee(EndPoint.addPubAddress, fioAddress)
+        txParams = {
+          account: 'fio.address',
+          action: 'addaddress',
+          data: {
+            fio_address: fioAddress,
+            public_addresses: publicAddresses,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      case ACTIONS.removePublicAddresses: {
+        const { fioAddress, publicAddresses } =
+          asFioConnectAddressesParams(params)
+        fee = await this.getFee(EndPoint.removePubAddress, fioAddress)
+        txParams = {
+          account: 'fio.address',
+          action: 'remaddress',
+          data: {
+            fio_address: fioAddress,
+            public_addresses: publicAddresses,
             actor: this.actor,
             max_fee: fee
           }
