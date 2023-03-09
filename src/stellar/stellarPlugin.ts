@@ -23,7 +23,7 @@ export class StellarTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
-  networkInfo: {}
+  networkInfo: StellarNetworkInfo
 
   highestTxHeight: number = 0
   stellarApiServers: Object[]
@@ -37,8 +37,7 @@ export class StellarTools implements EdgeCurrencyTools {
 
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
-    for (const server of currencyInfo.defaultSettings.otherSettings
-      .stellarServers) {
+    for (const server of this.networkInfo.stellarServers) {
       const stellarServer = new stellarApi.Server(server)
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
