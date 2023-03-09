@@ -53,8 +53,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     this.log = opts.log
 
     this.io = io
-    const { client, creatorApiServers, mirrorNodes, maxFee } =
-      this.currencyInfo.defaultSettings.otherSettings
+    const { client, creatorApiServers, mirrorNodes, maxFee } = env.networkInfo
     // @ts-expect-error
     this.client = hedera.Client[`for${client}`]()
     this.creatorApiServers = creatorApiServers

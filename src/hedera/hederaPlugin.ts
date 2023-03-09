@@ -119,13 +119,12 @@ export class HederaTools implements EdgeCurrencyTools {
     )
 
     if (publicAddress != null) {
-      const { checksumNetworkId } =
-        this.currencyInfo.defaultSettings.otherSettings
+      const { checksumNetworkID } = this.networkInfo
       const [address, checksum] = publicAddress.split('-')
       if (
         !validAddress(publicAddress) ||
         (checksum != null &&
-          checksum !== createChecksum(address, checksumNetworkId))
+          checksum !== createChecksum(address, checksumNetworkID))
       )
         throw new Error('InvalidPublicAddressError')
     }
@@ -168,8 +167,7 @@ export class HederaTools implements EdgeCurrencyTools {
   }
 
   async getActivationCost(): Promise<string | number> {
-    const creatorApiServer =
-      this.currencyInfo.defaultSettings.otherSettings.creatorApiServers[0]
+    const creatorApiServer = this.networkInfo.creatorApiServers[0]
 
     try {
       const response = await this.io.fetch(`${creatorApiServer}/account/cost`)

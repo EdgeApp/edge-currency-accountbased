@@ -2,23 +2,15 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { HederaTools } from './hederaPlugin'
-import type { HederaNetworkInfo, HederaSettings } from './hederaTypes'
+import type { HederaNetworkInfo } from './hederaTypes'
 import { hederaOtherMethodNames } from './hederaTypes'
 
 const networkInfo: HederaNetworkInfo = {
-  hedera: true
-}
-
-const otherSettings: HederaSettings = {
   creatorApiServers: ['https://creator.myhbarwallet.com'],
   mirrorNodes: ['https://mainnet-public.mirrornode.hedera.com'],
   client: 'Mainnet',
   checksumNetworkID: '0',
   maxFee: 900000
-}
-
-const defaultSettings: any = {
-  otherSettings
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -28,7 +20,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'hedera',
   walletType: 'wallet:hedera',
 
-  defaultSettings,
+  defaultSettings: {},
 
   memoMaxLength: 100,
 
