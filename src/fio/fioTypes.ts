@@ -1,4 +1,11 @@
-import { asArray, asNumber, asObject, asString, asUnknown } from 'cleaners'
+import {
+  asArray,
+  asBoolean,
+  asNumber,
+  asObject,
+  asString,
+  asUnknown
+} from 'cleaners'
 
 import { FIO_REQUESTS_TYPES } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
@@ -90,6 +97,16 @@ export const asFioConnectAddressesParams = asObject({
       public_address: asString
     })
   )
+})
+
+export const asFioAddBundledTransactions = asObject({
+  fioAddress: asString,
+  bundleSets: asNumber
+})
+
+export const asSetFioDomainVisibility = asObject({
+  fioDomain: asString,
+  isPublic: asBoolean
 })
 
 export const asFioBroadcastResult = asObject({

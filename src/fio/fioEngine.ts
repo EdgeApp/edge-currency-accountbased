@@ -66,6 +66,7 @@ import {
 } from './fioSchema'
 import {
   asFioAction,
+  asFioAddBundledTransactions,
   asFioAddressParam,
   asFioBroadcastResult,
   asFioConnectAddressesParams,
@@ -74,6 +75,7 @@ import {
   asFioSignedTx,
   asFioTransferDomainParams,
   asFioTxParams,
+  asSetFioDomainVisibility,
   FioActionFees,
   FioBroadcastResult,
   FioNetworkInfo,
@@ -207,22 +209,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
               return res
             }
             break
-          }
-          case 'addBundledTransactions': {
-            const fioAddress = this.otherData.fioAddresses.find(
-              ({ name }) => name === params.fioAddress
-            )
-
-            if (fioAddress == null)
-              throw new FioError('Fio Address is not found in engine')
-
-            const res = await this.multicastServers(actionName, params)
-
-            // @ts-expect-error
-            // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-            fioAddress.bundledTxs += DEFAULT_BUNDLED_TXS_AMOUNT
-            this.localDataDirty()
-            return { bundledTxs: fioAddress.bundledTxs, ...res }
           }
         }
 
@@ -1659,6 +1645,36 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         }
         break
       }
+      case ACTIONS.addBundledTransactions: {
+        const { bundleSets, fioAddress } = asFioAddBundledTransactions(params)
+        fee = await this.getFee(EndPoint.addBundledTransactions, fioAddress)
+        txParams = {
+          account: 'fio.address',
+          action: 'addbundles',
+          data: {
+            fio_address: fioAddress,
+            bundle_sets: bundleSets,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      case ACTIONS.setFioDomainPublic: {
+        const { fioDomain, isPublic } = asSetFioDomainVisibility(params)
+        fee = await this.getFee(EndPoint.setFioDomainPublic)
+        txParams = {
+          account: 'fio.address',
+          action: 'setdomainpub',
+          data: {
+            fio_domain: fioDomain,
+            is_public: isPublic ? 1 : 0,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
       default: {
         // Do nothing
       }
@@ -1834,6 +1850,22 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             renewedDomain.expiration = broadcastResult.expiration
             this.localDataDirty()
           }
+          break
+        }
+        case ACTIONS.addBundledTransactions: {
+          const { fioAddress: fioAddressParam } =
+            asFioAddBundledTransactions(params)
+          const fioAddress = this.otherData.fioAddresses.find(
+            ({ name }) => name === fioAddressParam
+          )
+
+          if (fioAddress == null)
+            throw new FioError('Fio Address is not found in engine')
+
+          fioAddress.bundledTxs =
+            (fioAddress.bundledTxs ?? 0) + DEFAULT_BUNDLED_TXS_AMOUNT
+
+          this.localDataDirty()
           break
         }
       }

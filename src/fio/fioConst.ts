@@ -26,7 +26,7 @@ export const ACTIONS = {
   addPublicAddress: 'addPublicAddress',
   addPublicAddresses: 'addPublicAddresses',
   removePublicAddresses: 'removePublicAddresses',
-  setFioDomainPublic: 'setFioDomainPublic',
+  setFioDomainPublic: 'setFioDomainVisibility',
   rejectFundsRequest: 'rejectFundsRequest',
   requestFunds: 'requestFunds',
   recordObtData: 'recordObtData',
@@ -53,6 +53,7 @@ export const BROADCAST_ACTIONS = {
   [ACTIONS.transferFioAddress]: true,
   [ACTIONS.transferFioDomain]: true,
   [ACTIONS.addBundledTransactions]: true,
+  [ACTIONS.setFioDomainPublic]: true,
   [ACTIONS.stakeFioTokens]: true,
   [ACTIONS.unStakeFioTokens]: true
 }
