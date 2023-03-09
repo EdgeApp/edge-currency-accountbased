@@ -109,6 +109,16 @@ export const asSetFioDomainVisibility = asObject({
   isPublic: asBoolean
 })
 
+export const asRejectFundsRequest = asObject({
+  payerFioAddress: asString,
+  fioRequestId: asNumber
+})
+
+export const asCancelFundsRequest = asObject({
+  fioAddress: asString,
+  fioRequestId: asNumber
+})
+
 export const asFioBroadcastResult = asObject({
   block_num: asNumber,
   block_time: asString,

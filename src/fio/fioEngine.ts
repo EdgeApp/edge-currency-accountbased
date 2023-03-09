@@ -65,6 +65,7 @@ import {
   GetFioName
 } from './fioSchema'
 import {
+  asCancelFundsRequest,
   asFioAction,
   asFioAddBundledTransactions,
   asFioAddressParam,
@@ -75,6 +76,7 @@ import {
   asFioSignedTx,
   asFioTransferDomainParams,
   asFioTxParams,
+  asRejectFundsRequest,
   asSetFioDomainVisibility,
   FioActionFees,
   FioBroadcastResult,
@@ -153,32 +155,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             params.maxFee = fee
 
             break
-          }
-          case 'rejectFundsRequest': {
-            const { fee } = await this.multicastServers(
-              // @ts-expect-error
-              FEE_ACTION_MAP[actionName].action,
-              {
-                [FEE_ACTION_MAP[actionName].propName]:
-                  params[FEE_ACTION_MAP[actionName].propName]
-              }
-            )
-            params.maxFee = fee
-            const res = await this.multicastServers(actionName, params)
-            this.removeFioRequest(
-              params.fioRequestId,
-              FIO_REQUESTS_TYPES.PENDING
-            )
-            this.localDataDirty()
-
-            return res
-          }
-          case 'cancelFundsRequest': {
-            const res = await this.multicastServers(actionName, params)
-            this.removeFioRequest(params.fioRequestId, FIO_REQUESTS_TYPES.SENT)
-            this.localDataDirty()
-
-            return res
           }
           case 'recordObtData': {
             const { fee } = await this.multicastServers(
@@ -1675,6 +1651,34 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         }
         break
       }
+      case ACTIONS.rejectFundsRequest: {
+        const { fioRequestId, payerFioAddress } = asRejectFundsRequest(params)
+        fee = await this.getFee(EndPoint.rejectFundsRequest, payerFioAddress)
+        txParams = {
+          account: 'fio.reqobt',
+          action: 'rejectfndreq',
+          data: {
+            fio_request_id: fioRequestId,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
+      case ACTIONS.cancelFundsRequest: {
+        const { fioAddress, fioRequestId } = asCancelFundsRequest(params)
+        fee = await this.getFee(EndPoint.cancelFundsRequest, fioAddress)
+        txParams = {
+          account: 'fio.reqobt',
+          action: 'cancelfndreq',
+          data: {
+            fio_request_id: fioRequestId,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
       default: {
         // Do nothing
       }
@@ -1866,6 +1870,22 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             (fioAddress.bundledTxs ?? 0) + DEFAULT_BUNDLED_TXS_AMOUNT
 
           this.localDataDirty()
+          break
+        }
+        case ACTIONS.rejectFundsRequest: {
+          const { fioRequestId } = asRejectFundsRequest(params)
+          if (typeof fioRequestId === 'string') {
+            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.PENDING)
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.cancelFundsRequest: {
+          const { fioRequestId } = asCancelFundsRequest(params)
+          if (typeof fioRequestId === 'string') {
+            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.SENT)
+            this.localDataDirty()
+          }
           break
         }
       }
