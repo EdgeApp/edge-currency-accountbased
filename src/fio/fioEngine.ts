@@ -69,6 +69,7 @@ import {
   asFioAddressParam,
   asFioFee,
   asFioSignedTx,
+  asFioTransferDomainParams,
   asFioTxParams,
   FioActionFees,
   FioNetworkInfo,
@@ -261,31 +262,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
                 tpid
               }
             })
-            return res
-          }
-          case 'transferFioDomain': {
-            const res = await this.multicastServers(actionName, params)
-            const transferredDomainIndex = this.otherData.fioDomains.findIndex(
-              ({ name }) => name === params.fioDomain
-            )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (transferredDomainIndex) {
-              this.otherData.fioDomains.splice(transferredDomainIndex, 1)
-              this.localDataDirty()
-            }
-            return res
-          }
-          case 'transferFioAddress': {
-            const res = await this.multicastServers(actionName, params)
-            const transferredAddressIndex =
-              this.otherData.fioAddresses.findIndex(
-                ({ name }) => name === params.fioAddress
-              )
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (transferredAddressIndex) {
-              this.otherData.fioAddresses.splice(transferredAddressIndex, 1)
-              this.localDataDirty()
-            }
             return res
           }
           case 'addBundledTransactions': {
@@ -1564,12 +1540,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
     const { name, params } = asFioAction(otherParams.action)
 
-    if (
-      [ACTIONS.transferFioAddress, ACTIONS.transferFioDomain].includes(name)
-    ) {
-      params.newOwnerKey = publicAddress // todo: move this to the gui
-    }
-
     let fee
     let txParams: FioTxParams | undefined
     switch (name) {
@@ -1636,6 +1606,36 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           accrued,
           estReward,
           unlockDate
+        }
+        break
+      }
+      case ACTIONS.transferFioAddress: {
+        const { fioAddress } = asFioAddressParam(params)
+        fee = await this.getFee(EndPoint.transferFioAddress, fioAddress)
+        txParams = {
+          account: 'fio.address',
+          action: 'xferaddress',
+          data: {
+            fio_address: fioAddress,
+            new_owner_fio_public_key: publicAddress,
+            actor: this.actor,
+            max_fee: fee
+          }
+        }
+        break
+      }
+      case ACTIONS.transferFioDomain: {
+        const { fioDomain } = asFioTransferDomainParams(params)
+        fee = await this.getFee(EndPoint.transferFioDomain)
+        txParams = {
+          account: 'fio.address',
+          action: 'xferdomain',
+          data: {
+            fio_domain: fioDomain,
+            new_owner_fio_public_key: publicAddress,
+            actor: this.actor,
+            max_fee: fee
+          }
         }
         break
       }
@@ -1738,6 +1738,42 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
     return edgeTransaction
+  }
+
+  async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
+    const otherParams = getOtherParams(edgeTransaction)
+    const { action } = otherParams
+    const { name, params } = asFioAction(action)
+
+    // Attempt post-broadcast actions
+    try {
+      switch (name) {
+        case ACTIONS.transferFioDomain: {
+          const transferredDomainIndex = this.otherData.fioDomains.findIndex(
+            ({ name }) => name === params.fioDomain
+          )
+          if (transferredDomainIndex >= 0) {
+            this.otherData.fioDomains.splice(transferredDomainIndex, 1)
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.transferFioAddress: {
+          const transferredAddressIndex = this.otherData.fioAddresses.findIndex(
+            ({ name }) => name === params.fioAddress
+          )
+          if (transferredAddressIndex >= 0) {
+            this.otherData.fioAddresses.splice(transferredAddressIndex, 1)
+            this.localDataDirty()
+          }
+          break
+        }
+      }
+    } catch (e) {
+      this.log.warn(`Error attempting post-broadcast action ${name}:`, e)
+    }
+
+    await super.saveTx(edgeTransaction)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -72,3 +72,7 @@ export type FioActionFees = Map<string, FioFee>
 export const asFioAddressParam = asObject({
   fioAddress: asString
 })
+
+export const asFioTransferDomainParams = asObject({
+  fioDomain: asString
+})
