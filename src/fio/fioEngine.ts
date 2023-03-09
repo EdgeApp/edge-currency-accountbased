@@ -67,12 +67,15 @@ import {
 import {
   asFioAction,
   asFioAddressParam,
+  asFioBroadcastResult,
   asFioConnectAddressesParams,
+  asFioDomainParam,
   asFioFee,
   asFioSignedTx,
   asFioTransferDomainParams,
   asFioTxParams,
   FioActionFees,
+  FioBroadcastResult,
   FioNetworkInfo,
   FioRefBlock,
   FioSignedTx,
@@ -204,64 +207,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
               return res
             }
             break
-          }
-          case 'registerFioAddress': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint[actionName]
-            })
-            params.maxFee = fee
-            const res = await this.multicastServers(actionName, params)
-            if (
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              params.ownerPublicKey &&
-              params.ownerPublicKey !== this.walletInfo.keys.publicKey
-            ) {
-              return {
-                feeCollected: res.fee_collected
-              }
-            }
-            const addressAlreadyAdded = this.otherData.fioAddresses.find(
-              ({ name }) => name === params.fioAddress
-            )
-            if (addressAlreadyAdded == null) {
-              this.otherData.fioAddresses.push({
-                name: params.fioAddress as string,
-                bundledTxs: undefined
-              })
-              this.localDataDirty()
-            }
-            return res
-          }
-          case 'renewFioDomain': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint[actionName]
-            })
-            params.maxFee = fee
-            const res = await this.multicastServers(actionName, params)
-            const renewedDomain = this.otherData.fioDomains.find(
-              ({ name }) => name === params.fioDomain
-            )
-            if (renewedDomain != null) {
-              renewedDomain.expiration = res.expiration
-              this.localDataDirty()
-            }
-            return res
-          }
-          case 'registerFioDomain': {
-            const { fee } = await this.multicastServers('getFee', {
-              endPoint: EndPoint.registerFioDomain
-            })
-            params.max_fee = fee
-            // todo: why we use pushTransaction here?
-            const res = await this.multicastServers('pushTransaction', {
-              action: 'regdomain',
-              account: '',
-              data: {
-                ...params,
-                tpid
-              }
-            })
-            return res
           }
           case 'addBundledTransactions': {
             const fioAddress = this.otherData.fioAddresses.find(
@@ -1670,6 +1615,50 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         }
         break
       }
+      case ACTIONS.registerFioAddress: {
+        const { fioAddress } = asFioAddressParam(params)
+        fee = await this.getFee(EndPoint.registerFioAddress)
+        txParams = {
+          account: 'fio.address',
+          action: 'regaddress',
+          data: {
+            fio_address: fioAddress,
+            owner_fio_public_key: this.walletInfo.keys.publicKey,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
+      case ACTIONS.registerFioDomain: {
+        const { fioDomain } = asFioDomainParam(params)
+        fee = await this.getFee(EndPoint.registerFioDomain)
+        txParams = {
+          account: 'fio.address',
+          action: 'regdomain',
+          data: {
+            fio_domain: fioDomain,
+            owner_fio_public_key: this.walletInfo.keys.publicKey,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
+      case ACTIONS.renewFioDomain: {
+        const { fioDomain } = asFioDomainParam(params)
+        fee = await this.getFee(EndPoint.renewFioDomain)
+        txParams = {
+          account: 'fio.address',
+          action: 'renewdomain',
+          data: {
+            fio_domain: fioDomain,
+            max_fee: fee,
+            actor: this.actor
+          }
+        }
+        break
+      }
       default: {
         // Do nothing
       }
@@ -1740,7 +1729,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    let trx
+    let trx: FioBroadcastResult
     const otherParams = getOtherParams(edgeTransaction)
 
     if (otherParams.action?.name == null) {
@@ -1759,6 +1748,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         otherParams.action.params
       )
     }
+    trx = asFioBroadcastResult(trx)
 
     edgeTransaction.metadata = {
       notes: trx.transaction_id
@@ -1768,12 +1758,17 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     edgeTransaction.blockHeight = trx.block_num
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
+    // Save additional return values to otherParams
+    // eslint-disable-next-line
+    const { block_num, block_time, transaction_id, ...broadcastResult } = trx
+    edgeTransaction.otherParams = { ...otherParams, broadcastResult }
+
     return edgeTransaction
   }
 
   async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
     const otherParams = getOtherParams(edgeTransaction)
-    const { action } = otherParams
+    const { broadcastResult = {}, action } = otherParams
     const { name, params } = asFioAction(action)
 
     // Attempt post-broadcast actions
@@ -1795,6 +1790,48 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           )
           if (transferredAddressIndex >= 0) {
             this.otherData.fioAddresses.splice(transferredAddressIndex, 1)
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.registerFioAddress: {
+          const { fioAddress } = asFioAddressParam(params)
+          const addressAlreadyAdded = this.otherData.fioAddresses.find(
+            ({ name }) => name === fioAddress
+          )
+          if (addressAlreadyAdded == null) {
+            this.otherData.fioAddresses.push({
+              name: fioAddress,
+              bundledTxs: undefined
+            })
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.registerFioDomain: {
+          const { fioDomain } = asFioDomainParam(params)
+          if (broadcastResult.expiration == null)
+            throw new Error('expiration not present')
+
+          const renewedDomain = this.otherData.fioDomains.find(
+            ({ name }) => name === fioDomain
+          )
+          if (renewedDomain != null) {
+            renewedDomain.expiration = broadcastResult.expiration
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.renewFioDomain: {
+          const { fioDomain } = asFioDomainParam(params)
+          if (broadcastResult.expiration == null)
+            throw new Error('expiration not present')
+
+          const renewedDomain = this.otherData.fioDomains.find(
+            ({ name }) => name === fioDomain
+          )
+          if (renewedDomain != null) {
+            renewedDomain.expiration = broadcastResult.expiration
             this.localDataDirty()
           }
           break

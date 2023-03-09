@@ -73,6 +73,10 @@ export const asFioAddressParam = asObject({
   fioAddress: asString
 })
 
+export const asFioDomainParam = asObject({
+  fioDomain: asString
+})
+
 export const asFioTransferDomainParams = asObject({
   fioDomain: asString
 })
@@ -87,3 +91,11 @@ export const asFioConnectAddressesParams = asObject({
     })
   )
 })
+
+export const asFioBroadcastResult = asObject({
+  block_num: asNumber,
+  block_time: asString,
+  transaction_id: asString
+}).withRest
+
+export type FioBroadcastResult = ReturnType<typeof asFioBroadcastResult>
