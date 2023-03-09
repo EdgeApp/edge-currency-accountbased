@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.16 (2023-03-08)
+
+- added: Parse/quote Smartpay PIX QR codes for Tron/USDT
+
 ## 0.22.15 (2023-03-08)
 
 - EVM: Add L1 gas price multiplier
