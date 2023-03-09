@@ -135,9 +135,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
     if (this.polkadotApi == null) {
       this.polkadotApi = await ApiPromise.create({
         initWasm: false,
-        provider: new WsProvider(
-          this.currencyInfo.defaultSettings.otherSettings.rpcNodes[0]
-        )
+        provider: new WsProvider(this.networkInfo.rpcNodes[0])
       })
     }
     this.polkadotApiSubscribers.add(walletId)

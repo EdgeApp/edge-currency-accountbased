@@ -29,7 +29,6 @@ import {
   asTransactions,
   asTransfer,
   PolkadotNetworkInfo,
-  PolkadotSettings,
   PolkadotWalletOtherData,
   SubscanResponse,
   SubscanTx
@@ -42,7 +41,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const queryTxMutex = makeMutex()
 
 export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
-  settings: PolkadotSettings
+  networkInfo: PolkadotNetworkInfo
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
   keypair!: Keyring
@@ -55,7 +54,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
-    this.settings = tools.currencyInfo.defaultSettings.otherSettings
+    this.networkInfo = env.networkInfo
     this.nonce = 0
   }
 
@@ -76,7 +75,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       body: JSON.stringify(body)
     }
     const response = await this.io.fetch(
-      this.settings.subscanBaseUrl + endpoint,
+      this.networkInfo.subscanBaseUrl + endpoint,
       options
     )
     if (!response.ok || response.status === 429) {
@@ -165,12 +164,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   async queryTransactionsInner(): Promise<void> {
     // Skip pages we don't need
     let page = Math.floor(
-      this.otherData.txCount / this.settings.subscanQueryLimit
+      this.otherData.txCount / this.networkInfo.subscanQueryLimit
     )
 
     while (true) {
       const payload = {
-        row: this.settings.subscanQueryLimit,
+        row: this.networkInfo.subscanQueryLimit,
         page,
         address: this.walletInfo.keys.publicKey
       }
@@ -206,7 +205,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 
       // If we haven't reached the end, Update local txCount and progress and then query the next page
       this.otherData.txCount =
-        page * this.settings.subscanQueryLimit + transfers.length
+        page * this.networkInfo.subscanQueryLimit + transfers.length
 
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
         Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
@@ -267,7 +266,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.settings.existentialDeposit)
+    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
 
     const tempSpendTarget = [
       {
@@ -291,7 +290,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       const paddedHex = hex.length % 2 === 1 ? `0${hex}` : hex
       const lengthFee = mul(
         div(paddedHex.length.toString(), '2'),
-        this.settings.lengthFeePerByte
+        this.networkInfo.lengthFeePerByte
       )
 
       const totalAmount = add(add(lengthFee, fee), mid)
@@ -321,7 +320,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     const balance = this.getBalance({
       currencyCode: this.currencyInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.settings.existentialDeposit)
+    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
 
     if (gt(nativeAmount, spendableBalance)) {
       throw new InsufficientFundsError()
@@ -339,7 +338,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     // The fee returned from partial fee is always off by the length fee, because reasons
     const nativeNetworkFee = sub(
       paymentInfo.partialFee.toString(),
-      this.settings.lengthFeePerByte
+      this.networkInfo.lengthFeePerByte
     )
 
     const totalTxAmount = add(nativeAmount, nativeNetworkFee)

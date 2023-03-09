@@ -2,13 +2,9 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { PolkadotTools } from './polkadotPlugin'
-import type { PolkadotNetworkInfo, PolkadotSettings } from './polkadotTypes'
+import type { PolkadotNetworkInfo } from './polkadotTypes'
 
 const networkInfo: PolkadotNetworkInfo = {
-  polkadot: true
-}
-
-const otherSettings: PolkadotSettings = {
   rpcNodes: ['wss://rpc.polkadot.io'],
   genesisHash:
     '0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3',
@@ -18,10 +14,6 @@ const otherSettings: PolkadotSettings = {
   lengthFeePerByte: '1000000'
 }
 
-const defaultSettings: any = {
-  otherSettings
-}
-
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'DOT',
@@ -29,7 +21,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'polkadot',
   walletType: 'wallet:polkadot',
 
-  defaultSettings,
+  defaultSettings: {},
 
   addressExplorer: 'https://polkadot.subscan.io/account/%s',
   transactionExplorer: 'https://polkadot.subscan.io/extrinsic/%s',

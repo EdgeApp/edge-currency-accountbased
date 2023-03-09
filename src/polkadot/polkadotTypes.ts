@@ -10,11 +10,6 @@ import {
 } from 'cleaners'
 
 export interface PolkadotNetworkInfo {
-  // TODO: Replace this placeholder with `typeof otherSettings`:
-  polkadot: true
-}
-
-export interface PolkadotSettings {
   rpcNodes: string[]
   genesisHash: string
   existentialDeposit: string
