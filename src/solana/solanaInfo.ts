@@ -2,13 +2,9 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { SolanaTools } from './solanaPlugin'
-import type { SolanaNetworkInfo, SolanaSettings } from './solanaTypes'
+import type { SolanaNetworkInfo } from './solanaTypes'
 
 const networkInfo: SolanaNetworkInfo = {
-  solana: true
-}
-
-const otherSettings: SolanaSettings = {
   rpcNodes: [
     // 'https://solana-api.projectserum.com', // Doesn't have full history
     'https://ssc-dao.genesysgo.net',
@@ -20,10 +16,6 @@ const otherSettings: SolanaSettings = {
   memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 }
 
-const defaultSettings: any = {
-  otherSettings
-}
-
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'SOL',
@@ -31,7 +23,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'solana',
   walletType: 'wallet:solana',
 
-  defaultSettings,
+  defaultSettings: {},
 
   addressExplorer: 'https://explorer.solana.com/address/%s',
   transactionExplorer: 'https://explorer.solana.com/tx/%s',

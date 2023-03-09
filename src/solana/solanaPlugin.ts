@@ -54,7 +54,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     const keypair = await createKeyPair(
       mnemonic,
-      this.currencyInfo.defaultSettings.otherSettings.derivationPath
+      this.networkInfo.derivationPath
     )
 
     return {

@@ -9,11 +9,6 @@ import {
 } from 'cleaners'
 
 export interface SolanaNetworkInfo {
-  // TODO: Replace this placeholder with `typeof otherSettings`:
-  solana: true
-}
-
-export interface SolanaSettings {
   rpcNodes: string[]
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number

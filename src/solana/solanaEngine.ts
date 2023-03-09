@@ -30,7 +30,6 @@ import {
   RpcGetTransaction,
   RpcSignatureForAddress,
   SolanaNetworkInfo,
-  SolanaSettings,
   SolanaWalletOtherData
 } from './solanaTypes'
 
@@ -47,13 +46,13 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class SolanaEngine extends CurrencyEngine<SolanaTools> {
+  networkInfo: SolanaNetworkInfo
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
   chainCode: string
   otherData!: SolanaWalletOtherData
   fetchCors: EdgeFetchFunction
-  settings: SolanaSettings
   progressRatio: number
 
   constructor(
@@ -63,12 +62,12 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     opts: any // EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.networkInfo = env.networkInfo
     const fetchCors = getFetchCors(env)
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = fetchCors
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
-    this.settings = tools.currencyInfo.defaultSettings.otherSettings
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
   }
@@ -94,7 +93,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
       body: JSON.stringify(body)
     }
 
-    const funcs = this.settings.rpcNodes.map(serverUrl => async () => {
+    const funcs = this.networkInfo.rpcNodes.map(serverUrl => async () => {
       const res = await this.fetchCors(serverUrl, options)
       if (!res.ok) {
         throw new Error(
@@ -113,7 +112,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     try {
       const response = await this.fetchRpc('getBalance', [
         this.base58PublicKey,
-        { commitment: this.settings.commitment }
+        { commitment: this.networkInfo.commitment }
       ])
       const balance = asRpcBalance(response)
       this.updateBalance(this.chainCode, balance.value.toString())
@@ -200,8 +199,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
           {
             until,
             before,
-            limit: this.settings.txQueryLimit,
-            commitment: this.settings.commitment
+            limit: this.networkInfo.txQueryLimit,
+            commitment: this.networkInfo.commitment
           }
         ]
         const response: RpcSignatureForAddress[] = await this.fetchRpc(
@@ -210,8 +209,8 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
         )
         // @ts-expect-error
         txids = txids.concat(response)
-        if (response.length < this.settings.txQueryLimit) break // RPC limit
-        before = response[this.settings.txQueryLimit - 1].signature
+        if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
+        before = response[this.networkInfo.txQueryLimit - 1].signature
       }
     } catch (e: any) {
       this.error('getTransactionSignatures failed with error: ', e)
@@ -231,7 +230,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
         const tx = asRpcGetTransaction(
           await this.fetchRpc('getTransaction', [
             txids[i].signature,
-            { encoding: 'json', commitment: this.settings.commitment }
+            { encoding: 'json', commitment: this.networkInfo.commitment }
           ])
         )
 
@@ -352,7 +351,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
             isWritable: true
           }
         ],
-        programId: new PublicKey(this.settings.memoPublicKey),
+        programId: new PublicKey(this.networkInfo.memoPublicKey),
         data: Buffer.from(memo)
       })
       solTx.add(memoOpts)
