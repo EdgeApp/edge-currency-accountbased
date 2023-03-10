@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.22.18 (2023-03-10)
+
+- Fix: Lower Optimism minGasPrice
+
 ## 0.22.17 (2023-03-09)
 
 - HBAR: Update explorer URL
