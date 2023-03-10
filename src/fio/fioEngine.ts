@@ -73,6 +73,8 @@ import {
   asFioConnectAddressesParams,
   asFioDomainParam,
   asFioFee,
+  asFioRecordObtData,
+  asFioRequestFundsParams,
   asFioSignedTx,
   asFioTransferDomainParams,
   asFioTxParams,
@@ -142,52 +144,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
-        switch (actionName) {
-          case 'requestFunds': {
-            const { fee } = await this.multicastServers(
-              // @ts-expect-error
-              FEE_ACTION_MAP[actionName].action,
-              {
-                [FEE_ACTION_MAP[actionName].propName]:
-                  params[FEE_ACTION_MAP[actionName].propName]
-              }
-            )
-            params.maxFee = fee
-
-            break
-          }
-          case 'recordObtData': {
-            const { fee } = await this.multicastServers(
-              // @ts-expect-error
-              FEE_ACTION_MAP[actionName].action,
-              {
-                [FEE_ACTION_MAP[actionName].propName]:
-                  params[FEE_ACTION_MAP[actionName].propName]
-              }
-            )
-            params.maxFee = fee
-
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (params.fioRequestId) {
-              this.otherData.fioRequestsToApprove[params.fioRequestId] = params
-              this.localDataDirty()
-              const res = await this.multicastServers(actionName, params)
-              // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-              if (res && res.status === 'sent_to_blockchain') {
-                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-                delete this.otherData.fioRequestsToApprove[params.fioRequestId]
-                this.removeFioRequest(
-                  params.fioRequestId,
-                  FIO_REQUESTS_TYPES.PENDING
-                )
-                this.localDataDirty()
-              }
-              return res
-            }
-            break
-          }
-        }
-
         return await this.multicastServers(actionName, params)
       },
       getFee: async (
@@ -1679,6 +1635,18 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         }
         break
       }
+      case ACTIONS.recordObtData: {
+        const { payerFioAddress } = asFioRecordObtData(params)
+        fee = await this.getFee(EndPoint.recordObtData, payerFioAddress)
+        // Need private key to craft transaction
+        break
+      }
+      case ACTIONS.requestFunds: {
+        const { payeeFioAddress } = asFioRequestFundsParams(params)
+        fee = await this.getFee(EndPoint.newFundsRequest, payeeFioAddress)
+        // Need private key to craft transaction
+        break
+      }
       default: {
         // Do nothing
       }
@@ -1716,33 +1684,132 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
-    const txParams = asMaybe(asFioTxParams)(otherParams.txParams)
+    let txParams = asMaybe(asFioTxParams)(otherParams.txParams)
+    const transactions = new Transactions()
 
-    if (txParams != null) {
-      const transactions = new Transactions()
+    if (txParams == null) {
+      const { name, params } = asFioAction(otherParams.action)
+      const { networkFee } = edgeTransaction
 
-      const rawTx = await transactions.createRawTransaction({
-        action: txParams.action,
-        account: txParams.account,
-        data: { ...txParams.data, tpid: this.tpid },
-        publicKey: this.walletInfo.keys.publicKey,
-        chainData: this.refBlock
-      })
-      const { serializedContextFreeData, serializedTransaction } =
-        await transactions.serialize({
-          chainId: this.networkInfo.chainId,
-          transaction: rawTx
-        })
-      const signedTx = await transactions.sign({
-        chainId: this.networkInfo.chainId,
-        privateKeys: [this.walletInfo.keys.fioKey],
-        transaction: rawTx,
-        serializedTransaction,
-        serializedContextFreeData
-      })
+      // let txParams: FioTxParams | undefined
+      switch (name) {
+        case ACTIONS.recordObtData: {
+          const {
+            payerFioAddress,
+            payeeFioAddress,
+            payerPublicAddress,
+            payeePublicAddress,
+            amount,
+            tokenCode,
+            chainCode,
+            obtId,
+            memo,
+            status,
+            fioRequestId
+          } = asFioRecordObtData(params)
+          const content = {
+            payer_public_address: payerPublicAddress,
+            payee_public_address: payeePublicAddress,
+            amount,
+            chain_code: chainCode,
+            token_code: tokenCode,
+            status,
+            obt_id: obtId,
+            memo,
+            hash: undefined,
+            offline_url: undefined
+          }
+          const cipherContent = transactions.getCipherContent(
+            'record_obt_data_content',
+            content,
+            this.walletInfo.keys.fioKey,
+            this.walletInfo.keys.publicKey
+          )
+          txParams = {
+            account: 'fio.reqobt',
+            action: 'recordobt',
+            data: {
+              payer_fio_address: payerFioAddress,
+              payee_fio_address: payeeFioAddress,
+              content: cipherContent,
+              fio_request_id: fioRequestId,
+              max_fee: networkFee,
+              actor: this.actor
+            }
+          }
 
-      edgeTransaction.otherParams = { ...edgeTransaction.otherParams, signedTx }
+          if (fioRequestId != null) {
+            this.otherData.fioRequestsToApprove[fioRequestId] = params
+            this.localDataDirty()
+          }
+
+          break
+        }
+        case ACTIONS.requestFunds: {
+          const {
+            payerFioAddress,
+            payeeFioAddress,
+            payeeTokenPublicAddress,
+            amount,
+            chainCode,
+            tokenCode,
+            memo
+          } = asFioRequestFundsParams(params)
+          const content = {
+            payee_public_address: payeeTokenPublicAddress,
+            amount,
+            chain_code: chainCode,
+            token_code: tokenCode,
+            memo,
+            hash: undefined,
+            offline_url: undefined
+          }
+          const cipherContent = transactions.getCipherContent(
+            'new_funds_content',
+            content,
+            this.walletInfo.keys.fioKey,
+            this.walletInfo.keys.publicKey
+          )
+          txParams = {
+            account: 'fio.reqobt',
+            action: 'newfundsreq',
+            data: {
+              payer_fio_address: payerFioAddress,
+              payee_fio_address: payeeFioAddress,
+              content: cipherContent,
+              max_fee: networkFee,
+              actor: this.actor
+            }
+          }
+          break
+        }
+        default: {
+          throw new Error('Unknown FIO action')
+        }
+      }
     }
+
+    const rawTx = await transactions.createRawTransaction({
+      action: txParams.action,
+      account: txParams.account,
+      data: { ...txParams.data, tpid: this.tpid },
+      publicKey: this.walletInfo.keys.publicKey,
+      chainData: this.refBlock
+    })
+    const { serializedContextFreeData, serializedTransaction } =
+      await transactions.serialize({
+        chainId: this.networkInfo.chainId,
+        transaction: rawTx
+      })
+    const signedTx = await transactions.sign({
+      chainId: this.networkInfo.chainId,
+      privateKeys: [this.walletInfo.keys.fioKey],
+      transaction: rawTx,
+      serializedTransaction,
+      serializedContextFreeData
+    })
+
+    edgeTransaction.otherParams = { ...edgeTransaction.otherParams, signedTx }
     return edgeTransaction
   }
 
@@ -1884,6 +1951,19 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           const { fioRequestId } = asCancelFundsRequest(params)
           if (typeof fioRequestId === 'string') {
             this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.SENT)
+            this.localDataDirty()
+          }
+          break
+        }
+        case ACTIONS.recordObtData: {
+          const { fioRequestId } = asFioRecordObtData(params)
+          if (
+            fioRequestId != null &&
+            broadcastResult.status === 'sent_to_blockchain'
+          ) {
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete this.otherData.fioRequestsToApprove[fioRequestId]
+            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.PENDING)
             this.localDataDirty()
           }
           break

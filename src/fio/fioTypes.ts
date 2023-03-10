@@ -3,8 +3,10 @@ import {
   asBoolean,
   asNumber,
   asObject,
+  asOptional,
   asString,
-  asUnknown
+  asUnknown,
+  asValue
 } from 'cleaners'
 
 import { FIO_REQUESTS_TYPES } from './fioConst'
@@ -117,6 +119,33 @@ export const asRejectFundsRequest = asObject({
 export const asCancelFundsRequest = asObject({
   fioAddress: asString,
   fioRequestId: asNumber
+})
+
+export const asFioRecordObtData = asObject({
+  payerFioAddress: asString,
+  payeeFioAddress: asString,
+  payerPublicAddress: asString,
+  payeePublicAddress: asString,
+  amount: asString,
+  tokenCode: asString,
+  chainCode: asString,
+  obtId: asString,
+  memo: asString,
+  status: asOptional(
+    asValue('cancelled', 'rejected', 'requested', 'sent_to_blockchain')
+  ),
+  fioRequestId: asOptional(asNumber)
+})
+
+export const asFioRequestFundsParams = asObject({
+  payerFioAddress: asString,
+  payerFioPublicKey: asString,
+  payeeFioAddress: asString,
+  payeeTokenPublicAddress: asString,
+  amount: asString,
+  chainCode: asString,
+  tokenCode: asString,
+  memo: asString
 })
 
 export const asFioBroadcastResult = asObject({
