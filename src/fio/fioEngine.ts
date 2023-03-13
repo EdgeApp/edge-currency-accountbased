@@ -36,13 +36,11 @@ import {
 import {
   ACTIONS,
   ACTIONS_TO_END_POINT_KEYS,
-  ACTIONS_TO_FEE_END_POINT_KEYS,
   ACTIONS_TO_TX_ACTION_NAME,
   asFioWalletOtherData,
   BROADCAST_ACTIONS,
   DAY_INTERVAL,
   DEFAULT_BUNDLED_TXS_AMOUNT,
-  FEE_ACTION_MAP,
   FIO_REQUESTS_TYPES,
   FioAddress,
   FioDomain,
@@ -142,16 +140,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
         return await this.multicastServers(actionName, params)
-      },
-      getFee: async (
-        actionName: string,
-        fioAddress: string = ''
-      ): Promise<number> => {
-        const { fee } = await this.multicastServers('getFee', {
-          endPoint: EndPoint[ACTIONS_TO_FEE_END_POINT_KEYS[actionName]],
-          fioAddress
-        })
-        return fee
       },
       getFioAddresses: async (): Promise<FioAddress[]> => {
         return this.otherData.fioAddresses
@@ -1381,7 +1369,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
     const { name, params } = asFioAction(otherParams.action)
 
-    let fee
+    let fee: string
     let txParams: FioTxParams | undefined
     switch (name) {
       case ACTIONS.transferTokens: {
@@ -1627,19 +1615,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         break
       }
       default: {
-        // Do nothing
+        throw new Error('Unrecognized FIO action')
       }
-    }
-
-    if (fee == null) {
-      let feeFioAddress = ''
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (FEE_ACTION_MAP[name] != null && params) {
-        feeFioAddress = params[FEE_ACTION_MAP[name].propName] as string
-      }
-      // @ts-expect-error
-      fee = await this.otherMethods.getFee(name, feeFioAddress)
-      params.maxFee = fee
     }
 
     const edgeTransaction: EdgeTransaction = {

@@ -81,24 +81,6 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   addBundledTransactions: 'addBundledTransactions'
 } as const
 
-export const ACTIONS_TO_FEE_END_POINT_KEYS = {
-  [ACTIONS.requestFunds]: 'newFundsRequest',
-  [ACTIONS.registerFioAddress]: 'registerFioAddress',
-  [ACTIONS.registerFioDomain]: 'registerFioDomain',
-  [ACTIONS.renewFioDomain]: 'renewFioDomain',
-  [ACTIONS.addPublicAddresses]: 'addPubAddress',
-  [ACTIONS.setFioDomainPublic]: 'setFioDomainPublic',
-  [ACTIONS.rejectFundsRequest]: 'rejectFundsRequest',
-  [ACTIONS.recordObtData]: 'recordObtData',
-  [ACTIONS.transferTokens]: 'transferTokens',
-  [ACTIONS.pushTransaction]: 'pushTransaction',
-  [ACTIONS.transferFioAddress]: 'transferFioAddress',
-  [ACTIONS.transferFioDomain]: 'transferFioDomain',
-  [ACTIONS.addBundledTransactions]: 'addBundledTransactions',
-  [ACTIONS.stakeFioTokens]: 'stakeFioTokens',
-  [ACTIONS.unStakeFioTokens]: 'unStakeFioTokens'
-} as const
-
 export const ACTIONS_TO_TX_ACTION_NAME = {
   [ACTIONS.transferTokens]: 'trnsfiopubky',
   [ACTIONS.stakeFioTokens]: 'stakefio',
@@ -109,35 +91,6 @@ export const ACTIONS_TO_TX_ACTION_NAME = {
 export const FIO_REQUESTS_TYPES = {
   PENDING: 'PENDING',
   SENT: 'SENT'
-}
-
-export const FEE_ACTION_MAP = {
-  [ACTIONS.addPublicAddress]: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  [ACTIONS.addPublicAddresses]: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  [ACTIONS.rejectFundsRequest]: {
-    action: 'getFeeForRejectFundsRequest',
-    propName: 'payerFioAddress'
-  },
-  [ACTIONS.requestFunds]: {
-    action: 'getFeeForNewFundsRequest',
-    propName: 'payeeFioAddress'
-  },
-  [ACTIONS.recordObtData]: {
-    action: 'getFeeForRecordObtData',
-    propName: 'payerFioAddress'
-  },
-  [ACTIONS.stakeFioTokens]: {
-    propName: 'fioAddress'
-  },
-  [ACTIONS.unStakeFioTokens]: {
-    propName: 'fioAddress'
-  }
 }
 
 export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
