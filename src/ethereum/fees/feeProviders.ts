@@ -252,7 +252,12 @@ export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
   { currencyCode }: EdgeCurrencyInfo
 ): Promise<EthereumFees> => {
-  const result = await fetchInfo(`v1/networkFees/${currencyCode}`)
+  const result = await fetchInfo(
+    `v1/networkFees/${currencyCode}`,
+    undefined,
+    undefined,
+    fetch
+  )
   const json = await result.json()
   return asEthereumFees(json)
 }
