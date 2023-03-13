@@ -108,7 +108,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   fetchCors: EdgeFetchFunction
   otherMethods: Object
   tpid: string
-  fioSdk!: FIOSDK
   otherData!: FioWalletOtherData
   networkInfo: FioNetworkInfo
   refBlock: FioRefBlock
@@ -139,8 +138,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
     this.fees = new Map()
     this.actor = FIOSDK.accountHash(this.walletInfo.keys.publicKey).accountnm
-
-    this.fioSdkInit()
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -228,22 +225,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  fioSdkInit() {
-    const baseUrl = shuffleArray(
-      this.networkInfo.apiUrls.map(apiUrl => apiUrl)
-    )[0]
-
-    this.fioSdk = new FIOSDK(
-      this.walletInfo.keys.fioKey,
-      this.walletInfo.keys.publicKey,
-      baseUrl,
-      this.fetchCors,
-      undefined,
-      this.tpid
-    )
   }
 
   // Poll on the blockheight
@@ -645,14 +626,12 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     if (!this.networkInfo.historyNodeUrls[historyNodeIndex]) return false
     let newHighestTxHeight = this.otherData.highestTxHeight
     let lastActionSeqNumber = 0
-    const actor = this.fioSdk.transactions.getActor(
-      this.walletInfo.keys.publicKey
-    )
+
     try {
       const lastActionObject = await this.requestHistory(
         historyNodeIndex,
         {
-          account_name: actor,
+          account_name: this.actor,
           pos: -1,
           offset: -1
         },
@@ -689,7 +668,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         actionsObject = await this.requestHistory(
           historyNodeIndex,
           {
-            account_name: actor,
+            account_name: this.actor,
             pos,
             offset: -HISTORY_NODE_OFFSET + 1
           },
@@ -712,7 +691,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         for (let i = actions.length - 1; i > -1; i--) {
           const action = actions[i]
           asFioHistoryNodeAction(action)
-          const blockNum = this.processTransaction(action, actor)
+          const blockNum = this.processTransaction(action, this.actor)
 
           if (blockNum > newHighestTxHeight) {
             newHighestTxHeight = blockNum
