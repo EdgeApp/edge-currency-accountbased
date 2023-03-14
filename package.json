@@ -76,7 +76,7 @@
     "@binance-chain/javascript-sdk": "^4.2.0",
     "@ethereumjs/common": "^2.4.0",
     "@ethereumjs/tx": "^3.3.0",
-    "@fioprotocol/fiosdk": "^1.5.0",
+    "@fioprotocol/fiosdk": "https://github.com/peachbits/fiosdk_typescript.git#d04449fff9f9b8c1487359a5b6bf64b7b53d0b6b",
     "@greymass/eosio": "^0.6.8",
     "@greymass/eosio-resources": "^0.7.0",
     "@hashgraph/sdk": "^1.1.9",

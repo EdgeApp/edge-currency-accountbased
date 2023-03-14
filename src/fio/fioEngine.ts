@@ -3,7 +3,6 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
-import { Constants as FioConstants } from '@fioprotocol/fiosdk/lib/utils/constants'
 import { add, div, gt, max, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -376,8 +375,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
       }
     }
-
-    await this.checkAbiAccounts()
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -403,29 +400,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       this.tpid,
       true
     )
-  }
-
-  async checkAbiAccounts(): Promise<void> {
-    if (Transactions.abiMap.size === FioConstants.rawAbiAccountName.length)
-      return
-    await asyncWaterfall(
-      shuffleArray(
-        this.networkInfo.apiUrls.map(
-          apiUrl => async () => await this.loadAbiAccounts(apiUrl)
-        )
-      )
-    )
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async loadAbiAccounts(apiUrl: string) {
-    this.setFioSdkBaseUrl(apiUrl)
-    for (const accountName of FioConstants.rawAbiAccountName) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (Transactions.abiMap.get(accountName)) continue
-      const response = await this.fioSdk.getAbi(accountName)
-      Transactions.abiMap.set(response.account_name, response)
-    }
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
