@@ -1,0 +1,13 @@
+diff --git a/node_modules/@greymass/eosio/lib/eosio-core.m.js b/node_modules/@greymass/eosio/lib/eosio-core.m.js
+index 1e398df..87d90ad 100644
+--- a/node_modules/@greymass/eosio/lib/eosio-core.m.js
++++ b/node_modules/@greymass/eosio/lib/eosio-core.m.js
+@@ -3848,7 +3848,7 @@ class FetchProvider {
+             // ignore json parse errors
+         }
+         const headers = {};
+-        for (const [key, value] of response.headers.entries()) {
++        for (const [key, value] of Object.entries(response.headers)) {
+             headers[key] = value;
+         }
+         return { headers, status: response.status, json, text };

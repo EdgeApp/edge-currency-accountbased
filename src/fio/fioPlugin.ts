@@ -1,5 +1,6 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
+import { PrivateKey } from '@greymass/eosio'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
 import {
@@ -12,7 +13,6 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import ecc from 'eosjs-ecc'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -82,10 +82,7 @@ export class FioTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const keys = {}
     if (/[0-9a-zA-Z]{51}$/.test(userInput)) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!ecc.isValidPrivate(userInput)) {
-        throw new Error('Invalid private key')
-      }
+      PrivateKey.fromString(userInput) // will throw if invalid
 
       // @ts-expect-error
       keys.fioKey = userInput

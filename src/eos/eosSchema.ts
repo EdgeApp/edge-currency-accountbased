@@ -1,10 +1,13 @@
+import { ABIDef } from '@greymass/eosio'
 import {
   asArray,
   asBoolean,
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  asTuple,
+  asValue
 } from 'cleaners'
 
 export const asGetAccountActivationQuote = asObject({
@@ -29,14 +32,14 @@ export const asHyperionTransaction = asObject({
   '@timestamp': asString,
   block_num: asNumber,
   act: asObject({
-    authorization: asOptional(
-      asArray(
-        asObject({
-          actor: asString,
-          permission: asString
-        })
-      )
-    ),
+    // authorization: asOptional(
+    //   asArray(
+    //     asObject({
+    //       actor: asString,
+    //       permission: asString
+    //     })
+    //   )
+    // ),
     data: asObject({
       from: asString,
       to: asString,
@@ -47,9 +50,15 @@ export const asHyperionTransaction = asObject({
   })
 })
 
+export type HyperionTransaction = ReturnType<typeof asHyperionTransaction>
+
 export const asHyperionGetTransactionResponse = asObject({
   actions: asArray(asHyperionTransaction)
 })
+
+export type HyperionGetTransactionResponse = ReturnType<
+  typeof asHyperionGetTransactionResponse
+>
 
 export const asDfuseGetKeyAccountsResponse = asObject({
   account_names: asArray(asString)
@@ -69,13 +78,15 @@ export const asDfuseTransaction = asObject({
           memo: asString,
           quantity: asString,
           to: asString
-        }),
-        authorization: asArray(
-          asObject({
-            actor: asString,
-            permission: asString
-          })
-        )
+        })
+        // authorization: asOptional(
+        //   asArray(
+        //     asObject({
+        //       actor: asString,
+        //       permission: asString
+        //     })
+        //   )
+        // )
       })
     )
   })
@@ -134,3 +145,63 @@ export const asEosTransactionSuperNodeSchema = asObject({
   '@timestamp': asString,
   block_num: asNumber
 })
+
+export const asEosTransfer = asObject({
+  account: asString,
+  name: asValue('transfer'),
+  authorization: asTuple(
+    asObject({
+      actor: asString,
+      permission: asValue('active')
+    })
+  ),
+  data: asObject({
+    from: asString,
+    to: asString,
+    quantity: asString,
+    memo: asOptional(asString)
+  })
+})
+
+export type EosTransfer = ReturnType<typeof asEosTransfer>
+
+export const asEosOtherParams = asObject({
+  actions: asArray(asEosTransfer),
+  signatures: asArray(asString)
+})
+
+export type EosOtherParams = ReturnType<typeof asEosOtherParams>
+
+export const transferAbi: ABIDef = {
+  structs: [
+    {
+      base: '',
+      name: 'transfer',
+      fields: [
+        { name: 'from', type: 'name' },
+        { name: 'to', type: 'name' },
+        { name: 'quantity', type: 'asset' },
+        { name: 'memo', type: 'string' }
+      ]
+    }
+  ],
+  actions: [{ name: 'transfer', type: 'transfer', ricardian_contract: '' }]
+}
+
+export const powerupAbi: ABIDef = {
+  structs: [
+    {
+      base: '',
+      name: 'powerup',
+      fields: [
+        { name: 'payer', type: 'name' },
+        { name: 'receiver', type: 'name' },
+        { name: 'days', type: 'int32' },
+        { name: 'net_frac', type: 'int64' },
+        { name: 'cpu_frac', type: 'int64' },
+        { name: 'max_payment', type: 'asset' }
+      ]
+    }
+  ],
+  actions: [{ name: 'powerup', type: 'powerup', ricardian_contract: '' }]
+}
