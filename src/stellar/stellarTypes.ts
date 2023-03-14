@@ -1,6 +1,7 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
 export interface StellarNetworkInfo {
+  baseReserve: string
   stellarServers: string[]
 }
 

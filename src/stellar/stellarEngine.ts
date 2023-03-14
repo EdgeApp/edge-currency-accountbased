@@ -517,7 +517,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 
     const networkFee = transaction.fee.toString()
     nativeAmount = add(networkFee, nativeAmount) // Add fee to total
-    const nativeBalance2 = sub(nativeBalance, '10000000') // Subtract the 1 min XLM
+    const nativeBalance2 = sub(nativeBalance, this.networkInfo.baseReserve) // Subtract the 1 min XLM
     if (gt(nativeAmount, nativeBalance2)) {
       throw new InsufficientFundsError()
     }
