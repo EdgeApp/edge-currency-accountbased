@@ -67,7 +67,7 @@ export class FioTools implements EdgeCurrencyTools {
     this.fetchCors = getFetchCors(env)
     this.fioRegApiToken = fioRegApiToken
 
-    const [baseUrl] = pickRandom(currencyInfo.defaultSettings.apiUrls, 1)
+    const [baseUrl] = pickRandom(this.networkInfo.apiUrls, 1)
     this.connection = new FIOSDK(
       '',
       '',
@@ -183,7 +183,7 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         '',
         400,
-        currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
       )
     }
     try {
@@ -195,7 +195,7 @@ export class FioTools implements EdgeCurrencyTools {
         throw new FioError(
           '',
           404,
-          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
+          this.networkInfo.errorCodes.FIO_ADDRESS_IS_NOT_EXIST
         )
       }
     } catch (e: any) {
@@ -207,8 +207,7 @@ export class FioTools implements EdgeCurrencyTools {
         e.json.fields &&
         e.errorCode === 400
       ) {
-        e.labelCode =
-          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        e.labelCode = this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
       }
 
       throw e
@@ -224,7 +223,7 @@ export class FioTools implements EdgeCurrencyTools {
         throw new FioError(
           '',
           404,
-          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
+          this.networkInfo.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
         )
       }
       return result
@@ -232,14 +231,13 @@ export class FioTools implements EdgeCurrencyTools {
       if (
         (e.name === 'FioError' &&
           e.labelCode ===
-            currencyInfo.defaultSettings.errorCodes
-              .FIO_ADDRESS_IS_NOT_LINKED) ||
+            this.networkInfo.errorCodes.FIO_ADDRESS_IS_NOT_LINKED) ||
         e.errorCode === 404
       ) {
         throw new FioError(
           '',
           404,
-          currencyInfo.defaultSettings.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
+          this.networkInfo.errorCodes.FIO_ADDRESS_IS_NOT_LINKED
         )
       }
       throw e
@@ -270,7 +268,7 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         '',
         400,
-        currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
       )
     }
     try {
@@ -289,8 +287,7 @@ export class FioTools implements EdgeCurrencyTools {
         e.json.fields &&
         e.errorCode === 400
       ) {
-        e.labelCode =
-          currencyInfo.defaultSettings.errorCodes.INVALID_FIO_ADDRESS
+        e.labelCode = this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
       }
 
       throw e
@@ -306,10 +303,10 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         '',
         400,
-        currencyInfo.defaultSettings.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
+        this.networkInfo.errorCodes.FIO_DOMAIN_IS_NOT_EXIST
       )
     const result = await this.fetchCors(
-      `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
+      `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.isDomainPublic}/${domain}`,
       {
         method: 'GET'
       }
@@ -319,7 +316,7 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         '',
         result.status,
-        currencyInfo.defaultSettings.errorCodes.IS_DOMAIN_PUBLIC_ERROR,
+        this.networkInfo.errorCodes.IS_DOMAIN_PUBLIC_ERROR,
         data
       )
     }
@@ -365,7 +362,7 @@ export class FioTools implements EdgeCurrencyTools {
     }
     try {
       const result = await this.fetchCors(
-        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
+        `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.buyAddress}`,
         {
           method: 'POST',
           headers,
@@ -374,12 +371,13 @@ export class FioTools implements EdgeCurrencyTools {
       )
       if (!result.ok) {
         const data = await result.json()
-
-        if (currencyInfo.defaultSettings.errorCodes[data.errorCode] != null) {
+        // @ts-expect-error
+        if (this.networkInfo.errorCodes[data.errorCode] != null) {
           throw new FioError(
             data.error,
             result.status,
-            currencyInfo.defaultSettings.errorCodes[data.errorCode],
+            // @ts-expect-error
+            this.networkInfo.errorCodes[data.errorCode],
             data
           )
         }
@@ -388,7 +386,7 @@ export class FioTools implements EdgeCurrencyTools {
           throw new FioError(
             data.error,
             result.status,
-            currencyInfo.defaultSettings.errorCodes.ALREADY_REGISTERED,
+            this.networkInfo.errorCodes.ALREADY_REGISTERED,
             data
           )
         }
@@ -402,28 +400,30 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         safeErrorMessage(e),
         500,
-        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        this.networkInfo.errorCodes.SERVER_ERROR
       )
     }
   }
 
   async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!ref) ref = currencyInfo.defaultSettings.defaultRef
+    if (!ref) ref = this.networkInfo.defaultRef
     try {
       const result = await this.fetchCors(
-        `${currencyInfo.defaultSettings.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
+        `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
         {
           method: 'GET'
         }
       )
       const json = await result.json()
       if (!result.ok) {
-        if (currencyInfo.defaultSettings.errorCodes[json.errorCode] != null) {
+        // @ts-expect-error
+        if (this.networkInfo.errorCodes[json.errorCode] != null) {
           throw new FioError(
             json.error,
             result.status,
-            currencyInfo.defaultSettings.errorCodes[json.errorCode],
+            // @ts-expect-error
+            this.networkInfo.errorCodes[json.errorCode],
             json
           )
         }
@@ -437,7 +437,7 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         safeErrorMessage(e),
         500,
-        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        this.networkInfo.errorCodes.SERVER_ERROR
       )
     }
   }
@@ -445,7 +445,7 @@ export class FioTools implements EdgeCurrencyTools {
   async getStakeEstReturn(): Promise<number | { error: any }> {
     try {
       const result = await this.fetchCors(
-        `${currencyInfo.defaultSettings.fioStakingApyUrl}`,
+        `${this.networkInfo.fioStakingApyUrl}`,
         {
           method: 'GET'
         }
@@ -465,7 +465,7 @@ export class FioTools implements EdgeCurrencyTools {
         }
       } = await result.json()
       if (!result.ok) {
-        throw new Error(currencyInfo.defaultSettings.errorCodes.SERVER_ERROR)
+        throw new Error(this.networkInfo.errorCodes.SERVER_ERROR)
       }
       const apr = json.historical_apr['7day']
       return (apr != null && apr > DEFAULT_APR) || apr == null
@@ -477,7 +477,7 @@ export class FioTools implements EdgeCurrencyTools {
       throw new FioError(
         e.message,
         500,
-        currencyInfo.defaultSettings.errorCodes.SERVER_ERROR
+        this.networkInfo.errorCodes.SERVER_ERROR
       )
     }
   }
@@ -492,8 +492,7 @@ export class FioTools implements EdgeCurrencyTools {
   ): Promise<any> {
     const res = await asyncWaterfall(
       shuffleArray(
-        // @ts-expect-error
-        currencyInfo.defaultSettings.apiUrls.map(apiUrl => async () => {
+        this.networkInfo.apiUrls.map(apiUrl => async () => {
           let out
 
           Transactions.baseUrl = apiUrl

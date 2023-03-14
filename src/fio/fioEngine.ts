@@ -94,6 +94,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   fioSdk!: FIOSDK
   fioSdkPreparedTrx!: FIOSDK
   otherData!: FioWalletOtherData
+  networkInfo: FioNetworkInfo
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -112,6 +113,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.fetchCors = fetchCors
     this.tpid = tpid
     this.recentFioFee = { publicAddress: '', fee: 0 }
+    this.networkInfo = env.networkInfo
 
     this.fioSdkInit()
 
@@ -381,8 +383,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   fioSdkInit() {
     const baseUrl = shuffleArray(
-      // @ts-expect-error
-      this.currencyInfo.defaultSettings.apiUrls.map(apiUrl => apiUrl)
+      this.networkInfo.apiUrls.map(apiUrl => apiUrl)
     )[0]
 
     this.fioSdk = new FIOSDK(
@@ -409,8 +410,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       return
     await asyncWaterfall(
       shuffleArray(
-        this.currencyInfo.defaultSettings.apiUrls.map(
-          // @ts-expect-error
+        this.networkInfo.apiUrls.map(
           apiUrl => async () => await this.loadAbiAccounts(apiUrl)
         )
       )
@@ -460,20 +460,17 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   doInitialBalanceCallback() {
     super.doInitialBalanceCallback()
 
-    const balanceCurrencyCodes =
-      this.currencyInfo.defaultSettings.balanceCurrencyCodes
-    for (const currencyCodeKey in balanceCurrencyCodes) {
+    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
+    for (const currencyCodeKey of Object.values(balanceCurrencyCodes)) {
       try {
         this.currencyEngineCallbacks.onBalanceChanged(
-          balanceCurrencyCodes[currencyCodeKey],
-          this.walletLocalData.totalBalances[
-            balanceCurrencyCodes[currencyCodeKey]
-          ] ?? '0'
+          currencyCodeKey,
+          this.walletLocalData.totalBalances[currencyCodeKey] ?? '0'
         )
       } catch (e: any) {
         this.log.error(
           'doInitialBalanceCallback Error for currencyCode',
-          balanceCurrencyCodes[currencyCodeKey],
+          currencyCodeKey,
           e
         )
       }
@@ -821,8 +818,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
   async checkTransactions(historyNodeIndex: number = 0): Promise<boolean> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!this.currencyInfo.defaultSettings.historyNodeUrls[historyNodeIndex])
-      return false
+    if (!this.networkInfo.historyNodeUrls[historyNodeIndex]) return false
     let newHighestTxHeight = this.otherData.highestTxHeight
     let lastActionSeqNumber = 0
     const actor = this.fioSdk.transactions.getActor(
@@ -954,9 +950,9 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     uri: string
   ): Promise<any> {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex])
+    if (!this.networkInfo.historyNodeUrls[nodeIndex])
       return { error: { noNodeForIndex: true } }
-    const apiUrl = this.currencyInfo.defaultSettings.historyNodeUrls[nodeIndex]
+    const apiUrl = this.networkInfo.historyNodeUrls[nodeIndex]
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const result = await this.fetchCors(`${apiUrl}history/${uri || ''}`, {
       method: 'POST',
@@ -1107,8 +1103,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       )
       const preparedTrx = await asyncWaterfall(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(
-            // @ts-expect-error
+          this.networkInfo.apiUrls.map(
             apiUrl => async () =>
               await this.fioApiRequest(apiUrl, actionName, params, true)
           )
@@ -1121,8 +1116,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       )
       res = await promiseAny(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(
-            // @ts-expect-error
+          this.networkInfo.apiUrls.map(
             async apiUrl =>
               await this.executePreparedTrx(
                 apiUrl,
@@ -1143,8 +1137,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       }
     } else if (actionName === 'getFioNames') {
       res = await promiseNy(
-        this.currencyInfo.defaultSettings.apiUrls.map(
-          // @ts-expect-error
+        this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
@@ -1160,8 +1153,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     } else {
       res = await asyncWaterfall(
         shuffleArray(
-          this.currencyInfo.defaultSettings.apiUrls.map(
-            // @ts-expect-error
+          this.networkInfo.apiUrls.map(
             apiUrl => async () =>
               await this.fioApiRequest(apiUrl, actionName, params)
           )
@@ -1187,8 +1179,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
     const currencyCode = this.currencyInfo.currencyCode
-    const balanceCurrencyCodes =
-      this.currencyInfo.defaultSettings.balanceCurrencyCodes
+    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
 
     // Initialize balance
     if (
@@ -1503,7 +1494,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const lockedBalance =
       this.walletLocalData.totalBalances[
-        this.currencyInfo.defaultSettings.balanceCurrencyCodes.locked
+        this.networkInfo.balanceCurrencyCodes.locked
       ] ?? '0'
     const availableBalance = sub(nativeBalance, lockedBalance)
 
@@ -1578,7 +1569,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       const unlockDate = this.getUnlockDate(new Date())
       const stakedBalance =
         this.walletLocalData.totalBalances[
-          this.currencyInfo.defaultSettings.balanceCurrencyCodes.staked
+          this.networkInfo.balanceCurrencyCodes.staked
         ] ?? '0'
       if (gt(quantity, stakedBalance)) {
         throw new InsufficientFundsError()

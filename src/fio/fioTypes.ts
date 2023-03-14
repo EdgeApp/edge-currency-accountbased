@@ -1,3 +1,6 @@
+import { FIO_REQUESTS_TYPES } from './fioConst'
+import { fioRegApiErrorCodes } from './fioError'
+
 export const fioOtherMethodNames = [
   'getConnectedPublicAddress',
   'isFioAddressValid',
@@ -10,6 +13,19 @@ export const fioOtherMethodNames = [
 ] as const
 
 export interface FioNetworkInfo {
-  // TODO: Replace this placeholder with `typeof otherSettings`:
-  fio: true
+  apiUrls: string[]
+  historyNodeUrls: string[]
+  fioRegApiUrl: string
+  fioDomainRegUrl: string
+  fioAddressRegUrl: string
+  fioStakingApyUrl: string
+  defaultRef: string
+  fallbackRef: string
+  freeAddressRef: string
+  errorCodes: typeof fioRegApiErrorCodes
+  fioRequestsTypes: typeof FIO_REQUESTS_TYPES
+  balanceCurrencyCodes: {
+    staked: 'FIO:STAKED'
+    locked: 'FIO:LOCKED'
+  }
 }

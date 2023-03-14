@@ -4,14 +4,9 @@ import { makeOuterPlugin } from '../common/innerPlugin'
 import { FIO_REQUESTS_TYPES } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './fioPlugin'
-import type { FioNetworkInfo } from './fioTypes'
-import { fioOtherMethodNames } from './fioTypes'
+import { FioNetworkInfo, fioOtherMethodNames } from './fioTypes'
 
 const networkInfo: FioNetworkInfo = {
-  fio: true
-}
-
-const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
     'https://fio.eosdac.io/v1/',
@@ -57,7 +52,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'fio',
   walletType: 'wallet:fio',
 
-  defaultSettings,
+  defaultSettings: { ...networkInfo },
 
   addressExplorer: 'https://fio.bloks.io/key/%s',
   transactionExplorer: 'https://fio.bloks.io/transaction/%s',
