@@ -1,12 +1,18 @@
 # edge-currency-accountbased
 
+## 0.22.19 (2023-03-10)
+
+- removed: Do not use `EdgeCurrencyInfo.defaultSettings` to store network info for most chains.
+- changed: Upgrade EOS to have power-up support. This will make spending EOS work again.
+- changed: Do not allow sending funds to XRP or Polkadot addresses if they would fail to meet activation the reserve requirement.
+
 ## 0.22.18 (2023-03-10)
 
-- Fix: Lower Optimism minGasPrice
+- fixed: Lower Optimism minGasPrice
 
 ## 0.22.17 (2023-03-09)
 
-- HBAR: Update explorer URL
+- changed: Update HBAR explorer URL
 
 ## 0.22.16 (2023-03-08)
 
