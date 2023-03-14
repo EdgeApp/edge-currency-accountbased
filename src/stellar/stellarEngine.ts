@@ -66,6 +66,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
     this.fees = { low: BASE_FEE, standard: BASE_FEE, high: BASE_FEE }
+    this.minimumAddressBalance = this.networkInfo.baseReserve
   }
 
   setOtherData(raw: any): void {

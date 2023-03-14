@@ -56,6 +56,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
     this.nonce = 0
+    this.minimumAddressBalance = this.networkInfo.existentialDeposit
   }
 
   setOtherData(raw: any): void {

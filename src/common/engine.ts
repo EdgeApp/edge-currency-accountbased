@@ -81,6 +81,7 @@ export class CurrencyEngine<
   warn: (message: string, e?: Error) => void
   error: (message: string, e?: Error) => void
   otherData: unknown
+  minimumAddressBalance: string
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -117,6 +118,7 @@ export class CurrencyEngine<
     this.allTokensMap = { ...customTokens, ...env.builtinTokens }
     this.timers = {}
     this.otherData = undefined
+    this.minimumAddressBalance = '0'
 
     this.transactionList[currencyCode] = []
     this.txIdMap[currencyCode] = {}

@@ -99,6 +99,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     const { networkInfo } = env
     this.networkInfo = networkInfo
     this.nonce = 0
+    this.minimumAddressBalance = this.networkInfo.baseReserve
   }
 
   setOtherData(raw: any): void {
