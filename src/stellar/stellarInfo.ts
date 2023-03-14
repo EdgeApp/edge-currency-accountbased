@@ -5,6 +5,7 @@ import type { StellarTools } from './stellarPlugin'
 import type { StellarNetworkInfo } from './stellarTypes'
 
 const networkInfo: StellarNetworkInfo = {
+  baseReserve: '10000000',
   stellarServers: ['https://horizon.stellar.org']
 }
 
