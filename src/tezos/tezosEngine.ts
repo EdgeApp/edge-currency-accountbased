@@ -28,6 +28,7 @@ import {
   asXtzGetTransaction,
   HeadInfo,
   OperationsContainer,
+  TezosNetworkInfo,
   TezosOperation,
   TezosWalletOtherData,
   XtzGetTransaction
@@ -50,16 +51,18 @@ type TezosFunction =
   | 'silentInjection'
 
 export class TezosEngine extends CurrencyEngine<TezosTools> {
+  networkInfo: TezosNetworkInfo
   fetchCors: EdgeFetchFunction
   otherData!: TezosWalletOtherData
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<TezosNetworkInfo>,
     tools: TezosTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.networkInfo = env.networkInfo
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
   }
@@ -123,8 +126,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
 
       case 'getTransactions':
         funcs = this.tools.tezosApiServers.map(server => async () => {
-          // @ts-expect-error
-          const pagination = /tzkt/.test(server)
+          const pagination = server.includes('tzkt')
             ? ''
             : `&p='${params[1]}&number=50`
           const result: XtzGetTransaction = await this.fetchCors(
@@ -150,9 +152,9 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
               params[3],
               params[4],
               null,
-              this.currencyInfo.defaultSettings.limit.gas,
-              this.currencyInfo.defaultSettings.limit.storage,
-              this.currencyInfo.defaultSettings.fee.reveal
+              this.networkInfo.limit.gas,
+              this.networkInfo.limit.storage,
+              this.networkInfo.fee.reveal
             )
             // @ts-expect-error
             .then(function (response) {
@@ -426,7 +428,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
           keys,
           publicAddress,
           div(nativeAmount, denom.multiplier, 6),
-          this.currencyInfo.defaultSettings.fee.transaction
+          this.networkInfo.fee.transaction
         )
       } catch (e: any) {
         error = e
@@ -443,7 +445,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
       networkFee = add(networkFee, operation.fee)
       const burn = await this.isBurn(operation)
       if (burn) {
-        networkFee = add(networkFee, this.currencyInfo.defaultSettings.fee.burn)
+        networkFee = add(networkFee, this.networkInfo.fee.burn)
       }
     }
     nativeAmount = add(nativeAmount, networkFee)
@@ -524,7 +526,7 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<TezosNetworkInfo>,
   tools: TezosTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

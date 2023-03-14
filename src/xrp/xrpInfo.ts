@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { RippleTools } from './xrpPlugin'
-import { XrpNetworkInfo } from './xrpTypes'
+import type { XrpNetworkInfo } from './xrpTypes'
 
 const networkInfo: XrpNetworkInfo = {
   rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],

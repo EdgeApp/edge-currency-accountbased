@@ -2,9 +2,9 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { TezosTools } from './tezosPlugin'
-import { TezosSettings } from './tezosTypes'
+import type { TezosNetworkInfo } from './tezosTypes'
 
-const otherSettings: TezosSettings = {
+const networkInfo: TezosNetworkInfo = {
   // Testnet (alphanet):
   // tezosRpcNodes: [
   //   'https://rpcalpha.tzbeta.net',
@@ -22,12 +22,8 @@ const otherSettings: TezosSettings = {
     //  'https://teznode.letzbake.com',
     'https://mainnet.tezrpc.me'
   ],
-  // @ts-expect-error
-  tezosApiServers: ['https://api.tzkt.io']
-}
+  tezosApiServers: ['https://api.tzkt.io'],
 
-const defaultSettings: any = {
-  otherSettings,
   fee: {
     transaction: '1350',
     reveal: '1300',
@@ -38,6 +34,7 @@ const defaultSettings: any = {
     storage: '277'
   }
 }
+
 export const currencyInfo: EdgeCurrencyInfo = {
   // Basic currency information:
   currencyCode: 'XTZ',
@@ -45,7 +42,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'tezos',
   walletType: 'wallet:tezos',
 
-  defaultSettings,
+  defaultSettings: {},
 
   addressExplorer: 'https://tzstats.com/%s',
   transactionExplorer: 'https://tzstats.com/%s',
@@ -61,9 +58,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [] // Deprecated
 }
 
-export const tezos = makeOuterPlugin<{}, TezosTools>({
+export const tezos = makeOuterPlugin<TezosNetworkInfo, TezosTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import(

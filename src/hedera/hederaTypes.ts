@@ -8,7 +8,7 @@ import {
   asString
 } from 'cleaners'
 
-export interface HederaSettings {
+export interface HederaNetworkInfo {
   creatorApiServers: [string]
   mirrorNodes: [string]
   client: string

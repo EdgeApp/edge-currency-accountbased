@@ -10,6 +10,7 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
@@ -23,16 +24,20 @@ import { ethPlugins } from './ethInfos'
 import { EthereumNetworkInfo, WalletConnectors } from './ethTypes'
 
 export class EthereumTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
   networkInfo: EthereumNetworkInfo
+
   walletConnectors: WalletConnectors
 
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
-    const { io, currencyInfo, networkInfo } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
     this.networkInfo = networkInfo
+
     this.walletConnectors = {}
   }
 

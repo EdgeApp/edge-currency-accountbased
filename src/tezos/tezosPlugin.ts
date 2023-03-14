@@ -4,36 +4,33 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { UriTransaction } from './tezosTypes'
+import type { TezosNetworkInfo, UriTransaction } from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  tezosRpcNodes: Object[]
-  tezosApiServers: Object[]
+  io: EdgeIo
+  networkInfo: TezosNetworkInfo
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { currencyInfo, io } = env
-    this.io = io
+  tezosRpcNodes: string[]
+  tezosApiServers: string[]
+
+  constructor(env: PluginEnvironment<TezosNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
 
-    this.tezosRpcNodes = []
-    for (const rpcNode of currencyInfo.defaultSettings.otherSettings
-      .tezosRpcNodes) {
-      this.tezosRpcNodes.push(rpcNode)
-    }
-
-    this.tezosApiServers = []
-    for (const apiServer of currencyInfo.defaultSettings.otherSettings
-      .tezosApiServers) {
-      this.tezosApiServers.push(apiServer)
-    }
+    this.tezosRpcNodes = [...this.networkInfo.tezosRpcNodes]
+    this.tezosApiServers = [...this.networkInfo.tezosApiServers]
   }
 
   checkAddress(address: string): boolean {
@@ -142,7 +139,7 @@ export class TezosTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<TezosNetworkInfo>
 ): Promise<TezosTools> {
   return new TezosTools(env)
 }

@@ -7,6 +7,11 @@ import {
   asString
 } from 'cleaners'
 
+export interface BinanceNetworkInfo {
+  binanceApiServers: string[]
+  beaconChainApiServers: string[]
+}
+
 export const asBinanceApiNodeInfo = asObject({
   sync_info: asObject({
     latest_block_height: asNumber
@@ -55,10 +60,6 @@ export const asBroadcastTxResponse = asObject({
     })
   )
 })
-export interface BinanceSettings {
-  binanceApiServers: string[]
-  beaconChainApiServers: string[]
-}
 
 export interface BinanceTxOtherParams {
   from: string[]

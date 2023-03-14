@@ -9,7 +9,7 @@ import {
   asUnknown
 } from 'cleaners'
 
-export interface PolkadotSettings {
+export interface PolkadotNetworkInfo {
   rpcNodes: string[]
   genesisHash: string
   existentialDeposit: string

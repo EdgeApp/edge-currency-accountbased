@@ -8,13 +8,14 @@ import {
   EdgeIo,
   EdgeLog,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from './../common/utils'
-import { asGetActivationCost } from './hederaTypes'
+import { asGetActivationCost, HederaNetworkInfo } from './hederaTypes'
 import { createChecksum, validAddress } from './hederaUtils'
 
 // if users want to import their mnemonic phrase in e.g. MyHbarWallet.com
@@ -23,15 +24,19 @@ const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaTools implements EdgeCurrencyTools {
+  builtinTokens: EdgeTokenMap
+  currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   log: EdgeLog
-  currencyInfo: EdgeCurrencyInfo
+  networkInfo: HederaNetworkInfo
 
-  constructor(opts: PluginEnvironment<{}>) {
-    const { currencyInfo, io, log } = opts
+  constructor(env: PluginEnvironment<HederaNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
+    this.builtinTokens = builtinTokens
+    this.currencyInfo = currencyInfo
     this.io = io
     this.log = log
-    this.currencyInfo = currencyInfo
+    this.networkInfo = networkInfo
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
@@ -114,13 +119,12 @@ export class HederaTools implements EdgeCurrencyTools {
     )
 
     if (publicAddress != null) {
-      const { checksumNetworkId } =
-        this.currencyInfo.defaultSettings.otherSettings
+      const { checksumNetworkID } = this.networkInfo
       const [address, checksum] = publicAddress.split('-')
       if (
         !validAddress(publicAddress) ||
         (checksum != null &&
-          checksum !== createChecksum(address, checksumNetworkId))
+          checksum !== createChecksum(address, checksumNetworkID))
       )
         throw new Error('InvalidPublicAddressError')
     }
@@ -163,8 +167,7 @@ export class HederaTools implements EdgeCurrencyTools {
   }
 
   async getActivationCost(): Promise<string | number> {
-    const creatorApiServer =
-      this.currencyInfo.defaultSettings.otherSettings.creatorApiServers[0]
+    const creatorApiServer = this.networkInfo.creatorApiServers[0]
 
     try {
       const response = await this.io.fetch(`${creatorApiServer}/account/cost`)
@@ -184,7 +187,7 @@ export class HederaTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<HederaNetworkInfo>
 ): Promise<HederaTools> {
   return new HederaTools(env)
 }

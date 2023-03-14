@@ -30,22 +30,22 @@ import {
 } from './tronTypes'
 
 export class TronTools implements EdgeCurrencyTools {
-  io: EdgeIo
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  initOptions: TronInitOptions
+  io: EdgeIo
   log: EdgeLog
   networkInfo: TronNetworkInfo
-  initOptions: TronInitOptions
 
   constructor(env: PluginEnvironment<TronNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, log, networkInfo, initOptions } =
+    const { builtinTokens, currencyInfo, initOptions, io, log, networkInfo } =
       env
-    this.io = io
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.initOptions = asTronInitOptions(initOptions)
+    this.io = io
     this.log = log
     this.networkInfo = networkInfo
-    this.initOptions = asTronInitOptions(initOptions)
   }
 
   async importPrivateKey(

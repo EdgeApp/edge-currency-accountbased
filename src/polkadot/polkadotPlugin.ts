@@ -10,6 +10,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -17,21 +18,27 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
+import { PolkadotNetworkInfo } from './polkadotTypes'
 
 const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: PolkadotNetworkInfo
 
   // The SDK is wallet-agnostic and we need to track how many wallets are relying on it and disconnect if zero
   polkadotApi!: ApiPromise
   polkadotApiSubscribers: Set<string>
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { io, currencyInfo } = env
-    this.io = io
+  constructor(env: PluginEnvironment<PolkadotNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
+
     this.polkadotApiSubscribers = new Set()
   }
 
@@ -128,9 +135,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
     if (this.polkadotApi == null) {
       this.polkadotApi = await ApiPromise.create({
         initWasm: false,
-        provider: new WsProvider(
-          this.currencyInfo.defaultSettings.otherSettings.rpcNodes[0]
-        )
+        provider: new WsProvider(this.networkInfo.rpcNodes[0])
       })
     }
     this.polkadotApiSubscribers.add(walletId)
@@ -148,7 +153,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<PolkadotNetworkInfo>
 ): Promise<PolkadotTools> {
   return new PolkadotTools(env)
 }

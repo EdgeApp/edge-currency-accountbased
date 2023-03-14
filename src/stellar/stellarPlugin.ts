@@ -5,6 +5,7 @@ import {
   EdgeEncodeUri,
   EdgeIo,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import stellarApi from 'stellar-sdk'
@@ -14,24 +15,29 @@ import parse from 'url-parse'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { StellarNetworkInfo } from './stellarTypes'
 
 const URI_PREFIX = 'web+stellar'
 
 export class StellarTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  highestTxHeight: number = 0
+  io: EdgeIo
+  networkInfo: StellarNetworkInfo
 
+  highestTxHeight: number = 0
   stellarApiServers: Object[]
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { currencyInfo, io } = env
-    this.io = io
+  constructor(env: PluginEnvironment<StellarNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
+
     stellarApi.Network.usePublicNetwork()
     this.stellarApiServers = []
-    for (const server of currencyInfo.defaultSettings.otherSettings
-      .stellarServers) {
+    for (const server of this.networkInfo.stellarServers) {
       const stellarServer = new stellarApi.Server(server)
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
@@ -178,7 +184,7 @@ export class StellarTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<StellarNetworkInfo>
 ): Promise<StellarTools> {
   return new StellarTools(env)
 }

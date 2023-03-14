@@ -24,6 +24,7 @@ import {
   asFeeStats,
   asStellarWalletOtherData,
   StellarAccount,
+  StellarNetworkInfo,
   StellarOperation,
   StellarTransaction,
   StellarWalletOtherData
@@ -44,6 +45,7 @@ type StellarServerFunction =
   | 'submitTransaction'
 
 export class StellarEngine extends CurrencyEngine<StellarTools> {
+  networkInfo: StellarNetworkInfo
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
@@ -52,12 +54,13 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   otherData!: StellarWalletOtherData
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<StellarNetworkInfo>,
     tools: StellarTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.networkInfo = env.networkInfo
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -78,15 +81,14 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     switch (func) {
       // Functions that should waterfall from top to low priority servers
       case 'feeStats':
-        funcs =
-          this.currencyInfo.defaultSettings.otherSettings.stellarServers.map(
-            (serverUrl: string) => async () => {
-              const response = await fetch(`${serverUrl}/fee_stats`)
-              const result = asFeeStats(await response.json())
+        funcs = this.networkInfo.stellarServers.map(
+          (serverUrl: string) => async () => {
+            const response = await fetch(`${serverUrl}/fee_stats`)
+            const result = asFeeStats(await response.json())
 
-              return { server: serverUrl, result }
-            }
-          )
+            return { server: serverUrl, result }
+          }
+        )
         out = await asyncWaterfall(funcs)
         break
 
@@ -638,7 +640,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<StellarNetworkInfo>,
   tools: StellarTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

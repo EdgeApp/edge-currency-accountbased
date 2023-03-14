@@ -9,12 +9,14 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { BinanceNetworkInfo } from './bnbTypes'
 
 const {
   checkAddress,
@@ -25,12 +27,16 @@ const {
 
 export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  networkInfo: BinanceNetworkInfo
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { io, currencyInfo } = env
-    this.io = io
+  constructor(env: PluginEnvironment<BinanceNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
   }
 
   // will actually use MNEMONIC version of private key
@@ -123,7 +129,7 @@ export class BinanceTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<BinanceNetworkInfo>
 ): Promise<BinanceTools> {
   return new BinanceTools(env)
 }

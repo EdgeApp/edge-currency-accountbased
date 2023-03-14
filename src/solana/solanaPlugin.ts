@@ -10,6 +10,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
@@ -17,6 +18,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
+import { SolanaNetworkInfo } from './solanaTypes'
 
 const { Keypair, PublicKey } = solanaWeb3
 
@@ -32,13 +34,17 @@ const createKeyPair = async (
 }
 
 export class SolanaTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
+  networkInfo: SolanaNetworkInfo
 
-  constructor(env: PluginEnvironment<{}>) {
-    const { currencyInfo, io } = env
-    this.io = io
+  constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
+    this.networkInfo = networkInfo
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {
@@ -48,7 +54,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     const keypair = await createKeyPair(
       mnemonic,
-      this.currencyInfo.defaultSettings.otherSettings.derivationPath
+      this.networkInfo.derivationPath
     )
 
     return {
@@ -142,7 +148,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<{}>
+  env: PluginEnvironment<SolanaNetworkInfo>
 ): Promise<SolanaTools> {
   return new SolanaTools(env)
 }

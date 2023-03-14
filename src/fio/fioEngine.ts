@@ -63,6 +63,7 @@ import {
   FioHistoryNodeAction,
   GetFioName
 } from './fioSchema'
+import { FioNetworkInfo } from './fioTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
@@ -100,7 +101,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   constructor(
-    env: PluginEnvironment<{}>,
+    env: PluginEnvironment<FioNetworkInfo>,
     tools: FioTools,
     walletInfo: EdgeWalletInfo,
     opts: EdgeCurrencyEngineOptions,
@@ -1677,7 +1678,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 }
 
 export async function makeCurrencyEngine(
-  env: PluginEnvironment<{}>,
+  env: PluginEnvironment<FioNetworkInfo>,
   tools: FioTools,
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions

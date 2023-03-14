@@ -8,3 +8,8 @@ export const fioOtherMethodNames = [
   'getDomains',
   'getStakeEstReturn'
 ] as const
+
+export interface FioNetworkInfo {
+  // TODO: Replace this placeholder with `typeof otherSettings`:
+  fio: true
+}

@@ -8,6 +8,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import {
@@ -21,17 +22,19 @@ import { getDenomInfo } from '../common/utils'
 import { UnifiedViewingKey, ZcashNetworkInfo } from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
   networkInfo: ZcashNetworkInfo
 
   KeyTool: typeof KeyToolType
   AddressTool: typeof AddressToolType
 
   constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
-    const { currencyInfo, io, networkInfo } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
     this.networkInfo = networkInfo
 
     const RNAccountbased = env.nativeIo['edge-currency-accountbased']

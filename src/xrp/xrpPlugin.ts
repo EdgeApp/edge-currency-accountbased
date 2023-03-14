@@ -6,6 +6,7 @@ import {
   EdgeIo,
   EdgeParsedUri,
   EdgeToken,
+  EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
 import parse from 'url-parse'
@@ -26,17 +27,21 @@ import { asXrpNetworkLocation, XrpNetworkInfo } from './xrpTypes'
 import { makeTokenId } from './xrpUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
-  io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  io: EdgeIo
   networkInfo: XrpNetworkInfo
+
   rippleApi!: Client
   rippleApiSubscribers: { [walletId: string]: boolean }
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
-    const { currencyInfo, io, networkInfo } = env
-    this.io = io
+    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.io = io
     this.networkInfo = networkInfo
+
     this.rippleApiSubscribers = {}
   }
 

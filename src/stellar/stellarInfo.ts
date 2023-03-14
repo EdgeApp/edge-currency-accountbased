@@ -2,14 +2,10 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { StellarTools } from './stellarPlugin'
-import { StellarSettings } from './stellarTypes'
+import type { StellarNetworkInfo } from './stellarTypes'
 
-const otherSettings: StellarSettings = {
+const networkInfo: StellarNetworkInfo = {
   stellarServers: ['https://horizon.stellar.org']
-}
-
-const defaultSettings: any = {
-  otherSettings
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -19,7 +15,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'stellar',
   walletType: 'wallet:stellar',
 
-  defaultSettings,
+  defaultSettings: {},
 
   memoMaxLength: 19,
 
@@ -37,9 +33,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: [] // Deprecated
 }
 
-export const stellar = makeOuterPlugin<{}, StellarTools>({
+export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({
   currencyInfo,
-  networkInfo: {},
+  networkInfo,
 
   async getInnerPlugin() {
     return await import(

@@ -8,7 +8,7 @@ import {
   asUnknown
 } from 'cleaners'
 
-export interface SolanaSettings {
+export interface SolanaNetworkInfo {
   rpcNodes: string[]
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number
