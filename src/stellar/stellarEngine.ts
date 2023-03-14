@@ -1,4 +1,4 @@
-import { add, div, eq, gt, mul, sub } from 'biggystring'
+import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -71,6 +71,31 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 
   setOtherData(raw: any): void {
     this.otherData = asStellarWalletOtherData(raw)
+  }
+
+  getRecipientBalance = async (recipient: string): Promise<string> => {
+    try {
+      const account: StellarAccount = await this.multicastServers(
+        'loadAccount',
+        recipient
+      )
+      const balanceObj = account.balances.find(
+        bal => bal.asset_type === 'native'
+      )
+      if (balanceObj == null) return '0'
+
+      const denom = getDenomInfo(
+        this.currencyInfo,
+        this.currencyInfo.currencyCode
+      )
+
+      if (denom?.multiplier != null) {
+        return mul(balanceObj.balance, denom.multiplier)
+      }
+    } catch (e: any) {
+      // API will throw if account doesn't exist
+    }
+    return '0'
   }
 
   async multicastServers(
@@ -561,6 +586,15 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
 
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
+
+    const sendAmount = abs(
+      add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+    )
+    await this.checkRecipientMinimumBalance(
+      this.getRecipientBalance,
+      sendAmount,
+      otherParams.toAddress
+    )
 
     // Do signing
     try {

@@ -1,4 +1,15 @@
-import { add, div, eq, gt, log10, lte, mul, sub, toFixed } from 'biggystring'
+import {
+  abs,
+  add,
+  div,
+  eq,
+  gt,
+  log10,
+  lte,
+  mul,
+  sub,
+  toFixed
+} from 'biggystring'
 import {
   EdgeActivationApproveOptions,
   EdgeActivationQuote,
@@ -104,6 +115,19 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
 
   setOtherData(raw: any): void {
     this.otherData = asXrpWalletOtherData(raw)
+  }
+
+  getRecipientBalance = async (recipient: string): Promise<string> => {
+    try {
+      const accountInfo = await this.tools.rippleApi.request({
+        command: 'account_info',
+        account: recipient
+      })
+      return accountInfo.result.account_data.Balance
+    } catch (e: any) {
+      // API will throw if account doesn't exist
+      return '0'
+    }
   }
 
   getTotalReserve(): string {
@@ -621,6 +645,21 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       LastLedgerSequence: this.walletLocalData.blockHeight + LEDGER_OFFSET
     }
     validatePayment(completeTxJson)
+
+    const publicAddress = completeTxJson.Destination
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+
+    if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
+      const nativeAmount = abs(
+        add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+      )
+      await this.checkRecipientMinimumBalance(
+        this.getRecipientBalance,
+        nativeAmount,
+        publicAddress
+      )
+    }
 
     // Do signing
     const privateKey = this.walletInfo.keys.rippleKey

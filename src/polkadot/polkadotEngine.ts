@@ -63,6 +63,15 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     this.otherData = asPolkadotWalletOtherData(raw)
   }
 
+  getRecipientBalance = async (recipient: string): Promise<string> => {
+    try {
+      const account = await this.api.query.system.account(recipient)
+      return account.data.free.toString()
+    } catch (e: any) {
+      return '0'
+    }
+  }
+
   async fetchSubscan(
     endpoint: string,
     body: JsonObject
@@ -376,6 +385,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 
     const nativeAmount = abs(
       add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+    )
+
+    await this.checkRecipientMinimumBalance(
+      this.getRecipientBalance,
+      nativeAmount,
+      publicAddress
     )
 
     // The SDK doesn't support serializable transactions so we need to recreate it

@@ -1,4 +1,4 @@
-import { add, eq, gt, lt } from 'biggystring'
+import { add, div, eq, gt, gte, lt } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
@@ -1020,6 +1020,30 @@ export class CurrencyEngine<
     }
 
     return { edgeSpendInfo, nativeBalance, currencyCode, denom, skipChecks }
+  }
+
+  async checkRecipientMinimumBalance(
+    getBalance: (address: string) => Promise<string>,
+    sendAmount: string,
+    recipient: string
+  ): Promise<void> {
+    if (gte(sendAmount, this.minimumAddressBalance)) return
+
+    const balance = await getBalance(recipient)
+    if (lt(add(sendAmount, balance), this.minimumAddressBalance)) {
+      const denom = this.currencyInfo.denominations.find(
+        denom => denom.name === this.currencyInfo.currencyCode
+      )
+      if (denom == null) throw new Error('Unknown denom')
+
+      const exchangeDenomString = div(
+        this.minimumAddressBalance,
+        denom.multiplier
+      )
+      throw new Error(
+        `Recipient address not activated. A minimum ${exchangeDenomString} ${this.currencyInfo.currencyCode} transfer is required to send funds to this address`
+      )
+    }
   }
 
   // called by GUI after sliding to confirm
