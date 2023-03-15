@@ -295,16 +295,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     txId: string,
     txName: string
   ): void {
-    // Might not be necessary, but better to be safe than sorry
-    if (
-      this.otherData.stakingStatus == null ||
-      this.otherData.stakingStatus.stakedAmounts == null
-    ) {
-      this.otherData.stakingStatus = {
-        stakedAmounts: []
-      }
-    }
-
     const unlockDate = this.getUnlockDate(new Date(this.getUTCDate(blockTime)))
 
     /*
@@ -1171,14 +1161,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       [FIO_REQUESTS_TYPES.SENT]: 'getSentFioRequests'
     }
 
-    if (this.otherData.fioRequests == null) {
-      // @ts-expect-error
-      this.otherData.fioRequests = {
-        [FIO_REQUESTS_TYPES.SENT]: [],
-        [FIO_REQUESTS_TYPES.PENDING]: []
-      }
-    }
-
     let isChanged = false
     let lastPageAmount = ITEMS_PER_PAGE
     let requestsLastPage = 1
@@ -1275,22 +1257,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           )} for ${this.otherData.fioRequestsToApprove[fioRequestId]}`
         )
       }
-    }
-  }
-
-  async clearBlockchainCache(): Promise<void> {
-    await super.clearBlockchainCache()
-    this.otherData.highestTxHeight = 0
-    this.otherData.fioAddresses = []
-    this.otherData.fioDomains = []
-    // @ts-expect-error
-    this.otherData.fioRequests = {
-      [FIO_REQUESTS_TYPES.SENT]: [],
-      [FIO_REQUESTS_TYPES.PENDING]: []
-    }
-    this.otherData.fioRequestsToApprove = {}
-    this.otherData.stakingStatus = {
-      stakedAmounts: []
     }
   }
 
