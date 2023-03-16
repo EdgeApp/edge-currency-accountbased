@@ -114,7 +114,7 @@ export class EosTools implements EdgeCurrencyTools {
       [this.networkInfo.uriProtocol]: true
     })
 
-    if (checkAddress(edgeParsedUri.publicAddress ?? '')) {
+    if (!checkAddress(edgeParsedUri.publicAddress ?? '')) {
       throw new Error('InvalidPublicAddressError')
     }
     return edgeParsedUri
