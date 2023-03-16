@@ -9,7 +9,7 @@ import {
   asValue
 } from 'cleaners'
 
-import { FIO_REQUESTS_TYPES } from './fioConst'
+import { asEncryptedFioRequest, FIO_REQUESTS_TYPES } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
 
 export const fioOtherMethodNames = [
@@ -155,3 +155,12 @@ export const asFioBroadcastResult = asObject({
 }).withRest
 
 export type FioBroadcastResult = ReturnType<typeof asFioBroadcastResult>
+
+export const asFioEmptyResponse = asObject({
+  message: asString
+})
+
+export const asGetFioRequestsResponse = asObject({
+  requests: asArray(asEncryptedFioRequest),
+  more: asNumber
+})

@@ -6,7 +6,8 @@ import {
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  asValue
 } from 'cleaners'
 
 import { asAny } from '../common/types'
@@ -113,6 +114,21 @@ export const asFioRequest = asObject({
 })
 
 export type FioRequest = ReturnType<typeof asFioRequest>
+
+export const asEncryptedFioRequest = asObject({
+  fio_request_id: asNumber,
+  payer_fio_address: asString,
+  payee_fio_address: asString,
+  payer_fio_public_key: asString,
+  payee_fio_public_key: asString,
+  content: asString,
+  time_stamp: asString,
+  status: asOptional(
+    asValue('cancelled', 'rejected', 'requested', 'sent_to_blockchain')
+  )
+})
+
+export type EncryptedFioRequest = ReturnType<typeof asEncryptedFioRequest>
 
 export const asFioAddress = asObject({
   name: asString,

@@ -2,6 +2,11 @@
 
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
+import {
+  PendingFioRequests,
+  SentFioRequests
+} from '@fioprotocol/fiosdk/lib/transactions/queries'
+import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { add, div, gt, max, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
@@ -41,6 +46,7 @@ import {
   BROADCAST_ACTIONS,
   DAY_INTERVAL,
   DEFAULT_BUNDLED_TXS_AMOUNT,
+  EncryptedFioRequest,
   FIO_REQUESTS_TYPES,
   FioAddress,
   FioDomain,
@@ -70,12 +76,14 @@ import {
   asFioBroadcastResult,
   asFioConnectAddressesParams,
   asFioDomainParam,
+  asFioEmptyResponse,
   asFioFee,
   asFioRecordObtData,
   asFioRequestFundsParams,
   asFioSignedTx,
   asFioTransferDomainParams,
   asFioTxParams,
+  asGetFioRequestsResponse,
   asRejectFundsRequest,
   asSetFioDomainVisibility,
   FioActionFees,
@@ -779,6 +787,15 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             throw new Error('Invalid balance')
 
           break
+        case 'getPendingFioRequests':
+        case 'getSentFioRequests': {
+          const { endpoint, body } = params
+          res = await fioSdk.transactions.executeCall(
+            endpoint,
+            JSON.stringify(body)
+          )
+          break
+        }
         default:
           res = await fioSdk.genericAction(actionName, params)
       }
@@ -1149,55 +1166,47 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
   }
 
-  async checkFioRequests(): Promise<void> {
-    await this.fetchFioRequests(FIO_REQUESTS_TYPES.PENDING)
-    await this.fetchFioRequests(FIO_REQUESTS_TYPES.SENT)
-  }
-
-  async fetchFioRequests(type: string): Promise<void> {
+  async fetchEncryptedFioRequests(
+    type: string,
+    decoder: Query<PendingFioRequests | SentFioRequests>
+  ): Promise<EncryptedFioRequest[]> {
     const ITEMS_PER_PAGE = 100
     const ACTION_TYPE_MAP = {
       [FIO_REQUESTS_TYPES.PENDING]: 'getPendingFioRequests',
       [FIO_REQUESTS_TYPES.SENT]: 'getSentFioRequests'
     }
 
-    let isChanged = false
     let lastPageAmount = ITEMS_PER_PAGE
     let requestsLastPage = 1
-    const fioRequests: FioRequest[] = []
+    const encryptedFioRequests: EncryptedFioRequest[] = []
     while (lastPageAmount === ITEMS_PER_PAGE) {
       try {
-        const { requests } = await this.multicastServers(
-          ACTION_TYPE_MAP[type],
-          {
-            fioPublicKey: this.walletInfo.keys.publicKey,
+        const response = await this.multicastServers(ACTION_TYPE_MAP[type], {
+          endpoint: decoder.getEndPoint(),
+          body: {
+            fio_public_key: this.walletInfo.keys.publicKey,
             limit: ITEMS_PER_PAGE,
             offset: (requestsLastPage - 1) * ITEMS_PER_PAGE
           }
-        )
+        })
+        const cleanResponse = asGetFioRequestsResponse(response)
 
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (requests) {
-          requestsLastPage++
-          fioRequests.push(...requests)
-          lastPageAmount = requests.length
-        }
+        const { requests, more } = cleanResponse
+        encryptedFioRequests.push(...requests)
+        if (more === 0) break
+
+        requestsLastPage++
+        lastPageAmount = requests.length
       } catch (e: any) {
-        lastPageAmount = 0
-        this.error('fetchFioRequests error: ', e)
+        const errorJson = asMaybe(asFioEmptyResponse)(e.json)
+        if (errorJson?.message !== 'No FIO Requests') {
+          this.error('fetchEncryptedFioRequests error: ', e)
+        }
+        break
       }
     }
 
-    if (
-      // @ts-expect-error
-      this.fioRequestsListChanged(this.otherData.fioRequests[type], fioRequests)
-    ) {
-      // @ts-expect-error
-      this.otherData.fioRequests[type] = [...fioRequests]
-      isChanged = true
-    }
-
-    if (isChanged) this.localDataDirty()
+    return encryptedFioRequests
   }
 
   fioRequestsListChanged = (
@@ -1260,6 +1269,44 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
   }
 
+  // Placeholder function for network activity that requires private keys
+  async syncNetwork(): Promise<void> {
+    let isChanged = false
+
+    const checkFioRequests = async (
+      type: 'PENDING' | 'SENT',
+      decoder: Query<PendingFioRequests | SentFioRequests>
+    ): Promise<void> => {
+      const encryptedReqs = await this.fetchEncryptedFioRequests(type, decoder)
+      decoder.privateKey = this.walletInfo.keys.fioKey
+      decoder.publicKey = this.walletInfo.keys.publicKey
+      const decryptedReqs: { requests: FioRequest[] } = decoder.decrypt({
+        requests: encryptedReqs
+      }) ?? { requests: [] }
+
+      if (
+        this.fioRequestsListChanged(
+          this.otherData.fioRequests[type],
+          decryptedReqs.requests
+        )
+      ) {
+        this.otherData.fioRequests[type] = [...decryptedReqs.requests]
+        isChanged = true
+      }
+    }
+
+    await checkFioRequests(
+      'PENDING',
+      new PendingFioRequests(this.walletInfo.keys.publicKey)
+    )
+    await checkFioRequests(
+      'SENT',
+      new SentFioRequests(this.walletInfo.keys.publicKey)
+    )
+
+    if (isChanged) this.localDataDirty()
+  }
+
   // https://developers.fioprotocol.io/docs/fio-protocol/fio-fees
   async getFee(endpoint: EndPoint, param?: string): Promise<string> {
     let cachedFee = this.fees.get(endpoint)
@@ -1290,7 +1337,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('approveErroredFioRequests', ADDRESS_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkFioRequests', REQUEST_POLL_MILLISECONDS)
+    this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
   }
