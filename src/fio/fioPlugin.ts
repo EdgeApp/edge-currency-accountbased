@@ -1,4 +1,5 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
+import { AvailabilityResponse } from '@fioprotocol/fiosdk/lib/entities/AvailabilityResponse'
 import { PrivateKey } from '@greymass/eosio'
 import { div } from 'biggystring'
 import { validateMnemonic } from 'bip39'
@@ -186,11 +187,13 @@ export class FioTools implements EdgeCurrencyTools {
       )
     }
     try {
-      const isAvailableRes = await this.multicastServers('isAvailable', {
-        fioName: fioAddress
-      })
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!isAvailableRes.is_registered) {
+      const isAvailableRes: AvailabilityResponse = await this.multicastServers(
+        'isAvailable',
+        {
+          fioName: fioAddress
+        }
+      )
+      if (isAvailableRes.is_registered === 0) {
         throw new FioError(
           '',
           404,
@@ -271,12 +274,14 @@ export class FioTools implements EdgeCurrencyTools {
       )
     }
     try {
-      const isAvailableRes = await this.multicastServers('isAvailable', {
-        fioName
-      })
+      const isAvailableRes: AvailabilityResponse = await this.multicastServers(
+        'isAvailable',
+        {
+          fioName
+        }
+      )
 
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      return !isAvailableRes.is_registered
+      return isAvailableRes.is_registered === 0
     } catch (e: any) {
       if (
         e.name === 'FioError' &&
@@ -294,11 +299,13 @@ export class FioTools implements EdgeCurrencyTools {
   }
 
   async isDomainPublic(domain: string): Promise<boolean> {
-    const isAvailableRes = await this.multicastServers('isAvailable', {
-      fioName: domain
-    })
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!isAvailableRes.is_registered)
+    const isAvailableRes: AvailabilityResponse = await this.multicastServers(
+      'isAvailable',
+      {
+        fioName: domain
+      }
+    )
+    if (isAvailableRes.is_registered === 0)
       throw new FioError(
         '',
         400,
@@ -325,17 +332,19 @@ export class FioTools implements EdgeCurrencyTools {
 
   async doesAccountExist(fioName: string): Promise<boolean> {
     try {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!FIOSDK.isFioAddressValid(fioName)) return false
     } catch (e: any) {
       return false
     }
     try {
-      const isAvailableRes = await this.multicastServers('isAvailable', {
-        fioName
-      })
+      const isAvailableRes: AvailabilityResponse = await this.multicastServers(
+        'isAvailable',
+        {
+          fioName
+        }
+      )
 
-      return isAvailableRes.is_registered
+      return isAvailableRes.is_registered === 1
     } catch (e: any) {
       // @ts-expect-error
       this.error('doesAccountExist error: ', e)
