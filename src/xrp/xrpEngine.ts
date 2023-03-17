@@ -50,6 +50,7 @@ import {
 } from '../pluginError'
 import { RippleTools } from './xrpPlugin'
 import {
+  asMaybeActivateTokenParams,
   asXrpNetworkLocation,
   asXrpTransaction,
   asXrpWalletOtherData,
@@ -495,6 +496,47 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const parentCurrencyCode = this.currencyInfo.currencyCode
 
+    // Activation Transaction:
+    const activateTokenParams = asMaybeActivateTokenParams(
+      edgeSpendInfo.otherParams
+    )
+    if (activateTokenParams?.activateTokenId != null) {
+      const activateTokenId = activateTokenParams.activateTokenId
+      const edgeToken = this.allTokensMap[activateTokenId]
+      const { currency, issuer } = asXrpNetworkLocation(
+        edgeToken.networkLocation
+      )
+      const networkFee = SET_TRUST_LINE_FEE
+      const trustSetTx: TrustSet = await this.tools.rippleApi.autofill({
+        TransactionType: 'TrustSet',
+        Account: this.walletLocalData.publicKey,
+        Fee: networkFee,
+        Flags: tfSetNoRipple,
+        LimitAmount: {
+          currency,
+          issuer,
+          value: TRUST_LINE_APPROVAL_AMOUNT
+        }
+        // Sequence: 12
+      })
+
+      return {
+        txid: '',
+        date: Date.now() / 1000,
+        currencyCode: this.currencyInfo.currencyCode,
+        blockHeight: 0, // blockHeight,
+        metadata: edgeSpendInfo.metadata,
+        nativeAmount: `-${networkFee}`,
+        networkFee,
+        ourReceiveAddresses: [],
+        signedTx: '',
+        otherParams: {
+          trustSetTx
+        },
+        walletId: this.walletId
+      }
+    }
+
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -643,6 +685,20 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
     const otherParams = getOtherParams(edgeTransaction)
 
+    // Activation Transaction:
+    if (otherParams.trustSetTx != null) {
+      const trustSetTx: TrustSet = otherParams.trustSetTx
+      const privateKey = this.walletInfo.keys.rippleKey
+      const wallet = Wallet.fromSeed(privateKey)
+      const { tx_blob: signedTransaction, hash: id } = wallet.sign(trustSetTx)
+      this.warn('Activation transaction signed...')
+      edgeTransaction.signedTx = signedTransaction
+      edgeTransaction.txid = id.toLowerCase()
+      edgeTransaction.date = Date.now() / 1000
+      this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+      return edgeTransaction
+    }
+
     const completeTxJson = {
       ...otherParams.preparedTx,
       Sequence: this.nonce,
@@ -765,56 +821,14 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
         const { metadata } = options
         const transactions: EdgeTransaction[] = []
         for (const activateTokenId of activateTokenIds) {
-          const edgeToken = this.allTokensMap[activateTokenId]
-          const { currency, issuer } = asXrpNetworkLocation(
-            edgeToken.networkLocation
-          )
-          const networkFee = SET_TRUST_LINE_FEE
-          const payment: TrustSet = {
-            TransactionType: 'TrustSet',
-            Account: this.walletLocalData.publicKey,
-            Fee: networkFee,
-            Flags: tfSetNoRipple,
-            LimitAmount: {
-              currency,
-              issuer,
-              value: TRUST_LINE_APPROVAL_AMOUNT
-            }
-            // Sequence: 12
-          }
-          const sendTx = await this.tools.rippleApi.autofill(payment)
-          const rippleWallet = Wallet.fromSeed(this.walletInfo.keys.rippleKey)
-          const { tx_blob: signedTx, hash: txid } = rippleWallet.sign(sendTx)
-          const response = await this.tools.rippleApi.submit(signedTx)
-          const {
-            engine_result_code: resultCode,
-            engine_result_message: resultMessage
-          } = response.result
-
-          if (resultCode !== 0) {
-            this.warn(
-              `FAILURE activateWallet.approve() ${resultCode} ${resultMessage}`
-            )
-            throw new Error(resultMessage)
-          }
-
-          const otherParams: XrpParams = {
-            preparedTx: payment
-          }
-
-          const edgeTransaction: EdgeTransaction = {
-            txid: txid.toLowerCase(),
-            date: Date.now() / 1000,
-            currencyCode: this.currencyInfo.currencyCode,
-            blockHeight: 0, // blockHeight,
+          const activationTx = await paymentWallet.makeSpend({
+            spendTargets: [],
             metadata,
-            nativeAmount: `-${networkFee}`,
-            networkFee,
-            ourReceiveAddresses: [],
-            signedTx,
-            otherParams,
-            walletId: this.walletId
-          }
+            otherParams: { activateTokenId }
+          })
+          const signedTx = await paymentWallet.signTx(activationTx)
+          const edgeTransaction = await paymentWallet.broadcastTx(signedTx)
+
           this.warn(
             `SUCCESS activateWallet.approve()\n${cleanTxLogs(edgeTransaction)}`
           )

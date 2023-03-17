@@ -14,6 +14,12 @@ export interface XrpCustomToken {
   contractAddress: string
 }
 
+export const asMaybeActivateTokenParams = asMaybe(
+  asObject({
+    activateTokenId: asString
+  })
+)
+
 export const asXrpWalletOtherData = asObject({
   recommendedFee: asMaybe(asString, '0') // Floating point value in full XRP value
 })
