@@ -3,6 +3,7 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import {
+  GetObtData,
   PendingFioRequests,
   SentFioRequests
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
@@ -84,12 +85,14 @@ import {
   asFioTransferDomainParams,
   asFioTxParams,
   asGetFioRequestsResponse,
+  asGetObtDataResponse,
   asRejectFundsRequest,
   asSetFioDomainVisibility,
   FioActionFees,
   FioNetworkInfo,
   FioRefBlock,
-  FioTxParams
+  FioTxParams,
+  ObtData
 } from './fioTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -117,6 +120,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   refBlock: FioRefBlock
   fees: FioActionFees
   actor: string
+  obtData: ObtData[]
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   localDataDirty() {
@@ -142,6 +146,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
     this.fees = new Map()
     this.actor = FIOSDK.accountHash(this.walletInfo.keys.publicKey).accountnm
+    this.obtData = []
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -170,6 +175,9 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
             .slice(startIndex, endIndex)
         )
+      },
+      getObtData: async (): Promise<ObtData[]> => {
+        return this.obtData
       }
     }
   }
@@ -785,6 +793,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             throw new Error('Invalid balance')
 
           break
+        case 'getObtData':
         case 'getPendingFioRequests':
         case 'getSentFioRequests': {
           const { endpoint, body } = params
@@ -1192,6 +1201,46 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return encryptedFioRequests
   }
 
+  async fetchEncryptedObtData(
+    type: string,
+    decoder: Query<GetObtData>
+  ): Promise<ObtData[]> {
+    const ITEMS_PER_PAGE = 100
+
+    let lastPageAmount = ITEMS_PER_PAGE
+    let requestsLastPage = 1
+    const encryptedObtDataRecords: ObtData[] = []
+    while (lastPageAmount === ITEMS_PER_PAGE) {
+      let response
+      try {
+        response = await this.multicastServers(type, {
+          endpoint: decoder.getEndPoint(),
+          body: {
+            fio_public_key: this.walletInfo.keys.publicKey,
+            limit: ITEMS_PER_PAGE,
+            offset: (requestsLastPage - 1) * ITEMS_PER_PAGE
+          }
+        })
+        const cleanResponse = asGetObtDataResponse(response)
+
+        const { obt_data_records: obtDataRecords, more } = cleanResponse
+        encryptedObtDataRecords.push(...obtDataRecords)
+        if (more === 0) break
+
+        requestsLastPage++
+        lastPageAmount = obtDataRecords.length
+      } catch (e: any) {
+        const errorJson = asMaybe(asFioEmptyResponse)(e.json)
+        if (errorJson?.message !== 'No FIO Requests') {
+          this.error('fetchEncryptedObtData error: ', e)
+        }
+        break
+      }
+    }
+
+    return encryptedObtDataRecords
+  }
+
   fioRequestsListChanged = (
     existingList: FioRequest[],
     newList: FioRequest[]
@@ -1288,6 +1337,20 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     )
 
     if (isChanged) this.localDataDirty()
+
+    const obtDecoder = new GetObtData(this.walletInfo.keys.publicKey)
+    const encryptedObtData = await this.fetchEncryptedObtData(
+      'getObtData',
+      obtDecoder
+    )
+    obtDecoder.privateKey = this.walletInfo.keys.fioKey
+    obtDecoder.publicKey = this.walletInfo.keys.publicKey
+    const decryptedObtData: { obt_data_records: ObtData[] } =
+      obtDecoder.decrypt({
+        obt_data_records: encryptedObtData
+      }) ?? { obt_data_records: [] }
+
+    this.obtData = decryptedObtData.obt_data_records
   }
 
   // https://developers.fioprotocol.io/docs/fio-protocol/fio-fees

@@ -160,3 +160,21 @@ export const asGetFioRequestsResponse = asObject({
   requests: asArray(asEncryptedFioRequest),
   more: asNumber
 })
+
+export const asObtData = asObject({
+  payer_fio_address: asString,
+  payee_fio_address: asString,
+  payer_fio_public_key: asString,
+  payee_fio_public_key: asString,
+  content: asString,
+  fio_request_id: asNumber,
+  status: asString,
+  time_stamp: asString
+})
+
+export type ObtData = ReturnType<typeof asObtData>
+
+export const asGetObtDataResponse = asObject({
+  obt_data_records: asArray(asObtData),
+  more: asNumber
+})
