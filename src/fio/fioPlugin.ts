@@ -140,8 +140,7 @@ export class FioTools implements EdgeCurrencyTools {
       },
       FIO_CURRENCY_CODE
     )
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-    const valid = checkAddress(edgeParsedUri.publicAddress || '')
+    const valid = checkAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -203,10 +202,7 @@ export class FioTools implements EdgeCurrencyTools {
     } catch (e: any) {
       if (
         e.name === 'FioError' &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.json &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.json.fields &&
+        e.json?.fields != null &&
         e.errorCode === 400
       ) {
         e.labelCode = this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
@@ -220,8 +216,7 @@ export class FioTools implements EdgeCurrencyTools {
         chainCode,
         tokenCode
       })
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!result.public_address || result.public_address === '0') {
+      if (result.public_address == null || result.public_address === '0') {
         throw new FioError(
           '',
           404,
@@ -260,10 +255,8 @@ export class FioTools implements EdgeCurrencyTools {
   ): Promise<boolean> {
     try {
       if (isDomain) {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!FIOSDK.isFioDomainValid(fioName)) return false
       } else {
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!FIOSDK.isFioAddressValid(fioName)) return false
       }
     } catch (e: any) {
@@ -285,10 +278,7 @@ export class FioTools implements EdgeCurrencyTools {
     } catch (e: any) {
       if (
         e.name === 'FioError' &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.json &&
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        e.json.fields &&
+        e.json?.fields != null &&
         e.errorCode === 400
       ) {
         e.labelCode = this.networkInfo.errorCodes.INVALID_FIO_ADDRESS
@@ -403,8 +393,7 @@ export class FioTools implements EdgeCurrencyTools {
       }
       return await result.json()
     } catch (e: any) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (e.labelCode) throw e
+      if (e.labelCode != null) throw e
       throw new FioError(
         safeErrorMessage(e),
         500,
@@ -414,8 +403,7 @@ export class FioTools implements EdgeCurrencyTools {
   }
 
   async getDomains(ref: string = ''): Promise<DomainItem[] | { error: any }> {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!ref) ref = this.networkInfo.defaultRef
+    if (ref == null) ref = this.networkInfo.defaultRef
     try {
       const result = await this.fetchCors(
         `${this.networkInfo.fioRegApiUrl}${FIO_REG_API_ENDPOINTS.getDomains}/${ref}`,
@@ -440,8 +428,7 @@ export class FioTools implements EdgeCurrencyTools {
       }
       return json.domains
     } catch (e: any) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (e.labelCode) throw e
+      if (e.labelCode != null) throw e
       throw new FioError(
         safeErrorMessage(e),
         500,
@@ -480,8 +467,7 @@ export class FioTools implements EdgeCurrencyTools {
         ? DEFAULT_APR
         : apr
     } catch (e: any) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (e.labelCode) throw e
+      if (e.labelCode != null) throw e
       throw new FioError(
         e.message,
         500,
@@ -516,8 +502,7 @@ export class FioTools implements EdgeCurrencyTools {
             out = await connection.genericAction(actionName, params)
           } catch (e: any) {
             // handle FIO API error
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            if (e.errorCode && fioApiErrorCodes.includes(e.errorCode)) {
+            if (e.errorCode != null && fioApiErrorCodes.includes(e.errorCode)) {
               out = {
                 isError: true,
                 data: {
@@ -537,8 +522,7 @@ export class FioTools implements EdgeCurrencyTools {
       )
     )
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (res.isError) {
+    if (res.isError != null) {
       const error = new FioError(res.errorMessage)
       error.json = res.data.json
       error.list = res.data.list
