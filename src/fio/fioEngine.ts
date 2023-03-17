@@ -122,8 +122,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   actor: string
   obtData: ObtData[]
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  localDataDirty() {
+  localDataDirty(): void {
     this.walletLocalDataDirty = true
   }
 
@@ -187,8 +186,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   // Normalize date if not exists "Z" parameter
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getUTCDate(dateString: string) {
+  getUTCDate(dateString: string): number {
     const date = new Date(dateString)
 
     return Date.UTC(
@@ -205,8 +203,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   Unstaked FIO is locked until 7 days after the start of the GMT day for when
   the transaction occurred (block-time).
   */
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getUnlockDate(txDate: Date) {
+  getUnlockDate(txDate: Date): Date {
     const blockTimeBeginingOfGmtDay =
       Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
     return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
@@ -230,8 +227,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   // Poll on the blockheight
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkBlockchainInnerLoop() {
+  async checkBlockchainInnerLoop(): Promise<void> {
     try {
       const info = await this.multicastServers('getChainInfo')
       const blockHeight = info.head_block_num
@@ -263,8 +259,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return super.getBalance(options)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  doInitialBalanceCallback() {
+  doInitialBalanceCallback(): void {
     super.doInitialBalanceCallback()
 
     const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
@@ -713,14 +708,13 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return true
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkTransactionsInnerLoop() {
+  async checkTransactionsInnerLoop(): Promise<void> {
     let transactions
     try {
       transactions = await this.checkTransactions()
     } catch (e: any) {
       this.error('checkTransactionsInnerLoop fetches failed with error: ', e)
-      return false
+      return
     }
 
     if (transactions) {
@@ -849,12 +843,11 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return res
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async executePreparedTrx(
     apiUrl: string,
     endpoint: string,
     preparedTrx: PreparedTrx
-  ) {
+  ): Promise<any> {
     const fioSdk = new FIOSDK(
       '',
       this.walletInfo.keys.publicKey,
@@ -1009,8 +1002,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   // Check all account balance and other relevant info
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async checkAccountInnerLoop() {
+  async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
     const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
 
@@ -1245,9 +1237,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     existingList: FioRequest[],
     newList: FioRequest[]
   ): boolean => {
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-    function compareArray(arrA, arrB) {
+    function compareArray(arrA: FioRequest[], arrB: FioRequest[]): boolean {
       for (const fioRequest of arrA) {
         if (
           arrB.findIndex(
@@ -1371,21 +1361,25 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   // ****************************************************************************
 
   // This routine is called once a wallet needs to start querying the network
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('approveErroredFioRequests', ADDRESS_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    this.addToLoop(
+      'checkBlockchainInnerLoop',
+      BLOCKCHAIN_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop(
+      'checkTransactionsInnerLoop',
+      TRANSACTION_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop(
+      'approveErroredFioRequests',
+      ADDRESS_POLL_MILLISECONDS
+    ).catch(() => {})
+    this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS).catch(() => {})
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -1394,8 +1388,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     await this.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const lockedBalance =
@@ -1988,26 +1981,12 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return { publicAddress: this.walletInfo.keys.publicKey }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    let out = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.fioKey) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += this.walletInfo.keys.fioKey
-    }
-    return out
+  getDisplayPrivateSeed(): string {
+    return this.walletInfo.keys?.fioKey ?? ''
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    let out = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      out += this.walletInfo.keys.publicKey
-    }
-    return out
+  getDisplayPublicSeed(): string {
+    return this.walletInfo.keys?.publicKey ?? ''
   }
 }
 
