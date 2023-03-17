@@ -22,12 +22,16 @@ const networkInfo: FioNetworkInfo = {
     'https://fio.eostribe.io/v1/',
     'https://api.fio.greeneosio.com/v1/',
     'https://api.fio.services/v1/',
-    'https://fio.eosusa.news/v1/'
+    'https://fio.eosusa.news/v1/',
+    'https://api-fio.nodeone.network:8344/v1/',
+    'https://api.fio.detroitledger.tech/v1/',
+    'https://fio-api.eosiomadrid.io/v1/',
+    'https://fio.eosphere.io/v1/',
+    'https://fioapi.ledgerwise.io/v1/'
   ],
   historyNodeUrls: [
-    'https://fio.greymass.com/v1/',
-    'https://fio.greymass.com/v1/',
-    'https://fio.eosphere.io/v1/'
+    'https://fio.eosphere.io/v1/',
+    'https://fio.greymass.com/v1/'
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
