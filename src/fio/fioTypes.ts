@@ -9,7 +9,7 @@ import {
   asValue
 } from 'cleaners'
 
-import { asEncryptedFioRequest, FIO_REQUESTS_TYPES } from './fioConst'
+import { asEncryptedFioRequest } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
 
 export const fioOtherMethodNames = [
@@ -34,13 +34,14 @@ export interface FioNetworkInfo {
   fallbackRef: string
   freeAddressRef: string
   errorCodes: typeof fioRegApiErrorCodes
-  fioRequestsTypes: typeof FIO_REQUESTS_TYPES
   balanceCurrencyCodes: {
     staked: 'FIO:STAKED'
     locked: 'FIO:LOCKED'
   }
   chainId: string
 }
+
+export type FioRequestTypes = 'PENDING' | 'SENT'
 
 export interface FioRefBlock {
   expiration: string

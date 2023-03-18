@@ -1,7 +1,6 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { FIO_REQUESTS_TYPES } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './fioPlugin'
 import { FioNetworkInfo, fioOtherMethodNames } from './fioTypes'
@@ -41,7 +40,6 @@ const networkInfo: FioNetworkInfo = {
   fallbackRef: 'edge',
   freeAddressRef: 'edgefree',
   errorCodes: fioRegApiErrorCodes,
-  fioRequestsTypes: FIO_REQUESTS_TYPES,
   balanceCurrencyCodes: {
     // TODO: Remove these currencyCodes in favor of adding a dedicated locked balances field to the API
     staked: 'FIO:STAKED',

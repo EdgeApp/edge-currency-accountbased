@@ -46,7 +46,6 @@ import {
   DAY_INTERVAL,
   DEFAULT_BUNDLED_TXS_AMOUNT,
   EncryptedFioRequest,
-  FIO_REQUESTS_TYPES,
   FioAddress,
   FioDomain,
   FioRequest,
@@ -89,6 +88,7 @@ import {
   FioActionFees,
   FioNetworkInfo,
   FioRefBlock,
+  FioRequestTypes,
   FioTxParams,
   ObtData
 } from './fioTypes'
@@ -159,19 +159,15 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         return this.otherData.fioDomains
       },
       getFioRequests: async (
-        type: string,
+        type: FioRequestTypes,
         page: number,
         itemsPerPage: number = 50
       ): Promise<FioRequest[]> => {
         const startIndex = itemsPerPage * (page - 1)
         const endIndex = itemsPerPage * page
-        return (
-          // @ts-expect-error
-          this.otherData.fioRequests[type]
-            // @ts-expect-error
-            .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
-            .slice(startIndex, endIndex)
-        )
+        return this.otherData.fioRequests[type]
+          .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
+          .slice(startIndex, endIndex)
       },
       getObtData: async (): Promise<ObtData[]> => {
         return this.obtData
@@ -1092,17 +1088,15 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     decoder: Query<PendingFioRequests | SentFioRequests>
   ): Promise<EncryptedFioRequest[]> {
     const ITEMS_PER_PAGE = 100
-    const ACTION_TYPE_MAP = {
-      [FIO_REQUESTS_TYPES.PENDING]: 'getPendingFioRequests',
-      [FIO_REQUESTS_TYPES.SENT]: 'getSentFioRequests'
-    }
+    const action =
+      type === 'PENDING' ? 'getPendingFioRequests' : 'getSentFioRequests'
 
     let lastPageAmount = ITEMS_PER_PAGE
     let requestsLastPage = 1
     const encryptedFioRequests: EncryptedFioRequest[] = []
     while (lastPageAmount === ITEMS_PER_PAGE) {
       try {
-        const response = await this.multicastServers(ACTION_TYPE_MAP[type], {
+        const response = await this.multicastServers(action, {
           endpoint: decoder.getEndPoint(),
           body: {
             fio_public_key: this.walletInfo.keys.publicKey,
@@ -1197,15 +1191,16 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return false
   }
 
-  removeFioRequest = (fioRequestId: string | number, type: string): void => {
-    // @ts-expect-error
+  removeFioRequest = (
+    fioRequestId: string | number,
+    type: FioRequestTypes
+  ): void => {
     const fioRequestIndex = this.otherData.fioRequests[type].findIndex(
       (fioRequest: FioRequest) =>
         fioRequest.fio_request_id === `${fioRequestId}`
     )
 
     if (fioRequestIndex > -1) {
-      // @ts-expect-error
       this.otherData.fioRequests[type].splice(fioRequestIndex, 1)
     }
   }
@@ -1233,7 +1228,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     let isChanged = false
 
     const checkFioRequests = async (
-      type: 'PENDING' | 'SENT',
+      type: FioRequestTypes,
       decoder: Query<PendingFioRequests | SentFioRequests>
     ): Promise<void> => {
       const encryptedReqs = await this.fetchEncryptedFioRequests(type, decoder)
@@ -1879,7 +1874,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         case ACTIONS.rejectFundsRequest: {
           const { fioRequestId } = asRejectFundsRequest(params)
           if (typeof fioRequestId === 'string') {
-            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.PENDING)
+            this.removeFioRequest(fioRequestId, 'PENDING')
             this.localDataDirty()
           }
           break
@@ -1887,7 +1882,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
         case ACTIONS.cancelFundsRequest: {
           const { fioRequestId } = asCancelFundsRequest(params)
           if (typeof fioRequestId === 'string') {
-            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.SENT)
+            this.removeFioRequest(fioRequestId, 'SENT')
             this.localDataDirty()
           }
           break
@@ -1900,7 +1895,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           ) {
             // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete this.otherData.fioRequestsToApprove[fioRequestId]
-            this.removeFioRequest(fioRequestId, FIO_REQUESTS_TYPES.PENDING)
+            this.removeFioRequest(fioRequestId, 'PENDING')
             this.localDataDirty()
           }
           break

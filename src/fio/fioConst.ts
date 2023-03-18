@@ -89,11 +89,6 @@ export const ACTIONS_TO_TX_ACTION_NAME = {
   transfer: 'transfer'
 }
 
-export const FIO_REQUESTS_TYPES = {
-  PENDING: 'PENDING',
-  SENT: 'SENT'
-}
-
 export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
 export const DEFAULT_APR = 450
 export const STAKING_REWARD_MEMO = 'Paying Staking Rewards'
