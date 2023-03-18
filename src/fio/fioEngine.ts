@@ -87,10 +87,8 @@ import {
   asRejectFundsRequest,
   asSetFioDomainVisibility,
   FioActionFees,
-  FioBroadcastResult,
   FioNetworkInfo,
   FioRefBlock,
-  FioSignedTx,
   FioTxParams
 } from './fioTypes'
 
@@ -849,7 +847,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     preparedTrx: PreparedTrx
   ) {
     const fioSdk = new FIOSDK(
-      this.walletInfo.keys.fioKey,
+      '',
       this.walletInfo.keys.publicKey,
       apiUrl,
       this.fetchCors,
@@ -913,22 +911,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   async multicastServers(actionName: string, params?: any): Promise<any> {
     let res
     if (BROADCAST_ACTIONS[actionName]) {
-      let preparedTrx = asMaybe(asFioSignedTx)(params)
-      if (preparedTrx == null) {
-        this.warn(
-          `multicastServers prepare trx. actionName: ${actionName} - res: ${JSON.stringify(
-            params
-          )}`
-        )
-        preparedTrx = await asyncWaterfall(
-          shuffleArray(
-            this.networkInfo.apiUrls.map(
-              apiUrl => async () =>
-                await this.fioApiRequest(apiUrl, actionName, params, true)
-            )
-          )
-        )
-      }
+      const preparedTrx = asFioSignedTx(params)
       this.warn(
         `multicastServers executePreparedTrx. actionName: ${actionName} - res: ${JSON.stringify(
           preparedTrx
@@ -941,7 +924,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
               await this.executePreparedTrx(
                 apiUrl,
                 EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                preparedTrx as FioSignedTx
+                preparedTrx
               )
           )
         )
@@ -1785,7 +1768,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    let trx: FioBroadcastResult
     const otherParams = getOtherParams(edgeTransaction)
 
     if (otherParams.action?.name == null) {
@@ -1794,17 +1776,10 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       )
     }
 
-    if ('signedTx' in otherParams) {
-      const signedTx = asFioSignedTx(otherParams.signedTx)
-      trx = await this.multicastServers(otherParams.action.name, signedTx)
-    } else {
-      // @ts-expect-error
-      trx = await this.otherMethods.fioAction(
-        otherParams.action.name,
-        otherParams.action.params
-      )
-    }
-    trx = asFioBroadcastResult(trx)
+    const signedTx = asFioSignedTx(otherParams.signedTx)
+    const trx = asFioBroadcastResult(
+      await this.multicastServers(otherParams.action.name, signedTx)
+    )
 
     edgeTransaction.metadata = {
       notes: trx.transaction_id

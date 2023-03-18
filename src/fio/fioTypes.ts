@@ -68,8 +68,6 @@ export const asFioSignedTx = asObject({
   signatures: asArray(asString)
 })
 
-export type FioSignedTx = ReturnType<typeof asFioSignedTx>
-
 export const asFioFee = asObject({ fee: asNumber })
 
 interface FioFee {
@@ -153,8 +151,6 @@ export const asFioBroadcastResult = asObject({
   block_time: asString,
   transaction_id: asString
 }).withRest
-
-export type FioBroadcastResult = ReturnType<typeof asFioBroadcastResult>
 
 export const asFioEmptyResponse = asObject({
   message: asString
