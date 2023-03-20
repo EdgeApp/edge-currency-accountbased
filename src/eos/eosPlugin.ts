@@ -3,6 +3,7 @@ import {
   APIClient,
   APIError,
   FetchProvider,
+  Name,
   PrivateKey
 } from '@greymass/eosio'
 import { div, toFixed } from 'biggystring'
@@ -30,7 +31,7 @@ import {
 import { EosNetworkInfo } from './eosTypes'
 
 export function checkAddress(address: string): boolean {
-  return /^[a-z0-9.]{1,12}$/.test(address)
+  return Name.pattern.test(address)
 }
 
 export function getClient(fetch: EdgeFetchFunction, server: string): APIClient {
@@ -114,7 +115,7 @@ export class EosTools implements EdgeCurrencyTools {
       [this.networkInfo.uriProtocol]: true
     })
 
-    if (checkAddress(edgeParsedUri.publicAddress ?? '')) {
+    if (!checkAddress(edgeParsedUri.publicAddress ?? '')) {
       throw new Error('InvalidPublicAddressError')
     }
     return edgeParsedUri
