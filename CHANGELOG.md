@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.20 (2023-03-20)
+
+- EOS: Fix address parsing
+- EOS: Replace address regex with greymass sdk regex
+
 ## 0.22.19 (2023-03-10)
 
 - removed: Do not use `EdgeCurrencyInfo.defaultSettings` to store network info for most chains.
