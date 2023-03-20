@@ -185,7 +185,6 @@ export const asFioWalletOtherData = asObject({
       PENDING: []
     }
   ),
-  fioRequestsToApprove: asMaybe(asObject(asAny), {}),
   srps: asMaybe(asNumber, 0),
   stakingRoe: asMaybe(asString, ''),
   stakingStatus: asMaybe(asEdgeStakingStatus, {

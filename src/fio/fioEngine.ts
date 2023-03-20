@@ -1205,24 +1205,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     }
   }
 
-  async approveErroredFioRequests(): Promise<void> {
-    for (const fioRequestId in this.otherData.fioRequestsToApprove) {
-      try {
-        // @ts-expect-error
-        await this.otherMethods.fioAction(
-          'recordObtData',
-          this.otherData.fioRequestsToApprove[fioRequestId]
-        )
-      } catch (e: any) {
-        this.error(
-          `approveErroredFioRequests recordObtData error: ${safeErrorMessage(
-            e
-          )} for ${this.otherData.fioRequestsToApprove[fioRequestId]}`
-        )
-      }
-    }
-  }
-
   // Placeholder function for network activity that requires private keys
   async syncNetwork(): Promise<void> {
     let isChanged = false
@@ -1305,10 +1287,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     this.addToLoop(
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop(
-      'approveErroredFioRequests',
-      ADDRESS_POLL_MILLISECONDS
     ).catch(() => {})
     this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS).catch(() => {})
     await super.startEngine()
@@ -1677,12 +1655,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
               actor: this.actor
             }
           }
-
-          if (fioRequestId != null) {
-            this.otherData.fioRequestsToApprove[fioRequestId] = params
-            this.localDataDirty()
-          }
-
           break
         }
         case ACTIONS.requestFunds: {
@@ -1893,8 +1865,6 @@ export class FioEngine extends CurrencyEngine<FioTools> {
             fioRequestId != null &&
             broadcastResult.status === 'sent_to_blockchain'
           ) {
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete this.otherData.fioRequestsToApprove[fioRequestId]
             this.removeFioRequest(fioRequestId, 'PENDING')
             this.localDataDirty()
           }
