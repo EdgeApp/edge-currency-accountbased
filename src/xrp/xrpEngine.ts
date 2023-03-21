@@ -685,10 +685,20 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       engine_result_message: resultMessage
     } = response.result
 
-    if (resultCode !== 0) {
+    // https://xrpl.org/transaction-results.html
+    if (
+      (resultCode >= -199 && resultCode <= -100) || // failure and most likely wont succeed
+      (resultCode >= -299 && resultCode <= -200) || // tx malformed
+      (resultCode >= -399 && resultCode <= -300) // server failure and needs to be retried
+    ) {
       this.warn(`FAILURE broadcastTx ${resultCode} ${resultMessage}`)
       throw new Error(resultMessage)
     }
+
+    // Success codes
+    // resultCode === 0 all good
+    // (resultCode >= 100 && resultCode <= 199) tx failed but fee burned
+    // (resultCode >= -99 && resultCode <= -1) tx failed but could still succeed (like waiting for fee to become competitive)
 
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
