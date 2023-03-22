@@ -68,7 +68,8 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
       const account = await this.api.query.system.account(recipient)
       return account.data.free.toString()
     } catch (e: any) {
-      return '0'
+      // API returns valid response for empty accounts. For other errors just assume the recipient's account is sufficient.
+      return this.minimumAddressBalance
     }
   }
 

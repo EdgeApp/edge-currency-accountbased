@@ -93,8 +93,12 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
       return mul(balanceObj.balance, denom.multiplier)
     } catch (e: any) {
       // API will throw if account doesn't exist
+      if (e.response?.title === 'Resource Missing') {
+        return '0'
+      }
+      // For other errors just assume the recipient's account is sufficient
+      return this.minimumAddressBalance
     }
-    return '0'
   }
 
   async multicastServers(

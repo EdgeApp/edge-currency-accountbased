@@ -126,7 +126,11 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
       return accountInfo.result.account_data.Balance
     } catch (e: any) {
       // API will throw if account doesn't exist
-      return '0'
+      if (e.data?.error === 'actNotFound') {
+        return '0'
+      }
+      // For other errors just assume the recipient's account is sufficient
+      return this.minimumAddressBalance
     }
   }
 
