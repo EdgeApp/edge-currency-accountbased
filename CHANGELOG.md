@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.22.21 (2023-03-21)
+
+- Fix fallback value returned when recipient min balance check fails
+- XRP: Add additional broadcast error code handling
+
 ## 0.22.20 (2023-03-20)
 
 - EOS: Fix address parsing
