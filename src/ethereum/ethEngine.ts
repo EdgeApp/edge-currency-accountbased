@@ -8,6 +8,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeFetchFunction,
+  EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeSpendTarget,
   EdgeTransaction,
@@ -51,6 +52,7 @@ import { EthereumTools } from './ethPlugin'
 import { asEIP712TypedData } from './ethSchema'
 import {
   asEthereumPrivateKeys,
+  asEthereumSignMessageParams,
   asEthereumTxOtherParams,
   asEthereumWalletOtherData,
   asRollupGasPrices,
@@ -139,10 +141,7 @@ export class EthereumEngine extends CurrencyEngine<
     this.utils = {
       signMessage: (message: string, privateKeys: EthereumPrivateKeys) => {
         if (!isHex(message)) throw new Error('ErrorInvalidMessage')
-        const privKey = Buffer.from(
-          this.getDisplayPrivateSeed(privateKeys),
-          'hex'
-        )
+        const privKey = Buffer.from(privateKeys.privateKey, 'hex')
         const messageBuffer = hexToBuf(message)
         const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
         const { v, r, s } = EthereumUtil.ecsign(messageHash, privKey)
@@ -157,10 +156,7 @@ export class EthereumEngine extends CurrencyEngine<
         // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
         const clean = asEIP712TypedData(typedData)
 
-        const privKey = Buffer.from(
-          this.getDisplayPrivateSeed(privateKeys),
-          'hex'
-        )
+        const privKey = Buffer.from(privateKeys.privateKey, 'hex')
         const { types } = clean
 
         // Recursively finds all the dependencies of a type
@@ -1104,6 +1100,35 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  async signMessage(
+    message: string,
+    privateKeys: JsonObject,
+    opts: EdgeSignMessageOptions
+  ): Promise<string> {
+    const ethereumPrivateKeys = asEthereumPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
+    const otherParams = asEthereumSignMessageParams(opts.otherParams)
+
+    if (otherParams.typedData) {
+      const typedData = JSON.parse(message)
+      try {
+        return this.utils.signTypedData(typedData, ethereumPrivateKeys)
+      } catch (_) {
+        // It's possible that the dApp makes the wrong call.
+        // Try to sign using the latest signTypedData_v4 method.
+        return signTypedData_v4(
+          Buffer.from(ethereumPrivateKeys.privateKey, 'hex'),
+          {
+            data: typedData
+          }
+        )
+      }
+    }
+
+    return this.utils.signMessage(message, ethereumPrivateKeys)
   }
 
   async signTx(

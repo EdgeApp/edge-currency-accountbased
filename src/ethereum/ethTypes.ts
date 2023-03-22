@@ -1,6 +1,7 @@
 import WalletConnect from '@walletconnect/client'
 import {
   asArray,
+  asBoolean,
   asCodec,
   asEither,
   asMaybe,
@@ -479,6 +480,10 @@ export const asWcSessionRequestParams = asObject({
   params: asArray(asWcDappDetails)
 })
 
+//
+// Other Params and Other Methods:
+//
+
 export interface EthereumOtherMethods {
   personal_sign: (params: string[], privateKeys: JsonObject) => string
   eth_sign: (params: string[], privateKeys: JsonObject) => string
@@ -505,6 +510,17 @@ export interface EthereumOtherMethods {
   ) => Promise<void>
   wcGetConnections: () => Dapp[]
 }
+
+export const asEthereumSignMessageParams = asOptional(
+  asObject({
+    typedData: asOptional(asBoolean, false)
+  }),
+  { typedData: false }
+)
+
+//
+// Wallet Info and Keys:
+//
 
 export type SafeEthWalletInfo = ReturnType<typeof asSafeEthWalletInfo>
 export const asSafeEthWalletInfo = asSafeCommonWalletInfo

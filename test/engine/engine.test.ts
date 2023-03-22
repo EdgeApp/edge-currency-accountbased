@@ -189,22 +189,26 @@ for (const fixture of fixtures) {
   describe('Message signing', function () {
     if (fixture.messages == null) return
     it('Should sign a hashed message', async function () {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!engine) throw new Error('ErrorNoEngine')
-      // @ts-expect-error
-      const sig = engine.utils.signMessage(
+      if (engine == null) throw new Error('ErrorNoEngine')
+      if (engine.signMessage == null) return
+      const sig = await engine.signMessage(
         fixture.messages.eth_sign.param,
-        privateWalletInfo.keys
+        privateWalletInfo.keys,
+        {}
       )
       assert.equal(sig, fixture.messages.eth_sign.signature)
     })
-    it('Should sign a typed message', function () {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!engine) throw new Error('ErrorNoEngine')
-      // @ts-expect-error
-      const sig = engine.utils.signTypedData(
-        fixture.messages.eth_signTypedData.param,
-        privateWalletInfo.keys
+    it('Should sign a typed message', async function () {
+      if (engine == null) throw new Error('ErrorNoEngine')
+      if (engine.signMessage == null) return
+      const sig = await engine.signMessage(
+        JSON.stringify(fixture.messages.eth_signTypedData.param),
+        privateWalletInfo.keys,
+        {
+          otherParams: {
+            typedData: true
+          }
+        }
       )
       assert.equal(sig, fixture.messages.eth_signTypedData.signature)
     })
