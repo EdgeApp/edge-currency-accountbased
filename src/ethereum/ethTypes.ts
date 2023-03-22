@@ -14,7 +14,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { EdgeSpendInfo, EdgeTransaction, JsonObject } from 'edge-core-js/types'
+import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -420,10 +420,7 @@ export interface EthereumUtils {
     typedData: EIP712TypedDataParam,
     privateKeys: EthereumPrivateKeys
   ) => string
-  txRpcParamsToSpendInfo: (
-    params: TxRpcParams,
-    currencyCode: string
-  ) => EdgeSpendInfo
+  txRpcParamsToSpendInfo: (params: TxRpcParams) => EdgeSpendInfo
 }
 
 export const asWcProps = asObject({
@@ -485,29 +482,16 @@ export const asWcSessionRequestParams = asObject({
 //
 
 export interface EthereumOtherMethods {
-  personal_sign: (params: string[], privateKeys: JsonObject) => string
-  eth_sign: (params: string[], privateKeys: JsonObject) => string
-  eth_signTypedData: (params: string[], privateKeys: JsonObject) => string
-  eth_signTypedData_v4: (params: string[], privateKeys: JsonObject) => string
-  eth_sendTransaction: (
-    params: TxRpcParams,
-    currencyCode: string,
-    privateKeys: JsonObject
-  ) => Promise<EdgeTransaction>
-  eth_signTransaction: (
-    params: TxRpcParams,
-    currencyCode: string,
-    privateKeys: JsonObject
-  ) => Promise<EdgeTransaction>
-  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
+  txRpcParamsToSpendInfo: (params: TxRpcParams) => Promise<EdgeSpendInfo>
   wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
   wcConnect: (uri: string, publicKey: string, walletId: string) => void
   wcDisconnect: (uri: string) => void
-  wcRequestResponse: (
+  wcApproveRequest: (
     uri: string,
-    approve: boolean,
-    payload: WcRpcPayload
+    payload: WcRpcPayload,
+    result: string
   ) => Promise<void>
+  wcRejectRequest: (uri: string, payload: WcRpcPayload) => Promise<void>
   wcGetConnections: () => Dapp[]
 }
 

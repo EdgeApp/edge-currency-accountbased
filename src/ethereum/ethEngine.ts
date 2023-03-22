@@ -265,7 +265,7 @@ export class EthereumEngine extends CurrencyEngine<
         )
       },
 
-      txRpcParamsToSpendInfo: (params: TxRpcParams, currencyCode: string) => {
+      txRpcParamsToSpendInfo: (params: TxRpcParams) => {
         const spendTarget: EdgeSpendTarget = { otherParams: params }
         if (params.to != null) {
           spendTarget.publicAddress = params.to
@@ -277,7 +277,7 @@ export class EthereumEngine extends CurrencyEngine<
         }
 
         const spendInfo: EdgeSpendInfo = {
-          currencyCode,
+          currencyCode: this.currencyInfo.currencyCode,
           spendTargets: [spendTarget],
           networkFeeOption: 'custom',
           customNetworkFee: {
@@ -296,62 +296,10 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     this.otherMethods = {
-      personal_sign: (params, privateKeys) =>
-        this.utils.signMessage(
-          params[0],
-          asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-        ),
-      eth_sign: (params, privateKeys) =>
-        this.utils.signMessage(
-          params[1],
-          asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-        ),
-      eth_signTypedData: (params, privateKeys) => {
-        try {
-          return this.utils.signTypedData(
-            JSON.parse(params[1]),
-            asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-          )
-        } catch (e: any) {
-          // It's possible that the dApp makes the wrong call.
-          // Try to sign using the latest signTypedData_v4 method.
-          return this.otherMethods.eth_signTypedData_v4(params, privateKeys)
-        }
-      },
-      eth_signTypedData_v4: (params, privateKeys) =>
-        signTypedData_v4(
-          Buffer.from(this.getDisplayPrivateSeed(privateKeys), 'hex'),
-          {
-            data: JSON.parse(params[1])
-          }
-        ),
-      eth_sendTransaction: async (params, cc, privateKeys) => {
-        // @ts-expect-error
-        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
-        const tx = await this.makeSpend(spendInfo)
-        const signedTx = await this.signTx(tx, privateKeys)
-        return await this.broadcastTx(signedTx)
-      },
-      eth_signTransaction: async (params, cc, privateKeys) => {
-        // @ts-expect-error
-        const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
-        const tx = await this.makeSpend(spendInfo)
-        return await this.signTx(tx, privateKeys)
-      },
-      eth_sendRawTransaction: async params => {
-        const tx: EdgeTransaction = {
-          currencyCode: '',
-          nativeAmount: '',
-          networkFee: '',
-          blockHeight: 0,
-          date: Date.now(),
-          txid: '',
-          signedTx: params[0],
-          ourReceiveAddresses: [],
-          walletId: this.walletId
-        }
-
-        return await this.broadcastTx(tx)
+      txRpcParamsToSpendInfo: async (
+        params: TxRpcParams
+      ): Promise<EdgeSpendInfo> => {
+        return this.utils.txRpcParamsToSpendInfo(params)
       },
 
       // Wallet Connect utils
@@ -464,63 +412,28 @@ export class EthereumEngine extends CurrencyEngine<
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete this.tools.walletConnectors[uri]
       },
-      wcRequestResponse: async (
+      wcApproveRequest: async (
         uri: string,
-        approve: boolean,
-        payload: WcRpcPayload
-      ) => {
-        const requestBody = (result: Object): Object => ({
-          id: payload.id,
+        payload: WcRpcPayload,
+        result: string
+      ): Promise<void> => {
+        this.tools.walletConnectors[uri].connector.approveRequest({
+          id: parseInt(payload.id.toString()),
           jsonrpc: '2.0',
-          ...result
+          result: result
         })
-
-        if (approve) {
-          try {
-            // @ts-expect-error
-            const result = await this.otherMethods[`${payload.method}`](
-              payload.params
-            )
-
-            switch (payload.method) {
-              case 'personal_sign':
-              case 'eth_sign':
-              case 'eth_signTypedData':
-              case 'eth_signTypedData_v4':
-                this.tools.walletConnectors[uri].connector.approveRequest(
-                  requestBody({ result: result })
-                )
-                break
-              case 'eth_signTransaction':
-                this.tools.walletConnectors[uri].connector.approveRequest(
-                  requestBody({ result: result.signedTx })
-                )
-                break
-              case 'eth_sendTransaction':
-              case 'eth_sendRawTransaction':
-                this.tools.walletConnectors[uri].connector.approveRequest(
-                  requestBody({ result: result.txid })
-                )
-            }
-          } catch (e: any) {
-            this.tools.walletConnectors[uri].connector.rejectRequest(
-              requestBody({
-                error: {
-                  message: 'rejected'
-                }
-              })
-            )
-            throw e
+      },
+      wcRejectRequest: async (
+        uri: string,
+        payload: WcRpcPayload
+      ): Promise<void> => {
+        this.tools.walletConnectors[uri].connector.rejectRequest({
+          id: parseInt(payload.id.toString()),
+          jsonrpc: '2.0',
+          error: {
+            message: 'rejected'
           }
-        } else {
-          this.tools.walletConnectors[uri].connector.rejectRequest(
-            requestBody({
-              error: {
-                message: 'rejected'
-              }
-            })
-          )
-        }
+        })
       },
       wcGetConnections: () =>
         Object.keys(this.tools.walletConnectors)
