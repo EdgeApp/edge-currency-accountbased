@@ -12,6 +12,10 @@ const networkInfo: AlgorandNetworkInfo = {
     'https://mainnet-api.algonode.cloud',
     'http://node.algoexplorerapi.io',
     'https://xna-mainnet-api.algonode.cloud'
+  ],
+  indexerServers: [
+    'https://mainnet-idx.algonode.cloud',
+    'https://algoindexer.algoexplorerapi.io'
   ]
 }
 

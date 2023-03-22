@@ -1,4 +1,5 @@
 import algosdk from 'algosdk'
+import { add } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -19,13 +20,18 @@ import {
   asAccountInformation,
   asAlgorandPrivateKeys,
   asAlgorandWalletOtherData,
+  asIndexerPayTransactionResponse,
+  asPayTransaction,
   asSafeAlgorandWalletInfo,
+  BaseTransaction,
+  IndexerPayTransactionResponse,
   SafeAlgorandWalletInfo
 } from './algorandTypes'
 
-const { Algodv2 } = algosdk
+const { Algodv2, Indexer } = algosdk
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
+const TRANSACTION_POLL_MILLISECONDS = 3000
 
 export class AlgorandEngine extends CurrencyEngine<
   AlgorandTools,
@@ -85,12 +91,127 @@ export class AlgorandEngine extends CurrencyEngine<
     throw new Error('queryTransactionParams not implemented')
   }
 
-  processAlgorandTransaction(tx: any): void {
-    throw new Error('processAlgorandTransaction not implemented')
+  processAlgorandTransaction(tx: BaseTransaction): void {
+    const {
+      fee,
+      'confirmed-round': confirmedRound,
+      id,
+      'round-time': roundTime,
+      sender,
+      'tx-type': txType
+    } = tx
+
+    let nativeAmount: string
+    let networkFee: string
+    const ourReceiveAddresses = []
+
+    switch (txType) {
+      case 'pay': {
+        const { amount } = asPayTransaction(tx)['payment-transaction']
+
+        nativeAmount = amount.toString()
+        networkFee = fee.toString()
+
+        if (sender === this.walletInfo.keys.publicKey) {
+          nativeAmount = `-${add(nativeAmount, networkFee)}`
+        } else {
+          networkFee = '0'
+          ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        }
+        break
+      }
+      default: {
+        // Unrecognized tx type
+        return
+      }
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: id,
+      date: roundTime,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: confirmedRound,
+      nativeAmount,
+      networkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      walletId: this.walletId
+    }
+
+    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
   async queryTransactions(): Promise<void> {
-    throw new Error('queryTransactions not implemented')
+    const minRound = this.otherData.latestRound // init query
+
+    let latestTxid: string | undefined // To store newest found txid
+    let latestRound = this.otherData.latestRound // To store next loop query ending round
+
+    let progressRound = 0 // for tracking progress
+    let nextQueryToken: string | undefined // to continue where previous query left off. The first server to respond will be the only one that can serve requests with this token.
+    let continueQuery = true
+    do {
+      const indexerTransactions: IndexerPayTransactionResponse =
+        await asyncWaterfall(
+          this.networkInfo.indexerServers.map(server => async () => {
+            const client = new Indexer({}, server, '')
+            const response = await client
+              .lookupAccountTransactions(this.walletLocalData.publicKey)
+              .minRound(minRound)
+              .nextToken(nextQueryToken ?? '')
+              // .limit(1000) // default response limit is 1000
+              .do()
+            const out = asIndexerPayTransactionResponse(response)
+            return out
+          })
+        )
+      const { 'next-token': nextToken, transactions } = indexerTransactions
+
+      if (transactions.length === 0) break
+
+      for (const tx of transactions) {
+        if (latestTxid == null) {
+          // the very first tx is the most recent
+          latestTxid = tx.id
+          latestRound = tx['confirmed-round']
+        }
+        progressRound = tx['confirmed-round']
+        if (tx.id === this.otherData.latestTxid) {
+          continueQuery = false
+          break
+        }
+        try {
+          this.processAlgorandTransaction(tx)
+        } catch (e: any) {
+          this.log.warn('processAlgorandTransaction error:', e)
+        }
+      }
+
+      latestRound = latestRound ?? this.walletLocalData.blockHeight
+      const progress = (latestRound - progressRound) / (latestRound - minRound)
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        progress
+      this.updateOnAddressesChecked()
+
+      nextQueryToken = nextToken
+    } while (nextQueryToken != null && continueQuery)
+
+    if (latestTxid != null && this.otherData.latestTxid !== latestTxid) {
+      this.otherData.latestTxid = latestTxid
+      this.otherData.latestRound = latestRound
+      this.walletLocalDataDirty = true
+    }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.updateOnAddressesChecked()
+
+    if (this.transactionsChangedArray.length > 0) {
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
   }
 
   // // ****************************************************************************
@@ -100,6 +221,9 @@ export class AlgorandEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     await super.startEngine()
   }
 
