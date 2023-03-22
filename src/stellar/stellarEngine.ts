@@ -88,10 +88,9 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
         this.currencyInfo,
         this.currencyInfo.currencyCode
       )
+      if (denom == null) throw new Error('Unknown denom')
 
-      if (denom?.multiplier != null) {
-        return mul(balanceObj.balance, denom.multiplier)
-      }
+      return mul(balanceObj.balance, denom.multiplier)
     } catch (e: any) {
       // API will throw if account doesn't exist
     }
