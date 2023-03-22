@@ -11,7 +11,7 @@ import {
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asyncWaterfall } from '../common/utils'
+import { asyncWaterfall, makeMutex, Mutex } from '../common/utils'
 import { AlgorandTools } from './algorandPlugin'
 import {
   AccountInformation,
@@ -40,6 +40,8 @@ export class AlgorandEngine extends CurrencyEngine<
   otherData!: AlgorandWalletOtherData
   networkInfo: AlgorandNetworkInfo
 
+  queryTxMutex: Mutex
+
   constructor(
     env: PluginEnvironment<AlgorandNetworkInfo>,
     tools: AlgorandTools,
@@ -48,6 +50,8 @@ export class AlgorandEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+
+    this.queryTxMutex = makeMutex()
   }
 
   setOtherData(raw: any): void {
@@ -142,6 +146,12 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    return await this.queryTxMutex(
+      async () => await this.queryTransactionsInner()
+    )
+  }
+
+  async queryTransactionsInner(): Promise<void> {
     const minRound = this.otherData.latestRound // init query
 
     let latestTxid: string | undefined // To store newest found txid

@@ -297,7 +297,7 @@ export function getOtherParams<T extends JsonObject>(tx: EdgeTransaction): T {
   return otherParams
 }
 
-type Mutex = <T>(callback: () => Promise<T>) => Promise<T>
+export type Mutex = <T>(callback: () => Promise<T>) => Promise<T>
 /**
  * Constructs a mutex.
  *
