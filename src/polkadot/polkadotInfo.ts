@@ -31,7 +31,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'DOT',
       multiplier: '10000000000',
-      symbol: ''
+      symbol: '●'
     }
   ],
   metaTokens: [] // Deprecated

@@ -35,7 +35,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'ZEC',
       multiplier: '100000000',
-      symbol: 'Z'
+      symbol: 'ⓩ'
     }
   ],
 

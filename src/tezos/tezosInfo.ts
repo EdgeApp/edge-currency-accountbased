@@ -52,7 +52,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'XTZ',
       multiplier: '1000000',
-      symbol: 't'
+      symbol: 'ꜩ'
     }
   ],
   metaTokens: [] // Deprecated

@@ -28,7 +28,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'XLM',
       multiplier: '10000000',
-      symbol: '*'
+      symbol: '🚀'
     }
   ],
   metaTokens: [] // Deprecated
