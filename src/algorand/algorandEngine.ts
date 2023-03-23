@@ -23,9 +23,11 @@ import {
   asIndexerPayTransactionResponse,
   asPayTransaction,
   asSafeAlgorandWalletInfo,
+  asSuggestedTransactionParams,
   BaseTransaction,
   IndexerPayTransactionResponse,
-  SafeAlgorandWalletInfo
+  SafeAlgorandWalletInfo,
+  SuggestedTransactionParams
 } from './algorandTypes'
 
 const { Algodv2, Indexer } = algosdk
@@ -41,6 +43,7 @@ export class AlgorandEngine extends CurrencyEngine<
   networkInfo: AlgorandNetworkInfo
 
   queryTxMutex: Mutex
+  suggestedTransactionParams: SuggestedTransactionParams
 
   constructor(
     env: PluginEnvironment<AlgorandNetworkInfo>,
@@ -52,6 +55,14 @@ export class AlgorandEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
 
     this.queryTxMutex = makeMutex()
+    this.suggestedTransactionParams = {
+      flatFee: false,
+      fee: 0,
+      firstRound: 0,
+      lastRound: 0,
+      genesisID: this.networkInfo.genesisID,
+      genesisHash: this.networkInfo.genesisHash
+    }
   }
 
   setOtherData(raw: any): void {
@@ -92,7 +103,25 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async queryTransactionParams(): Promise<void> {
-    throw new Error('queryTransactionParams not implemented')
+    try {
+      const params: SuggestedTransactionParams = await asyncWaterfall(
+        this.networkInfo.algodServers.map(server => async () => {
+          const client = new Algodv2('', server, '')
+          const response = await client.getTransactionParams().do()
+          const out = asSuggestedTransactionParams(response)
+
+          if (out.genesisHash !== this.networkInfo.genesisHash) {
+            throw new Error('Server genesisHash mismatch')
+          }
+
+          return out
+        })
+      )
+
+      this.suggestedTransactionParams = params
+    } catch (e: any) {
+      this.log.warn('queryTransactionParams error:', e)
+    }
   }
 
   processAlgorandTransaction(tx: BaseTransaction): void {
@@ -231,6 +260,9 @@ export class AlgorandEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )

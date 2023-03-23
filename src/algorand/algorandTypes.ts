@@ -1,5 +1,6 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -24,6 +25,8 @@ export type AlgorandWalletOtherData = ReturnType<
 export interface AlgorandNetworkInfo {
   algodServers: string[]
   indexerServers: string[]
+  genesisID: string
+  genesisHash: string
 }
 
 export const asAccountInformation = asObject({
@@ -98,6 +101,19 @@ export const asIndexerPayTransactionResponse = asObject({
 
 export type IndexerPayTransactionResponse = ReturnType<
   typeof asIndexerPayTransactionResponse
+>
+
+export const asSuggestedTransactionParams = asObject({
+  flatFee: asBoolean, // false
+  fee: asNumber, // 0
+  firstRound: asNumber, // 27857494
+  lastRound: asNumber, // 27858494
+  genesisID: asString, // 'mainnet-v1.0'
+  genesisHash: asString // 'wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8='
+})
+
+export type SuggestedTransactionParams = ReturnType<
+  typeof asSuggestedTransactionParams
 >
 
 export type SafeAlgorandWalletInfo = ReturnType<typeof asSafeAlgorandWalletInfo>

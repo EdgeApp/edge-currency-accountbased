@@ -16,7 +16,9 @@ const networkInfo: AlgorandNetworkInfo = {
   indexerServers: [
     'https://mainnet-idx.algonode.cloud',
     'https://algoindexer.algoexplorerapi.io'
-  ]
+  ],
+  genesisID: 'mainnet-v1.0',
+  genesisHash: 'wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8='
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
