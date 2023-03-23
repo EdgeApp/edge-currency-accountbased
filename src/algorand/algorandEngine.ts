@@ -3,7 +3,7 @@ import algosdk, {
   encodeUnsignedTransaction,
   Transaction
 } from 'algosdk'
-import { abs, add, gt } from 'biggystring'
+import { abs, add, gt, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -61,6 +61,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
   queryTxMutex: Mutex
   suggestedTransactionParams: SuggestedTransactionParams
+  minimumAddressBalance: string
 
   constructor(
     env: PluginEnvironment<AlgorandNetworkInfo>,
@@ -80,6 +81,7 @@ export class AlgorandEngine extends CurrencyEngine<
       genesisID: this.networkInfo.genesisID,
       genesisHash: this.networkInfo.genesisHash
     }
+    this.minimumAddressBalance = this.networkInfo.minimumAddressBalance
   }
 
   setOtherData(raw: any): void {
@@ -95,6 +97,15 @@ export class AlgorandEngine extends CurrencyEngine<
         return out
       })
     )
+  }
+
+  getRecipientBalance = async (account: string): Promise<string> => {
+    try {
+      const accountInfo = await this.fetchAccountInfo(account)
+      return accountInfo.amount.toString()
+    } catch (e: any) {
+      return this.minimumAddressBalance
+    }
   }
 
   async queryBalance(): Promise<void> {
@@ -302,8 +313,14 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    const { edgeSpendInfo, currencyCode, nativeBalance } =
-      this.makeSpendCheck(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+
+    const spendableAlgoBalance = sub(
+      this.getBalance({
+        currencyCode: this.currencyInfo.currencyCode
+      }),
+      this.minimumAddressBalance
+    )
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -332,6 +349,7 @@ export class AlgorandEngine extends CurrencyEngine<
     let nativeAmount = amount
     let networkFee = '0'
     let fee: string
+    let recipient: string | undefined
     switch (type) {
       case 'pay': {
         rawTx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -345,8 +363,9 @@ export class AlgorandEngine extends CurrencyEngine<
 
         networkFee = fee
         nativeAmount = `-${add(nativeAmount, networkFee)}`
+        recipient = publicAddress
 
-        if (gt(abs(nativeAmount), nativeBalance)) {
+        if (gt(abs(nativeAmount), spendableAlgoBalance)) {
           throw new InsufficientFundsError()
         }
 
@@ -360,7 +379,8 @@ export class AlgorandEngine extends CurrencyEngine<
     rawTx.fee = parseInt(fee)
 
     const otherParams = {
-      encodedTx: base16.stringify(encodeUnsignedTransaction(rawTx))
+      encodedTx: base16.stringify(encodeUnsignedTransaction(rawTx)),
+      recipient
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -383,11 +403,21 @@ export class AlgorandEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    const { encodedTx } = asAlgorandUnsignedTx(getOtherParams(edgeTransaction))
+    const { encodedTx, recipient } = asAlgorandUnsignedTx(
+      getOtherParams(edgeTransaction)
+    )
 
     const rawTx = decodeUnsignedTransaction(
       Uint8Array.from(base16.parse(encodedTx))
     )
+
+    if (recipient != null) {
+      await this.checkRecipientMinimumBalance(
+        this.getRecipientBalance,
+        rawTx.amount.toString(),
+        recipient
+      )
+    }
 
     const keys = asAlgorandPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
     const secretKey = algosdk.mnemonicToSecretKey(keys.mnemonic)

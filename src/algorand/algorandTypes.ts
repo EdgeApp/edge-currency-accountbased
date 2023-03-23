@@ -28,6 +28,7 @@ export interface AlgorandNetworkInfo {
   genesisID: string
   genesisHash: string
   minimumTxFee: number
+  minimumAddressBalance: string
 }
 
 export const asAccountInformation = asObject({
@@ -124,7 +125,8 @@ export const asBaseTxOpts = asObject({
 export type BaseTxOpts = ReturnType<typeof asBaseTxOpts>
 
 export const asAlgorandUnsignedTx = asObject({
-  encodedTx: asString
+  encodedTx: asString,
+  recipient: asOptional(asString)
 })
 
 export type AlgorandUnsignedTx = ReturnType<typeof asAlgorandUnsignedTx>
