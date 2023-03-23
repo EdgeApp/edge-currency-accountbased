@@ -3,7 +3,7 @@ import {
   EdgeFetchFunction,
   EdgeFetchOptions,
   EdgeFetchResponse
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import { asyncWaterfall, shuffleArray } from './utils'
 const INFO_SERVERS = ['https://info1.edge.app', 'https://info2.edge.app']

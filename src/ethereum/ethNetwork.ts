@@ -1,5 +1,5 @@
 import { add, div, mul, sub } from 'biggystring'
-import { EdgeTransaction, JsonObject } from 'edge-core-js'
+import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
