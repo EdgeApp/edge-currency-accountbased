@@ -1,17 +1,31 @@
-import algosdk from 'algosdk'
-import { add } from 'biggystring'
+import algosdk, {
+  decodeUnsignedTransaction,
+  encodeUnsignedTransaction,
+  Transaction
+} from 'algosdk'
+import { abs, add, gt } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject
+  InsufficientFundsError,
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asyncWaterfall, makeMutex, Mutex } from '../common/utils'
+import {
+  asyncWaterfall,
+  cleanTxLogs,
+  getOtherParams,
+  makeMutex,
+  Mutex
+} from '../common/utils'
 import { AlgorandTools } from './algorandPlugin'
 import {
   AccountInformation,
@@ -19,12 +33,15 @@ import {
   AlgorandWalletOtherData,
   asAccountInformation,
   asAlgorandPrivateKeys,
+  asAlgorandUnsignedTx,
   asAlgorandWalletOtherData,
+  asBaseTxOpts,
   asIndexerPayTransactionResponse,
   asPayTransaction,
   asSafeAlgorandWalletInfo,
   asSuggestedTransactionParams,
   BaseTransaction,
+  BaseTxOpts,
   IndexerPayTransactionResponse,
   SafeAlgorandWalletInfo,
   SuggestedTransactionParams
@@ -275,21 +292,135 @@ export class AlgorandEngine extends CurrencyEngine<
     await this.startEngine()
   }
 
-  async makeSpend(edgeSpendInfo: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('makeSpend not implemented')
+  calcFee(rawTx: Transaction): string {
+    const sizeBytes = rawTx.estimateSize()
+    const fee = Math.max(
+      this.suggestedTransactionParams.fee * sizeBytes,
+      this.networkInfo.minimumTxFee
+    )
+    return fee.toString()
+  }
+
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    const { edgeSpendInfo, currencyCode, nativeBalance } =
+      this.makeSpendCheck(edgeSpendInfoIn)
+
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const {
+      nativeAmount: amount,
+      memo,
+      publicAddress
+    } = edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (amount == null) throw new NoAmountSpecifiedError()
+
+    const { type }: BaseTxOpts = asMaybe(asBaseTxOpts)(
+      edgeSpendInfo.otherParams
+    ) ?? { type: 'pay' }
+
+    let note: Uint8Array | undefined
+    if (memo != null) {
+      note = Uint8Array.from(Buffer.from(memo, 'ascii'))
+    }
+
+    let rawTx: Transaction
+    let nativeAmount = amount
+    let networkFee = '0'
+    let fee: string
+    switch (type) {
+      case 'pay': {
+        rawTx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          to: publicAddress,
+          from: this.walletInfo.keys.publicKey,
+          amount: BigInt(amount),
+          note,
+          suggestedParams: { ...this.suggestedTransactionParams }
+        })
+        fee = this.calcFee(rawTx)
+
+        networkFee = fee
+        nativeAmount = `-${add(nativeAmount, networkFee)}`
+
+        if (gt(abs(nativeAmount), nativeBalance)) {
+          throw new InsufficientFundsError()
+        }
+
+        break
+      }
+      default:
+        throw new Error('Unrecognized transaction type')
+    }
+
+    rawTx.flatFee = true
+    rawTx.fee = parseInt(fee)
+
+    const otherParams = {
+      encodedTx: base16.stringify(encodeUnsignedTransaction(rawTx))
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode,
+      blockHeight: 0,
+      nativeAmount,
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams,
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
   }
 
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    throw new Error('signTx not implemented')
+    const { encodedTx } = asAlgorandUnsignedTx(getOtherParams(edgeTransaction))
+
+    const rawTx = decodeUnsignedTransaction(
+      Uint8Array.from(base16.parse(encodedTx))
+    )
+
+    const keys = asAlgorandPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const secretKey = algosdk.mnemonicToSecretKey(keys.mnemonic)
+    const signedTxBytes = rawTx.signTxn(secretKey.sk)
+    const signedTx = base16.stringify(signedTxBytes)
+
+    edgeTransaction.signedTx = signedTx
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('broadcastTx not implemented')
+    const signedTxBytes = Uint8Array.from(
+      base16.parse(edgeTransaction.signedTx)
+    )
+
+    try {
+      const { txId } = await asyncWaterfall(
+        this.networkInfo.algodServers.map(server => async () => {
+          const client = new Algodv2('', server, '')
+          return await client.sendRawTransaction(signedTxBytes).do()
+        })
+      )
+      edgeTransaction.txid = txId
+      edgeTransaction.date = Date.now() / 1000
+    } catch (e: any) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
+
+    this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    return edgeTransaction
   }
 
   getDisplayPrivateSeed(privateKeys: JsonObject): string {

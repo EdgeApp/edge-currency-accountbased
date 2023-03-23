@@ -27,6 +27,7 @@ export interface AlgorandNetworkInfo {
   indexerServers: string[]
   genesisID: string
   genesisHash: string
+  minimumTxFee: number
 }
 
 export const asAccountInformation = asObject({
@@ -115,6 +116,24 @@ export const asSuggestedTransactionParams = asObject({
 export type SuggestedTransactionParams = ReturnType<
   typeof asSuggestedTransactionParams
 >
+
+export const asBaseTxOpts = asObject({
+  type: asString
+}).withRest
+
+export type BaseTxOpts = ReturnType<typeof asBaseTxOpts>
+
+export const asAlgorandUnsignedTx = asObject({
+  encodedTx: asString
+})
+
+export type AlgorandUnsignedTx = ReturnType<typeof asAlgorandUnsignedTx>
+
+export const asPayTxOpts = asObject({
+  type: asPayTxType,
+  to: asString,
+  amount: asNumber
+}).withRest
 
 export type SafeAlgorandWalletInfo = ReturnType<typeof asSafeAlgorandWalletInfo>
 export const asSafeAlgorandWalletInfo = asSafeCommonWalletInfo
