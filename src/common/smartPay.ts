@@ -1,6 +1,6 @@
 import { mul } from 'biggystring'
 import { asEither, asNumber, asObject, asString, asValue } from 'cleaners'
-import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js'
+import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js/types'
 
 import { cleanMultiFetch, makeQueryParams, QueryParams } from './network'
 import { computeCRC, formatPixKey } from './pixkey'

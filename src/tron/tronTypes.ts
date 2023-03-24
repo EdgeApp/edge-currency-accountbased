@@ -11,7 +11,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { JsonObject } from 'edge-core-js'
+import { JsonObject } from 'edge-core-js/types'
 
 export interface TronKeys {
   tronMnemonic?: string

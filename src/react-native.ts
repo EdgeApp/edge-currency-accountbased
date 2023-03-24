@@ -1,4 +1,4 @@
-import { EdgeOtherMethods } from 'edge-core-js'
+import { EdgeOtherMethods } from 'edge-core-js/types'
 import { NativeModules } from 'react-native'
 import {
   AddressTool as PiratechainAddressTool,

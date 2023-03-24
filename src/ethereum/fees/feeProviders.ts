@@ -5,7 +5,7 @@ import {
   EdgeFetchFunction,
   EdgeLog,
   JsonObject
-} from 'edge-core-js'
+} from 'edge-core-js/types'
 
 import { fetchInfo } from '../../common/network'
 import { hexToDecimal, pickRandom } from '../../common/utils'

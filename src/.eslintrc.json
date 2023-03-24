@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "name": "edge-core-js",
+        "message": "Use edge-core-js/types"
+      }
+    ]
+  }
+}

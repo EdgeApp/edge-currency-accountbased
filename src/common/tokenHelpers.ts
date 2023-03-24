@@ -1,6 +1,6 @@
 import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
-import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js'
+import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
 
 /**
  * The `networkLocation` field is untyped,
