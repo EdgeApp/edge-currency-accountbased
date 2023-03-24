@@ -9,6 +9,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeSpendInfo,
+  EdgeToken,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -35,6 +36,7 @@ import {
   asAlgorandPrivateKeys,
   asAlgorandUnsignedTx,
   asAlgorandWalletOtherData,
+  asAxferTransaction,
   asBaseTxOpts,
   asIndexerPayTransactionResponse,
   asMaybeCustomFee,
@@ -184,8 +186,10 @@ export class AlgorandEngine extends CurrencyEngine<
       'tx-type': txType
     } = tx
 
+    let currencyCode: string
     let nativeAmount: string
     let networkFee: string
+    let parentNetworkFee: string | undefined
     const ourReceiveAddresses = []
 
     switch (txType) {
@@ -201,6 +205,28 @@ export class AlgorandEngine extends CurrencyEngine<
           networkFee = '0'
           ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
         }
+
+        currencyCode = this.currencyInfo.currencyCode
+        break
+      }
+      case 'axfer': {
+        const { amount, 'asset-id': assetId } =
+          asAxferTransaction(tx)['asset-transfer-transaction']
+
+        nativeAmount = amount.toString()
+        networkFee = '0'
+
+        if (sender === this.walletInfo.keys.publicKey) {
+          nativeAmount = `-${nativeAmount}`
+          parentNetworkFee = fee.toString()
+        } else {
+          ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        }
+
+        const edgeToken: EdgeToken | undefined = this.allTokensMap[assetId]
+        if (edgeToken == null) return
+        currencyCode = edgeToken.currencyCode
+
         break
       }
       default: {
@@ -212,11 +238,12 @@ export class AlgorandEngine extends CurrencyEngine<
     const edgeTransaction: EdgeTransaction = {
       txid: id,
       date: roundTime,
-      currencyCode: this.currencyInfo.currencyCode,
+      currencyCode,
       blockHeight: confirmedRound,
       nativeAmount,
       networkFee,
       ourReceiveAddresses,
+      parentNetworkFee,
       signedTx: '',
       walletId: this.walletId
     }
@@ -291,7 +318,9 @@ export class AlgorandEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
 
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    for (const cc of this.enabledTokens) {
+      this.tokenCheckTransactionsStatus[cc] = 1
+    }
     this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {

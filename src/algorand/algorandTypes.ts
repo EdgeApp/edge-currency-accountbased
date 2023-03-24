@@ -95,6 +95,17 @@ export const asPayTransaction = asObject({
   'tx-type': asPayTxType
 })
 
+const asAxferTxType = asValue('axfer')
+export const asAxferTransaction = asObject({
+  'asset-transfer-transaction': asObject({
+    amount: asNumber,
+    'asset-id': asNumber
+    // "close-amount": 0,
+    // receiver: asString
+  }),
+  'tx-type': asAxferTxType
+})
+
 export const asIndexerPayTransactionResponse = asObject({
   'current-round': asNumber,
   'next-token': asOptional(asString),
