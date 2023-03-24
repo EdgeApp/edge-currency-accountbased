@@ -367,7 +367,9 @@ export class AlgorandEngine extends CurrencyEngine<
     let balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
-    balance = sub(balance, this.networkInfo.minimumAddressBalance)
+    if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
+      balance = sub(balance, this.networkInfo.minimumAddressBalance)
+    }
 
     const publicAddress = spendInfo.spendTargets[0].publicAddress
     if (publicAddress == null) {
@@ -410,7 +412,8 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, nativeBalance } =
+      this.makeSpendCheck(edgeSpendInfoIn)
 
     const spendableAlgoBalance = sub(
       this.getBalance({
@@ -435,7 +438,9 @@ export class AlgorandEngine extends CurrencyEngine<
 
     const { type }: BaseTxOpts = asMaybe(asBaseTxOpts)(
       edgeSpendInfo.otherParams
-    ) ?? { type: 'pay' }
+    ) ?? {
+      type: currencyCode === this.currencyInfo.currencyCode ? 'pay' : 'axfer'
+    }
 
     let note: Uint8Array | undefined
     if (memo != null) {
@@ -448,6 +453,7 @@ export class AlgorandEngine extends CurrencyEngine<
     let rawTx: Transaction
     let nativeAmount = amount
     let networkFee = '0'
+    let parentNetworkFee: string | undefined
     let fee: string
     let recipient: string | undefined
     switch (type) {
@@ -466,6 +472,41 @@ export class AlgorandEngine extends CurrencyEngine<
         recipient = publicAddress
 
         if (gt(abs(nativeAmount), spendableAlgoBalance)) {
+          throw new InsufficientFundsError()
+        }
+
+        break
+      }
+      case 'axfer': {
+        const edgeTokenId = Object.keys(this.allTokensMap).find(
+          tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
+        )
+        if (edgeTokenId == null) throw new Error('Unrecognized asset')
+        const assetIndex: string | undefined =
+          this.allTokensMap?.[edgeTokenId]?.networkLocation?.assetIndex
+        if (assetIndex == null) throw new Error('Unrecognized asset')
+
+        rawTx = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          assetIndex: parseInt(assetIndex),
+          to: publicAddress,
+          from: this.walletInfo.keys.publicKey,
+          amount: BigInt(amount),
+          note,
+          suggestedParams: { ...this.suggestedTransactionParams }
+        })
+        fee = customFee ?? this.calcFee(rawTx)
+
+        nativeAmount = `-${nativeAmount}`
+        parentNetworkFee = fee
+
+        if (gt(parentNetworkFee, spendableAlgoBalance)) {
+          throw new InsufficientFundsError({
+            currencyCode: this.currencyInfo.currencyCode,
+            networkFee: fee
+          })
+        }
+
+        if (gt(abs(nativeAmount), nativeBalance)) {
           throw new InsufficientFundsError()
         }
 
@@ -491,6 +532,7 @@ export class AlgorandEngine extends CurrencyEngine<
       nativeAmount,
       networkFee,
       ourReceiveAddresses: [],
+      parentNetworkFee,
       signedTx: '',
       otherParams,
       walletId: this.walletId
