@@ -30,7 +30,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'algorand',
   walletType: 'wallet:algorand',
 
-  defaultSettings: {},
+  defaultSettings: { customFeeSettings: ['fee'] },
 
   memoType: 'text',
 

@@ -137,6 +137,11 @@ export const asPayTxOpts = asObject({
   amount: asNumber
 }).withRest
 
+export const asMaybeCustomFee = asMaybe(
+  asObject({ fee: asOptional(asString) }),
+  { fee: undefined }
+)
+
 export type SafeAlgorandWalletInfo = ReturnType<typeof asSafeAlgorandWalletInfo>
 export const asSafeAlgorandWalletInfo = asSafeCommonWalletInfo
 

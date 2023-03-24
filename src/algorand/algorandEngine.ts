@@ -3,7 +3,7 @@ import algosdk, {
   encodeUnsignedTransaction,
   Transaction
 } from 'algosdk'
-import { abs, add, gt, sub } from 'biggystring'
+import { abs, add, div, gt, lte, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -37,6 +37,7 @@ import {
   asAlgorandWalletOtherData,
   asBaseTxOpts,
   asIndexerPayTransactionResponse,
+  asMaybeCustomFee,
   asPayTransaction,
   asSafeAlgorandWalletInfo,
   asSuggestedTransactionParams,
@@ -312,6 +313,52 @@ export class AlgorandEngine extends CurrencyEngine<
     return fee.toString()
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    let balance = this.getBalance({
+      currencyCode: spendInfo.currencyCode
+    })
+    balance = sub(balance, this.networkInfo.minimumAddressBalance)
+
+    const publicAddress = spendInfo.spendTargets[0].publicAddress
+    if (publicAddress == null) {
+      throw new Error('makeSpend Missing publicAddress')
+    }
+
+    const { customNetworkFee } = spendInfo
+    const customFee = asMaybeCustomFee(customNetworkFee).fee
+
+    let fee: string | undefined = customFee
+
+    if (fee == null) {
+      spendInfo.spendTargets[0].nativeAmount = '1'
+      const edgeTx = await this.makeSpend(spendInfo)
+      fee = edgeTx.networkFee
+    }
+
+    const getMax = async (min: string, max: string): Promise<string> => {
+      const diff = sub(max, min)
+      if (lte(diff, '1')) {
+        return min
+      }
+      const mid = add(min, div(diff, '2'))
+
+      // Try the average:
+      spendInfo.spendTargets[0].nativeAmount = mid
+
+      const totalAmount = add(
+        mid,
+        fee ?? this.networkInfo.minimumTxFee.toString()
+      )
+      if (gt(totalAmount, balance)) {
+        return await getMax(min, mid)
+      } else {
+        return await getMax(mid, max)
+      }
+    }
+
+    return await getMax('0', add(balance, '1'))
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
 
@@ -345,6 +392,9 @@ export class AlgorandEngine extends CurrencyEngine<
       note = Uint8Array.from(Buffer.from(memo, 'ascii'))
     }
 
+    const { customNetworkFee } = edgeSpendInfo
+    const customFee = asMaybeCustomFee(customNetworkFee).fee
+
     let rawTx: Transaction
     let nativeAmount = amount
     let networkFee = '0'
@@ -359,7 +409,7 @@ export class AlgorandEngine extends CurrencyEngine<
           note,
           suggestedParams: { ...this.suggestedTransactionParams }
         })
-        fee = this.calcFee(rawTx)
+        fee = customFee ?? this.calcFee(rawTx)
 
         networkFee = fee
         nativeAmount = `-${add(nativeAmount, networkFee)}`
