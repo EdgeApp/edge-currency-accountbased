@@ -7,25 +7,34 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
+  EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { AlgorandNetworkInfo, asAlgorandPrivateKeys } from './algorandTypes'
+import {
+  AlgorandNetworkInfo,
+  asAlgorandPrivateKeys,
+  asMaybeAssetIndexLocation
+} from './algorandTypes'
 
 const { isValidAddress, mnemonicFromSeed } = algosdk
 
 export class AlgorandTools implements EdgeCurrencyTools {
   io: EdgeIo
+  builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
 
   constructor(env: PluginEnvironment<AlgorandNetworkInfo>) {
-    const { currencyInfo, io } = env
+    const { builtinTokens, currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
+    this.builtinTokens = builtinTokens
   }
 
   async importPrivateKey(input: string): Promise<JsonObject> {
@@ -112,6 +121,15 @@ export class AlgorandTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
+    const cleanLocation = asMaybeAssetIndexLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidAssetIndex')
+    }
+    return cleanLocation.assetIndex
   }
 }
 

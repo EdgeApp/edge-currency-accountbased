@@ -5,7 +5,16 @@ import { makeMetaTokens } from '../common/tokenHelpers'
 import type { AlgorandTools } from './algorandPlugin'
 import { AlgorandNetworkInfo } from './algorandTypes'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '31566704': {
+    currencyCode: 'USDC',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+    networkLocation: {
+      assetIndex: '31566704'
+    }
+  }
+}
 
 const networkInfo: AlgorandNetworkInfo = {
   algodServers: [

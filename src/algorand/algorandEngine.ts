@@ -114,10 +114,31 @@ export class AlgorandEngine extends CurrencyEngine<
       const accountInfo: AccountInformation = await this.fetchAccountInfo(
         this.walletLocalData.publicKey
       )
+      const { assets, amount, round } = accountInfo
 
-      const { amount, round } = accountInfo
+      for (const cc of this.enabledTokens) {
+        if (cc === this.currencyInfo.currencyCode) {
+          this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+        } else {
+          const tokenId = Object.keys(this.allTokensMap).find(
+            tokenId => this.allTokensMap[tokenId].currencyCode === cc
+          )
+          if (tokenId == null) {
+            this.updateBalance(cc, '0')
+            continue
+          }
 
-      this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+          const asset = assets.find(
+            asset => asset['asset-id'] === parseInt(tokenId)
+          )
+          if (asset == null) {
+            this.updateBalance(cc, '0')
+            continue
+          }
+
+          this.updateBalance(cc, asset.amount.toString())
+        }
+      }
 
       if (round > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = round

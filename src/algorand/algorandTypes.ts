@@ -11,7 +11,7 @@ import {
   Cleaner
 } from 'cleaners'
 
-import { asSafeCommonWalletInfo } from '../common/types'
+import { asIntegerString, asSafeCommonWalletInfo } from '../common/types'
 
 export const asAlgorandWalletOtherData = asObject({
   latestRound: asMaybe(asNumber, 0),
@@ -40,13 +40,13 @@ export const asAccountInformation = asObject({
   //   'num-byte-slice': 0,
   //   'num-uint': 0
   // },
-  // assets: [
-  //   {
-  //     amount: 1,
-  //     'asset-id': 954648101,
-  //     'is-frozen': true
-  //   }
-  // ],
+  assets: asArray(
+    asObject({
+      amount: asNumber,
+      'asset-id': asNumber
+      // 'is-frozen': asBoolean
+    })
+  ),
   // 'created-apps': [],
   // 'created-assets': [],
   // 'min-balance': 200000,
@@ -140,6 +140,12 @@ export const asPayTxOpts = asObject({
 export const asMaybeCustomFee = asMaybe(
   asObject({ fee: asOptional(asString) }),
   { fee: undefined }
+)
+
+export const asMaybeAssetIndexLocation = asMaybe(
+  asObject({
+    assetIndex: asIntegerString
+  })
 )
 
 export type SafeAlgorandWalletInfo = ReturnType<typeof asSafeAlgorandWalletInfo>
