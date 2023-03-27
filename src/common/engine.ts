@@ -2,6 +2,7 @@ import { add, div, eq, gt, gte, lt } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
@@ -51,7 +52,8 @@ const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
 export class CurrencyEngine<
   T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
-> {
+> implements EdgeCurrencyEngine
+{
   tools: T
   walletInfo: EdgeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
@@ -1063,5 +1065,35 @@ export class CurrencyEngine<
         this.transactionsChangedArray
       )
     }
+  }
+
+  //
+  // Virtual functions to be override by extension:
+  //
+
+  getDisplayPrivateSeed(): string | null {
+    throw new Error('not implemented')
+  }
+
+  getDisplayPublicSeed(): string | null {
+    throw new Error('not implemented')
+  }
+
+  async resyncBlockchain(): Promise<void> {
+    throw new Error('not implemented')
+  }
+
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
+  }
+
+  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
+  }
+
+  async broadcastTx(
+    edgeTransaction: EdgeTransaction
+  ): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
   }
 }

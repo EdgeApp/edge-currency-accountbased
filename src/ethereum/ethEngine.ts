@@ -80,10 +80,7 @@ import {
   printFees
 } from './fees/feeProviders'
 
-export class EthereumEngine
-  extends CurrencyEngine<EthereumTools>
-  implements EdgeCurrencyEngine
-{
+export class EthereumEngine extends CurrencyEngine<EthereumTools> {
   otherData!: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
