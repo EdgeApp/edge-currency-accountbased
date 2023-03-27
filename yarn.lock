@@ -333,10 +333,9 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@^1.5.0":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/@fioprotocol/fiosdk/-/fiosdk-1.5.0.tgz#2bc2c857101de778de7f8be0e9bad6f958184e11"
-  integrity sha512-lWKj/VIWv1R57WEOJaTDg0nb0XTcxuQrFrUXqRs82cekoSe8GVQ7MfgWl0hbRghtO895DFBSxrlqfT5jZiP5/w==
+"@fioprotocol/fiosdk@https://github.com/peachbits/fiosdk_typescript.git#d04449fff9f9b8c1487359a5b6bf64b7b53d0b6b":
+  version "1.8.0"
+  resolved "https://github.com/peachbits/fiosdk_typescript.git#d04449fff9f9b8c1487359a5b6bf64b7b53d0b6b"
   dependencies:
     "@fioprotocol/fiojs" "1.0.1"
     "@types/text-encoding" "0.0.35"

@@ -6,7 +6,8 @@ import {
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  asValue
 } from 'cleaners'
 
 import { asAny } from '../common/types'
@@ -25,8 +26,10 @@ export const ACTIONS = {
   transferTokens: 'transferTokens',
   addPublicAddress: 'addPublicAddress',
   addPublicAddresses: 'addPublicAddresses',
-  setFioDomainPublic: 'setFioDomainPublic',
+  removePublicAddresses: 'removePublicAddresses',
+  setFioDomainPublic: 'setFioDomainVisibility',
   rejectFundsRequest: 'rejectFundsRequest',
+  cancelFundsRequest: 'cancelFundsRequest',
   requestFunds: 'requestFunds',
   recordObtData: 'recordObtData',
   registerFioAddress: 'registerFioAddress',
@@ -43,14 +46,18 @@ export const ACTIONS = {
 export const BROADCAST_ACTIONS = {
   [ACTIONS.recordObtData]: true,
   [ACTIONS.requestFunds]: true,
+  [ACTIONS.rejectFundsRequest]: true,
+  [ACTIONS.cancelFundsRequest]: true,
   [ACTIONS.registerFioAddress]: true,
   [ACTIONS.registerFioDomain]: true,
   [ACTIONS.renewFioDomain]: true,
   [ACTIONS.transferTokens]: true,
   [ACTIONS.addPublicAddresses]: true,
+  [ACTIONS.removePublicAddresses]: true,
   [ACTIONS.transferFioAddress]: true,
   [ACTIONS.transferFioDomain]: true,
   [ACTIONS.addBundledTransactions]: true,
+  [ACTIONS.setFioDomainPublic]: true,
   [ACTIONS.stakeFioTokens]: true,
   [ACTIONS.unStakeFioTokens]: true
 }
@@ -61,8 +68,10 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   [ACTIONS.registerFioDomain]: 'registerFioDomain',
   [ACTIONS.renewFioDomain]: 'renewFioDomain',
   [ACTIONS.addPublicAddresses]: 'addPubAddress',
+  [ACTIONS.removePublicAddresses]: 'removePubAddress',
   [ACTIONS.setFioDomainPublic]: 'setFioDomainPublic',
   [ACTIONS.rejectFundsRequest]: 'rejectFundsRequest',
+  [ACTIONS.cancelFundsRequest]: 'cancelFundsRequest',
   [ACTIONS.recordObtData]: 'recordObtData',
   [ACTIONS.transferTokens]: 'transferTokens',
   [ACTIONS.pushTransaction]: 'pushTransaction',
@@ -71,65 +80,13 @@ export const ACTIONS_TO_END_POINT_KEYS = {
   [ACTIONS.stakeFioTokens]: 'pushTransaction',
   [ACTIONS.unStakeFioTokens]: 'pushTransaction',
   addBundledTransactions: 'addBundledTransactions'
-}
-
-export const ACTIONS_TO_FEE_END_POINT_KEYS = {
-  [ACTIONS.requestFunds]: 'newFundsRequest',
-  [ACTIONS.registerFioAddress]: 'registerFioAddress',
-  [ACTIONS.registerFioDomain]: 'registerFioDomain',
-  [ACTIONS.renewFioDomain]: 'renewFioDomain',
-  [ACTIONS.addPublicAddresses]: 'addPubAddress',
-  [ACTIONS.setFioDomainPublic]: 'setFioDomainPublic',
-  [ACTIONS.rejectFundsRequest]: 'rejectFundsRequest',
-  [ACTIONS.recordObtData]: 'recordObtData',
-  [ACTIONS.transferTokens]: 'transferTokens',
-  [ACTIONS.pushTransaction]: 'pushTransaction',
-  [ACTIONS.transferFioAddress]: 'transferFioAddress',
-  [ACTIONS.transferFioDomain]: 'transferFioDomain',
-  [ACTIONS.addBundledTransactions]: 'addBundledTransactions',
-  [ACTIONS.stakeFioTokens]: 'stakeFioTokens',
-  [ACTIONS.unStakeFioTokens]: 'unStakeFioTokens'
-}
+} as const
 
 export const ACTIONS_TO_TX_ACTION_NAME = {
   [ACTIONS.transferTokens]: 'trnsfiopubky',
   [ACTIONS.stakeFioTokens]: 'stakefio',
   [ACTIONS.unStakeFioTokens]: 'unstakefio',
   transfer: 'transfer'
-}
-
-export const FIO_REQUESTS_TYPES = {
-  PENDING: 'PENDING',
-  SENT: 'SENT'
-}
-
-export const FEE_ACTION_MAP = {
-  [ACTIONS.addPublicAddress]: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  [ACTIONS.addPublicAddresses]: {
-    action: 'getFeeForAddPublicAddress',
-    propName: 'fioAddress'
-  },
-  [ACTIONS.rejectFundsRequest]: {
-    action: 'getFeeForRejectFundsRequest',
-    propName: 'payerFioAddress'
-  },
-  [ACTIONS.requestFunds]: {
-    action: 'getFeeForNewFundsRequest',
-    propName: 'payeeFioAddress'
-  },
-  [ACTIONS.recordObtData]: {
-    action: 'getFeeForRecordObtData',
-    propName: 'payerFioAddress'
-  },
-  [ACTIONS.stakeFioTokens]: {
-    propName: 'fioAddress'
-  },
-  [ACTIONS.unStakeFioTokens]: {
-    propName: 'fioAddress'
-  }
 }
 
 export const DEFAULT_BUNDLED_TXS_AMOUNT = 100
@@ -152,6 +109,21 @@ export const asFioRequest = asObject({
 })
 
 export type FioRequest = ReturnType<typeof asFioRequest>
+
+export const asEncryptedFioRequest = asObject({
+  fio_request_id: asNumber,
+  payer_fio_address: asString,
+  payee_fio_address: asString,
+  payer_fio_public_key: asString,
+  payee_fio_public_key: asString,
+  content: asString,
+  time_stamp: asString,
+  status: asOptional(
+    asValue('cancelled', 'rejected', 'requested', 'sent_to_blockchain')
+  )
+})
+
+export type EncryptedFioRequest = ReturnType<typeof asEncryptedFioRequest>
 
 export const asFioAddress = asObject({
   name: asString,
@@ -213,7 +185,6 @@ export const asFioWalletOtherData = asObject({
       PENDING: []
     }
   ),
-  fioRequestsToApprove: asMaybe(asObject(asAny), {}),
   srps: asMaybe(asNumber, 0),
   stakingRoe: asMaybe(asString, ''),
   stakingStatus: asMaybe(asEdgeStakingStatus, {

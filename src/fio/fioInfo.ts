@@ -1,16 +1,11 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { FIO_REQUESTS_TYPES } from './fioConst'
+import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './fioPlugin'
-import type { FioNetworkInfo } from './fioTypes'
-import { fioOtherMethodNames } from './fioTypes'
+import { FioNetworkInfo, fioOtherMethodNames } from './fioTypes'
 
 const networkInfo: FioNetworkInfo = {
-  fio: true
-}
-
-const defaultSettings: any = {
   apiUrls: [
     'https://fio.eu.eosamsterdam.net/v1/',
     'https://fio.eosdac.io/v1/',
@@ -26,12 +21,16 @@ const defaultSettings: any = {
     'https://fio.eostribe.io/v1/',
     'https://api.fio.greeneosio.com/v1/',
     'https://api.fio.services/v1/',
-    'https://fio.eosusa.news/v1/'
+    'https://fio.eosusa.news/v1/',
+    'https://api-fio.nodeone.network:8344/v1/',
+    'https://api.fio.detroitledger.tech/v1/',
+    'https://fio-api.eosiomadrid.io/v1/',
+    'https://fio.eosphere.io/v1/',
+    'https://fioapi.ledgerwise.io/v1/'
   ],
   historyNodeUrls: [
-    'https://fio.greymass.com/v1/',
-    'https://fio.greymass.com/v1/',
-    'https://fio.eosphere.io/v1/'
+    'https://fio.eosphere.io/v1/',
+    'https://fio.greymass.com/v1/'
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
   fioDomainRegUrl: 'https://reg.fioprotocol.io/domain/',
@@ -40,22 +39,13 @@ const defaultSettings: any = {
   defaultRef: 'edge',
   fallbackRef: 'edge',
   freeAddressRef: 'edgefree',
-  errorCodes: {
-    INVALID_FIO_ADDRESS: 'INVALID_FIO_ADDRESS',
-    ALREADY_REGISTERED: 'ALREADY_REGISTERED',
-    FIO_ADDRESS_IS_NOT_EXIST: 'FIO_ADDRESS_IS_NOT_EXIST',
-    FIO_DOMAIN_IS_NOT_EXIST: 'FIO_DOMAIN_IS_NOT_EXIST',
-    FIO_DOMAIN_IS_NOT_PUBLIC: 'FIO_DOMAIN_IS_NOT_PUBLIC',
-    IS_DOMAIN_PUBLIC_ERROR: 'IS_DOMAIN_PUBLIC_ERROR',
-    FIO_ADDRESS_IS_NOT_LINKED: 'FIO_ADDRESS_IS_NOT_LINKED',
-    SERVER_ERROR: 'SERVER_ERROR'
-  },
-  fioRequestsTypes: FIO_REQUESTS_TYPES,
+  errorCodes: fioRegApiErrorCodes,
   balanceCurrencyCodes: {
     // TODO: Remove these currencyCodes in favor of adding a dedicated locked balances field to the API
     staked: 'FIO:STAKED',
     locked: 'FIO:LOCKED'
-  }
+  },
+  chainId: '21dcae42c0182200e93f954a074011f9048a7624c6fe81d3c9541a614a88bd1c'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -65,7 +55,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'fio',
   walletType: 'wallet:fio',
 
-  defaultSettings,
+  defaultSettings: { ...networkInfo },
 
   addressExplorer: 'https://fio.bloks.io/key/%s',
   transactionExplorer: 'https://fio.bloks.io/transaction/%s',
