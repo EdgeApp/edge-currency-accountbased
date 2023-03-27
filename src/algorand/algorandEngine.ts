@@ -6,8 +6,14 @@ import algosdk, {
 import { abs, add, div, gt, lte, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
+  EdgeActivationApproveOptions,
+  EdgeActivationQuote,
+  EdgeActivationResult,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEngineActivationOptions,
+  EdgeEngineGetActivationAssetsOptions,
+  EdgeGetActivationAssetsResults,
   EdgeSpendInfo,
   EdgeToken,
   EdgeTransaction,
@@ -25,6 +31,7 @@ import {
   cleanTxLogs,
   getOtherParams,
   makeMutex,
+  matchJson,
   Mutex
 } from '../common/utils'
 import { AlgorandTools } from './algorandPlugin'
@@ -118,6 +125,7 @@ export class AlgorandEngine extends CurrencyEngine<
       )
       const { assets, amount, round } = accountInfo
 
+      const newUnactivatedTokenIds: string[] = []
       for (const cc of this.enabledTokens) {
         if (cc === this.currencyInfo.currencyCode) {
           this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
@@ -131,9 +139,10 @@ export class AlgorandEngine extends CurrencyEngine<
           }
 
           const asset = assets.find(
-            asset => asset['asset-id'] === parseInt(tokenId)
+            asset => asset['asset-id'].toFixed() === tokenId
           )
           if (asset == null) {
+            newUnactivatedTokenIds.push(tokenId)
             this.updateBalance(cc, '0')
             continue
           }
@@ -147,6 +156,19 @@ export class AlgorandEngine extends CurrencyEngine<
         this.walletLocalDataDirty = true
         this.currencyEngineCallbacks.onBlockHeightChanged(
           this.walletLocalData.blockHeight
+        )
+      }
+
+      if (
+        !matchJson(
+          newUnactivatedTokenIds,
+          this.walletLocalData.unactivatedTokenIds
+        )
+      ) {
+        this.walletLocalData.unactivatedTokenIds = newUnactivatedTokenIds
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onUnactivatedTokenIdsChanged(
+          this.walletLocalData.unactivatedTokenIds
         )
       }
     } catch (e: any) {
@@ -604,6 +626,90 @@ export class AlgorandEngine extends CurrencyEngine<
 
   getDisplayPublicSeed(): string {
     return this.walletInfo.keys.publicKey ?? ''
+  }
+
+  engineGetActivationAssets = async (
+    options: EdgeEngineGetActivationAssetsOptions
+  ): Promise<EdgeGetActivationAssetsResults> => {
+    return {
+      assetOptions: [
+        {
+          paymentWalletId: this.walletId,
+          currencyPluginId: this.currencyInfo.pluginId
+        }
+      ]
+    }
+  }
+
+  engineActivateWallet = async ({
+    activateTokenIds,
+    paymentTokenId,
+    paymentWallet
+  }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
+    if (activateTokenIds == null)
+      throw new Error(
+        `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
+      )
+    if (paymentTokenId != null)
+      throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
+    if (paymentWallet?.id !== this.walletId)
+      throw new Error('Must pay with same wallet you are activating token with')
+
+    const minTxFee = this.networkInfo.minimumTxFee.toFixed()
+    let totalNetworkFee = '0'
+    const approvalSpendInfos: EdgeSpendInfo[] = []
+
+    for (const activateTokenId of activateTokenIds) {
+      if (this.allTokensMap[activateTokenId] == null)
+        throw new Error(`Invalid tokenId to activate ${activateTokenId}`)
+
+      const spendInfo: EdgeSpendInfo = {
+        currencyCode: this.allTokensMap[activateTokenId].currencyCode,
+        skipChecks: true,
+        spendTargets: [
+          { publicAddress: this.walletInfo.keys.publicKey, nativeAmount: '0' }
+        ] // Activation ("opt-in") transactions are just asset transfers with a zero amount
+      }
+      try {
+        const approvalTx = await this.makeSpend(spendInfo)
+        totalNetworkFee = add(
+          totalNetworkFee,
+          approvalTx.parentNetworkFee ?? minTxFee
+        )
+      } catch (e) {
+        // use default
+        totalNetworkFee = add(totalNetworkFee, minTxFee)
+      }
+
+      approvalSpendInfos.push(spendInfo)
+    }
+
+    const out = {
+      paymentWalletId: this.walletId,
+      fromNativeAmount: '0',
+      networkFee: {
+        nativeAmount: totalNetworkFee,
+        currencyPluginId: this.currencyInfo.pluginId
+      },
+      approve: async (
+        options: EdgeActivationApproveOptions = {}
+      ): Promise<EdgeActivationResult> => {
+        const { metadata } = options
+        const broadcastTransactions: EdgeTransaction[] = []
+        for (const spendInfo of approvalSpendInfos) {
+          const edgeTx = await this.makeSpend(spendInfo)
+          edgeTx.metadata = { ...metadata }
+          let signedTx = await paymentWallet.signTx(edgeTx)
+          signedTx = await paymentWallet.broadcastTx(signedTx)
+          broadcastTransactions.push(signedTx)
+          await paymentWallet.saveTx(signedTx)
+        }
+
+        return { transactions: broadcastTransactions }
+      },
+      close: async (): Promise<void> => {}
+    }
+    return out
   }
 }
 
