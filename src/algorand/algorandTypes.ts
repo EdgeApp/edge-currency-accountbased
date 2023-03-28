@@ -153,9 +153,9 @@ export const asMaybeCustomFee = asMaybe(
   { fee: undefined }
 )
 
-export const asMaybeAssetIndexLocation = asMaybe(
+export const asMaybeContractAddressLocation = asMaybe(
   asObject({
-    assetIndex: asIntegerString
+    contractAddress: asIntegerString
   })
 )
 

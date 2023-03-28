@@ -46,6 +46,7 @@ import {
   asAxferTransaction,
   asBaseTxOpts,
   asIndexerPayTransactionResponse,
+  asMaybeContractAddressLocation,
   asMaybeCustomFee,
   asPayTransaction,
   asSafeAlgorandWalletInfo,
@@ -508,12 +509,14 @@ export class AlgorandEngine extends CurrencyEngine<
           tokenId => this.allTokensMap[tokenId].currencyCode === currencyCode
         )
         if (edgeTokenId == null) throw new Error('Unrecognized asset')
-        const assetIndex: string | undefined =
-          this.allTokensMap?.[edgeTokenId]?.networkLocation?.assetIndex
-        if (assetIndex == null) throw new Error('Unrecognized asset')
+        const networkLocation = asMaybeContractAddressLocation(
+          this.allTokensMap?.[edgeTokenId]?.networkLocation
+        )
+
+        if (networkLocation == null) throw new Error('Unrecognized asset')
 
         rawTx = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-          assetIndex: parseInt(assetIndex),
+          assetIndex: parseInt(networkLocation.contractAddress),
           to: publicAddress,
           from: this.walletInfo.keys.publicKey,
           amount: BigInt(amount),

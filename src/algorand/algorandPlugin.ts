@@ -20,7 +20,7 @@ import { getDenomInfo } from '../common/utils'
 import {
   AlgorandNetworkInfo,
   asAlgorandPrivateKeys,
-  asMaybeAssetIndexLocation
+  asMaybeContractAddressLocation
 } from './algorandTypes'
 
 const { isValidAddress, mnemonicFromSeed } = algosdk
@@ -125,11 +125,11 @@ export class AlgorandTools implements EdgeCurrencyTools {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     validateToken(token)
-    const cleanLocation = asMaybeAssetIndexLocation(token.networkLocation)
+    const cleanLocation = asMaybeContractAddressLocation(token.networkLocation)
     if (cleanLocation == null) {
-      throw new Error('ErrorInvalidAssetIndex')
+      throw new Error('ErrorInvalidContractAddress')
     }
-    return cleanLocation.assetIndex
+    return cleanLocation.contractAddress
   }
 }
 

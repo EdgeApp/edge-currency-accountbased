@@ -11,7 +11,7 @@ const builtinTokens: EdgeTokenMap = {
     displayName: 'USD Coin',
     denominations: [{ name: 'USDC', multiplier: '1000000' }],
     networkLocation: {
-      assetIndex: '10458941'
+      contractAddress: '10458941' // assetIndex
     }
   }
 }
