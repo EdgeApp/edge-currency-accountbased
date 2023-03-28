@@ -35,6 +35,7 @@ import {
   asChainParams,
   asEstimateEnergy,
   asFreezeBalanceContract,
+  asSafeTronWalletInfo,
   asTransaction,
   asTRC20Balance,
   asTRC20Transaction,
@@ -42,7 +43,7 @@ import {
   asTriggerSmartContract,
   asTronBlockHeight,
   asTronFreezeAction,
-  asTronKeys,
+  asTronPrivateKeys,
   asTronQuery,
   asTronUnfreezeAction,
   asTronWalletOtherData,
@@ -51,6 +52,7 @@ import {
   asUnfreezeBalanceContract,
   CalcTxFeeOpts,
   ReferenceBlock,
+  SafeTronWalletInfo,
   TronAccountResources,
   TronFreezeAction,
   TronNetworkFees,
@@ -86,7 +88,7 @@ type TronFunction =
   | 'trx_getTransactionInfo'
   | 'trx_getTransactions'
 
-export class TronEngine extends CurrencyEngine<TronTools> {
+export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   fetchCors: EdgeFetchFunction
   log: EdgeLog
   readonly recentBlock: ReferenceBlock
@@ -102,7 +104,7 @@ export class TronEngine extends CurrencyEngine<TronTools> {
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
     currencyPlugin: TronTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeTronWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, currencyPlugin, walletInfo, opts)
@@ -1278,11 +1280,14 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
     const otherParams: TxBuilderParams = getOtherParams(edgeTransaction)
 
     const transaction = await this.txBuilder(otherParams)
-    const { tronKey } = asTronKeys(this.walletInfo.keys)
+    const { tronKey } = asTronPrivateKeys(privateKeys)
     const signer = this.tronscan.getSigner(tronKey)
     const { hex } = await signer.signTransaction(transaction.transaction)
 
@@ -1329,12 +1334,13 @@ export class TronEngine extends CurrencyEngine<TronTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys?.tronMnemonic ?? this.walletInfo.keys?.tronKey
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const tronPrivateKeys = asTronPrivateKeys(privateKeys)
+    return tronPrivateKeys.tronMnemonic ?? tronPrivateKeys.tronKey
   }
 
   getDisplayPublicSeed(): string {
-    return this.walletInfo.keys?.publicKey ?? ''
+    return this.walletInfo.keys.publicKey
   }
 }
 
@@ -1344,10 +1350,11 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TronEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafeTronWalletInfo(walletInfo)
+  const engine = new TronEngine(env, tools, safeWalletInfo, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

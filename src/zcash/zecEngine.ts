@@ -3,10 +3,12 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
+  EdgeEnginePrivateKeyOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -15,7 +17,10 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from './../common/utils'
 import { ZcashTools } from './zecPlugin'
 import {
+  asSafeZcashWalletInfo,
+  asZcashPrivateKeys,
   asZcashWalletOtherData,
+  SafeZcashWalletInfo,
   ZcashInitializerConfig,
   ZcashNetworkInfo,
   ZcashSpendInfo,
@@ -25,7 +30,10 @@ import {
   ZcashWalletOtherData
 } from './zecTypes'
 
-export class ZcashEngine extends CurrencyEngine<ZcashTools> {
+export class ZcashEngine extends CurrencyEngine<
+  ZcashTools,
+  SafeZcashWalletInfo
+> {
   pluginId: string
   networkInfo: ZcashNetworkInfo
   otherData!: ZcashWalletOtherData
@@ -43,7 +51,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   constructor(
     env: PluginEnvironment<ZcashNetworkInfo>,
     tools: ZcashTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeZcashWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     makeSynchronizer: any
   ) {
@@ -271,10 +279,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     await this.clearBlockchainCache()
     await this.startEngine()
     this.synchronizer
-      .rescan(
-        this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
-          this.networkInfo.defaultBirthday
-      )
+      .rescan(this.walletInfo.keys.birthdayHeight)
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
   }
 
@@ -349,8 +354,12 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
   }
 
   async broadcastTx(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
+    const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
+      opts?.privateKeys
+    )
     if (
       edgeTransaction.spendTargets == null ||
       edgeTransaction.spendTargets.length !== 1
@@ -366,7 +375,7 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
       toAddress: spendTarget.publicAddress,
       memo: spendTarget.memo ?? spendTarget.uniqueIdentifier ?? '',
       fromAccountIndex: 0,
-      spendingKey: this.walletInfo.keys[`${this.pluginId}SpendKey`]
+      spendingKey: zcashPrivateKeys.spendKey
     }
 
     try {
@@ -382,8 +391,9 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys[`${this.pluginId}Mnemonic`] ?? ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(privateKeys)
+    return zcashPrivateKeys.mnemonic
   }
 
   getDisplayPublicSeed(): string {
@@ -392,28 +402,17 @@ export class ZcashEngine extends CurrencyEngine<ZcashTools> {
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeZcashWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
     this.engineOn = true
 
-    if (
-      this.walletInfo.keys.publicKey != null ||
-      this.walletInfo.keys.unifiedViewingKeys != null
-    ) {
-      const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-      this.walletInfo.keys.publicKey = pubKeys.publicKey
-      this.walletInfo.keys[`${this.pluginId}ViewKeys`] =
-        pubKeys.unifiedViewingKeys
-    }
-    const { rpcNode, defaultBirthday } = this.networkInfo
+    const { rpcNode } = this.networkInfo
     this.initializer = {
-      fullViewingKey: this.walletInfo.keys[`${this.pluginId}ViewKeys`],
-      birthdayHeight:
-        this.walletInfo.keys[`${this.pluginId}BirthdayHeight`] ??
-        defaultBirthday,
-      alias: this.walletInfo.keys.publicKey,
+      fullViewingKey: walletInfo.keys.unifiedViewingKeys,
+      birthdayHeight: walletInfo.keys.birthdayHeight,
+      alias: walletInfo.keys.publicKey,
       ...rpcNode
     }
   }
@@ -424,13 +423,20 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
+  const safeWalletInfo = asSafeZcashWalletInfo(walletInfo)
   const { makeSynchronizer } =
     env.nativeIo['edge-currency-accountbased'][env.networkInfo.nativeSdk]
 
-  const engine = new ZcashEngine(env, tools, walletInfo, opts, makeSynchronizer)
+  const engine = new ZcashEngine(
+    env,
+    tools,
+    safeWalletInfo,
+    opts,
+    makeSynchronizer
+  )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

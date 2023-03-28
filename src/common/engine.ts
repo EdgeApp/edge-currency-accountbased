@@ -2,12 +2,14 @@ import { add, div, eq, gt, gte, lt } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
+  EdgeCurrencyEngine,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeDataDump,
   EdgeDenomination,
+  EdgeEnginePrivateKeyOptions,
   EdgeFreshAddress,
   EdgeGetTransactionsOptions,
   EdgeIo,
@@ -16,8 +18,8 @@ import {
   EdgeSpendInfo,
   EdgeTokenMap,
   EdgeTransaction,
-  EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   SpendToSelfError
 } from 'edge-core-js/types'
 
@@ -32,6 +34,7 @@ import {
   asWalletLocalData,
   CustomToken,
   DATA_STORE_FILE,
+  SafeCommonWalletInfo,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
   TXID_MAP_FILE,
@@ -50,10 +53,15 @@ const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
 export class CurrencyEngine<
-  T extends EdgeCurrencyTools & { io: EdgeIo; currencyInfo: EdgeCurrencyInfo }
-> {
-  tools: T
-  walletInfo: EdgeWalletInfo
+  Tools extends EdgeCurrencyTools & {
+    io: EdgeIo
+    currencyInfo: EdgeCurrencyInfo
+  },
+  SafeWalletInfo extends SafeCommonWalletInfo
+> implements EdgeCurrencyEngine
+{
+  tools: Tools
+  walletInfo: SafeWalletInfo
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
   engineOn: boolean
@@ -85,8 +93,8 @@ export class CurrencyEngine<
 
   constructor(
     env: PluginEnvironment<{}>,
-    tools: T,
-    walletInfo: EdgeWalletInfo,
+    tools: Tools,
+    walletInfo: SafeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     const { io, currencyInfo } = tools
@@ -257,14 +265,13 @@ export class CurrencyEngine<
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     const { currencyCode } = this.currencyInfo
 
     if (this.walletInfo.keys.publicKey == null) {
-      const pubKeys = await this.tools.derivePublicKey(this.walletInfo)
-      this.walletInfo.keys.publicKey = pubKeys.publicKey
+      this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
     }
 
     const disklet = this.walletLocalDisklet
@@ -1063,5 +1070,42 @@ export class CurrencyEngine<
         this.transactionsChangedArray
       )
     }
+  }
+
+  //
+  // Virtual functions to be override by extension:
+  //
+
+  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+    throw new Error('not implemented')
+  }
+
+  getDisplayPublicSeed(): string | null {
+    throw new Error('not implemented')
+  }
+
+  async resyncBlockchain(): Promise<void> {
+    throw new Error('not implemented')
+  }
+
+  async makeSpend(
+    edgeSpendInfoIn: EdgeSpendInfo,
+    opts?: EdgeEnginePrivateKeyOptions
+  ): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
+  }
+
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
+  }
+
+  async broadcastTx(
+    edgeTransaction: EdgeTransaction,
+    opts?: EdgeEnginePrivateKeyOptions
+  ): Promise<EdgeTransaction> {
+    throw new Error('not implemented')
   }
 }

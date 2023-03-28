@@ -193,7 +193,7 @@ describe(`Tezos engine`, function () {
     this.timeout(10000)
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (engine) {
-      edgeTransaction = await engine.signTx(edgeTransaction)
+      edgeTransaction = await engine.signTx(edgeTransaction, info.keys)
       assert.equal(edgeTransaction.signedTx === signedOpBytes, true)
       const { otherParams = {} } = edgeTransaction
       assert.equal(otherParams.fullOp.opbytes, signedOpBytes)

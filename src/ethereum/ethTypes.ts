@@ -1,6 +1,8 @@
 import WalletConnect from '@walletconnect/client'
 import {
   asArray,
+  asBoolean,
+  asCodec,
   asEither,
   asMaybe,
   asNull,
@@ -9,9 +11,12 @@ import {
   asOptional,
   asString,
   asUnknown,
-  asValue
+  asValue,
+  Cleaner
 } from 'cleaners'
-import { EdgeSpendInfo, EdgeTransaction } from 'edge-core-js/types'
+import { EdgeSpendInfo } from 'edge-core-js/types'
+
+import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -410,12 +415,12 @@ export interface EIP712TypedDataParam {
 }
 
 export interface EthereumUtils {
-  signMessage: (message: string) => string
-  signTypedData: (typedData: Object) => string
-  txRpcParamsToSpendInfo: (
-    params: TxRpcParams,
-    currencyCode: string
-  ) => EdgeSpendInfo
+  signMessage: (message: string, privateKeys: EthereumPrivateKeys) => string
+  signTypedData: (
+    typedData: EIP712TypedDataParam,
+    privateKeys: EthereumPrivateKeys
+  ) => string
+  txRpcParamsToSpendInfo: (params: TxRpcParams) => EdgeSpendInfo
 }
 
 export const asWcProps = asObject({
@@ -472,27 +477,86 @@ export const asWcSessionRequestParams = asObject({
   params: asArray(asWcDappDetails)
 })
 
+//
+// Other Params and Other Methods:
+//
+
 export interface EthereumOtherMethods {
-  personal_sign: (params: string[]) => string
-  eth_sign: (params: string[]) => string
-  eth_signTypedData: (params: string[]) => string
-  eth_signTypedData_v4: (params: string[]) => string
-  eth_sendTransaction: (
-    params: TxRpcParams,
-    currencyCode: string
-  ) => Promise<EdgeTransaction>
-  eth_signTransaction: (
-    params: TxRpcParams,
-    currencyCode: string
-  ) => Promise<EdgeTransaction>
-  eth_sendRawTransaction: (signedTx: string) => Promise<EdgeTransaction>
+  txRpcParamsToSpendInfo: (params: TxRpcParams) => Promise<EdgeSpendInfo>
   wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
   wcConnect: (uri: string, publicKey: string, walletId: string) => void
   wcDisconnect: (uri: string) => void
-  wcRequestResponse: (
+  wcApproveRequest: (
     uri: string,
-    approve: boolean,
-    payload: WcRpcPayload
+    payload: WcRpcPayload,
+    result: string
   ) => Promise<void>
+  wcRejectRequest: (uri: string, payload: WcRpcPayload) => Promise<void>
   wcGetConnections: () => Dapp[]
+}
+
+export const asEthereumSignMessageParams = asOptional(
+  asObject({
+    typedData: asOptional(asBoolean, false)
+  }),
+  { typedData: false }
+)
+
+//
+// Wallet Info and Keys:
+//
+
+export type SafeEthWalletInfo = ReturnType<typeof asSafeEthWalletInfo>
+export const asSafeEthWalletInfo = asSafeCommonWalletInfo
+
+export interface EthereumPrivateKeys {
+  mnemonic?: string
+  privateKey: string
+}
+export const asEthereumPrivateKeys = (
+  pluginId: string
+): Cleaner<EthereumPrivateKeys> => {
+  // Type hacks:
+  type PluginId = 'x'
+  type FromKeys = {
+    [key in `${PluginId}Key`]: string
+  } &
+    {
+      [key in `${PluginId}Mnemonic`]?: string
+    }
+  const _pluginId = pluginId as PluginId
+  // Derived cleaners from the generic parameter:
+  const asFromKeys: Cleaner<FromKeys> = asObject({
+    [`${_pluginId}Mnemonic`]: asOptional(asString),
+    [`${_pluginId}Key`]: asString
+  }) as Cleaner<any>
+  const asFromJackedKeys = asObject({ keys: asFromKeys })
+
+  return asCodec(
+    (value: unknown) => {
+      // Handle potentially jacked-up keys:
+      const fromJacked = asMaybe(asFromJackedKeys)(value)
+      if (fromJacked != null) {
+        const to: EthereumPrivateKeys = {
+          mnemonic: fromJacked.keys[`${_pluginId}Mnemonic`],
+          privateKey: fromJacked.keys[`${_pluginId}Key`]
+        }
+        return to
+      }
+
+      // Handle normal keys:
+      const from = asFromKeys(value)
+      const to: EthereumPrivateKeys = {
+        mnemonic: from[`${_pluginId}Mnemonic`],
+        privateKey: from[`${_pluginId}Key`]
+      }
+      return to
+    },
+    ethPrivateKey => {
+      return {
+        [`${_pluginId}Mnemonic`]: ethPrivateKey.mnemonic,
+        [`${_pluginId}Key`]: ethPrivateKey.privateKey
+      }
+    }
+  )
 }

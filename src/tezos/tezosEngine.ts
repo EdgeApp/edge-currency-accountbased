@@ -7,6 +7,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { eztz } from 'eztz.js'
@@ -24,10 +25,13 @@ import {
 import { TezosTools } from '../tezos/tezosPlugin'
 import { currencyInfo } from './tezosInfo'
 import {
+  asSafeTezosWalletInfo,
+  asTezosPrivateKeys,
   asTezosWalletOtherData,
   asXtzGetTransaction,
   HeadInfo,
   OperationsContainer,
+  SafeTezosWalletInfo,
   TezosNetworkInfo,
   TezosOperation,
   TezosWalletOtherData,
@@ -50,18 +54,23 @@ type TezosFunction =
   | 'injectOperation'
   | 'silentInjection'
 
-export class TezosEngine extends CurrencyEngine<TezosTools> {
+export class TezosEngine extends CurrencyEngine<
+  TezosTools,
+  SafeTezosWalletInfo
+> {
   networkInfo: TezosNetworkInfo
   fetchCors: EdgeFetchFunction
   otherData!: TezosWalletOtherData
+  walletInfo: SafeTezosWalletInfo
 
   constructor(
     env: PluginEnvironment<TezosNetworkInfo>,
     tools: TezosTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeTezosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.walletInfo = asSafeTezosWalletInfo(walletInfo)
     this.networkInfo = env.networkInfo
     const fetchCors = getFetchCors(env)
     this.fetchCors = fetchCors
@@ -474,11 +483,15 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const tezosPrivateKeys = asTezosPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
     if (edgeTransaction.signedTx === '') {
-      const sk = this.walletInfo.keys.privateKey
+      const sk = tezosPrivateKeys.privateKey
       const signed = eztz.crypto.sign(
         otherParams.fullOp.opbytes,
         sk,
@@ -506,22 +519,13 @@ export class TezosEngine extends CurrencyEngine<TezosTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.mnemonic) {
-      return this.walletInfo.keys.mnemonic
-    }
-    return ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+    const tezosPrivateKeys = asTezosPrivateKeys(privateKeys)
+    return tezosPrivateKeys.mnemonic
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+  getDisplayPublicSeed(): string | null {
+    return this.walletInfo.keys.publicKey
   }
 }
 
@@ -531,9 +535,10 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new TezosEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafeTezosWalletInfo(walletInfo)
+  const engine = new TezosEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

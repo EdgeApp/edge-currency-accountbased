@@ -10,6 +10,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base64 } from 'rfc4648'
@@ -22,16 +23,22 @@ import {
   asCheckAccountCreationStatus,
   asGetAccountActivationQuote,
   asGetHederaAccount,
+  asHederaPrivateKeys,
   asHederaWalletOtherData,
   asMirrorNodeQueryBalance,
   asMirrorNodeTransactionResponse,
+  asSafeHederaWalletInfo,
   HederaNetworkInfo,
-  HederaWalletOtherData
+  HederaWalletOtherData,
+  SafeHederaWalletInfo
 } from './hederaTypes'
 
 const GENESIS = '1535068800' // '2018-08-24T00:00:00.000Z'
 
-export class HederaEngine extends CurrencyEngine<HederaTools> {
+export class HederaEngine extends CurrencyEngine<
+  HederaTools,
+  SafeHederaWalletInfo
+> {
   client: hedera.Client
   accountId: hedera.AccountId | undefined | null
   otherMethods: Object
@@ -45,7 +52,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
   constructor(
     env: PluginEnvironment<HederaNetworkInfo>,
     tools: HederaTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeHederaWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     io: EdgeIo
   ) {
@@ -191,7 +198,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       )
       const { accounts } = asGetHederaAccount(await response.json())
       for (const account of accounts) {
-        if (this.walletInfo.keys.publicKey.indexOf(account.key.key) >= 0) {
+        if (this.walletInfo.keys.publicKey.includes(account.key.key)) {
           accountId = account.account
         }
       }
@@ -485,7 +492,13 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const hederaPrivateKeys = asHederaPrivateKeys(this.currencyInfo.pluginId)(
+      privateKeys
+    )
     if (
       edgeTransaction.otherParams == null ||
       edgeTransaction.otherParams.transferTx == null
@@ -493,7 +506,7 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
       throw new Error('missing otherParam transferTx')
     }
 
-    const privateKey = this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
+    const privateKey = hederaPrivateKeys.privateKey
 
     if (privateKey == null) {
       throw new Error('missing privateKey in walletInfo')
@@ -546,13 +559,11 @@ export class HederaEngine extends CurrencyEngine<HederaTools> {
     return Math.floor(Date.now() / 1000)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    return (
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ??
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`] ??
-      ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const hederaPrivateKeys = asHederaPrivateKeys(this.currencyInfo.pluginId)(
+      privateKeys
     )
+    return hederaPrivateKeys.mnemonic ?? hederaPrivateKeys.privateKey
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -575,9 +586,10 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { io } = env
-  const engine = new HederaEngine(env, tools, walletInfo, opts, io)
+  const safeWalletInfo = asSafeHederaWalletInfo(walletInfo)
+  const engine = new HederaEngine(env, tools, safeWalletInfo, opts, io)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

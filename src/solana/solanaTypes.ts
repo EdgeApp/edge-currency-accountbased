@@ -1,12 +1,16 @@
 import {
   asArray,
+  asCodec,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
-  asUnknown
+  asUnknown,
+  Cleaner
 } from 'cleaners'
+
+import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface SolanaNetworkInfo {
   rpcNodes: string[]
@@ -62,3 +66,36 @@ export const asRecentBlockHash = asObject({
     })
   })
 })
+
+export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
+export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
+
+export interface SolanaPrivateKeys {
+  mnemonic: string
+  privateKey: string
+}
+export const asSolanaPrivateKeys = (
+  pluginId: string
+): Cleaner<SolanaPrivateKeys> =>
+  asCodec(
+    (value: unknown) => {
+      const from = asObject({
+        [`${pluginId}Mnemonic`]: asString,
+        [`${pluginId}Key`]: asString
+      })(value)
+      const to = {
+        mnemonic: from[`${pluginId}Mnemonic`],
+        privateKey: from[`${pluginId}Key`]
+      }
+      return asObject({
+        mnemonic: asString,
+        privateKey: asString
+      })(to)
+    },
+    hbarPrivateKey => {
+      return {
+        [`${pluginId}Mnemonic`]: hbarPrivateKey.mnemonic,
+        [`${pluginId}Key`]: hbarPrivateKey.privateKey
+      }
+    }
+  )

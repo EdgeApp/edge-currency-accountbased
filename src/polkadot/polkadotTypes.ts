@@ -1,13 +1,17 @@
 import {
   asArray,
   asBoolean,
+  asCodec,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
-  asUnknown
+  asUnknown,
+  Cleaner
 } from 'cleaners'
+
+import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
@@ -53,3 +57,36 @@ export const asTransactions = asObject({
   count: asNumber,
   transfers: asMaybe(asArray(asTransfer), [])
 })
+
+export type SafePolkadotWalletInfo = ReturnType<typeof asSafePolkadotWalletInfo>
+export const asSafePolkadotWalletInfo = asSafeCommonWalletInfo
+
+export interface PolkapolkadotPrivateKeys {
+  mnemonic?: string
+  privateKey: string
+}
+export const asPolkapolkadotPrivateKeys = (
+  pluginId: string
+): Cleaner<PolkapolkadotPrivateKeys> =>
+  asCodec(
+    (value: unknown) => {
+      const from = asObject({
+        [`${pluginId}Mnemonic`]: asOptional(asString),
+        [`${pluginId}Key`]: asString
+      })(value)
+      const to = {
+        mnemonic: from[`${pluginId}Mnemonic`],
+        privateKey: from[`${pluginId}Key`]
+      }
+      return asObject({
+        mnemonic: asOptional(asString),
+        privateKey: asString
+      })(to)
+    },
+    privateKeys => {
+      return {
+        [`${pluginId}Mnemonic`]: privateKeys.mnemonic,
+        [`${pluginId}Key`]: privateKeys.privateKey
+      }
+    }
+  )

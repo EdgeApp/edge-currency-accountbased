@@ -6,6 +6,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import stellarApi from 'stellar-sdk'
@@ -22,7 +23,10 @@ import {
 import { StellarTools } from '../stellar/stellarPlugin'
 import {
   asFeeStats,
+  asSafeStellarWalletInfo,
+  asStellarPrivateKeys,
   asStellarWalletOtherData,
+  SafeStellarWalletInfo,
   StellarAccount,
   StellarNetworkInfo,
   StellarOperation,
@@ -44,7 +48,10 @@ type StellarServerFunction =
   | 'ledgers'
   | 'submitTransaction'
 
-export class StellarEngine extends CurrencyEngine<StellarTools> {
+export class StellarEngine extends CurrencyEngine<
+  StellarTools,
+  SafeStellarWalletInfo
+> {
   networkInfo: StellarNetworkInfo
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
@@ -56,7 +63,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
   constructor(
     env: PluginEnvironment<StellarNetworkInfo>,
     tools: StellarTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeStellarWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
@@ -453,8 +460,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     await this.startEngine()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+  async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
 
@@ -587,7 +593,11 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const stellarPrivateKeys = asStellarPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
     const sendAmount = abs(
@@ -610,7 +620,7 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
       this.warn('Signing...')
       // @ts-expect-error
       const keypair = this.stellarApi.Keypair.fromSecret(
-        this.walletInfo.keys.stellarKey
+        stellarPrivateKeys.stellarKey
       )
       // @ts-expect-error
       await transaction.sign(keypair)
@@ -658,22 +668,13 @@ export class StellarEngine extends CurrencyEngine<StellarTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.stellarKey) {
-      return this.walletInfo.keys.stellarKey
-    }
-    return ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+    const stellarPrivateKeys = asStellarPrivateKeys(privateKeys)
+    return stellarPrivateKeys.stellarKey
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+  getDisplayPublicSeed(): string | null {
+    return this.walletInfo.keys.publicKey
   }
 }
 
@@ -683,11 +684,12 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new StellarEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafeStellarWalletInfo(walletInfo)
+  const engine = new StellarEngine(env, tools, safeWalletInfo, opts)
 
   engine.stellarApi = stellarApi
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

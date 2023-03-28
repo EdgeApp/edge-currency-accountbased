@@ -12,6 +12,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -26,9 +27,12 @@ import {
   asRecentBlockHash,
   asRpcBalance,
   asRpcGetTransaction,
+  asSafeSolanaWalletInfo,
+  asSolanaPrivateKeys,
   asSolanaWalletOtherData,
   RpcGetTransaction,
   RpcSignatureForAddress,
+  SafeSolanaWalletInfo,
   SolanaNetworkInfo,
   SolanaWalletOtherData
 } from './solanaTypes'
@@ -45,7 +49,10 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 
-export class SolanaEngine extends CurrencyEngine<SolanaTools> {
+export class SolanaEngine extends CurrencyEngine<
+  SolanaTools,
+  SafeSolanaWalletInfo
+> {
   networkInfo: SolanaNetworkInfo
   base58PublicKey: string
   feePerSignature: string
@@ -58,7 +65,7 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
     tools: SolanaTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeSolanaWalletInfo,
     opts: any // EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
@@ -382,18 +389,19 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const solanaPrivateKeys = asSolanaPrivateKeys(this.currencyInfo.pluginId)(
+      privateKeys
+    )
     const { unsignedSerializedSolTx } = getOtherParams(edgeTransaction)
     if (unsignedSerializedSolTx == null)
       throw new Error('Missing unsignedSerializedSolTx')
 
     const keypair = Keypair.fromSecretKey(
-      Uint8Array.from(
-        Buffer.from(
-          this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
-          'hex'
-        )
-      )
+      Uint8Array.from(base16.parse(solanaPrivateKeys.privateKey))
     )
 
     const solTx = Transaction.from(unsignedSerializedSolTx)
@@ -426,26 +434,15 @@ export class SolanaEngine extends CurrencyEngine<SolanaTools> {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-    ) {
-      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-    }
-    return ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
+    const solanaPrivateKeys = asSolanaPrivateKeys(this.currencyInfo.pluginId)(
+      privateKeys
+    )
+    return solanaPrivateKeys.mnemonic
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+  getDisplayPublicSeed(): string {
+    return this.walletInfo.keys.publicKey
   }
 }
 
@@ -455,10 +452,11 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new SolanaEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafeSolanaWalletInfo(walletInfo)
+  const engine = new SolanaEngine(env, tools, safeWalletInfo, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

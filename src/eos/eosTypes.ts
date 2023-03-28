@@ -1,4 +1,6 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asOptional, asString } from 'cleaners'
+
+import { asWalletInfo } from '../common/types'
 
 export interface EosNetworkInfo {
   chainId: string
@@ -80,3 +82,17 @@ export interface AccountResources {
   cpu: number
   net: number
 }
+
+export type SafeEosWalletInfo = ReturnType<typeof asSafeEosWalletInfo>
+export const asSafeEosWalletInfo = asWalletInfo(
+  asObject({
+    publicKey: asString,
+    ownerPublicKey: asOptional(asString)
+  })
+)
+
+export type EosPrivateKeys = ReturnType<typeof asEosPrivateKeys>
+export const asEosPrivateKeys = asObject({
+  eosOwnerKey: asString,
+  eosKey: asString
+})
