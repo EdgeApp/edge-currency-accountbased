@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 0.23.0 (2023-03-28)
+
+- Refactor FIO use makeSpend, signTx, and broadcastTx instead of ambiguous otherMethods
+- changed: Remove `wcRequestResponse` and all WalletConnect signing methods
+- added: Support for `signMessage` core API for Ethereum engines to be used for Wallet Connect integrations
+- changed: Refactor all engines to only deal with private keys directly from privileged functions
+
 ## 0.22.21 (2023-03-21)
 
 - Fix fallback value returned when recipient min balance check fails
