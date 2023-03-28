@@ -101,6 +101,7 @@ const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
 ]
+const SYNC_NETWORK_INTERVAL = 10000
 
 interface PreparedTrx {
   signatures: string[]
@@ -1206,7 +1207,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   // Placeholder function for network activity that requires private keys
-  async syncNetwork(): Promise<void> {
+  async syncNetwork(): Promise<number> {
     let isChanged = false
 
     const checkFioRequests = async (
@@ -1255,6 +1256,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       }) ?? { obt_data_records: [] }
 
     this.obtData = decryptedObtData.obt_data_records
+
+    return SYNC_NETWORK_INTERVAL
   }
 
   // https://developers.fioprotocol.io/docs/fio-protocol/fio-fees
