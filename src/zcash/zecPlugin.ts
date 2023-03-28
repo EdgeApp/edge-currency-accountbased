@@ -9,7 +9,8 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeTokenMap,
-  EdgeWalletInfo
+  EdgeWalletInfo,
+  JsonObject
 } from 'edge-core-js/types'
 import {
   AddressTool as AddressToolType,
@@ -19,7 +20,12 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { UnifiedViewingKey, ZcashNetworkInfo } from './zecTypes'
+import {
+  asZcashPrivateKeys,
+  asZecPublicKey,
+  UnifiedViewingKey,
+  ZcashNetworkInfo
+} from './zecTypes'
 
 export class ZcashTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -48,17 +54,14 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    let birthdayHeight = this.networkInfo.defaultBirthday
     try {
-      birthdayHeight = await this.KeyTool.getBirthdayHeight(
+      return await this.KeyTool.getBirthdayHeight(
         this.networkInfo.rpcNode.defaultHost,
         this.networkInfo.rpcNode.defaultPort
       )
     } catch (e: any) {
-      // Using default birthday
+      return this.networkInfo.defaultBirthday
     }
-
-    return birthdayHeight
   }
 
   async isValidAddress(address: string): Promise<boolean> {
@@ -102,13 +105,23 @@ export class ZcashTools implements EdgeCurrencyTools {
     return await this.importPrivateKey(mnemonic)
   }
 
+  async checkPublicKey(publicKey: JsonObject): Promise<boolean> {
+    try {
+      asZecPublicKey(publicKey)
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const { pluginId } = this.currencyInfo
+    const zcashPrivateKeys = asZcashPrivateKeys(pluginId)(walletInfo.keys)
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
-    const mnemonic = walletInfo.keys[`${pluginId}Mnemonic`]
+    const mnemonic = zcashPrivateKeys.mnemonic
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
@@ -124,6 +137,7 @@ export class ZcashTools implements EdgeCurrencyTools {
       this.networkInfo.rpcNode.networkName
     )
     return {
+      birthdayHeight: zcashPrivateKeys.birthdayHeight,
       publicKey: shieldedAddress,
       unifiedViewingKeys
     }

@@ -9,6 +9,7 @@ import {
   asValue
 } from 'cleaners'
 
+import { asWalletInfo } from '../common/types'
 import { asEncryptedFioRequest } from './fioConst'
 import { fioRegApiErrorCodes } from './fioError'
 
@@ -178,4 +179,16 @@ export type ObtData = ReturnType<typeof asObtData>
 export const asGetObtDataResponse = asObject({
   obt_data_records: asArray(asObtData),
   more: asNumber
+})
+
+export type SafeFioWalletInfo = ReturnType<typeof asSafeFioWalletInfo>
+export const asSafeFioWalletInfo = asWalletInfo(
+  asObject({
+    publicKey: asString
+  })
+)
+
+export type FioPrivateKeys = ReturnType<typeof asFioPrivateKeys>
+export const asFioPrivateKeys = asObject({
+  fioKey: asString
 })

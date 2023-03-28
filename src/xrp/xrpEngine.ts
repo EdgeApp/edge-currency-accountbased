@@ -23,6 +23,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { rippleTimeToUnixTime, TrustSet, Wallet } from 'xrpl'
@@ -51,9 +52,12 @@ import {
 import { RippleTools } from './xrpPlugin'
 import {
   asMaybeActivateTokenParams,
+  asRipplePrivateKeys,
+  asSafeRippleWalletInfo,
   asXrpNetworkLocation,
   asXrpTransaction,
   asXrpWalletOtherData,
+  SafeRippleWalletInfo,
   XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
@@ -96,7 +100,10 @@ interface XrpParams {
   preparedTx: Object
 }
 
-export class XrpEngine extends CurrencyEngine<RippleTools> {
+export class XrpEngine extends CurrencyEngine<
+  RippleTools,
+  SafeRippleWalletInfo
+> {
   otherData!: XrpWalletOtherData
   networkInfo: XrpNetworkInfo
   nonce: number
@@ -104,7 +111,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
   constructor(
     env: PluginEnvironment<XrpNetworkInfo>,
     tools: RippleTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeRippleWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
@@ -682,13 +689,17 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const ripplePrivateKeys = asRipplePrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
     // Activation Transaction:
     if (otherParams.trustSetTx != null) {
       const trustSetTx: TrustSet = otherParams.trustSetTx
-      const privateKey = this.walletInfo.keys.rippleKey
+      const privateKey = privateKeys.rippleKey
       const wallet = Wallet.fromSeed(privateKey)
       const { tx_blob: signedTransaction, hash: id } = wallet.sign(trustSetTx)
       this.warn('Activation transaction signed...')
@@ -722,7 +733,7 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     }
 
     // Do signing
-    const privateKey = this.walletInfo.keys.rippleKey
+    const privateKey = ripplePrivateKeys.rippleKey
     const wallet = Wallet.fromSeed(privateKey)
     const { tx_blob: signedTransaction, hash: id } = wallet.sign(completeTxJson)
 
@@ -764,8 +775,9 @@ export class XrpEngine extends CurrencyEngine<RippleTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys?.rippleKey ?? ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const ripplePrivateKeys = asRipplePrivateKeys(privateKeys)
+    return ripplePrivateKeys.rippleKey
   }
 
   getDisplayPublicSeed(): string {
@@ -849,9 +861,10 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new XrpEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafeRippleWalletInfo(walletInfo)
+  const engine = new XrpEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

@@ -1,12 +1,16 @@
 import {
   asArray,
   asBoolean,
+  asCodec,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
-  asString
+  asString,
+  Cleaner
 } from 'cleaners'
+
+import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface HederaNetworkInfo {
   creatorApiServers: [string]
@@ -84,3 +88,36 @@ export const asCheckAccountCreationStatus = asObject({
   status: asString,
   account_id: asOptional(asString)
 })
+
+export type SafeHederaWalletInfo = ReturnType<typeof asSafeHederaWalletInfo>
+export const asSafeHederaWalletInfo = asSafeCommonWalletInfo
+
+export interface HederaPrivateKeys {
+  mnemonic?: string
+  privateKey: string
+}
+export const asHederaPrivateKeys = (
+  pluginId: string
+): Cleaner<HederaPrivateKeys> =>
+  asCodec(
+    (value: unknown) => {
+      const from = asObject({
+        [`${pluginId}Mnemonic`]: asOptional(asString),
+        [`${pluginId}Key`]: asString
+      })(value)
+      const to = {
+        mnemonic: from[`${pluginId}Mnemonic`],
+        privateKey: from[`${pluginId}Key`]
+      }
+      return asObject({
+        mnemonic: asOptional(asString),
+        privateKey: asString
+      })(to)
+    },
+    hbarPrivateKey => {
+      return {
+        [`${pluginId}Mnemonic`]: hbarPrivateKey.mnemonic,
+        [`${pluginId}Key`]: hbarPrivateKey.privateKey
+      }
+    }
+  )

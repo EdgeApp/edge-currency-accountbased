@@ -7,6 +7,8 @@ import {
   asString
 } from 'cleaners'
 
+import { asSafeCommonWalletInfo } from '../common/types'
+
 export interface BinanceNetworkInfo {
   binanceApiServers: string[]
   beaconChainApiServers: string[]
@@ -73,3 +75,12 @@ export interface BinanceTxOtherParams {
   data?: string | null
   memo?: string
 }
+
+export type SafeBnbWalletInfo = ReturnType<typeof asSafeBnbWalletInfo>
+export const asSafeBnbWalletInfo = asSafeCommonWalletInfo
+
+export type BnbPrivateKey = ReturnType<typeof asBnbPrivateKey>
+export const asBnbPrivateKey = asObject({
+  binanceKey: asString,
+  binanceMnemonic: asString
+})

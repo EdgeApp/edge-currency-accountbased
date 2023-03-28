@@ -1,5 +1,7 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
+import { asWalletInfo } from '../common/types'
+
 export interface TezosNetworkInfo {
   tezosRpcNodes: string[]
   tezosApiServers: string[]
@@ -123,3 +125,17 @@ export interface OperationsContainer {
     signature?: string
   }
 }
+
+export type SafeTezosWalletInfo = ReturnType<typeof asSafeTezosWalletInfo>
+export const asSafeTezosWalletInfo = asWalletInfo(
+  asObject({
+    publicKey: asString,
+    publicKeyEd: asString
+  })
+)
+
+export type TezosPrivateKeys = ReturnType<typeof asTezosPrivateKeys>
+export const asTezosPrivateKeys = asObject({
+  mnemonic: asString,
+  privateKey: asString
+})

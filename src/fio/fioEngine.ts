@@ -13,6 +13,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
+  EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
@@ -20,6 +21,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -76,6 +78,7 @@ import {
   asFioDomainParam,
   asFioEmptyResponse,
   asFioFee,
+  asFioPrivateKeys,
   asFioRecordObtData,
   asFioRequestFundsParams,
   asFioSignedTx,
@@ -84,13 +87,15 @@ import {
   asGetFioRequestsResponse,
   asGetObtDataResponse,
   asRejectFundsRequest,
+  asSafeFioWalletInfo,
   asSetFioDomainVisibility,
   FioActionFees,
   FioNetworkInfo,
   FioRefBlock,
   FioRequestTypes,
   FioTxParams,
-  ObtData
+  ObtData,
+  SafeFioWalletInfo
 } from './fioTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -110,7 +115,7 @@ interface PreparedTrx {
   packed_trx: string
 }
 
-export class FioEngine extends CurrencyEngine<FioTools> {
+export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   fetchCors: EdgeFetchFunction
   otherMethods: Object
   tpid: string
@@ -128,7 +133,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   constructor(
     env: PluginEnvironment<FioNetworkInfo>,
     tools: FioTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeFioWalletInfo,
     opts: EdgeCurrencyEngineOptions,
     tpid: string
   ) {
@@ -206,18 +211,10 @@ export class FioEngine extends CurrencyEngine<FioTools> {
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeFioWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
-    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      if (walletInfo.keys.ownerPublicKey != null) {
-        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
-      } else {
-        const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
-      }
-    }
   }
 
   // Poll on the blockheight
@@ -1207,7 +1204,8 @@ export class FioEngine extends CurrencyEngine<FioTools> {
   }
 
   // Placeholder function for network activity that requires private keys
-  async syncNetwork(): Promise<number> {
+  async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
+    const fioPrivateKeys = asFioPrivateKeys(opts.privateKeys)
     let isChanged = false
 
     const checkFioRequests = async (
@@ -1215,7 +1213,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       decoder: Query<PendingFioRequests | SentFioRequests>
     ): Promise<void> => {
       const encryptedReqs = await this.fetchEncryptedFioRequests(type, decoder)
-      decoder.privateKey = this.walletInfo.keys.fioKey
+      decoder.privateKey = fioPrivateKeys.fioKey
       decoder.publicKey = this.walletInfo.keys.publicKey
       const decryptedReqs: { requests: FioRequest[] } = decoder.decrypt({
         requests: encryptedReqs
@@ -1248,7 +1246,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       'getObtData',
       obtDecoder
     )
-    obtDecoder.privateKey = this.walletInfo.keys.fioKey
+    obtDecoder.privateKey = fioPrivateKeys.fioKey
     obtDecoder.publicKey = this.walletInfo.keys.publicKey
     const decryptedObtData: { obt_data_records: ObtData[] } =
       obtDecoder.decrypt({
@@ -1603,7 +1601,11 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const fioPrivateKeys = asFioPrivateKeys(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
     let txParams = asMaybe(asFioTxParams)(otherParams.txParams)
     const transactions = new Transactions()
@@ -1643,7 +1645,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           const cipherContent = transactions.getCipherContent(
             'record_obt_data_content',
             content,
-            this.walletInfo.keys.fioKey,
+            fioPrivateKeys.fioKey,
             this.walletInfo.keys.publicKey
           )
           txParams = {
@@ -1682,7 +1684,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
           const cipherContent = transactions.getCipherContent(
             'new_funds_content',
             content,
-            this.walletInfo.keys.fioKey,
+            fioPrivateKeys.fioKey,
             this.walletInfo.keys.publicKey
           )
           txParams = {
@@ -1718,7 +1720,7 @@ export class FioEngine extends CurrencyEngine<FioTools> {
       })
     const signedTx = await transactions.sign({
       chainId: this.networkInfo.chainId,
-      privateKeys: [this.walletInfo.keys.fioKey],
+      privateKeys: [fioPrivateKeys.fioKey],
       transaction: rawTx,
       serializedTransaction,
       serializedContextFreeData
@@ -1885,12 +1887,13 @@ export class FioEngine extends CurrencyEngine<FioTools> {
     return { publicAddress: this.walletInfo.keys.publicKey }
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys?.fioKey ?? ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const fioPrivateKeys = asFioPrivateKeys(privateKeys)
+    return fioPrivateKeys.fioKey
   }
 
   getDisplayPublicSeed(): string {
-    return this.walletInfo.keys?.publicKey ?? ''
+    return this.walletInfo.keys.publicKey
   }
 }
 
@@ -1901,8 +1904,9 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const { tpid = 'finance@edge' } = env.initOptions
-  const engine = new FioEngine(env, tools, walletInfo, opts, tpid)
-  await engine.loadEngine(tools, walletInfo, opts)
+  const safeWalletInfo = asSafeFioWalletInfo(walletInfo)
+  const engine = new FioEngine(env, tools, safeWalletInfo, opts, tpid)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

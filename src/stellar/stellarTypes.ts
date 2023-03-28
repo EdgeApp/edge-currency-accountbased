@@ -1,5 +1,7 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
+import { asSafeCommonWalletInfo } from '../common/types'
+
 export interface StellarNetworkInfo {
   baseReserve: string
   stellarServers: string[]
@@ -82,4 +84,12 @@ export const asFeeStats = asObject({
     p95: asString
     // p99: asString
   })
+})
+
+export type SafeStellarWalletInfo = ReturnType<typeof asSafeStellarWalletInfo>
+export const asSafeStellarWalletInfo = asSafeCommonWalletInfo
+
+export type StellarPrivateKeys = ReturnType<typeof asStellarPrivateKeys>
+export const asStellarPrivateKeys = asObject({
+  stellarKey: asString
 })

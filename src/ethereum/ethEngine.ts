@@ -13,6 +13,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
@@ -49,10 +50,12 @@ import { EthereumNetwork, getFeeRateUsed } from './ethNetwork'
 import { EthereumTools } from './ethPlugin'
 import { asEIP712TypedData } from './ethSchema'
 import {
+  asEthereumPrivateKeys,
   asEthereumTxOtherParams,
   asEthereumWalletOtherData,
   asRollupGasPrices,
   asRpcResultString,
+  asSafeEthWalletInfo,
   asWcSessionRequestParams,
   CalcL1RollupFeeParams,
   EIP712TypedDataParam,
@@ -62,12 +65,14 @@ import {
   EthereumInitOptions,
   EthereumNetworkInfo,
   EthereumOtherMethods,
+  EthereumPrivateKeys,
   EthereumTxOtherParams,
   EthereumUtils,
   EthereumWalletOtherData,
   KeysOfEthereumBaseMultiplier,
   L1RollupParams,
   LastEstimatedGasLimit,
+  SafeEthWalletInfo,
   TxRpcParams,
   WcDappDetails,
   WcProps,
@@ -80,7 +85,10 @@ import {
   printFees
 } from './fees/feeProviders'
 
-export class EthereumEngine extends CurrencyEngine<EthereumTools> {
+export class EthereumEngine extends CurrencyEngine<
+  EthereumTools,
+  SafeEthWalletInfo
+> {
   otherData!: EthereumWalletOtherData
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
@@ -95,20 +103,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeEthWalletInfo,
     initOptions: EthereumInitOptions,
     opts: EdgeCurrencyEngineOptions,
     currencyInfo: EdgeCurrencyInfo
   ) {
     super(env, tools, walletInfo, opts)
-    const { pluginId } = this.currencyInfo
-    if (typeof this.walletInfo.keys[`${pluginId}Key`] !== 'string') {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      if (walletInfo.keys.keys && walletInfo.keys.keys[`${pluginId}Key`]) {
-        this.walletInfo.keys[`${pluginId}Key`] =
-          walletInfo.keys.keys[`${pluginId}Key`]
-      }
-    }
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
@@ -137,9 +137,12 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     ]
 
     this.utils = {
-      signMessage: (message: string) => {
+      signMessage: (message: string, privateKeys: EthereumPrivateKeys) => {
         if (!isHex(message)) throw new Error('ErrorInvalidMessage')
-        const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
+        const privKey = Buffer.from(
+          this.getDisplayPrivateSeed(privateKeys),
+          'hex'
+        )
         const messageBuffer = hexToBuf(message)
         const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
         const { v, r, s } = EthereumUtil.ecsign(messageHash, privKey)
@@ -147,12 +150,17 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
         return EthereumUtil.toRpcSig(v, r, s)
       },
 
-      // @ts-expect-error
-      signTypedData: (typedData: EIP712TypedDataParam) => {
+      signTypedData: (
+        typedData: EIP712TypedDataParam,
+        privateKeys: EthereumPrivateKeys
+      ) => {
         // Adapted from https://github.com/ethereum/EIPs/blob/master/assets/eip-712/Example.js
         const clean = asEIP712TypedData(typedData)
 
-        const privKey = Buffer.from(this.getDisplayPrivateSeed(), 'hex')
+        const privKey = Buffer.from(
+          this.getDisplayPrivateSeed(privateKeys),
+          'hex'
+        )
         const { types } = clean
 
         // Recursively finds all the dependencies of a type
@@ -292,33 +300,47 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     }
 
     this.otherMethods = {
-      personal_sign: params => this.utils.signMessage(params[0]),
-      eth_sign: params => this.utils.signMessage(params[1]),
-      eth_signTypedData: params => {
+      personal_sign: (params, privateKeys) =>
+        this.utils.signMessage(
+          params[0],
+          asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+        ),
+      eth_sign: (params, privateKeys) =>
+        this.utils.signMessage(
+          params[1],
+          asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+        ),
+      eth_signTypedData: (params, privateKeys) => {
         try {
-          return this.utils.signTypedData(JSON.parse(params[1]))
+          return this.utils.signTypedData(
+            JSON.parse(params[1]),
+            asEthereumPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+          )
         } catch (e: any) {
           // It's possible that the dApp makes the wrong call.
           // Try to sign using the latest signTypedData_v4 method.
-          return this.otherMethods.eth_signTypedData_v4(params)
+          return this.otherMethods.eth_signTypedData_v4(params, privateKeys)
         }
       },
-      eth_signTypedData_v4: params =>
-        signTypedData_v4(Buffer.from(this.getDisplayPrivateSeed(), 'hex'), {
-          data: JSON.parse(params[1])
-        }),
-      eth_sendTransaction: async (params, cc) => {
+      eth_signTypedData_v4: (params, privateKeys) =>
+        signTypedData_v4(
+          Buffer.from(this.getDisplayPrivateSeed(privateKeys), 'hex'),
+          {
+            data: JSON.parse(params[1])
+          }
+        ),
+      eth_sendTransaction: async (params, cc, privateKeys) => {
         // @ts-expect-error
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
         const tx = await this.makeSpend(spendInfo)
-        const signedTx = await this.signTx(tx)
+        const signedTx = await this.signTx(tx, privateKeys)
         return await this.broadcastTx(signedTx)
       },
-      eth_signTransaction: async (params, cc) => {
+      eth_signTransaction: async (params, cc, privateKeys) => {
         // @ts-expect-error
         const spendInfo = this.utils.txRpcParamsToSpendInfo(params[0], cc)
         const tx = await this.makeSpend(spendInfo)
-        return await this.signTx(tx)
+        return await this.signTx(tx, privateKeys)
       },
       eth_sendRawTransaction: async params => {
         const tx: EdgeTransaction = {
@@ -1084,7 +1106,13 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const ethereumPrivateKeys = asEthereumPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
     const otherParams: EthereumTxOtherParams = getOtherParams(edgeTransaction)
 
     // Do signing
@@ -1181,10 +1209,7 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
       data
     }
 
-    const privKey = Buffer.from(
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`],
-      'hex'
-    )
+    const privKey = Buffer.from(ethereumPrivateKeys.privateKey, 'hex')
 
     // Log the private key address
     const wallet = ethWallet.fromPrivateKey(privKey)
@@ -1329,26 +1354,15 @@ export class EthereumEngine extends CurrencyEngine<EthereumTools> {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPrivateSeed() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
-    ) {
-      return this.walletInfo.keys[`${this.currencyInfo.pluginId}Key`]
-    }
-    return ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const ethereumPrivateKeys = asEthereumPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
+    return ethereumPrivateKeys.privateKey
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-optional-chain
-    if (this.walletInfo.keys && this.walletInfo.keys.publicKey) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
+  getDisplayPublicSeed(): string | null {
+    return this.walletInfo.keys.publicKey
   }
 
   // Overload saveTx to mutate replaced transactions by RBF
@@ -1416,17 +1430,18 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const { currencyInfo, initOptions } = env
 
+  const safeWalletInfo = asSafeEthWalletInfo(walletInfo)
   const engine = new EthereumEngine(
     env,
     tools,
-    walletInfo,
+    safeWalletInfo,
     initOptions,
     opts,
     currencyInfo
   )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

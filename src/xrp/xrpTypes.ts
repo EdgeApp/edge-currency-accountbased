@@ -1,5 +1,7 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 
+import { asSafeCommonWalletInfo } from '../common/types'
+
 export interface XrpNetworkInfo {
   rippledServers: string[]
   defaultFee: string
@@ -37,4 +39,12 @@ export type XrpTransaction = ReturnType<typeof asXrpTransaction>
 export const asXrpNetworkLocation = asObject({
   currency: asString,
   issuer: asString
+})
+
+export type SafeRippleWalletInfo = ReturnType<typeof asSafeRippleWalletInfo>
+export const asSafeRippleWalletInfo = asSafeCommonWalletInfo
+
+export type RipplePrivateKeys = ReturnType<typeof asRipplePrivateKeys>
+export const asRipplePrivateKeys = asObject({
+  rippleKey: asString
 })

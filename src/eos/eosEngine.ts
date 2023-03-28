@@ -14,12 +14,14 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyTools,
+  EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import parse from 'url-parse'
@@ -53,11 +55,15 @@ import {
 } from './eosSchema'
 import {
   AccountResources,
+  asEosPrivateKeys,
   asEosWalletOtherData,
+  asSafeEosWalletInfo,
   EosNetworkInfo,
+  EosPrivateKeys,
   EosTransaction,
   EosWalletOtherData,
-  ReferenceBlock
+  ReferenceBlock,
+  SafeEosWalletInfo
 } from './eosTypes'
 
 const ADDRESS_POLL_MILLISECONDS = 10000
@@ -83,7 +89,7 @@ const bogusAccounts: { readonly [name: string]: true } = {
   fobleos13125: true
 }
 
-export class EosEngine extends CurrencyEngine<EosTools> {
+export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   activatedAccountsCache: { [publicAddress: string]: boolean }
   otherData!: EosWalletOtherData
   otherMethods: Object
@@ -96,7 +102,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   constructor(
     env: PluginEnvironment<EosNetworkInfo>,
     tools: EosTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeEosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     const fetchCors = getFetchCors(env)
@@ -188,10 +194,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
 
   async loadEngine(
     plugin: EdgeCurrencyTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeEosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
+
     if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
       if (walletInfo.keys.ownerPublicKey != null) {
         this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
@@ -795,7 +802,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  async getResources(): Promise<void> {
+  async getResources(privateKeys: EosPrivateKeys): Promise<void> {
     if (this.getResourcesMutex) return
     const { cpu, net } = this.accountResources
     if (cpu > 500 && net > 500) {
@@ -870,9 +877,9 @@ export class EosEngine extends CurrencyEngine<EosTools> {
         },
         walletId: this.walletId
       }
-      const signedTx = await this.signTx(edgeTransaction)
+      const signedTx = await this.signTx(edgeTransaction, privateKeys)
       this.getResourcesMutex = true
-      await this.broadcastTx(signedTx)
+      await this.broadcastTx(signedTx, { privateKeys })
       this.log.warn('getResources purchase SUCCESS')
     } catch (e) {
       this.log.warn('getResources purchase FAILURE\n', e)
@@ -1044,7 +1051,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const eosPrivateKeys = asEosPrivateKeys(privateKeys)
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
 
     const abi =
@@ -1059,7 +1070,7 @@ export class EosEngine extends CurrencyEngine<EosTools> {
       abi
     )
     const txDigest = transaction.signingDigest(this.networkInfo.chainId)
-    const privateKey = PrivateKey.from(this.walletInfo.keys.eosKey)
+    const privateKey = PrivateKey.from(eosPrivateKeys.eosKey)
     const signature = privateKey.signDigest(txDigest)
     const signedTransaction = SignedTransaction.from({
       ...transaction,
@@ -1075,9 +1086,11 @@ export class EosEngine extends CurrencyEngine<EosTools> {
   }
 
   async broadcastTx(
-    edgeTransaction: EdgeTransaction
+    edgeTransaction: EdgeTransaction,
+    opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
-    await this.getResources()
+    const eosPrivateKeys = asEosPrivateKeys(opts?.privateKeys)
+    await this.getResources(eosPrivateKeys)
 
     const otherParams = getOtherParams<EosOtherParams>(edgeTransaction)
     const { signatures } = otherParams
@@ -1122,16 +1135,13 @@ export class EosEngine extends CurrencyEngine<EosTools> {
     }
   }
 
-  getDisplayPrivateSeed(): string {
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const eosPrivateKeys = asEosPrivateKeys(privateKeys)
     let out = ''
     // usage of eosOwnerKey must be protected by conditional
     // checking for its existence
-    if (this.walletInfo.keys?.eosOwnerKey != null) {
-      out += 'owner key\n' + String(this.walletInfo.keys.eosOwnerKey) + '\n\n'
-    }
-    if (this.walletInfo.keys?.eosKey != null) {
-      out += 'active key\n' + String(this.walletInfo.keys.eosKey) + '\n\n'
-    }
+    out += 'owner key\n' + String(eosPrivateKeys.eosOwnerKey) + '\n\n'
+    out += 'active key\n' + String(eosPrivateKeys.eosKey) + '\n\n'
     return out
   }
 
@@ -1157,8 +1167,9 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new EosEngine(env, tools, walletInfo, opts)
-  await engine.loadEngine(tools, walletInfo, opts)
+  const safeWalletInfo = asSafeEosWalletInfo(walletInfo)
+  const engine = new EosEngine(env, tools, safeWalletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

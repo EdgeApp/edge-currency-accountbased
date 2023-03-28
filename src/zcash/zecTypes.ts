@@ -1,5 +1,14 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import {
+  asCodec,
+  asMaybe,
+  asNumber,
+  asObject,
+  asString,
+  Cleaner
+} from 'cleaners'
 import { Subscriber } from 'yaob'
+
+import { asWalletInfo } from '../common/types'
 
 type ZcashNetworkName = 'mainnet' | 'testnet'
 
@@ -114,3 +123,50 @@ export interface ZcashSynchronizer {
 export type ZcashMakeSynchronizer = () => (
   config: ZcashInitializerConfig
 ) => Promise<ZcashSynchronizer>
+
+export const asZecPublicKey = asObject({
+  birthdayHeight: asNumber,
+  publicKey: asString,
+  unifiedViewingKeys: asObject({
+    extfvk: asString,
+    extpub: asString
+  })
+})
+
+export type SafeZcashWalletInfo = ReturnType<typeof asSafeZcashWalletInfo>
+export const asSafeZcashWalletInfo = asWalletInfo(asZecPublicKey)
+
+export interface ZcashPrivateKeys {
+  mnemonic: string
+  spendKey: string
+  birthdayHeight: number
+}
+export const asZcashPrivateKeys = (
+  pluginId: string
+): Cleaner<ZcashPrivateKeys> =>
+  asCodec(
+    (value: unknown) => {
+      const from = asObject({
+        [`${pluginId}Mnemonic`]: asString,
+        [`${pluginId}SpendKey`]: asString,
+        [`${pluginId}BirthdayHeight`]: asNumber
+      })(value)
+      const to = {
+        mnemonic: from[`${pluginId}Mnemonic`],
+        spendKey: from[`${pluginId}SpendKey`],
+        birthdayHeight: from[`${pluginId}BirthdayHeight`]
+      }
+      return asObject({
+        mnemonic: asString,
+        spendKey: asString,
+        birthdayHeight: asNumber
+      })(to)
+    },
+    zecPrivateKey => {
+      return {
+        [`${pluginId}Mnemonic`]: zecPrivateKey.mnemonic,
+        [`${pluginId}SpendKey`]: zecPrivateKey.spendKey,
+        [`${pluginId}BirthdayHeight`]: zecPrivateKey.birthdayHeight
+      }
+    }
+  )

@@ -13,17 +13,7 @@ import {
 } from 'cleaners'
 import { JsonObject } from 'edge-core-js/types'
 
-export interface TronKeys {
-  tronMnemonic?: string
-  tronKey: string
-  derivationPath?: string
-}
-
-export const asTronKeys = asObject<TronKeys>({
-  tronMnemonic: asOptional(asString),
-  tronKey: asString,
-  derivationPath: asOptional(asString)
-})
+import { asSafeCommonWalletInfo } from '../common/types'
 
 export const asTronInitOptions = asObject({
   smartPayPublicAddress: asOptional(
@@ -422,4 +412,18 @@ export const asBroadcastResponse = asObject({
   result: asBoolean,
   txid: asString,
   message: asString
+})
+
+export type SafeTronWalletInfo = ReturnType<typeof asSafeTronWalletInfo>
+export const asSafeTronWalletInfo = asSafeCommonWalletInfo
+
+export interface TronKeys {
+  tronMnemonic?: string
+  tronKey: string
+  derivationPath?: string
+}
+export const asTronPrivateKeys = asObject<TronKeys>({
+  tronMnemonic: asOptional(asString),
+  tronKey: asString,
+  derivationPath: asOptional(asString)
 })

@@ -23,7 +23,7 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import {
   asTronInitOptions,
-  asTronKeys,
+  asTronPrivateKeys,
   TronInitOptions,
   TronKeys,
   TronNetworkInfo
@@ -100,7 +100,7 @@ export class TronTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
-    const { tronKey } = asTronKeys(walletInfo.keys)
+    const { tronKey } = asTronPrivateKeys(walletInfo.keys)
     const publicKey = pkToAddress(tronKey)
     return { publicKey }
   }

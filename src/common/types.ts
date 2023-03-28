@@ -7,7 +7,8 @@ import {
   asOptional,
   asString,
   asUndefined,
-  asUnknown
+  asUnknown,
+  Cleaner
 } from 'cleaners'
 import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
 
@@ -54,3 +55,22 @@ export const asWalletLocalData = asObject({
 })
 
 export type WalletLocalData = ReturnType<typeof asWalletLocalData>
+
+export interface WalletInfo<Keys> {
+  id: string
+  type: string
+  keys: Keys
+}
+export const asWalletInfo = <Keys>(
+  asKeys: Cleaner<Keys>
+): Cleaner<WalletInfo<Keys>> =>
+  asObject({
+    id: asString,
+    type: asString,
+    keys: asKeys
+  })
+
+export type SafeCommonWalletInfo = ReturnType<typeof asSafeCommonWalletInfo>
+export const asSafeCommonWalletInfo = asWalletInfo(
+  asObject({ publicKey: asString })
+)

@@ -16,7 +16,7 @@ import fetch from 'node-fetch'
 
 import { CurrencyEngine } from '../../src/common/engine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
-import { asWalletLocalData } from '../../src/common/types'
+import { asWalletLocalData, SafeCommonWalletInfo } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'
 import { fakeLog } from '../fake/fakeLog'
 import { FakeTools } from '../fake/FakeTools'
@@ -35,9 +35,7 @@ const opts: EdgeCorePluginOptions = {
 for (const fixture of fixtures) {
   let tools: EdgeCurrencyTools
   let engine: EdgeCurrencyEngine
-  // @ts-expect-error
-  let keys
-
+  let privateWalletInfo: EdgeWalletInfo
   const WALLET_TYPE = fixture.WALLET_TYPE
   // const TX_AMOUNT = fixture['TX_AMOUNT']
 
@@ -102,14 +100,14 @@ for (const fixture of fixtures) {
       return await plugin.makeCurrencyTools().then(async currencyTools => {
         tools = currencyTools
 
-        keys = await tools.createPrivateKey(WALLET_TYPE)
-        const info: EdgeWalletInfo = {
+        const privateKeys = await tools.createPrivateKey(WALLET_TYPE)
+        privateWalletInfo = {
           id: '1',
           type: WALLET_TYPE,
-          keys
+          keys: privateKeys
         }
-        const keys2 = await tools.derivePublicKey(info)
-        keys = Object.assign(keys, keys2)
+        const publicKey = await tools.derivePublicKey(privateWalletInfo)
+        Object.assign(privateWalletInfo.keys, publicKey)
       })
     })
   })
@@ -117,16 +115,10 @@ for (const fixture of fixtures) {
   describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
     it('Make Engine', async function () {
       if (WALLET_TYPE === 'wallet:fio') this.timeout(60000)
-      const info: EdgeWalletInfo = {
-        id: '1',
-        type: WALLET_TYPE,
-        // @ts-expect-error
-        keys
-      }
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!plugin) throw new Error('ErrorNoPlugin')
       return await plugin
-        .makeCurrencyEngine(info, currencyEngineOptions)
+        .makeCurrencyEngine(privateWalletInfo, currencyEngineOptions)
         .then(e => {
           engine = e
           assert.equal(typeof engine.startEngine, 'function', 'startEngine')
@@ -200,7 +192,10 @@ for (const fixture of fixtures) {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!engine) throw new Error('ErrorNoEngine')
       // @ts-expect-error
-      const sig = engine.utils.signMessage(fixture.messages.eth_sign.param)
+      const sig = engine.utils.signMessage(
+        fixture.messages.eth_sign.param,
+        privateWalletInfo.keys
+      )
       assert.equal(sig, fixture.messages.eth_sign.signature)
     })
     it('Should sign a typed message', function () {
@@ -208,7 +203,8 @@ for (const fixture of fixtures) {
       if (!engine) throw new Error('ErrorNoEngine')
       // @ts-expect-error
       const sig = engine.utils.signTypedData(
-        fixture.messages.eth_signTypedData.param
+        fixture.messages.eth_signTypedData.param,
+        privateWalletInfo.keys
       )
       assert.equal(sig, fixture.messages.eth_signTypedData.signature)
     })
@@ -276,7 +272,6 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   customTokens: {},
   enabledTokenIds: []
 }
-const walletInfo = { id: '', type: '', keys: {} }
 const env: PluginEnvironment<{}> = {
   initOptions: {},
   io: {} as any,
@@ -290,7 +285,9 @@ const env: PluginEnvironment<{}> = {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function validateTxidListMap(engine: CurrencyEngine<FakeTools>) {
+function validateTxidListMap(
+  engine: CurrencyEngine<FakeTools, SafeCommonWalletInfo>
+) {
   const ccs = ['ETH', 'DAI']
   for (const currencyCode of ccs) {
     const transactionList = engine.transactionList[currencyCode]
@@ -318,7 +315,11 @@ describe('Test transaction list updating', () => {
     engine = new CurrencyEngine(
       env,
       new FakeTools(),
-      walletInfo,
+      {
+        id: '',
+        type: '',
+        keys: { publicKey: 'hi' }
+      },
       currencyEngineOptions
     )
     engine.walletLocalData = asWalletLocalData({ publicKey: '0x123456' })

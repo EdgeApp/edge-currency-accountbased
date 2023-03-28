@@ -7,6 +7,7 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
+  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -26,10 +27,13 @@ import {
   asBinanceApiAccountBalance,
   asBinanceApiGetTransactions,
   asBinanceApiNodeInfo,
+  asBnbPrivateKey,
   asBroadcastTxResponse,
+  asSafeBnbWalletInfo,
   BinanceApiTransaction,
   BinanceNetworkInfo,
-  BinanceTxOtherParams
+  BinanceTxOtherParams,
+  SafeBnbWalletInfo
 } from './bnbTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = 20000
@@ -46,13 +50,16 @@ type BnbFunction =
   | 'bnb_getBalance'
   | 'bnb_getTransactions'
 
-export class BinanceEngine extends CurrencyEngine<BinanceTools> {
+export class BinanceEngine extends CurrencyEngine<
+  BinanceTools,
+  SafeBnbWalletInfo
+> {
   networkInfo: BinanceNetworkInfo
 
   constructor(
     env: PluginEnvironment<BinanceNetworkInfo>,
     tools: BinanceTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafeBnbWalletInfo,
     initOptions: any, // BinanceInitOptions,
     opts: EdgeCurrencyEngineOptions
   ) {
@@ -446,13 +453,17 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const bnbPrivateKeys = asBnbPrivateKey(privateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
     const bnbClient = new BncClient(this.networkInfo.binanceApiServers[0])
     bnbClient.chooseNetwork('mainnet')
-    const privKey = this.walletInfo.keys.binanceKey
-    await bnbClient.setPrivateKey(privKey)
+    const { binanceKey } = bnbPrivateKeys
+    await bnbClient.setPrivateKey(binanceKey)
     await bnbClient.initChain()
     const currencyCode = edgeTransaction.currencyCode
     const spendAmount = add(
@@ -505,20 +516,14 @@ export class BinanceEngine extends CurrencyEngine<BinanceTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    const { keys } = this.walletInfo
-    if (keys.binanceMnemonic != null) {
-      return keys.binanceMnemonic
-    }
-    return ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const bnbPrivateKey = asBnbPrivateKey(privateKeys)
+    return bnbPrivateKey.binanceMnemonic
   }
 
   getDisplayPublicSeed(): string {
     const { keys } = this.walletInfo
-    if (keys.publicKey != null) {
-      return keys.publicKey
-    }
-    return ''
+    return keys.publicKey
   }
 }
 
@@ -530,10 +535,17 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const { initOptions } = env
 
-  const engine = new BinanceEngine(env, tools, walletInfo, initOptions, opts)
+  const safeWalletInfo = asSafeBnbWalletInfo(walletInfo)
+  const engine = new BinanceEngine(
+    env,
+    tools,
+    safeWalletInfo,
+    initOptions,
+    opts
+  )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }

@@ -12,6 +12,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -25,11 +26,14 @@ import {
 import { PolkadotTools } from './polkadotPlugin'
 import {
   asPolkadotWalletOtherData,
+  asPolkapolkadotPrivateKeys,
+  asSafePolkadotWalletInfo,
   asSubscanResponse,
   asTransactions,
   asTransfer,
   PolkadotNetworkInfo,
   PolkadotWalletOtherData,
+  SafePolkadotWalletInfo,
   SubscanResponse,
   SubscanTx
 } from './polkadotTypes'
@@ -40,7 +44,10 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 
 const queryTxMutex = makeMutex()
 
-export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
+export class PolkadotEngine extends CurrencyEngine<
+  PolkadotTools,
+  SafePolkadotWalletInfo
+> {
   networkInfo: PolkadotNetworkInfo
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
@@ -50,7 +57,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
   constructor(
     env: PluginEnvironment<PolkadotNetworkInfo>,
     tools: PolkadotTools,
-    walletInfo: EdgeWalletInfo,
+    walletInfo: SafePolkadotWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
@@ -98,7 +105,7 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 
   async queryBalance(): Promise<void> {
     const response = await this.api.query.system.account(
-      this.walletInfo.keys.publicKey as string
+      this.walletInfo.keys.publicKey
     )
     this.nonce = response.nonce.toNumber()
     this.updateBalance(
@@ -379,7 +386,13 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return edgeTransaction
   }
 
-  async signTx(edgeTransaction: EdgeTransaction): Promise<EdgeTransaction> {
+  async signTx(
+    edgeTransaction: EdgeTransaction,
+    privateKeys: JsonObject
+  ): Promise<EdgeTransaction> {
+    const polkadotPrivateKeys = asPolkapolkadotPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
     const { publicAddress } = getOtherParams(edgeTransaction)
     if (publicAddress == null)
       throw new Error('Missing publicAddress from makeSpend')
@@ -417,9 +430,12 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
 
     if (this.keypair == null) {
       this.keypair = new Keyring({ ss58Format: 0 })
-      this.keypair.addFromUri(
-        this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`]
-      )
+      if (polkadotPrivateKeys.mnemonic != null) {
+        this.keypair.addFromUri(polkadotPrivateKeys.mnemonic)
+      } else {
+        const uint8Array = base16.parse(polkadotPrivateKeys.privateKey)
+        this.keypair.addFromSeed(uint8Array)
+      }
     }
 
     const signedPayload = extrinsicPayload.sign(
@@ -455,8 +471,11 @@ export class PolkadotEngine extends CurrencyEngine<PolkadotTools> {
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(): string {
-    return this.walletInfo.keys[`${this.currencyInfo.pluginId}Mnemonic`] ?? ''
+  getDisplayPrivateSeed(privateKeys: JsonObject): string {
+    const polkadotPrivateKeys = asPolkapolkadotPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
+    return polkadotPrivateKeys.mnemonic ?? polkadotPrivateKeys.privateKey
   }
 
   getDisplayPublicSeed(): string {
@@ -470,10 +489,11 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const engine = new PolkadotEngine(env, tools, walletInfo, opts)
+  const safeWalletInfo = asSafePolkadotWalletInfo(walletInfo)
+  const engine = new PolkadotEngine(env, tools, safeWalletInfo, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, walletInfo, opts)
+  await engine.loadEngine(tools, safeWalletInfo, opts)
 
   return engine
 }
