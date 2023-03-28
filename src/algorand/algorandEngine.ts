@@ -72,6 +72,7 @@ export class AlgorandEngine extends CurrencyEngine<
   queryTxMutex: Mutex
   suggestedTransactionParams: SuggestedTransactionParams
   minimumAddressBalance: string
+  totalReserve: string
 
   constructor(
     env: PluginEnvironment<AlgorandNetworkInfo>,
@@ -92,6 +93,7 @@ export class AlgorandEngine extends CurrencyEngine<
       genesisHash: this.networkInfo.genesisHash
     }
     this.minimumAddressBalance = this.networkInfo.minimumAddressBalance
+    this.totalReserve = this.minimumAddressBalance
   }
 
   setOtherData(raw: any): void {
@@ -123,7 +125,9 @@ export class AlgorandEngine extends CurrencyEngine<
       const accountInfo: AccountInformation = await this.fetchAccountInfo(
         this.walletLocalData.publicKey
       )
-      const { assets, amount, round } = accountInfo
+      const { assets, amount, 'min-balance': minBalance, round } = accountInfo
+
+      this.totalReserve = minBalance.toString()
 
       const newUnactivatedTokenIds: string[] = []
       for (const cc of this.enabledTokens) {
@@ -390,7 +394,7 @@ export class AlgorandEngine extends CurrencyEngine<
       currencyCode: spendInfo.currencyCode
     })
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
-      balance = sub(balance, this.networkInfo.minimumAddressBalance)
+      balance = sub(balance, this.totalReserve)
     }
 
     const publicAddress = spendInfo.spendTargets[0].publicAddress
@@ -441,7 +445,7 @@ export class AlgorandEngine extends CurrencyEngine<
       this.getBalance({
         currencyCode: this.currencyInfo.currencyCode
       }),
-      this.minimumAddressBalance
+      this.totalReserve
     )
 
     if (edgeSpendInfo.spendTargets.length !== 1) {

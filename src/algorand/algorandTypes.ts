@@ -49,7 +49,7 @@ export const asAccountInformation = asObject({
   ),
   // 'created-apps': [],
   // 'created-assets': [],
-  // 'min-balance': 200000,
+  'min-balance': asNumber,
   // 'pending-rewards': 0,
   // 'reward-base': 218288,
   // rewards: 0,
