@@ -101,7 +101,6 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-const REQUEST_POLL_MILLISECONDS = 10000
 const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
@@ -1289,7 +1288,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     ).catch(() => {})
-    this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS).catch(() => {})
     await super.startEngine()
   }
 
