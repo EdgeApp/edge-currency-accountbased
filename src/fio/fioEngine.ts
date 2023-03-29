@@ -1204,7 +1204,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // Placeholder function for network activity that requires private keys
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
-    const fioPrivateKeys = asFioPrivateKeys(opts.privateKeys)
+    const fioPrivateKeys = asFioPrivateKeys(opts?.privateKeys)
     let isChanged = false
 
     const checkFioRequests = async (
