@@ -65,8 +65,7 @@ import {
   asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse,
-  FioHistoryNodeAction,
-  GetFioName
+  FioHistoryNodeAction
 } from './fioSchema'
 import {
   asCancelFundsRequest,
@@ -884,15 +883,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
-        (result: GetFioName) => {
-          try {
-            return JSON.stringify(asGetFioName(result))
-          } catch (e: any) {
-            this.log(`getFioNames checkResult function returned error `, e)
-          }
+        (result: any) => {
+          return JSON.stringify(result)
         },
         2
       )
+      if (res?.data?.json?.message === 'No FIO names') {
+        res = { fio_domains: [], fio_addresses: [] }
+      }
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(
         shuffleArray(
@@ -970,9 +968,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
     // Fio Addresses
     try {
-      const result = await this.multicastServers('getFioNames', {
-        fioPublicKey: this.walletInfo.keys.publicKey
-      })
+      const result = asGetFioName(
+        await this.multicastServers('getFioNames', {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        })
+      )
 
       let isChanged = false
       let areAddressesChanged = false
@@ -1005,7 +1005,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           for (const fioAddress of this.otherData.fioAddresses) {
             if (
               result.fio_addresses.findIndex(
-                // @ts-expect-error
                 item => item.fio_address === fioAddress.name
               ) < 0
             ) {
@@ -1029,7 +1028,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
               areDomainsChanged = true
               break
             }
-            if (existedFioDomain.isPublic !== (fioDomain.is_public === true)) {
+            if (existedFioDomain.isPublic !== (fioDomain.is_public === 1)) {
               areDomainsChanged = true
               break
             }
@@ -1044,7 +1043,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           for (const fioDomain of this.otherData.fioDomains) {
             if (
               result.fio_domains.findIndex(
-                // @ts-expect-error
                 item => item.fio_domain === fioDomain.name
               ) < 0
             ) {
@@ -1057,7 +1055,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       if (areAddressesChanged) {
         isChanged = true
-        // @ts-expect-error
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
           bundledTxs: fioAddress.remaining_bundled_tx
@@ -1066,11 +1063,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       if (areDomainsChanged) {
         isChanged = true
-        // @ts-expect-error
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
           name: fioDomain.fio_domain,
           expiration: fioDomain.expiration,
-          isPublic: fioDomain.is_public === true
+          isPublic: fioDomain.is_public === 1
         }))
       }
 
