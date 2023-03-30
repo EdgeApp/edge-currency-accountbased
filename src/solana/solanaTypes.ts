@@ -92,10 +92,10 @@ export const asSolanaPrivateKeys = (
         privateKey: asString
       })(to)
     },
-    hbarPrivateKey => {
+    solPrivateKey => {
       return {
-        [`${pluginId}Mnemonic`]: hbarPrivateKey.mnemonic,
-        [`${pluginId}Key`]: hbarPrivateKey.privateKey
+        [`${pluginId}Mnemonic`]: solPrivateKey.mnemonic,
+        [`${pluginId}Key`]: solPrivateKey.privateKey
       }
     }
   )
