@@ -54,6 +54,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x68f180fcCe6836688e9084f035309E29Bf0A2095'
     }
   },
+  '4200000000000000000000000000000000000006': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped ETH',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4200000000000000000000000000000000000006'
+    }
+  },
   '350a791bfc2c21f9ed5d10980dad2e2638ffa7f6': {
     currencyCode: 'LINK',
     displayName: 'Chainlink',
