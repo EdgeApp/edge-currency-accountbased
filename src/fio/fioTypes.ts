@@ -1,3 +1,4 @@
+import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
 import {
   asArray,
   asBoolean,
@@ -192,3 +193,10 @@ export type FioPrivateKeys = ReturnType<typeof asFioPrivateKeys>
 export const asFioPrivateKeys = asObject({
   fioKey: asString
 })
+
+export const comparisonFioNameString = (res: FioNamesResponse): string => {
+  const nameArray: string[] = []
+  res.fio_domains.forEach(domain => nameArray.push(domain.fio_domain))
+  res.fio_addresses.forEach(address => nameArray.push(address.fio_address))
+  return nameArray.sort((a, b) => (a < b ? -1 : 1)).join()
+}

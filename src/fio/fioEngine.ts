@@ -88,6 +88,7 @@ import {
   asRejectFundsRequest,
   asSafeFioWalletInfo,
   asSetFioDomainVisibility,
+  comparisonFioNameString,
   FioActionFees,
   FioNetworkInfo,
   FioRefBlock,
@@ -884,7 +885,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
         (result: any) => {
-          return JSON.stringify(result)
+          const errorResponse = asMaybe(asFioEmptyResponse)(result)
+          if (errorResponse != null) return JSON.stringify(errorResponse)
+          return comparisonFioNameString(result)
         },
         2
       )
