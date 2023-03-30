@@ -1,3 +1,4 @@
+import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
 import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
 import {
   asArray,
@@ -199,4 +200,14 @@ export const comparisonFioNameString = (res: FioNamesResponse): string => {
   res.fio_domains.forEach(domain => nameArray.push(domain.fio_domain))
   res.fio_addresses.forEach(address => nameArray.push(address.fio_address))
   return nameArray.sort((a, b) => (a < b ? -1 : 1)).join()
+}
+
+export const comparisonFioBalanceString = (res: BalanceResponse): string => {
+  const balanceArray: Array<number | string> = []
+  balanceArray.push(res.balance)
+  balanceArray.push(res.available)
+  balanceArray.push(res.staked)
+  balanceArray.push(res.srps)
+  balanceArray.push(res.roe)
+  return balanceArray.join()
 }

@@ -88,6 +88,7 @@ import {
   asRejectFundsRequest,
   asSafeFioWalletInfo,
   asSetFioDomainVisibility,
+  comparisonFioBalanceString,
   comparisonFioNameString,
   FioActionFees,
   FioNetworkInfo,
@@ -739,13 +740,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         case 'getBlock':
           res = await fioSdk.transactions.getBlock(params)
           break
-        case 'getFioBalance':
-          res = await fioSdk.genericAction(actionName, params)
-          asGetFioBalanceResponse(res)
-          if (res.balance != null && res.balance < 0)
-            throw new Error('Invalid balance')
-
-          break
         case 'getObtData':
         case 'getPendingFioRequests':
         case 'getSentFioRequests': {
@@ -894,6 +888,22 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       if (res?.data?.json?.message === 'No FIO names') {
         res = { fio_domains: [], fio_addresses: [] }
       }
+    } else if (actionName === 'getFioBalance') {
+      res = await promiseNy(
+        this.networkInfo.apiUrls.map(
+          async apiUrl =>
+            await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
+        ),
+        (result: any) => {
+          const errorResponse = asMaybe(asFioEmptyResponse)(result)
+          if (errorResponse != null) return JSON.stringify(errorResponse)
+          return comparisonFioBalanceString(result)
+        },
+        2
+      )
+      if (res?.data?.json?.message === 'Public key not found') {
+        res = { balance: '0', available: '0', staked: '0', srps: '0', roe: '' }
+      }
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(
         shuffleArray(
@@ -953,8 +963,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
-      const { balance, available, staked, srps, roe } =
+      const { balance, available, staked, srps, roe } = asGetFioBalanceResponse(
         await this.multicastServers('getFioBalance')
+      )
       const nativeAmount = String(balance)
       balances.staked = String(staked)
       balances.locked = sub(nativeAmount, String(available))
@@ -966,7 +977,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
       this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
     } catch (e: any) {
-      this.log('checkAccountInnerLoop getFioBalance error: ', e)
+      this.log.warn('checkAccountInnerLoop getFioBalance error: ', e)
     }
 
     // Fio Addresses
