@@ -3,12 +3,14 @@ import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesRespo
 import {
   asArray,
   asBoolean,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
   asUnknown,
-  asValue
+  asValue,
+  Cleaner
 } from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
@@ -211,3 +213,21 @@ export const comparisonFioBalanceString = (res: BalanceResponse): string => {
   balanceArray.push(res.roe)
   return balanceArray.join()
 }
+
+type FioNothingResponse =
+  | {
+      data: {
+        json: { message: string }
+      }
+    }
+  | undefined
+export const asFioNothingResponse = (
+  message: string
+): Cleaner<FioNothingResponse> =>
+  asMaybe(
+    asObject({
+      data: asObject({
+        json: asObject({ message: asValue(message) })
+      })
+    })
+  )

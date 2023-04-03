@@ -54,6 +54,8 @@ import {
   FioWalletOtherData,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET,
+  NO_FIO_NAMES,
+  PUBLIC_KEY_NOT_FOUND,
   STAKING_LOCK_PERIOD,
   STAKING_REWARD_MEMO,
   TxOtherParams
@@ -77,6 +79,7 @@ import {
   asFioDomainParam,
   asFioEmptyResponse,
   asFioFee,
+  asFioNothingResponse,
   asFioPrivateKeys,
   asFioRecordObtData,
   asFioRequestFundsParams,
@@ -879,13 +882,13 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
         (result: any) => {
-          const errorResponse = asMaybe(asFioEmptyResponse)(result)
-          if (errorResponse != null) return JSON.stringify(errorResponse)
+          const errorResponse = asFioNothingResponse(NO_FIO_NAMES)(result)
+          if (errorResponse != null) return errorResponse.data.json.message
           return comparisonFioNameString(result)
         },
         2
       )
-      if (res?.data?.json?.message === 'No FIO names') {
+      if (res?.data?.json?.message === NO_FIO_NAMES) {
         res = { fio_domains: [], fio_addresses: [] }
       }
     } else if (actionName === 'getFioBalance') {
@@ -895,13 +898,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
         (result: any) => {
-          const errorResponse = asMaybe(asFioEmptyResponse)(result)
-          if (errorResponse != null) return JSON.stringify(errorResponse)
+          const errorResponse =
+            asFioNothingResponse(PUBLIC_KEY_NOT_FOUND)(result)
+          if (errorResponse != null) return errorResponse.data.json.message
           return comparisonFioBalanceString(result)
         },
         2
       )
-      if (res?.data?.json?.message === 'Public key not found') {
+      if (res?.data?.json?.message === PUBLIC_KEY_NOT_FOUND) {
         res = { balance: '0', available: '0', staked: '0', srps: '0', roe: '' }
       }
     } else if (actionName === 'getFees') {
