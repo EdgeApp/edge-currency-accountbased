@@ -2,7 +2,9 @@ import {
   API,
   APIClient,
   APIError,
+  Bytes,
   FetchProvider,
+  KeyType,
   Name,
   PrivateKey
 } from '@greymass/eosio'
@@ -79,10 +81,14 @@ export class EosTools implements EdgeCurrencyTools {
 
     const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
     if (type === currencyInfoType) {
-      let entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const eosOwnerKey = PrivateKey.from(entropy).toWif()
-      entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const eosKey = PrivateKey.from(entropy).toWif()
+      const eosOwnerKey = new PrivateKey(
+        KeyType.K1,
+        Bytes.from(this.io.random(32), 'hex')
+      ).toWif()
+      const eosKey = new PrivateKey(
+        KeyType.K1,
+        Bytes.from(this.io.random(32), 'hex')
+      ).toWif()
       return { eosOwnerKey, eosKey }
     } else {
       throw new Error('InvalidWalletType')
