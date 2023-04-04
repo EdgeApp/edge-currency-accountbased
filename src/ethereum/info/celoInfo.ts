@@ -54,6 +54,7 @@ const defaultNetworkFees: EthereumFees = {
 const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
     'https://forno.celo.org',
+    'https://rpc.ankr.com/celo',
     'https://celo-mainnet-rpc.allthatnode.com'
   ],
   evmScanApiServers: ['https://explorer.celo.org/mainnet'],
