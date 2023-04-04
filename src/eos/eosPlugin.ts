@@ -96,24 +96,22 @@ export class EosTools implements EdgeCurrencyTools {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
-    const type = walletInfo.type.replace('wallet:', '')
-    const currencyInfoType = this.currencyInfo.walletType.replace('wallet:', '')
-    if (type === currencyInfoType) {
-      const publicKey = PrivateKey.from(walletInfo.keys.eosKey)
-        .toPublic()
-        .toLegacyString()
-      let ownerPublicKey
-      // usage of eosOwnerKey must be protected by conditional
-      // checking for its existence
-      if (walletInfo.keys.eosOwnerKey != null) {
-        ownerPublicKey = PrivateKey.from(walletInfo.keys.eosOwnerKey)
-          .toPublic()
-          .toLegacyString()
-      }
-      return { publicKey, ownerPublicKey }
-    } else {
+    if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const publicKey = PrivateKey.from(walletInfo.keys.eosKey)
+      .toPublic()
+      .toLegacyString()
+    let ownerPublicKey
+    // usage of eosOwnerKey must be protected by conditional
+    // checking for its existence
+    if (walletInfo.keys.eosOwnerKey != null) {
+      ownerPublicKey = PrivateKey.from(walletInfo.keys.eosOwnerKey)
+        .toPublic()
+        .toLegacyString()
+    }
+    return { publicKey, ownerPublicKey }
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
