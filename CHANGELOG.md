@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.23.1 (2023-04-04)
+
+- fixed: Crash in `createPrivateKey` for `EosTools`
+
 ## 0.23.0 (2023-03-28)
 
 - Refactor FIO use makeSpend, signTx, and broadcastTx instead of ambiguous otherMethods
