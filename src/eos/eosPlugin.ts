@@ -83,11 +83,11 @@ export class EosTools implements EdgeCurrencyTools {
     if (type === currencyInfoType) {
       const eosOwnerKey = new PrivateKey(
         KeyType.K1,
-        Bytes.from(this.io.random(32), 'hex')
+        Bytes.from(this.io.random(32))
       ).toWif()
       const eosKey = new PrivateKey(
         KeyType.K1,
-        Bytes.from(this.io.random(32), 'hex')
+        Bytes.from(this.io.random(32))
       ).toWif()
       return { eosOwnerKey, eosKey }
     } else {
