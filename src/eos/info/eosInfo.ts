@@ -32,7 +32,7 @@ const denominations = [
   {
     name: 'EOS',
     multiplier: '10000',
-    symbol: 'E'
+    symbol: 'ε'
   }
 ]
 

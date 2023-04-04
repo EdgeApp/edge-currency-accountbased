@@ -337,7 +337,9 @@ const builtinTokens: EdgeTokenMap = {
   '6b175474e89094c44da98b954eedeac495271d0f': {
     currencyCode: 'DAI',
     displayName: 'Dai Stablecoin',
-    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'DAI', multiplier: '1000000000000000000', symbol: '◈' }
+    ],
     networkLocation: {
       contractAddress: '0x6B175474E89094C44Da98b954EedeAC495271d0F'
     }
@@ -513,7 +515,9 @@ const builtinTokens: EdgeTokenMap = {
   '9f8f72aa9304c8b593d555f12ef6589cc3a579a2': {
     currencyCode: 'MKR',
     displayName: 'Maker',
-    denominations: [{ name: 'MKR', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'MKR', multiplier: '1000000000000000000', symbol: 'Μ' }
+    ],
     networkLocation: {
       contractAddress: '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'
     }
@@ -633,7 +637,9 @@ const builtinTokens: EdgeTokenMap = {
   '1985365e9f78359a9b6ad760e32412f4a445e862': {
     currencyCode: 'REP',
     displayName: 'Augur',
-    denominations: [{ name: 'REP', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'REP', multiplier: '1000000000000000000', symbol: 'Ɍ' }
+    ],
     networkLocation: {
       contractAddress: '0x1985365e9f78359a9B6AD760e32412f4a445E862'
     }
@@ -641,7 +647,9 @@ const builtinTokens: EdgeTokenMap = {
   '221657776846890989a759ba2973e427dff5c9bb': {
     currencyCode: 'REPV2',
     displayName: 'Augur v2',
-    denominations: [{ name: 'REPV2', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'REPV2', multiplier: '1000000000000000000', symbol: 'Ɍ' }
+    ],
     networkLocation: {
       contractAddress: '0x221657776846890989a759BA2973e427DfF5C9bB'
     }

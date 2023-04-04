@@ -31,7 +31,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'XRP',
       multiplier: '1000000',
-      symbol: 'X'
+      symbol: '✕'
     }
   ],
   metaTokens: [] // Deprecated

@@ -9,7 +9,9 @@ const builtinTokens: EdgeTokenMap = {
   ff795577d9ac8bd7d90ee22b6c1703490b6512fd: {
     currencyCode: 'DAI',
     displayName: 'Dai Stablecoin',
-    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'DAI', multiplier: '1000000000000000000', symbol: '◈' }
+    ],
     networkLocation: {
       contractAddress: '0xff795577d9ac8bd7d90ee22b6c1703490b6512fd'
     }

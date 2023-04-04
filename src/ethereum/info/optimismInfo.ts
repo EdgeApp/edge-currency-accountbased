@@ -33,7 +33,9 @@ const builtinTokens: EdgeTokenMap = {
   da10009cbd5d07dd0cecc66161fc93d7c9000da1: {
     currencyCode: 'DAI',
     displayName: 'Dai Stablecoin',
-    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'DAI', multiplier: '1000000000000000000', symbol: '◈' }
+    ],
     networkLocation: {
       contractAddress: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
     }
@@ -52,6 +54,14 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'WBTC', multiplier: '100000000' }],
     networkLocation: {
       contractAddress: '0x68f180fcCe6836688e9084f035309E29Bf0A2095'
+    }
+  },
+  '4200000000000000000000000000000000000006': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped ETH',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4200000000000000000000000000000000000006'
     }
   },
   '350a791bfc2c21f9ed5d10980dad2e2638ffa7f6': {

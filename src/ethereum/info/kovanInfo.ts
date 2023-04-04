@@ -89,7 +89,9 @@ const builtinTokens: EdgeTokenMap = {
   '61e4cae3da7fd189e52a4879c7b8067d7c2cc0fa': {
     currencyCode: 'MKR',
     displayName: 'Maker',
-    denominations: [{ name: 'MKR', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'MKR', multiplier: '1000000000000000000', symbol: 'Μ' }
+    ],
     networkLocation: {
       contractAddress: '0x61e4cae3da7fd189e52a4879c7b8067d7c2cc0fa'
     }
@@ -114,7 +116,9 @@ const builtinTokens: EdgeTokenMap = {
   ff795577d9ac8bd7d90ee22b6c1703490b6512fd: {
     currencyCode: 'DAI',
     displayName: 'Dai Stablecoin',
-    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    denominations: [
+      { name: 'DAI', multiplier: '1000000000000000000', symbol: '◈' }
+    ],
     networkLocation: {
       contractAddress: '0xff795577d9ac8bd7d90ee22b6c1703490b6512fd'
     }
