@@ -42,7 +42,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 5 // 5 days
-const NETWORK_FEE_NATIVE_AMOUNT = '37500' // fixed amount for BNB
+const NETWORK_FEE_NATIVE_AMOUNT = '7500' // fixed amount for BNB
 
 type BnbFunction =
   | 'bnb_broadcastTx'
