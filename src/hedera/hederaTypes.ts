@@ -98,26 +98,25 @@ export interface HederaPrivateKeys {
 }
 export const asHederaPrivateKeys = (
   pluginId: string
-): Cleaner<HederaPrivateKeys> =>
-  asCodec(
-    (value: unknown) => {
-      const from = asObject({
-        [`${pluginId}Mnemonic`]: asOptional(asString),
-        [`${pluginId}Key`]: asString
-      })(value)
-      const to = {
-        mnemonic: from[`${pluginId}Mnemonic`],
-        privateKey: from[`${pluginId}Key`]
-      }
-      return asObject({
-        mnemonic: asOptional(asString),
-        privateKey: asString
-      })(to)
-    },
-    hbarPrivateKey => {
+): Cleaner<HederaPrivateKeys> => {
+  const asKeys = asObject({
+    [`${pluginId}Mnemonic`]: asOptional(asString),
+    [`${pluginId}Key`]: asString
+  })
+
+  return asCodec(
+    raw => {
+      const from = asKeys(raw)
       return {
-        [`${pluginId}Mnemonic`]: hbarPrivateKey.mnemonic,
-        [`${pluginId}Key`]: hbarPrivateKey.privateKey
+        mnemonic: from[`${pluginId}Mnemonic`],
+        privateKey: from[`${pluginId}Key`] as string
+      }
+    },
+    clean => {
+      return {
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        [`${pluginId}Key`]: clean.privateKey
       }
     }
   )
+}

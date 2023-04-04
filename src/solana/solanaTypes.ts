@@ -76,26 +76,25 @@ export interface SolanaPrivateKeys {
 }
 export const asSolanaPrivateKeys = (
   pluginId: string
-): Cleaner<SolanaPrivateKeys> =>
-  asCodec(
-    (value: unknown) => {
-      const from = asObject({
-        [`${pluginId}Mnemonic`]: asString,
-        [`${pluginId}Key`]: asString
-      })(value)
-      const to = {
-        mnemonic: from[`${pluginId}Mnemonic`],
-        privateKey: from[`${pluginId}Key`]
-      }
-      return asObject({
-        mnemonic: asString,
-        privateKey: asString
-      })(to)
-    },
-    hbarPrivateKey => {
+): Cleaner<SolanaPrivateKeys> => {
+  const asKeys = asObject({
+    [`${pluginId}Mnemonic`]: asString,
+    [`${pluginId}Key`]: asString
+  })
+
+  return asCodec(
+    raw => {
+      const clean = asKeys(raw)
       return {
-        [`${pluginId}Mnemonic`]: hbarPrivateKey.mnemonic,
-        [`${pluginId}Key`]: hbarPrivateKey.privateKey
+        mnemonic: clean[`${pluginId}Mnemonic`],
+        privateKey: clean[`${pluginId}Key`]
+      }
+    },
+    clean => {
+      return {
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        [`${pluginId}Key`]: clean.privateKey
       }
     }
   )
+}

@@ -67,26 +67,25 @@ export interface PolkapolkadotPrivateKeys {
 }
 export const asPolkapolkadotPrivateKeys = (
   pluginId: string
-): Cleaner<PolkapolkadotPrivateKeys> =>
-  asCodec(
-    (value: unknown) => {
-      const from = asObject({
-        [`${pluginId}Mnemonic`]: asOptional(asString),
-        [`${pluginId}Key`]: asString
-      })(value)
-      const to = {
-        mnemonic: from[`${pluginId}Mnemonic`],
-        privateKey: from[`${pluginId}Key`]
-      }
-      return asObject({
-        mnemonic: asOptional(asString),
-        privateKey: asString
-      })(to)
-    },
-    privateKeys => {
+): Cleaner<PolkapolkadotPrivateKeys> => {
+  const asKeys = asObject({
+    [`${pluginId}Mnemonic`]: asOptional(asString),
+    [`${pluginId}Key`]: asString
+  })
+
+  return asCodec(
+    raw => {
+      const clean = asKeys(raw)
       return {
-        [`${pluginId}Mnemonic`]: privateKeys.mnemonic,
-        [`${pluginId}Key`]: privateKeys.privateKey
+        mnemonic: clean[`${pluginId}Mnemonic`],
+        privateKey: clean[`${pluginId}Key`] as string
+      }
+    },
+    clean => {
+      return {
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        [`${pluginId}Key`]: clean.privateKey
       }
     }
   )
+}

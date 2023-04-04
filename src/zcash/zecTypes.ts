@@ -143,30 +143,28 @@ export interface ZcashPrivateKeys {
 }
 export const asZcashPrivateKeys = (
   pluginId: string
-): Cleaner<ZcashPrivateKeys> =>
-  asCodec(
-    (value: unknown) => {
-      const from = asObject({
-        [`${pluginId}Mnemonic`]: asString,
-        [`${pluginId}SpendKey`]: asString,
-        [`${pluginId}BirthdayHeight`]: asNumber
-      })(value)
-      const to = {
-        mnemonic: from[`${pluginId}Mnemonic`],
-        spendKey: from[`${pluginId}SpendKey`],
-        birthdayHeight: from[`${pluginId}BirthdayHeight`]
-      }
-      return asObject({
-        mnemonic: asString,
-        spendKey: asString,
-        birthdayHeight: asNumber
-      })(to)
-    },
-    zecPrivateKey => {
+): Cleaner<ZcashPrivateKeys> => {
+  const asKeys = asObject({
+    [`${pluginId}Mnemonic`]: asString,
+    [`${pluginId}SpendKey`]: asString,
+    [`${pluginId}BirthdayHeight`]: asNumber
+  })
+
+  return asCodec(
+    raw => {
+      const clean = asKeys(raw)
       return {
-        [`${pluginId}Mnemonic`]: zecPrivateKey.mnemonic,
-        [`${pluginId}SpendKey`]: zecPrivateKey.spendKey,
-        [`${pluginId}BirthdayHeight`]: zecPrivateKey.birthdayHeight
+        mnemonic: clean[`${pluginId}Mnemonic`] as string,
+        spendKey: clean[`${pluginId}SpendKey`] as string,
+        birthdayHeight: clean[`${pluginId}BirthdayHeight`] as number
+      }
+    },
+    clean => {
+      return {
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        [`${pluginId}SpendKey`]: clean.spendKey,
+        [`${pluginId}BirthdayHeight`]: clean.birthdayHeight
       }
     }
   )
+}
