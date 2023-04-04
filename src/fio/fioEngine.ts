@@ -54,6 +54,8 @@ import {
   FioWalletOtherData,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_OFFSET,
+  NO_FIO_NAMES,
+  PUBLIC_KEY_NOT_FOUND,
   STAKING_LOCK_PERIOD,
   STAKING_REWARD_MEMO,
   TxOtherParams
@@ -65,8 +67,7 @@ import {
   asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse,
-  FioHistoryNodeAction,
-  GetFioName
+  FioHistoryNodeAction
 } from './fioSchema'
 import {
   asCancelFundsRequest,
@@ -78,6 +79,7 @@ import {
   asFioDomainParam,
   asFioEmptyResponse,
   asFioFee,
+  asFioNothingResponse,
   asFioPrivateKeys,
   asFioRecordObtData,
   asFioRequestFundsParams,
@@ -89,6 +91,8 @@ import {
   asRejectFundsRequest,
   asSafeFioWalletInfo,
   asSetFioDomainVisibility,
+  comparisonFioBalanceString,
+  comparisonFioNameString,
   FioActionFees,
   FioNetworkInfo,
   FioRefBlock,
@@ -101,7 +105,6 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-const REQUEST_POLL_MILLISECONDS = 10000
 const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
@@ -740,13 +743,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         case 'getBlock':
           res = await fioSdk.transactions.getBlock(params)
           break
-        case 'getFioBalance':
-          res = await fioSdk.genericAction(actionName, params)
-          asGetFioBalanceResponse(res)
-          if (res.balance != null && res.balance < 0)
-            throw new Error('Invalid balance')
-
-          break
         case 'getObtData':
         case 'getPendingFioRequests':
         case 'getSentFioRequests': {
@@ -885,15 +881,33 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
-        (result: GetFioName) => {
-          try {
-            return JSON.stringify(asGetFioName(result))
-          } catch (e: any) {
-            this.log(`getFioNames checkResult function returned error `, e)
-          }
+        (result: any) => {
+          const errorResponse = asFioNothingResponse(NO_FIO_NAMES)(result)
+          if (errorResponse != null) return errorResponse.data.json.message
+          return comparisonFioNameString(result)
         },
         2
       )
+      if (res?.data?.json?.message === NO_FIO_NAMES) {
+        res = { fio_domains: [], fio_addresses: [] }
+      }
+    } else if (actionName === 'getFioBalance') {
+      res = await promiseNy(
+        this.networkInfo.apiUrls.map(
+          async apiUrl =>
+            await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
+        ),
+        (result: any) => {
+          const errorResponse =
+            asFioNothingResponse(PUBLIC_KEY_NOT_FOUND)(result)
+          if (errorResponse != null) return errorResponse.data.json.message
+          return comparisonFioBalanceString(result)
+        },
+        2
+      )
+      if (res?.data?.json?.message === PUBLIC_KEY_NOT_FOUND) {
+        res = { balance: '0', available: '0', staked: '0', srps: '0', roe: '' }
+      }
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(
         shuffleArray(
@@ -953,8 +967,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
-      const { balance, available, staked, srps, roe } =
+      const { balance, available, staked, srps, roe } = asGetFioBalanceResponse(
         await this.multicastServers('getFioBalance')
+      )
       const nativeAmount = String(balance)
       balances.staked = String(staked)
       balances.locked = sub(nativeAmount, String(available))
@@ -966,14 +981,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
       this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
     } catch (e: any) {
-      this.log('checkAccountInnerLoop getFioBalance error: ', e)
+      this.log.warn('checkAccountInnerLoop getFioBalance error: ', e)
     }
 
     // Fio Addresses
     try {
-      const result = await this.multicastServers('getFioNames', {
-        fioPublicKey: this.walletInfo.keys.publicKey
-      })
+      const result = asGetFioName(
+        await this.multicastServers('getFioNames', {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        })
+      )
 
       let isChanged = false
       let areAddressesChanged = false
@@ -1006,7 +1023,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           for (const fioAddress of this.otherData.fioAddresses) {
             if (
               result.fio_addresses.findIndex(
-                // @ts-expect-error
                 item => item.fio_address === fioAddress.name
               ) < 0
             ) {
@@ -1030,7 +1046,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
               areDomainsChanged = true
               break
             }
-            if (existedFioDomain.isPublic !== (fioDomain.is_public === true)) {
+            if (existedFioDomain.isPublic !== (fioDomain.is_public === 1)) {
               areDomainsChanged = true
               break
             }
@@ -1045,7 +1061,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           for (const fioDomain of this.otherData.fioDomains) {
             if (
               result.fio_domains.findIndex(
-                // @ts-expect-error
                 item => item.fio_domain === fioDomain.name
               ) < 0
             ) {
@@ -1058,7 +1073,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       if (areAddressesChanged) {
         isChanged = true
-        // @ts-expect-error
         this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
           name: fioAddress.fio_address,
           bundledTxs: fioAddress.remaining_bundled_tx
@@ -1067,11 +1081,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       if (areDomainsChanged) {
         isChanged = true
-        // @ts-expect-error
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
           name: fioDomain.fio_domain,
           expiration: fioDomain.expiration,
-          isPublic: fioDomain.is_public === true
+          isPublic: fioDomain.is_public === 1
         }))
       }
 
@@ -1205,7 +1218,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // Placeholder function for network activity that requires private keys
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
-    const fioPrivateKeys = asFioPrivateKeys(opts.privateKeys)
+    const fioPrivateKeys = asFioPrivateKeys(opts?.privateKeys)
     let isChanged = false
 
     const checkFioRequests = async (
@@ -1289,7 +1302,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     ).catch(() => {})
-    this.addToLoop('syncNetwork', REQUEST_POLL_MILLISECONDS).catch(() => {})
     await super.startEngine()
   }
 

@@ -193,3 +193,6 @@ export const asFioWalletOtherData = asObject({
 })
 
 export type FioWalletOtherData = ReturnType<typeof asFioWalletOtherData>
+
+export const NO_FIO_NAMES = 'No FIO names'
+export const PUBLIC_KEY_NOT_FOUND = 'Public key not found'

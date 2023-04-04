@@ -1,12 +1,16 @@
+import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
+import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
 import {
   asArray,
   asBoolean,
+  asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
   asUnknown,
-  asValue
+  asValue,
+  Cleaner
 } from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
@@ -192,3 +196,38 @@ export type FioPrivateKeys = ReturnType<typeof asFioPrivateKeys>
 export const asFioPrivateKeys = asObject({
   fioKey: asString
 })
+
+export const comparisonFioNameString = (res: FioNamesResponse): string => {
+  const nameArray: string[] = []
+  res.fio_domains.forEach(domain => nameArray.push(domain.fio_domain))
+  res.fio_addresses.forEach(address => nameArray.push(address.fio_address))
+  return nameArray.sort((a, b) => (a < b ? -1 : 1)).join()
+}
+
+export const comparisonFioBalanceString = (res: BalanceResponse): string => {
+  const balanceArray: Array<number | string> = []
+  balanceArray.push(res.balance)
+  balanceArray.push(res.available)
+  balanceArray.push(res.staked)
+  balanceArray.push(res.srps)
+  balanceArray.push(res.roe)
+  return balanceArray.join()
+}
+
+type FioNothingResponse =
+  | {
+      data: {
+        json: { message: string }
+      }
+    }
+  | undefined
+export const asFioNothingResponse = (
+  message: string
+): Cleaner<FioNothingResponse> =>
+  asMaybe(
+    asObject({
+      data: asObject({
+        json: asObject({ message: asValue(message) })
+      })
+    })
+  )

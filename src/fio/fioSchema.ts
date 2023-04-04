@@ -16,8 +16,6 @@ export const asGetFioName = asObject({
   )
 })
 
-export type GetFioName = ReturnType<typeof asGetFioName>
-
 export const asFioHistoryNodeAction = asObject({
   account_action_seq: asNumber,
   block_num: asNumber,
