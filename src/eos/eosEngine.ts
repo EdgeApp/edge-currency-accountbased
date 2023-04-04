@@ -198,15 +198,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     opts: EdgeCurrencyEngineOptions
   ): Promise<void> {
     await super.loadEngine(plugin, walletInfo, opts)
-
-    if (typeof this.walletInfo.keys.ownerPublicKey !== 'string') {
-      if (walletInfo.keys.ownerPublicKey != null) {
-        this.walletInfo.keys.ownerPublicKey = walletInfo.keys.ownerPublicKey
-      } else {
-        const pubKeys = await plugin.derivePublicKey(this.walletInfo)
-        this.walletInfo.keys.ownerPublicKey = pubKeys.ownerPublicKey
-      }
-    }
   }
 
   // Poll on the blockheight

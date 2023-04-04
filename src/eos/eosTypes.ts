@@ -93,6 +93,6 @@ export const asSafeEosWalletInfo = asWalletInfo(
 
 export type EosPrivateKeys = ReturnType<typeof asEosPrivateKeys>
 export const asEosPrivateKeys = asObject({
-  eosOwnerKey: asString,
+  eosOwnerKey: asOptional(asString),
   eosKey: asString
 })
