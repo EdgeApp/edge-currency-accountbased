@@ -501,16 +501,26 @@ export class BinanceEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const reply = await this.multicastServers(
-      'bnb_broadcastTx',
-      edgeTransaction.signedTx
-    )
-    const response = asBroadcastTxResponse(reply)
-    if (response.result[0]?.ok) {
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-      edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
+    try {
+      const reply = await this.multicastServers(
+        'bnb_broadcastTx',
+        edgeTransaction.signedTx
+      )
+      const response = asBroadcastTxResponse(reply)
+      if (response.result[0]?.ok) {
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+        edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
+        return edgeTransaction
+      } else {
+        throw new Error(`Broadcast failed ${JSON.stringify(response)}`)
+      }
+    } catch (e: any) {
+      this.log.warn(
+        `FAILURE broadcastTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
+      )
+      throw new Error(`Broadcast failed: ${e.message}`)
     }
-    return edgeTransaction
   }
 
   getDisplayPrivateSeed(privateKeys: JsonObject): string {
