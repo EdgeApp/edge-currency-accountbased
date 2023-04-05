@@ -188,10 +188,10 @@ export class BinanceEngine extends CurrencyEngine<
 
     let blockHeight = tx.blockHeight
     if (blockHeight < 0) blockHeight = 0
-    const unixTimestamp = new Date(tx.blockTime)
+    const unixTimestamp = new Date(tx.blockTime).getTime() / 1000
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash,
-      date: unixTimestamp.getTime(),
+      date: unixTimestamp,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
@@ -510,6 +510,7 @@ export class BinanceEngine extends CurrencyEngine<
       if (response.result[0]?.ok) {
         this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
         edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
+        edgeTransaction.date = Date.now() / 1000
         return edgeTransaction
       } else {
         throw new Error(`Broadcast failed ${JSON.stringify(response)}`)
