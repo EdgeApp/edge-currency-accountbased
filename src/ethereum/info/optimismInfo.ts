@@ -124,7 +124,11 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://mainnet.optimism.io', 'https://rpc.ankr.com/optimism'],
+  rpcServers: [
+    'https://mainnet.optimism.io',
+    'https://rpc.ankr.com/optimism',
+    'https://web3endpoints.com/optimism-mainnet'
+  ],
   evmScanApiServers: ['https://api-optimistic.etherscan.io'],
   blockcypherApiServers: [],
   blockbookServers: [],

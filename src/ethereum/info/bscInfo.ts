@@ -39,6 +39,8 @@ const defaultNetworkFees: EthereumFees = {
 
 const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
+    'https://web3endpoints.com/bsc-mainnet',
+    'https://rpc.ankr.com/bsc',
     'https://bsc-dataseed.binance.org',
     'https://bsc-dataseed1.defibit.io',
     'https://bsc-dataseed1.ninicoin.io'

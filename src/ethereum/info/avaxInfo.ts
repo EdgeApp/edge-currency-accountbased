@@ -164,7 +164,11 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://api.avax.network/ext/bc/C/rpc'],
+  rpcServers: [
+    'https://api.avax.network/ext/bc/C/rpc',
+    'https://web3endpoints.com/avax-mainnet',
+    'https://rpc.ankr.com/avalanche'
+  ],
   evmScanApiServers: ['https://api.snowtrace.io'],
   blockcypherApiServers: [],
   blockbookServers: [],

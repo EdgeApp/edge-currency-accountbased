@@ -832,8 +832,11 @@ export class EthereumNetwork {
             )
             // Check if successful http response was actually an error
             if (result.error != null) {
+              this.ethEngine.log.warn('resulttt', JSON.stringify(result))
               this.ethEngine.error(
-                `Successful eth_blockNumber response object from ${baseUrl} included an error ${result.error}`
+                `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
+                  result.error
+                )}`
               )
               throw new Error(
                 'Successful eth_blockNumber response object included an error'
@@ -859,7 +862,9 @@ export class EthereumNetwork {
           // Check if successful http response was actually an error
           if (result.error != null) {
             this.ethEngine.error(
-              `Successful eth_estimateGas response object from ${baseUrl} included an error ${result.error}`
+              `Successful eth_estimateGas response object from ${baseUrl} included an error ${JSON.stringify(
+                result.error
+              )}`
             )
             throw new Error(
               'Successful eth_estimateGas response object included an error'
@@ -931,7 +936,9 @@ export class EthereumNetwork {
           // Check if successful http response was actually an error
           if (result.error != null) {
             this.ethEngine.error(
-              `Successful eth_getTransactionCount_RPC response object from ${baseUrl} included an error ${result.error}`
+              `Successful eth_getTransactionCount_RPC response object from ${baseUrl} included an error ${JSON.stringify(
+                result.error
+              )}`
             )
             throw new Error(
               'Successful eth_getTransactionCount_RPC response object included an error'
@@ -969,8 +976,11 @@ export class EthereumNetwork {
             )
             // Check if successful http response was actually an error
             if (result.error != null) {
+              this.ethEngine.log.warn('resulttt', JSON.stringify(result))
               this.ethEngine.error(
-                `Successful eth_getBalance response object from ${baseUrl} included an error ${result.error}`
+                `Successful eth_getBalance response object from ${baseUrl} included an error ${JSON.stringify(
+                  result.error
+                )}`
               )
               throw new Error(
                 'Successful eth_getBalance response object included an error'
@@ -1094,7 +1104,9 @@ export class EthereumNetwork {
           // Check if successful http response was actually an error
           if (result.error != null) {
             this.ethEngine.error(
-              `Successful eth_call response object from ${baseUrl} included an error ${result.error}`
+              `Successful eth_call response object from ${baseUrl} included an error ${JSON.stringify(
+                result.error
+              )}`
             )
             throw new Error(
               'Successful eth_call response object included an error'
