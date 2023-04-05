@@ -1,5 +1,13 @@
 # edge-currency-accountbased
 
+## 0.23.2 (2023-04-04)
+
+- FIO: Fix syncNetwork private key handling
+- FIO: Use promiseNy for balance checking
+- FIO: Fix promiseNy error handling
+- EVM: Update node lists
+- ZEC/ARRR: Update checkpoint files
+
 ## 0.23.1 (2023-04-04)
 
 - fixed: Crash in `createPrivateKey` for `EosTools`
