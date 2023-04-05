@@ -42,7 +42,7 @@ const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 5 // 5 days
-const NETWORK_FEE_NATIVE_AMOUNT = '37500' // fixed amount for BNB
+const NETWORK_FEE_NATIVE_AMOUNT = '7500' // fixed amount for BNB
 
 type BnbFunction =
   | 'bnb_broadcastTx'
@@ -188,10 +188,10 @@ export class BinanceEngine extends CurrencyEngine<
 
     let blockHeight = tx.blockHeight
     if (blockHeight < 0) blockHeight = 0
-    const unixTimestamp = new Date(tx.blockTime)
+    const unixTimestamp = new Date(tx.blockTime).getTime() / 1000
     const edgeTransaction: EdgeTransaction = {
       txid: tx.hash,
-      date: unixTimestamp.getTime(),
+      date: unixTimestamp,
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
@@ -493,7 +493,7 @@ export class BinanceEngine extends CurrencyEngine<
     )
 
     // @ts-expect-error
-    otherParams.serializedTx = signedTx.serialize()
+    edgeTransaction.signedTx = signedTx.serialize()
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
@@ -501,19 +501,27 @@ export class BinanceEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
-
-    const bnbSignedTransaction = otherParams.serializedTx
-    const reply = await this.multicastServers(
-      'bnb_broadcastTx',
-      bnbSignedTransaction
-    )
-    const response = asBroadcastTxResponse(reply)
-    if (response.result[0]?.ok) {
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
-      edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
+    try {
+      const reply = await this.multicastServers(
+        'bnb_broadcastTx',
+        edgeTransaction.signedTx
+      )
+      const response = asBroadcastTxResponse(reply)
+      if (response.result[0]?.ok) {
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+        edgeTransaction.txid = response.result[0].hash ?? '' // If ok === true, there should always be a `hash`
+        edgeTransaction.date = Date.now() / 1000
+        return edgeTransaction
+      } else {
+        throw new Error(`Broadcast failed ${JSON.stringify(response)}`)
+      }
+    } catch (e: any) {
+      this.log.warn(
+        `FAILURE broadcastTx\n${JSON.stringify(cleanTxLogs(edgeTransaction))} `,
+        e
+      )
+      throw new Error(`Broadcast failed: ${e.message}`)
     }
-    return edgeTransaction
   }
 
   getDisplayPrivateSeed(privateKeys: JsonObject): string {
