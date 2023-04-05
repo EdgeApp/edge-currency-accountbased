@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
-import type { AlgorandTools } from './algorandPlugin'
+import type { AlgorandTools } from './AlgorandTools'
 import { AlgorandNetworkInfo } from './algorandTypes'
 
 const builtinTokens: EdgeTokenMap = {
@@ -68,7 +68,7 @@ export const algorandtestnet = makeOuterPlugin<
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "algorandtestnet" */
-      './algorandPlugin'
+      './AlgorandTools'
     )
   }
 })

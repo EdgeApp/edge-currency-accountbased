@@ -34,7 +34,7 @@ import {
   matchJson,
   Mutex
 } from '../common/utils'
-import { AlgorandTools } from './algorandPlugin'
+import { AlgorandTools } from './AlgorandTools'
 import {
   AccountInformation,
   AlgorandNetworkInfo,

@@ -139,4 +139,4 @@ export async function makeCurrencyTools(
   return new AlgorandTools(env)
 }
 
-export { makeCurrencyEngine } from './algorandEngine'
+export { makeCurrencyEngine } from './AlgorandEngine'
