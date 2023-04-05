@@ -493,7 +493,7 @@ export class BinanceEngine extends CurrencyEngine<
     )
 
     // @ts-expect-error
-    otherParams.serializedTx = signedTx.serialize()
+    edgeTransaction.signedTx = signedTx.serialize()
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
@@ -501,12 +501,9 @@ export class BinanceEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    const otherParams = getOtherParams(edgeTransaction)
-
-    const bnbSignedTransaction = otherParams.serializedTx
     const reply = await this.multicastServers(
       'bnb_broadcastTx',
-      bnbSignedTransaction
+      edgeTransaction.signedTx
     )
     const response = asBroadcastTxResponse(reply)
     if (response.result[0]?.ok) {
