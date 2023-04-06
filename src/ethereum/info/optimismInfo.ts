@@ -6,6 +6,22 @@ import type { EthereumTools } from '../ethPlugin'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethTypes'
 
 const builtinTokens: EdgeTokenMap = {
+  '4200000000000000000000000000000000000006': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped ETH',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4200000000000000000000000000000000000006'
+    }
+  },
+  '3c8b650257cfb5f272f799f5e2b4e65093a11a05': {
+    currencyCode: 'VELO',
+    displayName: 'Velodrome',
+    denominations: [{ name: 'VELO', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3c8B650257cFb5f272f799F5e2b4e65093a11a05'
+    }
+  },
   '4200000000000000000000000000000000000042': {
     currencyCode: 'OP',
     displayName: 'Optimism',
