@@ -974,7 +974,7 @@ export class CurrencyEngine<
     checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
-      if (st.publicAddress === this.walletLocalData.publicKey) {
+      if (!skipChecks && st.publicAddress === this.walletLocalData.publicKey) {
         throw new SpendToSelfError()
       }
     }

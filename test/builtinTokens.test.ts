@@ -21,7 +21,7 @@ const fakePluginOptions: EdgeCorePluginOptions = {
 }
 
 const pluginIds = Object.keys(plugins) as Array<keyof typeof plugins>
-const pluginsWithoutMetatokens: BooleanMap = { ripple: true }
+const pluginsWithoutMetatokens: BooleanMap = { algorand: true, ripple: true }
 
 describe('builtinTokens', function () {
   for (const pluginId of pluginIds) {

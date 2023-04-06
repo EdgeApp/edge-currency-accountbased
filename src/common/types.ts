@@ -74,3 +74,11 @@ export type SafeCommonWalletInfo = ReturnType<typeof asSafeCommonWalletInfo>
 export const asSafeCommonWalletInfo = asWalletInfo(
   asObject({ publicKey: asString })
 )
+
+export function asIntegerString(raw: unknown): string {
+  const clean = asString(raw)
+  if (!/^\d+$/.test(clean)) {
+    throw new Error('Expected an integer string')
+  }
+  return clean
+}
