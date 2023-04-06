@@ -250,10 +250,10 @@ export const fetchFeesFromEvmGasStation = async (
 
 export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
-  { currencyCode }: EdgeCurrencyInfo
+  { pluginId }: EdgeCurrencyInfo
 ): Promise<EthereumFees> => {
   const result = await fetchInfo(
-    `v1/networkFees/${currencyCode}`,
+    `v1/networkFees/${pluginId}`,
     undefined,
     undefined,
     fetch
