@@ -114,12 +114,6 @@ export const asEthereumFee = asObject({
   minPriorityFee: asOptional(asString)
 })
 
-export const blankEthereumFee: EthereumFee = {
-  baseFeeMultiplier: undefined,
-  gasLimit: { minGasLimit: '', regularTransaction: '', tokenTransaction: '' },
-  gasPrice: undefined,
-  minPriorityFee: undefined
-}
 export type EthereumFee = ReturnType<typeof asEthereumFee>
 
 export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
@@ -262,8 +256,7 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
 
 export const asEthereumWalletOtherData = asObject({
   nextNonce: asMaybe(asString, '0'),
-  unconfirmedNextNonce: asMaybe(asString, '0'),
-  networkFees: asMaybe(asEthereumFees, { default: blankEthereumFee })
+  unconfirmedNextNonce: asMaybe(asString, '0')
 })
 
 export type EthereumWalletOtherData = ReturnType<

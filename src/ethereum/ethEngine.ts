@@ -102,6 +102,7 @@ export class EthereumEngine extends CurrencyEngine<
   infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
   l1RollupParams?: L1RollupParams
+  networkFees: EthereumFees
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
@@ -122,6 +123,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (this.networkInfo.l1RollupParams != null) {
       this.l1RollupParams = this.networkInfo.l1RollupParams
     }
+    this.networkFees = this.networkInfo.defaultNetworkFees
     this.fetchCors = getFetchCors(env)
 
     // Update network fees from other providers
@@ -365,13 +367,11 @@ export class EthereumEngine extends CurrencyEngine<
                         // make sure transaction methods have fee
                         ...{
                           gas: decimalToHex(
-                            this.otherData.networkFees.default.gasLimit
-                              .tokenTransaction
+                            this.networkFees.default.gasLimit.tokenTransaction
                           ),
                           gasPrice: decimalToHex(
                             // @ts-expect-error
-                            this.otherData.networkFees.default.gasPrice
-                              .standardFeeHigh
+                            this.networkFees.default.gasPrice.standardFeeHigh
                           )
                         },
                         // @ts-expect-error
@@ -452,12 +452,6 @@ export class EthereumEngine extends CurrencyEngine<
 
   setOtherData(raw: any): void {
     this.otherData = asEthereumWalletOtherData(raw)
-
-    if (this.otherData.networkFees.default.gasPrice == null) {
-      this.otherData.networkFees = {
-        ...this.networkInfo.defaultNetworkFees
-      }
-    }
   }
 
   /**
@@ -476,13 +470,12 @@ export class EthereumEngine extends CurrencyEngine<
           const k = key as KeysOfEthereumBaseMultiplier
           ethereumFeeInts[k] = biggyRoundToNearestInt(ethereumFee[k])
         })
-        if (this.otherData.networkFees.default.gasPrice != null) {
-          this.otherData.networkFees.default.gasPrice = {
-            ...this.otherData.networkFees.default.gasPrice,
+        if (this.networkFees.default.gasPrice != null) {
+          this.networkFees.default.gasPrice = {
+            ...this.networkFees.default.gasPrice,
             ...ethereumFeeInts
           }
         }
-        this.walletLocalDataDirty = true
         break
       } catch (e: any) {
         this.error(
@@ -568,7 +561,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (baseFeePerGas == null) return
     const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-    const networkFees: EthereumFees = this.otherData.networkFees
+    const networkFees: EthereumFees = this.networkFees
 
     // Make sure there is a default network fee entry and gasPrice entry
     if (networkFees.default == null || networkFees.default.gasPrice == null) {
@@ -617,7 +610,6 @@ export class EthereumEngine extends CurrencyEngine<
     await super.clearBlockchainCache()
     this.otherData.nextNonce = '0'
     this.otherData.unconfirmedNextNonce = '0'
-    this.otherData.networkFees = this.networkInfo.defaultNetworkFees
   }
 
   // ****************************************************************************
@@ -634,11 +626,7 @@ export class EthereumEngine extends CurrencyEngine<
       .then(info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
-        this.otherData.networkFees = mergeDeeply(
-          this.otherData.networkFees,
-          info
-        )
-        this.walletLocalDataDirty = true
+        this.networkFees = mergeDeeply(this.networkFees, info)
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
       .finally(
@@ -685,7 +673,7 @@ export class EthereumEngine extends CurrencyEngine<
         spendInfo.spendTargets[0].nativeAmount = mid
         const { gasPrice, gasLimit } = calcMiningFee(
           spendInfo,
-          this.otherData.networkFees,
+          this.networkFees,
           this.currencyInfo,
           this.networkInfo
         )
@@ -760,7 +748,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     const miningFees = calcMiningFee(
       edgeSpendInfo,
-      this.otherData.networkFees,
+      this.networkFees,
       this.currencyInfo,
       this.networkInfo
     )
