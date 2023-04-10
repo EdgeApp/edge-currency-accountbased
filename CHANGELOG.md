@@ -1,5 +1,14 @@
 # edge-currency-accountbased
 
+## 0.24.0 (2023-04-10)
+
+- Add Algorand (ALGO)
+- OP: Add WETH and VELO tokens
+- BNB Beacon Chain: Fix transaction date handling
+- ARRR: Add `unsafeBroadcastTx` to info
+- EVM: Query info server fees by pluginId
+- EVM: Save network fees to engine rather than to disk
+
 ## 0.23.2 (2023-04-04)
 
 - FIO: Fix syncNetwork private key handling
