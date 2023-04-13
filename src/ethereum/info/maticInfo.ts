@@ -156,7 +156,6 @@ const networkInfo: EthereumNetworkInfo = {
     'https://rpc.polycat.finance',
     'https://rpc-mainnet.maticvigil.com',
     'https://matic-mainnet.chainstacklabs.com',
-    'https://web3endpoints.com/poly-mainnet',
     'https://rpc.ankr.com/polygon',
     'https://rpc-mainnet.matic.quiknode.pro'
   ],
