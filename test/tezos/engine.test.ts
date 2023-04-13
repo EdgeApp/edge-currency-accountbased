@@ -148,6 +148,7 @@ describe(`Tezos engine`, function () {
       currencyCode: 'XTZ',
       blockHeight: 0,
       nativeAmount: '-3002650',
+      isSend: true,
       networkFee: '2650',
       ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
       signedTx: '',

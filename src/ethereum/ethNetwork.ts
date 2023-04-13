@@ -348,6 +348,7 @@ export class EthereumNetwork {
       currencyCode,
       blockHeight,
       nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       feeRateUsed:
         gasPrice != null
@@ -442,6 +443,7 @@ export class EthereumNetwork {
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
+      isSend: netNativeAmount.startsWith('-'),
       networkFee,
       ourReceiveAddresses,
       signedTx: '',

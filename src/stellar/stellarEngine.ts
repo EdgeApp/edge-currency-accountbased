@@ -251,6 +251,7 @@ export class StellarEngine extends CurrencyEngine<
       currencyCode,
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
       nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       parentNetworkFee: '0',
       ourReceiveAddresses,
@@ -565,6 +566,7 @@ export class StellarEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx

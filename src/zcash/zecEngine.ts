@@ -255,6 +255,7 @@ export class ZcashEngine extends CurrencyEngine<
       currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
+      isSend: netNativeAmount.startsWith('-'),
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
@@ -338,6 +339,7 @@ export class ZcashEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount: `-${totalTxAmount}`, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee: this.networkInfo.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx

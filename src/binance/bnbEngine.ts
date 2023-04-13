@@ -195,6 +195,7 @@ export class BinanceEngine extends CurrencyEngine<
       currencyCode,
       blockHeight,
       nativeAmount: netNativeAmount,
+      isSend: netNativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
@@ -443,6 +444,7 @@ export class BinanceEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx

@@ -269,6 +269,7 @@ export class XrpEngine extends CurrencyEngine<
       currencyCode,
       blockHeight: tx.ledger_index,
       nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       parentNetworkFee,
       ourReceiveAddresses,
@@ -534,6 +535,7 @@ export class XrpEngine extends CurrencyEngine<
         blockHeight: 0, // blockHeight,
         metadata: edgeSpendInfo.metadata,
         nativeAmount: `-${networkFee}`,
+        isSend: true,
         networkFee,
         ourReceiveAddresses: [],
         signedTx: '',
@@ -677,6 +679,7 @@ export class XrpEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       parentNetworkFee,
       ourReceiveAddresses: [], // ourReceiveAddresses

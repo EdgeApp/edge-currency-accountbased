@@ -267,6 +267,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       currencyCode,
       blockHeight: blockNum > 0 ? blockNum : 0,
       nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee: '0',
       parentNetworkFee: '0',
       ourReceiveAddresses,
@@ -347,6 +348,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         currencyCode,
         blockHeight,
         nativeAmount,
+        isSend: nativeAmount.startsWith('-'),
         networkFee: '0',
         parentNetworkFee: '0',
         ourReceiveAddresses,
@@ -859,6 +861,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         currencyCode: this.currencyInfo.currencyCode,
         blockHeight: 0,
         nativeAmount: '-3',
+        isSend: true,
         networkFee: '0',
         ourReceiveAddresses: [],
         signedTx: '',
@@ -1027,6 +1030,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
