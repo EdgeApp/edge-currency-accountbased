@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 0.24.1 (2023-04-13)
+
+- EVM: Update node lists
+- ZEC/ARRR: Update checkpoint files
+
 ## 0.24.0 (2023-04-10)
 
 - Add Algorand (ALGO)
