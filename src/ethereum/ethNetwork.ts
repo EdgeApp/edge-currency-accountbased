@@ -976,7 +976,6 @@ export class EthereumNetwork {
             )
             // Check if successful http response was actually an error
             if (result.error != null) {
-              this.ethEngine.log.warn('resulttt', JSON.stringify(result))
               this.ethEngine.error(
                 `Successful eth_getBalance response object from ${baseUrl} included an error ${JSON.stringify(
                   result.error
