@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.23.2-2 (2023-04-13)
+
+- EVM: Update node lists
+
 ## 0.23.2-1 (2023-04-07)
 
 - ARRR: Fix unsafeBroadcastTx flag
