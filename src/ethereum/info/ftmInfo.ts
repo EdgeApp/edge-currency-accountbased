@@ -233,7 +233,6 @@ const defaultNetworkFees: EthereumFees = {
 export const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
     'https://polished-empty-cloud.fantom.quiknode.pro',
-    'https://web3endpoints.com/fantom-mainnet',
     'https://rpc.ankr.com/fantom',
     'https://rpc.ftm.tools'
   ],

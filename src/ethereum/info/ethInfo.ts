@@ -883,7 +883,6 @@ export const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
     'https://eth-mainnet.alchemyapi.io',
     'https://mainnet.infura.io/v3',
-    'https://web3endpoints.com/eth-mainnet',
     'https://rpc.ankr.com/eth',
     'https://cloudflare-eth.com'
   ],
