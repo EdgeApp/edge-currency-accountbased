@@ -207,6 +207,7 @@ export class XrpEngine extends CurrencyEngine<
 
     const ourReceiveAddresses = []
     let nativeAmount = typeof tx.Amount === 'string' ? tx.Amount : '0'
+    let isSend = false
     const chainCode = this.currencyInfo.currencyCode
     let currencyCode = chainCode
     let tokenTx = false
@@ -254,6 +255,7 @@ export class XrpEngine extends CurrencyEngine<
       // Error. If we're not the destination, we should be the source account
       throw new Error('tx is neither Destination or source Account')
     } else {
+      isSend = true
       if (tokenTx) {
         parentNetworkFee = tx.Fee
         nativeAmount = `-${nativeAmount}`
@@ -269,7 +271,7 @@ export class XrpEngine extends CurrencyEngine<
       currencyCode,
       blockHeight: tx.ledger_index,
       nativeAmount,
-      isSend: nativeAmount.startsWith('-'),
+      isSend,
       networkFee,
       parentNetworkFee,
       ourReceiveAddresses,
@@ -679,7 +681,7 @@ export class XrpEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
-      isSend: nativeAmount.startsWith('-'),
+      isSend: true,
       networkFee,
       parentNetworkFee,
       ourReceiveAddresses: [], // ourReceiveAddresses

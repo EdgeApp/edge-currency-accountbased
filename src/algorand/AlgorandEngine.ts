@@ -217,6 +217,7 @@ export class AlgorandEngine extends CurrencyEngine<
     let nativeAmount: string
     let networkFee: string
     let parentNetworkFee: string | undefined
+    let isSend = false
     const ourReceiveAddresses = []
 
     switch (txType) {
@@ -228,6 +229,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
         if (sender === this.walletInfo.keys.publicKey) {
           nativeAmount = `-${add(nativeAmount, networkFee)}`
+          isSend = true
         } else {
           networkFee = '0'
           ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
@@ -246,6 +248,7 @@ export class AlgorandEngine extends CurrencyEngine<
         if (sender === this.walletInfo.keys.publicKey) {
           nativeAmount = `-${nativeAmount}`
           parentNetworkFee = fee.toString()
+          isSend = true
         } else {
           ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
         }
@@ -268,7 +271,7 @@ export class AlgorandEngine extends CurrencyEngine<
       currencyCode,
       blockHeight: confirmedRound,
       nativeAmount,
-      isSend: nativeAmount.startsWith('-'),
+      isSend,
       networkFee,
       ourReceiveAddresses,
       parentNetworkFee,
@@ -560,7 +563,7 @@ export class AlgorandEngine extends CurrencyEngine<
       currencyCode,
       blockHeight: 0,
       nativeAmount,
-      isSend: nativeAmount.startsWith('-'),
+      isSend: true,
       networkFee,
       ourReceiveAddresses: [],
       parentNetworkFee,
