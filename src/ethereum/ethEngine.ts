@@ -987,6 +987,7 @@ export class EthereumEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount, // nativeAmount
+      isSend: nativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee, // networkFee
       feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
       ourReceiveAddresses: [], // ourReceiveAddresses

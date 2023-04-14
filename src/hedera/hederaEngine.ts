@@ -375,6 +375,7 @@ export class HederaEngine extends CurrencyEngine<
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
         blockHeight: 1, // blockHeight
         nativeAmount,
+        isSend: nativeAmount.startsWith('-'),
         networkFee: tx.charged_tx_fee.toString(), // networkFee
         ourReceiveAddresses, // ourReceiveAddresses
         signedTx: '', // signedTx
@@ -478,6 +479,7 @@ export class HederaEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
       nativeAmount: `-${nativeAmount}`,
+      isSend: true,
       // UI shows the fee subtracted from the sent amount which doesn't make sense here
       networkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses

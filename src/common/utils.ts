@@ -14,11 +14,11 @@ import {
 
 import { getTokenIdFromCurrencyCode } from './tokenHelpers'
 
-function normalizeAddress(address: string): string {
+export function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
 }
 
-function shuffleArray<T>(array: T[]): T[] {
+export function shuffleArray<T>(array: T[]): T[] {
   let currentIndex = array.length
   let temporaryValue, randomIndex
 
@@ -87,7 +87,7 @@ export function bufToHex(buf: Buffer): string {
   return hex
 }
 
-function getDenomInfo(
+export function getDenomInfo(
   currencyInfo: EdgeCurrencyInfo,
   denom: string,
   customTokens?: EdgeMetaToken[],
@@ -134,14 +134,14 @@ function getDenomInfo(
   return edgeDenomination
 }
 
-const snoozeReject: Function = async (ms: number) =>
+export const snoozeReject: Function = async (ms: number) =>
   await new Promise((resolve: Function, reject: Function) =>
     setTimeout(reject, ms)
   )
-const snooze: Function = async (ms: number) =>
+export const snooze: Function = async (ms: number) =>
   await new Promise((resolve: Function) => setTimeout(resolve, ms))
 
-async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
+export async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
   return await new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
@@ -162,7 +162,7 @@ async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
  * to return a key to identify the result. The returned promise resolves when
  * n number of promises resolve to identical keys.
  */
-async function promiseNy<T>(
+export async function promiseNy<T>(
   promises: Array<Promise<T>>,
   checkResult: (arg: T) => string | undefined,
   n: number = promises.length
@@ -205,7 +205,7 @@ async function promiseNy<T>(
  * If the promise doesn't resolve in the given time,
  * reject it with the provided error, or a generic error if none is provided.
  */
-async function timeout<T>(
+export async function timeout<T>(
   promise: Promise<T>,
   ms: number,
   error: Error = new Error(`Timeout of ${ms}ms exceeded`)
@@ -227,7 +227,7 @@ async function timeout<T>(
 
 type AsyncFunction = () => Promise<any>
 
-async function asyncWaterfall(
+export async function asyncWaterfall(
   asyncFuncs: AsyncFunction[],
   timeoutMs: number = 5000
 ): Promise<any> {
@@ -364,7 +364,7 @@ export function biggyScience(num: string): string {
 /**
  * Emulates the browser Fetch API more accurately than fetch JSON.
  */
-function getFetchCors(opts: EdgeCorePluginOptions): EdgeFetchFunction {
+export function getFetchCors(opts: EdgeCorePluginOptions): EdgeFetchFunction {
   return opts.io.fetchCors ?? opts.io.fetch
 }
 
@@ -476,17 +476,4 @@ export const objectCheckOneWay = (obj1: any, obj2: any): boolean => {
     }
   }
   return true
-}
-
-export {
-  normalizeAddress,
-  getDenomInfo,
-  asyncWaterfall,
-  snooze,
-  shuffleArray,
-  snoozeReject,
-  promiseAny,
-  getFetchCors,
-  promiseNy,
-  timeout
 }
