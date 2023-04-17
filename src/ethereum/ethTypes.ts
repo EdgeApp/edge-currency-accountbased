@@ -310,7 +310,7 @@ export const asBlockbookAddress = asObject({
   unconfirmedBalance: asString,
   unconfirmedTxs: asNumber,
   nonce: asString,
-  tokens: asMaybe(asArray(asBlockbookTokenBalance), [])
+  tokens: asMaybe(asArray(asBlockbookTokenBalance), () => [])
 })
 
 export type BlockbookAddress = ReturnType<typeof asBlockbookAddress>

@@ -55,7 +55,7 @@ export type SubscanTx = ReturnType<typeof asTransfer>
 
 export const asTransactions = asObject({
   count: asNumber,
-  transfers: asMaybe(asArray(asTransfer), [])
+  transfers: asMaybe(asArray(asTransfer), () => [])
 })
 
 export type SafePolkadotWalletInfo = ReturnType<typeof asSafePolkadotWalletInfo>

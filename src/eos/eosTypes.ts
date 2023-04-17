@@ -66,8 +66,8 @@ export interface EosAction {
 
 export const asEosWalletOtherData = asObject({
   accountName: asMaybe(asString, ''),
-  lastQueryActionSeq: asMaybe(asObject(asNumber), {}),
-  highestTxHeight: asMaybe(asObject(asNumber), {}),
+  lastQueryActionSeq: asMaybe(asObject(asNumber), () => ({})),
+  highestTxHeight: asMaybe(asObject(asNumber), () => ({})),
   lastFreePowerUp: asMaybe(asNumber, 0)
 })
 

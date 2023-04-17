@@ -43,15 +43,15 @@ export interface TransactionList {
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),
   lastAddressQueryHeight: asMaybe(asNumber, 0),
-  lastTransactionQueryHeight: asMaybe(asObject(asNumber), {}),
-  lastTransactionDate: asMaybe(asObject(asNumber), {}),
+  lastTransactionQueryHeight: asMaybe(asObject(asNumber), () => ({})),
+  lastTransactionDate: asMaybe(asObject(asNumber), () => ({})),
   publicKey: asMaybe(asString, ''),
-  totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), {}),
+  totalBalances: asMaybe(asObject(asEither(asString, asUndefined)), () => ({})),
   lastCheckedTxsDropped: asMaybe(asNumber, 0),
   numUnconfirmedSpendTxs: asMaybe(asNumber, 0),
-  numTransactions: asMaybe(asObject(asNumber), {}),
-  unactivatedTokenIds: asMaybe(asArray(asString), []),
-  otherData: asOptional(asUnknown, {})
+  numTransactions: asMaybe(asObject(asNumber), () => ({})),
+  unactivatedTokenIds: asMaybe(asArray(asString), () => []),
+  otherData: asOptional(asUnknown, () => ({}))
 })
 
 export type WalletLocalData = ReturnType<typeof asWalletLocalData>
