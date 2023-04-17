@@ -1,6 +1,6 @@
 import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
 import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
-import { add, div, eq, gt, lt, lte, mul, sub } from 'biggystring'
+import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -201,20 +201,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     } catch (e: any) {
       this.log.error(`Error fetching height: `, e)
     }
-  }
-
-  updateBalance(tk: string, balance: string): void {
-    const currentBalance = this.walletLocalData.totalBalances[tk]
-    if (typeof this.walletLocalData.totalBalances[tk] === 'undefined') {
-      this.walletLocalData.totalBalances[tk] = '0'
-    }
-    if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[tk] = balance
-      this.log(tk + ': token Address balance: ' + balance)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
-    }
-    this.tokenCheckBalanceStatus[tk] = 1
-    this.updateOnAddressesChecked()
   }
 
   async checkTokenBalances(): Promise<void> {
