@@ -862,7 +862,7 @@ export class EthereumEngine extends CurrencyEngine<
         try {
           if (!sendingToContract && !hasUserMemo) {
             // Easy case of sending plain mainnet token with no memo/data
-            gasLimit = '21000'
+            gasLimit = this.networkFees.default.gasLimit.regularTransaction
           } else {
             const estimateGasResult = await this.ethNetwork.multicastServers(
               'eth_estimateGas',
@@ -902,7 +902,9 @@ export class EthereumEngine extends CurrencyEngine<
         }
 
         // Sanity check calculated value
-        if (lt(gasLimit, '21000')) {
+        if (
+          lt(gasLimit, this.networkFees.default.gasLimit.minGasLimit ?? '21000')
+        ) {
           gasLimit = defaultGasLimit
           this.lastEstimatedGasLimit.gasLimit = ''
           throw new Error('Calculated gasLimit less than minimum')

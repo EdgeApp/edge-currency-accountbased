@@ -13,6 +13,7 @@ import { optimism } from './info/optimismInfo'
 import { rinkeby } from './info/rinkebyInfo'
 import { ropsten } from './info/ropstenInfo'
 import { rsk } from './info/rskInfo'
+import { zksync } from './info/zksyncInfo'
 
 export const ethPlugins = {
   avalanche,
@@ -29,5 +30,6 @@ export const ethPlugins = {
   polygon,
   rinkeby,
   ropsten,
-  rsk
+  rsk,
+  zksync
 }
