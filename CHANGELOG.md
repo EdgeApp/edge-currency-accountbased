@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 0.24.2 (2023-04-17)
+
+- Add zkSync wallet type
+
 ## 0.24.1 (2023-04-13)
 
 - EVM: Update node lists
