@@ -368,7 +368,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   async checkOutgoingTransactions(
     acct: string,
     currencyCode: string
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
     const limit = 10
     let skip = 0
@@ -424,14 +424,13 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.otherData.lastQueryActionSeq[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
-    return true
   }
 
   // similar to checkOutgoingTransactions, possible to refactor
   async checkIncomingTransactions(
     acct: string,
     currencyCode: string
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight = this.otherData.highestTxHeight[currencyCode] ?? 0
@@ -493,7 +492,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.otherData.highestTxHeight[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
-    return true
   }
 
   async checkTransactionsInnerLoop(): Promise<void> {
@@ -503,19 +501,16 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const acct = this.otherData.accountName
 
     for (const token of this.enabledTokens) {
-      let incomingResult, outgoingResult
       try {
-        incomingResult = await this.checkIncomingTransactions(acct, token)
-        outgoingResult = await this.checkOutgoingTransactions(acct, token)
+        await this.checkIncomingTransactions(acct, token)
+        await this.checkOutgoingTransactions(acct, token)
       } catch (e: any) {
         this.error(`checkTransactionsInnerLoop fetches failed with error: `, e)
         return
       }
 
-      if (incomingResult && outgoingResult) {
-        this.tokenCheckTransactionsStatus[token] = 1
-        this.updateOnAddressesChecked()
-      }
+      this.tokenCheckTransactionsStatus[token] = 1
+      this.updateOnAddressesChecked()
       if (this.transactionsChangedArray.length > 0) {
         this.currencyEngineCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
