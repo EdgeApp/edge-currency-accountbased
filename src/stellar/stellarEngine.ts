@@ -119,7 +119,7 @@ export class StellarEngine extends CurrencyEngine<
       case 'feeStats':
         funcs = this.networkInfo.stellarServers.map(
           (serverUrl: string) => async () => {
-            const response = await fetch(`${serverUrl}/fee_stats`)
+            const response = await this.io.fetch(`${serverUrl}/fee_stats`)
             const result = asFeeStats(await response.json())
 
             return { server: serverUrl, result }
