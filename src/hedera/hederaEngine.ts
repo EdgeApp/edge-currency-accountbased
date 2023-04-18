@@ -32,8 +32,6 @@ import {
   SafeHederaWalletInfo
 } from './hederaTypes'
 
-const GENESIS = '1535068800' // '2018-08-24T00:00:00.000Z'
-
 export class HederaEngine extends CurrencyEngine<
   HederaTools,
   SafeHederaWalletInfo
@@ -288,7 +286,7 @@ export class HederaEngine extends CurrencyEngine<
     try {
       for (;;) {
         const txs = await this.getTransactionsMirrorNode(
-          this.otherData.latestTimestamp ?? GENESIS
+          this.otherData.latestTimestamp
         )
 
         if (txs.length > 0) {
@@ -392,13 +390,6 @@ export class HederaEngine extends CurrencyEngine<
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
-
-    if (this.otherData.latestTimestamp == null) {
-      this.otherData.latestTimestamp = GENESIS
-    }
-    if (this.otherData.hederaAccount == null) {
-      this.otherData.hederaAccount = ''
-    }
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('getNewTransactions', 1000)
