@@ -37,6 +37,7 @@ export class HederaEngine extends CurrencyEngine<
   SafeHederaWalletInfo
 > {
   client: hedera.Client
+  accountNameChecked: boolean
   otherMethods: Object
   creatorApiServers: [string]
   mirrorNodes: [string]
@@ -56,6 +57,7 @@ export class HederaEngine extends CurrencyEngine<
     const { client, creatorApiServers, mirrorNodes, maxFee } = env.networkInfo
     // @ts-expect-error
     this.client = hedera.Client[`for${client}`]()
+    this.accountNameChecked = false
     this.creatorApiServers = creatorApiServers
     this.mirrorNodes = mirrorNodes
     this.maxFee = maxFee
@@ -172,12 +174,9 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async checkAccountCreationStatus(): Promise<void> {
-    const { activationRequestId, paymentSubmitted, hederaAccount } =
-      this.otherData
+    if (this.accountNameChecked) return
 
-    if (hederaAccount != null) {
-      return
-    }
+    const { activationRequestId, paymentSubmitted } = this.otherData
 
     let accountId
 
@@ -192,6 +191,7 @@ export class HederaEngine extends CurrencyEngine<
           accountId = account.account
         }
       }
+      this.accountNameChecked = true
     } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
     }
@@ -234,6 +234,7 @@ export class HederaEngine extends CurrencyEngine<
       this.otherData.hederaAccount = accountId
       this.walletLocalDataDirty = true
       this.currencyEngineCallbacks.onAddressChanged()
+      this.accountNameChecked = true
     }
   }
 
@@ -245,6 +246,9 @@ export class HederaEngine extends CurrencyEngine<
     const accountId = this.otherData.hederaAccount
 
     if (accountId == null) {
+      if (this.accountNameChecked) {
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
+      }
       return
     }
 
@@ -275,6 +279,10 @@ export class HederaEngine extends CurrencyEngine<
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async getNewTransactions() {
     if (this.otherData.hederaAccount == null) {
+      if (this.accountNameChecked) {
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+        this.updateOnAddressesChecked()
+      }
       return
     }
     try {
@@ -384,6 +392,7 @@ export class HederaEngine extends CurrencyEngine<
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
     this.engineOn = true
+    this.accountNameChecked = this.otherData.hederaAccount != null
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('getNewTransactions', 1000)
@@ -396,6 +405,7 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async resyncBlockchain(): Promise<void> {
+    this.accountNameChecked = false
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
