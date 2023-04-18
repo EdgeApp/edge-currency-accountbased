@@ -765,6 +765,22 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           this.currencyEngineCallbacks.onAddressChanged()
         }
       }
+    } catch (e: any) {
+      if (/get_account failed with 400/.test(e?.message)) {
+        // dfuse servers will return 400 for new unused accounts and can be ignored
+      } else {
+        this.error(`getKeyAccounts error: `, e)
+      }
+    }
+
+    try {
+      // If account name still doesn't exist, set new wallet default values and return
+      if (this.otherData.accountName === '') {
+        for (const token of this.allTokens) {
+          this.updateBalance(token.currencyCode, '0')
+        }
+        return
+      }
 
       // Check balance on account
       for (const token of this.allTokens) {
@@ -777,8 +793,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           this.updateBalance(token.currencyCode, nativeAmount)
         }
       }
-
-      this.updateOnAddressesChecked()
 
       // Check available resources on account
       const accountStats: API.v1.AccountObject = await this.multicastServers(
