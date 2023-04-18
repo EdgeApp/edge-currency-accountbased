@@ -37,7 +37,6 @@ export class HederaEngine extends CurrencyEngine<
   SafeHederaWalletInfo
 > {
   client: hedera.Client
-  accountId: hedera.AccountId | undefined | null
   otherMethods: Object
   creatorApiServers: [string]
   mirrorNodes: [string]
@@ -166,8 +165,6 @@ export class HederaEngine extends CurrencyEngine<
 
         this.otherData.paymentSubmitted = true
         this.walletLocalDataDirty = true
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.addToLoop('checkAccountCreationStatus', 5000)
 
         return txn
       }
@@ -178,8 +175,7 @@ export class HederaEngine extends CurrencyEngine<
     const { activationRequestId, paymentSubmitted, hederaAccount } =
       this.otherData
 
-    if (hederaAccount != null && this.accountId != null) {
-      clearTimeout(this.timers.checkAccountCreationStatus)
+    if (hederaAccount != null) {
       return
     }
 
@@ -214,7 +210,6 @@ export class HederaEngine extends CurrencyEngine<
           this.otherData.accountActivationQuoteAddress = undefined
           this.otherData.accountActivationQuoteAmount = undefined
           this.walletLocalDataDirty = true
-          clearTimeout(this.timers.checkAccountCreationStatus)
           this.warn(
             `hederaEngine error from account activation status ${JSON.stringify(
               json
@@ -239,8 +234,6 @@ export class HederaEngine extends CurrencyEngine<
       this.otherData.hederaAccount = accountId
       this.walletLocalDataDirty = true
       this.currencyEngineCallbacks.onAddressChanged()
-      this.accountId = new hedera.AccountId(accountId)
-      clearTimeout(this.timers.checkAccountCreationStatus)
     }
   }
 
@@ -249,11 +242,12 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async queryBalance(): Promise<void> {
-    if (this.accountId == null) {
+    const accountId = this.otherData.hederaAccount
+
+    if (accountId == null) {
       return
     }
 
-    const accountId = this.accountId.toString()
     const url = `${this.mirrorNodes[0]}/api/v1/balances?account.id=${accountId}`
 
     try {
@@ -280,7 +274,7 @@ export class HederaEngine extends CurrencyEngine<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async getNewTransactions() {
-    if (this.accountId == null) {
+    if (this.otherData.hederaAccount == null) {
       return
     }
     try {
@@ -325,7 +319,7 @@ export class HederaEngine extends CurrencyEngine<
   async getTransactionsMirrorNode(
     timestamp: string
   ): Promise<EdgeTransaction[]> {
-    if (this.accountId == null) {
+    if (this.otherData.hederaAccount == null) {
       throw new Error('no Hedera account ID')
     }
 
@@ -401,11 +395,6 @@ export class HederaEngine extends CurrencyEngine<
     await super.startEngine()
   }
 
-  async clearBlockchainCache(): Promise<void> {
-    this.accountId = null
-    await super.clearBlockchainCache()
-  }
-
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
@@ -446,11 +435,11 @@ export class HederaEngine extends CurrencyEngine<
       throw new InsufficientFundsError()
     }
 
-    if (this.accountId == null) {
+    if (this.otherData.hederaAccount == null) {
       throw new Error('creating a transfer without an account ID')
     }
 
-    const txnId = new hedera.TransactionId(this.accountId)
+    const txnId = new hedera.TransactionId(this.otherData.hederaAccount)
 
     const transferTx = new hedera.TransferTransaction()
       .setTransactionId(txnId)
