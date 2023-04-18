@@ -908,7 +908,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         2
       )
       if (res?.data?.json?.message === PUBLIC_KEY_NOT_FOUND) {
-        res = { balance: '0', available: '0', staked: '0', srps: '0', roe: '' }
+        res = { balance: 0, available: 0, staked: 0, srps: 0, roe: '' }
       }
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(
