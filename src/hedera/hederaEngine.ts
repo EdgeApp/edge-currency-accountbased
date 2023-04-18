@@ -4,7 +4,6 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFreshAddress,
-  EdgeIo,
   EdgeLog,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -42,7 +41,6 @@ export class HederaEngine extends CurrencyEngine<
   client: hedera.Client
   accountId: hedera.AccountId | undefined | null
   otherMethods: Object
-  io: EdgeIo
   creatorApiServers: [string]
   mirrorNodes: [string]
   log: EdgeLog
@@ -53,13 +51,11 @@ export class HederaEngine extends CurrencyEngine<
     env: PluginEnvironment<HederaNetworkInfo>,
     tools: HederaTools,
     walletInfo: SafeHederaWalletInfo,
-    opts: EdgeCurrencyEngineOptions,
-    io: EdgeIo
+    opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
     this.log = opts.log
 
-    this.io = io
     const { client, creatorApiServers, mirrorNodes, maxFee } = env.networkInfo
     // @ts-expect-error
     this.client = hedera.Client[`for${client}`]()
@@ -103,7 +99,7 @@ export class HederaEngine extends CurrencyEngine<
         }
 
         try {
-          const response = await io.fetch(
+          const response = await this.io.fetch(
             `${this.creatorApiServers[0]}/account`,
             options
           )
@@ -587,9 +583,8 @@ export async function makeCurrencyEngine(
   walletInfo: EdgeWalletInfo,
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
-  const { io } = env
   const safeWalletInfo = asSafeHederaWalletInfo(walletInfo)
-  const engine = new HederaEngine(env, tools, safeWalletInfo, opts, io)
+  const engine = new HederaEngine(env, tools, safeWalletInfo, opts)
 
   await engine.loadEngine(tools, safeWalletInfo, opts)
 
