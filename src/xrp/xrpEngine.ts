@@ -408,7 +408,7 @@ export class XrpEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
-        this.warn('Account not found. Probably not activated w/minimum XRP')
+        this.log('Account not found. Probably not activated w/minimum XRP')
         this.updateBalance(this.currencyInfo.currencyCode, '0')
         this.enabledTokens.forEach(tokenCurrencyCode => {
           if (tokenCurrencyCode !== this.currencyInfo.currencyCode) {
