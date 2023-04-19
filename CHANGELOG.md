@@ -1,5 +1,16 @@
 # edge-currency-accountbased
 
+## 1.0.0 (2023-04-19)
+
+- PIX: Support minimum amount
+- ETH: Add ERC20 tokens (Amp, ApeCoin, Cronos Coin, EnjinCoin, Gala, Game Coin, Graph Token, Healthcare Administration Token, LoopringCoin V2, PlayDapp Token, Quant, SAND, SHIBA INU, Strike Token, SUKU, and Wrapped FIO)
+- FIO: Fix new account balance object
+- Audit and fix noisy unused address logging
+- HBAR/EOS: Fix balance and tx query for new accounts
+- Upgrade edge-core-js to v0.21.0
+- Replace asMaybe and asOptional cleaner default objects with functions that return new objects
+- Upgrade cleaners to v0.3.14
+
 ## 0.24.2 (2023-04-17)
 
 - Add zkSync wallet type
