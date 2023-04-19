@@ -25,7 +25,7 @@ export const asHederaWalletOtherData = asObject({
   accountActivationQuoteAddress: asMaybe(asString),
   accountActivationQuoteAmount: asMaybe(asString),
   hederaAccount: asMaybe(asString),
-  latestTimestamp: asMaybe(asString),
+  latestTimestamp: asMaybe(asString, '1535068800'), // genesis '2018-08-24T00:00:00.000Z'
   paymentSubmitted: asMaybe(asBoolean)
 })
 

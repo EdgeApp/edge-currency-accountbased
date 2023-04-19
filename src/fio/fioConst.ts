@@ -173,8 +173,8 @@ export const asEdgeStakingStatus = asObject({
 
 export const asFioWalletOtherData = asObject({
   highestTxHeight: asMaybe(asNumber, 0),
-  fioAddresses: asMaybe(asArray(asFioAddress), []),
-  fioDomains: asMaybe(asArray(asFioDomain), []),
+  fioAddresses: asMaybe(asArray(asFioAddress), () => []),
+  fioDomains: asMaybe(asArray(asFioDomain), () => []),
   fioRequests: asMaybe(
     asObject({
       PENDING: asArray(asFioRequest),

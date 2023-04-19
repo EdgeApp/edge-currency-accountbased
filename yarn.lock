@@ -3205,10 +3205,10 @@ clean-stack@^2.0.0:
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
   integrity sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==
 
-cleaners@^0.3.11, cleaners@^0.3.12, cleaners@^0.3.9:
-  version "0.3.12"
-  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.12.tgz#0e99ef2460a59ed87550a60bdfc441b1696ff9cb"
-  integrity sha512-bK7IvvYyhfy30S3VKmWi/YVWp0MUH1pEYfdtbjCpQiIzy8gmP9GCXv6AVZENDHbpcRHqMnZONs3ieyJMh3zvVw==
+cleaners@^0.3.11, cleaners@^0.3.14, cleaners@^0.3.9:
+  version "0.3.14"
+  resolved "https://registry.yarnpkg.com/cleaners/-/cleaners-0.3.14.tgz#df6b2727a0d7d41b95aaafc30df3077ec62dea8e"
+  integrity sha512-5BpYxV2CvannsslJTWZMX0uERGZ5m+AHpRqslRTTg08I9NNEganscQBF7Upte+Gs8roQqqORKKj9hOw3Dv+43Q==
 
 cli-cursor@^3.1.0:
   version "3.1.0"
@@ -7601,12 +7601,7 @@ serve-static@1.15.0:
     parseurl "~1.3.3"
     send "0.18.0"
 
-serverlet@^0.1.0:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/serverlet/-/serverlet-0.1.1.tgz#1f2f7347ad8411f785f2b7d1bbd7df9d3f1e5249"
-  integrity sha512-/AjpvNVeMNUKLq0K4gV4lSxSuGntF/e9O9YemvKSDSZaxB/Mr60JPSK+Do5u9UO4rS3iW0Xd1l+Gz/gyLz3dBA==
-
-serverlet@^0.1.2:
+serverlet@^0.1.0, serverlet@^0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/serverlet/-/serverlet-0.1.2.tgz#3a29cb22a1648b575ba357274cb7b5000fc9cd72"
   integrity sha512-+NnrJFjtFJqzqVz5yZYJyddrKnhrmlrnGS0wTTfjMKzIp7QsFoYkGjB1STgrIjpE9v2cGTOkaOvRz6lJQx98kw==

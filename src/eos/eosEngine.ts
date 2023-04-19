@@ -97,6 +97,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   fetchCors: EdgeFetchFunction
   referenceBlock: ReferenceBlock
   accountResources: AccountResources
+  accountNameChecked: boolean
   getResourcesMutex: boolean
 
   constructor(
@@ -120,6 +121,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       cpu: 0,
       net: 0
     }
+    this.accountNameChecked = false
     this.getResourcesMutex = false
     this.allTokens.push({
       ...denominations[0],
@@ -368,7 +370,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   async checkOutgoingTransactions(
     acct: string,
     currencyCode: string
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (!CHECK_TXS_FULL_NODES) throw new Error('Dont use full node API')
     const limit = 10
     let skip = 0
@@ -424,14 +426,13 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.otherData.lastQueryActionSeq[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
-    return true
   }
 
   // similar to checkOutgoingTransactions, possible to refactor
   async checkIncomingTransactions(
     acct: string,
     currencyCode: string
-  ): Promise<boolean> {
+  ): Promise<void> {
     if (!CHECK_TXS_HYPERION) throw new Error('Dont use Hyperion API')
 
     let newHighestTxHeight = this.otherData.highestTxHeight[currencyCode] ?? 0
@@ -493,29 +494,31 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.otherData.highestTxHeight[currencyCode] = newHighestTxHeight
       this.walletLocalDataDirty = true
     }
-    return true
   }
 
   async checkTransactionsInnerLoop(): Promise<void> {
-    if (this.otherData == null || this.otherData.accountName === '') {
+    if (!this.accountNameChecked) {
       return
     }
     const acct = this.otherData.accountName
 
     for (const token of this.enabledTokens) {
-      let incomingResult, outgoingResult
       try {
-        incomingResult = await this.checkIncomingTransactions(acct, token)
-        outgoingResult = await this.checkOutgoingTransactions(acct, token)
+        await this.checkIncomingTransactions(acct, token)
+        await this.checkOutgoingTransactions(acct, token)
       } catch (e: any) {
-        this.error(`checkTransactionsInnerLoop fetches failed with error: `, e)
-        return
+        // Unactivated accounts can continue to update status
+        if (acct !== '') {
+          this.error(
+            `checkTransactionsInnerLoop fetches failed with error: `,
+            e
+          )
+          return
+        }
       }
 
-      if (incomingResult && outgoingResult) {
-        this.tokenCheckTransactionsStatus[token] = 1
-        this.updateOnAddressesChecked()
-      }
+      this.tokenCheckTransactionsStatus[token] = 1
+      this.updateOnAddressesChecked()
       if (this.transactionsChangedArray.length > 0) {
         this.currencyEngineCallbacks.onTransactionsChanged(
           this.transactionsChangedArray
@@ -633,6 +636,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           server => async () => {
             const client = getClient(this.fetchCors, server)
             const accounts = await client.v1.history.get_key_accounts(publicKey)
+            // TODO: v1 history node endpoint has been deprecated. New Greymass Robo API (in development) will provide history v1 compatibility.
 
             if (accounts.account_names.length === 0) {
               throw new Error(
@@ -761,9 +765,27 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         )
         if (accountName != null && bogusAccounts[accountName] == null) {
           this.otherData.accountName = accountName
+          this.accountNameChecked = true
           this.walletLocalDataDirty = true
           this.currencyEngineCallbacks.onAddressChanged()
         }
+      }
+    } catch (e: any) {
+      if (/get_account failed with 400/.test(e?.message)) {
+        // dfuse servers will return 400 for new unused accounts and can be ignored
+        this.accountNameChecked = true
+      } else {
+        this.error(`getKeyAccounts error: `, e)
+      }
+    }
+
+    try {
+      // If account name still doesn't exist, set new wallet default values and return
+      if (this.otherData.accountName === '') {
+        for (const token of this.allTokens) {
+          this.updateBalance(token.currencyCode, '0')
+        }
+        return
       }
 
       // Check balance on account
@@ -777,8 +799,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           this.updateBalance(token.currencyCode, nativeAmount)
         }
       }
-
-      this.updateOnAddressesChecked()
 
       // Check available resources on account
       const accountStats: API.v1.AccountObject = await this.multicastServers(
@@ -888,6 +908,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     this.otherData.lastQueryActionSeq = {}
     this.otherData.highestTxHeight = {}
     this.otherData.accountName = ''
+    this.accountNameChecked = false
   }
 
   // ****************************************************************************
@@ -897,6 +918,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   // This routine is called once a wallet needs to start querying the network
   async startEngine(): Promise<void> {
     this.engineOn = true
+    this.accountNameChecked = this.otherData.accountName !== ''
     this.addToLoop(
       'checkBlockchainInnerLoop',
       BLOCKCHAIN_POLL_MILLISECONDS
