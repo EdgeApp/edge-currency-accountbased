@@ -49,6 +49,16 @@ export const parsePixKey = async (
   smartPayUserId: string
 ): Promise<EdgeParsedUri | undefined> => {
   const now = new Date()
+
+  // Get USDT info
+  const tokenId = Object.keys(tokens).find(
+    id => tokens[id].currencyCode === 'USDT'
+  )
+  if (tokenId == null) return
+  const token = tokens[tokenId]
+
+  const minNativeAmount = mul('0.5', token.denominations[0].multiplier)
+
   if (code.length > 36) {
     const crc = computeCRC(code.slice(0, -4))
     if (!code.endsWith(crc)) {
@@ -103,13 +113,6 @@ export const parsePixKey = async (
           throw new Error('ErrorPixExpired')
         }
 
-        // Get USDT info
-        const tokenId = Object.keys(tokens).find(
-          id => tokens[id].currencyCode === 'USDT'
-        )
-        if (tokenId == null) return
-
-        const token = tokens[tokenId]
         nativeAmount = mul(amountTxusdt, token.denominations[0].multiplier)
         const timeout = Math.min(
           decodeTimeout > 0 ? decodeTimeout : MAX_TIMEOUT_S,
@@ -126,6 +129,7 @@ export const parsePixKey = async (
         },
         expireDate,
         nativeAmount,
+        minNativeAmount,
         publicAddress: smartPayPublicAddress,
         uniqueIdentifier: code
       }
@@ -138,6 +142,7 @@ export const parsePixKey = async (
     if (!isPix) return
     const out: EdgeParsedUri = {
       currencyCode: 'USDT',
+      minNativeAmount,
       metadata: {
         name: `PIX: ${pixKey}`,
         notes: `To PIX: ${pixKey}`
