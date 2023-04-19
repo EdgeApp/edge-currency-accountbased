@@ -829,6 +829,126 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0xE41d2489571d322189246DaFA5ebDe1F4699F498'
     }
+  },
+  ff20817765cb7f73d4bde2e66e067e58d11095c2: {
+    currencyCode: 'AMP',
+    displayName: 'Amp',
+    denominations: [{ name: 'AMP', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xff20817765cb7f73d4bde2e66e067e58d11095c2'
+    }
+  },
+  '4d224452801aced8b2f0aebe155379bb5d594381': {
+    currencyCode: 'APE',
+    displayName: 'ApeCoin',
+    denominations: [{ name: 'APE', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4d224452801aced8b2f0aebe155379bb5d594381'
+    }
+  },
+  a0b73e1ff0b80914ab6fe0444e65848c4c34450b: {
+    currencyCode: 'CRO',
+    displayName: 'Cronos Coin',
+    denominations: [{ name: 'CRO', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0xa0b73e1ff0b80914ab6fe0444e65848c4c34450b'
+    }
+  },
+  f629cbd94d3791c9250152bd8dfbdf380e2a3b9c: {
+    currencyCode: 'ENJ',
+    displayName: 'EnjinCoin',
+    denominations: [{ name: 'ENJ', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xf629cbd94d3791c9250152bd8dfbdf380e2a3b9c'
+    }
+  },
+  '15d4c048f83bd7e37d49ea4c83a07267ec4203da': {
+    currencyCode: 'GALA',
+    displayName: 'Gala',
+    denominations: [{ name: 'GALA', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0x15D4c048F83bd7e37d49eA4C83a07267Ec4203dA'
+    }
+  },
+  d567b5f02b9073ad3a982a099a23bf019ff11d1c: {
+    currencyCode: 'GAME',
+    displayName: 'Game Coin',
+    denominations: [{ name: 'GAME', multiplier: '100000' }],
+    networkLocation: {
+      contractAddress: '0xd567b5f02b9073ad3a982a099a23bf019ff11d1c'
+    }
+  },
+  bbbbca6a901c926f240b89eacb641d8aec7aeafd: {
+    currencyCode: 'LRC',
+    displayName: 'LoopringCoin V2',
+    denominations: [{ name: 'LRC', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xbbbbca6a901c926f240b89eacb641d8aec7aeafd'
+    }
+  },
+  '3a4f40631a4f906c2bad353ed06de7a5d3fcb430': {
+    currencyCode: 'PLA',
+    displayName: 'PlayDapp Token',
+    denominations: [{ name: 'PLA', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3a4f40631a4f906c2BaD353Ed06De7A5D3fCb430'
+    }
+  },
+  '4a220e6096b25eadb88358cb44068a3248254675': {
+    currencyCode: 'QNT',
+    displayName: 'Quant',
+    denominations: [{ name: 'QNT', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4a220e6096b25eadb88358cb44068a3248254675'
+    }
+  },
+  '0763fdccf1ae541a5961815c0872a8c5bc6de4d7': {
+    currencyCode: 'SUKU',
+    displayName: 'SUKU',
+    denominations: [{ name: 'SUKU', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x0763fdCCF1aE541A5961815C0872A8c5Bc6DE4d7'
+    }
+  },
+  '95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce': {
+    currencyCode: 'SHIB',
+    displayName: 'SHIBA INU',
+    denominations: [{ name: 'SHIB', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce'
+    }
+  },
+  '446c9033e7516d820cc9a2ce2d0b7328b579406f': {
+    currencyCode: 'SOLVE',
+    displayName: 'Healthcare Administration Token',
+    denominations: [{ name: 'SOLVE', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0x446c9033e7516d820cc9a2ce2d0b7328b579406f'
+    }
+  },
+  '74232704659ef37c08995e386a2e26cc27a8d7b1': {
+    currencyCode: 'STRK',
+    displayName: 'Strike Token',
+    denominations: [{ name: 'STRK', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x74232704659ef37c08995e386a2e26cc27a8d7b1'
+    }
+  },
+  c944e90c64b2c07662a292be6244bdf05cda44a7: {
+    currencyCode: 'GRT',
+    displayName: 'Graph Token',
+    denominations: [{ name: 'GRT', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xc944e90c64b2c07662a292be6244bdf05cda44a7'
+    }
+  },
+  '3845badade8e6dff049820680d1f14bd3903a5d0': {
+    currencyCode: 'SAND',
+    displayName: 'SAND',
+    denominations: [{ name: 'SAND', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3845badAde8e6dFF049820680d1F14bD3903a5d0'
+    }
   }
 }
 
