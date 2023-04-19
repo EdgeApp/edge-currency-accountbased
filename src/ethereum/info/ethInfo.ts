@@ -790,6 +790,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
     }
   },
+  bea269038eb75bdab47a9c04d0f5c572d94b93d5: {
+    currencyCode: 'WFIO',
+    displayName: 'Wrapped FIO',
+    denominations: [{ name: 'WFIO', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: '0xbEA269038Eb75BdAB47a9C04D0F5c572d94b93D5'
+    }
+  },
   '667088b212ce3d06a1b553a7221e1fd19000d9af': {
     currencyCode: 'WINGS',
     displayName: 'Wings',
