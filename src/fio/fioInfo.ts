@@ -17,16 +17,12 @@ const networkInfo: FioNetworkInfo = {
     'https://fio.eosargentina.io/v1/',
     'https://fio.cryptolions.io/v1/',
     'https://api.fio.currencyhub.io/v1/',
-    'https://fio.eosdublin.io/v1/',
     'https://fio.eostribe.io/v1/',
     'https://api.fio.greeneosio.com/v1/',
     'https://api.fio.services/v1/',
     'https://fio.eosusa.news/v1/',
-    'https://api-fio.nodeone.network:8344/v1/',
-    'https://api.fio.detroitledger.tech/v1/',
     'https://fio-api.eosiomadrid.io/v1/',
-    'https://fio.eosphere.io/v1/',
-    'https://fioapi.ledgerwise.io/v1/'
+    'https://fio.eosphere.io/v1/'
   ],
   historyNodeUrls: [
     'https://fio.eosphere.io/v1/',
