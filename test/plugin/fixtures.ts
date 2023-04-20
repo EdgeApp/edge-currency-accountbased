@@ -388,7 +388,7 @@ export default [
     ],
     mnemonic:
       'room soda device label bicycle hill fork nest lion knee purpose hen',
-    xpub: '0x21d45fd06e291c49abfa135460de827b6579cef5',
+    xpub: '0x21D45Fd06e291C49AbFa135460DE827b6579Cef5',
     key_length: 64,
     'invalid key name': {
       type: 'wallet:ethereum',
@@ -576,7 +576,7 @@ export default [
     ],
     mnemonic:
       'latin seat grit casual fold cluster soon buyer turn school human exhibit',
-    xpub: '0xe38884ff92c9834dc3255d33b8662b80154a06dd',
+    xpub: '0xe38884FF92C9834DC3255D33b8662B80154a06Dd',
     key_length: 64,
     'invalid key name': {
       type: 'wallet:rsk',

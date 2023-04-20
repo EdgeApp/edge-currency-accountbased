@@ -115,7 +115,8 @@ export class EthereumTools implements EdgeCurrencyTools {
       const walletPathDerivation = hdwallet.derivePath(`${walletHdpath}/0`)
       const wallet = walletPathDerivation.getWallet()
       const publicKey = wallet.getPublicKey()
-      address = `0x${EthereumUtil.pubToAddress(publicKey).toString('hex')}`
+      const addressHex = EthereumUtil.pubToAddress(publicKey).toString('hex')
+      address = EthereumUtil.toChecksumAddress(addressHex)
     } else {
       // Otherwise, use the private key:
       const keyBuffer = Buffer.from(
