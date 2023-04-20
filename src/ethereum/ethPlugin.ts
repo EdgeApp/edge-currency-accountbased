@@ -111,12 +111,12 @@ export class EthereumTools implements EdgeCurrencyTools {
         walletInfo.keys[pluginMnemonicKeyName]
       )
       const hdwallet = hdKey.fromMasterSeed(seedBuffer)
-      const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
-      // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-      const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+      const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0`
+      const walletPathDerivation = hdwallet.derivePath(`${walletHdpath}/0`)
       const wallet = walletPathDerivation.getWallet()
       const publicKey = wallet.getPublicKey()
-      address = `0x${EthereumUtil.pubToAddress(publicKey).toString('hex')}`
+      const addressHex = EthereumUtil.pubToAddress(publicKey).toString('hex')
+      address = EthereumUtil.toChecksumAddress(addressHex)
     } else {
       // Otherwise, use the private key:
       const keyBuffer = Buffer.from(
@@ -139,9 +139,8 @@ export class EthereumTools implements EdgeCurrencyTools {
   async _mnemonicToHex(mnemonic: string): Promise<string> {
     const { hdPathCoinType } = this.networkInfo
     const hdwallet = hdKey.fromMasterSeed(mnemonicToSeedSync(mnemonic))
-    const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0/`
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-    const walletPathDerivation = hdwallet.derivePath(walletHdpath + 0)
+    const walletHdpath = `m/44'/${hdPathCoinType}'/0'/0`
+    const walletPathDerivation = hdwallet.derivePath(`${walletHdpath}/0`)
     const wallet = walletPathDerivation.getWallet()
     const privKey = wallet.getPrivateKeyString().replace(/^0x/, '')
     return privKey

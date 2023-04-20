@@ -8,6 +8,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
   EdgeFetchFunction,
+  EdgeFreshAddress,
   EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeSpendTarget,
@@ -645,6 +646,20 @@ export class EthereumEngine extends CurrencyEngine<
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
+  }
+
+  async getFreshAddress(): Promise<EdgeFreshAddress> {
+    const legacyAddress = this.walletLocalData.publicKey.toLowerCase()
+
+    const { publicKey } = this.walletLocalData
+    const publicAddress = /[A-F]/.test(publicKey)
+      ? publicKey
+      : EthereumUtil.toChecksumAddress(publicKey.replace('0x', ''))
+
+    return {
+      legacyAddress,
+      publicAddress
+    }
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
