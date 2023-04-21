@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.1.0 (2023-04-20)
+
+- Added: ERC-55 checksum address returned by `getFreshAddress` for ethereum plugin
+
 ## 1.0.0 (2023-04-19)
 
 - PIX: Support minimum amount
