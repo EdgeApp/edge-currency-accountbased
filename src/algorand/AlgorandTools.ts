@@ -15,6 +15,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { validateToken } from '../common/tokenHelpers'
+import { WalletConnectors } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import {
@@ -30,11 +31,15 @@ export class AlgorandTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
 
+  walletConnectors: WalletConnectors
+
   constructor(env: PluginEnvironment<AlgorandNetworkInfo>) {
     const { builtinTokens, currencyInfo, io } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
+
+    this.walletConnectors = {}
   }
 
   async importPrivateKey(input: string): Promise<JsonObject> {
@@ -75,7 +80,7 @@ export class AlgorandTools implements EdgeCurrencyTools {
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
     const { pluginId } = this.currencyInfo
-    const networks = { [pluginId]: true }
+    const networks = { [pluginId]: true, wc: true }
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
@@ -84,6 +89,20 @@ export class AlgorandTools implements EdgeCurrencyTools {
       currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
+
+    if (parsedUri.protocol === 'wc') {
+      if (parsedUri.query.bridge != null && parsedUri.query.key != null) {
+        edgeParsedUri.walletConnect = {
+          uri,
+          topic: parsedUri.pathname.split('@')[0],
+          version: parsedUri.pathname.split('@')[1],
+          bridge: parsedUri.query.bridge,
+          key: parsedUri.query.key
+        }
+        return edgeParsedUri
+      } else throw new Error('MissingWcBridgeKey')
+    }
+
     let address = ''
 
     if (edgeParsedUri.publicAddress != null) {
