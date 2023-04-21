@@ -26,7 +26,12 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { CustomToken } from '../common/types'
+import {
+  asWcSessionRequestParams,
+  CustomToken,
+  WcDappDetails,
+  WcProps
+} from '../common/types'
 import {
   biggyRoundToNearestInt,
   bufToHex,
@@ -59,7 +64,6 @@ import {
   asRollupGasPrices,
   asRpcResultString,
   asSafeEthWalletInfo,
-  asWcSessionRequestParams,
   CalcL1RollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
@@ -72,14 +76,12 @@ import {
   EthereumTxOtherParams,
   EthereumUtils,
   EthereumWalletOtherData,
+  EvmWcRpcPayload,
   KeysOfEthereumBaseMultiplier,
   L1RollupParams,
   LastEstimatedGasLimit,
   SafeEthWalletInfo,
-  TxRpcParams,
-  WcDappDetails,
-  WcProps,
-  WcRpcPayload
+  TxRpcParams
 } from './ethTypes'
 import { calcL1RollupFees, calcMiningFee } from './fees/ethMiningFees'
 import {
@@ -327,7 +329,7 @@ export class EthereumEngine extends CurrencyEngine<
             connector.on(
               'session_request',
               // @ts-expect-error
-              (error: Error, payload: WcRpcPayload) => {
+              (error: Error, payload: EvmWcRpcPayload) => {
                 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                 if (error) {
                   this.error(`Wallet connect session_request`, error)
@@ -349,7 +351,7 @@ export class EthereumEngine extends CurrencyEngine<
             connector.on(
               'call_request',
               // @ts-expect-error
-              (error: Error, payload: WcRpcPayload) => {
+              (error: Error, payload: EvmWcRpcPayload) => {
                 try {
                   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (error) throw error
@@ -415,7 +417,7 @@ export class EthereumEngine extends CurrencyEngine<
       },
       wcApproveRequest: async (
         uri: string,
-        payload: WcRpcPayload,
+        payload: EvmWcRpcPayload,
         result: string
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.approveRequest({
@@ -426,7 +428,7 @@ export class EthereumEngine extends CurrencyEngine<
       },
       wcRejectRequest: async (
         uri: string,
-        payload: WcRpcPayload
+        payload: EvmWcRpcPayload
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.rejectRequest({
           id: parseInt(payload.id.toString()),
