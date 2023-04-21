@@ -2,7 +2,7 @@ import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -355,33 +355,60 @@ export class EthereumEngine extends CurrencyEngine<
                 try {
                   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (error) throw error
+                  let nativeAmount = '0'
+                  let networkFee = '0'
+
+                  switch (payload.method) {
+                    case 'eth_sendTransaction':
+                    case 'eth_signTransaction': {
+                      const params = asObject({
+                        gas: asOptional(asString),
+                        gasPrice: asOptional(asString),
+                        value: asOptional(asString)
+                      })(payload.params[0])
+
+                      const { gas, gasPrice, value } = params
+
+                      if (value != null) {
+                        nativeAmount = hexToDecimal(value)
+                      }
+
+                      // make sure transaction methods have fee
+                      let gasNetworkFee =
+                        this.networkFees.default.gasLimit.tokenTransaction
+                      if (gas == null) {
+                        // @ts-expect-error
+                        payload.params[0].gas = decimalToHex(gasNetworkFee)
+                      } else {
+                        gasNetworkFee = hexToDecimal(gas)
+                      }
+
+                      let gasPriceNetworkFee =
+                        // @ts-expect-error
+                        this.networkFees.default.gasPrice.standardFeeHigh
+                      if (gasPrice == null) {
+                        // @ts-expect-error
+                        payload.params[0].gasPrice =
+                          decimalToHex(gasPriceNetworkFee)
+                      } else {
+                        gasPriceNetworkFee = hexToDecimal(gasPrice)
+                      }
+
+                      networkFee = mul(gasNetworkFee, gasPriceNetworkFee)
+                      break
+                    }
+                  }
+
                   const out = {
                     uri: wcProps.uri,
                     dApp: this.tools.walletConnectors[wcProps.uri].dApp,
                     payload,
-                    walletId: this.tools.walletConnectors[wcProps.uri].walletId
+                    walletId: this.tools.walletConnectors[wcProps.uri].walletId,
+                    nativeAmount,
+                    networkFee
+                    // tokenId // can't provide tokenId until we can parse from DATA
                   }
-                  if (
-                    payload.method === 'eth_sendTransaction' ||
-                    payload.method === 'eth_signTransaction'
-                  ) {
-                    payload.params = [
-                      {
-                        // make sure transaction methods have fee
-                        ...{
-                          gas: decimalToHex(
-                            this.networkFees.default.gasLimit.tokenTransaction
-                          ),
-                          gasPrice: decimalToHex(
-                            // @ts-expect-error
-                            this.networkFees.default.gasPrice.standardFeeHigh
-                          )
-                        },
-                        // @ts-expect-error
-                        ...payload.params[0]
-                      }
-                    ]
-                  }
+
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e: any) {
                   this.warn(`Wallet connect call_request `, e)
