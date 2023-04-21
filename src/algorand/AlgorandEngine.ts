@@ -575,6 +575,19 @@ export class AlgorandEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  async signMessage(message: string, privateKeys: JsonObject): Promise<string> {
+    const algorandPrivateKeys = asAlgorandPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
+
+    const rawTx = decodeUnsignedTransaction(base64.parse(message))
+    const secretKey = algosdk.mnemonicToSecretKey(algorandPrivateKeys.mnemonic)
+    const signedTxBytes = rawTx.signTxn(secretKey.sk)
+    const signedTx = base64.stringify(signedTxBytes)
+
+    return signedTx
+  }
+
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
