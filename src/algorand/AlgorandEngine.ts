@@ -211,8 +211,7 @@ export class AlgorandEngine extends CurrencyEngine<
         this.tools.walletConnectors[uri].walletId = walletId
       },
       wcDisconnect: (uri: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.tools.walletConnectors[uri].connector.killSession()
+        this.tools.walletConnectors[uri].connector.killSession().catch(() => {})
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete this.tools.walletConnectors[uri]
       },
