@@ -1,8 +1,16 @@
 # edge-currency-accountbased
 
+## 1.1.1 (2023-04-24)
+
+- fixed: Parse URIs as Tron addresses first before PIX addresses to prevent incorrect parsing of Tron addresses as a PIX address
+
 ## 1.1.0 (2023-04-20)
 
 - Added: ERC-55 checksum address returned by `getFreshAddress` for ethereum plugin
+
+## 1.0.1 (2023-04-24)
+
+- fixed: Parse URIs as Tron addresses first before PIX addresses to prevent incorrect parsing of Tron addresses as a PIX address
 
 ## 1.0.0 (2023-04-19)
 
