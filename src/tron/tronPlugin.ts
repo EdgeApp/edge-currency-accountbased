@@ -113,6 +113,20 @@ export class TronTools implements EdgeCurrencyTools {
     const networks = { [this.currencyInfo.pluginId]: true }
     const { smartPayPublicAddress, smartPayUserId } = this.initOptions
 
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
+      this.currencyInfo,
+      uri,
+      networks,
+      currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
+    )
+    const address = edgeParsedUri.publicAddress ?? ''
+
+    if (isAddressValid(address)) {
+      edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+      return edgeParsedUri
+    }
+
     // Look for PIX addresses
     const pixResults = await parsePixKey(
       this.io,
@@ -123,21 +137,7 @@ export class TronTools implements EdgeCurrencyTools {
     )
     if (pixResults != null) return pixResults
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
-    )
-    const address = edgeParsedUri.publicAddress ?? ''
-
-    if (!isAddressValid(address)) {
-      throw new Error('InvalidPublicAddressError')
-    }
-
-    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
-    return edgeParsedUri
+    throw new Error('InvalidPublicAddressError')
   }
 
   async encodeUri(
