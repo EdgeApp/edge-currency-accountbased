@@ -447,7 +447,7 @@ export class EthereumEngine extends CurrencyEngine<
         result: string
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.approveRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           result: result
         })
@@ -457,7 +457,7 @@ export class EthereumEngine extends CurrencyEngine<
         payload: EvmWcRpcPayload
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.rejectRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           error: {
             message: 'rejected'

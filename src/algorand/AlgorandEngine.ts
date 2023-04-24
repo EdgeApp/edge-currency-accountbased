@@ -221,7 +221,7 @@ export class AlgorandEngine extends CurrencyEngine<
         result: string
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.approveRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           result: [result]
         })
@@ -231,7 +231,7 @@ export class AlgorandEngine extends CurrencyEngine<
         payload: AlgoWcRpcPayload
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.rejectRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           error: {
             message: 'rejected'
