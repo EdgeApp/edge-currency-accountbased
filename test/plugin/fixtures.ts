@@ -921,5 +921,132 @@ export default [
         'hedera:0.0.443395?amount=0.0000123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
       ]
     }
+  },
+  {
+    pluginId: 'tron',
+    WALLET_TYPE: 'wallet:tron',
+    'Test Currency code': 'TRX',
+    key: [
+      39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150,
+      52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238
+    ],
+    xpub: 'TJqRvtjz2ugL2MXXzdVUw7CW6NL1YBwfdv',
+    mnemonic:
+      'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot',
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:tron',
+      keys: {
+        tronKeyz: '5KG4yxR4j1S1UFk4mGraAfGrWh7TS5uiJmhtkG4vPunFWg84wuP',
+        mnemonic:
+          'chicken valve parrot park animal proof youth detail glance review artwork spot'
+      }
+    },
+    'invalid wallet type': {
+      type: 'wallet:tronx',
+      keys: {
+        tronkey:
+          'ffd3dadf65d2fb2889f3a22de0aab48691ee8a3d3e0ea8a70c2b48482a08bb68'
+      }
+    },
+    parseUri: {
+      'address only': [
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+      ],
+      'invalid address': [
+        'HBARHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL',
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5FAD',
+        'GDUHWCM6NMEVYZKLPJBS45H5OFRVUO4KOIVBIGWZEPMZUOTHBGOL5'
+      ],
+      'uri address': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+      ],
+      'uri address with amount': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=12345.6789',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        '12345678900',
+        'TRX'
+      ],
+      'uri address with unique identifier': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?memo=123456789',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        'TRX',
+        '123456789'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?memo=123456789',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        'TRX',
+        '123456789'
+      ],
+      'uri address with amount & label': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=1234.56789&label=Johnny%20Ripple',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        '1234567890',
+        'TRX',
+        'Johnny Ripple'
+      ],
+      'uri address with amount, label & message': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=1234.56789&label=Johnny%20Ripple&msg=Hello%20World,%20I%20miss%20you%20!',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        '123456789',
+        'TRX',
+        'Johnny Ripple',
+        'Hello World, I miss you !'
+      ],
+      'uri address with unsupported param': [
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?unsupported=helloworld&amount=12345.6789',
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+        '1234567890',
+        'TRX'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        {
+          publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+        },
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+      ],
+      'weird address': [
+        {
+          publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+        },
+        'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j'
+      ],
+      'invalid address': [
+        { publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6k' },
+        { publicAddress: 'tMPp445UqCUpr27D4Z343xWKZQW5cnbp6j' },
+        { publicAddress: 'TmPp445UqCUpr27D4Z343xWKZQW5cnbp6j' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+          nativeAmount: '123456780000'
+        },
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=123456.78'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+          nativeAmount: '1230',
+          currencyCode: 'TRX',
+          label: 'Johnny Ripple'
+        },
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=0.00123&label=Johnny%20Ripple'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j',
+          nativeAmount: '1230',
+          currencyCode: 'TRX',
+          label: 'Johnny Ripple',
+          message: 'Hello World, I miss you !'
+        },
+        'tron:TMPp445UqCUpr27D4Z343xWKZQW5cnbp6j?amount=0.00123&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
   }
 ]
