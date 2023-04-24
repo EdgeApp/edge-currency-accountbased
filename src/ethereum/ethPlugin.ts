@@ -18,10 +18,11 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
+import { WalletConnectors } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethPlugins } from './ethInfos'
-import { EthereumNetworkInfo, WalletConnectors } from './ethTypes'
+import { EthereumNetworkInfo } from './ethTypes'
 
 export class EthereumTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap

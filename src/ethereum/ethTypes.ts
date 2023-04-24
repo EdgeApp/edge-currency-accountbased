@@ -1,4 +1,3 @@
-import WalletConnect from '@walletconnect/client'
 import {
   asArray,
   asBoolean,
@@ -16,7 +15,12 @@ import {
 } from 'cleaners'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
-import { asSafeCommonWalletInfo } from '../common/types'
+import {
+  asSafeCommonWalletInfo,
+  Dapp,
+  WcDappDetails,
+  WcProps
+} from '../common/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -416,15 +420,7 @@ export interface EthereumUtils {
   txRpcParamsToSpendInfo: (params: TxRpcParams) => EdgeSpendInfo
 }
 
-export const asWcProps = asObject({
-  uri: asString,
-  language: asMaybe(asString),
-  token: asMaybe(asString)
-})
-
-export type WcProps = ReturnType<typeof asWcProps>
-
-export const asWcRpcPayload = asObject({
+export const asEvmWcRpcPayload = asObject({
   id: asEither(asString, asNumber),
   method: asValue(
     'personal_sign',
@@ -438,37 +434,7 @@ export const asWcRpcPayload = asObject({
   params: asArray(asUnknown)
 })
 
-export type WcRpcPayload = ReturnType<typeof asWcRpcPayload>
-
-const asWcDappDetails = asObject({
-  peerId: asString,
-  peerMeta: asObject({
-    description: asString,
-    url: asString,
-    icons: asArray(asString),
-    name: asString
-  }),
-  chainId: asOptional(asNumber, 1)
-})
-
-export type WcDappDetails = {
-  timeConnected: number
-} & ReturnType<typeof asWcDappDetails>
-
-export type Dapp = { timeConnected: number } & WcProps & WcDappDetails
-
-export interface WalletConnectors {
-  [uri: string]: {
-    connector: WalletConnect
-    wcProps: WcProps
-    dApp: WcDappDetails
-    walletId?: string
-  }
-}
-
-export const asWcSessionRequestParams = asObject({
-  params: asArray(asWcDappDetails)
-})
+export type EvmWcRpcPayload = ReturnType<typeof asEvmWcRpcPayload>
 
 //
 // Other Params and Other Methods:
@@ -481,10 +447,10 @@ export interface EthereumOtherMethods {
   wcDisconnect: (uri: string) => void
   wcApproveRequest: (
     uri: string,
-    payload: WcRpcPayload,
+    payload: EvmWcRpcPayload,
     result: string
   ) => Promise<void>
-  wcRejectRequest: (uri: string, payload: WcRpcPayload) => Promise<void>
+  wcRejectRequest: (uri: string, payload: EvmWcRpcPayload) => Promise<void>
   wcGetConnections: () => Dapp[]
 }
 

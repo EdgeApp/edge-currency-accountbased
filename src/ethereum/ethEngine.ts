@@ -2,7 +2,7 @@ import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
 import WalletConnect from '@walletconnect/client'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -26,7 +26,12 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { CustomToken } from '../common/types'
+import {
+  asWcSessionRequestParams,
+  CustomToken,
+  WcDappDetails,
+  WcProps
+} from '../common/types'
 import {
   biggyRoundToNearestInt,
   bufToHex,
@@ -59,7 +64,6 @@ import {
   asRollupGasPrices,
   asRpcResultString,
   asSafeEthWalletInfo,
-  asWcSessionRequestParams,
   CalcL1RollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
@@ -72,14 +76,12 @@ import {
   EthereumTxOtherParams,
   EthereumUtils,
   EthereumWalletOtherData,
+  EvmWcRpcPayload,
   KeysOfEthereumBaseMultiplier,
   L1RollupParams,
   LastEstimatedGasLimit,
   SafeEthWalletInfo,
-  TxRpcParams,
-  WcDappDetails,
-  WcProps,
-  WcRpcPayload
+  TxRpcParams
 } from './ethTypes'
 import { calcL1RollupFees, calcMiningFee } from './fees/ethMiningFees'
 import {
@@ -327,7 +329,7 @@ export class EthereumEngine extends CurrencyEngine<
             connector.on(
               'session_request',
               // @ts-expect-error
-              (error: Error, payload: WcRpcPayload) => {
+              (error: Error, payload: EvmWcRpcPayload) => {
                 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                 if (error) {
                   this.error(`Wallet connect session_request`, error)
@@ -349,37 +351,64 @@ export class EthereumEngine extends CurrencyEngine<
             connector.on(
               'call_request',
               // @ts-expect-error
-              (error: Error, payload: WcRpcPayload) => {
+              (error: Error, payload: EvmWcRpcPayload) => {
                 try {
                   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (error) throw error
+                  let nativeAmount = '0'
+                  let networkFee = '0'
+
+                  switch (payload.method) {
+                    case 'eth_sendTransaction':
+                    case 'eth_signTransaction': {
+                      const params = asObject({
+                        gas: asOptional(asString),
+                        gasPrice: asOptional(asString),
+                        value: asOptional(asString)
+                      })(payload.params[0])
+
+                      const { gas, gasPrice, value } = params
+
+                      if (value != null) {
+                        nativeAmount = hexToDecimal(value)
+                      }
+
+                      // make sure transaction methods have fee
+                      let gasNetworkFee =
+                        this.networkFees.default.gasLimit.tokenTransaction
+                      if (gas == null) {
+                        // @ts-expect-error
+                        payload.params[0].gas = decimalToHex(gasNetworkFee)
+                      } else {
+                        gasNetworkFee = hexToDecimal(gas)
+                      }
+
+                      let gasPriceNetworkFee =
+                        // @ts-expect-error
+                        this.networkFees.default.gasPrice.standardFeeHigh
+                      if (gasPrice == null) {
+                        // @ts-expect-error
+                        payload.params[0].gasPrice =
+                          decimalToHex(gasPriceNetworkFee)
+                      } else {
+                        gasPriceNetworkFee = hexToDecimal(gasPrice)
+                      }
+
+                      networkFee = mul(gasNetworkFee, gasPriceNetworkFee)
+                      break
+                    }
+                  }
+
                   const out = {
                     uri: wcProps.uri,
                     dApp: this.tools.walletConnectors[wcProps.uri].dApp,
                     payload,
-                    walletId: this.tools.walletConnectors[wcProps.uri].walletId
+                    walletId: this.tools.walletConnectors[wcProps.uri].walletId,
+                    nativeAmount,
+                    networkFee
+                    // tokenId // can't provide tokenId until we can parse from DATA
                   }
-                  if (
-                    payload.method === 'eth_sendTransaction' ||
-                    payload.method === 'eth_signTransaction'
-                  ) {
-                    payload.params = [
-                      {
-                        // make sure transaction methods have fee
-                        ...{
-                          gas: decimalToHex(
-                            this.networkFees.default.gasLimit.tokenTransaction
-                          ),
-                          gasPrice: decimalToHex(
-                            // @ts-expect-error
-                            this.networkFees.default.gasPrice.standardFeeHigh
-                          )
-                        },
-                        // @ts-expect-error
-                        ...payload.params[0]
-                      }
-                    ]
-                  }
+
                   this.currencyEngineCallbacks.onWcNewContractCall(out)
                 } catch (e: any) {
                   this.warn(`Wallet connect call_request `, e)
@@ -408,28 +437,27 @@ export class EthereumEngine extends CurrencyEngine<
         this.tools.walletConnectors[uri].walletId = walletId
       },
       wcDisconnect: (uri: string) => {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.tools.walletConnectors[uri].connector.killSession()
+        this.tools.walletConnectors[uri].connector.killSession().catch(() => {})
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete this.tools.walletConnectors[uri]
       },
       wcApproveRequest: async (
         uri: string,
-        payload: WcRpcPayload,
+        payload: EvmWcRpcPayload,
         result: string
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.approveRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           result: result
         })
       },
       wcRejectRequest: async (
         uri: string,
-        payload: WcRpcPayload
+        payload: EvmWcRpcPayload
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.rejectRequest({
-          id: parseInt(payload.id.toString()),
+          id: Number(payload.id),
           jsonrpc: '2.0',
           error: {
             message: 'rejected'

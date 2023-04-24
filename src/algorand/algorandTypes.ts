@@ -2,16 +2,25 @@ import {
   asArray,
   asBoolean,
   asCodec,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
+  asTuple,
   asValue,
   Cleaner
 } from 'cleaners'
+import { EdgeSpendInfo } from 'edge-core-js/types'
 
-import { asIntegerString, asSafeCommonWalletInfo } from '../common/types'
+import {
+  asIntegerString,
+  asSafeCommonWalletInfo,
+  Dapp,
+  WcDappDetails,
+  WcProps
+} from '../common/types'
 
 export const asAlgorandWalletOtherData = asObject({
   latestRound: asMaybe(asNumber, 0),
@@ -181,4 +190,56 @@ export const asAlgorandPrivateKeys = (
       return { [`${pluginId}Mnemonic`]: clean.mnemonic }
     }
   )
+}
+
+export const asAlgoWcRpcPayload = asObject({
+  id: asEither(asString, asNumber),
+  method: asValue('algo_signTxn'),
+  params: asTuple(
+    asTuple(
+      asObject({
+        txn: asString,
+        message: asOptional(asString)
+      })
+    )
+  )
+})
+
+export type AlgoWcRpcPayload = ReturnType<typeof asAlgoWcRpcPayload>
+
+export interface AlgorandOtherMethods {
+  wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
+  wcConnect: (uri: string, publicKey: string, walletId: string) => void
+  wcDisconnect: (uri: string) => void
+  wcApproveRequest: (
+    uri: string,
+    payload: AlgoWcRpcPayload,
+    result: string
+  ) => Promise<void>
+  wcRejectRequest: (uri: string, payload: AlgoWcRpcPayload) => Promise<void>
+  wcGetConnections: () => Dapp[]
+}
+
+export const asAlgorandWalletConnectPayload = asObject({
+  id: asNumber,
+  jsonrpc: asValue('2.0'),
+  method: asValue('algo_signTxn'),
+  params: asTuple(
+    asTuple(
+      asObject({
+        txn: asString,
+        message: asOptional(asString)
+      })
+    )
+  )
+}).withRest
+
+export type AlgorandWalletConnectPayload = ReturnType<
+  typeof asAlgorandWalletConnectPayload
+>
+
+export interface AlgorandUtils {
+  txRpcParamsToSpendInfo: (
+    params: AlgorandWalletConnectPayload
+  ) => EdgeSpendInfo
 }
