@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.0.1 (2023-04-24)
+
+- fixed: Parse URIs as Tron addresses first before PIX addresses to prevent incorrect parsing of Tron addresses as a PIX address
+
 ## 1.0.0 (2023-04-19)
 
 - PIX: Support minimum amount
