@@ -107,7 +107,7 @@ export type WcDappDetails = {
   timeConnected: number
 } & ReturnType<typeof asWcDappDetails>
 
-export type Dapp = { timeConnected: number } & WcProps & WcDappDetails
+export type Dapp = WcProps & WcDappDetails
 
 export interface WalletConnectors {
   [uri: string]: {
