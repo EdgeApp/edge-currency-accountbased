@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 1.2.0 (2023-04-24)
+
+- Add WalletConnect v1 support to Algorand
+- Update EVM WalletConnect call_request response to include nativeAmount and networkFee
+- Break out WalletConnect types to common folder
+- Update ZEC checkpoints
+
 ## 1.1.1 (2023-04-24)
 
 - fixed: Parse URIs as Tron addresses first before PIX addresses to prevent incorrect parsing of Tron addresses as a PIX address
