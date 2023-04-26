@@ -211,6 +211,8 @@ export class AlgorandEngine extends CurrencyEngine<
         this.tools.walletConnectors[uri].walletId = walletId
       },
       wcDisconnect: (uri: string) => {
+        if (this.tools.walletConnectors[uri]?.connector == null) return
+
         this.tools.walletConnectors[uri].connector.killSession().catch(() => {})
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete this.tools.walletConnectors[uri]
