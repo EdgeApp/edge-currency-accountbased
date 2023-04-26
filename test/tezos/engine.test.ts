@@ -16,7 +16,7 @@ import { before, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
-import { TezosEngine } from '../../src/tezos/tezosEngine'
+import { TezosEngine } from '../../src/tezos/TezosEngine'
 import { fakeLog } from '../fake/fakeLog'
 
 describe(`Tezos engine`, function () {

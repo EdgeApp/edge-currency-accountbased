@@ -89,6 +89,12 @@ Please note that our team considers (but does not guarantee) PR's to add new cur
 - Rebase of your branch upon this repo's `master` branch. For more info:
 https://github.com/edx/edx-platform/wiki/How-to-Rebase-a-Pull-Request
 
+### Naming Convention
+
+Plugins take their names from the network, not the currency. For instance, the "ripple" plugin supports the Ripple network. There are many currencies on the Ripple network, including XRP, tokens, and bank-backed currencies, so naming the Ripple plugin "xrp" would be too narrow.
+
+The same principle applies to all the plugins in this repository, with a few unfortunate exceptions.
+
 ## License
 
 BSD 3

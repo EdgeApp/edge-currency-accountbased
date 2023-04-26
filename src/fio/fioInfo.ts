@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { fioRegApiErrorCodes } from './fioError'
-import type { FioTools } from './fioPlugin'
+import type { FioTools } from './FioTools'
 import { FioNetworkInfo, fioOtherMethodNames } from './fioTypes'
 
 const networkInfo: FioNetworkInfo = {
@@ -77,7 +77,7 @@ export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "fio" */
-      './fioPlugin'
+      './FioTools'
     )
   }
 })

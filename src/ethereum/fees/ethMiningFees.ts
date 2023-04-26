@@ -10,7 +10,7 @@ import {
   EthereumFee,
   EthereumFees,
   EthereumNetworkInfo
-} from '../ethTypes'
+} from '../ethereumTypes'
 
 export const ES_FEE_LOW = 'low'
 export const ES_FEE_STANDARD = 'standard'

@@ -14,7 +14,7 @@ import EventEmitter from 'events'
 import { beforeEach, describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
-import { CurrencyEngine } from '../../src/common/engine'
+import { CurrencyEngine } from '../../src/common/CurrencyEngine'
 import { PluginEnvironment } from '../../src/common/innerPlugin'
 import { asWalletLocalData, SafeCommonWalletInfo } from '../../src/common/types'
 import edgeCorePlugins from '../../src/index'

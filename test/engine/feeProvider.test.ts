@@ -10,11 +10,11 @@ import {
 import {
   currencyInfo as ethCurrencyInfo,
   networkInfo as ethNetworkInfo
-} from '../../src/ethereum/info/ethInfo'
+} from '../../src/ethereum/info/ethereumInfo'
 import {
   currencyInfo as ftmCurrencyInfo,
   networkInfo as ftmNetworkInfo
-} from '../../src/ethereum/info/ftmInfo'
+} from '../../src/ethereum/info/fantomInfo'
 import { fakeLog } from '../fake/fakeLog'
 
 // TODO: Loop for all plugins

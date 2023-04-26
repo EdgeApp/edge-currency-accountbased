@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import type { EosTools } from '../eosPlugin'
+import type { EosTools } from '../EosTools'
 import type { EosNetworkInfo } from '../eosTypes'
 import { eosOtherMethodNames } from '../eosTypes'
 
@@ -64,7 +64,7 @@ export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "eos" */
-      '../eosPlugin'
+      '../EosTools'
     )
   }
 })

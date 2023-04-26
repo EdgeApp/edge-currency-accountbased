@@ -25,7 +25,7 @@ import {
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
 
-import { CurrencyEngine } from '../common/engine'
+import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asWcSessionRequestParams,

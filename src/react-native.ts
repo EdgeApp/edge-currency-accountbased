@@ -14,7 +14,7 @@ import {
 } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
-import { ZcashInitializerConfig } from './zcash/zecTypes'
+import { ZcashInitializerConfig } from './zcash/zcashTypes'
 
 const { EdgeCurrencyAccountbasedModule } = NativeModules
 const { sourceUri } = EdgeCurrencyAccountbasedModule.getConstants()
