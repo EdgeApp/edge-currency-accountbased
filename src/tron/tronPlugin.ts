@@ -1,4 +1,3 @@
-import { isAddressValid, pkToAddress } from '@tronscan/client/src/utils/crypto'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import {
@@ -15,6 +14,7 @@ import {
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
+import TronWeb from 'tronweb'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parsePixKey } from '../common/smartPay'
@@ -28,6 +28,12 @@ import {
   TronKeys,
   TronNetworkInfo
 } from './tronTypes'
+
+const {
+  utils: {
+    crypto: { isAddressValid, pkToAddress }
+  }
+} = TronWeb
 
 export class TronTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
