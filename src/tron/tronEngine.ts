@@ -1,4 +1,3 @@
-import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
 import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
@@ -15,6 +14,7 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
+import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -70,6 +70,12 @@ import {
   hexToBase58Address,
   TronScan
 } from './tronUtils'
+
+const {
+  utils: {
+    transaction: { txJsonToPb }
+  }
+} = TronWeb
 
 const queryTxMutex = makeMutex()
 
@@ -911,11 +917,24 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async txBuilder(params: TxBuilderParams): Promise<TronTransaction> {
     const { contractJson, feeLimit, note } = params
 
-    const transaction = contractJsonToProtobuf(contractJson)
-    await this.tronscan.addRef(transaction, feeLimit)
-    if (note != null) {
-      await this.tronscan.addData(transaction, note)
-    }
+    const refBlockBytes = this.recentBlock.number
+      .toString(16)
+      .padStart(8, '0')
+      .slice(4, 8)
+    const refBlockHash = this.recentBlock.hash.slice(16, 32)
+    const expiration = this.recentBlock.timestamp + 60 * 5 * 1000 // five minutes
+
+    const transaction = txJsonToPb({
+      raw_data: {
+        contract: [contractJson],
+        ref_block_bytes: refBlockBytes,
+        ref_block_hash: refBlockHash,
+        expiration,
+        data: note,
+        fee_limit: feeLimit
+      }
+    })
+
     const transactionHex = base16.stringify(
       transaction.getRawData().serializeBinary()
     )
