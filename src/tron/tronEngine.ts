@@ -1,4 +1,3 @@
-import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
 import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
 import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
@@ -15,6 +14,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -916,7 +916,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     if (note != null) {
       await this.tronscan.addData(transaction, note)
     }
-    const transactionHex = byteArray2hexStr(
+    const transactionHex = base16.stringify(
       transaction.getRawData().serializeBinary()
     )
 

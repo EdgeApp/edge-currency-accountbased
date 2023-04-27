@@ -1,23 +1,22 @@
 import { Client } from '@tronscan/client'
-import { hexStr2byteArray } from '@tronscan/client/src/lib/code'
-import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
 import {
   decode58Check,
   getBase58CheckAddress
 } from '@tronscan/client/src/utils/crypto'
 import abi from 'ethereumjs-abi'
+import { base16 } from 'rfc4648'
 
 import { hexToDecimal } from '../common/utils'
 import { ReferenceBlock } from './tronTypes'
 
 export const base58ToHexAddress = (addressBase58: string): string => {
   const bytes = decode58Check(addressBase58)
-  const hex = byteArray2hexStr(bytes)
+  const hex = base16.stringify(bytes)
   return hex
 }
 
 export const hexToBase58Address = (addressHex: string): string => {
-  const bytes = hexStr2byteArray(addressHex)
+  const bytes = base16.parse(addressHex)
   const addressBase58 = getBase58CheckAddress(bytes)
   return addressBase58
 }
