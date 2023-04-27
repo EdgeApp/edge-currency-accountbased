@@ -67,13 +67,13 @@ import {
 import {
   base58ToHexAddress,
   encodeTRC20Transfer,
-  hexToBase58Address,
-  TronScan
+  hexToBase58Address
 } from './tronUtils'
 
 const {
   utils: {
-    transaction: { txJsonToPb }
+    crypto: { signTransaction },
+    transaction: { txJsonToPb, txPbToTxID }
   }
 } = TronWeb
 
@@ -103,7 +103,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   networkInfo: TronNetworkInfo
   accountExistsCache: { [address: string]: boolean }
   energyEstimateCache: { [addressAndContract: string]: number }
-  tronscan: TronScan
   otherData!: TronWalletOtherData
   stakingStatus: EdgeStakingStatus
 
@@ -135,7 +134,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       getEnergyFee: 280,
       getMemoFee: 1000000
     }
-    this.tronscan = new TronScan(this.recentBlock)
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
@@ -930,6 +928,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         ref_block_bytes: refBlockBytes,
         ref_block_hash: refBlockHash,
         expiration,
+        timestamp: this.recentBlock.timestamp,
         data: note,
         fee_limit: feeLimit
       }
@@ -1302,8 +1301,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
     const transaction = await this.txBuilder(otherParams)
     const { tronKey } = asTronPrivateKeys(privateKeys)
-    const signer = this.tronscan.getSigner(tronKey)
-    const { hex } = await signer.signTransaction(transaction.transaction)
+    const txid = txPbToTxID(transaction.transaction)
+    transaction.transaction.txID = txid.replace('0x', '')
+    const tx = await signTransaction(tronKey, transaction.transaction)
+    tx.addSignature(base16.parse(tx.signature[0]))
+    const hex = base16.stringify(tx.serializeBinary())
 
     edgeTransaction.signedTx = hex
     return edgeTransaction

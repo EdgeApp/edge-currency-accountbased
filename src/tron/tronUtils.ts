@@ -1,10 +1,8 @@
-import { Client } from '@tronscan/client'
 import abi from 'ethereumjs-abi'
 import { base16 } from 'rfc4648'
 import TronWeb from 'tronweb'
 
 import { hexToDecimal } from '../common/utils'
-import { ReferenceBlock } from './tronTypes'
 
 const {
   utils: {
@@ -59,39 +57,4 @@ export const encodeTRC20Transfer = (
     parseInt(nativeAmount)
   )
   return Buffer.from(dataArray).toString('hex')
-}
-
-// Tronscan Client wants to grab network info itself when using addRef() so we need
-// to override getLatestBlock() and provide the info we're already querying from public nodes
-
-export class TronScan extends Client {
-  recentBlock: ReferenceBlock
-
-  constructor(recentBlockRef: ReferenceBlock) {
-    super('')
-    this.recentBlock = recentBlockRef
-  }
-
-  getLatestBlock(): ReferenceBlock {
-    return this.recentBlock
-  }
-
-  async addData(preTx: any, memo: string): Promise<any> {
-    const tx = await super.addRef(preTx)
-    const rawData = tx.getRawData()
-    rawData.setData(Uint8Array.from(Buffer.from(memo, 'ascii')))
-    tx.setRawData(rawData)
-    return tx
-  }
-
-  // Need to add a fee limit to trc20 transactions
-  async addRef(preTx: any, feeLimit?: number): Promise<any> {
-    const tx = await super.addRef(preTx)
-    if (feeLimit != null) {
-      const rawData = tx.getRawData()
-      rawData.setFeeLimit(feeLimit)
-      tx.setRawData(rawData)
-    }
-    return tx
-  }
 }
