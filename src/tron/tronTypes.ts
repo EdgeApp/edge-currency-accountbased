@@ -1,6 +1,7 @@
 import {
   asArray,
   asBoolean,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
@@ -88,7 +89,9 @@ export interface TronTransferParams {
   note?: string
 }
 
-const asResource = asValue('BANDWIDTH', 'ENERGY')
+const asEnergy = asValue('ENERGY')
+const asBandwidth = asValue('BANDWIDTH')
+const asResource = asEither(asEnergy, asBandwidth)
 type Resource = ReturnType<typeof asResource>
 
 export interface TronUnfreezeAction {
@@ -210,6 +213,17 @@ export const asTRXBalance = asObject({
   //     key: asString // '1001611'
   //   })
   // ),
+  frozenV2: asTuple(
+    // bandwidth
+    asObject({
+      amount: asOptional(asNumber)
+    }),
+    asObject({
+      type: asEnergy,
+      amount: asOptional(asNumber)
+    }),
+    asObject({ type: asValue('TRON_POWER') })
+  ),
   // address: asString, // '41d4663f01b208b180015ec840b5228df7e69150f0'
   balance: asMaybe(asNumber, 0) // 102213111
   // create_time: asNumber, // 1654096560000

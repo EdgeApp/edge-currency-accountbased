@@ -271,6 +271,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
       const stakedAmounts: EdgeStakingStatus['stakedAmounts'] = []
 
+      // StakeV1
       if (frozenBalanceForBandwidth != null) {
         const nativeAmount =
           frozenBalanceForBandwidth[0].frozen_balance.toString()
@@ -289,6 +290,21 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           nativeAmount,
           unlockDate,
           otherParams: { type: 'ENERGY' }
+        })
+      }
+
+      // StakeV2
+      const [stakedBandwidthV2, stakedEnergyV2] = balances.frozenV2
+      if (stakedBandwidthV2.amount != null) {
+        stakedAmounts.push({
+          nativeAmount: stakedBandwidthV2.amount.toFixed(),
+          otherParams: { type: 'BANDWIDTH_V2' }
+        })
+      }
+      if (stakedEnergyV2.amount != null) {
+        stakedAmounts.push({
+          nativeAmount: stakedEnergyV2.amount.toFixed(),
+          otherParams: { type: 'ENERGY_V2' }
         })
       }
 
