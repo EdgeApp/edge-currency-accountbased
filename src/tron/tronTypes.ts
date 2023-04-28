@@ -94,6 +94,11 @@ const asBandwidth = asValue('BANDWIDTH')
 const asResource = asEither(asEnergy, asBandwidth)
 type Resource = ReturnType<typeof asResource>
 
+const asEnergyV2 = asValue('ENERGY_V2')
+const asBandwidthV2 = asValue('BANDWIDTH_V2')
+const asResourceV2 = asEither(asEnergyV2, asBandwidthV2)
+type ResourceV2 = ReturnType<typeof asResourceV2>
+
 export interface TronUnfreezeAction {
   type: 'remove'
   params: { resource: Resource }
@@ -103,6 +108,32 @@ export const asTronUnfreezeAction = asObject<TronUnfreezeAction>({
   type: asValue('remove'),
   params: asObject({
     resource: asResource
+  })
+})
+
+export interface TronFreezeV2Action {
+  type: 'addV2'
+  params: { nativeAmount: string; resource: ResourceV2 }
+}
+
+export const asTronFreezeV2Action = asObject<TronFreezeV2Action>({
+  type: asValue('addV2'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResourceV2
+  })
+})
+
+export interface TronUnfreezeV2Action {
+  type: 'removeV2'
+  params: { nativeAmount: string; resource: ResourceV2 }
+}
+
+export const asTronUnfreezeV2Action = asObject<TronUnfreezeV2Action>({
+  type: asValue('removeV2'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResourceV2
   })
 })
 
