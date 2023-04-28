@@ -42,7 +42,6 @@ import {
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
-  asTronFreezeAction,
   asTronPrivateKeys,
   asTronQuery,
   asTronUnfreezeAction,
@@ -54,7 +53,6 @@ import {
   ReferenceBlock,
   SafeTronWalletInfo,
   TronAccountResources,
-  TronFreezeAction,
   TronNetworkFees,
   TronNetworkInfo,
   TronTransaction,
@@ -983,49 +981,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return { contractJson, feeLimit, note }
   }
 
-  async makeFreezeTransaction(
-    action: TronFreezeAction
-  ): Promise<EdgeTransaction> {
-    const {
-      params: { nativeAmount, resource }
-    } = action
-
-    const contractJson = {
-      parameter: {
-        value: {
-          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
-          frozen_balance: parseInt(nativeAmount),
-          frozen_duration: this.networkInfo.defaultFreezeDurationInDays,
-          resource: resource
-        }
-      },
-      type: 'FreezeBalanceContract'
-    }
-
-    const txOtherParams: TxBuilderParams = { contractJson }
-    const { transactionHex } = await this.txBuilder(txOtherParams)
-    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
-
-    const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode: this.currencyInfo.currencyCode,
-      blockHeight: 0,
-      nativeAmount: mul(nativeAmount, '-1'),
-      isSend: true,
-      networkFee,
-      ourReceiveAddresses: [],
-      signedTx: '',
-      otherParams: txOtherParams,
-      walletId: this.walletId,
-      metadata: {
-        notes: resource
-      }
-    }
-
-    return edgeTransaction
-  }
-
   async makeUnfreezeTransaction(
     action: TronUnfreezeAction
   ): Promise<EdgeTransaction> {
@@ -1177,12 +1132,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
-      let action: TronFreezeAction | TronUnfreezeAction | undefined
-
-      action = asMaybe(asTronFreezeAction)(edgeSpendInfoIn.otherParams)
-      if (action != null) return await this.makeFreezeTransaction(action)
-
-      action = asMaybe(asTronUnfreezeAction)(edgeSpendInfoIn.otherParams)
+      const action: TronUnfreezeAction | undefined = asMaybe(
+        asTronUnfreezeAction
+      )(edgeSpendInfoIn.otherParams)
       if (action != null) return await this.makeUnfreezeTransaction(action)
     }
 

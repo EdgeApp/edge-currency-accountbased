@@ -91,19 +91,6 @@ export interface TronTransferParams {
 const asResource = asValue('BANDWIDTH', 'ENERGY')
 type Resource = ReturnType<typeof asResource>
 
-export interface TronFreezeAction {
-  type: 'add'
-  params: { nativeAmount: string; resource: Resource }
-}
-
-export const asTronFreezeAction = asObject<TronFreezeAction>({
-  type: asValue('add'),
-  params: asObject({
-    nativeAmount: asString,
-    resource: asResource
-  })
-})
-
 export interface TronUnfreezeAction {
   type: 'remove'
   params: { resource: Resource }
