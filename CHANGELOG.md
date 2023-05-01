@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 1.2.1 (2023-05-01)
+
+- ZEC/ARRR: Prevent sending overlapping queries to synchronizer
+- Fix accessing already deleted wallet connector
+- ZEC/ARRR: Update checkpoints
+
 ## 1.2.0 (2023-04-24)
 
 - Add WalletConnect v1 support to Algorand
