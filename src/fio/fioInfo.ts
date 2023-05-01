@@ -10,15 +10,15 @@ const networkInfo: FioNetworkInfo = {
     'https://fio.eu.eosamsterdam.net/v1/',
     'https://fio.eosdac.io/v1/',
     'https://fio.eosrio.io/v1/',
-    'https://fio.acherontrading.com/v1/',
+    // 'https://fio.acherontrading.com/v1/', running v3.2.0
     'https://fio.eos.barcelona/v1/',
     'https://api.fio.alohaeos.com/v1/',
-    'https://fio.greymass.com/v1/',
+    // 'https://fio.greymass.com/v1/', // offline
     'https://fio.eosargentina.io/v1/',
     'https://fio.cryptolions.io/v1/',
     'https://api.fio.currencyhub.io/v1/',
     'https://fio.eostribe.io/v1/',
-    'https://api.fio.greeneosio.com/v1/',
+    // 'https://api.fio.greeneosio.com/v1/', running v3.2.0
     'https://api.fio.services/v1/',
     'https://fio.eosusa.news/v1/',
     'https://fio-api.eosiomadrid.io/v1/',
