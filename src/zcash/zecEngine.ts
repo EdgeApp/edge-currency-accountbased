@@ -44,6 +44,7 @@ export class ZcashEngine extends CurrencyEngine<
   initializer!: ZcashInitializerConfig
   alias!: string
   progressRatio!: number
+  queryMutex: boolean
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>
@@ -60,6 +61,7 @@ export class ZcashEngine extends CurrencyEngine<
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
+    this.queryMutex = false
   }
 
   setOtherData(raw: any): void {
@@ -103,9 +105,14 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async queryAll(): Promise<void> {
-    await this.queryBalance()
-    await this.queryTransactions()
-    this.onUpdateTransactions()
+    if (this.queryMutex) return
+    this.queryMutex = true
+    try {
+      await this.queryBalance()
+      await this.queryTransactions()
+      this.onUpdateTransactions()
+    } catch (e: any) {}
+    this.queryMutex = false
   }
 
   onUpdateBlockHeight(networkBlockHeight: number): void {
