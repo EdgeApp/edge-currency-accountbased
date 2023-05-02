@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.2 (2023-05-01)
+
+- FIO: Update node list
+
 ## 1.2.1 (2023-05-01)
 
 - ZEC/ARRR: Prevent sending overlapping queries to synchronizer
