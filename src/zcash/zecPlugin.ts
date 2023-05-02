@@ -18,6 +18,7 @@ import {
 } from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import {
@@ -72,7 +73,10 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   // will actually use MNEMONIC version of private key
-  async importPrivateKey(userInput: string): Promise<Object> {
+  async importPrivateKey(
+    userInput: string,
+    opts: JsonObject = {}
+  ): Promise<Object> {
     const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(userInput)
     if (!isValid)
@@ -86,12 +90,26 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
-    const birthdayHeight = await this.getNewWalletBirthdayBlockheight()
+    const currentNetworkHeight = await this.getNewWalletBirthdayBlockheight()
+
+    let height = currentNetworkHeight
+
+    const { birthdayHeight } = opts
+    if (birthdayHeight != null) {
+      asIntegerString(birthdayHeight)
+
+      const birthdayHeightInt = parseInt(birthdayHeight)
+
+      if (birthdayHeightInt > currentNetworkHeight) {
+        throw new Error('InvalidBirthdayHeight') // must be less than current block height (assuming query was successful)
+      }
+      height = birthdayHeightInt
+    }
 
     return {
       [`${pluginId}Mnemonic`]: userInput,
       [`${pluginId}SpendKey`]: spendKey,
-      [`${pluginId}BirthdayHeight`]: birthdayHeight
+      [`${pluginId}BirthdayHeight`]: height
     }
   }
 
