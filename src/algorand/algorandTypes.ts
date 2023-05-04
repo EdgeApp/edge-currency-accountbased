@@ -108,9 +108,9 @@ const asAxferTxType = asValue('axfer')
 export const asAxferTransaction = asObject({
   'asset-transfer-transaction': asObject({
     amount: asNumber,
-    'asset-id': asNumber
+    'asset-id': asNumber,
     // "close-amount": 0,
-    // receiver: asString
+    receiver: asString
   }),
   'tx-type': asAxferTxType
 })

@@ -380,7 +380,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
     switch (txType) {
       case 'pay': {
-        const { amount } = asPayTransaction(tx)['payment-transaction']
+        const { amount, receiver } = asPayTransaction(tx)['payment-transaction']
 
         nativeAmount = amount.toString()
         networkFee = fee.toString()
@@ -388,17 +388,22 @@ export class AlgorandEngine extends CurrencyEngine<
         if (sender === this.walletInfo.keys.publicKey) {
           nativeAmount = `-${add(nativeAmount, networkFee)}`
           isSend = true
-        } else {
+        } else if (receiver === this.walletInfo.keys.publicKey) {
           networkFee = '0'
           ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        } else {
+          return
         }
 
         currencyCode = this.currencyInfo.currencyCode
         break
       }
       case 'axfer': {
-        const { amount, 'asset-id': assetId } =
-          asAxferTransaction(tx)['asset-transfer-transaction']
+        const {
+          amount,
+          'asset-id': assetId,
+          receiver
+        } = asAxferTransaction(tx)['asset-transfer-transaction']
 
         nativeAmount = amount.toString()
         networkFee = '0'
@@ -407,8 +412,10 @@ export class AlgorandEngine extends CurrencyEngine<
           nativeAmount = `-${nativeAmount}`
           parentNetworkFee = fee.toString()
           isSend = true
-        } else {
+        } else if (receiver === this.walletInfo.keys.publicKey) {
           ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+        } else {
+          return
         }
 
         const edgeToken: EdgeToken | undefined = this.allTokensMap[assetId]
