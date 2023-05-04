@@ -53,6 +53,7 @@ import {
   asAlgorandUnsignedTx,
   asAlgorandWalletConnectPayload,
   asAlgorandWalletOtherData,
+  asApplTransaction,
   asAxferTransaction,
   asBaseTxOpts,
   asIndexerPayTransactionResponse,
@@ -422,6 +423,28 @@ export class AlgorandEngine extends CurrencyEngine<
         if (edgeToken == null) return
         currencyCode = edgeToken.currencyCode
 
+        break
+      }
+      case 'appl': {
+        const { 'inner-txns': innerTxs = [] } = asApplTransaction(tx)
+        innerTxs.forEach(innerTx =>
+          this.processAlgorandTransaction({
+            ...innerTx,
+            id
+          })
+        )
+
+        nativeAmount = '0'
+        networkFee = fee.toString()
+
+        if (sender === this.walletInfo.keys.publicKey) {
+          nativeAmount = `-${add(nativeAmount, networkFee)}`
+          isSend = true
+        } else {
+          return
+        }
+
+        currencyCode = this.currencyInfo.currencyCode
         break
       }
       default: {

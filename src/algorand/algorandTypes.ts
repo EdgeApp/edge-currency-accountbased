@@ -115,6 +115,35 @@ export const asAxferTransaction = asObject({
   'tx-type': asAxferTxType
 })
 
+export const asInnerTransaction = asObject({
+  'confirmed-round': asNumber, // round number,
+  fee: asNumber, // 1000,
+  'first-valid': asNumber, // round number,
+  note: asOptional(asString),
+  'round-time': asNumber, // unix timestamp,
+  sender: asString,
+  'tx-type': asString
+}).withRest
+
+const asApplTxType = asValue('appl')
+export const asApplTransaction = asObject({
+  // 'application-transaction': {
+  //   accounts: [
+  //     'Q5DO5DF3O4K5BED6Y5WBS4F6POVQFMB2HFKZUEKBK66CHPJEZ7YFHL7FX4',
+  //     'JI3QGFWF2E7QNO6652A74SNYZJMUCKJGAJCQQGNXSXP3BDV23KRTGBGAA4'
+  //   ],
+  //   'application-args': ['c3dhcA==', 'Zml4ZWQtaW5wdXQ=', 'AAAAAAACr5k='],
+  //   'application-id': 1083651166,
+  //   'foreign-apps': [1002541853],
+  //   'foreign-assets': [0, 610886011, 31566704],
+  //   'global-state-schema': { 'num-byte-slice': 0, 'num-uint': 0 },
+  //   'local-state-schema': { 'num-byte-slice': 0, 'num-uint': 0 },
+  //   'on-completion': 'noop'
+  // },
+  'inner-txns': asOptional(asArray(asInnerTransaction)),
+  'tx-type': asApplTxType
+}).withRest
+
 export const asIndexerPayTransactionResponse = asObject({
   'current-round': asNumber,
   'next-token': asOptional(asString),
