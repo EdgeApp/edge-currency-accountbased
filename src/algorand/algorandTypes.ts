@@ -214,7 +214,7 @@ export interface AlgorandOtherMethods {
   wcApproveRequest: (
     uri: string,
     payload: AlgoWcRpcPayload,
-    result: string
+    result: string[]
   ) => Promise<void>
   wcRejectRequest: (uri: string, payload: AlgoWcRpcPayload) => Promise<void>
   wcGetConnections: () => Dapp[]
@@ -225,7 +225,7 @@ export const asAlgorandWalletConnectPayload = asObject({
   jsonrpc: asValue('2.0'),
   method: asValue('algo_signTxn'),
   params: asTuple(
-    asTuple(
+    asArray(
       asObject({
         txn: asString,
         message: asOptional(asString)

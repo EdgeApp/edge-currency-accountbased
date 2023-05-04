@@ -220,12 +220,12 @@ export class AlgorandEngine extends CurrencyEngine<
       wcApproveRequest: async (
         uri: string,
         payload: AlgoWcRpcPayload,
-        result: string
+        result: string[]
       ): Promise<void> => {
         this.tools.walletConnectors[uri].connector.approveRequest({
           id: Number(payload.id),
           jsonrpc: '2.0',
-          result: [result]
+          result
         })
       },
       wcRejectRequest: async (
