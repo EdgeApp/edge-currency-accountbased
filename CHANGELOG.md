@@ -4,6 +4,7 @@
 
 - Fix: Precision bug in min gas price checks for EVM currencies
 - Change: Lower zkSync minGasPrice to 0.01 gwei
+- Removed non-checksum addresses for EVM-based currencies (legacyAddress)
 
 ## 1.2.2 (2023-05-01)
 
