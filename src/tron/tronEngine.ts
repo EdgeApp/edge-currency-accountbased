@@ -1,5 +1,3 @@
-import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
-import { contractJsonToProtobuf } from '@tronscan/client/src/utils/tronWeb'
 import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
@@ -15,6 +13,8 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
+import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/engine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -35,6 +35,7 @@ import {
   asChainParams,
   asEstimateEnergy,
   asFreezeBalanceContract,
+  asFreezeV2BalanceContract,
   asSafeTronWalletInfo,
   asTransaction,
   asTRC20Balance,
@@ -42,24 +43,27 @@ import {
   asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
-  asTronFreezeAction,
+  asTronFreezeV2Action,
   asTronPrivateKeys,
   asTronQuery,
   asTronUnfreezeAction,
+  asTronUnfreezeV2Action,
   asTronWalletOtherData,
   asTRXBalance,
   asTRXTransferContract,
   asUnfreezeBalanceContract,
+  asUnfreezeV2BalanceContract,
   CalcTxFeeOpts,
   ReferenceBlock,
   SafeTronWalletInfo,
   TronAccountResources,
-  TronFreezeAction,
+  TronFreezeV2Action,
   TronNetworkFees,
   TronNetworkInfo,
   TronTransaction,
   TronTransferParams,
   TronUnfreezeAction,
+  TronUnfreezeV2Action,
   TronWalletOtherData,
   TxBuilderParams,
   TxQueryCache
@@ -67,9 +71,15 @@ import {
 import {
   base58ToHexAddress,
   encodeTRC20Transfer,
-  hexToBase58Address,
-  TronScan
+  hexToBase58Address
 } from './tronUtils'
+
+const {
+  utils: {
+    crypto: { signTransaction },
+    transaction: { txJsonToPb, txPbToTxID }
+  }
+} = TronWeb
 
 const queryTxMutex = makeMutex()
 
@@ -97,7 +107,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   networkInfo: TronNetworkInfo
   accountExistsCache: { [address: string]: boolean }
   energyEstimateCache: { [addressAndContract: string]: number }
-  tronscan: TronScan
   otherData!: TronWalletOtherData
   stakingStatus: EdgeStakingStatus
 
@@ -129,7 +138,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       getEnergyFee: 280,
       getMemoFee: 1000000
     }
-    this.tronscan = new TronScan(this.recentBlock)
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
@@ -269,6 +277,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
       const stakedAmounts: EdgeStakingStatus['stakedAmounts'] = []
 
+      // StakeV1
       if (frozenBalanceForBandwidth != null) {
         const nativeAmount =
           frozenBalanceForBandwidth[0].frozen_balance.toString()
@@ -287,6 +296,21 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           nativeAmount,
           unlockDate,
           otherParams: { type: 'ENERGY' }
+        })
+      }
+
+      // StakeV2
+      const [stakedBandwidthV2, stakedEnergyV2] = balances.frozenV2
+      if (stakedBandwidthV2.amount != null) {
+        stakedAmounts.push({
+          nativeAmount: stakedBandwidthV2.amount.toFixed(),
+          otherParams: { type: 'BANDWIDTH_V2' }
+        })
+      }
+      if (stakedEnergyV2.amount != null) {
+        stakedAmounts.push({
+          nativeAmount: stakedEnergyV2.amount.toFixed(),
+          otherParams: { type: 'ENERGY_V2' }
         })
       }
 
@@ -569,6 +593,83 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const feeNativeAmount = retArray[0].fee.toString()
         const { currencyCode } = this.currencyInfo
         const nativeAmount = sub(unfreezeAmount.toString(), feeNativeAmount)
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount,
+          isSend: nativeAmount.startsWith('-'),
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse freeze V2 transactions
+      const freezeV2Transaction = asMaybe(asFreezeV2BalanceContract)(contract)
+      if (freezeV2Transaction != null) {
+        const {
+          parameter: {
+            value: { owner_address: fromAddress, frozen_balance: frozenAmount }
+          }
+        } = freezeV2Transaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const nativeAmount = add(frozenAmount.toString(), feeNativeAmount)
+        const { currencyCode } = this.currencyInfo
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount: mul(nativeAmount, '-1'),
+          isSend: true,
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse unfreeze transactions
+      const unfreezeV2Transaction = asMaybe(asUnfreezeV2BalanceContract)(
+        contract
+      )
+      if (unfreezeV2Transaction != null) {
+        const {
+          parameter: {
+            value: {
+              unfreeze_balance: unfreezeBalance,
+              owner_address: fromAddress
+            }
+          }
+        } = unfreezeV2Transaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const { currencyCode } = this.currencyInfo
+        const nativeAmount = sub(unfreezeBalance.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
           txid,
@@ -911,12 +1012,26 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async txBuilder(params: TxBuilderParams): Promise<TronTransaction> {
     const { contractJson, feeLimit, note } = params
 
-    const transaction = contractJsonToProtobuf(contractJson)
-    await this.tronscan.addRef(transaction, feeLimit)
-    if (note != null) {
-      await this.tronscan.addData(transaction, note)
-    }
-    const transactionHex = byteArray2hexStr(
+    const refBlockBytes = this.recentBlock.number
+      .toString(16)
+      .padStart(8, '0')
+      .slice(4, 8)
+    const refBlockHash = this.recentBlock.hash.slice(16, 32)
+    const expiration = this.recentBlock.timestamp + 60 * 5 * 1000 // five minutes
+
+    const transaction = txJsonToPb({
+      raw_data: {
+        contract: [contractJson],
+        ref_block_bytes: refBlockBytes,
+        ref_block_hash: refBlockHash,
+        expiration,
+        timestamp: this.recentBlock.timestamp,
+        data: note,
+        fee_limit: feeLimit
+      }
+    })
+
+    const transactionHex = base16.stringify(
       transaction.getRawData().serializeBinary()
     )
 
@@ -965,8 +1080,54 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return { contractJson, feeLimit, note }
   }
 
-  async makeFreezeTransaction(
-    action: TronFreezeAction
+  async makeUnfreezeTransaction(
+    action: TronUnfreezeAction
+  ): Promise<EdgeTransaction> {
+    const {
+      params: { resource }
+    } = action
+
+    const stakedAmount = this.stakingStatus.stakedAmounts.find(
+      amount => amount.otherParams?.type === resource
+    )
+    if (stakedAmount == null) throw new Error('Nothing to unfreeze')
+
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
+          resource: resource
+        }
+      },
+      type: 'UnfreezeBalanceContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: stakedAmount.nativeAmount,
+      isSend: stakedAmount.nativeAmount.startsWith('-'),
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: resource
+      }
+    }
+
+    return edgeTransaction
+  }
+
+  async makeFreezeV2Transaction(
+    action: TronFreezeV2Action
   ): Promise<EdgeTransaction> {
     const {
       params: { nativeAmount, resource }
@@ -977,11 +1138,10 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         value: {
           owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
           frozen_balance: parseInt(nativeAmount),
-          frozen_duration: this.networkInfo.defaultFreezeDurationInDays,
-          resource: resource
+          resource: resource === 'ENERGY_V2' ? 'ENERGY' : 'BANDWIDTH'
         }
       },
-      type: 'FreezeBalanceContract'
+      type: 'FreezeBalanceV2Contract'
     }
 
     const txOtherParams: TxBuilderParams = { contractJson }
@@ -1008,11 +1168,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return edgeTransaction
   }
 
-  async makeUnfreezeTransaction(
-    action: TronUnfreezeAction
+  async makeUnfreezeV2Transaction(
+    action: TronUnfreezeV2Action
   ): Promise<EdgeTransaction> {
     const {
-      params: { resource }
+      params: { nativeAmount, resource }
     } = action
 
     const stakedAmount = this.stakingStatus.stakedAmounts.find(
@@ -1024,10 +1184,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       parameter: {
         value: {
           owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
-          resource: resource
+          unfreeze_balance: parseInt(nativeAmount),
+          resource: resource === 'ENERGY_V2' ? 'ENERGY' : 'BANDWIDTH'
         }
       },
-      type: 'UnfreezeBalanceContract'
+      type: 'UnfreezeBalanceV2Contract'
     }
 
     const txOtherParams: TxBuilderParams = { contractJson }
@@ -1159,13 +1320,20 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
-      let action: TronFreezeAction | TronUnfreezeAction | undefined
-
-      action = asMaybe(asTronFreezeAction)(edgeSpendInfoIn.otherParams)
-      if (action != null) return await this.makeFreezeTransaction(action)
+      let action:
+        | TronUnfreezeAction
+        | TronFreezeV2Action
+        | TronUnfreezeV2Action
+        | undefined
 
       action = asMaybe(asTronUnfreezeAction)(edgeSpendInfoIn.otherParams)
       if (action != null) return await this.makeUnfreezeTransaction(action)
+
+      action = asMaybe(asTronFreezeV2Action)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeFreezeV2Transaction(action)
+
+      action = asMaybe(asTronUnfreezeV2Action)(edgeSpendInfoIn.otherParams)
+      if (action != null) return await this.makeUnfreezeV2Transaction(action)
     }
 
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
@@ -1283,8 +1451,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
     const transaction = await this.txBuilder(otherParams)
     const { tronKey } = asTronPrivateKeys(privateKeys)
-    const signer = this.tronscan.getSigner(tronKey)
-    const { hex } = await signer.signTransaction(transaction.transaction)
+    const txid = txPbToTxID(transaction.transaction)
+    transaction.transaction.txID = txid.replace('0x', '')
+    const tx = await signTransaction(tronKey, transaction.transaction)
+    tx.addSignature(base16.parse(tx.signature[0]))
+    const hex = base16.stringify(tx.serializeBinary())
 
     edgeTransaction.signedTx = hex
     return edgeTransaction

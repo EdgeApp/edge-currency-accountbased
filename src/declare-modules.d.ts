@@ -1,19 +1,3 @@
-declare module '@tronscan/client'
-declare module '@tronscan/client/src/lib/code' {
-  export const hexStr2byteArray: (address: string) => Uint8Array
-}
-declare module '@tronscan/client/src/utils/bytes' {
-  export const byteArray2hexStr: (bytes: Uint8Array) => string
-}
-declare module '@tronscan/client/src/utils/crypto' {
-  export const decode58Check: (address: string) => Uint8Array
-  export const isAddressValid: (address: string) => boolean
-  export const getBase58CheckAddress: (bytes: Uint8Array) => string
-  export const pkToAddress: (privateKey: string) => string
-}
-declare module '@tronscan/client/src/utils/tronWeb' {
-  export const contractJsonToProtobuf: (json: Object) => any
-}
 declare module 'eosjs-ecc'
 declare module 'ethereumjs-abi'
 declare module 'ethereumjs-util'
@@ -34,3 +18,18 @@ declare module 'react-native' {
 }
 
 declare module 'stellar-sdk'
+declare module 'tronweb' {
+  export const utils: {
+    crypto: {
+      decode58Check: (addr: string) => number[]
+      getBase58CheckAddress: (addrBytes: number[]) => string
+      isAddressValid: (base58Address: string) => boolean
+      pkToAddress: (privateKey: string) => string
+      signTransaction: (privateKey: string, transaction: any) => any
+    }
+    transaction: {
+      txJsonToPb: (contractJson: any) => any
+      txPbToTxID: (transaction: any) => string
+    }
+  }
+}

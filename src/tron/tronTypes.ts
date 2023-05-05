@@ -1,6 +1,7 @@
 import {
   asArray,
   asBoolean,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
@@ -88,21 +89,15 @@ export interface TronTransferParams {
   note?: string
 }
 
-const asResource = asValue('BANDWIDTH', 'ENERGY')
+const asEnergy = asValue('ENERGY')
+const asBandwidth = asValue('BANDWIDTH')
+const asResource = asEither(asEnergy, asBandwidth)
 type Resource = ReturnType<typeof asResource>
 
-export interface TronFreezeAction {
-  type: 'add'
-  params: { nativeAmount: string; resource: Resource }
-}
-
-export const asTronFreezeAction = asObject<TronFreezeAction>({
-  type: asValue('add'),
-  params: asObject({
-    nativeAmount: asString,
-    resource: asResource
-  })
-})
+const asEnergyV2 = asValue('ENERGY_V2')
+const asBandwidthV2 = asValue('BANDWIDTH_V2')
+const asResourceV2 = asEither(asEnergyV2, asBandwidthV2)
+type ResourceV2 = ReturnType<typeof asResourceV2>
 
 export interface TronUnfreezeAction {
   type: 'remove'
@@ -113,6 +108,32 @@ export const asTronUnfreezeAction = asObject<TronUnfreezeAction>({
   type: asValue('remove'),
   params: asObject({
     resource: asResource
+  })
+})
+
+export interface TronFreezeV2Action {
+  type: 'addV2'
+  params: { nativeAmount: string; resource: ResourceV2 }
+}
+
+export const asTronFreezeV2Action = asObject<TronFreezeV2Action>({
+  type: asValue('addV2'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResourceV2
+  })
+})
+
+export interface TronUnfreezeV2Action {
+  type: 'removeV2'
+  params: { nativeAmount: string; resource: ResourceV2 }
+}
+
+export const asTronUnfreezeV2Action = asObject<TronUnfreezeV2Action>({
+  type: asValue('removeV2'),
+  params: asObject({
+    nativeAmount: asString,
+    resource: asResourceV2
   })
 })
 
@@ -223,6 +244,17 @@ export const asTRXBalance = asObject({
   //     key: asString // '1001611'
   //   })
   // ),
+  frozenV2: asTuple(
+    // bandwidth
+    asObject({
+      amount: asOptional(asNumber)
+    }),
+    asObject({
+      type: asEnergy,
+      amount: asOptional(asNumber)
+    }),
+    asObject({ type: asValue('TRON_POWER') })
+  ),
   // address: asString, // '41d4663f01b208b180015ec840b5228df7e69150f0'
   balance: asMaybe(asNumber, 0) // 102213111
   // create_time: asNumber, // 1654096560000
@@ -368,6 +400,26 @@ export const asUnfreezeBalanceContract = asObject({
     // type_url: 'type.googleapis.com/protocol.FreezeBalanceContract'
   }),
   type: asValue('UnfreezeBalanceContract')
+})
+
+export const asFreezeV2BalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      frozen_balance: asNumber,
+      owner_address: asString
+    })
+  }),
+  type: asValue('FreezeBalanceV2Contract')
+})
+
+export const asUnfreezeV2BalanceContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      unfreeze_balance: asNumber,
+      owner_address: asString
+    })
+  }),
+  type: asValue('UnfreezeBalanceV2Contract')
 })
 
 export interface TronGridQuery<T> {

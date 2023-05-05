@@ -1,24 +1,24 @@
-import { Client } from '@tronscan/client'
-import { hexStr2byteArray } from '@tronscan/client/src/lib/code'
-import { byteArray2hexStr } from '@tronscan/client/src/utils/bytes'
-import {
-  decode58Check,
-  getBase58CheckAddress
-} from '@tronscan/client/src/utils/crypto'
 import abi from 'ethereumjs-abi'
+import { base16 } from 'rfc4648'
+import TronWeb from 'tronweb'
 
 import { hexToDecimal } from '../common/utils'
-import { ReferenceBlock } from './tronTypes'
+
+const {
+  utils: {
+    crypto: { decode58Check, getBase58CheckAddress }
+  }
+} = TronWeb
 
 export const base58ToHexAddress = (addressBase58: string): string => {
   const bytes = decode58Check(addressBase58)
-  const hex = byteArray2hexStr(bytes)
+  const hex = base16.stringify(bytes)
   return hex
 }
 
 export const hexToBase58Address = (addressHex: string): string => {
-  const bytes = hexStr2byteArray(addressHex)
-  const addressBase58 = getBase58CheckAddress(bytes)
+  const bytes = base16.parse(addressHex)
+  const addressBase58 = getBase58CheckAddress(Array.from(bytes))
   return addressBase58
 }
 
@@ -57,39 +57,4 @@ export const encodeTRC20Transfer = (
     parseInt(nativeAmount)
   )
   return Buffer.from(dataArray).toString('hex')
-}
-
-// Tronscan Client wants to grab network info itself when using addRef() so we need
-// to override getLatestBlock() and provide the info we're already querying from public nodes
-
-export class TronScan extends Client {
-  recentBlock: ReferenceBlock
-
-  constructor(recentBlockRef: ReferenceBlock) {
-    super('')
-    this.recentBlock = recentBlockRef
-  }
-
-  getLatestBlock(): ReferenceBlock {
-    return this.recentBlock
-  }
-
-  async addData(preTx: any, memo: string): Promise<any> {
-    const tx = await super.addRef(preTx)
-    const rawData = tx.getRawData()
-    rawData.setData(Uint8Array.from(Buffer.from(memo, 'ascii')))
-    tx.setRawData(rawData)
-    return tx
-  }
-
-  // Need to add a fee limit to trc20 transactions
-  async addRef(preTx: any, feeLimit?: number): Promise<any> {
-    const tx = await super.addRef(preTx)
-    if (feeLimit != null) {
-      const rawData = tx.getRawData()
-      rawData.setFeeLimit(feeLimit)
-      tx.setRawData(rawData)
-    }
-    return tx
-  }
 }
