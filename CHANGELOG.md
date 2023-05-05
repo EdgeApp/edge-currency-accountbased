@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## Unreleased
+
+- Fix: Precision bug in min gas price checks for EVM currencies
+- Change: Lower zkSync minGasPrice to 0.01 gwei
+
 ## 1.2.2 (2023-05-01)
 
 - FIO: Update node list

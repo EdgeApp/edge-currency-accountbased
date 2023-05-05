@@ -58,10 +58,10 @@ export function calcMiningFee(
           networkFees.default?.gasPrice?.minGasPrice ??
           networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
         if (minGasPrice != null) {
-          const minGasPriceGwei = div(minGasPrice, WEI_MULTIPLIER)
-          if (lt(gasPrice, minGasPriceGwei) || /^\s*$/.test(gasPrice)) {
+          const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
+          if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
             const e = new Error(
-              `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+              `Gas price ${gasPriceInWei} wei below minimum ${minGasPrice} wei`
             )
             e.name = 'ErrorBelowMinimumFee'
             throw e
@@ -80,7 +80,7 @@ export function calcMiningFee(
           /^\s*$/.test(gasLimit)
         ) {
           const e = new Error(
-            `Gas Limit: ${gasLimit} Gas Price (Gwei): ${gasPrice}`
+            `Gas limit ${gasLimit} below minimum ${minGasLimit}`
           )
           e.name = 'ErrorBelowMinimumFee'
           throw e
