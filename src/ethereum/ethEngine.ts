@@ -350,8 +350,7 @@ export class EthereumEngine extends CurrencyEngine<
             // Subscribe to call requests
             connector.on(
               'call_request',
-              // @ts-expect-error
-              (error: Error, payload: EvmWcRpcPayload) => {
+              (error: Error | null, payload: EvmWcRpcPayload) => {
                 try {
                   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
                   if (error) throw error
@@ -361,40 +360,69 @@ export class EthereumEngine extends CurrencyEngine<
                   switch (payload.method) {
                     case 'eth_sendTransaction':
                     case 'eth_signTransaction': {
-                      const params = asObject({
+                      const txParam = asObject({
+                        from: asString,
+                        to: asOptional(asString),
+                        data: asString,
                         gas: asOptional(asString),
                         gasPrice: asOptional(asString),
                         value: asOptional(asString)
                       })(payload.params[0])
 
-                      const { gas, gasPrice, value } = params
+                      const { gas, gasPrice, value } = txParam
+
+                      // Finish calculating the network fee using the gas limit
+                      const deriveNetworkFee = (gasLimit: string): void => {
+                        if (gas == null) {
+                          txParam.gas = decimalToHex(gasLimit)
+                        } else {
+                          gasLimit = hexToDecimal(gas)
+                        }
+
+                        let gasPriceNetworkFee =
+                          this.networkFees.default.gasPrice?.standardFeeHigh ??
+                          '0'
+                        if (gasPrice == null) {
+                          txParam.gasPrice = decimalToHex(gasPriceNetworkFee)
+                        } else {
+                          gasPriceNetworkFee = hexToDecimal(gasPrice)
+                        }
+
+                        networkFee = mul(gasLimit, gasPriceNetworkFee)
+                      }
 
                       if (value != null) {
                         nativeAmount = hexToDecimal(value)
                       }
 
-                      // make sure transaction methods have fee
-                      let gasNetworkFee =
-                        this.networkFees.default.gasLimit.tokenTransaction
-                      if (gas == null) {
-                        // @ts-expect-error
-                        payload.params[0].gas = decimalToHex(gasNetworkFee)
+                      // Get the gasLimit from currency info or from RPC node:
+                      if (
+                        this.networkFees.default.gasLimit?.tokenTransaction ==
+                        null
+                      ) {
+                        this.ethNetwork
+                          .multicastServers('eth_estimateGas', txParam)
+                          .then((estimateGasResult: any) => {
+                            const gasLimit = add(
+                              parseInt(
+                                estimateGasResult.result.result,
+                                16
+                              ).toString(),
+                              '0'
+                            )
+                            deriveNetworkFee(gasLimit)
+                          })
+                          .catch((error: any) => {
+                            this.warn(
+                              `Wallet connect call_request failed to get gas limit`,
+                              error
+                            )
+                          })
                       } else {
-                        gasNetworkFee = hexToDecimal(gas)
+                        deriveNetworkFee(
+                          this.networkFees.default.gasLimit?.tokenTransaction
+                        )
                       }
-
-                      let gasPriceNetworkFee =
-                        // @ts-expect-error
-                        this.networkFees.default.gasPrice.standardFeeHigh
-                      if (gasPrice == null) {
-                        // @ts-expect-error
-                        payload.params[0].gasPrice =
-                          decimalToHex(gasPriceNetworkFee)
-                      } else {
-                        gasPriceNetworkFee = hexToDecimal(gasPrice)
-                      }
-
-                      networkFee = mul(gasNetworkFee, gasPriceNetworkFee)
                       break
                     }
                   }
@@ -901,51 +929,68 @@ export class EthereumEngine extends CurrencyEngine<
         // result === '0x' means we are sending to a plain address (no contract)
         const sendingToContract = getCodeResult.result.result !== '0x'
 
-        try {
-          if (!sendingToContract && !hasUserMemo) {
-            // Easy case of sending plain mainnet token with no memo/data
-            gasLimit = this.networkFees.default.gasLimit.regularTransaction
-          } else {
-            const estimateGasResult = await this.ethNetwork.multicastServers(
-              'eth_estimateGas',
-              estimateGasParams
-            )
-            gasLimit = add(
-              parseInt(estimateGasResult.result.result, 16).toString(),
-              '0'
-            )
-            if (sendingToContract) {
-              // Overestimate (double) gas limit to reduce chance of failure when sending
-              // to a contract. This includes sending any ERC20 token, sending ETH
-              // to a contract, sending tokens to a contract, or any contract
-              // execution (ie approvals, unstaking, etc)
-              gasLimit = mul(gasLimit, '2')
-            }
-          }
-          cacheGasLimit = true
-        } catch (e: any) {
-          // If makeSpend received an explicit memo/data field from caller,
-          // assume this is a smart contract call that needs accurate gasLimit
-          // estimation and fail if we weren't able to get estimates from an
-          // RPC node.
-          if (hasUserMemo) {
-            throw new Error(
-              'Unable to estimate gas limit. Please try again later'
-            )
-          }
-          // If we know the address is a contract but estimateGas fails use the default token gas limit
-          if (
+        const tryEstimatingGas = async (attempt: number = 0): Promise<void> => {
+          const defaultGasLimits =
             this.networkInfo.defaultNetworkFees.default.gasLimit
-              .tokenTransaction != null
-          )
-            gasLimit =
-              this.networkInfo.defaultNetworkFees.default.gasLimit
-                .tokenTransaction
+          try {
+            if (
+              defaultGasLimits != null &&
+              !sendingToContract &&
+              !hasUserMemo
+            ) {
+              // Easy case of sending plain mainnet token with no memo/data
+              gasLimit = defaultGasLimits.regularTransaction
+            } else {
+              const estimateGasResult = await this.ethNetwork.multicastServers(
+                'eth_estimateGas',
+                estimateGasParams
+              )
+              gasLimit = add(
+                parseInt(estimateGasResult.result.result, 16).toString(),
+                '0'
+              )
+              if (sendingToContract) {
+                // Overestimate (double) gas limit to reduce chance of failure when sending
+                // to a contract. This includes sending any ERC20 token, sending ETH
+                // to a contract, sending tokens to a contract, or any contract
+                // execution (ie approvals, unstaking, etc)
+                gasLimit = mul(gasLimit, '2')
+              }
+            }
+            cacheGasLimit = true
+          } catch (e: any) {
+            // If no defaults, then we must estimate by RPC, so try again
+            if (defaultGasLimits == null) {
+              if (attempt > 5)
+                throw new Error(
+                  'Unable to estimate gas limit after 5 tries. Please try again later'
+                )
+              return await tryEstimatingGas(attempt + 1)
+            }
+
+            // If makeSpend received an explicit memo/data field from caller,
+            // assume this is a smart contract call that needs accurate gasLimit
+            // estimation and fail if we weren't able to get estimates from an
+            // RPC node.
+            if (hasUserMemo) {
+              throw new Error(
+                'Unable to estimate gas limit. Please try again later'
+              )
+            }
+            // If we know the address is a contract but estimateGas fails use the default token gas limit
+            if (defaultGasLimits.tokenTransaction != null)
+              gasLimit = defaultGasLimits.tokenTransaction
+          }
         }
+
+        await tryEstimatingGas()
 
         // Sanity check calculated value
         if (
-          lt(gasLimit, this.networkFees.default.gasLimit.minGasLimit ?? '21000')
+          lt(
+            gasLimit,
+            this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
+          )
         ) {
           gasLimit = defaultGasLimit
           this.lastEstimatedGasLimit.gasLimit = ''
