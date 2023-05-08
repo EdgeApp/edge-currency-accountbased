@@ -1,10 +1,13 @@
 # edge-currency-accountbased
 
-## Unreleased
+## 1.2.3 (2023-05-08)
 
 - Fix: Precision bug in min gas price checks for EVM currencies
 - Change: Lower zkSync minGasPrice to 0.01 gwei
 - Removed non-checksum addresses for EVM-based currencies (legacyAddress)
+- Fix: Added dynamic gas limit calculation for zkSync
+- Add Tron Stake v2
+- Algorand: Support signing multiple transactions in wallet connect request
 
 ## 1.2.2 (2023-05-01)
 
