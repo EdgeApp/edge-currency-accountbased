@@ -23,8 +23,8 @@ describe(`FTM Network Fees`, function () {
     const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo)
     validateGasPrices(fees.default.gasPrice, true)
     // Info server should provide gas limit as well
-    assert.equal(fees.default.gasLimit.regularTransaction, '21000')
-    assert.equal(fees.default.gasLimit.tokenTransaction, '300000')
+    assert.equal(fees.default.gasLimit?.regularTransaction, '21000')
+    assert.equal(fees.default.gasLimit?.tokenTransaction, '300000')
   })
 
   it('EvmGasStation Fees', async function () {

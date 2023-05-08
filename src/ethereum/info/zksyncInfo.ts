@@ -25,11 +25,7 @@ const defaultNetworkFees: EthereumFees = {
       standardFeeHigh: '1.5',
       highFee: '1.75'
     },
-    gasLimit: {
-      regularTransaction: '461552',
-      tokenTransaction: '461552',
-      minGasLimit: '461552'
-    },
+    gasLimit: undefined, // Limits must always be estimated by eth_estimateGas
     gasPrice: {
       lowFee: '1000000001',
       standardFeeLow: '40000000001',

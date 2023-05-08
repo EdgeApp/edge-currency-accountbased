@@ -74,7 +74,7 @@ export function calcMiningFee(
       if (gasLimit != null && gasLimit !== '') {
         const minGasLimit =
           networkFees.default?.gasLimit?.minGasLimit ??
-          networkInfo.defaultNetworkFees.default.gasLimit.minGasLimit
+          networkInfo.defaultNetworkFees.default.gasLimit?.minGasLimit
         if (
           (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
           /^\s*$/.test(gasLimit)
@@ -116,7 +116,8 @@ export function calcMiningFee(
       }
     }
 
-    let useLimit = 'regularTransaction'
+    let useLimit: 'regularTransaction' | 'tokenTransaction' =
+      'regularTransaction'
     if (
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       spendInfo.currencyCode &&
@@ -133,8 +134,10 @@ export function calcMiningFee(
       networkFeeOption = spendInfo.networkFeeOption
     }
 
-    // @ts-expect-error
-    const gasLimit = networkFeeForGasLimit.gasLimit[useLimit]
+    const gasLimit =
+      networkFeeForGasLimit.gasLimit != null
+        ? networkFeeForGasLimit.gasLimit[useLimit]
+        : '21000'
     let gasPrice = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!spendInfo.spendTargets[0].nativeAmount) {
