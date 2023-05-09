@@ -244,7 +244,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const ourReceiveAddresses = []
     const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
     if (denom == null) {
-      this.error(
+      this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
       )
       return 0
