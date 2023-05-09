@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import type { SolanaTools } from './solanaPlugin'
+import type { SolanaTools } from './SolanaTools'
 import type { SolanaNetworkInfo } from './solanaTypes'
 
 const networkInfo: SolanaNetworkInfo = {
@@ -46,7 +46,7 @@ export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "solana" */
-      './solanaPlugin'
+      './SolanaTools'
     )
   }
 })

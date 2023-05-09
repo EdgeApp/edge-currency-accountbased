@@ -14,8 +14,8 @@ import {
   GAS_STATION_WEI_MULTIPLIER,
   OPTIMAL_FEE_HIGH_MULTIPLIER,
   WEI_MULTIPLIER
-} from '../ethConsts'
-import { asEthGasStation } from '../ethSchema'
+} from '../ethereumConsts'
+import { asEthGasStation } from '../ethereumSchema'
 import {
   asEthereumFees,
   asEvmScanGasResponseResult,
@@ -25,7 +25,7 @@ import {
   EthereumInitOptions,
   EthereumNetworkInfo,
   EvmScanGasResponse
-} from '../ethTypes'
+} from '../ethereumTypes'
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const printFees = (log: EdgeLog, fees: Object) => {

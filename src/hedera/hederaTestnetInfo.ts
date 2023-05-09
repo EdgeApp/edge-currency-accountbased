@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import type { HederaTools } from './hederaPlugin'
+import type { HederaTools } from './HederaTools'
 import { HederaNetworkInfo, hederaOtherMethodNames } from './hederaTypes'
 
 const networkInfo: HederaNetworkInfo = {
@@ -47,6 +47,6 @@ export const hederatestnet = makeOuterPlugin<HederaNetworkInfo, HederaTools>({
   otherMethodNames: hederaOtherMethodNames,
 
   async getInnerPlugin() {
-    return await import('./hederaPlugin')
+    return await import('./HederaTools')
   }
 })

@@ -2,8 +2,8 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
-import type { EthereumTools } from '../ethPlugin'
-import type { EthereumFees, EthereumNetworkInfo } from '../ethTypes'
+import type { EthereumTools } from '../EthereumTools'
+import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 
 const builtinTokens: EdgeTokenMap = {
   '765de816845861e75a25fca122bb6898b8b1282a': {
@@ -117,6 +117,6 @@ export const celo = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('../ethPlugin')
+    return await import('../EthereumTools')
   }
 })

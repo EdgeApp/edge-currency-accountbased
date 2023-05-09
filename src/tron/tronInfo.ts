@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
-import type { TronTools } from './tronPlugin'
+import type { TronTools } from './TronTools'
 import type { TronNetworkInfo } from './tronTypes'
 
 const builtinTokens: EdgeTokenMap = {
@@ -143,7 +143,7 @@ export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "tron" */
-      './tronPlugin'
+      './TronTools'
     )
   }
 })

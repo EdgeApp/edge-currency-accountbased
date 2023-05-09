@@ -2,8 +2,8 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
-import type { EthereumTools } from '../ethPlugin'
-import type { EthereumFees, EthereumNetworkInfo } from '../ethTypes'
+import type { EthereumTools } from '../EthereumTools'
+import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 
 const builtinTokens: EdgeTokenMap = {
   b597cd8d3217ea6477232f9217fa70837ff667af: {
@@ -290,6 +290,6 @@ export const kovan = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('../ethPlugin')
+    return await import('../EthereumTools')
   }
 })
