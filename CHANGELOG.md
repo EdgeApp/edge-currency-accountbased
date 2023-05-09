@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.2-3 (2023-05-08)
+
+- FIO: Fix pubkey in request and obt data
+
 ## 1.2.2-2 (2023-05-08)
 
 - Fix: Added dynamic gas limit calculation for zkSync
