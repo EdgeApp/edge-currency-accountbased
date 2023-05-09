@@ -1661,7 +1661,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             'record_obt_data_content',
             content,
             fioPrivateKeys.fioKey,
-            this.walletInfo.keys.publicKey
+            payerPublicAddress
           )
           txParams = {
             account: 'fio.reqobt',
@@ -1680,6 +1680,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         case ACTIONS.requestFunds: {
           const {
             payerFioAddress,
+            payerFioPublicKey,
             payeeFioAddress,
             payeeTokenPublicAddress,
             amount,
@@ -1700,7 +1701,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             'new_funds_content',
             content,
             fioPrivateKeys.fioKey,
-            this.walletInfo.keys.publicKey
+            payerFioPublicKey
           )
           txParams = {
             account: 'fio.reqobt',
