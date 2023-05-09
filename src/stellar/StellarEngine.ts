@@ -501,15 +501,11 @@ export class StellarEngine extends CurrencyEngine<
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
-    let memoId: string
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      edgeSpendInfo.spendTargets[0].otherParams != null &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    ) {
-      memoId = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    }
+    const spendTarget0 = edgeSpendInfo.spendTargets[0]
+    const memoId: string | undefined =
+      spendTarget0.memo ??
+      spendTarget0.uniqueIdentifier ??
+      spendTarget0.otherParams?.uniqueIdentifier
 
     const feeSetting =
       edgeSpendInfo.networkFeeOption !== undefined &&
@@ -542,9 +538,7 @@ export class StellarEngine extends CurrencyEngine<
         })
       )
     }
-    // @ts-expect-error
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (memoId) {
+    if (memoId != null) {
       // @ts-expect-error
       const memo = this.stellarApi.Memo.id(memoId)
       transaction = transaction.addMemo(memo)
