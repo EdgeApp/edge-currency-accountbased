@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 1.2.4 (2023-05-09)
+
+- ZEC/ARR: Add import private key birthdayHeight option handling
+- FIO: Replace public key with recipient public key
+- Rename files to the network name, not the currency code
+- Use uppercase names for files that export classes and use loweracse names for files that export types and utilities
+
 ## 1.2.3 (2023-05-08)
 
 - Fix: Precision bug in min gas price checks for EVM currencies
