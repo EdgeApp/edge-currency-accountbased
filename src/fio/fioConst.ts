@@ -20,7 +20,7 @@ export const FIO_REG_API_ENDPOINTS = {
 export const HISTORY_NODE_ACTIONS = {
   getActions: 'get_actions'
 }
-export const HISTORY_NODE_OFFSET = 20
+export const HISTORY_NODE_OFFSET = 21
 
 export const ACTIONS = {
   transferTokens: 'transferTokens',

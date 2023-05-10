@@ -591,8 +591,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         historyNodeIndex,
         {
           account_name: this.actor,
-          pos: -1,
-          offset: -1
+          pos: -1
         },
         HISTORY_NODE_ACTIONS.getActions
       )
@@ -604,7 +603,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       asHistoryResponse(lastActionObject)
       if (lastActionObject.actions.length > 0) {
-        lastActionSeqNumber = lastActionObject.actions[0].account_action_seq
+        lastActionSeqNumber =
+          lastActionObject.actions[lastActionObject.actions.length - 1]
+            .account_action_seq
       } else {
         // if no transactions at all
         return true
@@ -613,7 +614,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       return await this.checkTransactions(++historyNodeIndex)
     }
 
-    let pos = lastActionSeqNumber
+    let pos = Math.max(0, lastActionSeqNumber - HISTORY_NODE_OFFSET)
     let finish = false
 
     while (!finish) {
@@ -627,7 +628,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           {
             account_name: this.actor,
             pos,
-            offset: -HISTORY_NODE_OFFSET + 1
+            offset: HISTORY_NODE_OFFSET - 1
           },
           HISTORY_NODE_ACTIONS.getActions
         )
@@ -701,20 +702,24 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     params: {
       account_name: string
       pos: number
-      offset: number
+      offset?: number
     },
     uri: string
   ): Promise<any> {
     if (this.networkInfo.historyNodeUrls[nodeIndex] == null)
       return { error: { noNodeForIndex: true } }
     const apiUrl = this.networkInfo.historyNodeUrls[nodeIndex]
-    const result = await this.fetchCors(`${apiUrl}history/${uri}`, {
+    const body = JSON.stringify(params)
+    const result = await fetch(`${apiUrl}history/${uri}`, {
       method: 'POST',
       headers: {
+        // Explicit content length is needed to make the FIO server return
+        // the correct action's length for some reason.
+        'Content-Length': (body.length * 2).toString(),
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(params)
+      body
     })
     return await result.json()
   }
