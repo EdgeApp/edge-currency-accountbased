@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.5 (2023-05-10)
+
+- Fixed: Find XLM memos in all three makeSpend API locations
+
 ## 1.2.4 (2023-05-09)
 
 - ZEC/ARR: Add import private key birthdayHeight option handling
