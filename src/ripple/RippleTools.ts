@@ -46,17 +46,14 @@ export class RippleTools implements EdgeCurrencyTools {
   }
 
   async connectApi(walletId: string): Promise<void> {
-    if (this.rippleApi == null) {
+    if (Object.keys(this.rippleApiSubscribers).length === 0) {
       const funcs = this.networkInfo.rippledServers.map(server => async () => {
         const api = new Client(server)
         await api.connect()
         return api
       })
       const result: Client = await asyncWaterfall(funcs)
-
-      if (this.rippleApi == null) {
-        this.rippleApi = result
-      }
+      this.rippleApi = result
     }
     this.rippleApiSubscribers[walletId] = true
   }
