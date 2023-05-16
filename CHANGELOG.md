@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.2.6 (2023-05-16)
+
+- EVM: Fix null gas price handling in txRpcParamsToSpendInfo
+- Ripple: Fix api reconnect logic
+
 ## 1.2.5 (2023-05-10)
 
 - Fixed: Find XLM memos in all three makeSpend API locations
