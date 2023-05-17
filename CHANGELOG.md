@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.2.7 (2023-05-17)
+
+- Tron: Pass nativeAmount directly to TRC20 encoder
+- Tron: Make fee optional in asTRC20TransactionInfo cleaner
+
 ## 1.2.6 (2023-05-16)
 
 - EVM: Fix null gas price handling in txRpcParamsToSpendInfo
