@@ -54,7 +54,7 @@ export const encodeTRC20Transfer = (
   const dataArray = abi.simpleEncode(
     'transfer(address,uint256):(uint256)',
     receivingAddressHex,
-    parseInt(nativeAmount)
+    nativeAmount
   )
   return Buffer.from(dataArray).toString('hex')
 }
