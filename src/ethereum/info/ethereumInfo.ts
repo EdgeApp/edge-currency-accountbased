@@ -582,6 +582,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x4575f41308EC1483f3d399aa9a2826d74Da13Deb'
     }
   },
+  '6982508145454ce325ddbe47a25d4ec3d2311933': {
+    currencyCode: 'PEPE',
+    displayName: 'Pepe',
+    denominations: [{ name: 'PEPE', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x6982508145454Ce325dDbE47a25d4ec3d2311933'
+    }
+  },
   '429881672b9ae42b8eba0e26cd9c73711b891ca5': {
     currencyCode: 'PICKLE',
     displayName: 'PickleToken',
