@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.2.8 (2023-05-23)
+
+- Add Pepe token
+- Update ZEC/ARRR checkpoints
+
 ## 1.2.7 (2023-05-17)
 
 - Tron: Pass nativeAmount directly to TRC20 encoder
