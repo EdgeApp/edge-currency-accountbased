@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.9 (2023-05-23)
+
+- FIO: Handle empty otherParams objects as null
+
 ## 1.2.8 (2023-05-23)
 
 - Add Pepe token
