@@ -1331,7 +1331,8 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       throw new Error('makeSpend Missing publicAddress')
     if (quantity == null) throw new NoAmountSpecifiedError()
 
-    const {
+    let { otherParams } = edgeSpendInfo
+    if (otherParams == null || Object.keys(otherParams).length === 0) {
       otherParams = {
         action: {
           name: ACTIONS.transferTokens,
@@ -1342,7 +1343,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           }
         }
       }
-    } = edgeSpendInfo
+    }
 
     const { name, params } = asFioAction(otherParams.action)
 
