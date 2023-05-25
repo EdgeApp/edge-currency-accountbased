@@ -107,7 +107,8 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
 const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
+  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens],
+  'regaddress'
 ]
 const SYNC_NETWORK_INTERVAL = 10000
 
@@ -410,6 +411,22 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     // Transfer funds transaction
     if (PROCESS_TX_NAME_LIST.includes(trxName)) {
       nativeAmount = '0'
+
+      if (trxName === 'regaddress') {
+        // The action must have been authorized by the engine's actor in order
+        // for use to consider this a spend transaction.
+        // Otherwise, we should ignore regaddress actions which are received
+        // address, until we have some metadata explaining the receive.
+        if (
+          action.action_trace.act.authorization.some(
+            auth => auth.actor === this.actor
+          )
+        ) {
+          networkFee = String(action.action_trace.act.data.max_fee ?? 0)
+          nativeAmount = `-${networkFee}`
+        }
+      }
+
       if (
         trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens] &&
         data.amount != null
