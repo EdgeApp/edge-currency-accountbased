@@ -1299,11 +1299,13 @@ export class EthereumEngine extends CurrencyEngine<
       replacedTx.otherParams
     )
 
-    // Transaction checks
-    if (replacedTx == null || replacedTx.blockHeight > 0) {
+    // Transaction checks:
+    // The transaction must be found and not confirmed or dropped.
+    if (replacedTx == null || replacedTx.blockHeight !== 0) {
       return null
     }
-    // Other params checks
+    // Other params checks:
+    // The transaction must have a known nonce used and no data payload.
     if (
       replacedTxOtherParams == null ||
       replacedTxOtherParams.nonceUsed == null ||
