@@ -107,7 +107,8 @@ const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
 const PROCESS_TX_NAME_LIST = [
   ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens]
+  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens],
+  'regaddress'
 ]
 const SYNC_NETWORK_INTERVAL = 10000
 
@@ -410,6 +411,22 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     // Transfer funds transaction
     if (PROCESS_TX_NAME_LIST.includes(trxName)) {
       nativeAmount = '0'
+
+      if (trxName === 'regaddress') {
+        // The action must have been authorized by the engine's actor in order
+        // for use to consider this a spend transaction.
+        // Otherwise, we should ignore regaddress actions which are received
+        // address, until we have some metadata explaining the receive.
+        if (
+          action.action_trace.act.authorization.some(
+            auth => auth.actor === this.actor
+          )
+        ) {
+          networkFee = String(action.action_trace.act.data.max_fee ?? 0)
+          nativeAmount = `-${networkFee}`
+        }
+      }
+
       if (
         trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens] &&
         data.amount != null
@@ -483,7 +500,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         nativeAmount,
         isSend: nativeAmount.startsWith('-'),
         networkFee,
-        parentNetworkFee: '0',
         ourReceiveAddresses,
         signedTx: '',
         otherParams,
@@ -591,8 +607,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         historyNodeIndex,
         {
           account_name: this.actor,
-          pos: -1,
-          offset: -1
+          pos: -1
         },
         HISTORY_NODE_ACTIONS.getActions
       )
@@ -604,7 +619,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       asHistoryResponse(lastActionObject)
       if (lastActionObject.actions.length > 0) {
-        lastActionSeqNumber = lastActionObject.actions[0].account_action_seq
+        lastActionSeqNumber =
+          lastActionObject.actions[lastActionObject.actions.length - 1]
+            .account_action_seq
       } else {
         // if no transactions at all
         return true
@@ -613,7 +630,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       return await this.checkTransactions(++historyNodeIndex)
     }
 
-    let pos = lastActionSeqNumber
+    let pos = Math.max(0, lastActionSeqNumber - HISTORY_NODE_OFFSET)
     let finish = false
 
     while (!finish) {
@@ -627,7 +644,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           {
             account_name: this.actor,
             pos,
-            offset: -HISTORY_NODE_OFFSET + 1
+            offset: HISTORY_NODE_OFFSET - 1
           },
           HISTORY_NODE_ACTIONS.getActions
         )
@@ -701,20 +718,24 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     params: {
       account_name: string
       pos: number
-      offset: number
+      offset?: number
     },
     uri: string
   ): Promise<any> {
     if (this.networkInfo.historyNodeUrls[nodeIndex] == null)
       return { error: { noNodeForIndex: true } }
     const apiUrl = this.networkInfo.historyNodeUrls[nodeIndex]
-    const result = await this.fetchCors(`${apiUrl}history/${uri}`, {
+    const body = JSON.stringify(params)
+    const result = await fetch(`${apiUrl}history/${uri}`, {
       method: 'POST',
       headers: {
+        // Explicit content length is needed to make the FIO server return
+        // the correct action's length for some reason.
+        'Content-Length': (body.length * 2).toString(),
         Accept: 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(params)
+      body
     })
     return await result.json()
   }
