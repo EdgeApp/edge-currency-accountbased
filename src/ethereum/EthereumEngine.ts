@@ -857,7 +857,8 @@ export class EthereumEngine extends CurrencyEngine<
         gasPrice: gasPrice,
         gasUsed: '0',
         nonceUsed,
-        data
+        data,
+        isFromMakeSpend: true
       }
       value = decimalToHex(nativeAmount)
     } else {
@@ -895,7 +896,8 @@ export class EthereumEngine extends CurrencyEngine<
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
-        data
+        data,
+        isFromMakeSpend: true
       }
     }
 
@@ -1302,11 +1304,14 @@ export class EthereumEngine extends CurrencyEngine<
       return null
     }
     // Other params checks:
-    // The transaction must have a known nonce used and no data payload.
     if (
       replacedTxOtherParams == null ||
+      // The transaction must have a known nonce used.
       replacedTxOtherParams.nonceUsed == null ||
-      replacedTxOtherParams.data != null
+      // We can only accelerate transaction created locally from makeSpend
+      // due to the ambiguity of whether or not the transaction all the
+      // necessary to sign the transaction and broadcast it.
+      !replacedTxOtherParams.isFromMakeSpend
     ) {
       return null
     }

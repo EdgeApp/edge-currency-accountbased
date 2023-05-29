@@ -336,7 +336,8 @@ export class EthereumNetwork {
       to: [tx.to],
       gas: tx.gas,
       gasPrice: gasPrice ?? '',
-      gasUsed: tx.gasUsed
+      gasUsed: tx.gasUsed,
+      isFromMakeSpend: false
     }
 
     let blockHeight = parseInt(tx.blockNumber)
@@ -423,7 +424,8 @@ export class EthereumNetwork {
       to: [toAddress],
       gas: '0',
       gasPrice: '0',
-      gasUsed: '0'
+      gasUsed: '0',
+      isFromMakeSpend: false
     }
 
     let blockHeight = tokenTransfer.attributes.globalRank[0]
