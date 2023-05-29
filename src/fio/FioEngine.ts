@@ -500,7 +500,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         nativeAmount,
         isSend: nativeAmount.startsWith('-'),
         networkFee,
-        parentNetworkFee: '0',
         ourReceiveAddresses,
         signedTx: '',
         otherParams,
