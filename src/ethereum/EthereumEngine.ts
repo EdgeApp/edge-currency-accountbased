@@ -850,7 +850,7 @@ export class EthereumEngine extends CurrencyEngine<
     let contractAddress
     let value
     if (currencyCode === this.currencyInfo.currencyCode) {
-      const ethParams: EthereumTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         gas: gasLimit,
@@ -859,11 +859,9 @@ export class EthereumEngine extends CurrencyEngine<
         nonceUsed,
         data
       }
-      otherParams = ethParams
       value = decimalToHex(nativeAmount)
     } else {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (data) {
+      if (data != null) {
         contractAddress = publicAddress
       } else {
         const tokenInfo = this.getTokenInfo(currencyCode)
@@ -889,7 +887,7 @@ export class EthereumEngine extends CurrencyEngine<
         data = '0x' + Buffer.from(dataArray).toString('hex')
       }
 
-      const ethParams: EthereumTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
         gas: gasLimit,
@@ -899,7 +897,6 @@ export class EthereumEngine extends CurrencyEngine<
         nonceUsed,
         data
       }
-      otherParams = ethParams
     }
 
     // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
