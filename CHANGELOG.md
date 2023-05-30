@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.10 (2023-05-30)
+
+- Fixed: Added transaction processing for FIO name registration actions
+
 ## 1.2.9 (2023-05-23)
 
 - FIO: Handle empty otherParams objects as null
