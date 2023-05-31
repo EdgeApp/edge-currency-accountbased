@@ -3,10 +3,10 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { ZcashTools } from './ZcashTools'
-import { ZcashNetworkInfo } from './zcashTypes'
+import { PiratechainTools } from './PiratechainTools'
+import { PiratechainNetworkInfo } from './piratechainTypes'
 
-const networkInfo: ZcashNetworkInfo = {
+const networkInfo: PiratechainNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
     defaultHost: 'lightd1.pirate.black',
@@ -46,11 +46,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-export const piratechain = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({
+export const piratechain = makeOuterPlugin<
+  PiratechainNetworkInfo,
+  PiratechainTools
+>({
   currencyInfo,
   networkInfo,
 
   async getInnerPlugin() {
-    return await import('./ZcashTools')
+    return await import('./PiratechainTools')
   }
 })
