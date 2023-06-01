@@ -245,6 +245,7 @@ export interface EthereumTxOtherParams {
   nonceUsed?: string
   replacedTxid?: string
   data?: string | null
+  isFromMakeSpend: boolean
 }
 export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   from: asArray(asString),
@@ -255,7 +256,8 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   tokenRecipientAddress: asOptional(asString),
   nonceUsed: asOptional(asString),
   replacedTxid: asOptional(asString),
-  data: asOptional(asEither(asString, asNull))
+  data: asOptional(asEither(asString, asNull)),
+  isFromMakeSpend: asOptional(asBoolean, false)
 })
 
 export const asEthereumWalletOtherData = asObject({

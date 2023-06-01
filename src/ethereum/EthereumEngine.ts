@@ -850,20 +850,19 @@ export class EthereumEngine extends CurrencyEngine<
     let contractAddress
     let value
     if (currencyCode === this.currencyInfo.currencyCode) {
-      const ethParams: EthereumTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         gas: gasLimit,
         gasPrice: gasPrice,
         gasUsed: '0',
         nonceUsed,
-        data
+        data,
+        isFromMakeSpend: true
       }
-      otherParams = ethParams
       value = decimalToHex(nativeAmount)
     } else {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (data) {
+      if (data != null) {
         contractAddress = publicAddress
       } else {
         const tokenInfo = this.getTokenInfo(currencyCode)
@@ -889,7 +888,7 @@ export class EthereumEngine extends CurrencyEngine<
         data = '0x' + Buffer.from(dataArray).toString('hex')
       }
 
-      const ethParams: EthereumTxOtherParams = {
+      otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
         gas: gasLimit,
@@ -897,9 +896,9 @@ export class EthereumEngine extends CurrencyEngine<
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
-        data
+        data,
+        isFromMakeSpend: true
       }
-      otherParams = ethParams
     }
 
     // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
@@ -1299,15 +1298,20 @@ export class EthereumEngine extends CurrencyEngine<
       replacedTx.otherParams
     )
 
-    // Transaction checks
-    if (replacedTx == null || replacedTx.blockHeight > 0) {
+    // Transaction checks:
+    // The transaction must be found and not confirmed or dropped.
+    if (replacedTx == null || replacedTx.blockHeight !== 0) {
       return null
     }
-    // Other params checks
+    // Other params checks:
     if (
       replacedTxOtherParams == null ||
+      // The transaction must have a known nonce used.
       replacedTxOtherParams.nonceUsed == null ||
-      replacedTxOtherParams.data != null
+      // We can only accelerate transaction created locally from makeSpend
+      // due to the ambiguity of whether or not the transaction all the
+      // necessary to sign the transaction and broadcast it.
+      !replacedTxOtherParams.isFromMakeSpend
     ) {
       return null
     }
