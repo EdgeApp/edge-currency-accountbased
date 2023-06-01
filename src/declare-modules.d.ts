@@ -32,4 +32,5 @@ declare module 'tronweb' {
       txPbToTxID: (transaction: any) => string
     }
   }
+  export const fromUtf8: (s: string) => string
 }
