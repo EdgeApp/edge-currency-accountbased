@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 1.2.11 (2023-06-01)
+
+- EVM: Re-enable token transaction acceleration
+- FIO: Add `getMaxSpendable`
+- TRX: Fix memo handling
+
 ## 1.2.10 (2023-05-30)
 
 - Fixed: Added transaction processing for FIO name registration actions
