@@ -7,7 +7,7 @@ import {
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
 import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
-import { add, div, gt, max, mul, sub } from 'biggystring'
+import { add, div, gt, lt, max, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -1332,6 +1332,31 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
+  }
+
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const balance = this.getBalance({
+      currencyCode: spendInfo.currencyCode
+    })
+
+    const stakingStatus = await this.getStakingStatus()
+
+    let lockedAmount = '0'
+    for (const status of stakingStatus.stakedAmounts) {
+      if (new Date(status.unlockDate ?? 0) > new Date()) {
+        lockedAmount = add(lockedAmount, status.nativeAmount)
+      }
+    }
+
+    spendInfo.spendTargets[0].nativeAmount = '1'
+    const edgeTx = await this.makeSpend(spendInfo)
+    const spendableAmount = sub(sub(balance, edgeTx.networkFee), lockedAmount)
+
+    if (lt(spendableAmount, '0')) {
+      throw new InsufficientFundsError({ networkFee: edgeTx.networkFee })
+    }
+
+    return spendableAmount
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
