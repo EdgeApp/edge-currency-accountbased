@@ -1018,6 +1018,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       .slice(4, 8)
     const refBlockHash = this.recentBlock.hash.slice(16, 32)
     const expiration = this.recentBlock.timestamp + 60 * 5 * 1000 // five minutes
+    const data =
+      note == null ? undefined : base16.stringify(Buffer.from(note, 'ascii'))
 
     const transaction = txJsonToPb({
       raw_data: {
@@ -1026,7 +1028,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         ref_block_hash: refBlockHash,
         expiration,
         timestamp: this.recentBlock.timestamp,
-        data: note,
+        data,
         fee_limit: feeLimit
       }
     })
