@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.2.12 (2023-06-02)
+
+- FIO: Change `getMaxSpendable` to use available balance
+- Update ZEC/ARRR checkpoints
+
 ## 1.2.11 (2023-06-01)
 
 - EVM: Re-enable token transaction acceleration
