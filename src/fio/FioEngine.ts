@@ -1339,14 +1339,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       currencyCode: spendInfo.currencyCode
     })
 
-    const stakingStatus = await this.getStakingStatus()
-
-    let lockedAmount = '0'
-    for (const status of stakingStatus.stakedAmounts) {
-      if (new Date(status.unlockDate ?? 0) > new Date()) {
-        lockedAmount = add(lockedAmount, status.nativeAmount)
-      }
-    }
+    const lockedAmount =
+      this.walletLocalData.totalBalances[
+        this.networkInfo.balanceCurrencyCodes.locked
+      ] ?? '0'
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
