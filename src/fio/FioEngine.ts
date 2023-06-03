@@ -1439,10 +1439,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           this.walletLocalData.totalBalances[
             this.networkInfo.balanceCurrencyCodes.staked
           ] ?? '0'
-        if (
-          gt(quantity, stakedBalance) ||
-          gt(add(quantity, `${fee}`), availableBalance)
-        ) {
+        if (gt(quantity, stakedBalance) || gt(`${fee}`, availableBalance)) {
           throw new InsufficientFundsError()
         }
 
