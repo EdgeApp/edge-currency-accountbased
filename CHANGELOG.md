@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.2.13 (2023-06-02)
+
+- FIO: Fix unstake method insufficient funds checking
+
 ## 1.2.12 (2023-06-02)
 
 - FIO: Change `getMaxSpendable` to use available balance
