@@ -695,7 +695,6 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo,
       this.networkInfo
     )
-    const gasPrice = miningFees.gasPrice
     let gasLimit: string = miningFees.gasLimit
     const defaultGasLimit = gasLimit
 
@@ -723,7 +722,7 @@ export class EthereumEngine extends CurrencyEngine<
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
         gas: gasLimit,
-        gasPrice: gasPrice,
+        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         nonceUsed,
         data,
@@ -761,7 +760,7 @@ export class EthereumEngine extends CurrencyEngine<
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
         gas: gasLimit,
-        gasPrice: gasPrice,
+        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
@@ -888,7 +887,7 @@ export class EthereumEngine extends CurrencyEngine<
     const nativeBalance =
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
-    let nativeNetworkFee = mul(gasPrice, gasLimit)
+    let nativeNetworkFee = mul(miningFees.gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee = null
     let l1Fee = '0'
@@ -949,7 +948,7 @@ export class EthereumEngine extends CurrencyEngine<
       nativeAmount, // nativeAmount
       isSend: nativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
+      feeRateUsed: getFeeRateUsed(miningFees.gasPrice, gasLimit),
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams, // otherParams
