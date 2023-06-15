@@ -119,6 +119,17 @@ export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
 
 export type EthereumFees = ReturnType<typeof asEthereumFees>
 
+export type EthereumEstimateGasParams = [
+  {
+    to: string
+    from: string
+    gas: string
+    value: string | undefined
+    data: string | undefined
+  },
+  string
+]
+
 export interface EthereumMiningFees {
   gasPrice: string
   gasLimit: string

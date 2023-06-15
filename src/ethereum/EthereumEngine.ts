@@ -60,9 +60,11 @@ import {
   CalcL1RollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
+  EthereumEstimateGasParams,
   EthereumFee,
   EthereumFees,
   EthereumInitOptions,
+  EthereumMiningFees,
   EthereumNetworkInfo,
   EthereumOtherMethods,
   EthereumPrivateKeys,
@@ -382,6 +384,112 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Returns the gasLimit from eth_estimateGas RPC call.
+   */
+  async estimateGasLimit(context: {
+    contractAddress: string | undefined
+    estimateGasParams: EthereumEstimateGasParams
+    miningFees: EthereumMiningFees
+    publicAddress: string
+  }): Promise<string> {
+    const { contractAddress, estimateGasParams, miningFees, publicAddress } =
+      context
+    const hasUserMemo = estimateGasParams[0].data != null
+
+    let gasLimitReturn = miningFees.gasLimit
+    let cacheGasLimit = false
+    try {
+      // Determine if recipient is a normal or contract address
+      const getCodeResult = await this.ethNetwork.multicastServers(
+        'eth_getCode',
+        [estimateGasParams[0].to, 'latest']
+      )
+      // result === '0x' means we are sending to a plain address (no contract)
+      const sendingToContract = getCodeResult.result.result !== '0x'
+
+      const tryEstimatingGasLimit = async (
+        attempt: number = 0
+      ): Promise<void> => {
+        const defaultGasLimit =
+          this.networkInfo.defaultNetworkFees.default.gasLimit
+        try {
+          if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
+            // Easy case of sending plain mainnet token with no memo/data
+            gasLimitReturn = defaultGasLimit.regularTransaction
+          } else {
+            const estimateGasResult = await this.ethNetwork.multicastServers(
+              'eth_estimateGas',
+              estimateGasParams
+            )
+            gasLimitReturn = add(
+              parseInt(estimateGasResult.result.result, 16).toString(),
+              '0'
+            )
+            if (sendingToContract) {
+              // Overestimate (double) gas limit to reduce chance of failure when sending
+              // to a contract. This includes sending any ERC20 token, sending ETH
+              // to a contract, sending tokens to a contract, or any contract
+              // execution (ie approvals, unstaking, etc)
+              gasLimitReturn = mul(gasLimitReturn, '2')
+            }
+          }
+          cacheGasLimit = true
+        } catch (e: any) {
+          // If no defaults, then we must estimate by RPC, so try again
+          if (defaultGasLimit == null) {
+            if (attempt > 5)
+              throw new Error(
+                'Unable to estimate gas limit after 5 tries. Please try again later'
+              )
+            return await tryEstimatingGasLimit(attempt + 1)
+          }
+
+          // If makeSpend received an explicit memo/data field from caller,
+          // assume this is a smart contract call that needs accurate gasLimit
+          // estimation and fail if we weren't able to get estimates from an
+          // RPC node.
+          if (hasUserMemo) {
+            throw new Error(
+              'Unable to estimate gas limit. Please try again later'
+            )
+          }
+          // If we know the address is a contract but estimateGas fails use the default token gas limit
+          if (defaultGasLimit.tokenTransaction != null)
+            gasLimitReturn = defaultGasLimit.tokenTransaction
+        }
+      }
+
+      await tryEstimatingGasLimit()
+
+      // Sanity check calculated value
+      if (
+        lt(
+          gasLimitReturn,
+          this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
+        )
+      ) {
+        // Revert gasLimit back to the value from calcMiningFee
+        gasLimitReturn = miningFees.gasLimit
+        this.lastEstimatedGasLimit.gasLimit = ''
+        throw new Error('Calculated gasLimit less than minimum')
+      }
+
+      // Save locally to compare for future makeSpend() calls
+      if (cacheGasLimit) {
+        this.lastEstimatedGasLimit = {
+          publicAddress,
+          contractAddress,
+          gasLimit: gasLimitReturn
+        }
+      }
+    } catch (e: any) {
+      this.error(`makeSpend Error determining gas limit `, e)
+    }
+
+    return gasLimitReturn
+  }
+
   setOtherData(raw: any): void {
     this.otherData = asEthereumWalletOtherData(raw)
   }
@@ -686,8 +794,6 @@ export class EthereumEngine extends CurrencyEngine<
 
     if (data === '') data = undefined
 
-    const hasUserMemo = data != null
-
     let otherParams: EthereumTxOtherParams
 
     const miningFees = calcMiningFees(
@@ -776,105 +882,21 @@ export class EthereumEngine extends CurrencyEngine<
         this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
         this.lastEstimatedGasLimit.gasLimit === '')
     ) {
-      const estimateGasParams = [
-        {
-          to: contractAddress ?? publicAddress,
-          from: this.walletLocalData.publicKey,
-          gas: '0xffffff',
-          value,
-          data
-        },
-        'latest'
-      ]
-
-      let cacheGasLimit = false
-      try {
-        // Determine if recipient is a normal or contract address
-        const getCodeResult = await this.ethNetwork.multicastServers(
-          'eth_getCode',
-          [contractAddress ?? publicAddress, 'latest']
-        )
-        // result === '0x' means we are sending to a plain address (no contract)
-        const sendingToContract = getCodeResult.result.result !== '0x'
-
-        const tryEstimatingGasLimit = async (
-          attempt: number = 0
-        ): Promise<void> => {
-          const defaultGasLimit =
-            this.networkInfo.defaultNetworkFees.default.gasLimit
-          try {
-            if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
-              // Easy case of sending plain mainnet token with no memo/data
-              gasLimit = defaultGasLimit.regularTransaction
-            } else {
-              const estimateGasResult = await this.ethNetwork.multicastServers(
-                'eth_estimateGas',
-                estimateGasParams
-              )
-              gasLimit = add(
-                parseInt(estimateGasResult.result.result, 16).toString(),
-                '0'
-              )
-              if (sendingToContract) {
-                // Overestimate (double) gas limit to reduce chance of failure when sending
-                // to a contract. This includes sending any ERC20 token, sending ETH
-                // to a contract, sending tokens to a contract, or any contract
-                // execution (ie approvals, unstaking, etc)
-                gasLimit = mul(gasLimit, '2')
-              }
-            }
-            cacheGasLimit = true
-          } catch (e: any) {
-            // If no defaults, then we must estimate by RPC, so try again
-            if (defaultGasLimit == null) {
-              if (attempt > 5)
-                throw new Error(
-                  'Unable to estimate gas limit after 5 tries. Please try again later'
-                )
-              return await tryEstimatingGasLimit(attempt + 1)
-            }
-
-            // If makeSpend received an explicit memo/data field from caller,
-            // assume this is a smart contract call that needs accurate gasLimit
-            // estimation and fail if we weren't able to get estimates from an
-            // RPC node.
-            if (hasUserMemo) {
-              throw new Error(
-                'Unable to estimate gas limit. Please try again later'
-              )
-            }
-            // If we know the address is a contract but estimateGas fails use the default token gas limit
-            if (defaultGasLimit.tokenTransaction != null)
-              gasLimit = defaultGasLimit.tokenTransaction
-          }
-        }
-
-        await tryEstimatingGasLimit()
-
-        // Sanity check calculated value
-        if (
-          lt(
-            gasLimit,
-            this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
-          )
-        ) {
-          // Revert gasLimit back to the value from calcMiningFee
-          gasLimit = miningFees.gasLimit
-          this.lastEstimatedGasLimit.gasLimit = ''
-          throw new Error('Calculated gasLimit less than minimum')
-        }
-
-        // Save locally to compare for future makeSpend() calls
-        if (cacheGasLimit) {
-          this.lastEstimatedGasLimit = {
-            publicAddress,
-            contractAddress,
-            gasLimit
-          }
-        }
-      } catch (e: any) {
-        this.error(`makeSpend Error determining gas limit `, e)
-      }
+      gasLimit = await this.estimateGasLimit({
+        contractAddress,
+        estimateGasParams: [
+          {
+            to: contractAddress ?? publicAddress,
+            from: this.walletLocalData.publicKey,
+            gas: '0xffffff',
+            value,
+            data
+          },
+          'latest'
+        ],
+        miningFees,
+        publicAddress
+      })
     } else if (miningFees.useEstimatedGasLimit) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
       gasLimit = this.lastEstimatedGasLimit.gasLimit
