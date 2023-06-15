@@ -798,7 +798,9 @@ export class EthereumEngine extends CurrencyEngine<
         // result === '0x' means we are sending to a plain address (no contract)
         const sendingToContract = getCodeResult.result.result !== '0x'
 
-        const tryEstimatingGas = async (attempt: number = 0): Promise<void> => {
+        const tryEstimatingGasLimit = async (
+          attempt: number = 0
+        ): Promise<void> => {
           const defaultGasLimit =
             this.networkInfo.defaultNetworkFees.default.gasLimit
           try {
@@ -830,7 +832,7 @@ export class EthereumEngine extends CurrencyEngine<
                 throw new Error(
                   'Unable to estimate gas limit after 5 tries. Please try again later'
                 )
-              return await tryEstimatingGas(attempt + 1)
+              return await tryEstimatingGasLimit(attempt + 1)
             }
 
             // If makeSpend received an explicit memo/data field from caller,
@@ -848,7 +850,7 @@ export class EthereumEngine extends CurrencyEngine<
           }
         }
 
-        await tryEstimatingGas()
+        await tryEstimatingGasLimit()
 
         // Sanity check calculated value
         if (
