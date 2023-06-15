@@ -696,7 +696,6 @@ export class EthereumEngine extends CurrencyEngine<
       this.networkInfo
     )
     let gasLimit: string = miningFees.gasLimit
-    const defaultGasLimit = gasLimit
 
     //
     // Nonce:
@@ -862,7 +861,8 @@ export class EthereumEngine extends CurrencyEngine<
             this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
           )
         ) {
-          gasLimit = defaultGasLimit
+          // Revert gasLimit back to the value from calcMiningFee
+          gasLimit = miningFees.gasLimit
           this.lastEstimatedGasLimit.gasLimit = ''
           throw new Error('Calculated gasLimit less than minimum')
         }
