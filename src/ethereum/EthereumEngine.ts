@@ -799,16 +799,12 @@ export class EthereumEngine extends CurrencyEngine<
         const sendingToContract = getCodeResult.result.result !== '0x'
 
         const tryEstimatingGas = async (attempt: number = 0): Promise<void> => {
-          const defaultGasLimits =
+          const defaultGasLimit =
             this.networkInfo.defaultNetworkFees.default.gasLimit
           try {
-            if (
-              defaultGasLimits != null &&
-              !sendingToContract &&
-              !hasUserMemo
-            ) {
+            if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
               // Easy case of sending plain mainnet token with no memo/data
-              gasLimit = defaultGasLimits.regularTransaction
+              gasLimit = defaultGasLimit.regularTransaction
             } else {
               const estimateGasResult = await this.ethNetwork.multicastServers(
                 'eth_estimateGas',
@@ -829,7 +825,7 @@ export class EthereumEngine extends CurrencyEngine<
             cacheGasLimit = true
           } catch (e: any) {
             // If no defaults, then we must estimate by RPC, so try again
-            if (defaultGasLimits == null) {
+            if (defaultGasLimit == null) {
               if (attempt > 5)
                 throw new Error(
                   'Unable to estimate gas limit after 5 tries. Please try again later'
@@ -847,8 +843,8 @@ export class EthereumEngine extends CurrencyEngine<
               )
             }
             // If we know the address is a contract but estimateGas fails use the default token gas limit
-            if (defaultGasLimits.tokenTransaction != null)
-              gasLimit = defaultGasLimits.tokenTransaction
+            if (defaultGasLimit.tokenTransaction != null)
+              gasLimit = defaultGasLimit.tokenTransaction
           }
         }
 
