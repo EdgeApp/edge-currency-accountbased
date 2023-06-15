@@ -19,7 +19,7 @@ export const ES_FEE_CUSTOM = 'custom'
 
 const WEI_MULTIPLIER = '1000000000'
 
-export function calcMiningFee(
+export function calcMiningFees(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
   currencyInfo: EdgeCurrencyInfo,

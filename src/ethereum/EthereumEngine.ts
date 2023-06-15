@@ -76,7 +76,7 @@ import {
   SafeEthWalletInfo,
   TxRpcParams
 } from './ethereumTypes'
-import { calcL1RollupFees, calcMiningFee } from './fees/ethMiningFees'
+import { calcL1RollupFees, calcMiningFees } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
   FeeProviders,
@@ -614,7 +614,7 @@ export class EthereumEngine extends CurrencyEngine<
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
-        const { gasPrice, gasLimit } = calcMiningFee(
+        const { gasPrice, gasLimit } = calcMiningFees(
           spendInfo,
           this.networkFees,
           this.currencyInfo,
@@ -689,7 +689,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     let otherParams: EthereumTxOtherParams
 
-    const miningFees = calcMiningFee(
+    const miningFees = calcMiningFees(
       edgeSpendInfo,
       this.networkFees,
       this.currencyInfo,
