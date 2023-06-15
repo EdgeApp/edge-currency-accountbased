@@ -678,7 +678,8 @@ export class EthereumEngine extends CurrencyEngine<
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    let data = spendTarget.memo ?? spendTarget.otherParams?.data
+    let data: string | undefined =
+      spendTarget.memo ?? spendTarget.otherParams?.data
     if (data != null && data.length > 0 && !isHex(data)) {
       throw new Error(`Memo/data field must be of type 'hex'`)
     }
@@ -714,8 +715,8 @@ export class EthereumEngine extends CurrencyEngine<
       nonceUsed = add(baseNonce, pendingTxs.length.toString())
     }
 
-    let contractAddress
-    let value
+    let contractAddress: string | undefined
+    let value: string | undefined
     if (currencyCode === this.currencyInfo.currencyCode) {
       otherParams = {
         from: [this.walletLocalData.publicKey],
