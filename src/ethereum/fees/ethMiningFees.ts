@@ -6,9 +6,9 @@ import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
   CalcL1RollupFeeParams,
-  EthereumCalcedFees,
   EthereumFee,
   EthereumFees,
+  EthereumMiningFees,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 
@@ -24,7 +24,7 @@ export function calcMiningFee(
   networkFees: EthereumFees,
   currencyInfo: EdgeCurrencyInfo,
   networkInfo: EthereumNetworkInfo
-): EthereumCalcedFees {
+): EthereumMiningFees {
   let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
   if (
@@ -205,7 +205,7 @@ export function calcMiningFee(
       default:
         throw new Error(`Invalid networkFeeOption`)
     }
-    const out: EthereumCalcedFees = {
+    const out: EthereumMiningFees = {
       gasLimit: customGasLimit ?? gasLimit,
       gasPrice: customGasPrice ?? gasPrice,
       useEstimatedGasLimit: useGasLimitDefaults
