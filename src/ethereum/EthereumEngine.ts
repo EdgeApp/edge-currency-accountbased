@@ -408,7 +408,6 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     let gasLimitReturn = miningFees.gasLimit
-    let cacheGasLimit = false
     try {
       // Determine if recipient is a normal or contract address
       const getCodeResult = await this.ethNetwork.multicastServers(
@@ -444,7 +443,12 @@ export class EthereumEngine extends CurrencyEngine<
               gasLimitReturn = mul(gasLimitReturn, '2')
             }
           }
-          cacheGasLimit = true
+          // Save locally to compare for future estimate calls
+          this.lastEstimatedGasLimit = {
+            publicAddress,
+            contractAddress,
+            gasLimit: gasLimitReturn
+          }
         } catch (e: any) {
           // If no defaults, then we must estimate by RPC, so try again
           if (defaultGasLimit == null) {
@@ -483,15 +487,6 @@ export class EthereumEngine extends CurrencyEngine<
         gasLimitReturn = miningFees.gasLimit
         this.lastEstimatedGasLimit.gasLimit = ''
         throw new Error('Calculated gasLimit less than minimum')
-      }
-
-      // Save locally to compare for future makeSpend() calls
-      if (cacheGasLimit) {
-        this.lastEstimatedGasLimit = {
-          publicAddress,
-          contractAddress,
-          gasLimit: gasLimitReturn
-        }
       }
     } catch (e: any) {
       this.error(`makeSpend Error determining gas limit `, e)
