@@ -807,7 +807,6 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo,
       this.networkInfo
     )
-    let gasLimit: string = miningFees.gasLimit
 
     //
     // Nonce:
@@ -832,7 +831,7 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
-        gas: gasLimit,
+        gas: miningFees.gasLimit,
         gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         nonceUsed,
@@ -870,7 +869,7 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
-        gas: gasLimit,
+        gas: miningFees.gasLimit,
         gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
@@ -881,7 +880,7 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     if (miningFees.useEstimatedGasLimit) {
-      gasLimit = await this.estimateGasLimit({
+      otherParams.gas = await this.estimateGasLimit({
         contractAddress,
         estimateGasParams: [
           {
@@ -897,12 +896,11 @@ export class EthereumEngine extends CurrencyEngine<
         publicAddress
       })
     }
-    otherParams.gas = gasLimit
 
     const nativeBalance =
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
-    let nativeNetworkFee = mul(miningFees.gasPrice, gasLimit)
+    let nativeNetworkFee = mul(miningFees.gasPrice, otherParams.gas)
     let totalTxAmount = '0'
     let parentNetworkFee = null
     let l1Fee = '0'
@@ -963,7 +961,7 @@ export class EthereumEngine extends CurrencyEngine<
       nativeAmount, // nativeAmount
       isSend: nativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed: getFeeRateUsed(miningFees.gasPrice, gasLimit),
+      feeRateUsed: getFeeRateUsed(miningFees.gasPrice, otherParams.gas),
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams, // otherParams
