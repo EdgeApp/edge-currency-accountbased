@@ -397,6 +397,16 @@ export class EthereumEngine extends CurrencyEngine<
       context
     const hasUserMemo = estimateGasParams[0].data != null
 
+    // If destination address is the same from the previous
+    // estimate call, use the previously calculated gasLimit.
+    if (
+      this.lastEstimatedGasLimit.gasLimit !== '' &&
+      this.lastEstimatedGasLimit.publicAddress === publicAddress &&
+      this.lastEstimatedGasLimit.contractAddress === contractAddress
+    ) {
+      return this.lastEstimatedGasLimit.gasLimit
+    }
+
     let gasLimitReturn = miningFees.gasLimit
     let cacheGasLimit = false
     try {
@@ -875,13 +885,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
 
-    // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
-    if (
-      miningFees.useEstimatedGasLimit &&
-      (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
-        this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
-        this.lastEstimatedGasLimit.gasLimit === '')
-    ) {
+    if (miningFees.useEstimatedGasLimit) {
       gasLimit = await this.estimateGasLimit({
         contractAddress,
         estimateGasParams: [
@@ -897,9 +901,6 @@ export class EthereumEngine extends CurrencyEngine<
         miningFees,
         publicAddress
       })
-    } else if (miningFees.useEstimatedGasLimit) {
-      // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
-      gasLimit = this.lastEstimatedGasLimit.gasLimit
     }
     otherParams.gas = gasLimit
 
