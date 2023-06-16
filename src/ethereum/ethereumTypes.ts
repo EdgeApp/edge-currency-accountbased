@@ -241,6 +241,12 @@ export const asEvmScanGasResponse = asObject({
 
 export type EvmScanGasResponse = ReturnType<typeof asEvmScanGasResponse>
 
+export interface EthereumTxParameterInformation {
+  contractAddress?: string
+  data?: string
+  value?: string
+}
+
 export interface EthereumTxOtherParams {
   from: string[]
   to: string[]

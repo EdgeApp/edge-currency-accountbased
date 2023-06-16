@@ -69,6 +69,7 @@ import {
   EthereumOtherMethods,
   EthereumPrivateKeys,
   EthereumTxOtherParams,
+  EthereumTxParameterInformation,
   EthereumUtils,
   EthereumWalletOtherData,
   EvmWcRpcPayload,
@@ -767,6 +768,66 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
+  getTxParameterInformation(
+    edgeSpendInfo: EdgeSpendInfo,
+    currencyCode: string,
+    currencyInfo: EdgeCurrencyInfo
+  ): EthereumTxParameterInformation {
+    const { spendTargets } = edgeSpendInfo
+    const spendTarget = spendTargets[0]
+    const { publicAddress, nativeAmount } = spendTarget
+
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
+    // Get data:
+    let data: string | undefined =
+      spendTarget.memo ?? spendTarget.otherParams?.data
+    if (data != null && data.length > 0 && !isHex(data)) {
+      throw new Error(`Memo/data field must be of type 'hex'`)
+    }
+    if (data === '') data = undefined
+
+    // Get contractAddress and/or value:
+    let value: string | undefined
+    if (currencyCode === currencyInfo.currencyCode) {
+      value = decimalToHex(nativeAmount)
+      return {
+        value
+      }
+    } else {
+      let contractAddress: string | undefined
+      if (data != null) {
+        contractAddress = publicAddress
+      } else {
+        const tokenInfo = this.getTokenInfo(currencyCode)
+        if (
+          tokenInfo == null ||
+          typeof tokenInfo.contractAddress !== 'string'
+        ) {
+          throw new Error(
+            'Error: Token not supported or invalid contract address'
+          )
+        }
+
+        contractAddress = tokenInfo.contractAddress
+
+        // Derive the data from a ERC-20 token transfer smart-contract call:
+        const dataArray = abi.simpleEncode(
+          'transfer(address,uint256):(uint256)',
+          publicAddress,
+          decimalToHex(nativeAmount)
+        )
+        value = '0x0'
+        data = '0x' + Buffer.from(dataArray).toString('hex')
+      }
+      return {
+        contractAddress,
+        data,
+        value
+      }
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
     const { edgeSpendInfo, currencyCode, skipChecks } =
@@ -790,14 +851,6 @@ export class EthereumEngine extends CurrencyEngine<
     if (!EthereumUtil.isValidAddress(publicAddress)) {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
-
-    let data: string | undefined =
-      spendTarget.memo ?? spendTarget.otherParams?.data
-    if (data != null && data.length > 0 && !isHex(data)) {
-      throw new Error(`Memo/data field must be of type 'hex'`)
-    }
-
-    if (data === '') data = undefined
 
     let otherParams: EthereumTxOtherParams
 
@@ -825,9 +878,14 @@ export class EthereumEngine extends CurrencyEngine<
       nonceUsed = add(baseNonce, pendingTxs.length.toString())
     }
 
-    let contractAddress: string | undefined
-    let value: string | undefined
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    const { contractAddress, data, value } = this.getTxParameterInformation(
+      edgeSpendInfo,
+      currencyCode,
+      this.currencyInfo
+    )
+
+    // Set otherParams
+    if (contractAddress == null) {
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
@@ -838,34 +896,7 @@ export class EthereumEngine extends CurrencyEngine<
         data,
         isFromMakeSpend: true
       }
-      value = decimalToHex(nativeAmount)
     } else {
-      if (data != null) {
-        contractAddress = publicAddress
-      } else {
-        const tokenInfo = this.getTokenInfo(currencyCode)
-        if (
-          tokenInfo == null ||
-          typeof tokenInfo.contractAddress !== 'string'
-        ) {
-          throw new Error(
-            'Error: Token not supported or invalid contract address'
-          )
-        }
-
-        contractAddress = tokenInfo.contractAddress
-        value = decimalToHex(nativeAmount)
-
-        const dataArray = abi.simpleEncode(
-          'transfer(address,uint256):(uint256)',
-          publicAddress,
-          value
-        )
-
-        value = '0x0'
-        data = '0x' + Buffer.from(dataArray).toString('hex')
-      }
-
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
