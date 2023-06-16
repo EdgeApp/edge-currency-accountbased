@@ -777,8 +777,7 @@ export class EthereumEngine extends CurrencyEngine<
     ) {
       const estimateGasParams = [
         {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          to: contractAddress || publicAddress,
+          to: contractAddress ?? publicAddress,
           from: this.walletLocalData.publicKey,
           gas: '0xffffff',
           value,
@@ -792,8 +791,7 @@ export class EthereumEngine extends CurrencyEngine<
         // Determine if recipient is a normal or contract address
         const getCodeResult = await this.ethNetwork.multicastServers(
           'eth_getCode',
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          [contractAddress || publicAddress, 'latest']
+          [contractAddress ?? publicAddress, 'latest']
         )
         // result === '0x' means we are sending to a plain address (no contract)
         const sendingToContract = getCodeResult.result.result !== '0x'
