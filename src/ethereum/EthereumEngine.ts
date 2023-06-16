@@ -705,21 +705,29 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
+
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
 
-    const publicAddress = spendInfo.spendTargets[0].publicAddress
+    const spendTarget = spendInfo.spendTargets[0]
+    const publicAddress = spendTarget.publicAddress
     if (publicAddress == null) {
       throw new Error('makeSpend Missing publicAddress')
     }
+    const { contractAddress, data, value } = this.getTxParameterInformation(
+      edgeSpendInfo,
+      currencyCode,
+      this.currencyInfo
+    )
 
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
       // For mainnet currency, the fee can scale with the amount sent so we should find the
       // appropriate amount by recursively calling calcMiningFee. This is adapted from the
       // same function in edge-core-js.
 
-      const getMax = (min: string, max: string): string => {
+      const getMax = async (min: string, max: string): Promise<string> => {
         const diff = sub(max, min)
         if (lte(diff, '1')) {
           return min
@@ -728,20 +736,37 @@ export class EthereumEngine extends CurrencyEngine<
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
-        const { gasPrice, gasLimit } = calcMiningFees(
+        const miningFees = calcMiningFees(
           spendInfo,
           this.networkFees,
           this.currencyInfo,
           this.networkInfo
         )
-        const fee = mul(gasPrice, gasLimit)
+        if (miningFees.useEstimatedGasLimit) {
+          miningFees.gasLimit = await this.estimateGasLimit({
+            contractAddress,
+            estimateGasParams: [
+              {
+                to: contractAddress ?? publicAddress,
+                from: this.walletLocalData.publicKey,
+                gas: '0xffffff',
+                value,
+                data
+              },
+              'latest'
+            ],
+            miningFees,
+            publicAddress
+          })
+        }
+        const fee = mul(miningFees.gasPrice, miningFees.gasLimit)
         let l1Fee = '0'
 
         if (this.l1RollupParams != null) {
           const txData: CalcL1RollupFeeParams = {
             nonce: this.otherData.unconfirmedNextNonce,
             gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
-            gasLimit,
+            gasLimit: miningFees.gasLimit,
             to: publicAddress,
             value: decimalToHex(mid),
             chainParams: this.networkInfo.chainParams,
@@ -752,13 +777,13 @@ export class EthereumEngine extends CurrencyEngine<
         }
         const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
-          return getMax(min, mid)
+          return await getMax(min, mid)
         } else {
-          return getMax(mid, max)
+          return await getMax(mid, max)
         }
       }
 
-      return getMax('0', add(balance, '1'))
+      return await getMax('0', add(balance, '1'))
     } else {
       spendInfo.spendTargets[0].nativeAmount = balance
       await this.makeSpend(spendInfo)
