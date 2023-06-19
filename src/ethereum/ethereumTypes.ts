@@ -122,7 +122,7 @@ export type EthereumFees = ReturnType<typeof asEthereumFees>
 export interface EthereumCalcedFees {
   gasPrice: string
   gasLimit: string
-  useDefaults: boolean
+  useEstimatedGasLimit: boolean
 }
 
 export interface L1RollupParams {

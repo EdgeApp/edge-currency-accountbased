@@ -697,7 +697,6 @@ export class EthereumEngine extends CurrencyEngine<
     )
     const gasPrice = miningFees.gasPrice
     let gasLimit: string = miningFees.gasLimit
-    const useDefaults: boolean = miningFees.useDefaults
     const defaultGasLimit = gasLimit
 
     //
@@ -773,7 +772,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
     if (
-      useDefaults &&
+      miningFees.useEstimatedGasLimit &&
       (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
         this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
         this.lastEstimatedGasLimit.gasLimit === '')
@@ -880,7 +879,7 @@ export class EthereumEngine extends CurrencyEngine<
       } catch (e: any) {
         this.error(`makeSpend Error determining gas limit `, e)
       }
-    } else if (useDefaults) {
+    } else if (miningFees.useEstimatedGasLimit) {
       // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
       gasLimit = this.lastEstimatedGasLimit.gasLimit
     }

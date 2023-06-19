@@ -25,7 +25,7 @@ export function calcMiningFee(
   currencyInfo: EdgeCurrencyInfo,
   networkInfo: EthereumNetworkInfo
 ): EthereumCalcedFees {
-  let useDefaults = true
+  let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
   if (
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -87,9 +87,8 @@ export function calcMiningFee(
         }
         customGasLimit = gasLimit
 
-        // useDefaults should be named useGasLimitDefaults since it only affects the gasLimit
         // Set to false since we have a custom gasLimit
-        useDefaults = false
+        useGasLimitDefaults = false
       }
     }
 
@@ -97,7 +96,7 @@ export function calcMiningFee(
       return {
         gasLimit: customGasLimit,
         gasPrice: customGasPrice,
-        useDefaults: false
+        useEstimatedGasLimit: false
       }
     }
 
@@ -110,7 +109,7 @@ export function calcMiningFee(
 
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]
-      useDefaults = false
+      useGasLimitDefaults = false
       if (typeof networkFeeForGasLimit.gasPrice !== 'undefined') {
         networkFeeForGasPrice = networkFeeForGasLimit
       }
@@ -209,7 +208,7 @@ export function calcMiningFee(
     const out: EthereumCalcedFees = {
       gasLimit: customGasLimit ?? gasLimit,
       gasPrice: customGasPrice ?? gasPrice,
-      useDefaults
+      useEstimatedGasLimit: useGasLimitDefaults
     }
     return out
   } else {
