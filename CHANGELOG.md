@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.0 (2023-06-20)
+
+- Added: Add PulseChain (PLS)
+
 ## 1.3.1 (2023-06-20)
 
 - Fixed: Fix broken max-spend for zkSync
