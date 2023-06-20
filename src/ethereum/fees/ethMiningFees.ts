@@ -6,9 +6,9 @@ import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
   CalcL1RollupFeeParams,
-  EthereumCalcedFees,
   EthereumFee,
   EthereumFees,
+  EthereumMiningFees,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 
@@ -19,13 +19,13 @@ export const ES_FEE_CUSTOM = 'custom'
 
 const WEI_MULTIPLIER = '1000000000'
 
-export function calcMiningFee(
+export function calcMiningFees(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
   currencyInfo: EdgeCurrencyInfo,
   networkInfo: EthereumNetworkInfo
-): EthereumCalcedFees {
-  let useDefaults = true
+): EthereumMiningFees {
+  let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
   if (
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -87,9 +87,8 @@ export function calcMiningFee(
         }
         customGasLimit = gasLimit
 
-        // useDefaults should be named useGasLimitDefaults since it only affects the gasLimit
         // Set to false since we have a custom gasLimit
-        useDefaults = false
+        useGasLimitDefaults = false
       }
     }
 
@@ -97,7 +96,7 @@ export function calcMiningFee(
       return {
         gasLimit: customGasLimit,
         gasPrice: customGasPrice,
-        useDefaults: false
+        useEstimatedGasLimit: false
       }
     }
 
@@ -110,7 +109,7 @@ export function calcMiningFee(
 
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]
-      useDefaults = false
+      useGasLimitDefaults = false
       if (typeof networkFeeForGasLimit.gasPrice !== 'undefined') {
         networkFeeForGasPrice = networkFeeForGasLimit
       }
@@ -206,10 +205,10 @@ export function calcMiningFee(
       default:
         throw new Error(`Invalid networkFeeOption`)
     }
-    const out: EthereumCalcedFees = {
+    const out: EthereumMiningFees = {
       gasLimit: customGasLimit ?? gasLimit,
       gasPrice: customGasPrice ?? gasPrice,
-      useDefaults
+      useEstimatedGasLimit: useGasLimitDefaults
     }
     return out
   } else {

@@ -60,13 +60,16 @@ import {
   CalcL1RollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
+  EthereumEstimateGasParams,
   EthereumFee,
   EthereumFees,
   EthereumInitOptions,
+  EthereumMiningFees,
   EthereumNetworkInfo,
   EthereumOtherMethods,
   EthereumPrivateKeys,
   EthereumTxOtherParams,
+  EthereumTxParameterInformation,
   EthereumUtils,
   EthereumWalletOtherData,
   EvmWcRpcPayload,
@@ -76,7 +79,7 @@ import {
   SafeEthWalletInfo,
   TxRpcParams
 } from './ethereumTypes'
-import { calcL1RollupFees, calcMiningFee } from './fees/ethMiningFees'
+import { calcL1RollupFees, calcMiningFees } from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
   FeeProviders,
@@ -382,6 +385,117 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Returns the gasLimit from eth_estimateGas RPC call.
+   */
+  async estimateGasLimit(context: {
+    contractAddress: string | undefined
+    estimateGasParams: EthereumEstimateGasParams
+    miningFees: EthereumMiningFees
+    publicAddress: string
+  }): Promise<string> {
+    const { contractAddress, estimateGasParams, miningFees, publicAddress } =
+      context
+    const hasUserMemo = estimateGasParams[0].data != null
+
+    // If destination address is the same from the previous
+    // estimate call, use the previously calculated gasLimit.
+    if (
+      this.lastEstimatedGasLimit.gasLimit !== '' &&
+      this.lastEstimatedGasLimit.publicAddress === publicAddress &&
+      this.lastEstimatedGasLimit.contractAddress === contractAddress
+    ) {
+      return this.lastEstimatedGasLimit.gasLimit
+    }
+
+    let gasLimitReturn = miningFees.gasLimit
+    try {
+      // Determine if recipient is a normal or contract address
+      const getCodeResult = await this.ethNetwork.multicastServers(
+        'eth_getCode',
+        [estimateGasParams[0].to, 'latest']
+      )
+      // result === '0x' means we are sending to a plain address (no contract)
+      const sendingToContract = getCodeResult.result.result !== '0x'
+
+      const tryEstimatingGasLimit = async (
+        attempt: number = 0
+      ): Promise<void> => {
+        const defaultGasLimit =
+          this.networkInfo.defaultNetworkFees.default.gasLimit
+        try {
+          if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
+            // Easy case of sending plain mainnet token with no memo/data
+            gasLimitReturn = defaultGasLimit.regularTransaction
+          } else {
+            const estimateGasResult = await this.ethNetwork.multicastServers(
+              'eth_estimateGas',
+              estimateGasParams
+            )
+            gasLimitReturn = add(
+              parseInt(estimateGasResult.result.result, 16).toString(),
+              '0'
+            )
+            if (sendingToContract) {
+              // Overestimate (double) gas limit to reduce chance of failure when sending
+              // to a contract. This includes sending any ERC20 token, sending ETH
+              // to a contract, sending tokens to a contract, or any contract
+              // execution (ie approvals, unstaking, etc)
+              gasLimitReturn = mul(gasLimitReturn, '2')
+            }
+          }
+          // Save locally to compare for future estimate calls
+          this.lastEstimatedGasLimit = {
+            publicAddress,
+            contractAddress,
+            gasLimit: gasLimitReturn
+          }
+        } catch (e: any) {
+          // If no defaults, then we must estimate by RPC, so try again
+          if (defaultGasLimit == null) {
+            if (attempt > 5)
+              throw new Error(
+                'Unable to estimate gas limit after 5 tries. Please try again later'
+              )
+            return await tryEstimatingGasLimit(attempt + 1)
+          }
+
+          // If makeSpend received an explicit memo/data field from caller,
+          // assume this is a smart contract call that needs accurate gasLimit
+          // estimation and fail if we weren't able to get estimates from an
+          // RPC node.
+          if (hasUserMemo) {
+            throw new Error(
+              'Unable to estimate gas limit. Please try again later'
+            )
+          }
+          // If we know the address is a contract but estimateGas fails use the default token gas limit
+          if (defaultGasLimit.tokenTransaction != null)
+            gasLimitReturn = defaultGasLimit.tokenTransaction
+        }
+      }
+
+      await tryEstimatingGasLimit()
+
+      // Sanity check calculated value
+      if (
+        lt(
+          gasLimitReturn,
+          this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
+        )
+      ) {
+        // Revert gasLimit back to the value from calcMiningFee
+        gasLimitReturn = miningFees.gasLimit
+        this.lastEstimatedGasLimit.gasLimit = ''
+        throw new Error('Calculated gasLimit less than minimum')
+      }
+    } catch (e: any) {
+      this.error(`makeSpend Error determining gas limit `, e)
+    }
+
+    return gasLimitReturn
+  }
+
   setOtherData(raw: any): void {
     this.otherData = asEthereumWalletOtherData(raw)
   }
@@ -591,21 +705,29 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
+
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
 
-    const publicAddress = spendInfo.spendTargets[0].publicAddress
+    const spendTarget = spendInfo.spendTargets[0]
+    const publicAddress = spendTarget.publicAddress
     if (publicAddress == null) {
       throw new Error('makeSpend Missing publicAddress')
     }
+    const { contractAddress, data, value } = this.getTxParameterInformation(
+      edgeSpendInfo,
+      currencyCode,
+      this.currencyInfo
+    )
 
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
       // For mainnet currency, the fee can scale with the amount sent so we should find the
       // appropriate amount by recursively calling calcMiningFee. This is adapted from the
       // same function in edge-core-js.
 
-      const getMax = (min: string, max: string): string => {
+      const getMax = async (min: string, max: string): Promise<string> => {
         const diff = sub(max, min)
         if (lte(diff, '1')) {
           return min
@@ -614,20 +736,37 @@ export class EthereumEngine extends CurrencyEngine<
 
         // Try the average:
         spendInfo.spendTargets[0].nativeAmount = mid
-        const { gasPrice, gasLimit } = calcMiningFee(
+        const miningFees = calcMiningFees(
           spendInfo,
           this.networkFees,
           this.currencyInfo,
           this.networkInfo
         )
-        const fee = mul(gasPrice, gasLimit)
+        if (miningFees.useEstimatedGasLimit) {
+          miningFees.gasLimit = await this.estimateGasLimit({
+            contractAddress,
+            estimateGasParams: [
+              {
+                to: contractAddress ?? publicAddress,
+                from: this.walletLocalData.publicKey,
+                gas: '0xffffff',
+                value,
+                data
+              },
+              'latest'
+            ],
+            miningFees,
+            publicAddress
+          })
+        }
+        const fee = mul(miningFees.gasPrice, miningFees.gasLimit)
         let l1Fee = '0'
 
         if (this.l1RollupParams != null) {
           const txData: CalcL1RollupFeeParams = {
             nonce: this.otherData.unconfirmedNextNonce,
             gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
-            gasLimit,
+            gasLimit: miningFees.gasLimit,
             to: publicAddress,
             value: decimalToHex(mid),
             chainParams: this.networkInfo.chainParams,
@@ -638,19 +777,79 @@ export class EthereumEngine extends CurrencyEngine<
         }
         const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
-          return getMax(min, mid)
+          return await getMax(min, mid)
         } else {
-          return getMax(mid, max)
+          return await getMax(mid, max)
         }
       }
 
-      return getMax('0', add(balance, '1'))
+      return await getMax('0', add(balance, '1'))
     } else {
       spendInfo.spendTargets[0].nativeAmount = balance
       await this.makeSpend(spendInfo)
       return this.getBalance({
         currencyCode: spendInfo.currencyCode
       })
+    }
+  }
+
+  getTxParameterInformation(
+    edgeSpendInfo: EdgeSpendInfo,
+    currencyCode: string,
+    currencyInfo: EdgeCurrencyInfo
+  ): EthereumTxParameterInformation {
+    const { spendTargets } = edgeSpendInfo
+    const spendTarget = spendTargets[0]
+    const { publicAddress, nativeAmount } = spendTarget
+
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
+    // Get data:
+    let data: string | undefined =
+      spendTarget.memo ?? spendTarget.otherParams?.data
+    if (data != null && data.length > 0 && !isHex(data)) {
+      throw new Error(`Memo/data field must be of type 'hex'`)
+    }
+    if (data === '') data = undefined
+
+    // Get contractAddress and/or value:
+    let value: string | undefined
+    if (currencyCode === currencyInfo.currencyCode) {
+      value = decimalToHex(nativeAmount)
+      return {
+        value
+      }
+    } else {
+      let contractAddress: string | undefined
+      if (data != null) {
+        contractAddress = publicAddress
+      } else {
+        const tokenInfo = this.getTokenInfo(currencyCode)
+        if (
+          tokenInfo == null ||
+          typeof tokenInfo.contractAddress !== 'string'
+        ) {
+          throw new Error(
+            'Error: Token not supported or invalid contract address'
+          )
+        }
+
+        contractAddress = tokenInfo.contractAddress
+
+        // Derive the data from a ERC-20 token transfer smart-contract call:
+        const dataArray = abi.simpleEncode(
+          'transfer(address,uint256):(uint256)',
+          publicAddress,
+          decimalToHex(nativeAmount)
+        )
+        value = '0x0'
+        data = '0x' + Buffer.from(dataArray).toString('hex')
+      }
+      return {
+        contractAddress,
+        data,
+        value
+      }
     }
   }
 
@@ -678,27 +877,14 @@ export class EthereumEngine extends CurrencyEngine<
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    let data = spendTarget.memo ?? spendTarget.otherParams?.data
-    if (data != null && data.length > 0 && !isHex(data)) {
-      throw new Error(`Memo/data field must be of type 'hex'`)
-    }
-
-    if (data === '') data = undefined
-
-    const hasUserMemo = data != null
-
     let otherParams: EthereumTxOtherParams
 
-    const miningFees = calcMiningFee(
+    const miningFees = calcMiningFees(
       edgeSpendInfo,
       this.networkFees,
       this.currencyInfo,
       this.networkInfo
     )
-    const gasPrice = miningFees.gasPrice
-    let gasLimit: string = miningFees.gasLimit
-    const useDefaults: boolean = miningFees.useDefaults
-    const defaultGasLimit = gasLimit
 
     //
     // Nonce:
@@ -717,52 +903,30 @@ export class EthereumEngine extends CurrencyEngine<
       nonceUsed = add(baseNonce, pendingTxs.length.toString())
     }
 
-    let contractAddress
-    let value
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    const { contractAddress, data, value } = this.getTxParameterInformation(
+      edgeSpendInfo,
+      currencyCode,
+      this.currencyInfo
+    )
+
+    // Set otherParams
+    if (contractAddress == null) {
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
-        gas: gasLimit,
-        gasPrice: gasPrice,
+        gas: miningFees.gasLimit,
+        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         nonceUsed,
         data,
         isFromMakeSpend: true
       }
-      value = decimalToHex(nativeAmount)
     } else {
-      if (data != null) {
-        contractAddress = publicAddress
-      } else {
-        const tokenInfo = this.getTokenInfo(currencyCode)
-        if (
-          tokenInfo == null ||
-          typeof tokenInfo.contractAddress !== 'string'
-        ) {
-          throw new Error(
-            'Error: Token not supported or invalid contract address'
-          )
-        }
-
-        contractAddress = tokenInfo.contractAddress
-        value = decimalToHex(nativeAmount)
-
-        const dataArray = abi.simpleEncode(
-          'transfer(address,uint256):(uint256)',
-          publicAddress,
-          value
-        )
-
-        value = '0x0'
-        data = '0x' + Buffer.from(dataArray).toString('hex')
-      }
-
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
-        gas: gasLimit,
-        gasPrice: gasPrice,
+        gas: miningFees.gasLimit,
+        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
@@ -771,125 +935,28 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
 
-    // If the recipient or contractaddress has changed from previous makeSpend(), calculate the gasLimit
-    if (
-      useDefaults &&
-      (this.lastEstimatedGasLimit.publicAddress !== publicAddress ||
-        this.lastEstimatedGasLimit.contractAddress !== contractAddress ||
-        this.lastEstimatedGasLimit.gasLimit === '')
-    ) {
-      const estimateGasParams = [
-        {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          to: contractAddress || publicAddress,
-          from: this.walletLocalData.publicKey,
-          gas: '0xffffff',
-          value,
-          data
-        },
-        'latest'
-      ]
-
-      let cacheGasLimit = false
-      try {
-        // Determine if recipient is a normal or contract address
-        const getCodeResult = await this.ethNetwork.multicastServers(
-          'eth_getCode',
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          [contractAddress || publicAddress, 'latest']
-        )
-        // result === '0x' means we are sending to a plain address (no contract)
-        const sendingToContract = getCodeResult.result.result !== '0x'
-
-        const tryEstimatingGas = async (attempt: number = 0): Promise<void> => {
-          const defaultGasLimits =
-            this.networkInfo.defaultNetworkFees.default.gasLimit
-          try {
-            if (
-              defaultGasLimits != null &&
-              !sendingToContract &&
-              !hasUserMemo
-            ) {
-              // Easy case of sending plain mainnet token with no memo/data
-              gasLimit = defaultGasLimits.regularTransaction
-            } else {
-              const estimateGasResult = await this.ethNetwork.multicastServers(
-                'eth_estimateGas',
-                estimateGasParams
-              )
-              gasLimit = add(
-                parseInt(estimateGasResult.result.result, 16).toString(),
-                '0'
-              )
-              if (sendingToContract) {
-                // Overestimate (double) gas limit to reduce chance of failure when sending
-                // to a contract. This includes sending any ERC20 token, sending ETH
-                // to a contract, sending tokens to a contract, or any contract
-                // execution (ie approvals, unstaking, etc)
-                gasLimit = mul(gasLimit, '2')
-              }
-            }
-            cacheGasLimit = true
-          } catch (e: any) {
-            // If no defaults, then we must estimate by RPC, so try again
-            if (defaultGasLimits == null) {
-              if (attempt > 5)
-                throw new Error(
-                  'Unable to estimate gas limit after 5 tries. Please try again later'
-                )
-              return await tryEstimatingGas(attempt + 1)
-            }
-
-            // If makeSpend received an explicit memo/data field from caller,
-            // assume this is a smart contract call that needs accurate gasLimit
-            // estimation and fail if we weren't able to get estimates from an
-            // RPC node.
-            if (hasUserMemo) {
-              throw new Error(
-                'Unable to estimate gas limit. Please try again later'
-              )
-            }
-            // If we know the address is a contract but estimateGas fails use the default token gas limit
-            if (defaultGasLimits.tokenTransaction != null)
-              gasLimit = defaultGasLimits.tokenTransaction
-          }
-        }
-
-        await tryEstimatingGas()
-
-        // Sanity check calculated value
-        if (
-          lt(
-            gasLimit,
-            this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
-          )
-        ) {
-          gasLimit = defaultGasLimit
-          this.lastEstimatedGasLimit.gasLimit = ''
-          throw new Error('Calculated gasLimit less than minimum')
-        }
-
-        // Save locally to compare for future makeSpend() calls
-        if (cacheGasLimit) {
-          this.lastEstimatedGasLimit = {
-            publicAddress,
-            contractAddress,
-            gasLimit
-          }
-        }
-      } catch (e: any) {
-        this.error(`makeSpend Error determining gas limit `, e)
-      }
-    } else if (useDefaults) {
-      // If recipient and contract address are the same from the previous makeSpend(), use the previously calculated gasLimit
-      gasLimit = this.lastEstimatedGasLimit.gasLimit
+    if (miningFees.useEstimatedGasLimit) {
+      otherParams.gas = await this.estimateGasLimit({
+        contractAddress,
+        estimateGasParams: [
+          {
+            to: contractAddress ?? publicAddress,
+            from: this.walletLocalData.publicKey,
+            gas: '0xffffff',
+            value,
+            data
+          },
+          'latest'
+        ],
+        miningFees,
+        publicAddress
+      })
     }
-    otherParams.gas = gasLimit
 
     const nativeBalance =
       this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
 
-    let nativeNetworkFee = mul(gasPrice, gasLimit)
+    let nativeNetworkFee = mul(miningFees.gasPrice, otherParams.gas)
     let totalTxAmount = '0'
     let parentNetworkFee = null
     let l1Fee = '0'
@@ -950,7 +1017,7 @@ export class EthereumEngine extends CurrencyEngine<
       nativeAmount, // nativeAmount
       isSend: nativeAmount.startsWith('-'),
       networkFee: nativeNetworkFee, // networkFee
-      feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
+      feeRateUsed: getFeeRateUsed(miningFees.gasPrice, otherParams.gas),
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
       otherParams, // otherParams

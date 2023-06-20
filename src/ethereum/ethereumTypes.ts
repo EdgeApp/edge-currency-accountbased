@@ -119,10 +119,21 @@ export const asEthereumFees = asObject<EthereumFee>(asEthereumFee)
 
 export type EthereumFees = ReturnType<typeof asEthereumFees>
 
-export interface EthereumCalcedFees {
+export type EthereumEstimateGasParams = [
+  {
+    to: string
+    from: string
+    gas: string
+    value: string | undefined
+    data: string | undefined
+  },
+  string
+]
+
+export interface EthereumMiningFees {
   gasPrice: string
   gasLimit: string
-  useDefaults: boolean
+  useEstimatedGasLimit: boolean
 }
 
 export interface L1RollupParams {
@@ -229,6 +240,12 @@ export const asEvmScanGasResponse = asObject({
 })
 
 export type EvmScanGasResponse = ReturnType<typeof asEvmScanGasResponse>
+
+export interface EthereumTxParameterInformation {
+  contractAddress?: string
+  data?: string
+  value?: string
+}
 
 export interface EthereumTxOtherParams {
   from: string[]
