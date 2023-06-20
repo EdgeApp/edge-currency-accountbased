@@ -10,6 +10,7 @@ import { goerli } from './info/goerliInfo'
 import { kovan } from './info/kovanInfo'
 import { optimism } from './info/optimismInfo'
 import { polygon } from './info/polygonInfo'
+import { pulsechain } from './info/pulsechainInfo'
 import { rinkeby } from './info/rinkebyInfo'
 import { ropsten } from './info/ropstenInfo'
 import { rsk } from './info/rskInfo'
@@ -28,6 +29,7 @@ export const ethereumPlugins = {
   kovan,
   optimism,
   polygon,
+  pulsechain,
   rinkeby,
   ropsten,
   rsk,
