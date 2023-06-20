@@ -18,6 +18,7 @@ import { EdgeSpendInfo } from 'edge-core-js/types'
 import {
   asSafeCommonWalletInfo,
   Dapp,
+  WalletConnectPayload,
   WcDappDetails,
   WcProps
 } from '../common/types'
@@ -443,6 +444,9 @@ export type EvmWcRpcPayload = ReturnType<typeof asEvmWcRpcPayload>
 //
 
 export interface EthereumOtherMethods {
+  parseWalletConnectV2Payload: (
+    payload: EvmWcRpcPayload
+  ) => Promise<WalletConnectPayload>
   txRpcParamsToSpendInfo: (params: TxRpcParams) => Promise<EdgeSpendInfo>
   wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
   wcConnect: (uri: string, publicKey: string, walletId: string) => void

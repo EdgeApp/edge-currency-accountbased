@@ -18,6 +18,7 @@ import {
   asIntegerString,
   asSafeCommonWalletInfo,
   Dapp,
+  WalletConnectPayload,
   WcDappDetails,
   WcProps
 } from '../common/types'
@@ -237,6 +238,9 @@ export const asAlgoWcRpcPayload = asObject({
 export type AlgoWcRpcPayload = ReturnType<typeof asAlgoWcRpcPayload>
 
 export interface AlgorandOtherMethods {
+  parseWalletConnectV2Payload: (
+    payload: AlgoWcRpcPayload
+  ) => Promise<WalletConnectPayload>
   wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
   wcConnect: (uri: string, publicKey: string, walletId: string) => void
   wcDisconnect: (uri: string) => void

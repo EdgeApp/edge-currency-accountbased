@@ -121,3 +121,9 @@ export interface WalletConnectors {
 export const asWcSessionRequestParams = asObject({
   params: asArray(asWcDappDetails)
 })
+
+export interface WalletConnectPayload {
+  nativeAmount: string
+  networkFee: string
+  tokenId?: string // can't provide tokenId until we can parse from DATA
+}

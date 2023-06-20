@@ -109,6 +109,35 @@ export class AlgorandEngine extends CurrencyEngine<
     this.totalReserve = this.minimumAddressBalance
 
     this.otherMethods = {
+      parseWalletConnectV2Payload: async (payload: AlgoWcRpcPayload) => {
+        try {
+          const cleanPayload = asAlgorandWalletConnectPayload(payload)
+          const params = cleanPayload.params[0][0]
+          const algoTx = decodeUnsignedTransaction(base64.parse(params.txn))
+
+          const nativeAmount =
+            algoTx.amount != null ? algoTx.amount.toString() : '0'
+          const networkFee = algoTx.fee.toFixed()
+          let tokenId: string | undefined
+
+          if (algoTx.type === 'axfer') {
+            const assetIndex = algoTx.assetIndex.toString()
+            const metaToken: EdgeToken | undefined =
+              this.allTokensMap[assetIndex]
+            if (metaToken == null) throw new Error('Unrecognized token')
+            tokenId = assetIndex
+          }
+
+          return {
+            nativeAmount,
+            networkFee,
+            tokenId // optional
+          }
+        } catch (e: any) {
+          this.warn(`Wallet connect call_request `, e)
+          throw e
+        }
+      },
       // Wallet Connect utils
       wcInit: async (
         wcProps: WcProps,

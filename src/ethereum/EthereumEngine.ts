@@ -304,6 +304,83 @@ export class EthereumEngine extends CurrencyEngine<
     }
 
     this.otherMethods = {
+      parseWalletConnectV2Payload: async (payload: EvmWcRpcPayload) => {
+        try {
+          let nativeAmount = '0'
+          let networkFee = '0'
+
+          switch (payload.method) {
+            case 'eth_sendTransaction':
+            case 'eth_signTransaction': {
+              const txParam = asObject({
+                from: asString,
+                to: asOptional(asString),
+                data: asString,
+                gas: asOptional(asString),
+                gasPrice: asOptional(asString),
+                value: asOptional(asString)
+              })(payload.params[0])
+
+              const { gas, gasPrice, value } = txParam
+
+              // Finish calculating the network fee using the gas limit
+              const deriveNetworkFee = (gasLimit: string): void => {
+                if (gas == null) {
+                  txParam.gas = decimalToHex(gasLimit)
+                } else {
+                  gasLimit = hexToDecimal(gas)
+                }
+
+                let gasPriceNetworkFee =
+                  this.networkFees.default.gasPrice?.standardFeeHigh ?? '0'
+                if (gasPrice == null) {
+                  txParam.gasPrice = decimalToHex(gasPriceNetworkFee)
+                } else {
+                  gasPriceNetworkFee = hexToDecimal(gasPrice)
+                }
+
+                networkFee = mul(gasLimit, gasPriceNetworkFee)
+              }
+
+              if (value != null) {
+                nativeAmount = hexToDecimal(value)
+              }
+
+              // Get the gasLimit from currency info or from RPC node:
+              if (this.networkFees.default.gasLimit?.tokenTransaction == null) {
+                this.ethNetwork
+                  .multicastServers('eth_estimateGas', txParam)
+                  .then((estimateGasResult: any) => {
+                    const gasLimit = add(
+                      parseInt(estimateGasResult.result.result, 16).toString(),
+                      '0'
+                    )
+                    deriveNetworkFee(gasLimit)
+                  })
+                  .catch((error: any) => {
+                    this.warn(
+                      `Wallet connect call_request failed to get gas limit`,
+                      error
+                    )
+                  })
+              } else {
+                deriveNetworkFee(
+                  this.networkFees.default.gasLimit?.tokenTransaction
+                )
+              }
+              break
+            }
+          }
+
+          return {
+            nativeAmount,
+            networkFee
+          }
+        } catch (e: any) {
+          this.warn(`Wallet connect call_request `, e)
+          throw e
+        }
+      },
       txRpcParamsToSpendInfo: async (
         params: TxRpcParams
       ): Promise<EdgeSpendInfo> => {
