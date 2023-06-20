@@ -44,7 +44,7 @@ const defaultNetworkFees: EthereumFees = {
 
 const networkInfo: EthereumNetworkInfo = {
   rpcServers: ['https://rpc.pulsechain.com/'],
-  evmScanApiServers: ['https://scan.pulsechain.com'],
+  evmScanApiServers: ['cors-https://scan.pulsechain.com'],
   blockcypherApiServers: [],
   blockbookServers: [],
   uriNetworks: ['pulsechain'],
