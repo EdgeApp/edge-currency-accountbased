@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 1.3.0 (2023-06-20)
+
+- Deprecate WalletConnect v1
+- EVM/ALGO: Add parseWalletConnectV2Payload to parse out amounts from WalletConnect v2 payloads
+- ZEC: Update checkpoints
+
 ## 1.2.13 (2023-06-02)
 
 - FIO: Fix unstake method insufficient funds checking
