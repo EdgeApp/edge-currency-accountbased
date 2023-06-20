@@ -12,15 +12,11 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import {
   asIntegerString,
   asSafeCommonWalletInfo,
-  Dapp,
-  WalletConnectPayload,
-  WcDappDetails,
-  WcProps
+  WalletConnectPayload
 } from '../common/types'
 
 export const asAlgorandWalletOtherData = asObject({
@@ -241,16 +237,6 @@ export interface AlgorandOtherMethods {
   parseWalletConnectV2Payload: (
     payload: AlgoWcRpcPayload
   ) => Promise<WalletConnectPayload>
-  wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
-  wcConnect: (uri: string, publicKey: string, walletId: string) => void
-  wcDisconnect: (uri: string) => void
-  wcApproveRequest: (
-    uri: string,
-    payload: AlgoWcRpcPayload,
-    result: string[]
-  ) => Promise<void>
-  wcRejectRequest: (uri: string, payload: AlgoWcRpcPayload) => Promise<void>
-  wcGetConnections: () => Dapp[]
 }
 
 export const asAlgorandWalletConnectPayload = asObject({
@@ -266,13 +252,3 @@ export const asAlgorandWalletConnectPayload = asObject({
     )
   )
 }).withRest
-
-export type AlgorandWalletConnectPayload = ReturnType<
-  typeof asAlgorandWalletConnectPayload
->
-
-export interface AlgorandUtils {
-  txRpcParamsToSpendInfo: (
-    params: AlgorandWalletConnectPayload
-  ) => EdgeSpendInfo
-}

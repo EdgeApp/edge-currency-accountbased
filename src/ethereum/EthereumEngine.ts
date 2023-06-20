@@ -1,6 +1,5 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
-import WalletConnect from '@walletconnect/client'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
@@ -26,12 +25,7 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import {
-  asWcSessionRequestParams,
-  CustomToken,
-  WcDappDetails,
-  WcProps
-} from '../common/types'
+import { CustomToken } from '../common/types'
 import {
   biggyRoundToNearestInt,
   bufToHex,
@@ -45,7 +39,6 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
-  timeout,
   toHex
 } from '../common/utils'
 import {
@@ -385,207 +378,7 @@ export class EthereumEngine extends CurrencyEngine<
         params: TxRpcParams
       ): Promise<EdgeSpendInfo> => {
         return this.utils.txRpcParamsToSpendInfo(params)
-      },
-
-      // Wallet Connect utils
-      wcInit: async (
-        wcProps: WcProps,
-        walletName: string = 'Edge'
-      ): Promise<WcDappDetails> => {
-        return await timeout(
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          new Promise((resolve, reject) => {
-            const connector = new WalletConnect({
-              uri: wcProps.uri,
-              storageId: wcProps.uri,
-              clientMeta: {
-                description: 'Edge Wallet',
-                url: 'https://www.edge.app',
-                icons: ['https://content.edge.app/Edge_logo_Icon.png'],
-                name: walletName
-              }
-            })
-
-            connector.on(
-              'session_request',
-              // @ts-expect-error
-              (error: Error, payload: EvmWcRpcPayload) => {
-                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                if (error) {
-                  this.error(`Wallet connect session_request`, error)
-                  throw error
-                }
-                const params = asWcSessionRequestParams(payload).params[0]
-                const dApp = { ...params, timeConnected: Date.now() / 1000 }
-                // Set connector in memory
-                this.tools.walletConnectors[wcProps.uri] = {
-                  connector,
-                  wcProps,
-                  dApp
-                }
-                resolve(dApp)
-              }
-            )
-
-            // Subscribe to call requests
-            connector.on(
-              'call_request',
-              (error: Error | null, payload: EvmWcRpcPayload) => {
-                try {
-                  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                  if (error) throw error
-                  let nativeAmount = '0'
-                  let networkFee = '0'
-
-                  switch (payload.method) {
-                    case 'eth_sendTransaction':
-                    case 'eth_signTransaction': {
-                      const txParam = asObject({
-                        from: asString,
-                        to: asOptional(asString),
-                        data: asString,
-                        gas: asOptional(asString),
-                        gasPrice: asOptional(asString),
-                        value: asOptional(asString)
-                      })(payload.params[0])
-
-                      const { gas, gasPrice, value } = txParam
-
-                      // Finish calculating the network fee using the gas limit
-                      const deriveNetworkFee = (gasLimit: string): void => {
-                        if (gas == null) {
-                          txParam.gas = decimalToHex(gasLimit)
-                        } else {
-                          gasLimit = hexToDecimal(gas)
-                        }
-
-                        let gasPriceNetworkFee =
-                          this.networkFees.default.gasPrice?.standardFeeHigh ??
-                          '0'
-                        if (gasPrice == null) {
-                          txParam.gasPrice = decimalToHex(gasPriceNetworkFee)
-                        } else {
-                          gasPriceNetworkFee = hexToDecimal(gasPrice)
-                        }
-
-                        networkFee = mul(gasLimit, gasPriceNetworkFee)
-                      }
-
-                      if (value != null) {
-                        nativeAmount = hexToDecimal(value)
-                      }
-
-                      // Get the gasLimit from currency info or from RPC node:
-                      if (
-                        this.networkFees.default.gasLimit?.tokenTransaction ==
-                        null
-                      ) {
-                        this.ethNetwork
-                          .multicastServers('eth_estimateGas', txParam)
-                          .then((estimateGasResult: any) => {
-                            const gasLimit = add(
-                              parseInt(
-                                estimateGasResult.result.result,
-                                16
-                              ).toString(),
-                              '0'
-                            )
-                            deriveNetworkFee(gasLimit)
-                          })
-                          .catch((error: any) => {
-                            this.warn(
-                              `Wallet connect call_request failed to get gas limit`,
-                              error
-                            )
-                          })
-                      } else {
-                        deriveNetworkFee(
-                          this.networkFees.default.gasLimit?.tokenTransaction
-                        )
-                      }
-                      break
-                    }
-                  }
-
-                  const out = {
-                    uri: wcProps.uri,
-                    dApp: this.tools.walletConnectors[wcProps.uri].dApp,
-                    payload,
-                    walletId: this.tools.walletConnectors[wcProps.uri].walletId,
-                    nativeAmount,
-                    networkFee
-                    // tokenId // can't provide tokenId until we can parse from DATA
-                  }
-
-                  this.currencyEngineCallbacks.onWcNewContractCall(out)
-                } catch (e: any) {
-                  this.warn(`Wallet connect call_request `, e)
-                  throw e
-                }
-              }
-            )
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            connector.on('disconnect', (error, payload) => {
-              if (error != null) {
-                throw error
-              }
-              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-              delete this.tools.walletConnectors[wcProps.uri]
-            })
-          }),
-          5000
-        )
-      },
-      wcConnect: (uri: string, publicKey: string, walletId: string) => {
-        this.tools.walletConnectors[uri].connector.approveSession({
-          accounts: [publicKey],
-          chainId: this.networkInfo.chainParams.chainId // required
-        })
-        this.tools.walletConnectors[uri].walletId = walletId
-      },
-      wcDisconnect: (uri: string) => {
-        if (this.tools.walletConnectors[uri]?.connector == null) return
-
-        this.tools.walletConnectors[uri].connector.killSession().catch(() => {})
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete this.tools.walletConnectors[uri]
-      },
-      wcApproveRequest: async (
-        uri: string,
-        payload: EvmWcRpcPayload,
-        result: string
-      ): Promise<void> => {
-        this.tools.walletConnectors[uri].connector.approveRequest({
-          id: Number(payload.id),
-          jsonrpc: '2.0',
-          result: result
-        })
-      },
-      wcRejectRequest: async (
-        uri: string,
-        payload: EvmWcRpcPayload
-      ): Promise<void> => {
-        this.tools.walletConnectors[uri].connector.rejectRequest({
-          id: Number(payload.id),
-          jsonrpc: '2.0',
-          error: {
-            message: 'rejected'
-          }
-        })
-      },
-      wcGetConnections: () =>
-        Object.keys(this.tools.walletConnectors)
-          .filter(
-            uri =>
-              this.tools.walletConnectors[uri].walletId === this.walletInfo.id
-          )
-          .map(
-            uri => ({
-              ...this.tools.walletConnectors[uri].dApp,
-              ...this.tools.walletConnectors[uri].wcProps
-            }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
-          )
+      }
     }
   }
 
