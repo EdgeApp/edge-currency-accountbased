@@ -1,4 +1,3 @@
-import WalletConnect from '@walletconnect/client'
 import algosdk, {
   decodeUnsignedTransaction,
   encodeUnsignedTransaction,
@@ -28,18 +27,12 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import {
-  asWcSessionRequestParams,
-  WcDappDetails,
-  WcProps
-} from '../common/types'
-import {
   asyncWaterfall,
   cleanTxLogs,
   getOtherParams,
   makeMutex,
   matchJson,
-  Mutex,
-  timeout
+  Mutex
 } from '../common/utils'
 import { AlgorandTools } from './AlgorandTools'
 import {
@@ -109,150 +102,35 @@ export class AlgorandEngine extends CurrencyEngine<
     this.totalReserve = this.minimumAddressBalance
 
     this.otherMethods = {
-      // Wallet Connect utils
-      wcInit: async (
-        wcProps: WcProps,
-        walletName: string = 'Edge'
-      ): Promise<WcDappDetails> => {
-        return await timeout(
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          new Promise((resolve, reject) => {
-            const connector = new WalletConnect({
-              uri: wcProps.uri,
-              storageId: wcProps.uri,
-              clientMeta: {
-                description: 'Edge Wallet',
-                url: 'https://www.edge.app',
-                icons: ['https://content.edge.app/Edge_logo_Icon.png'],
-                name: walletName
-              }
-            })
+      parseWalletConnectV2Payload: async (payload: AlgoWcRpcPayload) => {
+        try {
+          const cleanPayload = asAlgorandWalletConnectPayload(payload)
+          const params = cleanPayload.params[0][0]
+          const algoTx = decodeUnsignedTransaction(base64.parse(params.txn))
 
-            connector.on(
-              'session_request',
-              (error: Error | null, payload: AlgoWcRpcPayload) => {
-                if (error != null) {
-                  this.error(`Wallet connect session_request`, error)
-                  throw error
-                }
+          const nativeAmount =
+            algoTx.amount != null ? algoTx.amount.toString() : '0'
+          const networkFee = algoTx.fee.toFixed()
+          let tokenId: string | undefined
 
-                const params = asWcSessionRequestParams(payload).params[0]
-                const dApp = { ...params, timeConnected: Date.now() / 1000 }
-
-                // Set connector in memory
-                this.tools.walletConnectors[wcProps.uri] = {
-                  connector,
-                  wcProps,
-                  dApp
-                }
-                resolve(dApp)
-              }
-            )
-
-            // Subscribe to call requests
-            connector.on(
-              'call_request',
-              (error: Error | null, payload: AlgoWcRpcPayload) => {
-                try {
-                  if (error != null) throw error
-                  const cleanPayload = asAlgorandWalletConnectPayload(payload)
-                  const params = cleanPayload.params[0][0]
-                  const algoTx = decodeUnsignedTransaction(
-                    base64.parse(params.txn)
-                  )
-
-                  const nativeAmount =
-                    algoTx.amount != null ? algoTx.amount.toString() : '0'
-                  const networkFee = algoTx.fee.toFixed()
-                  let tokenId: string | undefined
-
-                  if (algoTx.type === 'axfer') {
-                    const assetIndex = algoTx.assetIndex.toString()
-                    const metaToken: EdgeToken | undefined =
-                      this.allTokensMap[assetIndex]
-                    if (metaToken == null) throw new Error('Unrecognized token')
-                    tokenId = assetIndex
-                  }
-
-                  const out = {
-                    uri: wcProps.uri,
-                    dApp: this.tools.walletConnectors[wcProps.uri].dApp,
-                    payload: cleanPayload,
-                    walletId: this.tools.walletConnectors[wcProps.uri].walletId,
-                    nativeAmount,
-                    networkFee,
-                    tokenId // optional
-                  }
-
-                  this.currencyEngineCallbacks.onWcNewContractCall(out)
-                } catch (e: any) {
-                  this.warn(`Wallet connect call_request `, e)
-                  throw e
-                }
-              }
-            )
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            connector.on('disconnect', (error, payload) => {
-              if (error != null) {
-                throw error
-              }
-              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-              delete this.tools.walletConnectors[wcProps.uri]
-            })
-          }),
-          5000
-        )
-      },
-      wcConnect: (uri: string, publicKey: string, walletId: string) => {
-        this.tools.walletConnectors[uri].connector.approveSession({
-          accounts: [publicKey],
-          chainId: 416001 // Not actually required in runtime. Using the placeholder value found in another implementation.
-        })
-        this.tools.walletConnectors[uri].walletId = walletId
-      },
-      wcDisconnect: (uri: string) => {
-        if (this.tools.walletConnectors[uri]?.connector == null) return
-
-        this.tools.walletConnectors[uri].connector.killSession().catch(() => {})
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete this.tools.walletConnectors[uri]
-      },
-      wcApproveRequest: async (
-        uri: string,
-        payload: AlgoWcRpcPayload,
-        result: string[]
-      ): Promise<void> => {
-        this.tools.walletConnectors[uri].connector.approveRequest({
-          id: Number(payload.id),
-          jsonrpc: '2.0',
-          result
-        })
-      },
-      wcRejectRequest: async (
-        uri: string,
-        payload: AlgoWcRpcPayload
-      ): Promise<void> => {
-        this.tools.walletConnectors[uri].connector.rejectRequest({
-          id: Number(payload.id),
-          jsonrpc: '2.0',
-          error: {
-            message: 'rejected'
+          if (algoTx.type === 'axfer') {
+            const assetIndex = algoTx.assetIndex.toString()
+            const metaToken: EdgeToken | undefined =
+              this.allTokensMap[assetIndex]
+            if (metaToken == null) throw new Error('Unrecognized token')
+            tokenId = assetIndex
           }
-        })
-      },
-      wcGetConnections: () =>
-        Object.keys(this.tools.walletConnectors)
-          .filter(
-            uri =>
-              this.tools.walletConnectors[uri].walletId === this.walletInfo.id
-          )
-          .map(
-            uri => ({
-              ...this.tools.walletConnectors[uri].dApp,
-              ...this.tools.walletConnectors[uri].wcProps
-            }) // NOTE: keys are all the uris from the walletConnectors. This returns all the wsProps
-          )
+
+          return {
+            nativeAmount,
+            networkFee,
+            tokenId // optional
+          }
+        } catch (e: any) {
+          this.warn(`Wallet connect call_request `, e)
+          throw e
+        }
+      }
     }
   }
 

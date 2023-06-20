@@ -1,4 +1,3 @@
-import { getLocalStorage } from '@walletconnect/browser-utils'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -18,7 +17,6 @@ import hdKey from 'ethereumjs-wallet/hdkey'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
-import { WalletConnectors } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
@@ -30,16 +28,12 @@ export class EthereumTools implements EdgeCurrencyTools {
   io: EdgeIo
   networkInfo: EthereumNetworkInfo
 
-  walletConnectors: WalletConnectors
-
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
-
-    this.walletConnectors = {}
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
@@ -152,10 +146,8 @@ export class EthereumTools implements EdgeCurrencyTools {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    // By default, all EVM clones should be WalletConnect compatible.
-    const networks = { wc: true }
+    const networks: { [uriNetwork: string]: boolean } = {}
     this.networkInfo.uriNetworks.forEach(network => {
-      // @ts-expect-error
       networks[network] = true
     })
 
@@ -167,19 +159,6 @@ export class EthereumTools implements EdgeCurrencyTools {
       currencyCode || this.currencyInfo.currencyCode,
       customTokens
     )
-
-    if (parsedUri.protocol === 'wc') {
-      if (parsedUri.query.bridge != null && parsedUri.query.key != null) {
-        edgeParsedUri.walletConnect = {
-          uri,
-          topic: parsedUri.pathname.split('@')[0],
-          version: parsedUri.pathname.split('@')[1],
-          bridge: parsedUri.query.bridge,
-          key: parsedUri.query.key
-        }
-        return edgeParsedUri
-      } else throw new Error('MissingWcBridgeKey')
-    }
 
     let address = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -368,12 +347,6 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<EthereumNetworkInfo>
 ): Promise<EthereumTools> {
   const out = new EthereumTools(env)
-
-  // FIXME: This clears locally stored walletconnect sessions that would otherwise prevent
-  // a user from reconnecting to an "active" but invisible connection. Future enhancement
-  // will restore these active sessions to the GUI
-  const wcStorage = getLocalStorage()
-  if (wcStorage != null) wcStorage.clear()
 
   return out
 }

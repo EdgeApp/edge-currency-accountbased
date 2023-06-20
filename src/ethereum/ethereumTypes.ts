@@ -15,12 +15,7 @@ import {
 } from 'cleaners'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
-import {
-  asSafeCommonWalletInfo,
-  Dapp,
-  WcDappDetails,
-  WcProps
-} from '../common/types'
+import { asSafeCommonWalletInfo, WalletConnectPayload } from '../common/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -443,17 +438,10 @@ export type EvmWcRpcPayload = ReturnType<typeof asEvmWcRpcPayload>
 //
 
 export interface EthereumOtherMethods {
+  parseWalletConnectV2Payload: (
+    payload: EvmWcRpcPayload
+  ) => Promise<WalletConnectPayload>
   txRpcParamsToSpendInfo: (params: TxRpcParams) => Promise<EdgeSpendInfo>
-  wcInit: (wcProps: WcProps) => Promise<WcDappDetails>
-  wcConnect: (uri: string, publicKey: string, walletId: string) => void
-  wcDisconnect: (uri: string) => void
-  wcApproveRequest: (
-    uri: string,
-    payload: EvmWcRpcPayload,
-    result: string
-  ) => Promise<void>
-  wcRejectRequest: (uri: string, payload: EvmWcRpcPayload) => Promise<void>
-  wcGetConnections: () => Dapp[]
 }
 
 export const asEthereumSignMessageParams = asOptional(

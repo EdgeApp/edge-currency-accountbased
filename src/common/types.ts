@@ -1,4 +1,3 @@
-import WalletConnect from '@walletconnect/client'
 import {
   asArray,
   asEither,
@@ -84,40 +83,8 @@ export function asIntegerString(raw: unknown): string {
   return clean
 }
 
-export const asWcProps = asObject({
-  uri: asString,
-  language: asMaybe(asString),
-  token: asMaybe(asString)
-})
-
-export type WcProps = ReturnType<typeof asWcProps>
-
-const asWcDappDetails = asObject({
-  peerId: asString,
-  peerMeta: asObject({
-    description: asString,
-    url: asString,
-    icons: asArray(asString),
-    name: asString
-  }),
-  chainId: asOptional(asNumber, 1)
-})
-
-export type WcDappDetails = {
-  timeConnected: number
-} & ReturnType<typeof asWcDappDetails>
-
-export type Dapp = WcProps & WcDappDetails
-
-export interface WalletConnectors {
-  [uri: string]: {
-    connector: WalletConnect
-    wcProps: WcProps
-    dApp: WcDappDetails
-    walletId?: string
-  }
+export interface WalletConnectPayload {
+  nativeAmount: string
+  networkFee: string
+  tokenId?: string // can't provide tokenId until we can parse from DATA
 }
-
-export const asWcSessionRequestParams = asObject({
-  params: asArray(asWcDappDetails)
-})
