@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.3.1 (2023-06-20)
+
+- Fixed: Fix broken max-spend for zkSync
+
 ## 1.3.0 (2023-06-20)
 
 - Deprecate WalletConnect v1
