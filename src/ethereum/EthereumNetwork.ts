@@ -465,14 +465,29 @@ export class EthereumNetwork {
       this.ethEngine.currencyInfo,
       this.ethEngine.log
     )
-    const apiKey = `&apikey=${
-      Array.isArray(scanApiKey)
-        ? pickRandom(scanApiKey, 1)[0]
-        : scanApiKey ?? ''
-    }`
+
+    // Quick hack to signal to use slower fetchCors over fetch from EdgeIo
+    const useFetchCors = server.indexOf('cors-http') === 0
+    if (useFetchCors) server = server.replace(/^cors-http/, 'http')
+
+    const apiKey = Array.isArray(scanApiKey)
+      ? pickRandom(scanApiKey, 1)[0]
+      : scanApiKey ?? ''
+    const apiKeyParam = apiKey !== '' ? `&apikey=${apiKey}` : ''
 
     const url = `${server}/api${cmd}`
-    const response = await this.ethEngine.io.fetch(`${url}${apiKey}`)
+
+    const fetcher = useFetchCors
+      ? this.ethEngine.io.fetchCors
+      : this.ethEngine.io.fetch
+
+    // Assert that fetch is defined (only possible if fetchCors is undefined)
+    if (fetcher == null)
+      throw new Error(
+        `Failed to fetch from ${server} undefined fetchCors in EdgeIo`
+      )
+
+    const response = await fetcher(`${url}${apiKeyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
     return await response.json()
   }
