@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.1 (2023-06-21)
+
+- Fixed: Fixed Ethereum broken max-spend for spend info with undefined nativeAmount
+
 ## 1.4.0 (2023-06-20)
 
 - Added: Add PulseChain (PLS)
