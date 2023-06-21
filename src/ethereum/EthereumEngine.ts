@@ -802,8 +802,6 @@ export class EthereumEngine extends CurrencyEngine<
     const spendTarget = spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
-    if (nativeAmount == null) throw new NoAmountSpecifiedError()
-
     // Get data:
     let data: string | undefined =
       spendTarget.memo ?? spendTarget.otherParams?.data
@@ -815,7 +813,7 @@ export class EthereumEngine extends CurrencyEngine<
     // Get contractAddress and/or value:
     let value: string | undefined
     if (currencyCode === currencyInfo.currencyCode) {
-      value = decimalToHex(nativeAmount)
+      value = nativeAmount == null ? undefined : decimalToHex(nativeAmount)
       return {
         value
       }
@@ -840,7 +838,7 @@ export class EthereumEngine extends CurrencyEngine<
         const dataArray = abi.simpleEncode(
           'transfer(address,uint256):(uint256)',
           publicAddress,
-          decimalToHex(nativeAmount)
+          decimalToHex(nativeAmount ?? '0')
         )
         value = '0x0'
         data = '0x' + Buffer.from(dataArray).toString('hex')
