@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.2 (2023-06-21)
+
+- Upgrade @polkadot/api to v10.9.1
+
 ## 1.4.1 (2023-06-21)
 
 - Fixed: Fixed Ethereum broken max-spend for spend info with undefined nativeAmount
