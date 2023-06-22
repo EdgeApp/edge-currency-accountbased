@@ -80,7 +80,7 @@
     "@greymass/eosio": "^0.6.8",
     "@greymass/eosio-resources": "^0.7.0",
     "@hashgraph/sdk": "^1.1.9",
-    "@polkadot/api": "^9.11.3",
+    "@polkadot/api": "^10.9.1",
     "@solana/web3.js": "^1.32.0",
     "algosdk": "^2.1.0",
     "biggystring": "^4.1.3",
