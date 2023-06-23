@@ -133,15 +133,17 @@ export class TronTools implements EdgeCurrencyTools {
       return edgeParsedUri
     }
 
-    // Look for PIX addresses
-    const pixResults = await parsePixKey(
-      this.io,
-      this.builtinTokens,
-      uri,
-      smartPayPublicAddress,
-      smartPayUserId
-    )
-    if (pixResults != null) return pixResults
+    // Look for PIX addresses if currency code is undefined or 'USDT'
+    if (currencyCode == null || currencyCode === 'USDT') {
+      const pixResults = await parsePixKey(
+        this.io,
+        this.builtinTokens,
+        uri,
+        smartPayPublicAddress,
+        smartPayUserId
+      )
+      if (pixResults != null) return pixResults
+    }
 
     throw new Error('InvalidPublicAddressError')
   }
