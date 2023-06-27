@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.3 (2023-06-27)
+
+- Disable using TRX for PIX codes
+
 ## 1.4.2 (2023-06-21)
 
 - Upgrade @polkadot/api to v10.9.1
