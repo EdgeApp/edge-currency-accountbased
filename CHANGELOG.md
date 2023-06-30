@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.4 (2023-06-30)
+
+- Fixed: Critical bug that is missing data field for native EVM transactions including a memo
+
 ## 1.4.3 (2023-06-27)
 
 - Disable using TRX for PIX codes
