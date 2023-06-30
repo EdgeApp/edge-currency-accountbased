@@ -815,6 +815,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (currencyCode === currencyInfo.currencyCode) {
       value = nativeAmount == null ? undefined : decimalToHex(nativeAmount)
       return {
+        data,
         value
       }
     } else {
