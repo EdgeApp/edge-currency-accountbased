@@ -3,14 +3,9 @@ import { describe, it } from 'mocha'
 import fetch from 'node-fetch'
 
 import {
-  fetchFeesFromEvmGasStation,
   fetchFeesFromEvmScan,
   fetchFeesFromInfoServer
 } from '../../src/ethereum/fees/feeProviders'
-import {
-  currencyInfo as ethCurrencyInfo,
-  networkInfo as ethNetworkInfo
-} from '../../src/ethereum/info/ethereumInfo'
 import {
   currencyInfo as ftmCurrencyInfo,
   networkInfo as ftmNetworkInfo
@@ -25,19 +20,6 @@ describe(`FTM Network Fees`, function () {
     // Info server should provide gas limit as well
     assert.equal(fees.default.gasLimit?.regularTransaction, '21000')
     assert.equal(fees.default.gasLimit?.tokenTransaction, '300000')
-  })
-
-  it('EvmGasStation Fees', async function () {
-    const fees = await fetchFeesFromEvmGasStation(
-      fetch,
-      ethCurrencyInfo,
-      {
-        gasStationApiKey: 'D925MHYVPJH3ZBSJKES5EFC876FFMW3ZHX'
-      },
-      fakeLog,
-      ethNetworkInfo
-    )
-    validateGasPrices(fees)
   })
 
   it('EvmScan Fees', async function () {
