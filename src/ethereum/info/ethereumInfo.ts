@@ -870,10 +870,18 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xf629cbd94d3791c9250152bd8dfbdf380e2a3b9c'
     }
   },
-  '15d4c048f83bd7e37d49ea4c83a07267ec4203da': {
+  d1d2eb1b1e90b638588728b4130137d262c87cae: {
     currencyCode: 'GALA',
     displayName: 'Gala',
     denominations: [{ name: 'GALA', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0xd1d2Eb1B1e90B638588728b4130137D262C87cae'
+    }
+  },
+  '15d4c048f83bd7e37d49ea4c83a07267ec4203da': {
+    currencyCode: 'GALAV1',
+    displayName: 'Gala (old)',
+    denominations: [{ name: 'GALAV1', multiplier: '100000000' }],
     networkLocation: {
       contractAddress: '0x15D4c048F83bd7e37d49eA4C83a07267Ec4203dA'
     }
