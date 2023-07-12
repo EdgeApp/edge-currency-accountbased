@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 1.4.5 (2023-07-12)
+
+- Update GALA token
+- Remove EthGasStation test
+- Update checkpoints
+
 ## 1.4.4 (2023-06-30)
 
 - Fixed: Critical bug that is missing data field for native EVM transactions including a memo
