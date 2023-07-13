@@ -419,8 +419,7 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeZcashWalletInfo(walletInfo)
-  const { makeSynchronizer } =
-    env.nativeIo['edge-currency-accountbased'][env.networkInfo.nativeSdk]
+  const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased'].zcash
 
   const engine = new ZcashEngine(
     env,

@@ -14,7 +14,6 @@ const networkInfo: PiratechainNetworkInfo = {
   },
   defaultBirthday: 2040000,
   defaultNetworkFee: '10000',
-  nativeSdk: 'piratechain',
   transactionQueryLimit: 999
 }
 

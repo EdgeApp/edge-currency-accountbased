@@ -48,7 +48,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (RNAccountbased == null) {
       throw new Error('Need opts')
     }
-    const { KeyTool, AddressTool } = RNAccountbased[this.networkInfo.nativeSdk]
+    const { KeyTool, AddressTool } = RNAccountbased.piratechain
 
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool

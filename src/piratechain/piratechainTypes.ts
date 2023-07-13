@@ -20,7 +20,6 @@ export interface PiratechainNetworkInfo {
   }
   defaultNetworkFee: string
   defaultBirthday: number
-  nativeSdk: 'piratechain' | 'piratechain'
   transactionQueryLimit: number
 }
 
