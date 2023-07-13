@@ -7,10 +7,9 @@ import {
   Synchronizer as PirateSynchronizer
 } from 'react-native-piratechain'
 import {
-  AddressTool as ZcashAddressTool,
-  KeyTool as ZcashKeyTool,
   makeSynchronizer as ZcashMakeSynchronizer,
-  Synchronizer as ZcashSynchronizer
+  Synchronizer as ZcashSynchronizer,
+  Tools as ZcashNativeTools
 } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
@@ -79,20 +78,20 @@ const makeZcashSynchronizer = async (
   const out: ZcashSynchronizer = bridgifyObject({
     // @ts-expect-error
     on: onMethod,
-    start: async () => {
-      return await realSynchronizer.start()
+    deriveUnifiedAddress: async () => {
+      return await realSynchronizer.deriveUnifiedAddress()
     },
     getTransactions: async blockRange => {
       return await realSynchronizer.getTransactions(blockRange)
     },
-    rescan: height => {
-      return realSynchronizer.rescan(height)
+    rescan: () => {
+      return realSynchronizer.rescan()
     },
     sendToAddress: async spendInfo => {
       return await realSynchronizer.sendToAddress(spendInfo)
     },
-    getShieldedBalance: async () => {
-      return await realSynchronizer.getShieldedBalance()
+    getBalance: async () => {
+      return await realSynchronizer.getBalance()
     },
     stop: async () => {
       return await realSynchronizer.stop()
@@ -104,8 +103,7 @@ const makeZcashSynchronizer = async (
 export function makePluginIo(): EdgeOtherMethods {
   bridgifyObject(PiratechainKeyTool)
   bridgifyObject(PiratechainAddressTool)
-  bridgifyObject(ZcashKeyTool)
-  bridgifyObject(ZcashAddressTool)
+  bridgifyObject(ZcashNativeTools)
 
   return {
     async fetchText(uri: string, opts: Object) {
@@ -128,8 +126,7 @@ export function makePluginIo(): EdgeOtherMethods {
       }
     }),
     zcash: bridgifyObject({
-      KeyTool: ZcashKeyTool,
-      AddressTool: ZcashAddressTool,
+      Tools: ZcashNativeTools,
       async makeSynchronizer(config: ZcashInitializerConfig) {
         return await makeZcashSynchronizer(config)
       }

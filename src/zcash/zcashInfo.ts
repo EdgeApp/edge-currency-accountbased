@@ -21,6 +21,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcash',
   requiredConfirmations: 10,
   unsafeBroadcastTx: true,
+  unsafeSyncNetwork: true,
   walletType: 'wallet:zcash',
 
   // Explorers:

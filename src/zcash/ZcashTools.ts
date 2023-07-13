@@ -1,5 +1,5 @@
 import { div } from 'biggystring'
-import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   EdgeCurrencyInfo,
@@ -12,10 +12,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import {
-  AddressTool as AddressToolType,
-  KeyTool as KeyToolType
-} from 'react-native-zcash'
+import { Tools as ToolsType } from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
@@ -34,9 +31,7 @@ export class ZcashTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: ZcashNetworkInfo
-
-  KeyTool: typeof KeyToolType
-  AddressTool: typeof AddressToolType
+  nativeTools: typeof ToolsType
 
   constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -51,8 +46,7 @@ export class ZcashTools implements EdgeCurrencyTools {
     }
     const { Tools } = RNAccountbased.zcash
 
-    this.KeyTool = KeyTool
-    this.AddressTool = AddressTool
+    this.nativeTools = Tools
   }
 
   async getDisplayPrivateKey(
@@ -65,12 +59,12 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
     const { keys } = asSafeZcashWalletInfo(publicWalletInfo)
-    return keys.unifiedViewingKeys?.extfvk
+    return keys.publicKey
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
     try {
-      return await this.KeyTool.getBirthdayHeight(
+      return await this.nativeTools.getBirthdayHeight(
         this.networkInfo.rpcNode.defaultHost,
         this.networkInfo.rpcNode.defaultPort
       )
@@ -80,10 +74,7 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return (
-      (await this.AddressTool.isValidShieldedAddress(address)) ||
-      (await this.AddressTool.isValidTransparentAddress(address))
-    )
+    return await this.nativeTools.isValidAddress(address)
   }
 
   // will actually use MNEMONIC version of private key
@@ -95,13 +86,6 @@ export class ZcashTools implements EdgeCurrencyTools {
     const isValid = validateMnemonic(userInput)
     if (!isValid)
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
-    const hexBuffer = await mnemonicToSeed(userInput)
-    const hex = hexBuffer.toString('hex')
-    const spendKey = await this.KeyTool.deriveSpendingKey(
-      hex,
-      this.networkInfo.rpcNode.networkName
-    )
-    if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
     const currentNetworkHeight = await this.getNewWalletBirthdayBlockheight()
@@ -122,7 +106,6 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     return {
       [`${pluginId}Mnemonic`]: userInput,
-      [`${pluginId}SpendKey`]: spendKey,
       [`${pluginId}BirthdayHeight`]: height
     }
   }
@@ -157,21 +140,14 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const hexBuffer = await mnemonicToSeed(mnemonic)
-    const hex = hexBuffer.toString('hex')
-    const unifiedViewingKeys: UnifiedViewingKey =
-      await this.KeyTool.deriveViewingKey(
-        hex,
+    const unifiedViewingKey: UnifiedViewingKey =
+      await this.nativeTools.deriveViewingKey(
+        mnemonic,
         this.networkInfo.rpcNode.networkName
       )
-    const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
-      unifiedViewingKeys.extfvk,
-      this.networkInfo.rpcNode.networkName
-    )
     return {
       birthdayHeight: zcashPrivateKeys.birthdayHeight,
-      publicKey: shieldedAddress,
-      unifiedViewingKeys
+      publicKey: unifiedViewingKey
     }
   }
 

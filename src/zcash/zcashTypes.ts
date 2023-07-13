@@ -28,7 +28,7 @@ export interface ZcashSpendInfo {
   toAddress: string
   memo: string
   fromAccountIndex: number
-  spendingKey: string
+  mnemonicSeed: string
 }
 
 export interface ZcashTransaction {
@@ -59,7 +59,7 @@ export interface ZcashInitializerConfig {
   networkName: ZcashNetworkName
   defaultHost: string
   defaultPort: number
-  fullViewingKey: UnifiedViewingKey
+  mnemonicSeed: string
   alias: string
   birthdayHeight: number
 }
@@ -67,10 +67,7 @@ export interface ZcashInitializerConfig {
 export type ZcashSynchronizerStatus =
   | 'STOPPED'
   | 'DISCONNECTED'
-  | 'DOWNLOADING'
-  | 'VALIDATING'
-  | 'SCANNING'
-  | 'ENHANCING'
+  | 'SYNCING'
   | 'SYNCED'
 
 export interface ZcashStatusEvent {
@@ -113,10 +110,11 @@ export interface ZcashSynchronizer {
   }>
   start: () => Promise<void>
   stop: () => Promise<void>
+  deriveUnifiedAddress: () => Promise<string>
   getTransactions: (arg: ZcashBlockRange) => Promise<ZcashTransaction[]>
-  rescan: (arg: number) => Promise<string>
+  rescan: () => Promise<string>
   sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>
-  getShieldedBalance: () => Promise<ZcashWalletBalance>
+  getBalance: () => Promise<ZcashWalletBalance>
 }
 
 export type ZcashMakeSynchronizer = () => (
@@ -125,11 +123,7 @@ export type ZcashMakeSynchronizer = () => (
 
 export const asZecPublicKey = asObject({
   birthdayHeight: asNumber,
-  publicKey: asString,
-  unifiedViewingKeys: asObject({
-    extfvk: asString,
-    extpub: asString
-  })
+  publicKey: asString
 })
 
 export type SafeZcashWalletInfo = ReturnType<typeof asSafeZcashWalletInfo>
@@ -137,7 +131,6 @@ export const asSafeZcashWalletInfo = asWalletInfo(asZecPublicKey)
 
 export interface ZcashPrivateKeys {
   mnemonic: string
-  spendKey: string
   birthdayHeight: number
 }
 export const asZcashPrivateKeys = (
@@ -145,7 +138,6 @@ export const asZcashPrivateKeys = (
 ): Cleaner<ZcashPrivateKeys> => {
   const asKeys = asObject({
     [`${pluginId}Mnemonic`]: asString,
-    [`${pluginId}SpendKey`]: asString,
     [`${pluginId}BirthdayHeight`]: asNumber
   })
 
@@ -154,14 +146,12 @@ export const asZcashPrivateKeys = (
       const clean = asKeys(raw)
       return {
         mnemonic: clean[`${pluginId}Mnemonic`] as string,
-        spendKey: clean[`${pluginId}SpendKey`] as string,
         birthdayHeight: clean[`${pluginId}BirthdayHeight`] as number
       }
     },
     clean => {
       return {
         [`${pluginId}Mnemonic`]: clean.mnemonic,
-        [`${pluginId}SpendKey`]: clean.spendKey,
         [`${pluginId}BirthdayHeight`]: clean.birthdayHeight
       }
     }
