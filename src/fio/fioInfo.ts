@@ -26,6 +26,9 @@ const networkInfo: FioNetworkInfo = {
   ],
   historyNodeUrls: [
     'https://fio.eosphere.io/v1/',
+    'https://api.fio.detroitledger.tech/v1/',
+    'https://api.fiosweden.org/v1/',
+    'https://fio.blockpane.com/v1/',
     'https://fio.greymass.com/v1/'
   ],
   fioRegApiUrl: 'https://reg.fioprotocol.io/public-api/',
