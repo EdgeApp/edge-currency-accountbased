@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.6 (2023-07-14)
+
+- Fixed: FIO transaction reliability issues resolved by adding more historical nodes
+
 ## 1.4.5 (2023-07-12)
 
 - Update GALA token
