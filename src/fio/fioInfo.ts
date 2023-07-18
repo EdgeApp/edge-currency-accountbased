@@ -21,7 +21,7 @@ const networkInfo: FioNetworkInfo = {
     // 'https://api.fio.greeneosio.com/v1/', running v3.2.0
     'https://api.fio.services/v1/',
     'https://fio.eosusa.news/v1/',
-    'https://fio-api.eosiomadrid.io/v1/',
+    // 'https://fio-api.eosiomadrid.io/v1/', constant 403 errors
     'https://fio.eosphere.io/v1/'
   ],
   historyNodeUrls: [
