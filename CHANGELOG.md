@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.4.7 (2023-07-18)
+
+- FIO: Treat 403 status code as error
+- Update checkpoints
+
 ## 1.4.6 (2023-07-14)
 
 - Fixed: FIO transaction reliability issues resolved by adding more historical nodes
