@@ -1,4 +1,4 @@
-export const fioApiErrorCodes = [400, 403, 404]
+export const fioApiErrorCodes = [400, 404]
 
 export const fioRegApiErrorCodes = {
   INVALID_FIO_ADDRESS: 'INVALID_FIO_ADDRESS',
