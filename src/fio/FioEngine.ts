@@ -882,10 +882,13 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         shuffleArray(
           this.networkInfo.apiUrls.map(
             async apiUrl =>
-              await this.executePreparedTrx(
-                apiUrl,
-                EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                preparedTrx
+              await timeout(
+                this.executePreparedTrx(
+                  apiUrl,
+                  EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+                  preparedTrx
+                ),
+                10000
               )
           )
         )
