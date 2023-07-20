@@ -54,7 +54,6 @@ import {
   asEthereumSignMessageParams,
   asEthereumTxOtherParams,
   asEthereumWalletOtherData,
-  asRollupGasPrices,
   asRpcResultString,
   asSafeEthWalletInfo,
   CalcL1RollupFeeParams,
@@ -547,17 +546,21 @@ export class EthereumEngine extends CurrencyEngine<
 
     // L1GasPrice
     try {
+      const params = {
+        to: this.l1RollupParams.oracleContractAddress,
+        data: this.l1RollupParams.gasPricel1BaseFeeMethod
+      }
       const response = await this.ethNetwork.multicastServers(
-        'rollup_gasPrices'
+        'eth_call',
+        params
       )
-      const gasPrices = asRollupGasPrices(response.result.result)
-      const { l1GasPrice } = gasPrices
+      const result = asRpcResultString(response.result)
 
       this.l1RollupParams = {
         ...this.l1RollupParams,
         gasPriceL1Wei: ceil(
           mul(
-            hexToDecimal(l1GasPrice),
+            hexToDecimal(result.result),
             this.l1RollupParams.maxGasPriceL1Multiplier
           ),
           0
