@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 1.4.8 (2023-07-21)
+
+- Optimism: Replace deprecated rpc method `rollup_gasPrices` with `l1BaseFee` query
+- EVM: Handle null gas parameter in WalletConnect requests
+- Update checkpoints
+
 ## 1.4.7 (2023-07-18)
 
 - FIO: Treat 403 status code as error
