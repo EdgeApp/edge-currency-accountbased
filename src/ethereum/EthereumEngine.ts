@@ -54,7 +54,6 @@ import {
   asEthereumSignMessageParams,
   asEthereumTxOtherParams,
   asEthereumWalletOtherData,
-  asRollupGasPrices,
   asRpcResultString,
   asSafeEthWalletInfo,
   CalcL1RollupFeeParams,
@@ -277,20 +276,29 @@ export class EthereumEngine extends CurrencyEngine<
           spendTarget.nativeAmount = '0'
         }
 
+        let networkFeeOption: 'custom' | undefined
+        let gasLimit
+        let gasPrice
+        if (params.gas != null) {
+          gasLimit = hexToDecimal(params.gas)
+          networkFeeOption = 'custom'
+        }
+        if (params.gasPrice != null) {
+          gasPrice = div(
+            hexToDecimal(params.gasPrice),
+            WEI_MULTIPLIER.toString(),
+            18
+          )
+          networkFeeOption = 'custom'
+        }
+
         const spendInfo: EdgeSpendInfo = {
           currencyCode: this.currencyInfo.currencyCode,
           spendTargets: [spendTarget],
-          networkFeeOption: 'custom',
+          networkFeeOption,
           customNetworkFee: {
-            gasLimit: hexToDecimal(params.gas),
-            gasPrice:
-              params.gasPrice != null
-                ? div(
-                    hexToDecimal(params.gasPrice),
-                    WEI_MULTIPLIER.toString(),
-                    18
-                  )
-                : undefined
+            gasLimit,
+            gasPrice
           },
           otherParams: params
         }
@@ -538,17 +546,21 @@ export class EthereumEngine extends CurrencyEngine<
 
     // L1GasPrice
     try {
+      const params = {
+        to: this.l1RollupParams.oracleContractAddress,
+        data: this.l1RollupParams.gasPricel1BaseFeeMethod
+      }
       const response = await this.ethNetwork.multicastServers(
-        'rollup_gasPrices'
+        'eth_call',
+        params
       )
-      const gasPrices = asRollupGasPrices(response.result.result)
-      const { l1GasPrice } = gasPrices
+      const result = asRpcResultString(response.result)
 
       this.l1RollupParams = {
         ...this.l1RollupParams,
         gasPriceL1Wei: ceil(
           mul(
-            hexToDecimal(l1GasPrice),
+            hexToDecimal(result.result),
             this.l1RollupParams.maxGasPriceL1Multiplier
           ),
           0

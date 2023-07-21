@@ -27,86 +27,80 @@ export function calcMiningFees(
 ): EthereumMiningFees {
   let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
+
+  const { customNetworkFee } = spendInfo ?? {}
   if (
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    spendInfo.spendTargets &&
-    spendInfo.spendTargets.length > 0 &&
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    spendInfo.spendTargets[0].publicAddress
+    spendInfo.networkFeeOption === ES_FEE_CUSTOM &&
+    customNetworkFee != null
   ) {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const { customNetworkFee } = spendInfo || {}
+    const { gasLimit, gasPrice } = customNetworkFee
+
     if (
-      spendInfo.networkFeeOption === ES_FEE_CUSTOM &&
-      customNetworkFee != null
+      (isNaN(gasLimit) || gasLimit === '') &&
+      (isNaN(gasPrice) || gasPrice === '')
     ) {
-      const { gasLimit, gasPrice } = customNetworkFee
+      const e = new Error(
+        `Custom Fee must have at least gasLimit or gasPrice specified`
+      )
+      e.name = 'ErrorBelowMinimumFee'
+      throw e
+    }
 
-      if (
-        (isNaN(gasLimit) || gasLimit === '') &&
-        (isNaN(gasPrice) || gasPrice === '')
-      ) {
-        const e = new Error(
-          `Custom Fee must have at least gasLimit or gasPrice specified`
-        )
-        e.name = 'ErrorBelowMinimumFee'
-        throw e
-      }
-
-      if (gasPrice != null && gasPrice !== '') {
-        const minGasPrice =
-          networkFees.default?.gasPrice?.minGasPrice ??
-          networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
-        if (minGasPrice != null) {
-          const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
-          if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
-            const e = new Error(
-              `Gas price ${gasPriceInWei} wei below minimum ${minGasPrice} wei`
-            )
-            e.name = 'ErrorBelowMinimumFee'
-            throw e
-          }
-        }
-
-        customGasPrice = mul(gasPrice, WEI_MULTIPLIER)
-      }
-
-      if (gasLimit != null && gasLimit !== '') {
-        const minGasLimit =
-          networkFees.default?.gasLimit?.minGasLimit ??
-          networkInfo.defaultNetworkFees.default.gasLimit?.minGasLimit
-        if (
-          (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
-          /^\s*$/.test(gasLimit)
-        ) {
+    if (gasPrice != null && gasPrice !== '') {
+      const minGasPrice =
+        networkFees.default?.gasPrice?.minGasPrice ??
+        networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
+      if (minGasPrice != null) {
+        const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
+        if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
           const e = new Error(
-            `Gas limit ${gasLimit} below minimum ${minGasLimit}`
+            `Gas price ${gasPriceInWei} wei below minimum ${minGasPrice} wei`
           )
           e.name = 'ErrorBelowMinimumFee'
           throw e
         }
-        customGasLimit = gasLimit
-
-        // Set to false since we have a custom gasLimit
-        useGasLimitDefaults = false
       }
+
+      customGasPrice = mul(gasPrice, WEI_MULTIPLIER)
     }
 
-    if (customGasLimit != null && customGasPrice != null) {
-      return {
-        gasLimit: customGasLimit,
-        gasPrice: customGasPrice,
-        useEstimatedGasLimit: false
+    if (gasLimit != null && gasLimit !== '') {
+      const minGasLimit =
+        networkFees.default?.gasLimit?.minGasLimit ??
+        networkInfo.defaultNetworkFees.default.gasLimit?.minGasLimit
+      if (
+        (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
+        /^\s*$/.test(gasLimit)
+      ) {
+        const e = new Error(
+          `Gas limit ${gasLimit} below minimum ${minGasLimit}`
+        )
+        e.name = 'ErrorBelowMinimumFee'
+        throw e
       }
-    }
+      customGasLimit = gasLimit
 
+      // Set to false since we have a custom gasLimit
+      useGasLimitDefaults = false
+    }
+  }
+
+  if (customGasLimit != null && customGasPrice != null) {
+    return {
+      gasLimit: customGasLimit,
+      gasPrice: customGasPrice,
+      useEstimatedGasLimit: false
+    }
+  }
+
+  let networkFeeForGasPrice: EthereumFee = networkFees.default
+  let networkFeeForGasLimit: EthereumFee = networkFees.default
+
+  if (typeof spendInfo.spendTargets[0]?.publicAddress === 'string') {
     // If we have incomplete fees from custom fees, calculate as normal
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
     )
-    let networkFeeForGasPrice: EthereumFee = networkFees.default
-    let networkFeeForGasLimit: EthereumFee = networkFees.default
-
     if (typeof networkFees[targetAddress] !== 'undefined') {
       networkFeeForGasLimit = networkFees[targetAddress]
       useGasLimitDefaults = false
@@ -114,106 +108,96 @@ export function calcMiningFees(
         networkFeeForGasPrice = networkFeeForGasLimit
       }
     }
+  }
 
-    let useLimit: 'regularTransaction' | 'tokenTransaction' =
-      'regularTransaction'
-    if (
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      spendInfo.currencyCode &&
-      spendInfo.currencyCode !== currencyInfo.currencyCode
-    ) {
-      useLimit = 'tokenTransaction'
-    }
+  let useLimit: 'regularTransaction' | 'tokenTransaction' = 'regularTransaction'
+  if (
+    spendInfo.currencyCode != null &&
+    spendInfo.currencyCode !== currencyInfo.currencyCode
+  ) {
+    useLimit = 'tokenTransaction'
+  }
 
-    let networkFeeOption = 'standard'
-    if (
-      typeof spendInfo.networkFeeOption === 'string' &&
-      spendInfo.networkFeeOption !== ES_FEE_CUSTOM
-    ) {
-      networkFeeOption = spendInfo.networkFeeOption
-    }
+  let networkFeeOption = 'standard'
+  if (
+    typeof spendInfo.networkFeeOption === 'string' &&
+    spendInfo.networkFeeOption !== ES_FEE_CUSTOM
+  ) {
+    networkFeeOption = spendInfo.networkFeeOption
+  }
 
-    const gasLimit =
-      networkFeeForGasLimit.gasLimit != null
-        ? networkFeeForGasLimit.gasLimit[useLimit]
-        : '21000'
-    let gasPrice = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!spendInfo.spendTargets[0].nativeAmount) {
-      throw new Error('ErrorInvalidNativeAmount')
-    }
-    let nativeAmount = spendInfo.spendTargets[0].nativeAmount
-    if (useLimit === 'tokenTransaction') {
-      // Small hack. Edgetimate the relative value of token to ethereum as 10%
-      nativeAmount = div(nativeAmount, '10')
-    }
-    if (networkFeeForGasPrice.gasPrice == null) {
-      throw new Error('ErrorInvalidGasPrice')
-    }
-    const gasPriceObj = networkFeeForGasPrice.gasPrice
-    switch (networkFeeOption) {
-      case ES_FEE_LOW:
-        gasPrice = gasPriceObj.lowFee
-        break
-      case ES_FEE_STANDARD: {
-        if (
-          gte(
-            nativeAmount,
-            networkFeeForGasPrice.gasPrice.standardFeeHighAmount
-          )
-        ) {
-          gasPrice = gasPriceObj.standardFeeHigh
-          break
-        }
-
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!networkFeeForGasPrice.gasPrice) {
-            throw new Error('ErrorInvalidGasPrice')
-          }
-          gasPrice = networkFeeForGasPrice.gasPrice.standardFeeLow
-          break
-        }
-
-        // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
-        const lowHighAmountDiff = sub(
-          gasPriceObj.standardFeeHighAmount,
-          gasPriceObj.standardFeeLowAmount
-        )
-        const lowHighFeeDiff = sub(
-          gasPriceObj.standardFeeHigh,
-          gasPriceObj.standardFeeLow
-        )
-
-        // How much above the lowFeeAmount is the user sending
-        const amountDiffFromLow = sub(
-          nativeAmount,
-          gasPriceObj.standardFeeLowAmount
-        )
-
-        // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
-        const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
-        const addFeeToLow = div(temp1, lowHighAmountDiff)
-        gasPrice = add(gasPriceObj.standardFeeLow, addFeeToLow)
+  const gasLimit =
+    networkFeeForGasLimit.gasLimit != null
+      ? networkFeeForGasLimit.gasLimit[useLimit]
+      : '21000'
+  let gasPrice = ''
+  if (spendInfo.spendTargets[0].nativeAmount == null) {
+    throw new Error('ErrorInvalidNativeAmount')
+  }
+  let nativeAmount = spendInfo.spendTargets[0].nativeAmount
+  if (useLimit === 'tokenTransaction') {
+    // Small hack. Edgetimate the relative value of token to ethereum as 10%
+    nativeAmount = div(nativeAmount, '10')
+  }
+  if (networkFeeForGasPrice.gasPrice == null) {
+    throw new Error('ErrorInvalidGasPrice')
+  }
+  const gasPriceObj = networkFeeForGasPrice.gasPrice
+  switch (networkFeeOption) {
+    case ES_FEE_LOW:
+      gasPrice = gasPriceObj.lowFee
+      break
+    case ES_FEE_STANDARD: {
+      if (
+        gte(nativeAmount, networkFeeForGasPrice.gasPrice.standardFeeHighAmount)
+      ) {
+        gasPrice = gasPriceObj.standardFeeHigh
         break
       }
 
-      case ES_FEE_HIGH:
-        gasPrice = networkFeeForGasPrice.gasPrice.highFee
+      if (lte(nativeAmount, gasPriceObj.standardFeeLowAmount)) {
+        if (networkFeeForGasPrice.gasPrice == null) {
+          throw new Error('ErrorInvalidGasPrice')
+        }
+        gasPrice = networkFeeForGasPrice.gasPrice.standardFeeLow
         break
-      default:
-        throw new Error(`Invalid networkFeeOption`)
+      }
+
+      // Scale the fee by the amount the user is sending scaled between standardFeeLowAmount and standardFeeHighAmount
+      const lowHighAmountDiff = sub(
+        gasPriceObj.standardFeeHighAmount,
+        gasPriceObj.standardFeeLowAmount
+      )
+      const lowHighFeeDiff = sub(
+        gasPriceObj.standardFeeHigh,
+        gasPriceObj.standardFeeLow
+      )
+
+      // How much above the lowFeeAmount is the user sending
+      const amountDiffFromLow = sub(
+        nativeAmount,
+        gasPriceObj.standardFeeLowAmount
+      )
+
+      // Add this much to the low fee = (amountDiffFromLow * lowHighFeeDiff) / lowHighAmountDiff)
+      const temp1 = mul(amountDiffFromLow, lowHighFeeDiff)
+      const addFeeToLow = div(temp1, lowHighAmountDiff)
+      gasPrice = add(gasPriceObj.standardFeeLow, addFeeToLow)
+      break
     }
-    const out: EthereumMiningFees = {
-      gasLimit: customGasLimit ?? gasLimit,
-      gasPrice: customGasPrice ?? gasPrice,
-      useEstimatedGasLimit: useGasLimitDefaults
-    }
-    return out
-  } else {
-    throw new Error('ErrorInvalidSpendInfo')
+
+    case ES_FEE_HIGH:
+      gasPrice = networkFeeForGasPrice.gasPrice.highFee
+      break
+    default:
+      throw new Error(`Invalid networkFeeOption`)
   }
+  const out: EthereumMiningFees = {
+    gasLimit: customGasLimit ?? gasLimit,
+    gasPrice: customGasPrice ?? gasPrice,
+    useEstimatedGasLimit: useGasLimitDefaults
+  }
+  return out
 }
 
 const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s, v signatures to raw transaction

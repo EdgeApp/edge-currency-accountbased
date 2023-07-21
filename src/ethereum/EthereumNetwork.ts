@@ -90,7 +90,6 @@ type EthFunction =
   | 'eth_getCode'
   | 'blockbookBlockHeight'
   | 'blockbookAddress'
-  | 'rollup_gasPrices'
 
 interface BroadcastResults {
   incrementNonce: boolean
@@ -895,7 +894,6 @@ export class EthereumNetwork {
         break
 
       case 'eth_getTransactionReceipt':
-      case 'rollup_gasPrices':
       case 'eth_getCode':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(

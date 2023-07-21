@@ -138,6 +138,7 @@ export interface EthereumMiningFees {
 
 export interface L1RollupParams {
   gasPriceL1Wei: string
+  gasPricel1BaseFeeMethod: string
   maxGasPriceL1Multiplier: string
   fixedOverhead: string
   dynamicOverhead: string
@@ -393,11 +394,6 @@ export type RpcResultString = ReturnType<typeof asRpcResultString>
 
 export const asGetTransactionReceipt = asObject({
   l1Fee: asString
-})
-
-export const asRollupGasPrices = asObject({
-  l1GasPrice: asString
-  // l2GasPrice: asString
 })
 
 export interface TxRpcParams {
