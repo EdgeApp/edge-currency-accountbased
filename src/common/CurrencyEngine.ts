@@ -47,6 +47,16 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
+interface TxidList {
+  [currencyCode: string]: string[]
+}
+interface TxidMap {
+  [currencyCode: string]: { [txid: string]: number }
+}
+interface TransactionList {
+  [currencyCode: string]: EdgeTransaction[]
+}
+
 export class CurrencyEngine<
   Tools extends EdgeCurrencyTools & {
     io: EdgeIo
@@ -67,9 +77,9 @@ export class CurrencyEngine<
   walletLocalDataDirty: boolean
   transactionListDirty: boolean
   transactionsLoaded: boolean
-  transactionList: { [currencyCode: string]: EdgeTransaction[] }
-  txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in
-  txIdList: { [currencyCode: string]: string[] } // Map of array of txids in chronological order
+  transactionList: TransactionList
+  txIdMap: TxidMap // Maps txid to index of tx in
+  txIdList: TxidList // Map of array of txids in chronological order
   transactionsChangedArray: EdgeTransaction[] // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
   allTokens: EdgeMetaToken[]
@@ -187,13 +197,8 @@ export class CurrencyEngine<
     this.transactionsLoaded = true
 
     const disklet = this.walletLocalDisklet
-    let txIdList: { [currencyCode: string]: string[] } | undefined
-    let txIdMap:
-      | { [currencyCode: string]: { [txid: string]: number } }
-      | undefined
-    let transactionList:
-      | { [currencyCode: string]: EdgeTransaction[] }
-      | undefined
+
+    let txIdList: TxidList | undefined
     try {
       const result = await disklet.getText(TXID_LIST_FILE)
       txIdList = JSON.parse(result)
@@ -201,6 +206,8 @@ export class CurrencyEngine<
       this.log('Could not load txidList file. Failure is ok on new device')
       await disklet.setText(TXID_LIST_FILE, JSON.stringify(this.txIdList))
     }
+
+    let txIdMap: TxidMap | undefined
     try {
       const result = await disklet.getText(TXID_MAP_FILE)
       txIdMap = JSON.parse(result)
@@ -209,6 +216,7 @@ export class CurrencyEngine<
       await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
     }
 
+    let transactionList: TransactionList | undefined
     try {
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
