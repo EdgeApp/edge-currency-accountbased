@@ -676,6 +676,7 @@ export class CurrencyEngine<
     return true
   }
 
+  // Called by EthereumNetwork
   getTokenInfo(token: string): EdgeMetaToken | undefined {
     return this.allTokens.find(element => {
       return element.currencyCode === token
@@ -794,6 +795,7 @@ export class CurrencyEngine<
     }
   }
 
+  /** @deprecated Replaced by changeEnabledTokenIds */
   async enableTokens(tokens: string[]): Promise<void> {
     this.enableTokensSync(tokens)
   }
@@ -810,14 +812,12 @@ export class CurrencyEngine<
     }
   }
 
+  /** @deprecated Replaced by changeEnabledTokenIds */
   async disableTokens(tokens: string[]): Promise<void> {
     this.disableTokensSync(tokens)
   }
 
-  async getEnabledTokens(): Promise<string[]> {
-    return this.enabledTokens
-  }
-
+  /** @deprecated Replaced by changeCustomTokens */
   async addCustomToken(
     obj: CustomToken,
     contractAddress?: string
@@ -869,10 +869,6 @@ export class CurrencyEngine<
       this.allTokensMap = { [tokenId]: obj, ...this.allTokensMap }
     }
     this.enableTokensSync([edgeMetaToken.currencyCode])
-  }
-
-  getTokenStatus(token: string): boolean {
-    return this.enabledTokens.includes(token)
   }
 
   getBalance(options: EdgeCurrencyCodeOptions): string {
@@ -983,7 +979,7 @@ export class CurrencyEngine<
     if (typeof edgeSpendInfo.currencyCode === 'string') {
       currencyCode = edgeSpendInfo.currencyCode
       if (currencyCode !== this.currencyInfo.currencyCode) {
-        if (!this.getTokenStatus(currencyCode)) {
+        if (!this.enabledTokens.includes(currencyCode)) {
           throw new Error('Error: Token not supported or enabled')
         }
       }
