@@ -65,7 +65,7 @@ export const asTronWalletOtherData = asObject({
       mainnet: asTxQueryCache,
       trc20: asTxQueryCache
     }),
-    {
+    () => ({
       mainnet: {
         txid: '',
         timestamp: 0
@@ -74,7 +74,7 @@ export const asTronWalletOtherData = asObject({
         txid: '',
         timestamp: 0
       }
-    }
+    })
   )
 })
 

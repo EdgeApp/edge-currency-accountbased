@@ -99,10 +99,10 @@ export type ZcashBlockRange = ReturnType<typeof asZcashBlockRange>
 
 export const asZcashWalletOtherData = asObject({
   alias: asMaybe(asString),
-  blockRange: asMaybe(asZcashBlockRange, {
+  blockRange: asMaybe(asZcashBlockRange, () => ({
     first: 0,
     last: 0
-  })
+  }))
 })
 
 export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>

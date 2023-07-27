@@ -180,16 +180,16 @@ export const asFioWalletOtherData = asObject({
       PENDING: asArray(asFioRequest),
       SENT: asArray(asFioRequest)
     }),
-    {
+    () => ({
       SENT: [],
       PENDING: []
-    }
+    })
   ),
   srps: asMaybe(asNumber, 0),
   stakingRoe: asMaybe(asString, ''),
-  stakingStatus: asMaybe(asEdgeStakingStatus, {
+  stakingStatus: asMaybe(asEdgeStakingStatus, () => ({
     stakedAmounts: []
-  })
+  }))
 })
 
 export type FioWalletOtherData = ReturnType<typeof asFioWalletOtherData>
