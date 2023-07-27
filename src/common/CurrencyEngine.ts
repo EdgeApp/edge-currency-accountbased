@@ -24,11 +24,6 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
-import {
-  asCurrencyCodeOptions,
-  checkCustomToken,
-  checkEdgeSpendInfo
-} from './schema'
 import { validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
@@ -814,8 +809,6 @@ export class CurrencyEngine<
     obj: CustomToken,
     contractAddress?: string
   ): Promise<void> {
-    checkCustomToken(obj)
-
     const tokenObj: CustomToken = obj
 
     // If token is already in currencyInfo, error as it cannot be changed
@@ -870,8 +863,7 @@ export class CurrencyEngine<
   }
 
   getBalance(options: EdgeCurrencyCodeOptions): string {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     if (nativeBalance == null) {
@@ -881,8 +873,7 @@ export class CurrencyEngine<
   }
 
   getNumTransactions(options: EdgeCurrencyCodeOptions): number {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     if (this.walletLocalData.numTransactions[currencyCode] == null) {
       return 0
@@ -894,8 +885,7 @@ export class CurrencyEngine<
   async getTransactions(
     options: EdgeGetTransactionsOptions
   ): Promise<EdgeTransaction[]> {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     await this.loadTransactions()
 
@@ -969,7 +959,6 @@ export class CurrencyEngine<
     skipChecks: boolean
   } {
     const { skipChecks = false } = edgeSpendInfo
-    checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (!skipChecks && st.publicAddress === this.walletLocalData.publicKey) {
