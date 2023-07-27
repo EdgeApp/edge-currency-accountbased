@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.4.9 (2023-07-26)
+
+- Update XRP explorer url
+- Update checkpoints
+
 ## 1.4.8 (2023-07-21)
 
 - Optimism: Replace deprecated rpc method `rollup_gasPrices` with `l1BaseFee` query
