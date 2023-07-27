@@ -23,8 +23,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   memoMaxLength: 10,
   memoMaxValue: '4294967295',
 
-  addressExplorer: 'https://bithomp.com/explorer/%s',
-  transactionExplorer: 'https://bithomp.com/explorer/%s',
+  addressExplorer: 'https://xrpscan.com/account/%s',
+  transactionExplorer: 'https://xrpscan.com/tx/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
