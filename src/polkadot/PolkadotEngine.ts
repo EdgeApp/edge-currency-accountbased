@@ -476,17 +476,6 @@ export class PolkadotEngine extends CurrencyEngine<
 
     return edgeTransaction
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const polkadotPrivateKeys = asPolkapolkadotPrivateKeys(
-      this.currencyInfo.pluginId
-    )(privateKeys)
-    return polkadotPrivateKeys.mnemonic ?? polkadotPrivateKeys.privateKey
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey ?? ''
-  }
 }
 
 export async function makeCurrencyEngine(

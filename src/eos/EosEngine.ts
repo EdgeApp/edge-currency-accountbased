@@ -1150,31 +1150,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       throw err
     }
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const eosPrivateKeys = asEosPrivateKeys(privateKeys)
-    let out = ''
-    // usage of eosOwnerKey must be protected by conditional
-    // checking for its existence
-    out += 'owner key\n' + String(eosPrivateKeys.eosOwnerKey) + '\n\n'
-    out += 'active key\n' + String(eosPrivateKeys.eosKey) + '\n\n'
-    return out
-  }
-
-  getDisplayPublicSeed(): string {
-    let out = ''
-    if (this.walletInfo.keys?.ownerPublicKey != null) {
-      out +=
-        'owner publicKey\n' +
-        String(this.walletInfo.keys.ownerPublicKey) +
-        '\n\n'
-    }
-    if (this.walletInfo.keys?.publicKey != null) {
-      out +=
-        'active publicKey\n' + String(this.walletInfo.keys.publicKey) + '\n\n'
-    }
-    return out
-  }
 }
 
 export async function makeCurrencyEngine(

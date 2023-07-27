@@ -8,7 +8,6 @@ import {
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
-  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -398,15 +397,6 @@ export class ZcashEngine extends CurrencyEngine<
       throw e
     }
     return edgeTransaction
-  }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(privateKeys)
-    return zcashPrivateKeys.mnemonic
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.unifiedViewingKeys?.extfvk ?? ''
   }
 
   async loadEngine(

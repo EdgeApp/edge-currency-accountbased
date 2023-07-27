@@ -667,15 +667,6 @@ export class StellarEngine extends CurrencyEngine<
     }
     return edgeTransaction
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
-    const stellarPrivateKeys = asStellarPrivateKeys(privateKeys)
-    return stellarPrivateKeys.stellarKey
-  }
-
-  getDisplayPublicSeed(): string | null {
-    return this.walletInfo.keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(
