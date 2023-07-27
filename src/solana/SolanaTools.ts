@@ -18,7 +18,11 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { SolanaNetworkInfo } from './solanaTypes'
+import {
+  asSafeSolanaWalletInfo,
+  asSolanaPrivateKeys,
+  SolanaNetworkInfo
+} from './solanaTypes'
 
 const { Keypair, PublicKey } = solanaWeb3
 
@@ -45,6 +49,19 @@ export class SolanaTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asSolanaPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeSolanaWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(mnemonic: string): Promise<JsonObject> {

@@ -18,7 +18,11 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, isHex } from '../common/utils'
-import { PolkadotNetworkInfo } from './polkadotTypes'
+import {
+  asPolkapolkadotPrivateKeys,
+  asSafePolkadotWalletInfo,
+  PolkadotNetworkInfo
+} from './polkadotTypes'
 
 const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
 
@@ -40,6 +44,19 @@ export class PolkadotTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
 
     this.polkadotApiSubscribers = new Set()
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asPolkapolkadotPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic ?? keys.privateKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafePolkadotWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {

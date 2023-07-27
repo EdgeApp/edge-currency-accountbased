@@ -20,7 +20,11 @@ import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { biggyScience, getDenomInfo } from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
-import { EthereumNetworkInfo } from './ethereumTypes'
+import {
+  asEthereumPrivateKeys,
+  asSafeEthWalletInfo,
+  EthereumNetworkInfo
+} from './ethereumTypes'
 
 export class EthereumTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -34,6 +38,19 @@ export class EthereumTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asEthereumPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.privateKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeEthWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {

@@ -30,7 +30,11 @@ import {
   asGetActivationCost,
   asGetActivationSupportedCurrencies
 } from './eosSchema'
-import { EosNetworkInfo } from './eosTypes'
+import {
+  asEosPrivateKeys,
+  asSafeEosWalletInfo,
+  EosNetworkInfo
+} from './eosTypes'
 
 export function checkAddress(address: string): boolean {
   return Name.pattern.test(address)
@@ -61,6 +65,31 @@ export class EosTools implements EdgeCurrencyTools {
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asEosPrivateKeys(privateWalletInfo.keys)
+    let out = ''
+    // usage of eosOwnerKey must be protected by conditional
+    // checking for its existence
+    out += 'owner key\n' + String(keys.eosOwnerKey) + '\n\n'
+    out += 'active key\n' + String(keys.eosKey) + '\n\n'
+    return out
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeEosWalletInfo(publicWalletInfo)
+
+    let out = ''
+    if (keys?.ownerPublicKey != null) {
+      out += 'owner publicKey\n' + String(keys.ownerPublicKey) + '\n\n'
+    }
+    if (keys?.publicKey != null) {
+      out += 'active publicKey\n' + String(keys.publicKey) + '\n\n'
+    }
+    return out
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {

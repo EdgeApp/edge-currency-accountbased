@@ -16,7 +16,12 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo, getFetchCors } from '../common/utils'
-import { asGetActivationCost, HederaNetworkInfo } from './hederaTypes'
+import {
+  asGetActivationCost,
+  asHederaPrivateKeys,
+  asSafeHederaWalletInfo,
+  HederaNetworkInfo
+} from './hederaTypes'
 import { createChecksum, validAddress } from './hederaUtils'
 
 // if users want to import their mnemonic phrase in e.g. MyHbarWallet.com
@@ -40,6 +45,19 @@ export class HederaTools implements EdgeCurrencyTools {
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asHederaPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic ?? keys.privateKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeHederaWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {

@@ -15,7 +15,11 @@ import parse from 'url-parse'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { StellarNetworkInfo } from './stellarTypes'
+import {
+  asSafeStellarWalletInfo,
+  asStellarPrivateKeys,
+  StellarNetworkInfo
+} from './stellarTypes'
 
 const URI_PREFIX = 'web+stellar'
 
@@ -42,6 +46,18 @@ export class StellarTools implements EdgeCurrencyTools {
       stellarServer.serverName = server
       this.stellarApiServers.push(stellarServer)
     }
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asStellarPrivateKeys(privateWalletInfo.keys)
+    return keys.stellarKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeStellarWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   checkAddress(address: string): boolean {

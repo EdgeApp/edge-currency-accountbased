@@ -26,7 +26,11 @@ import {
 import { DEFAULT_APR, FIO_REG_API_ENDPOINTS } from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
 import { currencyInfo } from './fioInfo'
-import { FioNetworkInfo } from './fioTypes'
+import {
+  asFioPrivateKeys,
+  asSafeFioWalletInfo,
+  FioNetworkInfo
+} from './fioTypes'
 
 const FIO_CURRENCY_CODE = 'FIO'
 const FIO_TYPE = 'fio'
@@ -72,6 +76,18 @@ export class FioTools implements EdgeCurrencyTools {
       // eslint-disable-next-line
       new FIOSDK('', '', baseUrl, this.fetchCors, undefined, tpid)
     }
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asFioPrivateKeys(privateWalletInfo.keys)
+    return keys.fioKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeFioWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(userInput: string): Promise<Object> {
