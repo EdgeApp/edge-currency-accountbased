@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.4.10 (2023-07-27)
+
+- Replace asMaybe and asOptional cleaner default objects with functions that return new objects in otherData cleaners
+
 ## 1.4.9 (2023-07-26)
 
 - Update XRP explorer url
