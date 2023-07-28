@@ -3,8 +3,8 @@ import { add, eq, gt, toFixed } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   EdgeFreshAddress,
-  EdgeLog,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -16,7 +16,12 @@ import { base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { bufToHex, hexToBuf, removeHexPrefix } from '../common/utils'
+import {
+  bufToHex,
+  getFetchCors,
+  hexToBuf,
+  removeHexPrefix
+} from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
   asCheckAccountCreationStatus,
@@ -37,11 +42,11 @@ export class HederaEngine extends CurrencyEngine<
   SafeHederaWalletInfo
 > {
   client: hedera.Client
+  fetchCors: EdgeFetchFunction
   accountNameChecked: boolean
   otherMethods: Object
   creatorApiServers: [string]
   mirrorNodes: [string]
-  log: EdgeLog
   maxFee: number
   otherData!: HederaWalletOtherData
 
@@ -52,11 +57,11 @@ export class HederaEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
-    this.log = opts.log
 
     const { client, creatorApiServers, mirrorNodes, maxFee } = env.networkInfo
     // @ts-expect-error
     this.client = hedera.Client[`for${client}`]()
+    this.fetchCors = getFetchCors(env.io)
     this.accountNameChecked = false
     this.creatorApiServers = creatorApiServers
     this.mirrorNodes = mirrorNodes
@@ -98,7 +103,7 @@ export class HederaEngine extends CurrencyEngine<
         }
 
         try {
-          const response = await this.io.fetch(
+          const response = await this.fetchCors(
             `${this.creatorApiServers[0]}/account`,
             options
           )
@@ -152,7 +157,7 @@ export class HederaEngine extends CurrencyEngine<
         const paymentUrl = `${this.creatorApiServers[0]}/request/${requestId}/payment`
 
         try {
-          const response = await this.io.fetch(paymentUrl, options)
+          const response = await this.fetchCors(paymentUrl, options)
           if (!response.ok) {
             this.warn(
               `submitActivationPayment failed to submit payment
@@ -182,7 +187,7 @@ export class HederaEngine extends CurrencyEngine<
 
     // Use mirror node to see if there's an account associated with the public key
     try {
-      const response = await this.io.fetch(
+      const response = await this.fetchCors(
         `${this.mirrorNodes[0]}/api/v1/accounts?account.publickey=${this.walletInfo.keys.publicKey}`
       )
       const { accounts } = asGetHederaAccount(await response.json())
@@ -200,7 +205,7 @@ export class HederaEngine extends CurrencyEngine<
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (accountId == null && paymentSubmitted && activationRequestId != null) {
       try {
-        const response = await this.io.fetch(
+        const response = await this.fetchCors(
           `${this.creatorApiServers[0]}/request/${activationRequestId}/status`
         )
         const json = asCheckAccountCreationStatus(await response.json())
@@ -255,7 +260,7 @@ export class HederaEngine extends CurrencyEngine<
     const url = `${this.mirrorNodes[0]}/api/v1/balances?account.id=${accountId}`
 
     try {
-      const response = await this.io.fetch(url)
+      const response = await this.fetchCors(url)
 
       if (!response.ok) {
         const text = await response.text()
@@ -336,7 +341,7 @@ export class HederaEngine extends CurrencyEngine<
     // we request transactions in ascending order by consensus timestamp
     const url = `${this.mirrorNodes[0]}/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${timestamp}`
 
-    const response = await this.io.fetch(url)
+    const response = await this.fetchCors(url)
 
     if (!response.ok) {
       this.warn(

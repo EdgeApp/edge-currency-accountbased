@@ -5,6 +5,7 @@ import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -20,6 +21,7 @@ import {
   cleanTxLogs,
   decimalToHex,
   getDenomInfo,
+  getFetchCors,
   getOtherParams,
   makeMutex
 } from '../common/utils'
@@ -48,6 +50,7 @@ export class PolkadotEngine extends CurrencyEngine<
   PolkadotTools,
   SafePolkadotWalletInfo
 > {
+  fetchCors: EdgeFetchFunction
   networkInfo: PolkadotNetworkInfo
   otherData!: PolkadotWalletOtherData
   api!: ApiPromise
@@ -61,6 +64,7 @@ export class PolkadotEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.fetchCors = getFetchCors(env.io)
     this.networkInfo = env.networkInfo
     this.nonce = 0
     this.minimumAddressBalance = this.networkInfo.existentialDeposit
@@ -92,7 +96,7 @@ export class PolkadotEngine extends CurrencyEngine<
       },
       body: JSON.stringify(body)
     }
-    const response = await this.io.fetch(
+    const response = await this.fetchCors(
       this.networkInfo.subscanBaseUrl + endpoint,
       options
     )

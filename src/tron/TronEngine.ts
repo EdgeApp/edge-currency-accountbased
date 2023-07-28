@@ -4,7 +4,6 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
-  EdgeLog,
   EdgeSpendInfo,
   EdgeStakingStatus,
   EdgeTransaction,
@@ -100,7 +99,6 @@ type TronFunction =
 
 export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   fetchCors: EdgeFetchFunction
-  log: EdgeLog
   readonly recentBlock: ReferenceBlock
   accountResources: TronAccountResources
   networkFees: TronNetworkFees
@@ -117,10 +115,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, currencyPlugin, walletInfo, opts)
-    const fetchCors = getFetchCors(env)
     const { networkInfo } = env
-    this.fetchCors = fetchCors
-    this.log = opts.log
+    this.fetchCors = getFetchCors(env.io)
     this.networkInfo = networkInfo
     this.recentBlock = {
       hash: '0',

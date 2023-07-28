@@ -84,7 +84,6 @@ export class CurrencyEngine<
   currentSettings: any
   timers: any
   walletId: string
-  io: EdgeIo
   log: EdgeLog
   warn: (message: string, e?: Error) => void
   error: (message: string, e?: Error) => void
@@ -97,12 +96,11 @@ export class CurrencyEngine<
     walletInfo: SafeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const { io, currencyInfo } = tools
+    const { currencyInfo } = tools
     const { currencyCode } = currencyInfo
     const { walletLocalDisklet, callbacks, customTokens } = opts
 
     this.tools = tools
-    this.io = io
     this.log = opts.log
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))

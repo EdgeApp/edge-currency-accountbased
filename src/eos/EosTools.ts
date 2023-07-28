@@ -57,10 +57,10 @@ export class EosTools implements EdgeCurrencyTools {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.fetchCors = getFetchCors(env.io)
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
-    this.fetchCors = getFetchCors(env)
   }
 
   async importPrivateKey(privateKey: string): Promise<Object> {

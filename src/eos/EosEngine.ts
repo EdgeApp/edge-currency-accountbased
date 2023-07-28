@@ -106,10 +106,9 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     walletInfo: SafeEosWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const fetchCors = getFetchCors(env)
     super(env, tools, walletInfo, opts)
     const { networkInfo } = env
-    this.fetchCors = fetchCors
+    this.fetchCors = getFetchCors(env.io)
     this.networkInfo = networkInfo
     this.activatedAccountsCache = {}
     const { currencyCode, denominations } = this.currencyInfo
@@ -176,7 +175,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
           const out = await asyncWaterfall(
             this.networkInfo.eosActivationServers.map(server => async () => {
               const uri = `${server}/api/v1/activateAccount`
-              const response = await fetchCors(uri, options)
+              const response = await this.fetchCors(uri, options)
               return await response.json()
             }),
             15000

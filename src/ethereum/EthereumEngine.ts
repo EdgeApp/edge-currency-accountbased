@@ -122,11 +122,11 @@ export class EthereumEngine extends CurrencyEngine<
       this.l1RollupParams = this.networkInfo.l1RollupParams
     }
     this.networkFees = this.networkInfo.defaultNetworkFees
-    this.fetchCors = getFetchCors(env)
+    this.fetchCors = getFetchCors(env.io)
 
     // Update network fees from other providers
     const { infoFeeProvider, externalFeeProviders } = FeeProviders(
-      this.io.fetch,
+      this.fetchCors,
       this.currencyInfo,
       this.initOptions,
       this.log,

@@ -476,17 +476,7 @@ export class EthereumNetwork {
 
     const url = `${server}/api${cmd}`
 
-    const fetcher = useFetchCors
-      ? this.ethEngine.io.fetchCors
-      : this.ethEngine.io.fetch
-
-    // Assert that fetch is defined (only possible if fetchCors is undefined)
-    if (fetcher == null)
-      throw new Error(
-        `Failed to fetch from ${server} undefined fetchCors in EdgeIo`
-      )
-
-    const response = await fetcher(`${url}${apiKeyParam}`)
+    const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
     return await response.json()
   }
@@ -495,7 +485,7 @@ export class EthereumNetwork {
   async fetchGetBlockbook(server: string, param: string) {
     const url = server + param
     const resultRaw = !server.includes('trezor')
-      ? await this.ethEngine.io.fetch(url)
+      ? await this.ethEngine.fetchCors(url)
       : await this.ethEngine.fetchCors(url, {
           headers: { 'User-Agent': 'http.agent' }
         })
@@ -541,7 +531,7 @@ export class EthereumNetwork {
     }
     url += addOnUrl
 
-    const response = await this.ethEngine.io.fetch(url, {
+    const response = await this.ethEngine.fetchCors(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -567,7 +557,7 @@ export class EthereumNetwork {
     }
 
     const url = `${baseUrl}/${cmd}${apiKey}`
-    const response = await this.ethEngine.io.fetch(url, {
+    const response = await this.ethEngine.fetchCors(url, {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json'
@@ -591,7 +581,7 @@ export class EthereumNetwork {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       includeKey && blockchairApiKey ? `&key=${blockchairApiKey}` : ''
     const url = `${blockchairApiServers[0]}${path}`
-    const response = await this.ethEngine.io.fetch(`${url}${keyParam}`)
+    const response = await this.ethEngine.fetchCors(`${url}${keyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetBlockchair', url)
     return await response.json()
   }
@@ -666,7 +656,7 @@ export class EthereumNetwork {
     const { alethioApiServers } = this.ethEngine.networkInfo
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
 
-    const response = await this.ethEngine.io.fetch(
+    const response = await this.ethEngine.fetchCors(
       url,
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       alethioApiKey
