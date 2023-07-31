@@ -12,16 +12,11 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { base64 } from 'rfc4648'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import {
-  bufToHex,
-  getFetchCors,
-  hexToBuf,
-  removeHexPrefix
-} from '../common/utils'
+import { getFetchCors, hexToBuf } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
   asCheckAccountCreationStatus,
@@ -370,8 +365,7 @@ export class HederaEngine extends CurrencyEngine<
       if (gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
 
       txs.push({
-        // @ts-expect-error
-        txid: removeHexPrefix(bufToHex(base64.parse(tx.transaction_hash))),
+        txid: hashToTxid(base64.parse(tx.transaction_hash)),
         date: parseInt(tx.valid_start_timestamp),
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
         blockHeight: 1, // blockHeight
@@ -513,8 +507,7 @@ export class HederaEngine extends CurrencyEngine<
     return {
       ...edgeTransaction,
       signedTx: base64.stringify(transferTx.toBytes()),
-      // @ts-expect-error
-      txid: removeHexPrefix(bufToHex(transferTx.hash())),
+      txid: hashToTxid(transferTx.hash()),
       date: Date.now() / 1000,
       otherParams: {
         ...edgeTransaction.otherParams
@@ -570,6 +563,10 @@ export class HederaEngine extends CurrencyEngine<
     }
     return ''
   }
+}
+
+function hashToTxid(hash: Uint8Array): string {
+  return base16.stringify(hash).toLowerCase()
 }
 
 export async function makeCurrencyEngine(

@@ -24,11 +24,6 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
-import {
-  asCurrencyCodeOptions,
-  checkCustomToken,
-  checkEdgeSpendInfo
-} from './schema'
 import { validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
@@ -52,6 +47,16 @@ const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
 const DROPPED_TX_TIME_GAP = 3600 * 24 // 1 Day
 
+interface TxidList {
+  [currencyCode: string]: string[]
+}
+interface TxidMap {
+  [currencyCode: string]: { [txid: string]: number }
+}
+interface TransactionList {
+  [currencyCode: string]: EdgeTransaction[]
+}
+
 export class CurrencyEngine<
   Tools extends EdgeCurrencyTools & {
     io: EdgeIo
@@ -72,9 +77,9 @@ export class CurrencyEngine<
   walletLocalDataDirty: boolean
   transactionListDirty: boolean
   transactionsLoaded: boolean
-  transactionList: { [currencyCode: string]: EdgeTransaction[] }
-  txIdMap: { [currencyCode: string]: { [txid: string]: number } } // Maps txid to index of tx in
-  txIdList: { [currencyCode: string]: string[] } // Map of array of txids in chronological order
+  transactionList: TransactionList
+  txIdMap: TxidMap // Maps txid to index of tx in
+  txIdList: TxidList // Map of array of txids in chronological order
   transactionsChangedArray: EdgeTransaction[] // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
   allTokens: EdgeMetaToken[]
@@ -160,7 +165,7 @@ export class CurrencyEngine<
     )
   }
 
-  isSpendTx(edgeTransaction: EdgeTransaction): boolean {
+  protected isSpendTx(edgeTransaction: EdgeTransaction): boolean {
     if (edgeTransaction.nativeAmount !== '') {
       if (edgeTransaction.nativeAmount.slice(0, 1) === '-') {
         return true
@@ -180,11 +185,11 @@ export class CurrencyEngine<
     return out
   }
 
-  setOtherData(raw: any): void {
+  protected setOtherData(raw: any): void {
     throw new Error(`Unimplemented setOtherData for ${this.walletInfo.type}`)
   }
 
-  async loadTransactions(): Promise<void> {
+  protected async loadTransactions(): Promise<void> {
     if (this.transactionsLoaded) {
       this.log('Transactions already loaded')
       return
@@ -192,13 +197,8 @@ export class CurrencyEngine<
     this.transactionsLoaded = true
 
     const disklet = this.walletLocalDisklet
-    let txIdList: { [currencyCode: string]: string[] } | undefined
-    let txIdMap:
-      | { [currencyCode: string]: { [txid: string]: number } }
-      | undefined
-    let transactionList:
-      | { [currencyCode: string]: EdgeTransaction[] }
-      | undefined
+
+    let txIdList: TxidList | undefined
     try {
       const result = await disklet.getText(TXID_LIST_FILE)
       txIdList = JSON.parse(result)
@@ -206,6 +206,8 @@ export class CurrencyEngine<
       this.log('Could not load txidList file. Failure is ok on new device')
       await disklet.setText(TXID_LIST_FILE, JSON.stringify(this.txIdList))
     }
+
+    let txIdMap: TxidMap | undefined
     try {
       const result = await disklet.getText(TXID_MAP_FILE)
       txIdMap = JSON.parse(result)
@@ -214,6 +216,7 @@ export class CurrencyEngine<
       await disklet.setText(TXID_MAP_FILE, JSON.stringify(this.txIdMap))
     }
 
+    let transactionList: TransactionList | undefined
     try {
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
@@ -261,6 +264,7 @@ export class CurrencyEngine<
     }
   }
 
+  // Called by engine startup code
   async loadEngine(
     plugin: EdgeCurrencyTools,
     walletInfo: SafeWalletInfo,
@@ -374,7 +378,7 @@ export class CurrencyEngine<
     this.doInitialUnactivatedTokenIdsCallback()
   }
 
-  findTransaction(currencyCode: string, txid: string): number {
+  protected findTransaction(currencyCode: string, txid: string): number {
     if (this.txIdMap[currencyCode] != null) {
       const index = this.txIdMap[currencyCode][txid]
       if (typeof index === 'number') {
@@ -384,11 +388,12 @@ export class CurrencyEngine<
     return -1
   }
 
-  sortTxByDate(a: EdgeTransaction, b: EdgeTransaction): number {
+  protected sortTxByDate(a: EdgeTransaction, b: EdgeTransaction): number {
     return b.date - a.date
   }
 
   // Add or update tx in transactionList
+  // Called by EthereumNetwork
   addTransaction(
     currencyCode: string,
     edgeTransaction: EdgeTransaction,
@@ -480,7 +485,7 @@ export class CurrencyEngine<
     }
   }
 
-  sortTransactions(currencyCode: string): void {
+  protected sortTransactions(currencyCode: string): void {
     // Sort
     this.transactionList[currencyCode].sort(this.sortTxByDate)
     // Add to txidMap
@@ -497,6 +502,7 @@ export class CurrencyEngine<
     this.txIdList[currencyCode] = txIdList
   }
 
+  // Called by EthereumNetwork
   checkDroppedTransactionsThrottled(): void {
     const now = Date.now() / 1000
     if (
@@ -515,7 +521,7 @@ export class CurrencyEngine<
     }
   }
 
-  checkDroppedTransactions(dateNow: number): void {
+  protected checkDroppedTransactions(dateNow: number): void {
     let numUnconfirmedSpendTxs = 0
     for (const currencyCode in this.transactionList) {
       // const droppedTxIndices: Array<number> = []
@@ -549,6 +555,7 @@ export class CurrencyEngine<
     this.walletLocalDataDirty = true
   }
 
+  // Called by EthereumNetwork
   updateBalance(tk: string, balance: string): void {
     const currentBalance = this.walletLocalData.totalBalances[tk]
     if (this.walletLocalData.totalBalances[tk] == null) {
@@ -564,7 +571,7 @@ export class CurrencyEngine<
     this.updateOnAddressesChecked()
   }
 
-  updateTransaction(
+  protected updateTransaction(
     currencyCode: string,
     edgeTransaction: EdgeTransaction,
     idx: number
@@ -576,10 +583,10 @@ export class CurrencyEngine<
     this.warn(`updateTransaction: ${edgeTransaction.txid}`)
   }
 
-  // *************************************
-  // Save the wallet data store
-  // *************************************
-  async saveWalletLoop(): Promise<void> {
+  /**
+   * Save the wallet data store.
+   */
+  protected async saveWalletLoop(): Promise<void> {
     const disklet = this.walletLocalDisklet
     const promises = []
     if (this.transactionListDirty) {
@@ -621,7 +628,7 @@ export class CurrencyEngine<
     }
   }
 
-  doInitialBalanceCallback(): void {
+  protected doInitialBalanceCallback(): void {
     for (const currencyCode of this.enabledTokens) {
       try {
         this.currencyEngineCallbacks.onBalanceChanged(
@@ -637,7 +644,7 @@ export class CurrencyEngine<
     }
   }
 
-  doInitialUnactivatedTokenIdsCallback(): void {
+  protected doInitialUnactivatedTokenIdsCallback(): void {
     try {
       if (
         this.walletLocalData.unactivatedTokenIds != null &&
@@ -652,7 +659,7 @@ export class CurrencyEngine<
     }
   }
 
-  async addToLoop(func: string, timer: number): Promise<boolean> {
+  protected async addToLoop(func: string, timer: number): Promise<boolean> {
     try {
       // @ts-expect-error
       await this[func]()
@@ -675,6 +682,7 @@ export class CurrencyEngine<
     })
   }
 
+  // Called by EthereumNetwork
   updateOnAddressesChecked(): void {
     if (this.addressesChecked) {
       return
@@ -701,31 +709,7 @@ export class CurrencyEngine<
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
   }
 
-  async startEngine(): Promise<void> {
-    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS).catch(
-      () => {}
-    )
-  }
-
-  // *************************************
-  // Public methods
-  // *************************************
-
-  async killEngine(): Promise<void> {
-    // Set status flag to false
-    this.engineOn = false
-    // Clear Inner loops timers
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
-    }
-    this.timers = {}
-  }
-
-  async changeUserSettings(userSettings: Object): Promise<void> {
-    this.currentSettings = userSettings
-  }
-
-  async clearBlockchainCache(): Promise<void> {
+  protected async clearBlockchainCache(): Promise<void> {
     this.walletLocalData = asWalletLocalData({
       publicKey: this.walletLocalData.publicKey
     })
@@ -741,11 +725,35 @@ export class CurrencyEngine<
     await this.saveWalletLoop()
   }
 
+  // *************************************
+  // Public methods
+  // *************************************
+
+  async startEngine(): Promise<void> {
+    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS).catch(
+      () => {}
+    )
+  }
+
+  async killEngine(): Promise<void> {
+    // Set status flag to false
+    this.engineOn = false
+    // Clear Inner loops timers
+    for (const timer in this.timers) {
+      clearTimeout(this.timers[timer])
+    }
+    this.timers = {}
+  }
+
+  async changeUserSettings(userSettings: Object): Promise<void> {
+    this.currentSettings = userSettings
+  }
+
   getBlockHeight(): number {
     return this.walletLocalData.blockHeight
   }
 
-  enableTokensSync(tokens: string[]): void {
+  private enableTokensSync(tokens: string[]): void {
     const initValue: { [currencyCode: string]: boolean } = {}
     const tokenMap = tokens.reduce((map, currencyCode) => {
       map[currencyCode] = true
@@ -790,7 +798,7 @@ export class CurrencyEngine<
     this.enableTokensSync(tokens)
   }
 
-  disableTokensSync(tokens: string[]): void {
+  private disableTokensSync(tokens: string[]): void {
     for (const currencyCode of tokens) {
       if (currencyCode === this.currencyInfo.currencyCode) {
         continue
@@ -814,8 +822,6 @@ export class CurrencyEngine<
     obj: CustomToken,
     contractAddress?: string
   ): Promise<void> {
-    checkCustomToken(obj)
-
     const tokenObj: CustomToken = obj
 
     // If token is already in currencyInfo, error as it cannot be changed
@@ -870,8 +876,7 @@ export class CurrencyEngine<
   }
 
   getBalance(options: EdgeCurrencyCodeOptions): string {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     if (nativeBalance == null) {
@@ -881,8 +886,7 @@ export class CurrencyEngine<
   }
 
   getNumTransactions(options: EdgeCurrencyCodeOptions): number {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     if (this.walletLocalData.numTransactions[currencyCode] == null) {
       return 0
@@ -894,8 +898,7 @@ export class CurrencyEngine<
   async getTransactions(
     options: EdgeGetTransactionsOptions
   ): Promise<EdgeTransaction[]> {
-    const cleanOptions = asCurrencyCodeOptions(options)
-    const { currencyCode = this.currencyInfo.currencyCode } = cleanOptions
+    const { currencyCode = this.currencyInfo.currencyCode } = options
 
     await this.loadTransactions()
 
@@ -969,7 +972,6 @@ export class CurrencyEngine<
     skipChecks: boolean
   } {
     const { skipChecks = false } = edgeSpendInfo
-    checkEdgeSpendInfo(edgeSpendInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (!skipChecks && st.publicAddress === this.walletLocalData.publicKey) {
