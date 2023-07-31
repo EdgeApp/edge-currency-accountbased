@@ -1,13 +1,17 @@
 # edge-currency-accountbased
 
+## 1.4.11 (2023-07-30)
+
+- fixed: Use `io.fetchCors` for all requests, instead of `io.fetch`.
+
 ## 1.4.10 (2023-07-27)
 
-- Replace asMaybe and asOptional cleaner default objects with functions that return new objects in otherData cleaners
+- fixed: Replace asMaybe and asOptional cleaner default objects with functions that return new objects in otherData cleaners
 
 ## 1.4.9 (2023-07-26)
 
-- Update XRP explorer url
-- Update checkpoints
+- changed: Update XRP explorer url
+- changed: Update checkpoints
 
 ## 1.4.8 (2023-07-21)
 
