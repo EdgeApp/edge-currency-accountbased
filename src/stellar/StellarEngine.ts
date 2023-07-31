@@ -2,6 +2,7 @@ import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -17,6 +18,7 @@ import {
   asyncWaterfall,
   cleanTxLogs,
   getDenomInfo,
+  getFetchCors,
   getOtherParams,
   promiseAny
 } from '../common/utils'
@@ -53,6 +55,7 @@ export class StellarEngine extends CurrencyEngine<
   SafeStellarWalletInfo
 > {
   networkInfo: StellarNetworkInfo
+  fetchCors: EdgeFetchFunction
   stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
@@ -68,6 +71,7 @@ export class StellarEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+    this.fetchCors = getFetchCors(env.io)
     this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
@@ -119,7 +123,7 @@ export class StellarEngine extends CurrencyEngine<
       case 'feeStats':
         funcs = this.networkInfo.stellarServers.map(
           (serverUrl: string) => async () => {
-            const response = await this.io.fetch(`${serverUrl}/fee_stats`)
+            const response = await this.fetchCors(`${serverUrl}/fee_stats`)
             const result = asFeeStats(await response.json())
 
             return { server: serverUrl, result }

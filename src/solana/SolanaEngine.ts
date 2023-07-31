@@ -70,9 +70,8 @@ export class SolanaEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
-    const fetchCors = getFetchCors(env)
     this.chainCode = tools.currencyInfo.currencyCode
-    this.fetchCors = fetchCors
+    this.fetchCors = getFetchCors(env.io)
     this.feePerSignature = '5000'
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey

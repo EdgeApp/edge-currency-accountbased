@@ -63,7 +63,7 @@ export class FioTools implements EdgeCurrencyTools {
     const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
       initOptions
 
-    this.fetchCors = getFetchCors(env)
+    this.fetchCors = getFetchCors(env.io)
     this.fioRegApiToken = fioRegApiToken
     this.tpid = tpid
 

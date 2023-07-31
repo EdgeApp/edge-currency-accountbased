@@ -142,8 +142,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     tpid: string
   ) {
     super(env, tools, walletInfo, opts)
-    const fetchCors = getFetchCors(env)
-    this.fetchCors = fetchCors
+    this.fetchCors = getFetchCors(env.io)
     this.tpid = tpid
     this.networkInfo = env.networkInfo
     this.refBlock = {

@@ -5,6 +5,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeLog,
   EdgeParsedUri,
@@ -14,7 +15,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo } from '../common/utils'
+import { getDenomInfo, getFetchCors } from '../common/utils'
 import { asGetActivationCost, HederaNetworkInfo } from './hederaTypes'
 import { createChecksum, validAddress } from './hederaUtils'
 
@@ -26,6 +27,7 @@ const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 export class HederaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  fetchCors: EdgeFetchFunction
   io: EdgeIo
   log: EdgeLog
   networkInfo: HederaNetworkInfo
@@ -34,6 +36,7 @@ export class HederaTools implements EdgeCurrencyTools {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
+    this.fetchCors = getFetchCors(io)
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
@@ -170,7 +173,7 @@ export class HederaTools implements EdgeCurrencyTools {
     const creatorApiServer = this.networkInfo.creatorApiServers[0]
 
     try {
-      const response = await this.io.fetch(`${creatorApiServer}/account/cost`)
+      const response = await this.fetchCors(`${creatorApiServer}/account/cost`)
       return asGetActivationCost(await response.json()).hbar
     } catch (e: any) {
       this.log.warn(

@@ -2,10 +2,10 @@ import { add, mul } from 'biggystring'
 import { Buffer } from 'buffer'
 import { asArray, asObject, asOptional, asString } from 'cleaners'
 import {
-  EdgeCorePluginOptions,
   EdgeCurrencyInfo,
   EdgeDenomination,
   EdgeFetchFunction,
+  EdgeIo,
   EdgeMetaToken,
   EdgeTokenMap,
   EdgeTransaction,
@@ -364,8 +364,8 @@ export function biggyScience(num: string): string {
 /**
  * Emulates the browser Fetch API more accurately than fetch JSON.
  */
-export function getFetchCors(opts: EdgeCorePluginOptions): EdgeFetchFunction {
-  return opts.io.fetchCors ?? opts.io.fetch
+export function getFetchCors(io: EdgeIo): EdgeFetchFunction {
+  return io.fetchCors ?? io.fetch
 }
 
 export function safeErrorMessage(e?: Error): string {

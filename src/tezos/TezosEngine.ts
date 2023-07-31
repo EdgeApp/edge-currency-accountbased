@@ -72,8 +72,7 @@ export class TezosEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
     this.walletInfo = asSafeTezosWalletInfo(walletInfo)
     this.networkInfo = env.networkInfo
-    const fetchCors = getFetchCors(env)
-    this.fetchCors = fetchCors
+    this.fetchCors = getFetchCors(env.io)
   }
 
   setOtherData(raw: any): void {
@@ -90,9 +89,9 @@ export class TezosEngine extends CurrencyEngine<
         // need to re-enable once that nodes issue is fixed
         const nonCachedNodes = this.tools.tezosRpcNodes
         funcs = nonCachedNodes.map(server => async () => {
-          const result = await this.io
-            // eslint-disable-next-line @typescript-eslint/restrict-plus-operands, @typescript-eslint/no-base-to-string
-            .fetch(server + '/chains/main/blocks/head/header')
+          const result = await this.fetchCors(
+            server + '/chains/main/blocks/head/header'
+          )
             .then(async function (response) {
               return await response.json()
             })

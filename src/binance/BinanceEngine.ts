@@ -3,6 +3,7 @@ import { add, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -18,6 +19,7 @@ import {
   asyncWaterfall,
   cleanTxLogs,
   getDenomInfo,
+  getFetchCors,
   getOtherParams,
   promiseAny,
   shuffleArray
@@ -54,6 +56,7 @@ export class BinanceEngine extends CurrencyEngine<
   BinanceTools,
   SafeBnbWalletInfo
 > {
+  fetchCors: EdgeFetchFunction
   networkInfo: BinanceNetworkInfo
 
   constructor(
@@ -64,6 +67,7 @@ export class BinanceEngine extends CurrencyEngine<
     opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.fetchCors = getFetchCors(env.io)
     this.networkInfo = env.networkInfo
   }
 
@@ -72,20 +76,7 @@ export class BinanceEngine extends CurrencyEngine<
   }
 
   async fetchGet(url: string): Promise<Object> {
-    const response = await this.io.fetch(url, {
-      method: 'GET'
-    })
-    if (!response.ok) {
-      throw new Error(
-        `The server returned error code ${response.status} for ${url}`
-      )
-    }
-    return await response.json()
-  }
-
-  async fetchCorsGet(url: string): Promise<Object> {
-    const fetch = this.io.fetchCors ?? this.io.fetch
-    const response = await fetch(url, {
+    const response = await this.fetchCors(url, {
       method: 'GET'
     })
     if (!response.ok) {
@@ -296,7 +287,7 @@ export class BinanceEngine extends CurrencyEngine<
         for (const bnbServer of broadcastServers) {
           const endpoint = `${bnbServer}/api/v1/broadcast?sync=true`
           promises.push(
-            this.io.fetch(endpoint, {
+            this.fetchCors(endpoint, {
               method: 'POST',
               body: params[0],
               headers: {
@@ -341,7 +332,7 @@ export class BinanceEngine extends CurrencyEngine<
         funcs = this.networkInfo.beaconChainApiServers.map(
           (server: string) => async () => {
             const path: string = params[0]
-            const result = await this.fetchCorsGet(server + path)
+            const result = await this.fetchGet(server + path)
             if (typeof result !== 'object') {
               const msg = `Invalid return value ${func} in ${server}`
               this.error(msg)
