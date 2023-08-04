@@ -517,7 +517,7 @@ export class XrpEngine extends CurrencyEngine<
         edgeToken.networkLocation
       )
       const networkFee = SET_TRUST_LINE_FEE
-      const trustSetTx: TrustSet = await this.tools.rippleApi.autofill({
+      const xrpTransaction: TrustSet = await this.tools.rippleApi.autofill({
         TransactionType: 'TrustSet',
         Account: this.walletLocalData.publicKey,
         Fee: networkFee,
@@ -542,7 +542,7 @@ export class XrpEngine extends CurrencyEngine<
         ourReceiveAddresses: [],
         signedTx: '',
         otherParams: {
-          trustSetTx
+          xrpTransaction
         },
         walletId: this.walletId
       }
@@ -702,11 +702,12 @@ export class XrpEngine extends CurrencyEngine<
     const otherParams = getOtherParams(edgeTransaction)
 
     // Activation Transaction:
-    if (otherParams.trustSetTx != null) {
-      const trustSetTx: TrustSet = otherParams.trustSetTx
+    if (otherParams.xrpTransaction != null) {
+      const xrpTransaction: TrustSet = otherParams.xrpTransaction
       const privateKey = privateKeys.rippleKey
       const wallet = Wallet.fromSeed(privateKey)
-      const { tx_blob: signedTransaction, hash: id } = wallet.sign(trustSetTx)
+      const { tx_blob: signedTransaction, hash: id } =
+        wallet.sign(xrpTransaction)
       this.warn('Activation transaction signed...')
       edgeTransaction.signedTx = signedTransaction
       edgeTransaction.txid = id.toLowerCase()
