@@ -4,6 +4,9 @@ import { makeOuterPlugin } from '../common/innerPlugin'
 import type { RippleTools } from './RippleTools'
 import type { XrpNetworkInfo } from './rippleTypes'
 
+export const DIVIDE_PRECISION = 18
+export const EST_BLOCK_TIME_MS = 3500
+
 const networkInfo: XrpNetworkInfo = {
   rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],
   defaultFee: '10', // in drops
