@@ -26,7 +26,7 @@ import fixtures from './fixtures'
 const fakeIo = makeFakeIo()
 const opts: EdgeCorePluginOptions = {
   initOptions: {},
-  io: { ...fakeIo, fetch },
+  io: { ...fakeIo, fetch, fetchCors: fetch },
   log: fakeLog,
   nativeIo: {},
   pluginDisklet: fakeIo.disklet

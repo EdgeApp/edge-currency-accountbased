@@ -22,7 +22,12 @@ describe(`EOS activation`, function () {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
     initOptions: {},
-    io: { ...fakeIo, fetch, random: size => new Uint8Array(size) },
+    io: {
+      ...fakeIo,
+      fetch,
+      fetchCors: fetch,
+      random: size => new Uint8Array(size)
+    },
     nativeIo: {},
     log: fakeLog,
     pluginDisklet: fakeIo.disklet

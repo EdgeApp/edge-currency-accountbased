@@ -6,6 +6,7 @@ import {
   makeFakeIo
 } from 'edge-core-js'
 import { before, describe, it } from 'mocha'
+import fetch from 'node-fetch'
 
 import edgeCorePlugins from '../../src/index'
 import { expectRejection } from '../expectRejection'
@@ -22,7 +23,7 @@ for (const fixture of fixtures) {
     initOptions: {},
     // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    io: { ...fakeIo, random: size => fixture.key },
+    io: { ...fakeIo, fetch, fetchCors: fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet

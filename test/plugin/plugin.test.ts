@@ -30,7 +30,7 @@ for (const fixture of fixtures) {
     initOptions: {},
     // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    io: { ...fakeIo, fetch, random: size => fixture.key },
+    io: { ...fakeIo, fetch, fetchCors: fetch, random: size => fixture.key },
     log: fakeLog,
     nativeIo: {},
     pluginDisklet: fakeIo.disklet
