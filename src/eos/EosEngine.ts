@@ -13,7 +13,6 @@ import { asEither, asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyTools,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -191,14 +190,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
 
   setOtherData(raw: unknown): void {
     this.otherData = asEosWalletOtherData(raw)
-  }
-
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeEosWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
   }
 
   // Poll on the blockheight
@@ -1164,7 +1155,7 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeEosWalletInfo(walletInfo)
   const engine = new EosEngine(env, tools, safeWalletInfo, opts)
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

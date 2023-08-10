@@ -12,7 +12,6 @@ import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyTools,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -210,14 +209,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const blockTimeBeginingOfGmtDay =
       Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
     return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
-  }
-
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeFioWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
   }
 
   // Poll on the blockheight
@@ -2003,7 +1994,7 @@ export async function makeCurrencyEngine(
   const { tpid = 'finance@edge' } = env.initOptions
   const safeWalletInfo = asSafeFioWalletInfo(walletInfo)
   const engine = new FioEngine(env, tools, safeWalletInfo, opts, tpid)
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

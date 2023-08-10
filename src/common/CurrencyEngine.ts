@@ -275,11 +275,8 @@ export class CurrencyEngine<
   }
 
   // Called by engine startup code
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
+  async loadEngine(): Promise<void> {
+    const { walletInfo } = this
     const { currencyCode } = this.currencyInfo
 
     if (this.walletInfo.keys.publicKey == null) {

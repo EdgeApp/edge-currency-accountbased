@@ -1388,7 +1388,7 @@ export async function makeCurrencyEngine(
   )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

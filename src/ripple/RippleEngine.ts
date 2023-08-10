@@ -973,7 +973,7 @@ export async function makeCurrencyEngine(
   const safeWalletInfo = asSafeRippleWalletInfo(walletInfo)
   const engine = new XrpEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

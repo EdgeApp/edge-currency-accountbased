@@ -530,7 +530,7 @@ export async function makeCurrencyEngine(
   const safeWalletInfo = asSafeTezosWalletInfo(walletInfo)
   const engine = new TezosEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

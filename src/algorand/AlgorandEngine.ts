@@ -801,7 +801,7 @@ export async function makeCurrencyEngine(
   const safeWalletInfo = asSafeAlgorandWalletInfo(walletInfo)
   const engine = new AlgorandEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

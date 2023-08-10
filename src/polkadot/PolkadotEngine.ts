@@ -489,7 +489,7 @@ export async function makeCurrencyEngine(
   const engine = new PolkadotEngine(env, tools, safeWalletInfo, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }
