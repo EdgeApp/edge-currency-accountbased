@@ -99,7 +99,7 @@
     "tweetnacl": "^1.0.3",
     "uri-js": "^3.0.2",
     "url-parse": "^1.4.1",
-    "xrpl": "^2.1.1",
+    "xrpl": "^2.10.0",
     "yaob": "^0.3.6"
   },
   "devDependencies": {
