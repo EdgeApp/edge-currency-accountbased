@@ -596,38 +596,80 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     return action.block_num
   }
 
-  async checkTransactions(historyNodeIndex: number = 0): Promise<boolean> {
-    if (this.networkInfo.historyNodeUrls[historyNodeIndex] == null) return false
-    let newHighestTxHeight = this.otherData.highestTxHeight
-    let lastActionSeqNumber = 0
+  async getSortedHistoryNodesLastActionSeqNumbers(): Promise<
+    Array<{ nodeIndex: number; seqNumber: number }>
+  > {
+    const promises: Array<Promise<{ nodeIndex: number; seqNumber: number }>> =
+      this.networkInfo.historyNodeUrls.map(async (_, nodeIndex) => {
+        try {
+          const lastActionObject = await this.requestHistory(
+            nodeIndex,
+            {
+              account_name: this.actor,
+              pos: -1
+            },
+            HISTORY_NODE_ACTIONS.getActions
+          )
 
-    try {
-      const lastActionObject = await this.requestHistory(
-        historyNodeIndex,
-        {
-          account_name: this.actor,
-          pos: -1
-        },
-        HISTORY_NODE_ACTIONS.getActions
-      )
+          // I don't fully understand what this error check is for, but it's
+          // carried over from a refactoring. I believe it's identical to saying
+          // that the node has no actions for the account.
+          if (lastActionObject?.error?.noNodeForIndex != null) {
+            // no more history nodes left; return no sequence number
+            return { nodeIndex, seqNumber: -1 }
+          }
 
-      if (lastActionObject?.error?.noNodeForIndex != null) {
-        // no more history nodes left
-        return false
-      }
+          asHistoryResponse(lastActionObject)
+          if (lastActionObject.actions.length === 0) {
+            // if no transactions at all
+            return { nodeIndex, seqNumber: -1 }
+          }
 
-      asHistoryResponse(lastActionObject)
-      if (lastActionObject.actions.length > 0) {
-        lastActionSeqNumber =
-          lastActionObject.actions[lastActionObject.actions.length - 1]
-            .account_action_seq
-      } else {
-        // if no transactions at all
-        return true
-      }
-    } catch (e: any) {
-      return await this.checkTransactions(++historyNodeIndex)
+          // Return last action's sequence number
+          return {
+            nodeIndex,
+            seqNumber:
+              lastActionObject.actions[lastActionObject.actions.length - 1]
+                .account_action_seq
+          }
+        } catch (error) {
+          // Node failed, so it return's no sequence number
+          return { nodeIndex, seqNumber: -1 }
+        }
+      })
+
+    const historyNodesSeqNumbers = await Promise.all(promises)
+    historyNodesSeqNumbers.sort((a, b) => b.seqNumber - a.seqNumber)
+    return historyNodesSeqNumbers
+  }
+
+  async checkTransactions(
+    historyNodesSeqNumbers?: Array<{
+      nodeIndex: number
+      seqNumber: number
+    }>
+  ): Promise<boolean> {
+    if (historyNodesSeqNumbers?.length === 0) {
+      // We've checked all history nodes, so return a fail
+      return false
     }
+
+    historyNodesSeqNumbers =
+      historyNodesSeqNumbers ??
+      (await this.getSortedHistoryNodesLastActionSeqNumbers())
+
+    if (
+      historyNodesSeqNumbers.reduce((sum, node) => sum + node.seqNumber, 0) ===
+      -historyNodesSeqNumbers.length
+    ) {
+      // All nodes agree there are no actions for the account
+      return true
+    }
+
+    let newHighestTxHeight = this.otherData.highestTxHeight
+
+    const lastActionSeqNumber = historyNodesSeqNumbers[0].seqNumber
+    const historyNodeIndex = historyNodesSeqNumbers[0].nodeIndex
 
     let pos = Math.max(0, lastActionSeqNumber - HISTORY_NODE_PAGE_SIZE + 1)
     let finish = false
@@ -684,7 +726,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           continue
         }
       } catch (e: any) {
-        return await this.checkTransactions(++historyNodeIndex)
+        // Failing to page through all actions with the first node mean's we
+        // should retry with the next node in the list.
+        return await this.checkTransactions(historyNodesSeqNumbers.slice(1))
       }
     }
     if (newHighestTxHeight > this.otherData.highestTxHeight) {
