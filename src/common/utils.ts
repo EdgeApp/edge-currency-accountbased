@@ -12,8 +12,6 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
-import { getTokenIdFromCurrencyCode } from './tokenHelpers'
-
 export function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
 }
@@ -87,51 +85,48 @@ export function bufToHex(buf: Buffer): string {
   return hex
 }
 
-export function getDenomInfo(
+export function getLegacyDenomination(
+  name: string,
   currencyInfo: EdgeCurrencyInfo,
-  denom: string,
-  customTokens?: EdgeMetaToken[],
-  allTokensMap?: EdgeTokenMap
+  legacyTokens: EdgeMetaToken[]
 ): EdgeDenomination | undefined {
-  // Look in the primary currency denoms
-  let edgeDenomination = currencyInfo.denominations.find(element => {
-    return element.name === denom
-  })
+  // Look in the primary currency info:
+  for (const denomination of currencyInfo.denominations) {
+    if (denomination.name === name) return denomination
+  }
 
-  // Look in the allTokensMap
-  if (allTokensMap != null) {
-    const tokenId = getTokenIdFromCurrencyCode(denom, allTokensMap)
-    if (tokenId != null) {
-      edgeDenomination = allTokensMap[tokenId].denominations.find(
-        d => d.name === denom
-      )
+  // Look in the custom tokens:
+  for (const metaToken of legacyTokens) {
+    for (const denomination of metaToken.denominations) {
+      if (denomination.name === name) return denomination
     }
   }
 
-  // Look in the currencyInfo tokens
-  if (edgeDenomination == null) {
-    for (const metaToken of currencyInfo.metaTokens) {
-      edgeDenomination = metaToken.denominations.find(element => {
-        return element.name === denom
-      })
-      if (edgeDenomination != null) {
-        break
-      }
+  // Look in the builtin tokens:
+  for (const metaToken of currencyInfo.metaTokens) {
+    for (const denomination of metaToken.denominations) {
+      if (denomination.name === name) return denomination
     }
+  }
+}
+
+export function getDenomination(
+  name: string,
+  currencyInfo: EdgeCurrencyInfo,
+  allTokens: EdgeTokenMap
+): EdgeDenomination | undefined {
+  // Look in the primary currency info:
+  for (const denomination of currencyInfo.denominations) {
+    if (denomination.name === name) return denomination
   }
 
-  // Look in custom tokens
-  if (edgeDenomination == null && customTokens != null) {
-    for (const metaToken of customTokens) {
-      edgeDenomination = metaToken.denominations.find(element => {
-        return element.name === denom
-      })
-      if (edgeDenomination != null) {
-        break
-      }
+  // Look in the merged tokens:
+  for (const tokenId of Object.keys(allTokens)) {
+    const token = allTokens[tokenId]
+    for (const denomination of token.denominations) {
+      if (denomination.name === name) return denomination
     }
   }
-  return edgeDenomination
 }
 
 export const snoozeReject: Function = async (ms: number) =>

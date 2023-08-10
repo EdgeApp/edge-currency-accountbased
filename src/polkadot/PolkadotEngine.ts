@@ -20,7 +20,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   cleanTxLogs,
   decimalToHex,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   makeMutex
@@ -150,9 +150,10 @@ export class PolkadotEngine extends CurrencyEngine<
     // Skip unsuccessful and irrelevant transactions
     if (!success || module !== 'balances') return
 
-    const denom = getDenomInfo(
+    const denom = getDenomination(
+      this.currencyInfo.currencyCode,
       this.currencyInfo,
-      this.currencyInfo.currencyCode
+      this.allTokensMap
     )
     if (denom == null) return
 

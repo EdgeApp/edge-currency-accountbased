@@ -17,7 +17,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   promiseAny
@@ -95,9 +95,10 @@ export class StellarEngine extends CurrencyEngine<
       )
       if (balanceObj == null) return '0'
 
-      const denom = getDenomInfo(
+      const denom = getDenomination(
+        this.currencyInfo.currencyCode,
         this.currencyInfo,
-        this.currencyInfo.currencyCode
+        this.allTokensMap
       )
       if (denom == null) throw new Error('Unknown denom')
 
@@ -219,7 +220,11 @@ export class StellarEngine extends CurrencyEngine<
     }
 
     const date: number = Date.parse(tx.created_at) / 1000
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    const denom = getDenomination(
+      currencyCode,
+      this.currencyInfo,
+      this.allTokensMap
+    )
     // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
     if (denom != null && denom.multiplier) {
       nativeAmount = mul(exchangeAmount, denom.multiplier)
@@ -376,7 +381,11 @@ export class StellarEngine extends CurrencyEngine<
         } else {
           currencyCode = bal.asset_type
         }
-        const denom = getDenomInfo(this.currencyInfo, currencyCode)
+        const denom = getDenomination(
+          currencyCode,
+          this.currencyInfo,
+          this.allTokensMap
+        )
         // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/strict-boolean-expressions
         if (denom != null && denom.multiplier) {
           const nativeAmount = mul(bal.balance, denom.multiplier)

@@ -15,7 +15,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo } from '../common/utils'
+import { getLegacyDenomination } from '../common/utils'
 import {
   asBnbPrivateKey,
   asSafeBnbWalletInfo,
@@ -120,7 +120,7 @@ export class BinanceTools implements EdgeCurrencyTools {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: EdgeMetaToken[]
+    customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = checkAddress(publicAddress, 'bnb')
@@ -129,9 +129,9 @@ export class BinanceTools implements EdgeCurrencyTools {
     }
     let amount
     if (typeof nativeAmount === 'string') {
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getLegacyDenomination(
         currencyCode ?? 'BNB',
+        this.currencyInfo,
         customTokens
       )
       if (denom == null) {

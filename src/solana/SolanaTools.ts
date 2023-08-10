@@ -17,7 +17,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo } from '../common/utils'
+import { getLegacyDenomination } from '../common/utils'
 import {
   asSafeSolanaWalletInfo,
   asSolanaPrivateKeys,
@@ -137,7 +137,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: EdgeMetaToken[]
+    customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
@@ -148,10 +148,9 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     let amount
     if (typeof nativeAmount === 'string') {
-      const denom = getDenomInfo(
+      const denom = getLegacyDenomination(
+        currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        currencyCode || this.currencyInfo.currencyCode,
         customTokens
       )
       if (denom == null) {

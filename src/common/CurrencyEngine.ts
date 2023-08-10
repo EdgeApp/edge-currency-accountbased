@@ -37,7 +37,7 @@ import {
 } from './types'
 import {
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   matchJson,
   normalizeAddress,
   safeErrorMessage
@@ -1012,10 +1012,9 @@ export class CurrencyEngine<
     }
 
     edgeSpendInfo.currencyCode = currencyCode
-    const denom = getDenomInfo(
-      this.currencyInfo,
+    const denom = getDenomination(
       currencyCode,
-      this.customTokens,
+      this.currencyInfo,
       this.allTokensMap
     )
     if (denom == null) {

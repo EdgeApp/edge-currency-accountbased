@@ -31,7 +31,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   pickRandom
@@ -241,7 +241,11 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
     const ourReceiveAddresses = []
-    const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
+    const denom = getDenomination(
+      currencyCode,
+      this.currencyInfo,
+      this.allTokensMap
+    )
     if (denom == null) {
       this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
@@ -319,10 +323,10 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       const exchangeAmount = amount.toString()
       const currencyCode = symbol
 
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getDenomination(
         currencyCode,
-        this.allTokens
+        this.currencyInfo,
+        this.allTokensMap
       )
       // if invalid currencyCode then don't count as valid transaction
       if (denom == null) {
@@ -959,10 +963,10 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress = 'eosio.token' } = tokenInfo
-    const nativeDenomination = getDenomInfo(
-      this.currencyInfo,
+    const nativeDenomination = getDenomination(
       currencyCode,
-      this.allTokens
+      this.currencyInfo,
+      this.allTokensMap
     )
     if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)

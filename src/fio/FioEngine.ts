@@ -30,7 +30,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   promiseAny,
@@ -514,13 +514,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     ) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
-      let denom = getDenomInfo(this.currencyInfo, currencyCode)
+      const denom = getDenomination(
+        currencyCode,
+        this.currencyInfo,
+        this.allTokensMap
+      )
       if (denom == null) {
-        denom = getDenomInfo(this.currencyInfo, this.currencyInfo.currencyCode)
-        if (denom == null) {
-          this.error(`Received unsupported currencyCode: ${currencyCode}`)
-          return 0
-        }
+        this.error(`Received unsupported currencyCode: ${currencyCode}`)
+        return 0
       }
 
       const fioAmount = mul(exchangeAmount, denom.multiplier)

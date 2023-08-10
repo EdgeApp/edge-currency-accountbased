@@ -8,7 +8,7 @@ import {
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
-import { getDenomInfo } from '../common/utils'
+import { getLegacyDenomination } from './utils'
 
 type ParsedUri = parse<Record<string, string | undefined>>
 
@@ -17,7 +17,7 @@ export function parseUriCommon(
   uri: string,
   networks: { [network: string]: boolean },
   currencyCode?: string,
-  customTokens?: EdgeMetaToken[]
+  customTokens: EdgeMetaToken[] = []
 ): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
   const parsedUri = { ...parse(uri, {}, true) }
 
@@ -72,7 +72,11 @@ export function parseUriCommon(
     if (currencyCode == null) {
       currencyCode = currencyInfo.currencyCode
     }
-    const denom = getDenomInfo(currencyInfo, currencyCode ?? '', customTokens)
+    const denom = getLegacyDenomination(
+      currencyCode ?? '',
+      currencyInfo,
+      customTokens
+    )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')
     }

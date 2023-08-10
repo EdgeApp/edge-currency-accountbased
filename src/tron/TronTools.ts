@@ -20,7 +20,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { parsePixKey } from '../common/smartPay'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo } from '../common/utils'
+import { getLegacyDenomination } from '../common/utils'
 import {
   asSafeTronWalletInfo,
   asTronInitOptions,
@@ -163,7 +163,7 @@ export class TronTools implements EdgeCurrencyTools {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: EdgeMetaToken[]
+    customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
 
@@ -172,9 +172,9 @@ export class TronTools implements EdgeCurrencyTools {
     }
     let amount
     if (typeof nativeAmount === 'string') {
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
+        this.currencyInfo,
         customTokens
       )
       if (denom == null) {
