@@ -53,7 +53,7 @@ import {
   FioRequest,
   FioWalletOtherData,
   HISTORY_NODE_ACTIONS,
-  HISTORY_NODE_OFFSET,
+  HISTORY_NODE_PAGE_SIZE,
   NO_FIO_NAMES,
   PUBLIC_KEY_NOT_FOUND,
   STAKING_LOCK_PERIOD,
@@ -629,13 +629,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       return await this.checkTransactions(++historyNodeIndex)
     }
 
-    let pos = Math.max(0, lastActionSeqNumber - HISTORY_NODE_OFFSET)
+    let pos = Math.max(0, lastActionSeqNumber - HISTORY_NODE_PAGE_SIZE + 1)
     let finish = false
 
     while (!finish) {
-      if (pos < 0) {
-        break
-      }
       let actionsObject
       try {
         actionsObject = await this.requestHistory(
@@ -643,7 +640,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           {
             account_name: this.actor,
             pos,
-            offset: HISTORY_NODE_OFFSET - 1
+            offset: HISTORY_NODE_PAGE_SIZE - 1
           },
           HISTORY_NODE_ACTIONS.getActions
         )
@@ -668,7 +665,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             newHighestTxHeight = blockNum
           } else if (
             (blockNum === newHighestTxHeight &&
-              i === HISTORY_NODE_OFFSET - 1) ||
+              i === HISTORY_NODE_PAGE_SIZE - 1) ||
             blockNum < this.otherData.highestTxHeight
           ) {
             finish = true
@@ -676,10 +673,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           }
         }
 
-        if (actions.length < HISTORY_NODE_OFFSET) {
+        // If this was the last page, break out of the paging loop.
+        // Otherwise, adjust the position and continue.
+        if (pos === 0) {
           break
+        } else {
+          // We're paging backwards, so subtract the offset but prevent negative
+          // overflow because that changes the query mode in the FIO History API
+          pos = Math.max(0, pos - HISTORY_NODE_PAGE_SIZE)
+          continue
         }
-        pos -= HISTORY_NODE_OFFSET
       } catch (e: any) {
         return await this.checkTransactions(++historyNodeIndex)
       }
