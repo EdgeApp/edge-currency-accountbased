@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 1.4.12 (2023-08-11)
+
+- Fixed: Bug in FIO causing missing historical transactions (first page of transactions).
+- Fixed: Improve FIO transaction history fetching from history nodes by using the nodes with the highest action sequence number.
+
 ## 1.4.11 (2023-07-30)
 
 - fixed: Use `io.fetchCors` for all requests, instead of `io.fetch`.
