@@ -14,6 +14,38 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x511d35c52a3c244e7b8bd92c0c297755fbd89212'
     }
   },
+  '1b6382dbdea11d97f24495c9a90b7c88469134a4': {
+    currencyCode: 'AXLUSDC',
+    displayName: 'Axelar Wrapped USDC',
+    denominations: [{ name: 'AXLUSDC', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x1B6382DBDEa11d97f24495C9A90b7c88469134a4'
+    }
+  },
+  d226392c23fb3476274ed6759d4a478db3197d82: {
+    currencyCode: 'AXLUSDT',
+    displayName: 'Axelar Wrapped USDT',
+    denominations: [{ name: 'AXLUSDT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xd226392C23fb3476274ED6759D4a478db3197d82'
+    }
+  },
+  fe7eda5f2c56160d406869a8aa4b2f365d544c7b: {
+    currencyCode: 'AXLETH',
+    displayName: 'Axelar Wrapped ETH',
+    denominations: [{ name: 'AXLETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xfe7eDa5F2c56160d406869A8aA4B2F365d544C7B'
+    }
+  },
+  '448d59b4302ab5d2dadf9611bed9457491926c8e': {
+    currencyCode: 'AXLWBTC',
+    displayName: 'Axelar Wrapped WBTC',
+    denominations: [{ name: 'AXLWBTC', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0x448d59B4302aB5d2dadf9611bED9457491926c8e'
+    }
+  },
   d67de0e0a0fd7b15dc8348bb9be742f3c5850454: {
     currencyCode: 'BNB',
     displayName: 'Binance',
@@ -140,6 +172,14 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'MIM', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x82f0b8b456c1a451378467398982d4834b6829c1'
+    }
+  },
+  '66eed5ff1701e6ed8470dc391f05e27b1d0657eb': {
+    currencyCode: 'MPX',
+    displayName: 'MPX',
+    denominations: [{ name: 'MPX', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x66eEd5FF1701E6ed8470DC391F05e27B1d0657eb'
     }
   },
   '24248cd1747348bdc971a5395f4b3cd7fee94ea0': {
