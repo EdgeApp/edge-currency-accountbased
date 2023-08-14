@@ -26,7 +26,14 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { rippleTimeToUnixTime, TrustSet, Wallet } from 'xrpl'
+import {
+  OfferCreate,
+  rippleTimeToUnixTime,
+  TrustSet,
+  unixTimeToRippleTime,
+  Wallet
+} from 'xrpl'
+import { Amount } from 'xrpl/dist/npm/models/common'
 import { AccountTxResponse } from 'xrpl/dist/npm/models/methods/accountTx'
 import {
   Payment,
@@ -49,6 +56,7 @@ import {
   pluginErrorLabels,
   pluginErrorName
 } from '../pluginError'
+import { DIVIDE_PRECISION, EST_BLOCK_TIME_MS } from './rippleInfo'
 import { RippleTools } from './RippleTools'
 import {
   asMaybeActivateTokenParams,
@@ -57,12 +65,14 @@ import {
   asXrpNetworkLocation,
   asXrpTransaction,
   asXrpWalletOtherData,
+  MakeTxParams,
+  RippleOtherMethods,
   SafeRippleWalletInfo,
   XrpNetworkInfo,
   XrpTransaction,
   XrpWalletOtherData
 } from './rippleTypes'
-import { makeTokenId } from './rippleUtils'
+import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
@@ -70,6 +80,13 @@ const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
+
+// How long to wait before a transaction is accepted into a ledge close (block)
+// afterwhich the transaction is dropped
+const TX_EXPIRATION_TIME_MS = 1000 * 60 * 1 // 1 min
+
+// How long a DEX order will stay open and be fulfilled
+const DEX_ORDER_EXPIRATION_TIME_DEFAULT_S = 60 * 5 // 5 min
 const LEDGER_OFFSET = 20 // sdk constant
 const TOKEN_FEE = '12'
 const tfSetNoRipple = 131072 // No Rippling Flag for token sends
@@ -107,6 +124,7 @@ export class XrpEngine extends CurrencyEngine<
   otherData!: XrpWalletOtherData
   networkInfo: XrpNetworkInfo
   nonce: number
+  otherMethods: RippleOtherMethods
 
   constructor(
     env: PluginEnvironment<XrpNetworkInfo>,
@@ -119,6 +137,92 @@ export class XrpEngine extends CurrencyEngine<
     this.networkInfo = networkInfo
     this.nonce = 0
     this.minimumAddressBalance = this.networkInfo.baseReserve
+    this.otherMethods = {
+      makeTx: async (params: MakeTxParams) => {
+        if (params.type === 'MakeTxDexSwap') {
+          const {
+            expiration,
+            metadata,
+            fromNativeAmount,
+            fromTokenId,
+            toNativeAmount,
+            toTokenId
+          } = params
+
+          const takerGets = this.nativeToXrpAmount(
+            fromNativeAmount,
+            fromTokenId
+          )
+          const takerPays = this.nativeToXrpAmount(toNativeAmount, toTokenId)
+
+          const expirationXrp = unixTimeToRippleTime(
+            (expiration ?? DEX_ORDER_EXPIRATION_TIME_DEFAULT_S) * 1000
+          )
+
+          // Construct the base payment transaction
+          const transaction: OfferCreate = {
+            Account: this.walletLocalData.publicKey,
+            Expiration: expirationXrp,
+            TransactionType: 'OfferCreate',
+            TakerGets: takerGets,
+            TakerPays: takerPays
+          }
+
+          const xrpTransaction: OfferCreate =
+            await this.tools.rippleApi.autofill(transaction)
+
+          // Add 2 minutes worth of blocks to the LastLedgerSequence since users have
+          // 1 min to confirm a DEX transaction after it has already been created
+          const lastLedger =
+            (xrpTransaction.LastLedgerSequence ??
+              this.walletLocalData.blockHeight) +
+            TX_EXPIRATION_TIME_MS / EST_BLOCK_TIME_MS
+          xrpTransaction.LastLedgerSequence = Math.floor(lastLedger)
+
+          const networkFee = xrpTransaction.Fee ?? '0'
+
+          const { currencyCode } =
+            fromTokenId == null
+              ? this.currencyInfo
+              : this.allTokensMap[fromTokenId]
+
+          const out: EdgeTransaction = {
+            txid: '',
+            date: Date.now() / 1000,
+            currencyCode,
+            blockHeight: 0, // blockHeight,
+            metadata,
+            nativeAmount: `-${add(fromNativeAmount, networkFee)}`,
+            isSend: true,
+            networkFee,
+            ourReceiveAddresses: [],
+            signedTx: '',
+            otherParams: {
+              xrpTransaction
+            },
+            walletId: this.walletId
+          }
+          return out
+        }
+
+        throw new Error(`Invalid type: ${params.type}`)
+      }
+    }
+  }
+
+  nativeToXrpAmount(nativeAmount: string, tokenId?: string): Amount {
+    if (tokenId == null) {
+      // We are sending XRP
+      return nativeAmount
+    } else {
+      const { networkLocation, denominations } = this.allTokensMap[tokenId]
+      const { currency, issuer } = asXrpNetworkLocation(networkLocation)
+      return {
+        value: div(nativeAmount, denominations[0].multiplier, DIVIDE_PRECISION),
+        currency: convertCurrencyCodeToHex(currency),
+        issuer
+      }
+    }
   }
 
   setOtherData(raw: any): void {
@@ -517,7 +621,7 @@ export class XrpEngine extends CurrencyEngine<
         edgeToken.networkLocation
       )
       const networkFee = SET_TRUST_LINE_FEE
-      const trustSetTx: TrustSet = await this.tools.rippleApi.autofill({
+      const xrpTransaction: TrustSet = await this.tools.rippleApi.autofill({
         TransactionType: 'TrustSet',
         Account: this.walletLocalData.publicKey,
         Fee: networkFee,
@@ -542,7 +646,7 @@ export class XrpEngine extends CurrencyEngine<
         ourReceiveAddresses: [],
         signedTx: '',
         otherParams: {
-          trustSetTx
+          xrpTransaction
         },
         walletId: this.walletId
       }
@@ -702,11 +806,12 @@ export class XrpEngine extends CurrencyEngine<
     const otherParams = getOtherParams(edgeTransaction)
 
     // Activation Transaction:
-    if (otherParams.trustSetTx != null) {
-      const trustSetTx: TrustSet = otherParams.trustSetTx
+    if (otherParams.xrpTransaction != null) {
+      const xrpTransaction: TrustSet = otherParams.xrpTransaction
       const privateKey = privateKeys.rippleKey
       const wallet = Wallet.fromSeed(privateKey)
-      const { tx_blob: signedTransaction, hash: id } = wallet.sign(trustSetTx)
+      const { tx_blob: signedTransaction, hash: id } =
+        wallet.sign(xrpTransaction)
       this.warn('Activation transaction signed...')
       edgeTransaction.signedTx = signedTransaction
       edgeTransaction.txid = id.toLowerCase()

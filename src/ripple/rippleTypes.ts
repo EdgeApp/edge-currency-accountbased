@@ -1,4 +1,5 @@
 import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { EdgeMetadata, EdgeTransaction, EdgeTxSwap } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -48,3 +49,30 @@ export type RipplePrivateKeys = ReturnType<typeof asRipplePrivateKeys>
 export const asRipplePrivateKeys = asObject({
   rippleKey: asString
 })
+
+/**
+ * Template for a future generalized makeTx type that can be used for all
+ * chains
+ */
+export type MakeTxParams =
+  | {
+      type: 'MakeTxDexSwap'
+      metadata?: EdgeMetadata
+      swapData?: EdgeTxSwap
+      fromTokenId?: string
+      fromNativeAmount: string
+      toTokenId?: string
+      toNativeAmount: string
+
+      /**
+       * UNIX time (seconds) to expire the DEX swap if it hasn't executed
+       */
+      expiration?: number
+    }
+  | {
+      type: 'MakeTxDummyType'
+    }
+
+export interface RippleOtherMethods {
+  makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
+}

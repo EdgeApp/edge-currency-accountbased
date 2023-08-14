@@ -88,7 +88,12 @@ const fixtures: SmartPayTestFixture = [
 const fakeIo = makeFakeIo()
 const opts: EdgeCorePluginOptions = {
   initOptions: { smartPayPublicAddress },
-  io: { ...fakeIo, fetch, random: size => new Uint8Array(32) },
+  io: {
+    ...fakeIo,
+    fetch,
+    fetchCors: fetch,
+    random: size => new Uint8Array(32)
+  },
   log: fakeLog,
   nativeIo: {},
   pluginDisklet: fakeIo.disklet
