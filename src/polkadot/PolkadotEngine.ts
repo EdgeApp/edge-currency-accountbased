@@ -67,7 +67,6 @@ export class PolkadotEngine extends CurrencyEngine<
     this.fetchCors = getFetchCors(env.io)
     this.networkInfo = env.networkInfo
     this.nonce = 0
-    this.minimumAddressBalance = this.networkInfo.existentialDeposit
   }
 
   setOtherData(raw: any): void {
@@ -259,6 +258,8 @@ export class PolkadotEngine extends CurrencyEngine<
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
+    this.minimumAddressBalance =
+      this.api.consts.balances.existentialDeposit.toString()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
@@ -290,7 +291,10 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
+    const spendableBalance = sub(
+      balance,
+      this.api.consts.balances.existentialDeposit.toString()
+    )
 
     const tempSpendTarget = [
       {
@@ -344,7 +348,10 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: this.currencyInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
+    const spendableBalance = sub(
+      balance,
+      this.api.consts.balances.existentialDeposit.toString()
+    )
 
     if (gt(nativeAmount, spendableBalance)) {
       throw new InsufficientFundsError()
