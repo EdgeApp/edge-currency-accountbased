@@ -15,7 +15,6 @@ import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
-  genesisHash: string
   subscanBaseUrl: string
   subscanQueryLimit: number
   lengthFeePerByte: string
