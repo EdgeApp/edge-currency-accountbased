@@ -37,9 +37,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // https://docs.hedera.com/hedera/sdks-and-apis/sdks/transactions/modify-transaction-fields
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 100 }],
+
   // Deprecated:
   defaultSettings: {},
   memoMaxLength: 100,
+  memoType: 'text',
   metaTokens: []
 }
 

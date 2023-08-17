@@ -17,6 +17,7 @@ import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   getDenomination,
@@ -1261,6 +1262,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
+    const { memos = [] } = spendInfo
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
@@ -1269,8 +1272,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { publicAddress, memo } = spendInfo.spendTargets[0]
-    const note = memo === '' ? undefined : memo
+    const { publicAddress } = spendInfo.spendTargets[0]
+    const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     if (publicAddress == null || spendInfo.currencyCode == null) {
       throw new Error('Error: need recipient address and/or currencyCode')
@@ -1327,6 +1330,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
+
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
       let action:
@@ -1348,6 +1353,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
       edgeSpendInfoIn
     )
+    const { memos = [] } = edgeSpendInfo
 
     const isTokenTransfer = currencyCode !== this.currencyInfo.currencyCode
 
@@ -1356,7 +1362,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { nativeAmount, publicAddress, otherParams, memo } =
+    const { nativeAmount, publicAddress, otherParams } =
       edgeSpendInfo.spendTargets[0]
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -1371,7 +1377,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       ? this.allTokens.find(token => token.currencyCode === currencyCode)
       : undefined
 
-    const note = memo === '' ? undefined : memo
+    const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const txTransferParams: TronTransferParams = {
       currencyCode,
@@ -1436,7 +1442,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode, // currencyCode
       date: 0, // date
       isSend: true,
-      memos: [],
+      memos,
       nativeAmount: mul(edgeNativeAmount, '-1'), // nativeAmount
       networkFee, // networkFee
       otherParams: txOtherParams, // otherParams

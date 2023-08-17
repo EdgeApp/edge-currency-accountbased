@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '4200000000000000000000000000000000000006': {
@@ -184,6 +185,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'Optimism',
+  memoOptions: evmMemoOptions,
   pluginId: 'optimism',
   walletType: 'wallet:optimism',
 

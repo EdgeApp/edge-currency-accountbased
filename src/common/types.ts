@@ -1,5 +1,6 @@
 import {
   asArray,
+  asCodec,
   asEither,
   asMaybe,
   asNumber,
@@ -11,6 +12,7 @@ import {
   Cleaner
 } from 'cleaners'
 import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
@@ -73,6 +75,14 @@ export const asWalletInfo = <Keys>(
 export type SafeCommonWalletInfo = ReturnType<typeof asSafeCommonWalletInfo>
 export const asSafeCommonWalletInfo = asWalletInfo(
   asObject({ publicKey: asString })
+)
+
+/**
+ * A string of hex-encoded binary data.
+ */
+export const asBase16: Cleaner<Uint8Array> = asCodec(
+  raw => base16.parse(asString(raw)),
+  clean => base16.stringify(clean).toLowerCase()
 )
 
 export function asIntegerString(raw: unknown): string {

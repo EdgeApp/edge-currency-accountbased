@@ -12,6 +12,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { ZcashTools } from './ZcashTools'
 import {
@@ -301,8 +302,10 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -338,7 +341,7 @@ export class ZcashEngine extends CurrencyEngine<
       currencyCode,
       date: 0,
       isSend: true,
-      memos: [],
+      memos,
       nativeAmount: txNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
@@ -359,6 +362,7 @@ export class ZcashEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
+    const { memos } = edgeTransaction
     const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
       opts?.privateKeys
     )
@@ -368,6 +372,7 @@ export class ZcashEngine extends CurrencyEngine<
     )
       throw new Error('Invalid spend targets')
 
+    const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
     const txParams: ZcashSpendInfo = {
       zatoshi: sub(
@@ -375,7 +380,7 @@ export class ZcashEngine extends CurrencyEngine<
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
-      memo: spendTarget.memo ?? spendTarget.uniqueIdentifier ?? '',
+      memo,
       fromAccountIndex: 0,
       spendingKey: zcashPrivateKeys.spendKey
     }

@@ -27,6 +27,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 import {
   getBalanceChanges,
   OfferCreate,
@@ -43,18 +44,14 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
+import { upgradeMemos } from '../common/upgradeMemos'
+import { utf8 } from '../common/utf8'
 import {
   cleanTxLogs,
   getOtherParams,
   matchJson,
   safeErrorMessage
 } from '../common/utils'
-import {
-  PluginError,
-  pluginErrorCodes,
-  pluginErrorLabels,
-  pluginErrorName
-} from '../pluginError'
 import { DIVIDE_PRECISION, EST_BLOCK_TIME_MS } from './rippleInfo'
 import { RippleTools } from './RippleTools'
 import {
@@ -586,6 +583,7 @@ export class XrpEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { currencyCode } = spendInfo
     let spendableBalance = this.getBalance({
       currencyCode
@@ -602,8 +600,11 @@ export class XrpEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+
     const parentCurrencyCode = this.currencyInfo.currencyCode
 
     // Activation Transaction:
@@ -635,7 +636,7 @@ export class XrpEngine extends CurrencyEngine<
         currencyCode: this.currencyInfo.currencyCode,
         date: Date.now() / 1000,
         isSend: true,
-        memos: [],
+        memos,
         metadata: edgeSpendInfo.metadata,
         nativeAmount: `-${networkFee}`,
         networkFee,
@@ -692,44 +693,6 @@ export class XrpEngine extends CurrencyEngine<
       }
     }
 
-    const uniqueIdentifier =
-      edgeSpendInfo.spendTargets[0].memo ??
-      edgeSpendInfo.spendTargets[0].uniqueIdentifier ??
-      edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier ??
-      ''
-
-    if (uniqueIdentifier !== '') {
-      // Destination Tag Checks
-      const { memoMaxLength = Infinity, memoMaxValue } = this.currencyInfo
-
-      if (Number.isNaN(parseInt(uniqueIdentifier))) {
-        throw new PluginError(
-          'Please enter a valid Destination Tag',
-          pluginErrorName.XRP_ERROR,
-          pluginErrorCodes[0],
-          pluginErrorLabels.UNIQUE_IDENTIFIER_FORMAT
-        )
-      }
-
-      if (uniqueIdentifier.length > memoMaxLength) {
-        throw new PluginError(
-          `Destination Tag must be ${memoMaxLength} characters or less`,
-          pluginErrorName.XRP_ERROR,
-          pluginErrorCodes[0],
-          pluginErrorLabels.UNIQUE_IDENTIFIER_EXCEEDS_LENGTH
-        )
-      }
-
-      if (memoMaxValue != null && gt(uniqueIdentifier, memoMaxValue)) {
-        throw new PluginError(
-          'XRP Destination Tag is above its maximum limit',
-          pluginErrorName.XRP_ERROR,
-          pluginErrorCodes[0],
-          pluginErrorLabels.UNIQUE_IDENTIFIER_EXCEEDS_LIMIT
-        )
-      }
-    }
-
     let payment: PaymentJson
     if (currencyCode === parentCurrencyCode) {
       payment = {
@@ -769,8 +732,18 @@ export class XrpEngine extends CurrencyEngine<
       nativeAmount = `-${nativeAmount}`
     }
 
-    if (uniqueIdentifier !== '') {
-      payment.DestinationTag = parseInt(uniqueIdentifier)
+    for (const memo of memos) {
+      if (memo.type === 'number') {
+        payment.DestinationTag = parseInt(memos[0].value)
+      } else if (memo.type === 'text') {
+        if (payment.Memos == null) payment.Memos = []
+        payment.Memos.push({
+          Memo: {
+            MemoFormat: base16.stringify(utf8.parse('text/plain')),
+            MemoData: base16.stringify(utf8.parse(memo.value))
+          }
+        })
+      }
     }
 
     const otherParams: XrpParams = {

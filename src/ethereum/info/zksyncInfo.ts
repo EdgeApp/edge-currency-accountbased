@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '3355df6d4c9c3035724fd0e3914de96a5a83aaf4': {
@@ -77,6 +78,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'zkSync',
+  memoOptions: evmMemoOptions,
   pluginId: 'zksync',
   walletType: 'wallet:zksync',
 

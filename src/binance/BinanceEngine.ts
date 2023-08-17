@@ -15,6 +15,7 @@ import {
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asErrorMessage } from '../common/types'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -383,7 +384,9 @@ export class BinanceEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress } = spendTarget
@@ -408,10 +411,7 @@ export class BinanceEngine extends CurrencyEngine<
       throw new Error('Binance Beacon Chain token transfers not supported')
     }
 
-    if (edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier != null) {
-      otherParams.memo =
-        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    }
+    otherParams.memo = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const nativeNetworkFee = NETWORK_FEE_NATIVE_AMOUNT
     const ErrorInsufficientFundsMoreBnb = new Error(
@@ -437,7 +437,7 @@ export class BinanceEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       date: 0, // date
       isSend: nativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
       otherParams, // otherParams

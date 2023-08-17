@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   a1077a294dde1b09bb078844df40758a5d0f9a27: {
@@ -78,6 +79,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'PLS',
   displayName: 'PulseChain',
+  memoOptions: evmMemoOptions,
   pluginId: 'pulsechain',
   walletType: 'wallet:pulsechain',
 

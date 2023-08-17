@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {}
 
@@ -111,6 +112,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'GOR',
   displayName: 'Goerli Testnet',
+  memoOptions: evmMemoOptions,
   pluginId: 'goerli',
   walletType: 'wallet:goerli',
 

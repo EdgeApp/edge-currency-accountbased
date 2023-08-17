@@ -43,6 +43,9 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // https://developer.algorand.org/docs/get-details/transactions/transactions/
+  memoOptions: [{ type: 'text', memoName: 'note', maxLength: 1000 }],
+
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
   memoType: 'text',

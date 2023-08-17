@@ -38,6 +38,9 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // Copied from Zcash:
+  memoOptions: [{ type: 'text', maxLength: 512 }],
+
   // Deprecated:
   defaultSettings: {},
   metaTokens: []

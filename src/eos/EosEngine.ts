@@ -27,6 +27,7 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -952,8 +953,11 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress = 'eosio.token' } = tokenInfo
@@ -1013,14 +1017,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
 
     const quantity =
       toFixed(exchangeAmount, nativePrecision) + ` ${currencyCode}`
-    let memo = ''
-    if (
-      edgeSpendInfo.spendTargets[0].otherParams != null &&
-      typeof edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier ===
-        'string'
-    ) {
-      memo = edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    }
+    const memo = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const transferActions: EosTransfer[] = [
       {
@@ -1048,7 +1045,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       currencyCode, // currencyCode
       date: 0, // date
       isSend: nativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       nativeAmount, // nativeAmount
       networkFee, // networkFee
       otherParams: {

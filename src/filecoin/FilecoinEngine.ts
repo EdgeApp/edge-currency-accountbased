@@ -23,6 +23,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import { FilecoinTools } from './FilecoinTools'
 import {
   asFilecoinPrivateKeys,
@@ -161,7 +162,9 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -196,7 +199,7 @@ export class FilecoinEngine extends CurrencyEngine<
       currencyCode,
       date: 0,
       isSend: true,
-      memos: [],
+      memos,
       nativeAmount: txNativeAmount,
       networkFee,
       otherParams,

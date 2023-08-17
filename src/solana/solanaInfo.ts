@@ -34,8 +34,12 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // https://spl.solana.com/memo
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 32 }],
+
   // Deprecated:
   defaultSettings: {},
+  memoType: 'text',
   metaTokens: []
 }
 

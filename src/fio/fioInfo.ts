@@ -51,8 +51,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIO',
   displayName: 'FIO',
   pluginId: 'fio',
-  walletType: 'wallet:fio',
   unsafeSyncNetwork: true,
+  walletType: 'wallet:fio',
 
   // Explorers:
   addressExplorer: 'https://fio.bloks.io/key/%s',
@@ -65,6 +65,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'ᵮ'
     }
   ],
+
+  // No memo support:
+  memoOptions: [],
 
   // Deprecated:
   defaultSettings: { ...networkInfo },

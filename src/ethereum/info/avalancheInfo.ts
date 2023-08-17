@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '60781c2586d68229fde47564546784ab3faca982': {
@@ -210,6 +211,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'AVAX',
   displayName: 'Avalanche',
+  memoOptions: evmMemoOptions,
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
 

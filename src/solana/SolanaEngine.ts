@@ -16,6 +16,8 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
+import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -315,7 +317,9 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -349,8 +353,7 @@ export class SolanaEngine extends CurrencyEngine<
       })
     )
 
-    const memo = edgeSpendInfo.spendTargets[0]?.otherParams?.uniqueIdentifier
-    if (memo != null && memo !== '') {
+    if (memos[0]?.type === 'text') {
       const memoOpts = new TransactionInstruction({
         keys: [
           {
@@ -360,7 +363,7 @@ export class SolanaEngine extends CurrencyEngine<
           }
         ],
         programId: new PublicKey(this.networkInfo.memoPublicKey),
-        data: Buffer.from(memo)
+        data: Buffer.from(utf8.parse(memos[0].value))
       })
       solTx.add(memoOpts)
     }
@@ -379,7 +382,7 @@ export class SolanaEngine extends CurrencyEngine<
       currencyCode,
       date: 0,
       isSend: true,
-      memos: [],
+      memos,
       nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
       otherParams,

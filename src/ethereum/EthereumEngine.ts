@@ -25,6 +25,7 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   biggyRoundToNearestInt,
   bufToHex,
@@ -716,6 +717,7 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
 
     const balance = this.getBalance({
@@ -809,17 +811,13 @@ export class EthereumEngine extends CurrencyEngine<
     currencyCode: string,
     currencyInfo: EdgeCurrencyInfo
   ): EthereumTxParameterInformation {
+    const { memos = [] } = edgeSpendInfo
     const { spendTargets } = edgeSpendInfo
     const spendTarget = spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
     // Get data:
-    let data: string | undefined =
-      spendTarget.memo ?? spendTarget.otherParams?.data
-    if (data != null && data.length > 0 && !isHex(data)) {
-      throw new Error(`Memo/data field must be of type 'hex'`)
-    }
-    if (data === '') data = undefined
+    let data = memos[0]?.type === 'hex' ? memos[0].value : undefined
 
     // Get contractAddress and/or value:
     let value: string | undefined
@@ -865,8 +863,10 @@ export class EthereumEngine extends CurrencyEngine<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, skipChecks } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     const { pendingTxs = [] } = edgeSpendInfo
 
@@ -1025,7 +1025,7 @@ export class EthereumEngine extends CurrencyEngine<
       date: 0, // date
       feeRateUsed: getFeeRateUsed(miningFees.gasPrice, otherParams.gas),
       isSend: nativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
       otherParams, // otherParams

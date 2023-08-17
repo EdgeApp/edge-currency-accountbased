@@ -32,10 +32,19 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  memoOptions: [
+    // https://xrpl.org/payment.html#payment-fields
+    { type: 'number', memoName: 'destination tag', maxValue: '4294967295' },
+    // https://xrpl.org/transaction-common-fields.html#memos-field
+    { type: 'text', memoName: 'memo', maxLength: 990 }
+  ],
+  multipleMemos: true,
+
   // Deprecated:
   defaultSettings: {},
   memoMaxLength: 10,
   memoMaxValue: '4294967295',
+  memoType: 'number',
   metaTokens: []
 }
 

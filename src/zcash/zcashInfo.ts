@@ -37,6 +37,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // https://zips.z.cash/zip-0302
+  memoOptions: [{ type: 'text', maxLength: 512 }],
+
   // Deprecated:
   defaultSettings: {},
   metaTokens: []

@@ -14,6 +14,7 @@ import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -398,6 +399,7 @@ export class TezosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     return await makeSpendMutex(
       async () => await this.makeSpendInner(edgeSpendInfoIn)
     )
@@ -408,6 +410,8 @@ export class TezosEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
@@ -469,7 +473,7 @@ export class TezosEngine extends CurrencyEngine<
       currencyCode,
       date: 0,
       isSend: nativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       nativeAmount,
       networkFee,
       otherParams: {

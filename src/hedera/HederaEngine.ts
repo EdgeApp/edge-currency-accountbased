@@ -16,6 +16,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import { getFetchCors, hexToBuf } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
@@ -412,18 +413,19 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+
     if (this.otherData.hederaAccount == null) {
       throw Error('ErrorAccountNotActivated')
     }
-
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
 
-    const { publicAddress, uniqueIdentifier = '' } =
-      edgeSpendInfo.spendTargets[0]
+    const memo = memos[0]?.type === 'text' ? memos[0].value : ''
+    const { publicAddress } = edgeSpendInfo.spendTargets[0]
     let { nativeAmount } = edgeSpendInfo.spendTargets[0]
 
     if (publicAddress == null)
@@ -456,7 +458,7 @@ export class HederaEngine extends CurrencyEngine<
       .addHbarTransfer(this.otherData.hederaAccount, hbar.negated())
       .addHbarTransfer(publicAddress, hbar)
       .setMaxTransactionFee(txnFee)
-      .setTransactionMemo(uniqueIdentifier)
+      .setTransactionMemo(memo)
       .build(this.client)
 
     const edgeTransaction: EdgeTransaction = {
@@ -464,7 +466,7 @@ export class HederaEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       date: 0,
       isSend: true,
-      memos: [],
+      memos,
       nativeAmount: `-${nativeAmount}`,
       // UI shows the fee subtracted from the sent amount which doesn't make sense here
       networkFee, // networkFee
