@@ -365,18 +365,18 @@ export class HederaEngine extends CurrencyEngine<
       if (gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
 
       txs.push({
-        txid: hashToTxid(base64.parse(tx.transaction_hash)),
-        date: parseInt(tx.valid_start_timestamp),
-        currencyCode: this.currencyInfo.currencyCode, // currencyCode
         blockHeight: 1, // blockHeight
-        nativeAmount,
+        currencyCode: this.currencyInfo.currencyCode, // currencyCode
+        date: parseInt(tx.valid_start_timestamp),
         isSend: nativeAmount.startsWith('-'),
+        nativeAmount,
         networkFee: tx.charged_tx_fee.toString(), // networkFee
-        ourReceiveAddresses, // ourReceiveAddresses
-        signedTx: '', // signedTx
         otherParams: {
           consensusAt: tx.consensus_timestamp
         },
+        ourReceiveAddresses, // ourReceiveAddresses
+        signedTx: '', // signedTx
+        txid: hashToTxid(base64.parse(tx.transaction_hash)),
         walletId: this.walletId
       })
     }
@@ -459,21 +459,21 @@ export class HederaEngine extends CurrencyEngine<
       .build(this.client)
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: `-${nativeAmount}`,
+      currencyCode, // currencyCode
+      date: 0,
       isSend: true,
+      nativeAmount: `-${nativeAmount}`,
       // UI shows the fee subtracted from the sent amount which doesn't make sense here
       networkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
       otherParams: {
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress,
         transferTx: base64.stringify(transferTx.toBytes())
       },
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '', // signedTx
+      txid: '',
       walletId: this.walletId
     }
     return edgeTransaction

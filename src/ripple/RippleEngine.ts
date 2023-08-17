@@ -166,19 +166,19 @@ export class XrpEngine extends CurrencyEngine<
               : this.allTokensMap[fromTokenId]
 
           const out: EdgeTransaction = {
-            txid: '',
-            date: Date.now() / 1000,
-            currencyCode,
             blockHeight: 0, // blockHeight,
+            currencyCode,
+            date: Date.now() / 1000,
+            isSend: true,
             metadata,
             nativeAmount: `-${add(fromNativeAmount, networkFee)}`,
-            isSend: true,
             networkFee,
-            ourReceiveAddresses: [],
-            signedTx: '',
             otherParams: {
               xrpTransaction
             },
+            ourReceiveAddresses: [],
+            signedTx: '',
+            txid: '',
             walletId: this.walletId
           }
           return out
@@ -337,16 +337,16 @@ export class XrpEngine extends CurrencyEngine<
           }
           // Parent currency like XRP
           this.addTransaction(currency, {
-            txid: hash.toLowerCase(),
-            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-            currencyCode: currency,
             blockHeight: tx.ledger_index ?? -1,
-            nativeAmount,
+            currencyCode: currency,
+            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
+            nativeAmount,
             networkFee,
+            otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
-            otherParams: {},
+            txid: hash.toLowerCase(),
             walletId: this.walletId
           })
         } else {
@@ -372,16 +372,16 @@ export class XrpEngine extends CurrencyEngine<
           }
 
           this.addTransaction(currencyCode, {
-            txid: hash.toLowerCase(),
-            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-            currencyCode,
             blockHeight: tx.ledger_index ?? -1,
-            nativeAmount,
+            currencyCode,
+            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
+            nativeAmount,
             networkFee: '0',
+            otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
-            otherParams: {},
+            txid: hash.toLowerCase(),
             walletId: this.walletId
           })
         }
@@ -628,19 +628,19 @@ export class XrpEngine extends CurrencyEngine<
       })
 
       return {
-        txid: '',
-        date: Date.now() / 1000,
-        currencyCode: this.currencyInfo.currencyCode,
         blockHeight: 0, // blockHeight,
+        currencyCode: this.currencyInfo.currencyCode,
+        date: Date.now() / 1000,
+        isSend: true,
         metadata: edgeSpendInfo.metadata,
         nativeAmount: `-${networkFee}`,
-        isSend: true,
         networkFee,
-        ourReceiveAddresses: [],
-        signedTx: '',
         otherParams: {
           xrpTransaction
         },
+        ourReceiveAddresses: [],
+        signedTx: '',
+        txid: '',
         walletId: this.walletId
       }
     }
@@ -774,17 +774,17 @@ export class XrpEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: true,
+      nativeAmount, // nativeAmount
       networkFee,
-      parentNetworkFee,
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
       otherParams,
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      parentNetworkFee,
+      signedTx: '', // signedTx
+      txid: '', // txid
       walletId: this.walletId
     }
 

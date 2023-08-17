@@ -176,15 +176,15 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses.push(this.base58PublicKey)
     }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.transaction.signatures[0],
-      date: timestamp,
-      currencyCode: this.chainCode,
       blockHeight: tx.slot,
-      nativeAmount: amount.toString(),
+      currencyCode: this.chainCode,
+      date: timestamp,
       isSend: amount.toString().startsWith('-'),
+      nativeAmount: amount.toString(),
       networkFee: fee.toString(),
       ourReceiveAddresses,
       signedTx: '',
+      txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
     this.addTransaction(this.chainCode, edgeTransaction)
@@ -374,16 +374,16 @@ export class SolanaEngine extends CurrencyEngine<
     // Create the unsigned EdgeTransaction
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: mul(totalTxAmount, '-1'),
+      currencyCode,
+      date: 0,
       isSend: true,
+      nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
+      otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
-      otherParams,
+      txid: '',
       walletId: this.walletId
     }
 

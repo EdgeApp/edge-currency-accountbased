@@ -249,20 +249,20 @@ export class StellarEngine extends CurrencyEngine<
       nativeAmount = '-' + nativeAmount
     }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.transaction_hash,
-      date,
-      currencyCode,
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
-      nativeAmount,
+      currencyCode,
+      date,
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount,
       networkFee,
-      parentNetworkFee: '0',
-      ourReceiveAddresses,
-      signedTx: '',
       otherParams: {
         fromAddress,
         toAddress
       },
+      ourReceiveAddresses,
+      parentNetworkFee: '0',
+      signedTx: '',
+      txid: tx.transaction_hash,
       walletId: this.walletId
     }
 
@@ -555,20 +555,20 @@ export class StellarEngine extends CurrencyEngine<
     nativeAmount = `-${nativeAmount}`
     const idInternal = this.pendingTransactionsIndex
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount, // nativeAmount
       networkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
       otherParams: {
         idInternal,
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress
       },
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '', // signedTx
+      txid: '', // txid
       walletId: this.walletId
     }
     this.pendingTransactionsMap[idInternal] = transaction

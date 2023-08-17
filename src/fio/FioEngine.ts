@@ -483,16 +483,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       otherParams.meta.isTransferProcessed = true
 
       const edgeTransaction: EdgeTransaction = {
-        txid: action.action_trace.trx_id,
-        date: this.getUTCDate(action.block_time) / 1000,
-        currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
-        nativeAmount,
+        currencyCode,
+        date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        nativeAmount,
         networkFee,
+        otherParams,
         ourReceiveAddresses,
         signedTx: '',
-        otherParams,
+        txid: action.action_trace.trx_id,
         walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
@@ -570,16 +570,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       otherParams.meta.isFeeProcessed = true
       const edgeTransaction: EdgeTransaction = {
-        txid: action.action_trace.trx_id,
-        date: this.getUTCDate(action.block_time) / 1000,
-        currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
-        nativeAmount,
+        currencyCode,
+        date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        nativeAmount,
         networkFee,
-        signedTx: '',
-        ourReceiveAddresses: [],
         otherParams,
+        ourReceiveAddresses: [],
+        signedTx: '',
+        txid: action.action_trace.trx_id,
         walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
@@ -1678,19 +1678,19 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: sub(`-${quantity}`, `${fee}`),
+      currencyCode,
+      date: 0,
       isSend: true,
+      nativeAmount: sub(`-${quantity}`, `${fee}`),
       networkFee: `${fee}`,
-      ourReceiveAddresses: [],
-      signedTx: '',
       otherParams: {
         ...otherParams,
         txParams
       },
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
       walletId: this.walletId
     }
 

@@ -258,21 +258,21 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: trxId,
-      date: Date.parse(blockTime) / 1000,
-      currencyCode,
       blockHeight: blockNum > 0 ? blockNum : 0,
-      nativeAmount,
+      currencyCode,
+      date: Date.parse(blockTime) / 1000,
       isSend: nativeAmount.startsWith('-'),
-      networkFee: '0',
-      parentNetworkFee: '0',
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams: {},
       metadata: {
         name,
         notes: memo
       },
+      nativeAmount,
+      networkFee: '0',
+      otherParams: {},
+      ourReceiveAddresses,
+      parentNetworkFee: '0',
+      signedTx: '',
+      txid: trxId,
       walletId: this.walletId
     }
 
@@ -339,20 +339,20 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       }
 
       const edgeTransaction: EdgeTransaction = {
-        txid,
-        date,
-        currencyCode,
         blockHeight,
-        nativeAmount,
+        currencyCode,
+        date,
         isSend: nativeAmount.startsWith('-'),
-        networkFee: '0',
-        parentNetworkFee: '0',
-        ourReceiveAddresses,
-        signedTx: '',
         metadata: {
           notes: memo
         },
+        nativeAmount,
+        networkFee: '0',
         otherParams: { fromAddress: from, toAddress: to },
+        ourReceiveAddresses,
+        parentNetworkFee: '0',
+        signedTx: '',
+        txid,
         walletId: this.walletId
       }
 
@@ -870,19 +870,19 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         }
       ]
       const edgeTransaction: EdgeTransaction = {
-        txid: '',
-        date: 0,
-        currencyCode: this.currencyInfo.currencyCode,
         blockHeight: 0,
-        nativeAmount: '-3',
+        currencyCode: this.currencyInfo.currencyCode,
+        date: 0,
         isSend: true,
+        nativeAmount: '-3',
         networkFee: '0',
-        ourReceiveAddresses: [],
-        signedTx: '',
         otherParams: {
           actions: transferActions,
           signatures: []
         },
+        ourReceiveAddresses: [],
+        signedTx: '',
+        txid: '',
         walletId: this.walletId
       }
       const signedTx = await this.signTx(edgeTransaction, privateKeys)
@@ -1041,19 +1041,19 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     nativeAmount = `-${nativeAmount}`
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount, // nativeAmount
       networkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
       otherParams: {
         actions: transferActions,
         signatures: []
       },
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '', // signedTx
+      txid: '', // txid
       walletId: this.walletId
     }
     this.warn(

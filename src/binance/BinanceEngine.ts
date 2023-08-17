@@ -183,18 +183,18 @@ export class BinanceEngine extends CurrencyEngine<
     if (blockHeight < 0) blockHeight = 0
     const unixTimestamp = new Date(tx.blockTime).getTime() / 1000
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
-      date: unixTimestamp,
-      currencyCode,
       blockHeight,
-      nativeAmount: netNativeAmount,
+      currencyCode,
+      date: unixTimestamp,
       isSend: netNativeAmount.startsWith('-'),
-      networkFee: nativeNetworkFee,
-      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
-      signedTx: '',
       metadata: {
         notes: tx.memo
       },
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      signedTx: '',
+      txid: tx.hash,
       walletId: this.walletId
     }
 
@@ -432,16 +432,16 @@ export class BinanceEngine extends CurrencyEngine<
     // Create the unsigned EdgeTransaction
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
+      otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams, // otherParams
+      txid: '', // txid
       walletId: this.walletId
     }
 

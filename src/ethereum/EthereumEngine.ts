@@ -1020,17 +1020,17 @@ export class EthereumEngine extends CurrencyEngine<
     //
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
-      isSend: nativeAmount.startsWith('-'),
-      networkFee: nativeNetworkFee, // networkFee
+      currencyCode, // currencyCode
+      date: 0, // date
       feeRateUsed: getFeeRateUsed(miningFees.gasPrice, otherParams.gas),
+      isSend: nativeAmount.startsWith('-'),
+      nativeAmount, // nativeAmount
+      networkFee: nativeNetworkFee, // networkFee
+      otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams, // otherParams
+      txid: '', // txid
       walletId: this.walletId
     }
 

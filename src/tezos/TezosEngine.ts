@@ -273,16 +273,16 @@ export class TezosEngine extends CurrencyEngine<
       nativeAmount = '-' + add(nativeAmount, networkFee)
     }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
-      date,
-      currencyCode,
       blockHeight,
-      nativeAmount,
+      currencyCode,
+      date,
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount,
       networkFee,
+      otherParams: {},
       ourReceiveAddresses,
       signedTx: '',
-      otherParams: {},
+      txid: tx.hash,
       walletId: this.walletId
     }
     if (!failedOperation) {
@@ -464,21 +464,21 @@ export class TezosEngine extends CurrencyEngine<
     nativeAmount = '-' + nativeAmount
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount,
+      currencyCode,
+      date: 0,
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount,
       networkFee,
-      ourReceiveAddresses: [],
-      signedTx: '',
       otherParams: {
         idInternal: 0,
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress,
         fullOp: ops
       },
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
       walletId: this.walletId
     }
     return edgeTransaction

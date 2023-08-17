@@ -189,15 +189,15 @@ export class PolkadotEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: hash,
-      date,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight,
-      nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date,
       isSend: nativeAmount.startsWith('-'),
+      nativeAmount,
       networkFee: fee,
       ourReceiveAddresses,
       signedTx: '',
+      txid: hash,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
@@ -482,16 +482,16 @@ export class PolkadotEngine extends CurrencyEngine<
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: mul(totalTxAmount, '-1'),
+      currencyCode,
+      date: 0,
       isSend: true,
+      nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
+      otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
-      otherParams,
+      txid: '',
       walletId: this.walletId
     }
 
