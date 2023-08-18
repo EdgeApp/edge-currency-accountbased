@@ -130,21 +130,17 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'Dev Ethereum',
   pluginId: 'ethDev',
   walletType: 'wallet:ethDev',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://etherscan.io/address/%s',
   transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ETH',
       multiplier: '1000000000000000000',
@@ -156,7 +152,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mΞ'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const ethDev = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

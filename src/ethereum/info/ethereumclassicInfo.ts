@@ -97,21 +97,17 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'ETC',
   displayName: 'Ethereum Classic',
   pluginId: 'ethereumclassic',
   walletType: 'wallet:ethereumclassic',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://blockscout.com/etc/mainnet/address/%s',
   transactionExplorer: 'https://blockscout.com/etc/mainnet/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ETC',
       multiplier: '1000000000000000000',
@@ -123,7 +119,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mΞ'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const ethereumclassic = makeOuterPlugin<

@@ -33,21 +33,16 @@ const networkInfo: AlgorandNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'ALGO',
   displayName: 'Algorand',
   pluginId: 'algorand',
   walletType: 'wallet:algorand',
 
-  defaultSettings: { customFeeSettings: ['fee'] },
-
-  memoType: 'text',
-
+  // Explorers:
   addressExplorer: 'https://algoexplorer.io/address/%s',
   transactionExplorer: 'https://algoexplorer.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ALGO',
       multiplier: '1000000',
@@ -55,7 +50,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+  // Deprecated:
+  defaultSettings: { customFeeSettings: ['fee'] },
+  memoType: 'text',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const algorand = makeOuterPlugin<AlgorandNetworkInfo, AlgorandTools>({

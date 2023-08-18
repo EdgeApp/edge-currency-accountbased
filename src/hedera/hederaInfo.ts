@@ -14,22 +14,17 @@ const networkInfo: HederaNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'HBAR',
   displayName: 'Hedera',
   pluginId: 'hedera',
   walletType: 'wallet:hedera',
 
-  defaultSettings: {},
-
-  memoMaxLength: 100,
-
+  // Explorers:
   addressExplorer: 'https://hashscan.io/mainnet/account/%s',
   transactionExplorer: 'https://hashscan.io/mainnet/transaction/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
-    // other denominations are specified but these are the most common
+    // Other denominations are specified but these are the most common:
     {
       name: 'HBAR',
       multiplier: '100000000', // 100,000,000
@@ -41,7 +36,11 @@ const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'tℏ'
     }
   ],
-  metaTokens: [] // Deprecated
+
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 100,
+  metaTokens: []
 }
 
 export const hedera = makeOuterPlugin<HederaNetworkInfo, HederaTools>({

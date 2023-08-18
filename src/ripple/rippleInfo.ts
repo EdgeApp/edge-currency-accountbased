@@ -15,29 +15,28 @@ const networkInfo: XrpNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'XRP',
   displayName: 'XRP',
   pluginId: 'ripple',
   walletType: 'wallet:ripple',
 
-  defaultSettings: {},
-
-  memoMaxLength: 10,
-  memoMaxValue: '4294967295',
-
+  // Explorers:
   addressExplorer: 'https://xrpscan.com/account/%s',
   transactionExplorer: 'https://xrpscan.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'XRP',
       multiplier: '1000000',
       symbol: 'X'
     }
   ],
-  metaTokens: [] // Deprecated
+
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 10,
+  memoMaxValue: '4294967295',
+  metaTokens: []
 }
 
 export const builtinTokens: EdgeTokenMap = {

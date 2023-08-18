@@ -255,21 +255,17 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'KOV',
   displayName: 'Kovan Testnet',
   pluginId: 'kovan',
   walletType: 'wallet:kovan',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://etherscan.io/address/%s',
   transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'KOV',
       multiplier: '1000000000000000000',
@@ -281,7 +277,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mK'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const kovan = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

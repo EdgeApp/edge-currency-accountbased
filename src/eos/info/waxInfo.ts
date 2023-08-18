@@ -16,31 +16,28 @@ export const waxNetworkInfo: EosNetworkInfo = {
   uriProtocol: 'wax'
 }
 
-const denominations = [
-  // An array of Objects of the possible denominations for this currency
-  {
-    name: 'WAX',
-    multiplier: '100000000',
-    symbol: 'W'
-  }
-]
-
 export const waxCurrencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'WAX',
   displayName: 'Wax',
   pluginId: 'wax',
   walletType: 'wallet:wax',
 
-  defaultSettings: {},
-
-  memoMaxLength: 256,
-
+  // Explorers:
   addressExplorer: 'https://wax.bloks.io/account/%s',
   transactionExplorer: 'https://wax.bloks.io/transaction/%s',
 
-  denominations,
-  metaTokens: [] // Deprecated
+  denominations: [
+    {
+      name: 'WAX',
+      multiplier: '100000000',
+      symbol: 'W'
+    }
+  ],
+
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 256,
+  metaTokens: []
 }
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({

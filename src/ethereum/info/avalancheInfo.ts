@@ -207,28 +207,28 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'AVAX',
   displayName: 'Avalanche',
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://snowtrace.io/address/%s',
   transactionExplorer: 'https://snowtrace.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'AVAX',
       multiplier: '1000000000000000000',
       symbol: 'AVAX'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const avalanche = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

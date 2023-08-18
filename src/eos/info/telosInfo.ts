@@ -20,30 +20,28 @@ export const telosNetworkInfo: EosNetworkInfo = {
   uriProtocol: 'telos'
 }
 
-const denominations = [
-  {
-    name: 'TLOS',
-    multiplier: '10000',
-    symbol: 'T'
-  }
-]
-
 export const telosCurrencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'TLOS',
   displayName: 'Telos',
   pluginId: 'telos',
   walletType: 'wallet:telos',
 
-  defaultSettings: {},
-
-  memoMaxLength: 256,
-
+  // Explorers:
   addressExplorer: 'https://telos.bloks.io/account/%s',
   transactionExplorer: 'https://telos.bloks.io/transaction/%s',
 
-  denominations,
-  metaTokens: [] // Deprecated
+  denominations: [
+    {
+      name: 'TLOS',
+      multiplier: '10000',
+      symbol: 'T'
+    }
+  ],
+
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 256,
+  metaTokens: []
 }
 
 export const telos = makeOuterPlugin<EosNetworkInfo, EosTools>({

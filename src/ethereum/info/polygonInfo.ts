@@ -190,21 +190,17 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'MATIC',
   displayName: 'Polygon',
   pluginId: 'polygon', // matching mnemonic here
   walletType: 'wallet:polygon',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://polygonscan.com/address/%s',
   transactionExplorer: 'https://polygonscan.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'MATIC',
       multiplier: '1000000000000000000',
@@ -216,7 +212,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mMATIC'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const polygon = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

@@ -17,21 +17,19 @@ const networkInfo: ZcashNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'ZEC',
   displayName: 'Zcash',
   pluginId: 'zcash',
   requiredConfirmations: 10,
+  unsafeBroadcastTx: true,
   walletType: 'wallet:zcash',
 
-  defaultSettings: {},
-
+  // Explorers:
   addressExplorer: 'https://blockchair.com/zcash/address/%s?from=edgeapp',
   transactionExplorer:
     'https://blockchair.com/zcash/transaction/%s?from=edgeapp',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ZEC',
       multiplier: '100000000',
@@ -39,9 +37,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: [], // Deprecated
-
-  unsafeBroadcastTx: true
+  // Deprecated:
+  defaultSettings: {},
+  metaTokens: []
 }
 
 export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({

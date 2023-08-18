@@ -74,28 +74,28 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'zkSync',
   pluginId: 'zksync',
   walletType: 'wallet:zksync',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://explorer.zksync.io/address/%s',
   transactionExplorer: 'https://explorer.zksync.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ETH',
       multiplier: '1000000000000000000',
       symbol: 'Ξ'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const zksync = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

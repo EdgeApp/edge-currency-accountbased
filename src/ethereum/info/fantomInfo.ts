@@ -308,28 +308,28 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'FTM',
   displayName: 'Fantom',
   pluginId: 'fantom',
   walletType: 'wallet:fantom',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://ftmscan.com/address/%s',
   transactionExplorer: 'https://ftmscan.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'FTM',
       multiplier: '1000000000000000000',
       symbol: 'F'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const fantom = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

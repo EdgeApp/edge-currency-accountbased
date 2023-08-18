@@ -87,28 +87,28 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'CELO',
   displayName: 'Celo',
   pluginId: 'celo',
   walletType: 'wallet:celo',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://explorer.celo.org/address/%s',
   transactionExplorer: 'https://explorer.celo.org/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'CELO',
       multiplier: '1000000000000000000',
       symbol: 'CELO'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const celo = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

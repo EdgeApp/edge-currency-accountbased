@@ -69,28 +69,28 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'RBTC',
   displayName: 'Rootstock',
   pluginId: 'rsk',
   walletType: 'wallet:rsk',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://explorer.rsk.co/address/%s',
   transactionExplorer: 'https://explorer.rsk.co/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'RBTC',
       multiplier: '1000000000000000000',
       symbol: 'RBTC'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const rsk = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

@@ -16,20 +16,18 @@ const networkInfo: FilecoinNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'FIL',
   displayName: 'Filecoin',
   pluginId: 'filecoin',
   requiredConfirmations: 900,
+  unsafeBroadcastTx: true,
   walletType: 'wallet:filecoin',
 
-  defaultSettings: {},
-
+  // Explorers:
   addressExplorer: 'https://filscan.io/en/address/%s',
   transactionExplorer: 'https://filscan.io/en/message/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'FIL',
       multiplier: '1000000000000000000',
@@ -67,9 +65,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: [], // Deprecated
-
-  unsafeBroadcastTx: true
+  // Deprecated:
+  defaultSettings: {},
+  metaTokens: []
 }
 
 export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
