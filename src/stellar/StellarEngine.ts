@@ -10,7 +10,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import stellarApi from 'stellar-sdk'
+import stellarApi, { Transaction } from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -56,10 +56,9 @@ export class StellarEngine extends CurrencyEngine<
 > {
   networkInfo: StellarNetworkInfo
   fetchCors: EdgeFetchFunction
-  stellarApi: Object
   activatedAccountsCache: { [publicAddress: string]: boolean }
   pendingTransactionsIndex: number
-  pendingTransactionsMap: { [index: number]: Object }
+  pendingTransactionsMap: { [index: number]: Transaction }
   fees: { low: number; standard: number; high: number }
   otherData!: StellarWalletOtherData
 
@@ -72,7 +71,6 @@ export class StellarEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
     this.fetchCors = getFetchCors(env.io)
-    this.stellarApi = {}
     this.activatedAccountsCache = {}
     this.pendingTransactionsIndex = 0
     this.pendingTransactionsMap = {}
@@ -137,7 +135,6 @@ export class StellarEngine extends CurrencyEngine<
         funcs = this.tools.stellarApiServers.map(api => async () => {
           // @ts-expect-error
           const result = await api[func](...params)
-          // @ts-expect-error
           return { server: api.serverName, result }
         })
         out = await asyncWaterfall(funcs)
@@ -156,7 +153,6 @@ export class StellarEngine extends CurrencyEngine<
             this.walletLocalData.blockHeight <= blockHeight &&
             this.tools.highestTxHeight <= blockHeight
           ) {
-            // @ts-expect-error
             return { server: serverApi.serverName, result }
           } else {
             throw new Error('Height out of date')
@@ -174,7 +170,6 @@ export class StellarEngine extends CurrencyEngine<
             .cursor(this.otherData.lastPagingToken)
             .forAccount(...params)
             .call()
-          // @ts-expect-error
           return { server: serverApi.serverName, result }
         })
         out = await asyncWaterfall(funcs)
@@ -186,7 +181,6 @@ export class StellarEngine extends CurrencyEngine<
           this.tools.stellarApiServers.map(async serverApi => {
             // @ts-expect-error
             const result = await serverApi[func](...params)
-            // @ts-expect-error
             return { server: serverApi.serverName, result }
           })
         )
@@ -509,8 +503,7 @@ export class StellarEngine extends CurrencyEngine<
 
     const exchangeAmount = div(nativeAmount, denom.multiplier, 7)
 
-    // @ts-expect-error
-    const account = new this.stellarApi.Account(
+    const account = new stellarApi.Account(
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
@@ -526,37 +519,31 @@ export class StellarEngine extends CurrencyEngine<
         ? this.fees[edgeSpendInfo.networkFeeOption]
         : BASE_FEE
 
-    // @ts-expect-error
-    const txBuilder = new this.stellarApi.TransactionBuilder(account, {
+    let txBuilder = new stellarApi.TransactionBuilder(account, {
       fee: feeSetting
     })
-    let transaction
 
     if (mustCreateAccount) {
-      transaction = txBuilder.addOperation(
-        // @ts-expect-error
-        this.stellarApi.Operation.createAccount({
+      txBuilder = txBuilder.addOperation(
+        stellarApi.Operation.createAccount({
           destination: publicAddress,
           startingBalance: exchangeAmount
         })
       )
     } else {
-      transaction = txBuilder.addOperation(
-        // @ts-expect-error
-        this.stellarApi.Operation.payment({
+      txBuilder = txBuilder.addOperation(
+        stellarApi.Operation.payment({
           destination: publicAddress,
-          // @ts-expect-error
-          asset: this.stellarApi.Asset.native(),
+          asset: stellarApi.Asset.native(),
           amount: exchangeAmount
         })
       )
     }
     if (memoId != null) {
-      // @ts-expect-error
-      const memo = this.stellarApi.Memo.id(memoId)
-      transaction = transaction.addMemo(memo)
+      const memo = stellarApi.Memo.id(memoId)
+      txBuilder = txBuilder.addMemo(memo)
     }
-    transaction = transaction.build()
+    const transaction = txBuilder.build()
 
     const networkFee = transaction.fee.toString()
     nativeAmount = add(networkFee, nativeAmount) // Add fee to total
@@ -627,11 +614,9 @@ export class StellarEngine extends CurrencyEngine<
         throw new Error('ErrorInvalidTransaction')
       }
       this.warn('Signing...')
-      // @ts-expect-error
-      const keypair = this.stellarApi.Keypair.fromSecret(
+      const keypair = stellarApi.Keypair.fromSecret(
         stellarPrivateKeys.stellarKey
       )
-      // @ts-expect-error
       await transaction.sign(keypair)
     } catch (e: any) {
       this.error(
@@ -686,8 +671,6 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeStellarWalletInfo(walletInfo)
   const engine = new StellarEngine(env, tools, safeWalletInfo, opts)
-
-  engine.stellarApi = stellarApi
 
   await engine.loadEngine()
 
