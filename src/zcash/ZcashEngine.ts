@@ -330,14 +330,6 @@ export class ZcashEngine extends CurrencyEngine<
     // **********************************
     // Create the unsigned EdgeTransaction
 
-    const spendTargets = edgeSpendInfo.spendTargets.map(si => ({
-      uniqueIdentifier: si.uniqueIdentifier,
-      memo: si.memo,
-      nativeAmount: si.nativeAmount ?? '0',
-      currencyCode,
-      publicAddress
-    }))
-
     const txNativeAmount = mul(totalTxAmount, '-1')
 
     const edgeTransaction: EdgeTransaction = {
@@ -350,7 +342,6 @@ export class ZcashEngine extends CurrencyEngine<
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      spendTargets,
       walletId: this.walletId
     }
 
