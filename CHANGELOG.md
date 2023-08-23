@@ -1,10 +1,15 @@
 # edge-currency-accountbased
 
+## 1.5.1 (2023-08-23)
+
+- changed: Removed blockscout API server from ETC info (disabling transaction list retrieval)
+
 ## 1.5.0 (2023-08-14)
 
 - added: Support for XRP OfferCreate txs
 - added: Fantom tokens listed on Axelarscan (AXLUSDC, AXLUSDT, AXLETH, AXLWBTC)
 -
+
 ## 1.4.12 (2023-08-11)
 
 - Fixed: Bug in FIO causing missing historical transactions (first page of transactions).
