@@ -14,6 +14,7 @@ import {
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
   EdgeGetActivationAssetsResults,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeToken,
   EdgeTransaction,
@@ -243,12 +244,13 @@ export class AlgorandEngine extends CurrencyEngine<
 
   processAlgorandTransaction(tx: BaseTransaction): void {
     const {
-      fee,
       'confirmed-round': confirmedRound,
-      id,
       'round-time': roundTime,
-      sender,
-      'tx-type': txType
+      'tx-type': txType,
+      fee,
+      id,
+      note,
+      sender
     } = tx
 
     let currencyCode: string
@@ -332,12 +334,30 @@ export class AlgorandEngine extends CurrencyEngine<
       }
     }
 
+    const memos: EdgeMemo[] = []
+    if (note != null) {
+      const data = base64.parse(note)
+      try {
+        memos.push({
+          memoName: 'note',
+          type: 'text',
+          value: utf8.stringify(data)
+        })
+      } catch (e) {
+        memos.push({
+          memoName: 'note',
+          type: 'hex',
+          value: base16.stringify(data).toLowerCase()
+        })
+      }
+    }
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: confirmedRound,
       currencyCode,
       date: roundTime,
       isSend,
-      memos: [],
+      memos,
       nativeAmount,
       networkFee,
       ourReceiveAddresses,
