@@ -92,6 +92,9 @@ export class PolkadotEngine extends CurrencyEngine<
     endpoint: string,
     body: JsonObject
   ): Promise<SubscanResponse> {
+    if (this.networkInfo.subscanBaseUrl == null) {
+      throw new Error('Missing subscan url')
+    }
     const options = {
       method: 'POST',
       headers: {
@@ -224,6 +227,16 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    /*
+    HACK: We cannot query transactions if a currency doesn't have a subscanBaseUrl
+    */
+    if (this.networkInfo.subscanBaseUrl == null) {
+      for (const currencyCode of this.enabledTokens) {
+        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      }
+      this.updateOnAddressesChecked()
+      return
+    }
     return await queryTxMutex(async () => await this.queryTransactionsInner())
   }
 

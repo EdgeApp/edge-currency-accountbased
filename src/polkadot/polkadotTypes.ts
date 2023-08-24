@@ -24,7 +24,7 @@ export const asMaybeAssetsPalletBalance = asMaybe(
 
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
-  subscanBaseUrl: string
+  subscanBaseUrl: string | undefined
   subscanQueryLimit: number
   lengthFeePerByte: string
 }
