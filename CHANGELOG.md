@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 1.5.2 (2023-08-24)
+
+- fixed: Correctly parse more types of Ripple transactions, including DEX transactions.
+
 ## 1.5.1 (2023-08-23)
 
 - changed: Removed blockscout API server from ETC info (disabling transaction list retrieval)
