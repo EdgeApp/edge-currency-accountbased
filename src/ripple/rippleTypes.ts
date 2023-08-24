@@ -1,4 +1,4 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import { asMaybe, asNumber, asObject, asOptional, asString } from 'cleaners'
 import { EdgeMetadata, EdgeTransaction, EdgeTxSwap } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
@@ -32,6 +32,7 @@ export type XrpWalletOtherData = ReturnType<typeof asXrpWalletOtherData>
 export const asXrpTransaction = asObject({
   date: asNumber,
   hash: asString,
+  Fee: asOptional(asString),
   ledger_index: asNumber
 })
 

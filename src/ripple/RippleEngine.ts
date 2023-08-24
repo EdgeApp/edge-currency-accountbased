@@ -5,6 +5,7 @@ import {
   eq,
   gt,
   log10,
+  lt,
   lte,
   mul,
   sub,
@@ -27,6 +28,7 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import {
+  getBalanceChanges,
   OfferCreate,
   rippleTimeToUnixTime,
   TrustSet,
@@ -35,15 +37,11 @@ import {
 } from 'xrpl'
 import { Amount } from 'xrpl/dist/npm/models/common'
 import { AccountTxResponse } from 'xrpl/dist/npm/models/methods/accountTx'
-import {
-  Payment,
-  validatePayment
-} from 'xrpl/dist/npm/models/transactions/payment'
+import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
-import { BooleanMap } from '../common/types'
 import {
   cleanTxLogs,
   getOtherParams,
@@ -92,10 +90,6 @@ const TOKEN_FEE = '12'
 const tfSetNoRipple = 131072 // No Rippling Flag for token sends
 const TRUST_LINE_APPROVAL_AMOUNT = '1000000'
 const SET_TRUST_LINE_FEE = '12'
-const SUPPORTED_TRANSACTION_TYPES: BooleanMap = {
-  Payment: true,
-  TrustSet: true
-}
 
 interface PaymentJson {
   Amount:
@@ -299,100 +293,114 @@ export class XrpEngine extends CurrencyEngine<
   }
 
   processRippleTransaction(accountTx: AccountTransaction): void {
-    if (accountTx.tx == null) return
+    const { log } = this
+    const { publicKey: publicAddress } = this.walletLocalData
+    const { meta, tx } = accountTx
+    if (tx == null) {
+      log(`processRippleTransaction: no tx`)
+      return
+    }
+    if (typeof meta !== 'object') {
+      log(`processRippleTransaction: hash:${tx.hash?.toString()} no meta`)
+      return
+    }
 
     // For some reason, XRPL types exclude Transaction hash, date, and ledger_index.
     // Check if the tx has these undocumented fields and throw if not
-    asXrpTransaction(accountTx.tx)
-
-    if (!SUPPORTED_TRANSACTION_TYPES[accountTx.tx.TransactionType]) return
-
-    const tx: Payment & XrpTransaction = accountTx.tx as any
-
-    const ourReceiveAddresses = []
-    let nativeAmount = typeof tx.Amount === 'string' ? tx.Amount : '0'
-    let isSend = false
-    const chainCode = this.currencyInfo.currencyCode
-    let currencyCode = chainCode
-    let tokenTx = false
-    if (typeof tx.Amount === 'string') {
-      nativeAmount = tx.Amount
-    } else if (tx.Amount != null) {
-      const { meta } = accountTx
-      if (typeof meta === 'string') {
-        this.log.warn(`**** WARNING: String meta field in txid ${tx.hash}`)
-        return
-      }
-
-      const DeliveredAmount = meta.DeliveredAmount ?? meta.delivered_amount
-      if (DeliveredAmount == null) {
-        this.log.warn(
-          `**** WARNING: Undefined DeliveredAmount in txid ${tx.hash}`
-        )
-        return
-      }
-
-      if (typeof DeliveredAmount === 'string') {
-        this.log.warn(`**** WARNING: String DeliveredAmount in txid ${tx.hash}`)
-        return
-      }
-
-      const { currency, issuer, value } = DeliveredAmount
-
-      // Special case that we can't yet validate:
-      // If issuer === recipient account, then ignore this tx
-      if (issuer === tx.Account) return
-
-      tokenTx = true
-      const tokenId = makeTokenId({ currency, issuer })
-      const edgeToken = this.allTokensMap[tokenId]
-      if (edgeToken == null) return
-      currencyCode = edgeToken.currencyCode
-      nativeAmount = mul(value, edgeToken.denominations[0].multiplier)
+    let xrpTx: XrpTransaction
+    try {
+      xrpTx = asXrpTransaction(tx)
+    } catch (e) {
+      log(String(e))
+      return
     }
 
-    let networkFee = '0'
-    let parentNetworkFee
-    if (tx.Destination === this.walletLocalData.publicKey) {
-      ourReceiveAddresses.push(this.walletLocalData.publicKey)
-    } else if (tx.Account !== this.walletLocalData.publicKey) {
-      // Error. If we're not the destination, we should be the source account
-      throw new Error('tx is neither Destination or source Account')
-    } else {
-      isSend = true
-      if (tokenTx) {
-        parentNetworkFee = tx.Fee
-        nativeAmount = `-${nativeAmount}`
-      } else {
-        networkFee = tx.Fee ?? '0'
-        nativeAmount = `-${add(nativeAmount, tx.Fee ?? '0')}`
-      }
-    }
+    const balances = getBalanceChanges(meta)
 
-    const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash.toLowerCase(),
-      date: rippleTimeToUnixTime(tx.date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
-      currencyCode,
-      blockHeight: tx.ledger_index,
-      nativeAmount,
-      isSend,
-      networkFee,
-      parentNetworkFee,
-      ourReceiveAddresses,
-      signedTx: '',
-      otherParams: {},
-      walletId: this.walletId
-    }
-    this.addTransaction(currencyCode, edgeTransaction)
-    if (tokenTx && nativeAmount.startsWith('-')) {
-      // Also add the mainnet fee transaction if this is a token spend
-      this.addTransaction(chainCode, {
-        ...edgeTransaction,
-        currencyCode: chainCode,
-        nativeAmount: `-${parentNetworkFee ?? ''}`,
-        networkFee: parentNetworkFee ?? '',
-        parentNetworkFee: undefined
-      })
+    const { date, hash, Fee } = xrpTx
+    for (const balance of balances) {
+      const { account } = balance
+      if (account !== publicAddress) {
+        continue
+      }
+      for (const amount of balance.balances) {
+        const { currency, issuer, value } = amount
+        if (currency === this.currencyInfo.currencyCode) {
+          /**
+           * Native mainnet currency balance update (ie XRP)
+           */
+          if (issuer != null) {
+            log(`Transaction has parent code ${currency} with issuer ${issuer}`)
+            return
+          }
+          const denom = this.currencyInfo.denominations.find(
+            d => d.name === currency
+          )
+          if (denom == null) {
+            log(`Unknown denom ${currency}`)
+            continue
+          }
+          const nativeAmount = mul(value, denom.multiplier)
+          let isSend = false
+          let networkFee = '0'
+          const ourReceiveAddresses: string[] = []
+          if (lt(nativeAmount, '0')) {
+            isSend = true
+            networkFee = Fee ?? '0'
+          } else {
+            ourReceiveAddresses.push(publicAddress)
+          }
+          // Parent currency like XRP
+          this.addTransaction(currency, {
+            txid: hash.toLowerCase(),
+            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
+            currencyCode: currency,
+            blockHeight: tx.ledger_index ?? -1,
+            nativeAmount,
+            isSend,
+            networkFee,
+            ourReceiveAddresses,
+            signedTx: '',
+            otherParams: {},
+            walletId: this.walletId
+          })
+        } else {
+          /**
+           * Token balance update
+           */
+          if (issuer == null) {
+            log(`Transaction has token code ${currency} with no issuer`)
+            return
+          }
+          const tokenId = makeTokenId({ currency, issuer })
+          const edgeToken = this.allTokensMap[tokenId]
+          if (edgeToken == null) return
+          const { currencyCode } = edgeToken
+          const nativeAmount = mul(value, edgeToken.denominations[0].multiplier)
+          let isSend = false
+          const ourReceiveAddresses: string[] = []
+
+          if (lt(nativeAmount, '0')) {
+            isSend = true
+          } else {
+            ourReceiveAddresses.push(publicAddress)
+          }
+
+          this.addTransaction(currencyCode, {
+            txid: hash.toLowerCase(),
+            date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
+            currencyCode,
+            blockHeight: tx.ledger_index ?? -1,
+            nativeAmount,
+            isSend,
+            networkFee: '0',
+            ourReceiveAddresses,
+            signedTx: '',
+            otherParams: {},
+            walletId: this.walletId
+          })
+        }
+      }
     }
   }
 
