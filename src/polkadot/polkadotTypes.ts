@@ -13,6 +13,15 @@ import {
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
+export const asMaybeAssetsPalletBalance = asMaybe(
+  asObject({
+    balance: asNumber
+    // status: 'Liquid',
+    // reason: { sufficient: null },
+    // extra: null
+  })
+)
+
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
   subscanBaseUrl: string
