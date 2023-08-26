@@ -379,6 +379,140 @@ export default [
     }
   },
   {
+    /*
+    abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about m/44'/461'/0'/0/0
+    f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq
+
+    room soda device label bicycle hill fork nest lion knee purpose hen m/44'/461'/0'/0/0
+    f1l5o3gou4vzh2v6wagaan7mvomwa7tlwrpndxhya 
+    */
+    pluginId: 'filecoin',
+    WALLET_TYPE: 'wallet:filecoin',
+    'Test Currency code': 'FIL',
+    key: [
+      39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150,
+      52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238
+    ],
+    mnemonic:
+      'room soda device label bicycle hill fork nest lion knee purpose hen',
+    xpub: 'xpub6C6UdTHYiyFsD5m3LtRpvuSHXxNE2e3CiVYwhztwVFR9AHGUveisJnr75hvyW18uTT6Qi2HwkXyoZcM8gNPi8C887DoqmrvmtFTFrqitGHg', // m/44'/461'/0'
+    key_length: 64,
+    'invalid key name': {
+      type: 'wallet:filecoin',
+      keys: { filecoinKeyz: '12345678abcd' }
+    },
+    'invalid wallet type': {
+      type: 'shitcoin',
+      keys: { filecoinKey: '12345678abcd' }
+    },
+    parseUri: {
+      'address only': [
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq'
+      ],
+      'address with provided currency code': {
+        args: ['f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq', 'USDC'],
+        output: {
+          publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq'
+        }
+      },
+      // 'checksum address only': [
+      //   '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1bf07',
+      //   '0x3c40cbb7f82a7e1bc83c4e3e98590b19e0e1bf07'
+      // ],
+      // 'invalid checksum address only': [
+      //   '0x3C40cbb7F82A7E1bc83C4E3E98590b19e0e1Bf07'
+      // ],
+      'invalid address': [
+        '0x466d506cd7fbcd29a06015da03f0de814df050ez',
+        '0466d506cd7fbcd29a06015da03f0de814df050ee',
+        '0x466d506cd7fbcd29a06015da03f0de814df050ee1'
+      ],
+      'uri address': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq'
+      ],
+      'uri address with amount': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=12345.6789',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        '12345678900000000000000',
+        'FIL'
+      ],
+      'uri address with unique identifier': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?dt=123456789',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        'FIL'
+      ],
+      'uri address with unique identifier and without network prefix': [
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?dt=123456789',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        'FIL'
+      ],
+      'uri address with amount & label': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=1234.56789&label=Johnny%20Ripple',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        '1234567890000000000000',
+        'FIL',
+        'Johnny Ripple'
+      ],
+      'uri address with amount, label & message': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=1234.56789&label=Johnny%20Ripple&message=Hello%20World,%20I%20miss%20you%20!',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        '1234567890000000000000',
+        'FIL',
+        'Johnny Ripple',
+        'Hello World, I miss you !'
+      ],
+      'uri address with unsupported param': [
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?unsupported=helloworld&amount=12345.6789',
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+        '12345678900000000000000',
+        'FIL'
+      ]
+    },
+    encodeUri: {
+      'address only': [
+        { publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq' },
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq'
+      ],
+      'weird address': [
+        { publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq' },
+        'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq'
+      ],
+      'invalid address': [
+        { publicAddress: '0x04b6b3bcbc16a5fb6a20301d650f8def513122az' },
+        { publicAddress: '04b6b3bcbc16a5fb6a20301d650f8def513122a8' },
+        { publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhqa' }
+      ],
+      'address & amount': [
+        {
+          publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+          nativeAmount: '123456780000'
+        },
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=0.00000012345678'
+      ],
+      'address, amount, and label': [
+        {
+          publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+          nativeAmount: '123000000000000',
+          currencyCode: 'FIL',
+          label: 'Johnny Filecoin'
+        },
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=0.000123&label=Johnny%20Filecoin'
+      ],
+      'address, amount, label, & message': [
+        {
+          publicAddress: 'f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq',
+          nativeAmount: '123000000000000',
+          currencyCode: 'FIL',
+          label: 'Johnny Filecoin',
+          message: 'Hello World, I miss you !'
+        },
+        'filecoin:f1qode47ievxlxzk6z2viuovedabmn3tq6t57uqhq?amount=0.000123&label=Johnny%20Filecoin&message=Hello%20World,%20I%20miss%20you%20!'
+      ]
+    }
+  },
+  {
     pluginId: 'ethereum',
     WALLET_TYPE: 'wallet:ethereum',
     'Test Currency code': 'ETH',
