@@ -4,6 +4,7 @@ import { algorand } from './algorand/algorandInfo'
 import { binance } from './binance/binanceInfo'
 import { eosPlugins } from './eos/eosInfos'
 import { ethereumPlugins } from './ethereum/ethereumInfos'
+import { filecoin } from './filecoin/filecoinInfo'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
 import { polkadot } from './polkadot/polkadotInfo'
@@ -20,6 +21,7 @@ const plugins = {
   ...ethereumPlugins,
   algorand,
   binance,
+  filecoin,
   fio,
   hedera,
   piratechain,

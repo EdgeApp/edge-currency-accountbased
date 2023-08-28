@@ -64,8 +64,7 @@ for (const fixture of fixtures) {
 
     it('Create valid key', async function () {
       const keys = await tools.createPrivateKey(WALLET_TYPE)
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      assert.equal(!keys, false)
+      assert.isDefined(keys)
       assert.equal(typeof keys[keyName], 'string')
       const length = keys[keyName].length
       assert.equal(length, fixture.key_length)
