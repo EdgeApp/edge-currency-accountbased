@@ -519,15 +519,6 @@ export class TezosEngine extends CurrencyEngine<
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     return edgeTransaction
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
-    const tezosPrivateKeys = asTezosPrivateKeys(privateKeys)
-    return tezosPrivateKeys.mnemonic
-  }
-
-  getDisplayPublicSeed(): string | null {
-    return this.walletInfo.keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(

@@ -22,6 +22,7 @@ import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import {
+  asSafeTronWalletInfo,
   asTronInitOptions,
   asTronPrivateKeys,
   TronInitOptions,
@@ -52,6 +53,18 @@ export class TronTools implements EdgeCurrencyTools {
     this.io = io
     this.log = log
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asTronPrivateKeys(privateWalletInfo.keys)
+    return keys.tronMnemonic ?? keys.tronKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeTronWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(

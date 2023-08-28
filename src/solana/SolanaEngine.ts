@@ -434,17 +434,6 @@ export class SolanaEngine extends CurrencyEngine<
 
     return edgeTransaction
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
-    const solanaPrivateKeys = asSolanaPrivateKeys(this.currencyInfo.pluginId)(
-      privateKeys
-    )
-    return solanaPrivateKeys.mnemonic
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(

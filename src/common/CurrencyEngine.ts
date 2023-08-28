@@ -1076,14 +1076,6 @@ export class CurrencyEngine<
   // Virtual functions to be override by extension:
   //
 
-  getDisplayPrivateSeed(privateKeys: JsonObject): string | null {
-    throw new Error('not implemented')
-  }
-
-  getDisplayPublicSeed(): string | null {
-    throw new Error('not implemented')
-  }
-
   async resyncBlockchain(): Promise<void> {
     throw new Error('not implemented')
   }

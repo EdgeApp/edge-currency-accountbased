@@ -1497,15 +1497,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     edgeTransaction.date = Date.now() / 1000
     return edgeTransaction
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const tronPrivateKeys = asTronPrivateKeys(privateKeys)
-    return tronPrivateKeys.tronMnemonic ?? tronPrivateKeys.tronKey
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(

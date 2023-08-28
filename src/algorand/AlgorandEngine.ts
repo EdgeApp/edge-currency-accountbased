@@ -708,17 +708,6 @@ export class AlgorandEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const algorandPrivateKeys = asAlgorandPrivateKeys(
-      this.currencyInfo.pluginId
-    )(privateKeys)
-    return algorandPrivateKeys.mnemonic
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey ?? ''
-  }
-
   engineGetActivationAssets = async (
     options: EdgeEngineGetActivationAssetsOptions
   ): Promise<EdgeGetActivationAssetsResults> => {

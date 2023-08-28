@@ -893,15 +893,6 @@ export class XrpEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const ripplePrivateKeys = asRipplePrivateKeys(privateKeys)
-    return ripplePrivateKeys.rippleKey
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys?.publicKey ?? ''
-  }
-
   engineGetActivationAssets = async (
     options: EdgeEngineGetActivationAssetsOptions
   ): Promise<EdgeGetActivationAssetsResults> => {

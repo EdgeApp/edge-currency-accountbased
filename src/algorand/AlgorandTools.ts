@@ -20,7 +20,8 @@ import { getDenomInfo } from '../common/utils'
 import {
   AlgorandNetworkInfo,
   asAlgorandPrivateKeys,
-  asMaybeContractAddressLocation
+  asMaybeContractAddressLocation,
+  asSafeAlgorandWalletInfo
 } from './algorandTypes'
 
 const { isValidAddress, mnemonicFromSeed } = algosdk
@@ -35,6 +36,19 @@ export class AlgorandTools implements EdgeCurrencyTools {
     this.io = io
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asAlgorandPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeAlgorandWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async importPrivateKey(input: string): Promise<JsonObject> {

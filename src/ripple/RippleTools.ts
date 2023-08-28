@@ -23,7 +23,12 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { asyncWaterfall, getDenomInfo, safeErrorMessage } from '../common/utils'
-import { asXrpNetworkLocation, XrpNetworkInfo } from './rippleTypes'
+import {
+  asRipplePrivateKeys,
+  asSafeRippleWalletInfo,
+  asXrpNetworkLocation,
+  XrpNetworkInfo
+} from './rippleTypes'
 import { makeTokenId } from './rippleUtils'
 
 export class RippleTools implements EdgeCurrencyTools {
@@ -43,6 +48,18 @@ export class RippleTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
 
     this.rippleApiSubscribers = {}
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asRipplePrivateKeys(privateWalletInfo.keys)
+    return keys.rippleKey
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeRippleWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async connectApi(walletId: string): Promise<void> {

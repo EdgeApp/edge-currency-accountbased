@@ -514,16 +514,6 @@ export class BinanceEngine extends CurrencyEngine<
       throw new Error(`Broadcast failed: ${e.message}`)
     }
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const bnbPrivateKey = asBnbPrivateKey(privateKeys)
-    return bnbPrivateKey.binanceMnemonic
-  }
-
-  getDisplayPublicSeed(): string {
-    const { keys } = this.walletInfo
-    return keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(

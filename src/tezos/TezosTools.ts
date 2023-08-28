@@ -11,7 +11,12 @@ import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import type { TezosNetworkInfo, UriTransaction } from './tezosTypes'
+import {
+  asSafeTezosWalletInfo,
+  asTezosPrivateKeys,
+  TezosNetworkInfo,
+  UriTransaction
+} from './tezosTypes'
 
 export class TezosTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -31,6 +36,18 @@ export class TezosTools implements EdgeCurrencyTools {
 
     this.tezosRpcNodes = [...this.networkInfo.tezosRpcNodes]
     this.tezosApiServers = [...this.networkInfo.tezosApiServers]
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asTezosPrivateKeys(privateWalletInfo.keys)
+    return keys.mnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeTezosWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   checkAddress(address: string): boolean {

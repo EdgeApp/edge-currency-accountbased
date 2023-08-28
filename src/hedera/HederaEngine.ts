@@ -544,25 +544,6 @@ export class HederaEngine extends CurrencyEngine<
   getBlockHeight(): number {
     return Math.floor(Date.now() / 1000)
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const hederaPrivateKeys = asHederaPrivateKeys(this.currencyInfo.pluginId)(
-      privateKeys
-    )
-    return hederaPrivateKeys.mnemonic ?? hederaPrivateKeys.privateKey
-  }
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  getDisplayPublicSeed() {
-    if (
-      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
-      this.walletInfo.keys != null &&
-      this.walletInfo.keys.publicKey != null
-    ) {
-      return this.walletInfo.keys.publicKey
-    }
-    return ''
-  }
 }
 
 function hashToTxid(hash: Uint8Array): string {

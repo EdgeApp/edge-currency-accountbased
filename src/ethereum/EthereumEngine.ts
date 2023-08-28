@@ -1325,17 +1325,6 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const ethereumPrivateKeys = asEthereumPrivateKeys(
-      this.currencyInfo.pluginId
-    )(privateKeys)
-    return ethereumPrivateKeys.privateKey
-  }
-
-  getDisplayPublicSeed(): string | null {
-    return this.walletInfo.keys.publicKey
-  }
-
   // Overload saveTx to mutate replaced transactions by RBF
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async saveTx(edgeTransaction: EdgeTransaction) {

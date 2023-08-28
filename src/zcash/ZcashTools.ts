@@ -22,6 +22,7 @@ import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
 import {
+  asSafeZcashWalletInfo,
   asZcashPrivateKeys,
   asZecPublicKey,
   UnifiedViewingKey,
@@ -52,6 +53,19 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     this.KeyTool = KeyTool
     this.AddressTool = AddressTool
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asZcashPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeZcashWalletInfo(publicWalletInfo)
+    return keys.unifiedViewingKeys?.extfvk
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {

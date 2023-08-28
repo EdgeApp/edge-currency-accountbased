@@ -1991,15 +1991,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   async getFreshAddress(options: any): Promise<EdgeFreshAddress> {
     return { publicAddress: this.walletInfo.keys.publicKey }
   }
-
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const fioPrivateKeys = asFioPrivateKeys(privateKeys)
-    return fioPrivateKeys.fioKey
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.publicKey
-  }
 }
 
 export async function makeCurrencyEngine(

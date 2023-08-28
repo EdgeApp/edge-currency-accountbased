@@ -16,7 +16,11 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getDenomInfo } from '../common/utils'
-import { BinanceNetworkInfo } from './binanceTypes'
+import {
+  asBnbPrivateKey,
+  asSafeBnbWalletInfo,
+  BinanceNetworkInfo
+} from './binanceTypes'
 
 const {
   checkAddress,
@@ -37,6 +41,18 @@ export class BinanceTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const keys = asBnbPrivateKey(privateWalletInfo.keys)
+    return keys.binanceMnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafeBnbWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   // will actually use MNEMONIC version of private key
