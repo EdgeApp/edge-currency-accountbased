@@ -9,7 +9,7 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
-import stellarApi from 'stellar-sdk'
+import stellarApi, { Server as StellarServer } from 'stellar-sdk'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
@@ -31,7 +31,7 @@ export class StellarTools implements EdgeCurrencyTools {
   networkInfo: StellarNetworkInfo
 
   highestTxHeight: number = 0
-  stellarApiServers: Object[]
+  stellarApiServers: StellarServer[]
 
   constructor(env: PluginEnvironment<StellarNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env

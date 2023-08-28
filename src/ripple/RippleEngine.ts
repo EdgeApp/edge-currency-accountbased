@@ -30,6 +30,7 @@ import {
 import {
   getBalanceChanges,
   OfferCreate,
+  Payment as PaymentJson,
   rippleTimeToUnixTime,
   TrustSet,
   unixTimeToRippleTime,
@@ -91,24 +92,8 @@ const tfSetNoRipple = 131072 // No Rippling Flag for token sends
 const TRUST_LINE_APPROVAL_AMOUNT = '1000000'
 const SET_TRUST_LINE_FEE = '12'
 
-interface PaymentJson {
-  Amount:
-    | string
-    | {
-        currency: string
-        issuer: string
-        value: string
-      }
-  TransactionType: string
-  Account: string
-  Destination: string
-  Fee: string
-  DestinationTag?: number
-  Flags?: number
-}
-
 interface XrpParams {
-  preparedTx: Object
+  preparedTx: PaymentJson
 }
 
 export class XrpEngine extends CurrencyEngine<

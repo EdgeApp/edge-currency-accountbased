@@ -17,7 +17,6 @@ declare module 'react-native' {
   }
 }
 
-declare module 'stellar-sdk'
 declare module 'tronweb' {
   export const utils: {
     crypto: {
