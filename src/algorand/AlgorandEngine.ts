@@ -115,9 +115,8 @@ export class AlgorandEngine extends CurrencyEngine<
 
           if (algoTx.type === 'axfer') {
             const assetIndex = algoTx.assetIndex.toString()
-            const metaToken: EdgeToken | undefined =
-              this.allTokensMap[assetIndex]
-            if (metaToken == null) throw new Error('Unrecognized token')
+            const token: EdgeToken | undefined = this.allTokensMap[assetIndex]
+            if (token == null) throw new Error('Unrecognized token')
             tokenId = assetIndex
           }
 
@@ -802,7 +801,7 @@ export async function makeCurrencyEngine(
   const safeWalletInfo = asSafeAlgorandWalletInfo(walletInfo)
   const engine = new AlgorandEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

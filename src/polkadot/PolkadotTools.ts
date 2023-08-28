@@ -17,7 +17,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo, isHex } from '../common/utils'
+import { getLegacyDenomination, isHex } from '../common/utils'
 import {
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
@@ -123,7 +123,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: EdgeMetaToken[]
+    customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
@@ -134,9 +134,9 @@ export class PolkadotTools implements EdgeCurrencyTools {
 
     let amount
     if (typeof nativeAmount === 'string') {
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
+        this.currencyInfo,
         customTokens
       )
       if (denom == null) {

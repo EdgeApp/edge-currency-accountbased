@@ -19,7 +19,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   hexToDecimal,
@@ -848,9 +848,10 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
     const { note, receiverAddress, tokenOpts, unsignedTxHex } = opts
 
-    const denom = getDenomInfo(
+    const denom = getDenomination(
+      this.currencyInfo.currencyCode,
       this.currencyInfo,
-      this.currencyInfo.currencyCode
+      this.allTokensMap
     )
     if (denom == null) throw new Error('calcTxFee unknown denom')
 
@@ -1509,7 +1510,7 @@ export async function makeCurrencyEngine(
   const engine = new TronEngine(env, tools, safeWalletInfo, opts)
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

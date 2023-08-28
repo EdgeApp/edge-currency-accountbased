@@ -25,7 +25,6 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { CustomToken } from '../common/types'
 import {
   biggyRoundToNearestInt,
   bufToHex,
@@ -38,7 +37,6 @@ import {
   isHex,
   mergeDeeply,
   normalizeAddress,
-  removeHexPrefix,
   toHex
 } from '../common/utils'
 import {
@@ -1369,17 +1367,6 @@ export class EthereumEngine extends CurrencyEngine<
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.saveTx(edgeTransaction)
   }
-
-  async addCustomToken(obj: CustomToken): Promise<void> {
-    const { contractAddress } = obj
-    if (
-      !isHex(contractAddress) ||
-      removeHexPrefix(contractAddress).length !== 40
-    ) {
-      throw new Error('ErrorInvalidContractAddress')
-    }
-    await super.addCustomToken(obj, contractAddress.toLowerCase())
-  }
 }
 
 export async function makeCurrencyEngine(
@@ -1401,7 +1388,7 @@ export async function makeCurrencyEngine(
   )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

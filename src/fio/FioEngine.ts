@@ -12,7 +12,6 @@ import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyTools,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -30,7 +29,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   promiseAny,
@@ -210,14 +209,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const blockTimeBeginingOfGmtDay =
       Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
     return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
-  }
-
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeFioWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
   }
 
   // Poll on the blockheight
@@ -514,13 +505,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     ) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
-      let denom = getDenomInfo(this.currencyInfo, currencyCode)
+      const denom = getDenomination(
+        currencyCode,
+        this.currencyInfo,
+        this.allTokensMap
+      )
       if (denom == null) {
-        denom = getDenomInfo(this.currencyInfo, this.currencyInfo.currencyCode)
-        if (denom == null) {
-          this.error(`Received unsupported currencyCode: ${currencyCode}`)
-          return 0
-        }
+        this.error(`Received unsupported currencyCode: ${currencyCode}`)
+        return 0
       }
 
       const fioAmount = mul(exchangeAmount, denom.multiplier)
@@ -2002,7 +1994,7 @@ export async function makeCurrencyEngine(
   const { tpid = 'finance@edge' } = env.initOptions
   const safeWalletInfo = asSafeFioWalletInfo(walletInfo)
   const engine = new FioEngine(env, tools, safeWalletInfo, opts, tpid)
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

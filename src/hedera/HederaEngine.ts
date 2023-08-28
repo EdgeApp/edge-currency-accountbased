@@ -559,7 +559,7 @@ export async function makeCurrencyEngine(
   const safeWalletInfo = asSafeHederaWalletInfo(walletInfo)
   const engine = new HederaEngine(env, tools, safeWalletInfo, opts)
 
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

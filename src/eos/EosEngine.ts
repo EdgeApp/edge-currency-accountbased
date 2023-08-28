@@ -13,7 +13,6 @@ import { asEither, asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeCurrencyTools,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -31,7 +30,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   pickRandom
@@ -193,14 +192,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     this.otherData = asEosWalletOtherData(raw)
   }
 
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeEosWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
-    await super.loadEngine(plugin, walletInfo, opts)
-  }
-
   // Poll on the blockheight
   async checkBlockchainInnerLoop(): Promise<void> {
     try {
@@ -241,7 +232,11 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
     const ourReceiveAddresses = []
-    const denom = getDenomInfo(this.currencyInfo, currencyCode, this.allTokens)
+    const denom = getDenomination(
+      currencyCode,
+      this.currencyInfo,
+      this.allTokensMap
+    )
     if (denom == null) {
       this.log(
         `processIncomingTransaction Received unsupported currencyCode: ${currencyCode}`
@@ -319,10 +314,10 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       const exchangeAmount = amount.toString()
       const currencyCode = symbol
 
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getDenomination(
         currencyCode,
-        this.allTokens
+        this.currencyInfo,
+        this.allTokensMap
       )
       // if invalid currencyCode then don't count as valid transaction
       if (denom == null) {
@@ -959,10 +954,10 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
     const { contractAddress = 'eosio.token' } = tokenInfo
-    const nativeDenomination = getDenomInfo(
-      this.currencyInfo,
+    const nativeDenomination = getDenomination(
       currencyCode,
-      this.allTokens
+      this.currencyInfo,
+      this.allTokensMap
     )
     if (nativeDenomination == null) {
       throw new Error(`Error: no native denomination found for ${currencyCode}`)
@@ -1160,7 +1155,7 @@ export async function makeCurrencyEngine(
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeEosWalletInfo(walletInfo)
   const engine = new EosEngine(env, tools, safeWalletInfo, opts)
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

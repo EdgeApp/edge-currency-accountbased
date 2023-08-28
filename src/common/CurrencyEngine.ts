@@ -24,10 +24,9 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
-import { validateToken } from './tokenHelpers'
+import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
-  CustomToken,
   DATA_STORE_FILE,
   SafeCommonWalletInfo,
   TRANSACTION_STORE_FILE,
@@ -37,7 +36,7 @@ import {
 } from './types'
 import {
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   matchJson,
   normalizeAddress,
   safeErrorMessage
@@ -82,10 +81,6 @@ export class CurrencyEngine<
   txIdList: TxidList // Map of array of txids in chronological order
   transactionsChangedArray: EdgeTransaction[] // Transactions that have changed and need to be added
   currencyInfo: EdgeCurrencyInfo
-  allTokens: EdgeMetaToken[]
-  allTokensMap: EdgeTokenMap
-  customTokens: EdgeMetaToken[]
-  enabledTokens: string[]
   currentSettings: any
   timers: any
   walletId: string
@@ -95,18 +90,31 @@ export class CurrencyEngine<
   otherData: unknown
   minimumAddressBalance: string
 
+  // Tokens:
+  allTokens: EdgeMetaToken[] = []
+  allTokensMap: EdgeTokenMap = {}
+  builtinTokens: EdgeTokenMap = {}
+  customTokens: EdgeTokenMap = {}
+  enabledTokenIds: string[] = []
+  enabledTokens: string[] = []
+
   constructor(
     env: PluginEnvironment<{}>,
     tools: Tools,
     walletInfo: SafeWalletInfo,
     opts: EdgeCurrencyEngineOptions
   ) {
-    const { currencyInfo } = tools
-    const { currencyCode } = currencyInfo
-    const { walletLocalDisklet, callbacks, customTokens } = opts
+    const { builtinTokens, currencyInfo } = env
+    const {
+      callbacks,
+      customTokens,
+      enabledTokenIds,
+      log,
+      walletLocalDisklet
+    } = opts
 
     this.tools = tools
-    this.log = opts.log
+    this.log = log
     this.warn = (message, e?) => this.log.warn(message + safeErrorMessage(e))
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))
     this.engineOn = false
@@ -123,17 +131,19 @@ export class CurrencyEngine<
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
-    this.allTokens = currencyInfo.metaTokens.slice(0)
-    this.enabledTokens = []
-    this.customTokens = []
-    this.allTokensMap = { ...customTokens, ...env.builtinTokens }
     this.timers = {}
     this.otherData = undefined
     this.minimumAddressBalance = '0'
 
+    const { currencyCode } = currencyInfo
     this.transactionList[currencyCode] = []
     this.txIdMap[currencyCode] = {}
     this.txIdList[currencyCode] = []
+
+    // Configure tokens:
+    this.builtinTokens = builtinTokens
+    this.changeCustomTokensSync(customTokens)
+    this.changeEnabledTokenIdsSync(enabledTokenIds)
 
     if (opts.userSettings != null) {
       this.currentSettings = opts.userSettings
@@ -265,11 +275,8 @@ export class CurrencyEngine<
   }
 
   // Called by engine startup code
-  async loadEngine(
-    plugin: EdgeCurrencyTools,
-    walletInfo: SafeWalletInfo,
-    opts: EdgeCurrencyEngineOptions
-  ): Promise<void> {
+  async loadEngine(): Promise<void> {
+    const { walletInfo } = this
     const { currencyCode } = this.currencyInfo
 
     if (this.walletInfo.keys.publicKey == null) {
@@ -304,75 +311,6 @@ export class CurrencyEngine<
     // Add the native token currency
     this.tokenCheckBalanceStatus[currencyCode] = 0
     this.tokenCheckTransactionsStatus[currencyCode] = 0
-    this.enabledTokens.push(currencyCode)
-
-    const { customTokens = {}, enabledTokenIds = [] } = opts
-
-    // Add all of the custom tokens
-    for (const tokenId of Object.keys(customTokens)) {
-      const token = customTokens[tokenId]
-      try {
-        validateToken(token)
-      } catch (e) {
-        this.log.warn(
-          `Dropping custom token "${token.currencyCode}" / ${tokenId}`
-        )
-        continue
-      }
-      const {
-        currencyCode,
-        denominations,
-        displayName,
-        networkLocation = {}
-      } = token
-      this.addCustomToken({
-        currencyCode,
-        currencyName: displayName,
-        denominations,
-        displayName,
-        multiplier: denominations[0].multiplier,
-        networkLocation,
-        contractAddress: networkLocation?.contractAddress
-      }).catch(e => this.log(e.message))
-    }
-
-    // Create a map for fast searching
-    const initMap: { [tokenId: string]: boolean } = {}
-    const tokenIdMap = enabledTokenIds.reduce((map, tokenId) => {
-      map[tokenId] = true
-      return map
-    }, initMap)
-
-    // Add all the enabled known tokens
-    const addTokenPromises = this.allTokens.map(
-      async ({
-        currencyCode,
-        contractAddress = '',
-        currencyName,
-        denominations
-      }) =>
-        await this.tools
-          .getTokenId?.({
-            currencyCode,
-            displayName: currencyName,
-            denominations,
-            networkLocation: { contractAddress }
-          })
-          .then(tokenId => {
-            if (
-              tokenIdMap[tokenId] &&
-              !this.enabledTokens.includes(currencyCode)
-            ) {
-              this.enabledTokens.push(currencyCode)
-              this.walletLocalData.totalBalances[currencyCode] = '0'
-              this.tokenCheckBalanceStatus[currencyCode] = 0
-              this.tokenCheckTransactionsStatus[currencyCode] = 0
-            }
-          })
-          .catch()
-    )
-
-    await Promise.all(addTokenPromises)
 
     this.doInitialBalanceCallback()
     this.doInitialUnactivatedTokenIdsCallback()
@@ -676,6 +614,7 @@ export class CurrencyEngine<
     return true
   }
 
+  // Called by EthereumNetwork
   getTokenInfo(token: string): EdgeMetaToken | undefined {
     return this.allTokens.find(element => {
       return element.currencyCode === token
@@ -753,126 +692,48 @@ export class CurrencyEngine<
     return this.walletLocalData.blockHeight
   }
 
-  private enableTokensSync(tokens: string[]): void {
-    const initValue: { [currencyCode: string]: boolean } = {}
-    const tokenMap = tokens.reduce((map, currencyCode) => {
-      map[currencyCode] = true
-      return map
-    }, initValue)
-
-    for (const token of this.allTokens) {
-      const { currencyCode } = token
-      if (
-        tokenMap[currencyCode] &&
-        !this.enabledTokens.includes(currencyCode)
-      ) {
-        this.enabledTokens.push(currencyCode)
-        // Initialize balance
-        const updatedBalance = '0'
-        this.walletLocalData.totalBalances[currencyCode] = updatedBalance
-        this.currencyEngineCallbacks.onBalanceChanged(
-          currencyCode,
-          updatedBalance
+  private changeCustomTokensSync(customTokens: EdgeTokenMap): void {
+    this.customTokens = {}
+    for (const tokenId of Object.keys(customTokens)) {
+      const token = customTokens[tokenId]
+      try {
+        validateToken(token)
+      } catch (e) {
+        this.log.warn(
+          `Dropping custom token "${token.currencyCode}" / ${tokenId}`
         )
-      }
-    }
-
-    // For now, also check the allTokensMap and hopefully remove allTokens
-    // in the future
-    for (const edgeToken of Object.values(this.allTokensMap)) {
-      const { currencyCode } = edgeToken
-      if (
-        tokenMap[currencyCode] &&
-        !this.enabledTokens.includes(currencyCode)
-      ) {
-        this.enabledTokens.push(currencyCode)
-        // Initialize balance
-        const newBalance = '0'
-        this.walletLocalData.totalBalances[currencyCode] = newBalance
-        this.currencyEngineCallbacks.onBalanceChanged(currencyCode, newBalance)
-      }
-    }
-  }
-
-  async enableTokens(tokens: string[]): Promise<void> {
-    this.enableTokensSync(tokens)
-  }
-
-  private disableTokensSync(tokens: string[]): void {
-    for (const currencyCode of tokens) {
-      if (currencyCode === this.currencyInfo.currencyCode) {
         continue
       }
-      const index = this.enabledTokens.indexOf(currencyCode)
-      if (index !== -1) {
-        this.enabledTokens.splice(index, 1)
-      }
+      this.customTokens[tokenId] = token
     }
+
+    this.allTokensMap = { ...this.customTokens, ...this.builtinTokens }
+    this.allTokens = makeMetaTokens(this.allTokensMap)
   }
 
-  async disableTokens(tokens: string[]): Promise<void> {
-    this.disableTokensSync(tokens)
+  async changeCustomTokens(tokens: EdgeTokenMap): Promise<void> {
+    this.changeCustomTokensSync(tokens)
   }
 
-  async getEnabledTokens(): Promise<string[]> {
-    return this.enabledTokens
+  private changeEnabledTokenIdsSync(tokenIds: string[]): void {
+    const { currencyCode } = this.currencyInfo
+
+    const codes = new Set<string>()
+    const ids = new Set<string>()
+    for (const tokenId of tokenIds) {
+      const token = this.allTokensMap[tokenId]
+      if (token == null) continue
+
+      codes.add(token.currencyCode)
+      ids.add(tokenId)
+    }
+
+    this.enabledTokens = [...codes, currencyCode]
+    this.enabledTokenIds = [...ids]
   }
 
-  async addCustomToken(
-    obj: CustomToken,
-    contractAddress?: string
-  ): Promise<void> {
-    const tokenObj: CustomToken = obj
-
-    // If token is already in currencyInfo, error as it cannot be changed
-    for (const tk of this.currencyInfo.metaTokens) {
-      if (
-        tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
-        tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
-      ) {
-        throw new Error('ErrorCannotModifyToken')
-      }
-    }
-
-    for (const tk of this.customTokens) {
-      if (
-        tk.currencyCode.toLowerCase() === tokenObj.currencyCode.toLowerCase() ||
-        tk.currencyName.toLowerCase() === tokenObj.currencyName.toLowerCase()
-      ) {
-        // Remove old token first then re-add it to incorporate any modifications
-        const idx = this.customTokens.findIndex(
-          element => element.currencyCode === tokenObj.currencyCode
-        )
-        if (idx !== -1) {
-          this.customTokens.splice(idx, 1)
-        }
-      }
-    }
-
-    // Create a token object for inclusion in customTokens
-    const denom: EdgeDenomination = {
-      name: tokenObj.currencyCode,
-      multiplier: tokenObj.multiplier
-    }
-    const edgeMetaToken: EdgeMetaToken = {
-      currencyCode: tokenObj.currencyCode,
-      currencyName: tokenObj.currencyName,
-      denominations: [denom],
-      contractAddress: contractAddress ?? tokenObj.contractAddress
-    }
-
-    this.customTokens.push(edgeMetaToken)
-    this.allTokens = this.currencyInfo.metaTokens.concat(this.customTokens)
-
-    if (this.tools.getTokenId != null) {
-      const tokenId = await this.tools.getTokenId(obj)
-      this.allTokensMap = { [tokenId]: obj, ...this.allTokensMap }
-    }
-    this.enableTokensSync([edgeMetaToken.currencyCode])
-  }
-
-  getTokenStatus(token: string): boolean {
-    return this.enabledTokens.includes(token)
+  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
+    this.changeEnabledTokenIdsSync(tokenIds)
   }
 
   getBalance(options: EdgeCurrencyCodeOptions): string {
@@ -983,7 +844,7 @@ export class CurrencyEngine<
     if (typeof edgeSpendInfo.currencyCode === 'string') {
       currencyCode = edgeSpendInfo.currencyCode
       if (currencyCode !== this.currencyInfo.currencyCode) {
-        if (!this.getTokenStatus(currencyCode)) {
+        if (!this.enabledTokens.includes(currencyCode)) {
           throw new Error('Error: Token not supported or enabled')
         }
       }
@@ -1016,10 +877,9 @@ export class CurrencyEngine<
     }
 
     edgeSpendInfo.currencyCode = currencyCode
-    const denom = getDenomInfo(
-      this.currencyInfo,
+    const denom = getDenomination(
       currencyCode,
-      this.customTokens,
+      this.currencyInfo,
       this.allTokensMap
     )
     if (denom == null) {

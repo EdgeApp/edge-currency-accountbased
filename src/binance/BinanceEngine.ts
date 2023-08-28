@@ -18,7 +18,7 @@ import { asErrorMessage } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
-  getDenomInfo,
+  getDenomination,
   getFetchCors,
   getOtherParams,
   promiseAny,
@@ -124,7 +124,11 @@ export class BinanceEngine extends CurrencyEngine<
       for (const tk of this.enabledTokens) {
         for (const balance of jsonObj.balances) {
           if (balance.symbol === tk) {
-            const denom = getDenomInfo(this.currencyInfo, tk)
+            const denom = getDenomination(
+              tk,
+              this.currencyInfo,
+              this.allTokensMap
+            )
             if (denom == null) {
               this.error(
                 `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
@@ -462,7 +466,11 @@ export class BinanceEngine extends CurrencyEngine<
       NETWORK_FEE_NATIVE_AMOUNT
     )
     const amount = spendAmount.replace('-', '')
-    const denom = getDenomInfo(this.currencyInfo, currencyCode)
+    const denom = getDenomination(
+      currencyCode,
+      this.currencyInfo,
+      this.allTokensMap
+    )
     if (denom == null) {
       this.error(`signTx Received unsupported currencyCode: ${currencyCode}`)
       throw new Error(`Received unsupported currencyCode: ${currencyCode}`)
@@ -534,7 +542,7 @@ export async function makeCurrencyEngine(
   )
 
   // Do any async initialization necessary for the engine
-  await engine.loadEngine(tools, safeWalletInfo, opts)
+  await engine.loadEngine()
 
   return engine
 }

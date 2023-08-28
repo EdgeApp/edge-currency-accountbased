@@ -20,7 +20,7 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo } from '../common/utils'
+import { getLegacyDenomination } from '../common/utils'
 import {
   asSafeZcashWalletInfo,
   asZcashPrivateKeys,
@@ -203,7 +203,7 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async encodeUri(
     obj: EdgeEncodeUri,
-    customTokens?: EdgeMetaToken[]
+    customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
@@ -214,9 +214,9 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     let amount
     if (nativeAmount != null) {
-      const denom = getDenomInfo(
-        this.currencyInfo,
+      const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
+        this.currencyInfo,
         customTokens
       )
       if (denom == null) {

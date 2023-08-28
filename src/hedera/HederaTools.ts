@@ -8,6 +8,7 @@ import {
   EdgeFetchFunction,
   EdgeIo,
   EdgeLog,
+  EdgeMetaToken,
   EdgeParsedUri,
   EdgeTokenMap,
   EdgeWalletInfo
@@ -15,7 +16,7 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getDenomInfo, getFetchCors } from '../common/utils'
+import { getFetchCors, getLegacyDenomination } from '../common/utils'
 import {
   asGetActivationCost,
   asHederaPrivateKeys,
@@ -153,7 +154,10 @@ export class HederaTools implements EdgeCurrencyTools {
     return edgeParsedUri
   }
 
-  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(
+    obj: EdgeEncodeUri,
+    customTokens: EdgeMetaToken[] = []
+  ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const { publicAddress, nativeAmount } = obj
     if (!validAddress(publicAddress)) {
@@ -165,9 +169,10 @@ export class HederaTools implements EdgeCurrencyTools {
       return publicAddress
     }
 
-    const denom = getDenomInfo(
+    const denom = getLegacyDenomination(
+      this.currencyInfo.currencyCode,
       this.currencyInfo,
-      this.currencyInfo.currencyCode
+      customTokens
     )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')

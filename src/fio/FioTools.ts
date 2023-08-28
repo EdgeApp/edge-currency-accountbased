@@ -9,6 +9,7 @@ import {
   EdgeEncodeUri,
   EdgeFetchFunction,
   EdgeIo,
+  EdgeMetaToken,
   EdgeParsedUri,
   EdgeTokenMap,
   EdgeWalletInfo
@@ -18,8 +19,8 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
-  getDenomInfo,
   getFetchCors,
+  getLegacyDenomination,
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
@@ -164,7 +165,10 @@ export class FioTools implements EdgeCurrencyTools {
     return edgeParsedUri
   }
 
-  async encodeUri(obj: EdgeEncodeUri): Promise<string> {
+  async encodeUri(
+    obj: EdgeEncodeUri,
+    customTokens: EdgeMetaToken[] = []
+  ): Promise<string> {
     const valid = checkAddress(obj.publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
@@ -173,7 +177,11 @@ export class FioTools implements EdgeCurrencyTools {
     if (typeof obj.nativeAmount === 'string') {
       const currencyCode: string = FIO_CURRENCY_CODE
       const nativeAmount: string = obj.nativeAmount
-      const denom = getDenomInfo(currencyInfo, currencyCode)
+      const denom = getLegacyDenomination(
+        currencyCode,
+        currencyInfo,
+        customTokens
+      )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
       }
