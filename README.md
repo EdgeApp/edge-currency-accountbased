@@ -4,6 +4,8 @@
 
 Plugins for [edge-core-js](https://github.com/EdgeApp/edge-core-js), handling many networks not derived from Bitcoin.
 
+These are compatible with edge-core-js v0.21.2 or later.
+
 ## Installing
 
 Fist, add this library to your project:

@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 2.0.0 (2023-08-28)
+
+- changed: Replace deprecated display key and token methods with modern ones.
+- changed: Require edge-core-js v0.21.2 or higher.
+
 ## 1.5.2 (2023-08-24)
 
 - fixed: Correctly parse more types of Ripple transactions, including DEX transactions.
