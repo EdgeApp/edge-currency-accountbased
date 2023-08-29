@@ -31,6 +31,7 @@ import {
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
+  asEthereumInitKeys,
   asEvmScancanTokenTransaction,
   asEvmScanInternalTransaction,
   asEvmScanTransaction,
@@ -506,30 +507,22 @@ export class EthereumNetwork {
       params
     }
 
-    let addOnUrl = ''
-    if (url.includes('infura')) {
-      const { infuraProjectId } = this.ethEngine.initOptions
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!infuraProjectId || infuraProjectId.length < 6) {
-        throw new Error('Need Infura Project ID')
+    const regex = /{{(.*?)}}/g
+    const match = regex.exec(url)
+    if (match != null) {
+      const key = match[1]
+      const cleanKey = asEthereumInitKeys(key)
+      const apiKey = this.ethEngine.initOptions[cleanKey]
+      if (typeof apiKey === 'string') {
+        url = url.replace(match[0], apiKey)
+      } else if (apiKey == null) {
+        throw new Error(
+          `Missing ${cleanKey} in 'initOptions' for ${this.ethEngine.currencyInfo.pluginId}`
+        )
+      } else {
+        throw new Error('Incorrect apikey type for RPC')
       }
-      addOnUrl = `/${infuraProjectId}`
-    } else if (url.includes('alchemyapi')) {
-      const { alchemyApiKey } = this.ethEngine.initOptions
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!alchemyApiKey || alchemyApiKey.length < 6) {
-        throw new Error('Need Alchemy API key')
-      }
-      addOnUrl = `/v2/-${alchemyApiKey}`
-    } else if (url.includes('quiknode')) {
-      const { quiknodeApiKey } = this.ethEngine.initOptions
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!quiknodeApiKey || quiknodeApiKey.length < 6) {
-        throw new Error('Need Quiknode API key')
-      }
-      addOnUrl = `/${quiknodeApiKey}/`
     }
-    url += addOnUrl
 
     const response = await this.ethEngine.fetchCors(url, {
       headers: {

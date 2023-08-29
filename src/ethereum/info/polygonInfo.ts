@@ -157,7 +157,7 @@ const networkInfo: EthereumNetworkInfo = {
     'https://rpc-mainnet.maticvigil.com',
     'https://matic-mainnet.chainstacklabs.com',
     'https://rpc.ankr.com/polygon',
-    'https://rpc-mainnet.matic.quiknode.pro'
+    'https://rpc-mainnet.matic.quiknode.pro/{{quiknodeApiKey}}/'
   ],
   evmScanApiServers: ['https://api.polygonscan.com'],
   blockcypherApiServers: [],

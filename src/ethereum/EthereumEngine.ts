@@ -48,6 +48,7 @@ import { EthereumNetwork, getFeeRateUsed } from './EthereumNetwork'
 import { asEIP712TypedData } from './ethereumSchema'
 import { EthereumTools } from './EthereumTools'
 import {
+  asEthereumInitOptions,
   asEthereumPrivateKeys,
   asEthereumSignMessageParams,
   asEthereumTxOtherParams,
@@ -1382,7 +1383,7 @@ export async function makeCurrencyEngine(
     env,
     tools,
     safeWalletInfo,
-    initOptions,
+    asEthereumInitOptions(initOptions),
     opts,
     currencyInfo
   )

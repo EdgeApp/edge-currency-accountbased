@@ -63,8 +63,8 @@ const defaultNetworkFees: EthereumFees = {
 
 const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
-    'https://eth-rinkeby.alchemyapi.io',
-    'https://rinkeby.infura.io/v3'
+    'https://eth-rinkeby.alchemyapi.io/v2/-{{alchemyApiKey}}',
+    'https://rinkeby.infura.io/v3/{{infuraProjectId}}'
   ],
 
   evmScanApiServers: ['https://api-rinkeby.etherscan.io'],

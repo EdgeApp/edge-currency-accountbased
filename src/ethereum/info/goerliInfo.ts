@@ -63,8 +63,8 @@ const defaultNetworkFees: EthereumFees = {
 
 const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
-    'https://eth-goerli.alchemyapi.io',
-    'https://goerli.infura.io/v3'
+    'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
+    'https://goerli.infura.io/v3/{{infuraProjectId}}'
   ],
 
   evmScanApiServers: ['https://api-goerli.etherscan.io'],
