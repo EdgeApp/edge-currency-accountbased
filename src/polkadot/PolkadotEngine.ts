@@ -1,12 +1,15 @@
 import '@polkadot/api-augment/polkadot'
 
 import { ApiPromise, Keyring } from '@polkadot/api'
+import { QueryableStorageMultiArg } from '@polkadot/api/types'
+import { FrameSystemAccountInfo } from '@polkadot/types/lookup'
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
+  EdgeToken,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -17,6 +20,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -27,6 +31,7 @@ import {
 } from '../common/utils'
 import { PolkadotTools } from './PolkadotTools'
 import {
+  asMaybeAssetsPalletBalance,
   asPolkadotWalletOtherData,
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
@@ -67,7 +72,6 @@ export class PolkadotEngine extends CurrencyEngine<
     this.fetchCors = getFetchCors(env.io)
     this.networkInfo = env.networkInfo
     this.nonce = 0
-    this.minimumAddressBalance = this.networkInfo.existentialDeposit
   }
 
   setOtherData(raw: any): void {
@@ -88,6 +92,9 @@ export class PolkadotEngine extends CurrencyEngine<
     endpoint: string,
     body: JsonObject
   ): Promise<SubscanResponse> {
+    if (this.networkInfo.subscanBaseUrl == null) {
+      throw new Error('Missing subscan url')
+    }
     const options = {
       method: 'POST',
       headers: {
@@ -108,14 +115,52 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryBalance(): Promise<void> {
-    const response = await this.api.query.system.account(
-      this.walletInfo.keys.publicKey
-    )
-    this.nonce = response.nonce.toNumber()
-    this.updateBalance(
-      this.currencyInfo.currencyCode,
-      response.data.free.toString()
-    )
+    const queryArray: Array<QueryableStorageMultiArg<'promise'>> = [
+      [this.api.query.system.account, this.walletInfo.keys.publicKey] // returns FrameSystemAccountInfo
+    ]
+    const edgeTokenArray: EdgeToken[] = []
+
+    for (const tokenId of this.enabledTokenIds) {
+      const token = this.allTokensMap[tokenId]
+      if (token == null) continue
+      const networkLocation = asMaybeContractLocation(token.networkLocation)
+      if (networkLocation == null) continue
+
+      queryArray.push([
+        this.api.query.assets.account,
+        [networkLocation.contractAddress, this.walletInfo.keys.publicKey]
+      ]) // returns Option<PalletAssetsAssetAccount>
+      edgeTokenArray.push(token)
+    }
+
+    const unsubscribe = await this.api.queryMulti(queryArray, balances => {
+      if (balances.length === 0) {
+        throw new Error('No balances returned')
+      }
+
+      // Mainnet
+      const accountBalance = balances.shift() as FrameSystemAccountInfo
+      this.nonce = accountBalance.nonce.toNumber()
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        accountBalance.data.free.toString()
+      )
+
+      // Assets
+      for (const [i, assetBalanceRaw] of balances.entries()) {
+        const token = edgeTokenArray[i]
+        const assetBalance = asMaybeAssetsPalletBalance(
+          assetBalanceRaw.toPrimitive()
+        )
+        if (assetBalance == null) {
+          this.updateBalance(token.currencyCode, '0')
+          return
+        }
+
+        this.updateBalance(token.currencyCode, assetBalance.balance.toString())
+      }
+    })
+    unsubscribe() // queryMulti sets up a subscription but we only need to call it once
   }
 
   async queryBlockheight(): Promise<void> {
@@ -182,6 +227,16 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    /*
+    HACK: We cannot query transactions if a currency doesn't have a subscanBaseUrl
+    */
+    if (this.networkInfo.subscanBaseUrl == null) {
+      for (const currencyCode of this.enabledTokens) {
+        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      }
+      this.updateOnAddressesChecked()
+      return
+    }
     return await queryTxMutex(async () => await this.queryTransactionsInner())
   }
 
@@ -259,6 +314,8 @@ export class PolkadotEngine extends CurrencyEngine<
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
+    this.minimumAddressBalance =
+      this.api.consts.balances.existentialDeposit.toString()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
@@ -290,7 +347,10 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
+    const spendableBalance = sub(
+      balance,
+      this.api.consts.balances.existentialDeposit.toString()
+    )
 
     const tempSpendTarget = [
       {
@@ -344,16 +404,26 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: this.currencyInfo.currencyCode
     })
-    const spendableBalance = sub(balance, this.networkInfo.existentialDeposit)
+    const spendableBalance = sub(
+      balance,
+      this.api.consts.balances.existentialDeposit.toString()
+    )
 
     if (gt(nativeAmount, spendableBalance)) {
       throw new InsufficientFundsError()
     }
 
-    const transfer = await this.api.tx.balances.transferKeepAlive(
-      publicAddress,
-      nativeAmount
-    )
+    const transfer =
+      edgeSpendInfo.tokenId != null
+        ? await this.api.tx.assets.transferKeepAlive(
+            parseInt(edgeSpendInfo.tokenId),
+            publicAddress,
+            nativeAmount
+          )
+        : await this.api.tx.balances.transferKeepAlive(
+            publicAddress,
+            nativeAmount
+          )
 
     const paymentInfo = await transfer.paymentInfo(
       this.walletInfo.keys.publicKey
@@ -414,11 +484,21 @@ export class PolkadotEngine extends CurrencyEngine<
       publicAddress
     )
 
-    // The SDK doesn't support serializable transactions so we need to recreate it
-    const transfer = await this.api.tx.balances.transferKeepAlive(
-      publicAddress,
-      nativeAmount
+    const edgeToken = this.allTokens.find(
+      token => token.currencyCode === edgeTransaction.currencyCode
     )
+
+    const transfer =
+      edgeToken?.contractAddress != null
+        ? await this.api.tx.assets.transferKeepAlive(
+            parseInt(edgeToken.contractAddress),
+            publicAddress,
+            nativeAmount
+          )
+        : await this.api.tx.balances.transferKeepAlive(
+            publicAddress,
+            nativeAmount
+          )
 
     const signer = this.api.createType('SignerPayload', {
       method: transfer,

@@ -7,7 +7,9 @@ import { ethereumPlugins } from './ethereum/ethereumInfos'
 import { filecoin } from './filecoin/filecoinInfo'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
-import { polkadot } from './polkadot/polkadotInfo'
+import { liberland } from './polkadot/info/liberlandInfo'
+import { liberlandtestnet } from './polkadot/info/liberlandTestnetInfo'
+import { polkadot } from './polkadot/info/polkadotInfo'
 import { ripple } from './ripple/rippleInfo'
 import { solana } from './solana/solanaInfo'
 import { stellar } from './stellar/stellarInfo'
@@ -24,6 +26,8 @@ const plugins = {
   filecoin,
   fio,
   hedera,
+  liberland,
+  liberlandtestnet,
   piratechain,
   polkadot,
   ripple,
