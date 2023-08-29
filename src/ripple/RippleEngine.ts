@@ -762,6 +762,7 @@ export class XrpEngine extends CurrencyEngine<
         Destination: publicAddress,
         Flags: tfSetNoRipple
       }
+      nativeAmount = `-${nativeAmount}`
     }
 
     if (uniqueIdentifier !== '') {
