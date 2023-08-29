@@ -27,6 +27,7 @@ export interface EthereumInitOptions {
   gasStationApiKey?: string
   quiknodeApiKey?: string
   alchemyApiKey?: string
+  poktPortalApiKey?: string
 }
 
 export const asEthereumInitOptions = asObject<EthereumInitOptions>({
@@ -38,7 +39,8 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   amberdataApiKey: asOptional(asString),
   gasStationApiKey: asOptional(asString),
   quiknodeApiKey: asOptional(asString),
-  alchemyApiKey: asOptional(asString)
+  alchemyApiKey: asOptional(asString),
+  poktPortalApiKey: asOptional(asString)
 })
 
 function isKeyOfEthereumInitOptions(

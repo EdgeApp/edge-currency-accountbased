@@ -1052,6 +1052,7 @@ export const networkInfo: EthereumNetworkInfo = {
     'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
     'https://mainnet.infura.io/v3/{{infuraProjectId}}',
     'https://rpc.ankr.com/eth',
+    'https://eth-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
     'https://cloudflare-eth.com'
   ],
 
