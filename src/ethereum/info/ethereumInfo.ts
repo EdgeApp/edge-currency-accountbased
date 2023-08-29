@@ -94,6 +94,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x960b236A07cf122663c4303350609A66A7B288C0'
     }
   },
+  b50721bcf8d664c30412cfbc6cf7a15145234ad1: {
+    currencyCode: 'ARB',
+    displayName: 'Arbitrum DAO',
+    denominations: [{ name: 'ARB', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1'
+    }
+  },
   cc12abe4ff81c9378d670de1b57f8e0dd228d77a: {
     currencyCode: 'AREN',
     displayName: 'Aave Interest Bearing REN',
@@ -228,6 +236,14 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'BRZ', multiplier: '10000' }],
     networkLocation: {
       contractAddress: '0x420412E765BFa6d85aaaC94b4f7b708C89be2e2B'
+    }
+  },
+  '4fabb145d64652a948d72533023f6e7a623c7c53': {
+    currencyCode: 'BUSD',
+    displayName: 'Binance USD',
+    denominations: [{ name: 'BUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4Fabb145d64652a948d72533023f6E7A623C7C53'
     }
   },
   '6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e': {
@@ -580,6 +596,14 @@ const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'OXT', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x4575f41308EC1483f3d399aa9a2826d74Da13Deb'
+    }
+  },
+  '45804880de22913dafe09f4980848ece6ecbaf78': {
+    currencyCode: 'PAXG',
+    displayName: 'Paxos Gold',
+    denominations: [{ name: 'PAXG', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x45804880De22913dAFE09f4980848ECE6EcbAf78'
     }
   },
   '6982508145454ce325ddbe47a25d4ec3d2311933': {
