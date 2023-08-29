@@ -1,5 +1,11 @@
 # edge-currency-accountbased
 
+## 2.1.0 (2023-08-29)
+
+- added: Add a Liberland plugin.
+- added: Add a Filecoin plugin.
+- fixed: Use the correct sign on Ripple transactions.
+
 ## 2.0.0 (2023-08-28)
 
 - changed: Replace deprecated display key and token methods with modern ones.
