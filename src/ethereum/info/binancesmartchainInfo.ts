@@ -6,6 +6,14 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 
 const builtinTokens: EdgeTokenMap = {
+  e9e7cea3dedca5984780bafc599bd69add087d56: {
+    currencyCode: 'BUSD',
+    displayName: 'Binance USD',
+    denominations: [{ name: 'BUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'
+    }
+  },
   '8ac76a51cc950d9822d68b83fe1ad97b32cd580d': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
