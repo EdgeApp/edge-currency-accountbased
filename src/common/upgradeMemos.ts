@@ -36,6 +36,11 @@ export function upgradeMemos(
     }
   }
 
+  // We need to support 0x prefixes for backwards compatibility:
+  for (const memo of legacyMemos) {
+    if (memo.type === 'hex') memo.value = memo.value.replace(/^0x/i, '')
+  }
+
   // If we don't have modern memos, use the legacy ones:
   const out: EdgeSpendInfo = {
     ...spendInfo,
