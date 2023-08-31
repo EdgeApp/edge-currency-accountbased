@@ -325,7 +325,7 @@ export class FilecoinEngine extends CurrencyEngine<
       messageCount = messagesResponse.result.total_count
       messagesChecked += messages.length
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        messagesChecked / messageCount
+        messageCount === 0 ? 1 : messagesChecked / messageCount
       this.updateOnAddressesChecked()
     } while (messagesChecked < messageCount)
   }
