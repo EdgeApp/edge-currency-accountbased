@@ -2,6 +2,7 @@ import {
   asArray,
   asEither,
   asJSON,
+  asMaybe,
   asNumber,
   asObject,
   asString,
@@ -86,7 +87,7 @@ export const asFilscanAccountInfoResponse = asObject({
 
 export type FilscanMessagesResult = ReturnType<typeof asFilscanMessagesResult>
 export const asFilscanMessagesResult = asObject({
-  messages_by_account_id_list: asArray(asFilscanMessage),
+  messages_by_account_id_list: asMaybe(asArray(asFilscanMessage), () => []),
   total_count: asNumber
 })
 
