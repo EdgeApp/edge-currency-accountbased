@@ -402,7 +402,7 @@ export class PolkadotEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     const balance = this.getBalance({
-      currencyCode: this.currencyInfo.currencyCode
+      currencyCode
     })
     const spendableBalance = sub(
       balance,
