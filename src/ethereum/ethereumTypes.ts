@@ -27,6 +27,37 @@ export interface EthereumInitOptions {
   gasStationApiKey?: string
   quiknodeApiKey?: string
   alchemyApiKey?: string
+  poktPortalApiKey?: string
+}
+
+export const asEthereumInitOptions = asObject<EthereumInitOptions>({
+  evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
+  blockcypherApiKey: asOptional(asString),
+  infuraProjectId: asOptional(asString),
+  blockchairApiKey: asOptional(asString),
+  alethioApiKey: asOptional(asString),
+  amberdataApiKey: asOptional(asString),
+  gasStationApiKey: asOptional(asString),
+  quiknodeApiKey: asOptional(asString),
+  alchemyApiKey: asOptional(asString),
+  poktPortalApiKey: asOptional(asString)
+})
+
+function isKeyOfEthereumInitOptions(
+  key: string
+): key is keyof EthereumInitOptions {
+  return key in asEthereumInitOptions.shape
+}
+
+export const asEthereumInitKeys = (raw: any): keyof EthereumInitOptions => {
+  if (typeof raw !== 'string') {
+    throw new Error('key must be a string')
+  }
+
+  if (isKeyOfEthereumInitOptions(raw)) {
+    return raw
+  }
+  throw new Error(`${raw} not a key of EthereumInitOptions`)
 }
 
 export interface ChainParams {

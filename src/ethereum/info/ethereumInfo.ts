@@ -1049,9 +1049,10 @@ const defaultNetworkFees: EthereumFees = {
 // Exported for fee provider test
 export const networkInfo: EthereumNetworkInfo = {
   rpcServers: [
-    'https://eth-mainnet.alchemyapi.io',
-    'https://mainnet.infura.io/v3',
+    'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
+    'https://mainnet.infura.io/v3/{{infuraProjectId}}',
     'https://rpc.ankr.com/eth',
+    'https://eth-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
     'https://cloudflare-eth.com'
   ],
 
