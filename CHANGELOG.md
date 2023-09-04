@@ -1,6 +1,15 @@
 # edge-currency-accountbased
 
-## 2.2.0 (2023-08-29)
+## 2.2.1 (2023-09-04)
+
+changed: Use separate code path for calculating token max spendable (Polkadot)
+changed: Allow user to spend entire token balance (Polkadot)
+changed: Add early exit to transaction query (Polkadot)
+fixed: Use Filscan as the block explorer for Filecoin
+fixed: Used correct balance in when sending tokens (Polkadot)
+fixed: Update Liberland length fee cost
+
+## 2.2.0 (2023-09-04)
 
 - added: Add new ETH tokens ARB, BUSD, and PAXG
 - added: Add new BSC token BUSD
