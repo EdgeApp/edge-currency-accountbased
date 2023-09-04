@@ -1,5 +1,14 @@
 # edge-currency-accountbased
 
+## 2.2.0 (2023-08-29)
+
+- added: Add new ETH tokens ARB, BUSD, and PAXG
+- added: Add new BSC token BUSD
+- added: Add new RPC server, Pocket Network
+- changed: Parameterize apikey replacement in node urls and remove url-specific apikey logic in engines
+- fixed: Skip Liberland transaction history query if subscan url isn't present
+- fixed: Correctly report transaction history query status for new empty Filecoin wallets
+
 ## 2.1.0 (2023-08-29)
 
 - added: Add a Liberland plugin.
