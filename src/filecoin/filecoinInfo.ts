@@ -24,9 +24,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   defaultSettings: {},
 
-  addressExplorer: 'https://blockchair.com/filecoin/address/%s?from=edgeapp',
-  transactionExplorer:
-    'https://blockchair.com/filecoin/transaction/%s?from=edgeapp',
+  addressExplorer: 'https://filscan.io/en/address/%s',
+  transactionExplorer: 'https://filscan.io/en/message/%s',
 
   denominations: [
     // An array of Objects of the possible denominations for this currency
