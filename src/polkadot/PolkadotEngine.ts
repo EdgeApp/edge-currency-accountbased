@@ -272,6 +272,10 @@ export class PolkadotEngine extends CurrencyEngine<
         }
       }
 
+      // count is the total number of transactions ever for an account
+      // If we've already seen all the transfers we don't need to bother processing or page through older ones
+      if (count === this.otherData.txCount) break
+
       // Process txs (newest first)
       transfers.forEach(tx => {
         try {
@@ -290,12 +294,13 @@ export class PolkadotEngine extends CurrencyEngine<
         Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
       this.updateOnAddressesChecked()
 
-      // count is the total number of transactions ever for an account
-      // If we've already seen all the transfers we don't need to bother processing or page through older ones
       if (count === this.otherData.txCount) break
 
       page++
     }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
       this.walletLocalDataDirty = true
