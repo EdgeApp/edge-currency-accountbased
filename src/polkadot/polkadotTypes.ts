@@ -27,6 +27,7 @@ export interface PolkadotNetworkInfo {
   subscanBaseUrl: string | undefined
   subscanQueryLimit: number
   lengthFeePerByte: string
+  partialFeeOffsetMultiplier: string
 }
 
 export const asPolkadotWalletOtherData = asObject({

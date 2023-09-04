@@ -20,7 +20,8 @@ const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://testchain.liberland.org/'],
   subscanBaseUrl: undefined,
   subscanQueryLimit: 100,
-  lengthFeePerByte: '1000000'
+  partialFeeOffsetMultiplier: '2',
+  lengthFeePerByte: '76800000'
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

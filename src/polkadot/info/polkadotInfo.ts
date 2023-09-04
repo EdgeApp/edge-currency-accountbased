@@ -8,6 +8,7 @@ const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://rpc.polkadot.io'],
   subscanBaseUrl: 'https://polkadot.api.subscan.io/api',
   subscanQueryLimit: 100,
+  partialFeeOffsetMultiplier: '1',
   lengthFeePerByte: '1000000'
 }
 

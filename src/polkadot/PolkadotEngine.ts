@@ -445,10 +445,13 @@ export class PolkadotEngine extends CurrencyEngine<
         this.walletInfo.keys.publicKey
       )
 
-      // The fee returned from partial fee is always off by the length fee, because reasons
+      // The fee returned from partial fee is always off by some length fee, because reasons
       nativeNetworkFee = sub(
         paymentInfo.partialFee.toString(),
-        this.networkInfo.lengthFeePerByte
+        mul(
+          this.networkInfo.lengthFeePerByte,
+          this.networkInfo.partialFeeOffsetMultiplier
+        )
       )
 
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
@@ -471,10 +474,13 @@ export class PolkadotEngine extends CurrencyEngine<
         this.walletInfo.keys.publicKey
       )
 
-      // The fee returned from partial fee is always off by the length fee, because reasons
+      // The fee returned from partial fee is always off by some length fee, because reasons
       nativeNetworkFee = sub(
         paymentInfo.partialFee.toString(),
-        this.networkInfo.lengthFeePerByte
+        mul(
+          this.networkInfo.lengthFeePerByte,
+          this.networkInfo.partialFeeOffsetMultiplier
+        )
       )
 
       const feeBalance = this.getBalance({
