@@ -272,6 +272,10 @@ export class PolkadotEngine extends CurrencyEngine<
         }
       }
 
+      // count is the total number of transactions ever for an account
+      // If we've already seen all the transfers we don't need to bother processing or page through older ones
+      if (count === this.otherData.txCount) break
+
       // Process txs (newest first)
       transfers.forEach(tx => {
         try {
@@ -290,12 +294,13 @@ export class PolkadotEngine extends CurrencyEngine<
         Math.min(1, count === 0 ? 1 : this.otherData.txCount / count)
       this.updateOnAddressesChecked()
 
-      // count is the total number of transactions ever for an account
-      // If we've already seen all the transfers we don't need to bother processing or page through older ones
       if (count === this.otherData.txCount) break
 
       page++
     }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
       this.walletLocalDataDirty = true
@@ -347,6 +352,19 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
+
+    if (spendInfo.currencyCode !== this.currencyInfo.currencyCode) {
+      const tempSpendTarget = [
+        {
+          publicAddress: spendInfo.spendTargets[0].publicAddress,
+          nativeAmount: balance
+        }
+      ]
+      const maxSpendInfo = { ...spendInfo, spendTargets: tempSpendTarget }
+      await this.makeSpend(maxSpendInfo)
+      return balance
+    }
+
     const spendableBalance = sub(
       balance,
       this.api.consts.balances.existentialDeposit.toString()
@@ -402,42 +420,82 @@ export class PolkadotEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     const balance = this.getBalance({
-      currencyCode: this.currencyInfo.currencyCode
+      currencyCode
     })
-    const spendableBalance = sub(
-      balance,
-      this.api.consts.balances.existentialDeposit.toString()
-    )
 
-    if (gt(nativeAmount, spendableBalance)) {
-      throw new InsufficientFundsError()
-    }
+    let totalTxAmount
+    let nativeNetworkFee
 
-    const transfer =
-      edgeSpendInfo.tokenId != null
-        ? await this.api.tx.assets.transferKeepAlive(
-            parseInt(edgeSpendInfo.tokenId),
-            publicAddress,
-            nativeAmount
-          )
-        : await this.api.tx.balances.transferKeepAlive(
-            publicAddress,
-            nativeAmount
-          )
+    if (edgeSpendInfo.tokenId == null) {
+      const spendableBalance = sub(
+        balance,
+        this.api.consts.balances.existentialDeposit.toString()
+      )
 
-    const paymentInfo = await transfer.paymentInfo(
-      this.walletInfo.keys.publicKey
-    )
+      if (gt(nativeAmount, spendableBalance)) {
+        throw new InsufficientFundsError()
+      }
 
-    // The fee returned from partial fee is always off by the length fee, because reasons
-    const nativeNetworkFee = sub(
-      paymentInfo.partialFee.toString(),
-      this.networkInfo.lengthFeePerByte
-    )
+      const transfer = await this.api.tx.balances.transferKeepAlive(
+        publicAddress,
+        nativeAmount
+      )
 
-    const totalTxAmount = add(nativeAmount, nativeNetworkFee)
-    if (gt(totalTxAmount, spendableBalance)) {
-      throw new InsufficientFundsError()
+      const paymentInfo = await transfer.paymentInfo(
+        this.walletInfo.keys.publicKey
+      )
+
+      // The fee returned from partial fee is always off by some length fee, because reasons
+      nativeNetworkFee = sub(
+        paymentInfo.partialFee.toString(),
+        mul(
+          this.networkInfo.lengthFeePerByte,
+          this.networkInfo.partialFeeOffsetMultiplier
+        )
+      )
+
+      totalTxAmount = add(nativeAmount, nativeNetworkFee)
+
+      if (gt(totalTxAmount, spendableBalance)) {
+        throw new InsufficientFundsError()
+      }
+    } else {
+      if (gt(nativeAmount, balance)) {
+        throw new InsufficientFundsError()
+      }
+      totalTxAmount = nativeAmount
+      const transfer = await this.api.tx.assets.transfer(
+        parseInt(edgeSpendInfo.tokenId),
+        publicAddress,
+        nativeAmount
+      )
+
+      const paymentInfo = await transfer.paymentInfo(
+        this.walletInfo.keys.publicKey
+      )
+
+      // The fee returned from partial fee is always off by some length fee, because reasons
+      nativeNetworkFee = sub(
+        paymentInfo.partialFee.toString(),
+        mul(
+          this.networkInfo.lengthFeePerByte,
+          this.networkInfo.partialFeeOffsetMultiplier
+        )
+      )
+
+      const feeBalance = this.getBalance({
+        currencyCode: this.currencyInfo.currencyCode
+      })
+      const spendableFeeBalance = sub(
+        feeBalance,
+        this.api.consts.balances.existentialDeposit.toString()
+      )
+      if (gt(nativeNetworkFee, spendableFeeBalance)) {
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee: nativeNetworkFee
+        })
+      }
     }
 
     const otherParams: JsonObject = {
@@ -474,31 +532,34 @@ export class PolkadotEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('Missing publicAddress from makeSpend')
 
-    const nativeAmount = abs(
-      add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
-    )
-
-    await this.checkRecipientMinimumBalance(
-      this.getRecipientBalance,
-      nativeAmount,
-      publicAddress
-    )
-
     const edgeToken = this.allTokens.find(
       token => token.currencyCode === edgeTransaction.currencyCode
     )
 
-    const transfer =
-      edgeToken?.contractAddress != null
-        ? await this.api.tx.assets.transferKeepAlive(
-            parseInt(edgeToken.contractAddress),
-            publicAddress,
-            nativeAmount
-          )
-        : await this.api.tx.balances.transferKeepAlive(
-            publicAddress,
-            nativeAmount
-          )
+    let transfer
+    if (edgeToken == null) {
+      const nativeAmount = abs(
+        add(edgeTransaction.nativeAmount, edgeTransaction.networkFee)
+      )
+      await this.checkRecipientMinimumBalance(
+        this.getRecipientBalance,
+        nativeAmount,
+        publicAddress
+      )
+      transfer = await this.api.tx.balances.transferKeepAlive(
+        publicAddress,
+        nativeAmount
+      )
+    } else if (edgeToken.contractAddress != null) {
+      const nativeAmount = abs(edgeTransaction.nativeAmount)
+      transfer = await this.api.tx.assets.transfer(
+        parseInt(edgeToken.contractAddress),
+        publicAddress,
+        nativeAmount
+      )
+    } else {
+      throw new Error('Unrecognized asset')
+    }
 
     const signer = this.api.createType('SignerPayload', {
       method: transfer,
