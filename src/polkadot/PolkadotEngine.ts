@@ -352,6 +352,19 @@ export class PolkadotEngine extends CurrencyEngine<
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
+
+    if (spendInfo.currencyCode !== this.currencyInfo.currencyCode) {
+      const tempSpendTarget = [
+        {
+          publicAddress: spendInfo.spendTargets[0].publicAddress,
+          nativeAmount: balance
+        }
+      ]
+      const maxSpendInfo = { ...spendInfo, spendTargets: tempSpendTarget }
+      await this.makeSpend(maxSpendInfo)
+      return balance
+    }
+
     const spendableBalance = sub(
       balance,
       this.api.consts.balances.existentialDeposit.toString()
