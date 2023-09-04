@@ -461,7 +461,7 @@ export class PolkadotEngine extends CurrencyEngine<
         throw new InsufficientFundsError()
       }
       totalTxAmount = nativeAmount
-      const transfer = await this.api.tx.assets.transferKeepAlive(
+      const transfer = await this.api.tx.assets.transfer(
         parseInt(edgeSpendInfo.tokenId),
         publicAddress,
         nativeAmount
@@ -546,7 +546,7 @@ export class PolkadotEngine extends CurrencyEngine<
       )
     } else if (edgeToken.contractAddress != null) {
       const nativeAmount = abs(edgeTransaction.nativeAmount)
-      transfer = await this.api.tx.assets.transferKeepAlive(
+      transfer = await this.api.tx.assets.transfer(
         parseInt(edgeToken.contractAddress),
         publicAddress,
         nativeAmount
