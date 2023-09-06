@@ -1,15 +1,14 @@
 import '@polkadot/api-augment/polkadot'
 
 import { ApiPromise, Keyring } from '@polkadot/api'
-import { QueryableStorageMultiArg } from '@polkadot/api/types'
-import { FrameSystemAccountInfo } from '@polkadot/types/lookup'
+import { Option } from '@polkadot/types/codec'
+import { PalletAssetsAssetAccount } from '@polkadot/types/lookup'
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
-  EdgeToken,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -31,7 +30,6 @@ import {
 } from '../common/utils'
 import { PolkadotTools } from './PolkadotTools'
 import {
-  asMaybeAssetsPalletBalance,
   asPolkadotWalletOtherData,
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
@@ -115,10 +113,14 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async queryBalance(): Promise<void> {
-    const queryArray: Array<QueryableStorageMultiArg<'promise'>> = [
-      [this.api.query.system.account, this.walletInfo.keys.publicKey] // returns FrameSystemAccountInfo
-    ]
-    const edgeTokenArray: EdgeToken[] = []
+    const accountBalanceRes = await this.api.query.system.account(
+      this.walletInfo.keys.publicKey
+    )
+    this.nonce = accountBalanceRes.nonce.toNumber()
+    this.updateBalance(
+      this.currencyInfo.currencyCode,
+      accountBalanceRes.data.free.toString()
+    )
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -126,41 +128,16 @@ export class PolkadotEngine extends CurrencyEngine<
       const networkLocation = asMaybeContractLocation(token.networkLocation)
       if (networkLocation == null) continue
 
-      queryArray.push([
-        this.api.query.assets.account,
-        [networkLocation.contractAddress, this.walletInfo.keys.publicKey]
-      ]) // returns Option<PalletAssetsAssetAccount>
-      edgeTokenArray.push(token)
+      const tokenBalanceRes = await this.api.query.assets.account<
+        Option<PalletAssetsAssetAccount>
+      >(networkLocation.contractAddress, this.walletInfo.keys.publicKey)
+
+      let tokenBalance = '0'
+      if (tokenBalanceRes.isSome) {
+        tokenBalance = tokenBalanceRes.unwrap().balance.toString()
+      }
+      this.updateBalance(token.currencyCode, tokenBalance)
     }
-
-    const unsubscribe = await this.api.queryMulti(queryArray, balances => {
-      if (balances.length === 0) {
-        throw new Error('No balances returned')
-      }
-
-      // Mainnet
-      const accountBalance = balances.shift() as FrameSystemAccountInfo
-      this.nonce = accountBalance.nonce.toNumber()
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        accountBalance.data.free.toString()
-      )
-
-      // Assets
-      for (const [i, assetBalanceRaw] of balances.entries()) {
-        const token = edgeTokenArray[i]
-        const assetBalance = asMaybeAssetsPalletBalance(
-          assetBalanceRaw.toPrimitive()
-        )
-        if (assetBalance == null) {
-          this.updateBalance(token.currencyCode, '0')
-          return
-        }
-
-        this.updateBalance(token.currencyCode, assetBalance.balance.toString())
-      }
-    })
-    unsubscribe() // queryMulti sets up a subscription but we only need to call it once
   }
 
   async queryBlockheight(): Promise<void> {
