@@ -108,6 +108,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   energyEstimateCache: { [addressAndContract: string]: number }
   otherData!: TronWalletOtherData
   stakingStatus: EdgeStakingStatus
+  getUnfreezeDelayDays: number
 
   constructor(
     env: PluginEnvironment<TronNetworkInfo>,
@@ -135,6 +136,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       getEnergyFee: 280,
       getMemoFee: 1000000
     }
+    this.getUnfreezeDelayDays = 14
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
@@ -309,6 +311,24 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           nativeAmount: stakedEnergyV2.amount.toFixed(),
           otherParams: { type: 'ENERGY_V2' }
         })
+      }
+
+      // StakeV2 unfrozen locked amounts
+      const unfrozenAmounts = balances.unfrozenV2
+      for (const unfrozenAmount of unfrozenAmounts) {
+        if ('type' in unfrozenAmount && unfrozenAmount.type === 'ENERGY') {
+          stakedAmounts.push({
+            nativeAmount: unfrozenAmount.unfreeze_amount.toFixed(),
+            unlockDate: new Date(unfrozenAmount.unfreeze_expire_time),
+            otherParams: { type: 'WITHDRAWEXPIREUNFREEZE_ENERGY_V2' }
+          })
+        } else {
+          stakedAmounts.push({
+            nativeAmount: unfrozenAmount.unfreeze_amount.toFixed(),
+            unlockDate: new Date(unfrozenAmount.unfreeze_expire_time),
+            otherParams: { type: 'WITHDRAWEXPIREUNFREEZE_BANDWIDTH_V2' }
+          })
+        }
       }
 
       this.stakingStatus = { stakedAmounts }
@@ -783,6 +803,14 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         if (feeObj != null) {
           this.networkFees = { ...this.networkFees, [feeName]: feeObj.value }
         }
+      }
+
+      // withdrawExpireUnfreeze time
+      const getUnfreezeDelayDays = json.find(
+        param => param.key === 'getUnfreezeDelayDays'
+      )
+      if (getUnfreezeDelayDays?.value != null) {
+        this.getUnfreezeDelayDays = getUnfreezeDelayDays.value
       }
     } catch (e: any) {
       this.log.error('checkUpdateNetworkFees error: ', e)
