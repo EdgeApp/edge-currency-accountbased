@@ -29,12 +29,10 @@ export const asFilscanOkResponse = <Result>(
   })
 
 export type FilscanError = ReturnType<typeof asFilscanError>
-export const asFilscanError = asJSON(
-  asObject({
-    code: asNumber,
-    message: asString
-  })
-)
+export const asFilscanError = asObject({
+  code: asNumber,
+  message: asString
+})
 
 export type FilscanEnvelope<Result> = FilscanOkResponse<Result> | FilscanError
 export const asFilscanEnvelope = <Result>(
