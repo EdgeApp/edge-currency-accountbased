@@ -49,6 +49,7 @@ import {
   asTronUnfreezeAction,
   asTronUnfreezeV2Action,
   asTronWalletOtherData,
+  asTronWithdrawExpireUnfreezeAction,
   asTRXBalance,
   asTRXTransferContract,
   asUnfreezeBalanceContract,
@@ -65,6 +66,7 @@ import {
   TronUnfreezeAction,
   TronUnfreezeV2Action,
   TronWalletOtherData,
+  TronWithdrawExpireUnfreezeAction,
   TxBuilderParams,
   TxQueryCache
 } from './tronTypes'
@@ -1236,18 +1238,65 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       blockHeight: 0,
       currencyCode: this.currencyInfo.currencyCode,
       date: 0,
-      isSend: stakedAmount.nativeAmount.startsWith('-'),
+      isSend: true,
       memos: [],
-      metadata: {
-        notes: resource
-      },
-      nativeAmount: stakedAmount.nativeAmount,
+      nativeAmount: '0',
       networkFee,
       otherParams: txOtherParams,
       ourReceiveAddresses: [],
       signedTx: '',
       txid: '',
       walletId: this.walletId
+    }
+
+    return edgeTransaction
+  }
+
+  async makeWithdrawExpireUnfreezeTransaction(): Promise<EdgeTransaction> {
+    const contractJson = {
+      parameter: {
+        value: {
+          owner_address: base58ToHexAddress(this.walletLocalData.publicKey)
+        }
+      },
+      type: 'WithdrawExpireUnfreezeContract'
+    }
+
+    const txOtherParams: TxBuilderParams = { contractJson }
+    const { transactionHex } = await this.txBuilder(txOtherParams)
+    const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
+
+    const claimedAmount = this.stakingStatus.stakedAmounts.reduce(
+      (sum, stakedAmount) => {
+        const { nativeAmount, otherParams, unlockDate } = stakedAmount
+        if (
+          unlockDate != null &&
+          new Date(unlockDate) > new Date() &&
+          otherParams?.type === 'WITHDRAWEXPIREUNFREEZE'
+        ) {
+          return add(sum, nativeAmount)
+        }
+        return sum
+      },
+      '0'
+    )
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: '',
+      date: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: 0,
+      nativeAmount: sub(claimedAmount, networkFee),
+      isSend: false,
+      memos: [],
+      networkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      otherParams: txOtherParams,
+      walletId: this.walletId,
+      metadata: {
+        notes: 'WithdrawExpireUnfreeze'
+      }
     }
 
     return edgeTransaction
@@ -1366,6 +1415,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         | TronUnfreezeAction
         | TronFreezeV2Action
         | TronUnfreezeV2Action
+        | TronWithdrawExpireUnfreezeAction
         | undefined
 
       action = asMaybe(asTronUnfreezeAction)(edgeSpendInfoIn.otherParams)
@@ -1376,6 +1426,12 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
       action = asMaybe(asTronUnfreezeV2Action)(edgeSpendInfoIn.otherParams)
       if (action != null) return await this.makeUnfreezeV2Transaction(action)
+
+      action = asMaybe(asTronWithdrawExpireUnfreezeAction)(
+        edgeSpendInfoIn.otherParams
+      )
+      if (action != null)
+        return await this.makeWithdrawExpireUnfreezeTransaction()
     }
 
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(

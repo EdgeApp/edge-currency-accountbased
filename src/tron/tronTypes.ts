@@ -137,6 +137,15 @@ export const asTronUnfreezeV2Action = asObject<TronUnfreezeV2Action>({
   })
 })
 
+export interface TronWithdrawExpireUnfreezeAction {
+  type: 'withdrawExpireUnfreeze'
+}
+
+export const asTronWithdrawExpireUnfreezeAction =
+  asObject<TronWithdrawExpireUnfreezeAction>({
+    type: asValue('withdrawExpireUnfreeze')
+  })
+
 export interface CalcTxFeeOpts {
   receiverAddress?: string
   unsignedTxHex: string
