@@ -1,13 +1,17 @@
 # edge-currency-accountbased
 
+## 2.2.2 (2023-09-06)
+
+- changed: Revert usage of `queryMulti` in Polkadot engine balance query
+
 ## 2.2.1 (2023-09-04)
 
-changed: Use separate code path for calculating token max spendable (Polkadot)
-changed: Allow user to spend entire token balance (Polkadot)
-changed: Add early exit to transaction query (Polkadot)
-fixed: Use Filscan as the block explorer for Filecoin
-fixed: Used correct balance in when sending tokens (Polkadot)
-fixed: Update Liberland length fee cost
+- changed: Use separate code path for calculating token max spendable (Polkadot)
+- changed: Allow user to spend entire token balance (Polkadot)
+- changed: Add early exit to transaction query (Polkadot)
+- fixed: Use Filscan as the block explorer for Filecoin
+- fixed: Used correct balance in when sending tokens (Polkadot)
+- fixed: Update Liberland length fee cost
 
 ## 2.2.0 (2023-09-04)
 
