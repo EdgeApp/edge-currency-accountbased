@@ -306,7 +306,7 @@ export class FilecoinEngine extends CurrencyEngine<
         index++,
         messagesPerPage
       )
-      const messages = messagesResponse.result.messages_by_account_id_list
+      const messages = messagesResponse.messages_by_account_id_list
 
       for (const message of messages) {
         const txid = message.cid
@@ -322,7 +322,7 @@ export class FilecoinEngine extends CurrencyEngine<
         this.processMessage(message)
       }
 
-      messageCount = messagesResponse.result.total_count
+      messageCount = messagesResponse.total_count
       messagesChecked += messages.length
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
         messageCount === 0 ? 1 : messagesChecked / messageCount
