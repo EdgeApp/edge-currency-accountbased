@@ -34,7 +34,7 @@ import {
   FilecoinWalletOtherData,
   SafeFilecoinWalletInfo
 } from './filecoinTypes'
-import { Filfox, FilfoxMessage } from './Filfox'
+import { Filfox, FilfoxMessageDetailed } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
@@ -392,7 +392,10 @@ export class FilecoinEngine extends CurrencyEngine<
         if (message.height < this.walletLocalData.lastAddressQueryHeight) return
 
         // Process message into a transaction
-        const tx = this.filfoxMessageToEdgeTransaction(message)
+        const messageDetails = await this.filfoxApi.getMessageDetails(
+          message.cid
+        )
+        const tx = this.filfoxMessageToEdgeTransaction(messageDetails)
 
         // Calculate the progress
         const progress =
@@ -441,14 +444,21 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   filfoxMessageToEdgeTransaction = (
-    message: FilfoxMessage
+    messageDetails: FilfoxMessageDetailed
   ): EdgeTransaction => {
     const addressString = this.address.toString()
-    let netNativeAmount = message.value
+    let netNativeAmount = messageDetails.value
     const ourReceiveAddresses = []
 
-    const networkFee = '0' // TODO: calculate transaction fee from onchain gas fields
-    if (message.to !== addressString) {
+    // Get the fees paid
+    const networkFee = messageDetails.transfers
+      .filter(
+        transfer =>
+          transfer.type === 'miner-fee' || transfer.type === 'burner-fee'
+      )
+      .reduce((sum, transfer) => add(sum, transfer.value), '0')
+
+    if (messageDetails.to !== addressString) {
       // check if tx is a spend
       netNativeAmount = `-${add(netNativeAmount, networkFee)}`
     } else {
@@ -456,10 +466,10 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: message.cid,
-      date: message.timestamp,
+      txid: messageDetails.cid,
+      date: messageDetails.timestamp,
       currencyCode: this.currencyInfo.currencyCode,
-      blockHeight: message.height,
+      blockHeight: messageDetails.height,
       nativeAmount: netNativeAmount,
       isSend: netNativeAmount.startsWith('-'),
       networkFee,

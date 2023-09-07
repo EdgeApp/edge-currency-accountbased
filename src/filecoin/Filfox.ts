@@ -48,6 +48,42 @@ export const asFilfoxMessage = asObject({
   value: asString
 })
 
+export type FilfoxMessageDetailed = ReturnType<typeof asFilfoxMessageDetailed>
+export const asFilfoxMessageDetailed = asObject({
+  cid: asString,
+  height: asNumber,
+  timestamp: asNumber,
+  from: asString,
+  to: asString,
+  value: asString,
+  gasLimit: asNumber,
+  gasFeeCap: asString,
+  gasPremium: asString,
+  receipt: asObject({
+    exitCode: asNumber,
+    return: asString,
+    gasUsed: asNumber
+  }),
+  baseFee: asString,
+  fee: asObject({
+    baseFeeBurn: asString,
+    overEstimationBurn: asString,
+    minerPenalty: asString,
+    minerTip: asString,
+    refund: asString
+  }),
+  transfers: asArray(
+    asObject({
+      from: asString,
+      fromId: asString,
+      to: asString,
+      toId: asString,
+      value: asString,
+      type: asString
+    })
+  )
+})
+
 //
 // Messages
 //
@@ -57,6 +93,15 @@ export const asFilfoxMessagesResult = asObject({
   messages: asArray(asFilfoxMessage),
   totalCount: asNumber
 })
+
+//
+// Message Details
+//
+
+export type FilfoxMessageDetailsResult = ReturnType<
+  typeof asFilfoxMessageDetailsResult
+>
+export const asFilfoxMessageDetailsResult = asFilfoxMessageDetailed
 
 // -----------------------------------------------------------------------------
 // Implementation
@@ -90,6 +135,28 @@ export class Filfox {
     })
     const responseText = await response.text()
     const responseBody = asFilfoxEnvelope(asFilfoxMessagesResult)(responseText)
+
+    if ('error' in responseBody)
+      throw new Error(
+        `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
+      )
+
+    return responseBody
+  }
+
+  async getMessageDetails(
+    messageCid: string
+  ): Promise<FilfoxMessageDetailsResult> {
+    const response = await this.fetch(`${this.baseUrl}/message/${messageCid}`, {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json'
+      }
+    })
+    const responseText = await response.text()
+    const responseBody = asFilfoxEnvelope(asFilfoxMessageDetailsResult)(
+      responseText
+    )
 
     if ('error' in responseBody)
       throw new Error(
