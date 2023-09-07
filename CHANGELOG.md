@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 2.2.3 (2023-09-07)
+
+- added: Integrate Filfox for Filecoin transaction scanning
+
 ## 2.2.2 (2023-09-06)
 
 - changed: Revert usage of `queryMulti` in Polkadot engine balance query
