@@ -343,7 +343,7 @@ export class FilecoinEngine extends CurrencyEngine<
       }
 
       const scanners = [
-        this.scanTransactionsFromFilscan(addressString, handleScan),
+        // this.scanTransactionsFromFilscan(addressString, handleScan),
         this.scanTransactionsFromFilfox(addressString, handleScan)
       ]
 
