@@ -17,6 +17,7 @@ declare enum Network {
   Butterfly = 'butterfly'
 }
 export interface FilecoinNetworkInfo {
+  filfoxUrl: string
   filscanUrl: string
   hdPathCoinType: number
   rpcNode: {
