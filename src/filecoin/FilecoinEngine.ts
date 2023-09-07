@@ -296,6 +296,23 @@ export class FilecoinEngine extends CurrencyEngine<
   async checkTransactions(): Promise<void> {
     const addressString = this.address.toString()
 
+    const handleScanProgress = (progress: number): void => {
+      const currentProgress =
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+      const newProgress = progress
+
+      if (
+        // Only send event if we haven't completed sync
+        currentProgress < 1 &&
+        // Avoid thrashing
+        (newProgress >= 1 || newProgress > currentProgress * 1.1)
+      ) {
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          newProgress
+        this.updateOnAddressesChecked()
+      }
+    }
+
     const handleScan = ({
       tx,
       progress
@@ -312,20 +329,7 @@ export class FilecoinEngine extends CurrencyEngine<
         this.onUpdateBlockHeight(tx.blockHeight)
       }
 
-      const currentProgress =
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
-      const newProgress = progress
-
-      if (
-        // Only send event if we haven't completed sync
-        currentProgress < 1 &&
-        // Avoid thrashing
-        (newProgress >= 1 || newProgress > currentProgress * 1.1)
-      ) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-          newProgress
-        this.updateOnAddressesChecked()
-      }
+      handleScanProgress(progress)
     }
 
     const scanners = [
