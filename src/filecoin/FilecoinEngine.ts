@@ -34,6 +34,7 @@ import {
   FilecoinWalletOtherData,
   SafeFilecoinWalletInfo
 } from './filecoinTypes'
+import { Filfox, FilfoxMessage } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
@@ -53,6 +54,7 @@ export class FilecoinEngine extends CurrencyEngine<
 
   // Backends:
   filRpc: RPC
+  filfoxApi: Filfox
   filscanApi: Filscan
   rpcExtra: RpcExtra
 
@@ -70,6 +72,7 @@ export class FilecoinEngine extends CurrencyEngine<
       url: env.networkInfo.rpcNode.url,
       token: env.currencyInfo.currencyCode
     })
+    this.filfoxApi = new Filfox(env.networkInfo.filfoxUrl, env.io.fetchCors)
     this.filscanApi = new Filscan(env.networkInfo.filscanUrl, env.io.fetchCors)
     this.rpcExtra = new RpcExtra(env.networkInfo.rpcNode.url, env.io.fetchCors)
 
@@ -296,18 +299,73 @@ export class FilecoinEngine extends CurrencyEngine<
   async checkTransactions(): Promise<void> {
     const addressString = this.address.toString()
 
+    const handleScanProgress = (progress: number): void => {
+      const currentProgress =
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+      const newProgress = progress
+
+      if (
+        // Only send event if we haven't completed sync
+        currentProgress < 1 &&
+        // Avoid thrashing
+        (newProgress >= 1 || newProgress > currentProgress * 1.1)
+      ) {
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          newProgress
+        this.updateOnAddressesChecked()
+      }
+    }
+
+    const handleScan = ({
+      tx,
+      progress
+    }: {
+      tx: EdgeTransaction
+      progress: number
+    }): void => {
+      this.addTransaction(this.currencyInfo.currencyCode, tx)
+      this.onUpdateTransactions()
+
+      // Progress the block-height if the message's height is greater than
+      // last poll for block-height.
+      if (this.walletLocalData.blockHeight < tx.blockHeight) {
+        this.onUpdateBlockHeight(tx.blockHeight)
+      }
+
+      handleScanProgress(progress)
+    }
+
+    const scanners = [
+      this.scanTransactionsFromFilscan(addressString, handleScan),
+      this.scanTransactionsFromFilfox(addressString, handleScan)
+    ]
+
+    await Promise.all(scanners)
+
+    handleScanProgress(1)
+  }
+
+  async scanTransactionsFromFilfox(
+    address: string,
+    onScan: (event: { tx: EdgeTransaction; progress: number }) => void
+  ): Promise<void> {
     const messagesPerPage = 20
     let index = 0
     let messagesChecked = 0
-    let messageCount = 0
+    let messageCount = -1
     do {
-      const messagesResponse = await this.filscanApi.getAccountMessages(
-        addressString,
+      const messagesResponse = await this.filfoxApi.getAccountMessages(
+        address,
         index++,
         messagesPerPage
       )
-      const messages = messagesResponse.result.messages_by_account_id_list
 
+      // Only update the message count on the first query because mutating this
+      // in-between pagination may cause infinite loops.
+      messageCount =
+        messageCount === -1 ? messagesResponse.totalCount : messageCount
+
+      const messages = messagesResponse.messages
       for (const message of messages) {
         const txid = message.cid
         const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
@@ -319,18 +377,93 @@ export class FilecoinEngine extends CurrencyEngine<
         }
 
         // Process message into a transaction
-        this.processMessage(message)
-      }
+        const tx = this.filfoxMessageToEdgeTransaction(message)
 
-      messageCount = messagesResponse.result.total_count
-      messagesChecked += messages.length
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        messageCount === 0 ? 1 : messagesChecked / messageCount
-      this.updateOnAddressesChecked()
+        // Calculate the progress
+        const progress =
+          messageCount === 0 ? 1 : ++messagesChecked / messageCount
+
+        onScan({ tx, progress })
+      }
     } while (messagesChecked < messageCount)
   }
 
-  processMessage(message: FilscanMessage): void {
+  async scanTransactionsFromFilscan(
+    address: string,
+    onScan: (event: { tx: EdgeTransaction; progress: number }) => void
+  ): Promise<void> {
+    const messagesPerPage = 20
+    let index = 0
+    let messagesChecked = 0
+    let messageCount = -1
+    do {
+      const messagesResponse = await this.filscanApi.getAccountMessages(
+        address,
+        index++,
+        messagesPerPage
+      )
+
+      // Only update the message count on the first query because mutating this
+      // in-between pagination may cause infinite loops.
+      messageCount =
+        messageCount === -1 ? messagesResponse.total_count : messageCount
+
+      const messages = messagesResponse.messages_by_account_id_list
+      for (const message of messages) {
+        const txid = message.cid
+        const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
+
+        if (idx >= 0) {
+          // Exit early because we reached transaction history from previous
+          // check
+          return
+        }
+
+        // Process message into a transaction
+        const tx = this.filscanMessageToEdgeTransaction(message)
+
+        // Calculate the progress
+        const progress =
+          messageCount === 0 ? 1 : ++messagesChecked / messageCount
+
+        onScan({ tx, progress })
+      }
+    } while (messagesChecked < messageCount)
+  }
+
+  filfoxMessageToEdgeTransaction = (
+    message: FilfoxMessage
+  ): EdgeTransaction => {
+    const addressString = this.address.toString()
+    let netNativeAmount = message.value
+    const ourReceiveAddresses = []
+
+    const networkFee = '0' // TODO: calculate transaction fee from onchain gas fields
+    if (message.to !== addressString) {
+      // check if tx is a spend
+      netNativeAmount = `-${add(netNativeAmount, networkFee)}`
+    } else {
+      ourReceiveAddresses.push(addressString)
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      txid: message.cid,
+      date: message.timestamp,
+      currencyCode: this.currencyInfo.currencyCode,
+      blockHeight: message.height,
+      nativeAmount: netNativeAmount,
+      isSend: netNativeAmount.startsWith('-'),
+      networkFee,
+      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      signedTx: '',
+      otherParams: {},
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
+  }
+
+  filscanMessageToEdgeTransaction(message: FilscanMessage): EdgeTransaction {
     const addressString = this.address.toString()
     let netNativeAmount = message.value
     const ourReceiveAddresses = []
@@ -356,14 +489,8 @@ export class FilecoinEngine extends CurrencyEngine<
       otherParams: {},
       walletId: this.walletId
     }
-    this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
-    this.onUpdateTransactions()
 
-    // Progress the block-height if the message's height is greater than
-    // last poll for block-height.
-    if (this.walletLocalData.blockHeight < message.height) {
-      this.onUpdateBlockHeight(message.height)
-    }
+    return edgeTransaction
   }
 }
 export async function makeCurrencyEngine(

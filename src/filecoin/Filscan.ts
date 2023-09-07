@@ -29,12 +29,10 @@ export const asFilscanOkResponse = <Result>(
   })
 
 export type FilscanError = ReturnType<typeof asFilscanError>
-export const asFilscanError = asJSON(
-  asObject({
-    code: asNumber,
-    message: asString
-  })
-)
+export const asFilscanError = asObject({
+  code: asNumber,
+  message: asString
+})
 
 export type FilscanEnvelope<Result> = FilscanOkResponse<Result> | FilscanError
 export const asFilscanEnvelope = <Result>(
@@ -146,9 +144,7 @@ export class Filscan {
     this.fetch = fetchFn
   }
 
-  async getAccountInfo(
-    accountId: string
-  ): Promise<FilscanOkResponse<FilscanAccountInfoResult>> {
+  async getAccountInfo(accountId: string): Promise<FilscanAccountInfoResult> {
     const response = await this.fetch(`${this.baseUrl}/AccountInfoByID`, {
       method: 'POST',
       headers: {
@@ -168,14 +164,14 @@ export class Filscan {
         `Error response code ${responseBody.code}: ${responseBody.message}`
       )
 
-    return responseBody
+    return responseBody.result
   }
 
   async getAccountMessages(
     accountId: string,
     index: number,
     limit: number = 20
-  ): Promise<FilscanOkResponse<FilscanMessagesResult>> {
+  ): Promise<FilscanMessagesResult> {
     const response = await this.fetch(`${this.baseUrl}/MessagesByAccountID`, {
       method: 'POST',
       headers: {
@@ -202,12 +198,12 @@ export class Filscan {
         `Error response code ${responseBody.code}: ${responseBody.message}`
       )
 
-    return responseBody
+    return responseBody.result
   }
 
   async getMessageDetails(
     messageCid: string
-  ): Promise<FilscanOkResponse<FilscanMessageDetailsResult>> {
+  ): Promise<FilscanMessageDetailsResult> {
     const response = await this.fetch(`${this.baseUrl}/MessageDetails`, {
       method: 'POST',
       headers: {
@@ -227,6 +223,6 @@ export class Filscan {
         `Error response code ${responseBody.code}: ${responseBody.message}`
       )
 
-    return responseBody
+    return responseBody.result
   }
 }
