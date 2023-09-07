@@ -230,6 +230,8 @@ export class FilecoinEngine extends CurrencyEngine<
       sigJson: signature.toJSON()
     }
 
+    edgeTransaction.date = Date.now() / 1000
+
     return edgeTransaction
   }
 
