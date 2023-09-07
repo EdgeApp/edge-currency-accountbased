@@ -341,15 +341,15 @@ export class ZcashEngine extends CurrencyEngine<
     const txNativeAmount = mul(totalTxAmount, '-1')
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
-      blockHeight: 0, // blockHeight
-      nativeAmount: txNativeAmount, // nativeAmount
+      txid: '',
+      date: 0,
+      currencyCode,
+      blockHeight: 0,
+      nativeAmount: txNativeAmount,
       isSend: true,
-      networkFee: this.networkInfo.defaultNetworkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
+      networkFee: this.networkInfo.defaultNetworkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
       spendTargets,
       walletId: this.walletId
     }
