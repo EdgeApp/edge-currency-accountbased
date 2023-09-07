@@ -337,6 +337,8 @@ export class FilecoinEngine extends CurrencyEngine<
     ]
 
     await Promise.all(scanners)
+
+    handleScanProgress(1)
   }
 
   async scanTransactionsFromFilscan(
