@@ -40,7 +40,7 @@ export const asFilfoxMessage = asObject({
   height: asNumber,
   method: asString,
   nonce: asNumber,
-  reciept: asObject({
+  receipt: asObject({
     exitCode: asNumber
   }),
   timestamp: asNumber,
