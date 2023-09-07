@@ -312,9 +312,20 @@ export class FilecoinEngine extends CurrencyEngine<
         this.onUpdateBlockHeight(tx.blockHeight)
       }
 
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        progress
-      this.updateOnAddressesChecked()
+      const currentProgress =
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+      const newProgress = progress
+
+      if (
+        // Only send event if we haven't completed sync
+        currentProgress < 1 &&
+        // Avoid thrashing
+        (newProgress >= 1 || newProgress > currentProgress * 1.1)
+      ) {
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          newProgress
+        this.updateOnAddressesChecked()
+      }
     }
 
     const scanners = [
