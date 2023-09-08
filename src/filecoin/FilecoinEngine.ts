@@ -48,6 +48,7 @@ export class FilecoinEngine extends CurrencyEngine<
 > {
   address: Address
   availableAttoFil: string
+  isScanning: boolean
   networkInfo: FilecoinNetworkInfo
   otherData!: FilecoinWalletOtherData
   pluginId: string
@@ -68,6 +69,10 @@ export class FilecoinEngine extends CurrencyEngine<
     const { networkInfo } = env
     this.address = Address.fromString(walletInfo.keys.address)
     this.availableAttoFil = '0'
+    this.isScanning = false
+    this.networkInfo = networkInfo
+    this.pluginId = this.currencyInfo.pluginId
+
     this.filRpc = new RPC(env.networkInfo.rpcNode.networkName, {
       url: env.networkInfo.rpcNode.url,
       token: env.currencyInfo.currencyCode
@@ -75,9 +80,6 @@ export class FilecoinEngine extends CurrencyEngine<
     this.filfoxApi = new Filfox(env.networkInfo.filfoxUrl, env.io.fetchCors)
     this.filscanApi = new Filscan(env.networkInfo.filscanUrl, env.io.fetchCors)
     this.rpcExtra = new RpcExtra(env.networkInfo.rpcNode.url, env.io.fetchCors)
-
-    this.networkInfo = networkInfo
-    this.pluginId = this.currencyInfo.pluginId
   }
 
   setOtherData(raw: any): void {
@@ -299,52 +301,62 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async checkTransactions(): Promise<void> {
-    const addressString = this.address.toString()
+    if (this.isScanning) return
+    try {
+      this.isScanning = true
 
-    const handleScanProgress = (progress: number): void => {
-      const currentProgress =
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
-      const newProgress = progress
+      const addressString = this.address.toString()
 
-      if (
-        // Only send event if we haven't completed sync
-        currentProgress < 1 &&
-        // Avoid thrashing
-        (newProgress >= 1 || newProgress > currentProgress * 1.1)
-      ) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-          newProgress
-        this.updateOnAddressesChecked()
-      }
-    }
+      const handleScanProgress = (progress: number): void => {
+        const currentProgress =
+          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+        const newProgress = progress
 
-    const handleScan = ({
-      tx,
-      progress
-    }: {
-      tx: EdgeTransaction
-      progress: number
-    }): void => {
-      this.addTransaction(this.currencyInfo.currencyCode, tx)
-      this.onUpdateTransactions()
-
-      // Progress the block-height if the message's height is greater than
-      // last poll for block-height.
-      if (this.walletLocalData.blockHeight < tx.blockHeight) {
-        this.onUpdateBlockHeight(tx.blockHeight)
+        if (
+          // Only send event if we haven't completed sync
+          currentProgress < 1 &&
+          // Avoid thrashing
+          (newProgress >= 1 || newProgress > currentProgress * 1.1)
+        ) {
+          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+            newProgress
+          this.updateOnAddressesChecked()
+        }
       }
 
-      handleScanProgress(progress)
+      const handleScan = ({
+        tx,
+        progress
+      }: {
+        tx: EdgeTransaction
+        progress: number
+      }): void => {
+        this.addTransaction(this.currencyInfo.currencyCode, tx)
+        this.onUpdateTransactions()
+
+        // Progress the block-height if the message's height is greater than
+        // last poll for block-height.
+        if (this.walletLocalData.blockHeight < tx.blockHeight) {
+          this.onUpdateBlockHeight(tx.blockHeight)
+        }
+
+        handleScanProgress(progress)
+      }
+
+      const scanners = [
+        this.scanTransactionsFromFilscan(addressString, handleScan),
+        this.scanTransactionsFromFilfox(addressString, handleScan)
+      ]
+
+      await Promise.all(scanners)
+
+      handleScanProgress(1)
+    } catch (error) {
+      console.error(error)
+      throw error
+    } finally {
+      this.isScanning = false
     }
-
-    const scanners = [
-      this.scanTransactionsFromFilscan(addressString, handleScan),
-      this.scanTransactionsFromFilfox(addressString, handleScan)
-    ]
-
-    await Promise.all(scanners)
-
-    handleScanProgress(1)
   }
 
   async scanTransactionsFromFilfox(
