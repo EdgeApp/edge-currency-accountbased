@@ -189,15 +189,15 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const networkFee = mul(txJson.GasLimit.toString(), txJson.GasPremium) // TODO: Include base fee and burn fee somehow?
-    const totalTxAmount = add(nativeAmount, networkFee)
+    const txNativeAmount = mul(add(nativeAmount, networkFee), '-1')
 
     const edgeTransaction: EdgeTransaction = {
       txid: '',
       date: 0,
       currencyCode,
       blockHeight: 0,
-      nativeAmount: `-${totalTxAmount}`,
-      isSend: nativeAmount.startsWith('-'),
+      nativeAmount: txNativeAmount,
+      isSend: true,
       networkFee,
       ourReceiveAddresses: [],
       otherParams,
@@ -229,6 +229,8 @@ export class FilecoinEngine extends CurrencyEngine<
       ...edgeTransaction.otherParams,
       sigJson: signature.toJSON()
     }
+
+    edgeTransaction.date = Date.now() / 1000
 
     return edgeTransaction
   }
