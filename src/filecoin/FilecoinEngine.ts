@@ -87,9 +87,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    // Initialize walletLocalData:
-    // ...
-
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 0
     // Engine variables
     this.availableAttoFil = '0'
   }
