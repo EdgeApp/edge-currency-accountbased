@@ -447,10 +447,9 @@ export class FilecoinEngine extends CurrencyEngine<
     messageDetails: FilfoxMessageDetailed
   ): EdgeTransaction => {
     const addressString = this.address.toString()
-    let netNativeAmount = messageDetails.value
     const ourReceiveAddresses = []
 
-    // Get the fees paid
+    // Handle network fees:
     const networkFee = messageDetails.transfers
       .filter(
         transfer =>
@@ -458,10 +457,18 @@ export class FilecoinEngine extends CurrencyEngine<
       )
       .reduce((sum, transfer) => add(sum, transfer.value), '0')
 
-    if (messageDetails.to !== addressString) {
-      // check if tx is a spend
-      netNativeAmount = `-${add(netNativeAmount, networkFee)}`
+    // Handle native amount:
+    let nativeAmount: string
+    if (messageDetails.from === addressString) {
+      // For spends, always include network fee
+      nativeAmount = `-${networkFee}`
+      if (messageDetails.to !== addressString) {
+        // For spends not to self, subtract tx value
+        nativeAmount = sub(nativeAmount, messageDetails.value)
+      }
     } else {
+      // For receives nativeAMount is always positively the value
+      nativeAmount = messageDetails.value
       ourReceiveAddresses.push(addressString)
     }
 
@@ -470,8 +477,8 @@ export class FilecoinEngine extends CurrencyEngine<
       date: messageDetails.timestamp,
       currencyCode: this.currencyInfo.currencyCode,
       blockHeight: messageDetails.height,
-      nativeAmount: netNativeAmount,
-      isSend: netNativeAmount.startsWith('-'),
+      nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
@@ -484,14 +491,20 @@ export class FilecoinEngine extends CurrencyEngine<
 
   filscanMessageToEdgeTransaction(message: FilscanMessage): EdgeTransaction {
     const addressString = this.address.toString()
-    let netNativeAmount = message.value
     const ourReceiveAddresses = []
 
     const networkFee = '0' // TODO: calculate transaction fee from onchain gas fields
-    if (message.to !== addressString) {
-      // check if tx is a spend
-      netNativeAmount = `-${add(netNativeAmount, networkFee)}`
+    let nativeAmount: string
+    if (message.from === addressString) {
+      // For spends, always include network fee
+      nativeAmount = `-${networkFee}`
+      if (message.to !== addressString) {
+        // For spends not to self, subtract tx value
+        nativeAmount = sub(nativeAmount, message.value)
+      }
     } else {
+      // For receives nativeAMount is always positively the value
+      nativeAmount = message.value
       ourReceiveAddresses.push(addressString)
     }
 
@@ -500,8 +513,8 @@ export class FilecoinEngine extends CurrencyEngine<
       date: message.block_time,
       currencyCode: this.currencyInfo.currencyCode,
       blockHeight: message.height,
-      nativeAmount: netNativeAmount,
-      isSend: netNativeAmount.startsWith('-'),
+      nativeAmount,
+      isSend: nativeAmount.startsWith('-'),
       networkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
