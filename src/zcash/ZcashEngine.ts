@@ -1,4 +1,4 @@
-import { abs, add, eq, gt, lte, sub } from 'biggystring'
+import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -338,13 +338,15 @@ export class ZcashEngine extends CurrencyEngine<
       publicAddress
     }))
 
+    const txNativeAmount = mul(totalTxAmount, '-1')
+
     const edgeTransaction: EdgeTransaction = {
       txid: '', // txid
       date: 0, // date
       currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: `-${totalTxAmount}`, // nativeAmount
-      isSend: nativeAmount.startsWith('-'),
+      nativeAmount: txNativeAmount, // nativeAmount
+      isSend: true,
       networkFee: this.networkInfo.defaultNetworkFee, // networkFee
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
