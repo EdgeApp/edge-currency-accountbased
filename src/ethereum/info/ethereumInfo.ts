@@ -934,6 +934,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x3a4f40631a4f906c2BaD353Ed06De7A5D3fCb430'
     }
   },
+  e17b8adf8e46b15f3f9ab4bb9e3b6e31db09126e: {
+    currencyCode: 'PYUSD',
+    displayName: 'PayPal USD',
+    denominations: [{ name: 'PYUSD', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xe17b8aDF8E46b15f3F9aB4Bb9E3b6e31Db09126E'
+    }
+  },
   '4a220e6096b25eadb88358cb44068a3248254675': {
     currencyCode: 'QNT',
     displayName: 'Quant',
