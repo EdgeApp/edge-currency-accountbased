@@ -301,6 +301,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async checkTransactions(): Promise<void> {
+    // We shouldn't start scanning if scanning is already happening:
     if (this.isScanning) return
     try {
       this.isScanning = true
@@ -348,8 +349,16 @@ export class FilecoinEngine extends CurrencyEngine<
         this.scanTransactionsFromFilfox(addressString, handleScan)
       ]
 
+      const startingNetworkHeight = this.walletLocalData.blockHeight
+
+      // Run scanners:
       await Promise.all(scanners)
 
+      // Save the network height at the start of the scanning
+      this.walletLocalData.lastAddressQueryHeight = startingNetworkHeight
+      this.walletLocalDataDirty = true
+
+      // Make sure the sync progress is 100%
       handleScanProgress(1)
     } catch (error) {
       console.error(error)
@@ -381,14 +390,8 @@ export class FilecoinEngine extends CurrencyEngine<
 
       const messages = messagesResponse.messages
       for (const message of messages) {
-        const txid = message.cid
-        const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
-
-        if (idx >= 0) {
-          // Exit early because we reached transaction history from previous
-          // check
-          return
-        }
+        // Exit when we reach a transaction we may already have saved
+        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
 
         // Process message into a transaction
         const tx = this.filfoxMessageToEdgeTransaction(message)
@@ -424,14 +427,8 @@ export class FilecoinEngine extends CurrencyEngine<
 
       const messages = messagesResponse.messages_by_account_id_list
       for (const message of messages) {
-        const txid = message.cid
-        const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
-
-        if (idx >= 0) {
-          // Exit early because we reached transaction history from previous
-          // check
-          return
-        }
+        // Exit when we reach a transaction we may already have saved
+        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
 
         // Process message into a transaction
         const tx = this.filscanMessageToEdgeTransaction(message)
