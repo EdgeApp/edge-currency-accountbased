@@ -118,6 +118,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664'
     }
   },
+  '9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7': {
+    currencyCode: 'USDT',
+    displayName: 'Tether USD',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7'
+    }
+  },
   c7198437980c041c805a1edcba50c1ce5db95118: {
     currencyCode: 'USDT.e',
     displayName: 'Tether USD',
