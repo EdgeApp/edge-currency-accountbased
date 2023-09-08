@@ -34,7 +34,7 @@ import {
   FilecoinWalletOtherData,
   SafeFilecoinWalletInfo
 } from './filecoinTypes'
-import { Filfox, FilfoxMessage } from './Filfox'
+import { Filfox, FilfoxMessageDetailed } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
@@ -48,6 +48,7 @@ export class FilecoinEngine extends CurrencyEngine<
 > {
   address: Address
   availableAttoFil: string
+  isScanning: boolean
   networkInfo: FilecoinNetworkInfo
   otherData!: FilecoinWalletOtherData
   pluginId: string
@@ -68,6 +69,10 @@ export class FilecoinEngine extends CurrencyEngine<
     const { networkInfo } = env
     this.address = Address.fromString(walletInfo.keys.address)
     this.availableAttoFil = '0'
+    this.isScanning = false
+    this.networkInfo = networkInfo
+    this.pluginId = this.currencyInfo.pluginId
+
     this.filRpc = new RPC(env.networkInfo.rpcNode.networkName, {
       url: env.networkInfo.rpcNode.url,
       token: env.currencyInfo.currencyCode
@@ -75,9 +80,6 @@ export class FilecoinEngine extends CurrencyEngine<
     this.filfoxApi = new Filfox(env.networkInfo.filfoxUrl, env.io.fetchCors)
     this.filscanApi = new Filscan(env.networkInfo.filscanUrl, env.io.fetchCors)
     this.rpcExtra = new RpcExtra(env.networkInfo.rpcNode.url, env.io.fetchCors)
-
-    this.networkInfo = networkInfo
-    this.pluginId = this.currencyInfo.pluginId
   }
 
   setOtherData(raw: any): void {
@@ -85,9 +87,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    // Initialize walletLocalData:
-    // ...
-
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 0
     // Engine variables
     this.availableAttoFil = '0'
   }
@@ -299,52 +299,71 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async checkTransactions(): Promise<void> {
-    const addressString = this.address.toString()
+    // We shouldn't start scanning if scanning is already happening:
+    if (this.isScanning) return
+    try {
+      this.isScanning = true
 
-    const handleScanProgress = (progress: number): void => {
-      const currentProgress =
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
-      const newProgress = progress
+      const addressString = this.address.toString()
 
-      if (
-        // Only send event if we haven't completed sync
-        currentProgress < 1 &&
-        // Avoid thrashing
-        (newProgress >= 1 || newProgress > currentProgress * 1.1)
-      ) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-          newProgress
-        this.updateOnAddressesChecked()
-      }
-    }
+      const handleScanProgress = (progress: number): void => {
+        const currentProgress =
+          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+        const newProgress = progress
 
-    const handleScan = ({
-      tx,
-      progress
-    }: {
-      tx: EdgeTransaction
-      progress: number
-    }): void => {
-      this.addTransaction(this.currencyInfo.currencyCode, tx)
-      this.onUpdateTransactions()
-
-      // Progress the block-height if the message's height is greater than
-      // last poll for block-height.
-      if (this.walletLocalData.blockHeight < tx.blockHeight) {
-        this.onUpdateBlockHeight(tx.blockHeight)
+        if (
+          // Only send event if we haven't completed sync
+          currentProgress < 1 &&
+          // Avoid thrashing
+          (newProgress >= 1 || newProgress > currentProgress * 1.1)
+        ) {
+          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+            newProgress
+          this.updateOnAddressesChecked()
+        }
       }
 
-      handleScanProgress(progress)
+      const handleScan = ({
+        tx,
+        progress
+      }: {
+        tx: EdgeTransaction
+        progress: number
+      }): void => {
+        this.addTransaction(this.currencyInfo.currencyCode, tx)
+        this.onUpdateTransactions()
+
+        // Progress the block-height if the message's height is greater than
+        // last poll for block-height.
+        if (this.walletLocalData.blockHeight < tx.blockHeight) {
+          this.onUpdateBlockHeight(tx.blockHeight)
+        }
+
+        handleScanProgress(progress)
+      }
+
+      const scanners = [
+        // this.scanTransactionsFromFilscan(addressString, handleScan),
+        this.scanTransactionsFromFilfox(addressString, handleScan)
+      ]
+
+      const startingNetworkHeight = this.walletLocalData.blockHeight
+
+      // Run scanners:
+      await Promise.all(scanners)
+
+      // Save the network height at the start of the scanning
+      this.walletLocalData.lastAddressQueryHeight = startingNetworkHeight
+      this.walletLocalDataDirty = true
+
+      // Make sure the sync progress is 100%
+      handleScanProgress(1)
+    } catch (error) {
+      console.error(error)
+      throw error
+    } finally {
+      this.isScanning = false
     }
-
-    const scanners = [
-      this.scanTransactionsFromFilscan(addressString, handleScan),
-      this.scanTransactionsFromFilfox(addressString, handleScan)
-    ]
-
-    await Promise.all(scanners)
-
-    handleScanProgress(1)
   }
 
   async scanTransactionsFromFilfox(
@@ -369,17 +388,14 @@ export class FilecoinEngine extends CurrencyEngine<
 
       const messages = messagesResponse.messages
       for (const message of messages) {
-        const txid = message.cid
-        const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
-
-        if (idx >= 0) {
-          // Exit early because we reached transaction history from previous
-          // check
-          return
-        }
+        // Exit when we reach a transaction we may already have saved
+        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
 
         // Process message into a transaction
-        const tx = this.filfoxMessageToEdgeTransaction(message)
+        const messageDetails = await this.filfoxApi.getMessageDetails(
+          message.cid
+        )
+        const tx = this.filfoxMessageToEdgeTransaction(messageDetails)
 
         // Calculate the progress
         const progress =
@@ -412,14 +428,8 @@ export class FilecoinEngine extends CurrencyEngine<
 
       const messages = messagesResponse.messages_by_account_id_list
       for (const message of messages) {
-        const txid = message.cid
-        const idx = this.findTransaction(this.currencyInfo.currencyCode, txid)
-
-        if (idx >= 0) {
-          // Exit early because we reached transaction history from previous
-          // check
-          return
-        }
+        // Exit when we reach a transaction we may already have saved
+        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
 
         // Process message into a transaction
         const tx = this.filscanMessageToEdgeTransaction(message)
@@ -434,14 +444,21 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   filfoxMessageToEdgeTransaction = (
-    message: FilfoxMessage
+    messageDetails: FilfoxMessageDetailed
   ): EdgeTransaction => {
     const addressString = this.address.toString()
-    let netNativeAmount = message.value
+    let netNativeAmount = messageDetails.value
     const ourReceiveAddresses = []
 
-    const networkFee = '0' // TODO: calculate transaction fee from onchain gas fields
-    if (message.to !== addressString) {
+    // Get the fees paid
+    const networkFee = messageDetails.transfers
+      .filter(
+        transfer =>
+          transfer.type === 'miner-fee' || transfer.type === 'burner-fee'
+      )
+      .reduce((sum, transfer) => add(sum, transfer.value), '0')
+
+    if (messageDetails.to !== addressString) {
       // check if tx is a spend
       netNativeAmount = `-${add(netNativeAmount, networkFee)}`
     } else {
@@ -449,10 +466,10 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: message.cid,
-      date: message.timestamp,
+      txid: messageDetails.cid,
+      date: messageDetails.timestamp,
       currencyCode: this.currencyInfo.currencyCode,
-      blockHeight: message.height,
+      blockHeight: messageDetails.height,
       nativeAmount: netNativeAmount,
       isSend: netNativeAmount.startsWith('-'),
       networkFee,
