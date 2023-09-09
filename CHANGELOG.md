@@ -1,5 +1,14 @@
 # edge-currency-accountbased
 
+## 2.2.4 (2023-09-08)
+
+- fixed: Bug prevent Filecoin spend transactions from being saved in the wallet (by saveTx)
+- fixed: Filecoin network fee query issue
+- changed: Use Filfox exclusively for Filecoin transaction querying
+- fixed: Incorrectly identifying send-to-self transactions as receives from the network
+- added: USDT token to Avalanche
+- added: PYUSD token to Ethereum
+
 ## 2.2.3 (2023-09-07)
 
 - added: Integrate Filfox for Filecoin transaction scanning
