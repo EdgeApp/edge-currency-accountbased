@@ -369,6 +369,7 @@ export class HederaEngine extends CurrencyEngine<
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
         date: parseInt(tx.valid_start_timestamp),
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
         nativeAmount,
         networkFee: tx.charged_tx_fee.toString(), // networkFee
         otherParams: {
@@ -463,6 +464,7 @@ export class HederaEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       date: 0,
       isSend: true,
+      memos: [],
       nativeAmount: `-${nativeAmount}`,
       // UI shows the fee subtracted from the sent amount which doesn't make sense here
       networkFee, // networkFee

@@ -485,6 +485,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
           nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses: ourReceiveAddresses,
@@ -522,6 +523,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: true,
+          memos: [],
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
@@ -558,6 +560,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: true,
+          memos: [],
           nativeAmount: mul(nativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
@@ -595,6 +598,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
           nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
@@ -630,6 +634,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           blockHeight: blockNumber,
           currencyCode,
           date: Math.floor(timestamp / 1000),
+          memos: [],
           isSend: true,
           nativeAmount: mul(nativeAmount, '-1'),
           networkFee: feeNativeAmount,
@@ -672,6 +677,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
           nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
@@ -744,6 +750,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode: metaToken.currencyCode,
       date: Math.floor(timestamp / 1000),
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount,
       networkFee: '0',
       ourReceiveAddresses,
@@ -1110,6 +1117,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode: this.currencyInfo.currencyCode,
       date: 0,
       isSend: stakedAmount.nativeAmount.startsWith('-'),
+      memos: [],
       metadata: {
         notes: resource
       },
@@ -1152,6 +1160,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode: this.currencyInfo.currencyCode,
       date: 0,
       isSend: true,
+      memos: [],
       metadata: {
         notes: resource
       },
@@ -1199,6 +1208,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode: this.currencyInfo.currencyCode,
       date: 0,
       isSend: stakedAmount.nativeAmount.startsWith('-'),
+      memos: [],
       metadata: {
         notes: resource
       },
@@ -1426,6 +1436,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       currencyCode, // currencyCode
       date: 0, // date
       isSend: true,
+      memos: [],
       nativeAmount: mul(edgeNativeAmount, '-1'), // nativeAmount
       networkFee, // networkFee
       otherParams: txOtherParams, // otherParams

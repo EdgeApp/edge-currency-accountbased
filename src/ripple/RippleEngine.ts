@@ -170,6 +170,7 @@ export class XrpEngine extends CurrencyEngine<
             currencyCode,
             date: Date.now() / 1000,
             isSend: true,
+            memos: [],
             metadata,
             nativeAmount: `-${add(fromNativeAmount, networkFee)}`,
             networkFee,
@@ -341,6 +342,7 @@ export class XrpEngine extends CurrencyEngine<
             currencyCode: currency,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
+            memos: [],
             nativeAmount,
             networkFee,
             otherParams: {},
@@ -376,6 +378,7 @@ export class XrpEngine extends CurrencyEngine<
             currencyCode,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
+            memos: [],
             nativeAmount,
             networkFee: '0',
             otherParams: {},
@@ -632,6 +635,7 @@ export class XrpEngine extends CurrencyEngine<
         currencyCode: this.currencyInfo.currencyCode,
         date: Date.now() / 1000,
         isSend: true,
+        memos: [],
         metadata: edgeSpendInfo.metadata,
         nativeAmount: `-${networkFee}`,
         networkFee,
@@ -778,6 +782,7 @@ export class XrpEngine extends CurrencyEngine<
       currencyCode, // currencyCode
       date: 0, // date
       isSend: true,
+      memos: [],
       nativeAmount, // nativeAmount
       networkFee,
       otherParams,

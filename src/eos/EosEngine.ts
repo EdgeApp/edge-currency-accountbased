@@ -262,6 +262,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       currencyCode,
       date: Date.parse(blockTime) / 1000,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       metadata: {
         name,
         notes: memo
@@ -343,6 +344,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         currencyCode,
         date,
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
         metadata: {
           notes: memo
         },
@@ -874,6 +876,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         currencyCode: this.currencyInfo.currencyCode,
         date: 0,
         isSend: true,
+        memos: [],
         nativeAmount: '-3',
         networkFee: '0',
         otherParams: {
@@ -1045,6 +1048,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       currencyCode, // currencyCode
       date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount, // nativeAmount
       networkFee, // networkFee
       otherParams: {

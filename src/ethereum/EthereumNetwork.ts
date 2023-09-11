@@ -352,6 +352,7 @@ export class EthereumNetwork {
           ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
           : undefined,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount,
       networkFee,
       otherParams,
@@ -444,6 +445,7 @@ export class EthereumNetwork {
       currencyCode,
       date: tokenTransfer.attributes.blockCreationTime,
       isSend: netNativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount: netNativeAmount,
       networkFee,
       otherParams,

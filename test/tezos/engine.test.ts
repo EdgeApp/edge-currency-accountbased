@@ -152,6 +152,7 @@ describe(`Tezos engine`, function () {
       currencyCode: 'XTZ',
       date: 0,
       isSend: true,
+      memos: [],
       nativeAmount: '-3002650',
       networkFee: '2650',
       otherParams: {

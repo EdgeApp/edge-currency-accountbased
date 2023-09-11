@@ -277,6 +277,7 @@ export class TezosEngine extends CurrencyEngine<
       currencyCode,
       date,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount,
       networkFee,
       otherParams: {},
@@ -468,6 +469,7 @@ export class TezosEngine extends CurrencyEngine<
       currencyCode,
       date: 0,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
       nativeAmount,
       networkFee,
       otherParams: {

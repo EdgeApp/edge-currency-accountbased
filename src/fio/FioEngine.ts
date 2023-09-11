@@ -487,6 +487,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         currencyCode,
         date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
         nativeAmount,
         networkFee,
         otherParams,
@@ -574,6 +575,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         currencyCode,
         date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
         nativeAmount,
         networkFee,
         otherParams,
@@ -1682,6 +1684,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       currencyCode,
       date: 0,
       isSend: true,
+      memos: [],
       nativeAmount: sub(`-${quantity}`, `${fee}`),
       networkFee: `${fee}`,
       otherParams: {
