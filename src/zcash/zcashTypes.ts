@@ -47,11 +47,6 @@ export interface ZcashPendingTransaction {
   raw: string
 }
 
-export interface ZcashWalletBalance {
-  availableZatoshi: string
-  totalZatoshi: string
-}
-
 export interface UnifiedViewingKey {
   extfvk: string
   extpub: string
@@ -80,8 +75,10 @@ export type ZcashSynchronizerStatus =
   | 'SYNCED'
 
 export interface ZcashBalanceEvent {
-  availableZatoshi: string
-  totalZatoshi: string
+  transparentAvailableZatoshi: string
+  transparentTotalZatoshi: string
+  saplingAvailableZatoshi: string
+  saplingTotalZatoshi: string
 }
 
 export interface ZcashStatusEvent {

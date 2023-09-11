@@ -23,6 +23,7 @@ import {
   asZcashPrivateKeys,
   asZcashWalletOtherData,
   SafeZcashWalletInfo,
+  ZcashBalanceEvent,
   ZcashInitializerConfig,
   ZcashNetworkInfo,
   ZcashSpendInfo,
@@ -41,6 +42,7 @@ export class ZcashEngine extends CurrencyEngine<
   otherData!: ZcashWalletOtherData
   synchronizerStatus!: ZcashSynchronizerStatus
   availableZatoshi!: string
+  balances: ZcashBalanceEvent
   initializer!: ZcashInitializerConfig
   progressRatio!: {
     seenFirstUpdate: boolean
@@ -69,6 +71,12 @@ export class ZcashEngine extends CurrencyEngine<
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
+    this.balances = {
+      transparentAvailableZatoshi: '0',
+      transparentTotalZatoshi: '0',
+      saplingAvailableZatoshi: '0',
+      saplingTotalZatoshi: '0'
+    }
 
     this.started = false
   }
@@ -103,9 +111,25 @@ export class ZcashEngine extends CurrencyEngine<
       this.synchronizerStatus = payload.name
     })
     this.synchronizer.on('balanceChanged', async payload => {
-      if (payload.totalZatoshi === '-1') return
-      this.availableZatoshi = payload.availableZatoshi
-      this.updateBalance(this.currencyInfo.currencyCode, payload.totalZatoshi)
+      const {
+        transparentAvailableZatoshi,
+        transparentTotalZatoshi,
+        saplingAvailableZatoshi,
+        saplingTotalZatoshi
+      } = payload
+
+      // Transparent funds will be autoshielded so the available balance should only reflect the chielded balances
+      this.availableZatoshi = saplingAvailableZatoshi
+      this.balances = {
+        transparentAvailableZatoshi,
+        transparentTotalZatoshi,
+        saplingAvailableZatoshi,
+        saplingTotalZatoshi
+      }
+
+      const total = add(transparentTotalZatoshi, saplingTotalZatoshi)
+
+      this.updateBalance(this.currencyInfo.currencyCode, total)
     })
     this.synchronizer.on('transactionsChanged', async payload => {
       const { transactions } = payload
