@@ -443,6 +443,15 @@ export const asUnfreezeV2BalanceContract = asObject({
   type: asValue('UnfreezeBalanceV2Contract')
 })
 
+export const asWithdrawExpireUnfreezeContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      owner_address: asString
+    })
+  }),
+  type: asValue('WithdrawExpireUnfreezeContract')
+})
+
 export interface TronGridQuery<T> {
   data: T[]
   success: boolean

@@ -54,6 +54,7 @@ import {
   asTRXTransferContract,
   asUnfreezeBalanceContract,
   asUnfreezeV2BalanceContract,
+  asWithdrawExpireUnfreezeContract,
   CalcTxFeeOpts,
   ReferenceBlock,
   SafeTronWalletInfo,
@@ -706,6 +707,51 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           ourReceiveAddresses,
           signedTx: '',
           txid,
+          walletId: this.walletId
+        }
+
+        this.addTransaction(currencyCode, edgeTransaction)
+        return out
+      }
+
+      // Parse WithdrawExpireUnfreeze transactions
+      const withdrawExpireUnfreezeTransaction = asMaybe(
+        asWithdrawExpireUnfreezeContract
+      )(contract)
+      if (withdrawExpireUnfreezeTransaction != null) {
+        const {
+          parameter: {
+            value: { owner_address: fromAddress }
+          }
+        } = withdrawExpireUnfreezeTransaction
+
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
+        }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+        const { currencyCode } = this.currencyInfo
+
+        // The withdrawn amount isn't included in this object. We only know it if we created the TX.
+        const sentTx = this.transactionList[currencyCode].find(
+          edgeTx => edgeTx.txid === txid
+        )
+        if (sentTx == null) break
+        const nativeAmount = sentTx.nativeAmount
+
+        const edgeTransaction: EdgeTransaction = {
+          txid,
+          date: Math.floor(timestamp / 1000),
+          currencyCode,
+          blockHeight: blockNumber,
+          nativeAmount,
+          isSend: false,
+          memos: [],
+          networkFee: feeNativeAmount,
+          ourReceiveAddresses,
+          signedTx: '',
           walletId: this.walletId
         }
 
