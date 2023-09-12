@@ -179,9 +179,9 @@ export class PiratechainEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.initData()
-    this.synchronizer = await this.makeSynchronizer(this.initializer)
-    await this.synchronizer.start()
-    this.initSubscriptions()
+    // this.synchronizer = await this.makeSynchronizer(this.initializer)
+    // await this.synchronizer.start()
+    // this.initSubscriptions()
     await super.startEngine()
   }
 
@@ -283,7 +283,7 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    await this.synchronizer.stop()
+    // await this.synchronizer.stop()
     await super.killEngine()
   }
 
@@ -296,12 +296,13 @@ export class PiratechainEngine extends CurrencyEngine<
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    this.synchronizer
-      .rescan(this.walletInfo.keys.birthdayHeight)
-      .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
+    // this.synchronizer
+    //   .rescan(this.walletInfo.keys.birthdayHeight)
+    //   .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
   }
 
   async getMaxSpendable(): Promise<string> {
+    if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const spendableBalance = sub(
       this.availableZatoshi,
       this.networkInfo.defaultNetworkFee
@@ -379,6 +380,8 @@ export class PiratechainEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
+    if (!this.isSynced())
+      throw new Error('Cannot broadcast until wallet is synced')
     const { memos } = edgeTransaction
     const piratechainPrivateKeys = asPiratechainPrivateKeys(this.pluginId)(
       opts?.privateKeys
@@ -447,15 +450,16 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafePiratechainWalletInfo(walletInfo)
-  const { makeSynchronizer } =
-    env.nativeIo['edge-currency-accountbased'].piratechain
+  // const { makeSynchronizer } =
+  //   env.nativeIo['edge-currency-accountbased'].piratechain ?? {}
 
   const engine = new PiratechainEngine(
     env,
     tools,
     safeWalletInfo,
     opts,
-    makeSynchronizer
+    // makeSynchronizer
+    () => {}
   )
 
   // Do any async initialization necessary for the engine
