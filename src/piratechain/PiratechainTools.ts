@@ -1,5 +1,5 @@
 import { div } from 'biggystring'
-import { entropyToMnemonic, validateMnemonic } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   EdgeCurrencyInfo,
@@ -12,28 +12,32 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import { Tools as ToolsType } from 'react-native-zcash'
+import {
+  AddressTool as AddressToolType,
+  KeyTool as KeyToolType
+} from 'react-native-piratechain'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import {
-  asSafeZcashWalletInfo,
-  asZcashPrivateKeys,
-  asZecPublicKey,
-  UnifiedViewingKey,
-  ZcashNetworkInfo
-} from './zcashTypes'
+  asArrrPublicKey,
+  asPiratechainPrivateKeys,
+  PiratechainNetworkInfo,
+  UnifiedViewingKey
+} from './piratechainTypes'
 
-export class ZcashTools implements EdgeCurrencyTools {
+export class PiratechainTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
-  networkInfo: ZcashNetworkInfo
-  nativeTools: typeof ToolsType
+  networkInfo: PiratechainNetworkInfo
 
-  constructor(env: PluginEnvironment<ZcashNetworkInfo>) {
+  KeyTool: typeof KeyToolType
+  AddressTool: typeof AddressToolType
+
+  constructor(env: PluginEnvironment<PiratechainNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
@@ -44,27 +48,15 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (RNAccountbased == null) {
       throw new Error('Need opts')
     }
-    const { Tools } = RNAccountbased.zcash
+    const { KeyTool, AddressTool } = RNAccountbased.piratechain
 
-    this.nativeTools = Tools
-  }
-
-  async getDisplayPrivateKey(
-    privateWalletInfo: EdgeWalletInfo
-  ): Promise<string> {
-    const { pluginId } = this.currencyInfo
-    const keys = asZcashPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
-  }
-
-  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
-    const { keys } = asSafeZcashWalletInfo(publicWalletInfo)
-    return keys.publicKey
+    this.KeyTool = KeyTool
+    this.AddressTool = AddressTool
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
     try {
-      return await this.nativeTools.getBirthdayHeight(
+      return await this.KeyTool.getBirthdayHeight(
         this.networkInfo.rpcNode.defaultHost,
         this.networkInfo.rpcNode.defaultPort
       )
@@ -74,7 +66,10 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return await this.nativeTools.isValidAddress(address)
+    return (
+      (await this.AddressTool.isValidShieldedAddress(address)) ||
+      (await this.AddressTool.isValidTransparentAddress(address))
+    )
   }
 
   // will actually use MNEMONIC version of private key
@@ -86,6 +81,13 @@ export class ZcashTools implements EdgeCurrencyTools {
     const isValid = validateMnemonic(userInput)
     if (!isValid)
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
+    const hexBuffer = await mnemonicToSeed(userInput)
+    const hex = hexBuffer.toString('hex')
+    const spendKey = await this.KeyTool.deriveSpendingKey(
+      hex,
+      this.networkInfo.rpcNode.networkName
+    )
+    if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
 
     // Get current network height for the birthday height
     const currentNetworkHeight = await this.getNewWalletBirthdayBlockheight()
@@ -106,6 +108,7 @@ export class ZcashTools implements EdgeCurrencyTools {
 
     return {
       [`${pluginId}Mnemonic`]: userInput,
+      [`${pluginId}SpendKey`]: spendKey,
       [`${pluginId}BirthdayHeight`]: height
     }
   }
@@ -122,7 +125,7 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async checkPublicKey(publicKey: JsonObject): Promise<boolean> {
     try {
-      asZecPublicKey(publicKey)
+      asArrrPublicKey(publicKey)
       return true
     } catch (err) {
       return false
@@ -131,23 +134,32 @@ export class ZcashTools implements EdgeCurrencyTools {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const { pluginId } = this.currencyInfo
-    const zcashPrivateKeys = asZcashPrivateKeys(pluginId)(walletInfo.keys)
+    const piratechainPrivateKeys = asPiratechainPrivateKeys(pluginId)(
+      walletInfo.keys
+    )
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
-    const mnemonic = zcashPrivateKeys.mnemonic
+    const mnemonic = piratechainPrivateKeys.mnemonic
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const unifiedViewingKey: UnifiedViewingKey =
-      await this.nativeTools.deriveViewingKey(
-        mnemonic,
+    const hexBuffer = await mnemonicToSeed(mnemonic)
+    const hex = hexBuffer.toString('hex')
+    const unifiedViewingKeys: UnifiedViewingKey =
+      await this.KeyTool.deriveViewingKey(
+        hex,
         this.networkInfo.rpcNode.networkName
       )
+    const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
+      unifiedViewingKeys.extfvk,
+      this.networkInfo.rpcNode.networkName
+    )
     return {
-      birthdayHeight: zcashPrivateKeys.birthdayHeight,
-      publicKey: unifiedViewingKey
+      birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+      publicKey: shieldedAddress,
+      unifiedViewingKeys
     }
   }
 
@@ -206,9 +218,9 @@ export class ZcashTools implements EdgeCurrencyTools {
 }
 
 export async function makeCurrencyTools(
-  env: PluginEnvironment<ZcashNetworkInfo>
-): Promise<ZcashTools> {
-  return new ZcashTools(env)
+  env: PluginEnvironment<PiratechainNetworkInfo>
+): Promise<PiratechainTools> {
+  return new PiratechainTools(env)
 }
 
-export { makeCurrencyEngine } from './ZcashEngine'
+export { makeCurrencyEngine } from './PiratechainEngine'

@@ -7,13 +7,13 @@ import {
   Synchronizer as PirateSynchronizer
 } from 'react-native-piratechain'
 import {
-  AddressTool as ZcashAddressTool,
-  KeyTool as ZcashKeyTool,
   makeSynchronizer as ZcashMakeSynchronizer,
-  Synchronizer as ZcashSynchronizer
+  Synchronizer as ZcashSynchronizer,
+  Tools as ZcashNativeTools
 } from 'react-native-zcash'
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
+import { PiratechainInitializerConfig } from './piratechain/piratechainTypes'
 import { ZcashInitializerConfig } from './zcash/zcashTypes'
 
 const { EdgeCurrencyAccountbasedModule } = NativeModules
@@ -22,63 +22,88 @@ const { sourceUri } = EdgeCurrencyAccountbasedModule.getConstants()
 export const pluginUri = sourceUri
 export const debugUri = 'http://localhost:8082/edge-currency-accountbased.js'
 
-type Synchronizer = ZcashSynchronizer | PirateSynchronizer
+const makePiratechainSynchronizer = async (
+  config: PiratechainInitializerConfig
+): Promise<PirateSynchronizer> => {
+  const realSynchronizer = await PiratechainMakeSynchronizer(config)
 
-const makePluginSynchronizer = (pluginId: string) => {
-  return async (config: ZcashInitializerConfig) => {
-    let realSynchronizer: Synchronizer
-
-    switch (pluginId) {
-      case 'piratechain':
-        realSynchronizer = await PiratechainMakeSynchronizer(config)
-        break
-      case 'zcash':
-        realSynchronizer = await ZcashMakeSynchronizer(config)
-        break
-      default:
-        throw new Error(`${pluginId} makeSynchronizer does not exist`)
+  realSynchronizer.subscribe({
+    onStatusChanged(status): void {
+      emit(out, 'statusChanged', status)
+    },
+    onUpdate(event): void {
+      emit(out, 'update', event)
     }
+  })
 
-    realSynchronizer.subscribe({
-      onStatusChanged(status): void {
-        emit(out, 'statusChanged', status)
-      },
-      onUpdate(event): void {
-        emit(out, 'update', event)
-      }
-    })
+  const out: PirateSynchronizer = bridgifyObject({
+    // @ts-expect-error
+    on: onMethod,
+    start: async () => {
+      return await realSynchronizer.start()
+    },
+    getTransactions: async blockRange => {
+      return await realSynchronizer.getTransactions(blockRange)
+    },
+    rescan: height => {
+      return realSynchronizer.rescan(height)
+    },
+    sendToAddress: async spendInfo => {
+      return await realSynchronizer.sendToAddress(spendInfo)
+    },
+    getShieldedBalance: async () => {
+      return await realSynchronizer.getShieldedBalance()
+    },
+    stop: async () => {
+      return await realSynchronizer.stop()
+    }
+  })
+  return out
+}
 
-    const out: Synchronizer = bridgifyObject({
-      // @ts-expect-error
-      on: onMethod,
-      start: async () => {
-        return await realSynchronizer.start()
-      },
-      getTransactions: async blockRange => {
-        return await realSynchronizer.getTransactions(blockRange)
-      },
-      rescan: height => {
-        return realSynchronizer.rescan(height)
-      },
-      sendToAddress: async spendInfo => {
-        return await realSynchronizer.sendToAddress(spendInfo)
-      },
-      getShieldedBalance: async () => {
-        return await realSynchronizer.getShieldedBalance()
-      },
-      stop: async () => {
-        return await realSynchronizer.stop()
-      }
-    })
-    return out
-  }
+const makeZcashSynchronizer = async (
+  config: ZcashInitializerConfig
+): Promise<ZcashSynchronizer> => {
+  const realSynchronizer = await ZcashMakeSynchronizer(config)
+
+  realSynchronizer.subscribe({
+    onStatusChanged(status): void {
+      emit(out, 'statusChanged', status)
+    },
+    onUpdate(event): void {
+      emit(out, 'update', event)
+    }
+  })
+
+  const out: ZcashSynchronizer = bridgifyObject({
+    // @ts-expect-error
+    on: onMethod,
+    deriveUnifiedAddress: async () => {
+      return await realSynchronizer.deriveUnifiedAddress()
+    },
+    getTransactions: async blockRange => {
+      return await realSynchronizer.getTransactions(blockRange)
+    },
+    rescan: () => {
+      return realSynchronizer.rescan()
+    },
+    sendToAddress: async spendInfo => {
+      return await realSynchronizer.sendToAddress(spendInfo)
+    },
+    getBalance: async () => {
+      return await realSynchronizer.getBalance()
+    },
+    stop: async () => {
+      return await realSynchronizer.stop()
+    }
+  })
+  return out
 }
 
 export function makePluginIo(): EdgeOtherMethods {
   bridgifyObject(PiratechainKeyTool)
   bridgifyObject(PiratechainAddressTool)
-  bridgifyObject(ZcashKeyTool)
-  bridgifyObject(ZcashAddressTool)
+  bridgifyObject(ZcashNativeTools)
 
   return {
     async fetchText(uri: string, opts: Object) {
@@ -96,15 +121,14 @@ export function makePluginIo(): EdgeOtherMethods {
     piratechain: bridgifyObject({
       KeyTool: PiratechainKeyTool,
       AddressTool: PiratechainAddressTool,
-      async makeSynchronizer(config: ZcashInitializerConfig) {
-        return await makePluginSynchronizer('piratechain')(config)
+      async makeSynchronizer(config: PiratechainInitializerConfig) {
+        return await makePiratechainSynchronizer(config)
       }
     }),
     zcash: bridgifyObject({
-      KeyTool: ZcashKeyTool,
-      AddressTool: ZcashAddressTool,
+      Tools: ZcashNativeTools,
       async makeSynchronizer(config: ZcashInitializerConfig) {
-        return await makePluginSynchronizer('zcash')(config)
+        return await makeZcashSynchronizer(config)
       }
     })
   }

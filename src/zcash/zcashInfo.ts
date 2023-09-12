@@ -12,7 +12,6 @@ const networkInfo: ZcashNetworkInfo = {
   },
   defaultBirthday: 1310000,
   defaultNetworkFee: '1000', // hardcoded default ZEC fee
-  nativeSdk: 'zcash',
   transactionQueryLimit: 999
 }
 
@@ -22,6 +21,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'zcash',
   requiredConfirmations: 10,
   unsafeBroadcastTx: true,
+  unsafeSyncNetwork: true,
   walletType: 'wallet:zcash',
 
   // Explorers:
