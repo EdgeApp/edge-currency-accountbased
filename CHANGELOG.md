@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 2.3.0 (2023-09-12)
+
+- added: Support the latest core memo API's.
+
 ## 2.2.4 (2023-09-08)
 
 - fixed: Bug prevent Filecoin spend transactions from being saved in the wallet (by saveTx)
