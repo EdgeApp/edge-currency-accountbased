@@ -55,7 +55,6 @@ export class ZcashEngine extends CurrencyEngine<
   makeSynchronizer: (config: InitializerConfig) => Promise<ZcashSynchronizer>
 
   // Synchronizer management
-  started: boolean
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: ZcashSynchronizer
 
@@ -77,8 +76,6 @@ export class ZcashEngine extends CurrencyEngine<
       saplingAvailableZatoshi: '0',
       saplingTotalZatoshi: '0'
     }
-
-    this.started = false
   }
 
   setOtherData(raw: any): void {
@@ -204,7 +201,6 @@ export class ZcashEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.engineOn = true
-    this.started = true
     await super.startEngine()
   }
 
@@ -247,7 +243,7 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
-    if (!this.started) return 1000
+    if (!this.engineOn) return 1000
 
     const zcashPrivateKeys = asZcashPrivateKeys(this.currencyInfo.pluginId)(
       opts?.privateKeys
@@ -272,13 +268,12 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    this.started = false
+    await super.killEngine()
     if (this.stopSyncing != null) {
       await this.stopSyncing(1000)
       this.stopSyncing = undefined
     }
     await this.synchronizer?.stop()
-    await super.killEngine()
   }
 
   async clearBlockchainCache(): Promise<void> {
