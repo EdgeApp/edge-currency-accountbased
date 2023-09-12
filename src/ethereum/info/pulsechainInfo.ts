@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   a1077a294dde1b09bb078844df40758a5d0f9a27: {
@@ -75,21 +76,18 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'PLS',
   displayName: 'PulseChain',
+  memoOptions: evmMemoOptions,
   pluginId: 'pulsechain',
   walletType: 'wallet:pulsechain',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://scan.pulsechain.com/address/%s',
   transactionExplorer: 'https://scan.pulsechain.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'PLS',
       multiplier: '1000000000000000000',
@@ -101,7 +99,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mPLS'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const pulsechain = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

@@ -15,29 +15,32 @@ const networkInfo: BinanceNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'BNB',
   displayName: 'BNB Beacon Chain',
   pluginId: 'binance',
   walletType: 'wallet:binance',
 
-  defaultSettings: {},
-
-  memoMaxLength: 128,
-
+  // Explorers:
   addressExplorer: 'https://explorer.binance.org/address/%s',
   transactionExplorer: 'https://explorer.binance.org/tx/%s',
   blockExplorer: 'https://explorer.binance.org/block/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'BNB',
       multiplier: '100000000',
       symbol: 'B'
     }
   ],
-  metaTokens: [] // Deprecated
+
+  // https://github.com/bnb-chain/javascript-sdk/blob/master/docs/api-docs/classes/bncclient.md#transfer
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 128 }],
+
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 128,
+  memoType: 'text',
+  metaTokens: []
 }
 
 export const binance = makeOuterPlugin<BinanceNetworkInfo, BinanceTools>({

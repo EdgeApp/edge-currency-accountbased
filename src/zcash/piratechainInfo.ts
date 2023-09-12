@@ -19,29 +19,31 @@ const networkInfo: ZcashNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'ARRR',
   displayName: 'Pirate Chain',
   pluginId: 'piratechain',
   requiredConfirmations: 10,
+  unsafeBroadcastTx: true,
   walletType: 'wallet:piratechain',
 
-  defaultSettings: {},
-
+  // Explorers:
   addressExplorer: '',
   transactionExplorer: 'https://explorer.pirate.black/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ARRR',
       multiplier: '100000000',
       symbol: 'P'
     }
   ],
-  metaTokens: [], // Deprecated
 
-  unsafeBroadcastTx: true
+  // Copied from Zcash:
+  memoOptions: [{ type: 'text', maxLength: 512 }],
+
+  // Deprecated:
+  defaultSettings: {},
+  metaTokens: []
 }
 
 export const piratechain = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({

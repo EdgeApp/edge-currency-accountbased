@@ -36,26 +36,29 @@ const networkInfo: TezosNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'XTZ',
   displayName: 'Tezos',
   pluginId: 'tezos',
   walletType: 'wallet:tezos',
 
-  defaultSettings: {},
-
+  // Explorers:
   addressExplorer: 'https://tzstats.com/%s',
   transactionExplorer: 'https://tzstats.com/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'XTZ',
       multiplier: '1000000',
       symbol: 't'
     }
   ],
-  metaTokens: [] // Deprecated
+
+  // No memo support:
+  memoOptions: [],
+
+  // Deprecated:
+  defaultSettings: {},
+  metaTokens: []
 }
 
 export const tezos = makeOuterPlugin<TezosNetworkInfo, TezosTools>({

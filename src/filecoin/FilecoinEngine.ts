@@ -23,6 +23,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import { FilecoinTools } from './FilecoinTools'
 import {
   asFilecoinPrivateKeys,
@@ -161,7 +162,9 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -192,16 +195,17 @@ export class FilecoinEngine extends CurrencyEngine<
     const txNativeAmount = mul(add(nativeAmount, networkFee), '-1')
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: txNativeAmount,
+      currencyCode,
+      date: 0,
       isSend: true,
+      memos,
+      nativeAmount: txNativeAmount,
       networkFee,
-      ourReceiveAddresses: [],
       otherParams,
+      ourReceiveAddresses: [],
       signedTx: '',
+      txid: '',
       walletId: this.walletId
     }
 
@@ -473,16 +477,17 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: messageDetails.cid,
-      date: messageDetails.timestamp,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: messageDetails.height,
-      nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: messageDetails.timestamp,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
       networkFee,
+      otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams: {},
+      txid: messageDetails.cid,
       walletId: this.walletId
     }
 
@@ -509,16 +514,17 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: message.cid,
-      date: message.block_time,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: message.height,
-      nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: message.block_time,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
       networkFee,
+      otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams: {},
+      txid: message.cid,
       walletId: this.walletId
     }
 

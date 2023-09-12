@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '111111111117dc0aa78b770fa6a738034120c302': {
@@ -1112,21 +1113,18 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'Ethereum',
+  memoOptions: evmMemoOptions,
   pluginId: 'ethereum',
   walletType: 'wallet:ethereum',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://etherscan.io/address/%s',
   transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ETH',
       multiplier: '1000000000000000000',
@@ -1138,7 +1136,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mΞ'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const ethereum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

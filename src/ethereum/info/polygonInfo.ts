@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '2791bca1f2de4661ed88a30c99a7a9449aa84174': {
@@ -190,21 +191,18 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'MATIC',
   displayName: 'Polygon',
+  memoOptions: evmMemoOptions,
   pluginId: 'polygon', // matching mnemonic here
   walletType: 'wallet:polygon',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://polygonscan.com/address/%s',
   transactionExplorer: 'https://polygonscan.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'MATIC',
       multiplier: '1000000000000000000',
@@ -216,7 +214,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mMATIC'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const polygon = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

@@ -26,6 +26,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -483,16 +484,17 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       otherParams.meta.isTransferProcessed = true
 
       const edgeTransaction: EdgeTransaction = {
-        txid: action.action_trace.trx_id,
-        date: this.getUTCDate(action.block_time) / 1000,
-        currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
-        nativeAmount,
+        currencyCode,
+        date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
+        nativeAmount,
         networkFee,
+        otherParams,
         ourReceiveAddresses,
         signedTx: '',
-        otherParams,
+        txid: action.action_trace.trx_id,
         walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
@@ -570,16 +572,17 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       otherParams.meta.isFeeProcessed = true
       const edgeTransaction: EdgeTransaction = {
-        txid: action.action_trace.trx_id,
-        date: this.getUTCDate(action.block_time) / 1000,
-        currencyCode,
         blockHeight: action.block_num > 0 ? action.block_num : 0,
-        nativeAmount,
+        currencyCode,
+        date: this.getUTCDate(action.block_time) / 1000,
         isSend: nativeAmount.startsWith('-'),
+        memos: [],
+        nativeAmount,
         networkFee,
-        signedTx: '',
-        ourReceiveAddresses: [],
         otherParams,
+        ourReceiveAddresses: [],
+        signedTx: '',
+        txid: action.action_trace.trx_id,
         walletId: this.walletId
       }
       this.addTransaction(currencyCode, edgeTransaction)
@@ -1376,6 +1379,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
@@ -1397,8 +1401,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+
     const lockedBalance =
       this.walletLocalData.totalBalances[
         this.networkInfo.balanceCurrencyCodes.locked
@@ -1678,19 +1685,20 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: sub(`-${quantity}`, `${fee}`),
+      currencyCode,
+      date: 0,
       isSend: true,
+      memos,
+      nativeAmount: sub(`-${quantity}`, `${fee}`),
       networkFee: `${fee}`,
-      ourReceiveAddresses: [],
-      signedTx: '',
       otherParams: {
         ...otherParams,
         txParams
       },
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
       walletId: this.walletId
     }
 

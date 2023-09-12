@@ -20,6 +20,7 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -189,15 +190,16 @@ export class PolkadotEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: hash,
-      date,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight,
-      nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
       networkFee: fee,
       ourReceiveAddresses,
       signedTx: '',
+      txid: hash,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
@@ -320,6 +322,7 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     if (
       spendInfo.spendTargets.length === 0 ||
       spendInfo.spendTargets[0].publicAddress == null
@@ -385,7 +388,9 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -482,16 +487,17 @@ export class PolkadotEngine extends CurrencyEngine<
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: mul(totalTxAmount, '-1'),
+      currencyCode,
+      date: 0,
       isSend: true,
+      memos,
+      nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
+      otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
-      otherParams,
+      txid: '',
       walletId: this.walletId
     }
 

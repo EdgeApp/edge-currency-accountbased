@@ -30,6 +30,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'liberland',
   walletType: 'wallet:liberland',
 
+  // Explorers:
   addressExplorer: '',
   transactionExplorer:
     'https://polkadot.js.org/apps/?rpc=wss%%3A%%2F%%2Fmainnet.liberland.org%%2F#/explorer/query/%s',
@@ -42,9 +43,9 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  // Deprecated
+  // Deprecated:
   defaultSettings: {},
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const liberland = makeOuterPlugin<PolkadotNetworkInfo, PolkadotTools>({

@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '60781c2586d68229fde47564546784ab3faca982': {
@@ -207,28 +208,29 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'AVAX',
   displayName: 'Avalanche',
+  memoOptions: evmMemoOptions,
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://snowtrace.io/address/%s',
   transactionExplorer: 'https://snowtrace.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'AVAX',
       multiplier: '1000000000000000000',
       symbol: 'AVAX'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const avalanche = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

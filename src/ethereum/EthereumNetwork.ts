@@ -344,21 +344,22 @@ export class EthereumNetwork {
     if (blockHeight < 0) blockHeight = 0
 
     const edgeTransaction: EdgeTransaction = {
-      txid,
-      date: parseInt(tx.timeStamp),
-      currencyCode,
       blockHeight,
-      nativeAmount,
-      isSend: nativeAmount.startsWith('-'),
-      networkFee,
+      currencyCode,
+      date: parseInt(tx.timeStamp),
       feeRateUsed:
         gasPrice != null
           ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
           : undefined,
-      parentNetworkFee,
-      ourReceiveAddresses,
-      signedTx: '',
+      isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
+      networkFee,
       otherParams,
+      ourReceiveAddresses,
+      parentNetworkFee,
+      signedTx: '',
+      txid,
       walletId: this.walletId
     }
 
@@ -440,17 +441,18 @@ export class EthereumNetwork {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: tokenTransfer.relationships.transaction.data.id,
-      date: tokenTransfer.attributes.blockCreationTime,
-      currencyCode,
       blockHeight,
-      nativeAmount: netNativeAmount,
+      currencyCode,
+      date: tokenTransfer.attributes.blockCreationTime,
       isSend: netNativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount: netNativeAmount,
       networkFee,
-      ourReceiveAddresses,
-      signedTx: '',
-      parentNetworkFee,
       otherParams,
+      ourReceiveAddresses,
+      parentNetworkFee,
+      signedTx: '',
+      txid: tokenTransfer.relationships.transaction.data.id,
       walletId: this.walletId
     }
 

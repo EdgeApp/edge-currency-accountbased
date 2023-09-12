@@ -15,6 +15,7 @@ import {
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asErrorMessage } from '../common/types'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -183,18 +184,19 @@ export class BinanceEngine extends CurrencyEngine<
     if (blockHeight < 0) blockHeight = 0
     const unixTimestamp = new Date(tx.blockTime).getTime() / 1000
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.hash,
-      date: unixTimestamp,
-      currencyCode,
       blockHeight,
-      nativeAmount: netNativeAmount,
+      currencyCode,
+      date: unixTimestamp,
       isSend: netNativeAmount.startsWith('-'),
-      networkFee: nativeNetworkFee,
-      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
-      signedTx: '',
+      memos: [],
       metadata: {
         notes: tx.memo
       },
+      nativeAmount: netNativeAmount,
+      networkFee: nativeNetworkFee,
+      ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
+      signedTx: '',
+      txid: tx.hash,
       walletId: this.walletId
     }
 
@@ -382,7 +384,9 @@ export class BinanceEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress } = spendTarget
@@ -407,10 +411,7 @@ export class BinanceEngine extends CurrencyEngine<
       throw new Error('Binance Beacon Chain token transfers not supported')
     }
 
-    if (edgeSpendInfo.spendTargets[0].otherParams?.uniqueIdentifier != null) {
-      otherParams.memo =
-        edgeSpendInfo.spendTargets[0].otherParams.uniqueIdentifier
-    }
+    otherParams.memo = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const nativeNetworkFee = NETWORK_FEE_NATIVE_AMOUNT
     const ErrorInsufficientFundsMoreBnb = new Error(
@@ -432,16 +433,17 @@ export class BinanceEngine extends CurrencyEngine<
     // Create the unsigned EdgeTransaction
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      memos,
+      nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
+      otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams, // otherParams
+      txid: '', // txid
       walletId: this.walletId
     }
 

@@ -17,26 +17,30 @@ const networkInfo: SolanaNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'SOL',
   displayName: 'Solana',
   pluginId: 'solana',
   walletType: 'wallet:solana',
 
-  defaultSettings: {},
-
+  // Explorers:
   addressExplorer: 'https://explorer.solana.com/address/%s',
   transactionExplorer: 'https://explorer.solana.com/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'SOL',
       multiplier: '1000000000',
       symbol: '◎'
     }
   ],
-  metaTokens: [] // Deprecated
+
+  // https://spl.solana.com/memo
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 32 }],
+
+  // Deprecated:
+  defaultSettings: {},
+  memoType: 'text',
+  metaTokens: []
 }
 
 export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({

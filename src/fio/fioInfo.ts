@@ -48,28 +48,30 @@ const networkInfo: FioNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'FIO',
   displayName: 'FIO',
   pluginId: 'fio',
+  unsafeSyncNetwork: true,
   walletType: 'wallet:fio',
 
-  defaultSettings: { ...networkInfo },
-
+  // Explorers:
   addressExplorer: 'https://fio.bloks.io/key/%s',
   transactionExplorer: 'https://fio.bloks.io/transaction/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'FIO',
       multiplier: '1000000000',
       symbol: 'ᵮ'
     }
   ],
-  metaTokens: [], // Deprecated
 
-  unsafeSyncNetwork: true
+  // No memo support:
+  memoOptions: [],
+
+  // Deprecated:
+  defaultSettings: { ...networkInfo },
+  metaTokens: []
 }
 
 export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({

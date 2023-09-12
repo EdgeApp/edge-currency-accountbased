@@ -14,6 +14,7 @@ import stellarApi, { Transaction } from 'stellar-sdk'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -249,20 +250,21 @@ export class StellarEngine extends CurrencyEngine<
       nativeAmount = '-' + nativeAmount
     }
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.transaction_hash,
-      date,
-      currencyCode,
       blockHeight: rawTx.ledger_attr > 0 ? rawTx.ledger_attr : 0, // API shows no ledger number ??
-      nativeAmount,
+      currencyCode,
+      date,
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
       networkFee,
-      parentNetworkFee: '0',
-      ourReceiveAddresses,
-      signedTx: '',
       otherParams: {
         fromAddress,
         toAddress
       },
+      ourReceiveAddresses,
+      parentNetworkFee: '0',
+      signedTx: '',
+      txid: tx.transaction_hash,
       walletId: this.walletId
     }
 
@@ -469,8 +471,10 @@ export class StellarEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -507,11 +511,6 @@ export class StellarEngine extends CurrencyEngine<
       this.walletLocalData.publicKey,
       this.otherData.accountSequence
     )
-    const spendTarget0 = edgeSpendInfo.spendTargets[0]
-    const memoId: string | undefined =
-      spendTarget0.memo ??
-      spendTarget0.uniqueIdentifier ??
-      spendTarget0.otherParams?.uniqueIdentifier
 
     const feeSetting =
       edgeSpendInfo.networkFeeOption !== undefined &&
@@ -539,9 +538,18 @@ export class StellarEngine extends CurrencyEngine<
         })
       )
     }
-    if (memoId != null) {
-      const memo = stellarApi.Memo.id(memoId)
-      txBuilder = txBuilder.addMemo(memo)
+    for (const memo of memos) {
+      switch (memo.type) {
+        case 'hex':
+          txBuilder = txBuilder.addMemo(stellarApi.Memo.hash(memo.value))
+          break
+        case 'number':
+          txBuilder = txBuilder.addMemo(stellarApi.Memo.id(memo.value))
+          break
+        case 'text':
+          txBuilder = txBuilder.addMemo(stellarApi.Memo.text(memo.value))
+          break
+      }
     }
     const transaction = txBuilder.build()
 
@@ -555,20 +563,21 @@ export class StellarEngine extends CurrencyEngine<
     nativeAmount = `-${nativeAmount}`
     const idInternal = this.pendingTransactionsIndex
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount, // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: nativeAmount.startsWith('-'),
+      memos,
+      nativeAmount, // nativeAmount
       networkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
       otherParams: {
         idInternal,
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress
       },
+      ourReceiveAddresses: [], // ourReceiveAddresses
+      signedTx: '', // signedTx
+      txid: '', // txid
       walletId: this.walletId
     }
     this.pendingTransactionsMap[idInternal] = transaction

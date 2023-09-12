@@ -17,6 +17,7 @@ import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   getDenomination,
@@ -481,15 +482,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount,
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
+          nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses: ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -518,15 +520,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount: mul(feeNativeAmount, '-1'),
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
           isSend: true,
+          memos: [],
+          nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -554,15 +557,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount: mul(nativeAmount, '-1'),
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
           isSend: true,
+          memos: [],
+          nativeAmount: mul(nativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -591,15 +595,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const nativeAmount = sub(unfreezeAmount.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount,
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
+          nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -627,15 +632,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const { currencyCode } = this.currencyInfo
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount: mul(nativeAmount, '-1'),
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
+          memos: [],
           isSend: true,
+          nativeAmount: mul(nativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -668,15 +674,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const nativeAmount = sub(unfreezeBalance.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
-          txid,
-          date: Math.floor(timestamp / 1000),
-          currencyCode,
           blockHeight: blockNumber,
-          nativeAmount,
+          currencyCode,
+          date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
+          memos: [],
+          nativeAmount,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          txid,
           walletId: this.walletId
         }
 
@@ -740,15 +747,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid,
-      date: Math.floor(timestamp / 1000),
-      currencyCode: metaToken.currencyCode,
       blockHeight,
-      nativeAmount,
+      currencyCode: metaToken.currencyCode,
+      date: Math.floor(timestamp / 1000),
       isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
       networkFee: '0',
       ourReceiveAddresses,
       signedTx: '',
+      txid,
       walletId: this.walletId
     }
 
@@ -1106,20 +1114,21 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: 0,
-      nativeAmount: stakedAmount.nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
       isSend: stakedAmount.nativeAmount.startsWith('-'),
-      networkFee,
-      ourReceiveAddresses: [],
-      signedTx: '',
-      otherParams: txOtherParams,
-      walletId: this.walletId,
+      memos: [],
       metadata: {
         notes: resource
-      }
+      },
+      nativeAmount: stakedAmount.nativeAmount,
+      networkFee,
+      otherParams: txOtherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
+      walletId: this.walletId
     }
 
     return edgeTransaction
@@ -1148,20 +1157,21 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: 0,
-      nativeAmount: mul(nativeAmount, '-1'),
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
       isSend: true,
-      networkFee,
-      ourReceiveAddresses: [],
-      signedTx: '',
-      otherParams: txOtherParams,
-      walletId: this.walletId,
+      memos: [],
       metadata: {
         notes: resource
-      }
+      },
+      nativeAmount: mul(nativeAmount, '-1'),
+      networkFee,
+      otherParams: txOtherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
+      walletId: this.walletId
     }
 
     return edgeTransaction
@@ -1195,20 +1205,21 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const networkFee = await this.calcTxFee({ unsignedTxHex: transactionHex })
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: 0,
-      nativeAmount: stakedAmount.nativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
       isSend: stakedAmount.nativeAmount.startsWith('-'),
-      networkFee,
-      ourReceiveAddresses: [],
-      signedTx: '',
-      otherParams: txOtherParams,
-      walletId: this.walletId,
+      memos: [],
       metadata: {
         notes: resource
-      }
+      },
+      nativeAmount: stakedAmount.nativeAmount,
+      networkFee,
+      otherParams: txOtherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
+      walletId: this.walletId
     }
 
     return edgeTransaction
@@ -1251,6 +1262,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
+    const { memos = [] } = spendInfo
     const balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
@@ -1259,8 +1272,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { publicAddress, memo } = spendInfo.spendTargets[0]
-    const note = memo === '' ? undefined : memo
+    const { publicAddress } = spendInfo.spendTargets[0]
+    const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     if (publicAddress == null || spendInfo.currencyCode == null) {
       throw new Error('Error: need recipient address and/or currencyCode')
@@ -1317,6 +1330,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
+
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
       let action:
@@ -1338,6 +1353,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
       edgeSpendInfoIn
     )
+    const { memos = [] } = edgeSpendInfo
 
     const isTokenTransfer = currencyCode !== this.currencyInfo.currencyCode
 
@@ -1346,7 +1362,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw new Error('Error: only one output allowed')
     }
 
-    const { nativeAmount, publicAddress, otherParams, memo } =
+    const { nativeAmount, publicAddress, otherParams } =
       edgeSpendInfo.spendTargets[0]
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -1361,7 +1377,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       ? this.allTokens.find(token => token.currencyCode === currencyCode)
       : undefined
 
-    const note = memo === '' ? undefined : memo
+    const note = memos[0]?.type === 'text' ? memos[0].value : undefined
 
     const txTransferParams: TronTransferParams = {
       currencyCode,
@@ -1422,16 +1438,17 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     // **********************************
     // Create the unsigned EdgeTransaction
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
       blockHeight: 0, // blockHeight
-      nativeAmount: mul(edgeNativeAmount, '-1'), // nativeAmount
+      currencyCode, // currencyCode
+      date: 0, // date
       isSend: true,
+      memos,
+      nativeAmount: mul(edgeNativeAmount, '-1'), // nativeAmount
       networkFee, // networkFee
+      otherParams: txOtherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      otherParams: txOtherParams, // otherParams
+      txid: '', // txid
       walletId: this.walletId
     }
 

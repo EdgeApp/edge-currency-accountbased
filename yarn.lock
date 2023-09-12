@@ -3471,10 +3471,10 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^1.3.7:
-  version "1.3.7"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.3.7.tgz#2f31bb92332593c045d7894843fd7deb7aa411f3"
-  integrity sha512-hHCkJciJpcSRPzSbPKc2CS/Ngjd6PuST4PhR9Uaz9b1TyVr522qYKndQzKsgDeGP/QNnyV35OWbpghMK6a4WTA==
+edge-core-js@^1.6.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.6.0.tgz#3a381faa3a483f631b3380e00615a22b2004ed52"
+  integrity sha512-y6nfz49ALKmsnyAkjBn5s5UNS7hEU3PhtPEoXDo6sOVgidEplcMMwUa5vEw15qcZnTxYmvgDCaNbj2UAxzlhxg==
   dependencies:
     aes-js "^3.1.0"
     base-x "^4.0.0"
@@ -3482,7 +3482,7 @@ edge-core-js@^1.3.7:
     cleaners "^0.3.14"
     currency-codes "^1.1.2"
     disklet "^0.5.2"
-    edge-sync-client "^0.2.7"
+    edge-sync-client "^0.2.8"
     elliptic "^6.4.0"
     hash.js "^1.1.7"
     hmac-drbg "^1.0.1"
@@ -3493,13 +3493,13 @@ edge-core-js@^1.3.7:
     rfc4648 "^1.4.0"
     scrypt-js "^2.0.3"
     serverlet "^0.1.2"
-    yaob "^0.3.9"
+    yaob "^0.3.11"
     yavent "^0.1.3"
 
-edge-sync-client@^0.2.7:
-  version "0.2.7"
-  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.7.tgz#57041f1a17565f24750803a99aaea517361fe9e1"
-  integrity sha512-ySWvsvHisg3e5gV/KBQymt0Fos1Nqupb6fbvxn5YXM5SmsOWz2iGRqocSc/Qxyd85WV7G/DjpJ8zWVqf0eUTrg==
+edge-sync-client@^0.2.8:
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/edge-sync-client/-/edge-sync-client-0.2.8.tgz#150c9d97676b5ddd158efd38565de1be29e525bc"
+  integrity sha512-5iaVYvws4fEk9gSkijo98nh46wyT2D0YSAYzwAyM4v/oHu+tVa18WrdGC+aP4HZVcrsg/LzrLu/NX9JyTsW9Cw==
   dependencies:
     base-x "^1.0.4"
     cleaners "^0.3.9"
@@ -7786,12 +7786,7 @@ tslib@^1.8.1, tslib@^1.9.0:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
-tslib@^2.0.3, tslib@^2.1.0:
-  version "2.5.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.5.0.tgz#42bfed86f5787aeb41d031866c8f402429e0fddf"
-  integrity sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg==
-
-tslib@^2.5.0, tslib@^2.5.3:
+tslib@^2.0.3, tslib@^2.1.0, tslib@^2.5.0, tslib@^2.5.3:
   version "2.5.3"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.5.3.tgz#24944ba2d990940e6e982c4bea147aba80209913"
   integrity sha512-mSxlJJwl3BMEQCUNnxXBU9jP4JBktcEGhURcPR6VQVlnP0FdDEsIaz0C35dXNGLyRfrATNofF0F5p2KPxQgB+w==
@@ -8331,15 +8326,10 @@ ws@^7.4.5:
   resolved "https://registry.yarnpkg.com/ws/-/ws-7.5.6.tgz#e59fc509fb15ddfb65487ee9765c5a51dec5fe7b"
   integrity sha512-6GLgCqo2cy2A2rjCNFlxQS6ZljG/coZfZXclldI8FB/1G3CCI36Zd8xy2HrFVACi8tfk5XrgLQEk+P0Tnz9UcA==
 
-ws@^8.13.0:
+ws@^8.13.0, ws@^8.2.2, ws@^8.4.2, ws@^8.8.1:
   version "8.13.0"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.13.0.tgz#9a9fb92f93cf41512a0735c8f4dd09b8a1211cd0"
   integrity sha512-x9vcZYTrFPC7aSIbj7sRCYo7L/Xb8Iy+pW0ng0wt2vCJv7M9HOMy0UoN3rr+IFC7hb7vXoqS+P9ktyLLLhO+LA==
-
-ws@^8.2.2, ws@^8.4.2, ws@^8.8.1:
-  version "8.11.0"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-8.11.0.tgz#6a0d36b8edfd9f96d8b25683db2f8d7de6e8e143"
-  integrity sha512-HPG3wQd9sNQoT9xHyNCXoDUa+Xw/VevmY9FoHyQ+g+rrMn4j6FB4np7Z0OhdTgjx6MgQLK7jwSy1YecU1+4Asg==
 
 xhr2@^0.1.4:
   version "0.1.4"
@@ -8391,10 +8381,10 @@ yaml@^1.10.0, yaml@^1.10.2:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz#2301c5ffbf12b467de8da2333a459e29e7920e4b"
   integrity sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==
 
-yaob@^0.3.6, yaob@^0.3.9:
-  version "0.3.10"
-  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.10.tgz#fb86d54d564ff6014f6f52fafc4219b6c068f613"
-  integrity sha512-QU+03xtNssGOw01Tten5zlfNcrsMPQjy0Nr/gueVEbXYsXHgYeDKXNLgPNMdYdTY7qkvLj8IGLOk/MKtsUh+Fg==
+yaob@^0.3.11, yaob@^0.3.6:
+  version "0.3.11"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.11.tgz#54dc4e03f5edabf7a0701c57e73e97cc69d2fc42"
+  integrity sha512-RRMKxWsjMGF9X7fyPny0w3icGriQCCT7FMtNrmxxyjxQIQn8GB4+CT4SWpgUca82RBvjRt5pRqKmbnvmMfKc9A==
   dependencies:
     rfc4648 "^1.1.0"
 

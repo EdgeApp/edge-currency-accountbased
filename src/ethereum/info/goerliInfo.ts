@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {}
 
@@ -108,21 +109,18 @@ const defaultSettings: any = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
+  canReplaceByFee: true,
   currencyCode: 'GOR',
   displayName: 'Goerli Testnet',
+  memoOptions: evmMemoOptions,
   pluginId: 'goerli',
   walletType: 'wallet:goerli',
-  memoType: 'hex',
 
-  canReplaceByFee: true,
-  defaultSettings,
-
+  // Explorers:
   addressExplorer: 'https://etherscan.io/address/%s',
   transactionExplorer: 'https://etherscan.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'GOR',
       multiplier: '1000000000000000000',
@@ -134,7 +132,11 @@ export const currencyInfo: EdgeCurrencyInfo = {
       symbol: 'mG'
     }
   ],
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+
+  // Deprecated:
+  defaultSettings,
+  memoType: 'hex',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const goerli = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({

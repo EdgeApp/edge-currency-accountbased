@@ -26,21 +26,16 @@ const networkInfo: AlgorandNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'ALGO',
   displayName: 'Algorand Testnet',
   pluginId: 'algorandtestnet',
   walletType: 'wallet:algorandtestnet',
 
-  defaultSettings: { customFeeSettings: ['fee'] },
-
-  memoType: 'text',
-
+  // Explorers:
   addressExplorer: 'https://testnet.algoexplorer.io/address/%s',
   transactionExplorer: 'https://testnet.algoexplorer.io/tx/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'ALGO',
       multiplier: '1000000',
@@ -48,7 +43,13 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+  // https://developer.algorand.org/docs/get-details/transactions/transactions/
+  memoOptions: [{ type: 'text', memoName: 'note', maxLength: 1000 }],
+
+  // Deprecated:
+  defaultSettings: { customFeeSettings: ['fee'] },
+  memoType: 'text',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const algorandtestnet = makeOuterPlugin<

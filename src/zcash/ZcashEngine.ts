@@ -12,6 +12,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { ZcashTools } from './ZcashTools'
 import {
@@ -255,16 +256,17 @@ export class ZcashEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.rawTransactionId,
-      date: tx.blockTimeInSeconds,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.minedHeight,
-      nativeAmount: netNativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: tx.blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount: netNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
+      otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams: {},
+      txid: tx.rawTransactionId,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
@@ -300,8 +302,10 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -330,27 +334,19 @@ export class ZcashEngine extends CurrencyEngine<
     // **********************************
     // Create the unsigned EdgeTransaction
 
-    const spendTargets = edgeSpendInfo.spendTargets.map(si => ({
-      uniqueIdentifier: si.uniqueIdentifier,
-      memo: si.memo,
-      nativeAmount: si.nativeAmount ?? '0',
-      currencyCode,
-      publicAddress
-    }))
-
     const txNativeAmount = mul(totalTxAmount, '-1')
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount: txNativeAmount,
+      currencyCode,
+      date: 0,
       isSend: true,
+      memos,
+      nativeAmount: txNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      spendTargets,
+      txid: '',
       walletId: this.walletId
     }
 
@@ -366,6 +362,7 @@ export class ZcashEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
+    const { memos } = edgeTransaction
     const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
       opts?.privateKeys
     )
@@ -375,6 +372,7 @@ export class ZcashEngine extends CurrencyEngine<
     )
       throw new Error('Invalid spend targets')
 
+    const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
     const txParams: ZcashSpendInfo = {
       zatoshi: sub(
@@ -382,7 +380,7 @@ export class ZcashEngine extends CurrencyEngine<
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
-      memo: spendTarget.memo ?? spendTarget.uniqueIdentifier ?? '',
+      memo,
       fromAccountIndex: 0,
       spendingKey: zcashPrivateKeys.spendKey
     }

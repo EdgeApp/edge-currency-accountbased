@@ -110,21 +110,16 @@ export const networkInfo: TronNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'TRX',
   displayName: 'Tron',
   pluginId: 'tron',
   walletType: 'wallet:tron',
 
-  defaultSettings: {},
-
-  memoType: 'text',
-
+  // Explorers:
   addressExplorer: 'https://tronscan.org/#/address/%s',
   transactionExplorer: 'https://tronscan.org/#/transaction/%s',
 
   denominations: [
-    // An array of Objects of the possible denominations for this currency
     {
       name: 'TRX',
       multiplier: '1000000',
@@ -132,7 +127,13 @@ export const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  metaTokens: makeMetaTokens(builtinTokens) // Deprecated
+  // https://developers.tron.network/v3.7/docs/how-to-build-a-transaction-locally
+  memoOptions: [{ type: 'text', memoName: 'data', maxLength: 10 }],
+
+  // Deprecated:
+  defaultSettings: {},
+  memoType: 'text',
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({

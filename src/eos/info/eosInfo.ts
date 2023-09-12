@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import type { EosNetworkInfo } from '../eosTypes'
 import { eosOtherMethodNames } from '../eosTypes'
+import { eosMemoOptions } from './eosCommonInfo'
 
 // ----EOSIO MAIN NET----
 export const eosNetworkInfo: EosNetworkInfo = {
@@ -27,33 +28,30 @@ export const eosNetworkInfo: EosNetworkInfo = {
   uriProtocol: 'eos'
 }
 
-const denominations = [
-  // An array of Objects of the possible denominations for this currency
-  {
-    name: 'EOS',
-    multiplier: '10000',
-    symbol: 'E'
-  }
-]
-
 export const eosCurrencyInfo: EdgeCurrencyInfo = {
-  // Basic currency information:
   currencyCode: 'EOS',
   displayName: 'EOS',
+  memoOptions: eosMemoOptions,
   pluginId: 'eos',
+  unsafeBroadcastTx: true,
   walletType: 'wallet:eos',
 
-  defaultSettings: {},
-
-  memoMaxLength: 256,
-
+  // Explorers:
   addressExplorer: 'https://bloks.io/account/%s',
   transactionExplorer: 'https://bloks.io/transaction/%s',
 
-  denominations,
-  metaTokens: [], // Deprecated
+  denominations: [
+    {
+      name: 'EOS',
+      multiplier: '10000',
+      symbol: 'E'
+    }
+  ],
 
-  unsafeBroadcastTx: true
+  // Deprecated:
+  defaultSettings: {},
+  memoMaxLength: 256,
+  metaTokens: []
 }
 
 export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({

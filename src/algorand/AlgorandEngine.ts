@@ -14,6 +14,7 @@ import {
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
   EdgeGetActivationAssetsResults,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeToken,
   EdgeTransaction,
@@ -26,6 +27,8 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { upgradeMemos } from '../common/upgradeMemos'
+import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -241,12 +244,13 @@ export class AlgorandEngine extends CurrencyEngine<
 
   processAlgorandTransaction(tx: BaseTransaction): void {
     const {
-      fee,
       'confirmed-round': confirmedRound,
-      id,
       'round-time': roundTime,
-      sender,
-      'tx-type': txType
+      'tx-type': txType,
+      fee,
+      id,
+      note,
+      sender
     } = tx
 
     let currencyCode: string
@@ -330,17 +334,36 @@ export class AlgorandEngine extends CurrencyEngine<
       }
     }
 
+    const memos: EdgeMemo[] = []
+    if (note != null) {
+      const data = base64.parse(note)
+      try {
+        memos.push({
+          memoName: 'note',
+          type: 'text',
+          value: utf8.stringify(data)
+        })
+      } catch (e) {
+        memos.push({
+          memoName: 'note',
+          type: 'hex',
+          value: base16.stringify(data).toLowerCase()
+        })
+      }
+    }
+
     const edgeTransaction: EdgeTransaction = {
-      txid: id,
-      date: roundTime,
-      currencyCode,
       blockHeight: confirmedRound,
-      nativeAmount,
+      currencyCode,
+      date: roundTime,
       isSend,
+      memos,
+      nativeAmount,
       networkFee,
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
+      txid: id,
       walletId: this.walletId
     }
 
@@ -460,6 +483,7 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     let balance = this.getBalance({
       currencyCode: spendInfo.currencyCode
     })
@@ -508,8 +532,10 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
 
     const spendableAlgoBalance = sub(
       this.getBalance({
@@ -522,11 +548,8 @@ export class AlgorandEngine extends CurrencyEngine<
       throw new Error('Error: only one output allowed')
     }
 
-    const {
-      nativeAmount: amount,
-      memo,
-      publicAddress
-    } = edgeSpendInfo.spendTargets[0]
+    const { nativeAmount: amount, publicAddress } =
+      edgeSpendInfo.spendTargets[0]
 
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -538,10 +561,8 @@ export class AlgorandEngine extends CurrencyEngine<
       type: currencyCode === this.currencyInfo.currencyCode ? 'pay' : 'axfer'
     }
 
-    let note: Uint8Array | undefined
-    if (memo != null) {
-      note = Uint8Array.from(Buffer.from(memo, 'ascii'))
-    }
+    const note =
+      memos[0]?.type === 'text' ? utf8.parse(memos[0].value) : undefined
 
     const { customNetworkFee } = edgeSpendInfo
     const customFee = asMaybeCustomFee(customNetworkFee).fee
@@ -623,17 +644,18 @@ export class AlgorandEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode,
       blockHeight: 0,
-      nativeAmount,
+      currencyCode,
+      date: 0,
       isSend: true,
+      memos,
+      nativeAmount,
       networkFee,
+      otherParams,
       ourReceiveAddresses: [],
       parentNetworkFee,
       signedTx: '',
-      otherParams,
+      txid: '',
       walletId: this.walletId
     }
 

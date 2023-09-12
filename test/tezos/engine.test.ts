@@ -148,15 +148,13 @@ describe(`Tezos engine`, function () {
   })
   it('should sign a transaction', async function () {
     edgeTransaction = {
-      txid: '',
-      date: 0,
-      currencyCode: 'XTZ',
       blockHeight: 0,
-      nativeAmount: '-3002650',
+      currencyCode: 'XTZ',
+      date: 0,
       isSend: true,
+      memos: [],
+      nativeAmount: '-3002650',
       networkFee: '2650',
-      ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
-      signedTx: '',
       otherParams: {
         idInternal: 0,
         fromAddress: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',
@@ -192,6 +190,9 @@ describe(`Tezos engine`, function () {
           }
         }
       },
+      ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
+      signedTx: '',
+      txid: '',
       walletId: ''
     }
     const signedOpBytes =
