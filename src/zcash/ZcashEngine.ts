@@ -4,6 +4,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeFreshAddress,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -260,12 +261,20 @@ export class ZcashEngine extends CurrencyEngine<
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
+    const memos: EdgeMemo[] = []
+    if (tx.memo != null) {
+      memos.push({
+        type: 'text',
+        value: tx.memo
+      })
+    }
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
       date: tx.blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       nativeAmount: netNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
       otherParams: {},

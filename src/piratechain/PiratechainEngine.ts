@@ -3,6 +3,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -256,6 +257,14 @@ export class PiratechainEngine extends CurrencyEngine<
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
+    const memos: EdgeMemo[] = []
+    if (tx.memo != null) {
+      memos.push({
+        type: 'text',
+        value: tx.memo
+      })
+    }
+
     const edgeTransaction: EdgeTransaction = {
       txid: tx.rawTransactionId,
       date: tx.blockTimeInSeconds,
@@ -263,7 +272,7 @@ export class PiratechainEngine extends CurrencyEngine<
       blockHeight: tx.minedHeight,
       nativeAmount: netNativeAmount,
       isSend: netNativeAmount.startsWith('-'),
-      memos: [],
+      memos,
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
