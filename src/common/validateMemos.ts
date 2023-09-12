@@ -56,7 +56,7 @@ export function validateMemos(
       .map(option => getMemoError(memo, option))
       .find(problem => problem != null)
     if (problem != null) {
-      throw new Error(`${displayName} {memoName}: ${problem}`)
+      throw new Error(`${displayName} ${memoName}: ${problem}`)
     }
   }
 
