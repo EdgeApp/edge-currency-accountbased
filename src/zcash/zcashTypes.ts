@@ -37,7 +37,7 @@ export interface ZcashTransaction {
   minedHeight: number
   value: string
   toAddress?: string
-  memo?: string
+  memos: string[]
 }
 
 export interface ZcashPendingTransaction {

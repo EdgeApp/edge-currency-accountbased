@@ -261,20 +261,20 @@ export class ZcashEngine extends CurrencyEngine<
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
-    const memos: EdgeMemo[] = []
-    if (tx.memo != null) {
-      memos.push({
+    const edgeMemos: EdgeMemo[] = tx.memos
+      .filter(text => text !== '')
+      .map(text => ({
+        memoName: 'memo',
         type: 'text',
-        value: tx.memo
-      })
-    }
+        value: text
+      }))
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
       date: tx.blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
-      memos,
+      memos: edgeMemos,
       nativeAmount: netNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
       otherParams: {},
