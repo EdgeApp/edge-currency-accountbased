@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 2.4.0 (2023-09-13)
+
+changed: Upgrade react-native-zcash to v0.4.1
+changed: Split Zcash and Piratechain into their own engines and tools
+changed: Update Pulsechain explorer URL
+removed: Disabled all Piratechain synchronizer functionality. This is a temporary removal due to incompatibility between latest react-native-zcash and react-native-piratechain. Engine will still load but it only useful for retrieving private keys.
+
 ## 2.3.0 (2023-09-12)
 
 - added: Support the latest core memo API's.
