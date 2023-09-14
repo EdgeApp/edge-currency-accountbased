@@ -818,6 +818,9 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Get data:
     let data = memos[0]?.type === 'hex' ? memos[0].value : undefined
+    if (data != null && !data.startsWith('0x')) {
+      data = `0x${data}`
+    }
 
     // Get contractAddress and/or value:
     let value: string | undefined
