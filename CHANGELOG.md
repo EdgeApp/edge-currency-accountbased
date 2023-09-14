@@ -1,5 +1,12 @@
 # edge-currency-accountbased
 
+## 2.4.1 (2023-09-14)
+
+- changed: Update react-native-zcash to v0.4.2
+- fixed: Fixed Zcash transaction memos array handling
+- fixed: Add `0x` prefix to EVM data created outside the engine
+- fixed: Roundup fee nativeAmount returned from L1 so it is an integer
+
 ## 2.4.0 (2023-09-13)
 
 changed: Upgrade react-native-zcash to v0.4.1

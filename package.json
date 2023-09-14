@@ -1,6 +1,6 @@
 {
   "name": "edge-currency-accountbased",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Edge currency plugin for account based currencies",
   "homepage": "https://edge.app/",
   "repository": {
@@ -140,7 +140,7 @@
     "path-browserify": "^1.0.1",
     "prettier": "^2.2.0",
     "process": "^0.11.10",
-    "react-native-zcash": "0.4.1",
+    "react-native-zcash": "0.4.2",
     "rimraf": "^3.0.2",
     "stream-browserify": "^2.0.2",
     "stream-http": "^3.2.0",
@@ -153,6 +153,6 @@
     "webpack-dev-server": "^4.11.1"
   },
   "peerDependencies": {
-    "react-native-zcash": "^0.4.1"
+    "react-native-zcash": "^0.4.2"
   }
 }
