@@ -1,6 +1,6 @@
 import Common from '@ethereumjs/common'
 import { Transaction } from '@ethereumjs/tx'
-import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
+import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 
 import { decimalToHex, normalizeAddress } from '../../common/utils'
@@ -256,7 +256,7 @@ export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
 
   const scalar = div(dynamicOverhead, '1000000', 18)
 
-  const total = mul(mul(gasPriceL1Wei, gasUsed), scalar)
+  const total = ceil(mul(mul(gasPriceL1Wei, gasUsed), scalar), 0)
 
   return total
 }
