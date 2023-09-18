@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## Unreleased
+
+- changed: Update Zcash address explorer
+
 ## 2.4.1 (2023-09-14)
 
 - changed: Update react-native-zcash to v0.4.2
