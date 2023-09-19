@@ -38,6 +38,7 @@ import {
   isHex,
   mergeDeeply,
   normalizeAddress,
+  removeHexPrefix,
   toHex
 } from '../common/utils'
 import {
@@ -295,6 +296,14 @@ export class EthereumEngine extends CurrencyEngine<
         const spendInfo: EdgeSpendInfo = {
           currencyCode: this.currencyInfo.currencyCode,
           spendTargets: [spendTarget],
+          memos: [
+            {
+              type: 'hex',
+              value: removeHexPrefix(params.data),
+              hidden: true,
+              memoName: 'data'
+            }
+          ],
           networkFeeOption,
           customNetworkFee: {
             gasLimit,
