@@ -1,5 +1,6 @@
 import {
   Address,
+  Network,
   RPC,
   Signature,
   SignatureType,
@@ -73,7 +74,7 @@ export class FilecoinEngine extends CurrencyEngine<
     this.networkInfo = networkInfo
     this.pluginId = this.currencyInfo.pluginId
 
-    this.filRpc = new RPC(env.networkInfo.rpcNode.networkName, {
+    this.filRpc = new RPC(Network[env.networkInfo.rpcNode.networkName], {
       url: env.networkInfo.rpcNode.url,
       token: env.currencyInfo.currencyCode
     })
