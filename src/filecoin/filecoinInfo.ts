@@ -1,4 +1,3 @@
-import { Network } from '@zondax/izari-filecoin'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
@@ -10,7 +9,7 @@ const networkInfo: FilecoinNetworkInfo = {
   filscanUrl: 'https://api-v2.filscan.io/api/v1',
   hdPathCoinType: 461,
   rpcNode: {
-    networkName: Network.Mainnet,
+    networkName: 'Mainnet',
     url: 'https://api.node.glif.io/'
   }
 }
