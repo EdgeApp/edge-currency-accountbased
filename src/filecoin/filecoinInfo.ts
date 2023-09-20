@@ -75,6 +75,12 @@ export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
   currencyInfo,
   networkInfo,
 
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Filecoin requires BigInt support')
+    }
+  },
+
   async getInnerPlugin() {
     return await import(
       /* webpackChunkName: "filecoin" */
