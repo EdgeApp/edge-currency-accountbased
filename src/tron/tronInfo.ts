@@ -128,7 +128,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // https://developers.tron.network/v3.7/docs/how-to-build-a-transaction-locally
-  memoOptions: [{ type: 'text', memoName: 'data', maxLength: 10 }],
+  memoOptions: [{ type: 'text', memoName: 'data' }],
 
   // Deprecated:
   defaultSettings: {},
