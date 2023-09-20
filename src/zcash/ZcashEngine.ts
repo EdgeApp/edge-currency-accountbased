@@ -448,7 +448,7 @@ export class ZcashEngine extends CurrencyEngine<
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const unifiedAddress = await this.synchronizer.deriveUnifiedAddress()
     return {
-      publicAddress: unifiedAddress
+      publicAddress: unifiedAddress.saplingAddress
     }
   }
 }

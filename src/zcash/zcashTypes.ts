@@ -64,6 +64,12 @@ export interface ZcashInitializerConfig {
   birthdayHeight: number
 }
 
+export interface ZcashAddresses {
+  unifiedAddress: string
+  saplingAddress: string
+  transparentAddress: string
+}
+
 export type ZcashSynchronizerStatus =
   | 'STOPPED'
   | 'DISCONNECTED'
@@ -110,7 +116,7 @@ export interface ZcashSynchronizer {
   }>
   start: () => Promise<void>
   stop: () => Promise<void>
-  deriveUnifiedAddress: () => Promise<string>
+  deriveUnifiedAddress: () => Promise<ZcashAddresses>
   getTransactions: (arg: ZcashBlockRange) => Promise<ZcashTransaction[]>
   rescan: () => Promise<string>
   sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>
