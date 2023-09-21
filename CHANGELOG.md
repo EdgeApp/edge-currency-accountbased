@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add VELO v2 token
+
 ## 2.5.2 (2023-09-22)
 
 - removed: Temporarily disable non-functionaly zcash memos, pending an updated SDK with correct fee math.
