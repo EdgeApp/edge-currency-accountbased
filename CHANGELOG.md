@@ -1,5 +1,10 @@
 # edge-currency-accountbased
 
+## 2.2.5 (2023-09-21)
+
+- fixed: Do not crash if BigInt is not present.
+- fixed: Block Filecoin when BigInt is not present.
+
 ## 2.2.4 (2023-09-08)
 
 - fixed: Bug prevent Filecoin spend transactions from being saved in the wallet (by saveTx)
