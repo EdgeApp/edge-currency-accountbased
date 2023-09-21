@@ -1,3 +1,4 @@
+import type { Network } from '@zondax/izari-filecoin'
 import {
   asCodec,
   asNumber,
@@ -10,18 +11,12 @@ import {
 
 import { asWalletInfo } from '../common/types'
 
-// Copy of `import { Network } from '@zondax/izari-filecoin'`
-declare enum Network {
-  Mainnet = 'mainnet',
-  Calibration = 'calibration',
-  Butterfly = 'butterfly'
-}
 export interface FilecoinNetworkInfo {
   filfoxUrl: string
   filscanUrl: string
   hdPathCoinType: number
   rpcNode: {
-    networkName: Network
+    networkName: keyof typeof Network
     url: string
   }
 }
