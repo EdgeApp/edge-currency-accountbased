@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.1 (2023-09-21)
+
 - changed: Update Zcash address explorer
 - fixed: Rename Tron memos to "note".
 
