@@ -2,7 +2,14 @@
 
 ## Unreleased
 
+## 2.5.0 (2023-09-20)
+
+- changed: Remove the maximum memo length on Tron
+- changed: Upgrade react-native-zcash to v0.5.0
 - changed: Update Zcash address explorer
+- fixed: Use EdgeMemo for WalletConnect data payloads
+- fixed: Do not crash if BigInt is not present
+- fixed: Block Filecoin when BigInt is not present
 
 ## 2.4.1 (2023-09-14)
 
