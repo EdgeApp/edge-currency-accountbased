@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: Temporarily disable non-functionaly zcash memos, pending an updated SDK with correct fee math.
+
 ## 2.5.1 (2023-09-21)
 
 - changed: Update Zcash address explorer
