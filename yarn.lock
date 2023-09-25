@@ -6674,6 +6674,13 @@ react-is@^16.12.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
+react-native-piratechain@0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/react-native-piratechain/-/react-native-piratechain-0.4.0.tgz#0a42204ddd28142b6a703ea91ba06ae5ecb04abb"
+  integrity sha512-iZuh7ST6TtSsGklO9Q08gJP/7OnmJ4afraLiOPmMgysTpY+M28umGTZK4Yg0t7gwudE5j46MWn51X6m46wjUzA==
+  dependencies:
+    rfc4648 "^1.3.0"
+
 react-native-zcash@0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/react-native-zcash/-/react-native-zcash-0.5.0.tgz#1544e767df751228b4e6bbd659876eb4ad19d725"

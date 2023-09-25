@@ -1,5 +1,5 @@
 import { div } from 'biggystring'
-import { entropyToMnemonic /* mnemonicToSeed, validateMnemonic */ } from 'bip39'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   EdgeCurrencyInfo,
@@ -12,21 +12,18 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import { Tools as ToolsType } from 'react-native-piratechain'
 
-// import {
-//   AddressTool as AddressToolType,
-//   KeyTool as KeyToolType
-// } from 'react-native-piratechain'
 import { PluginEnvironment } from '../common/innerPlugin'
-// import { asIntegerString } from '../common/types'
+import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,
-  // asPiratechainPrivateKeys,
-  PiratechainNetworkInfo
-  // UnifiedViewingKey
+  asSafePiratechainWalletInfo,
+  PiratechainNetworkInfo,
+  UnifiedViewingKey
 } from './piratechainTypes'
 
 export class PiratechainTools implements EdgeCurrencyTools {
@@ -34,9 +31,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: PiratechainNetworkInfo
-
-  // KeyTool: typeof KeyToolType
-  // AddressTool: typeof AddressToolType
+  nativeTools: typeof ToolsType
 
   constructor(env: PluginEnvironment<PiratechainNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -49,30 +44,37 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (RNAccountbased == null) {
       throw new Error('Need opts')
     }
-    // const { KeyTool, AddressTool } = RNAccountbased.piratechain
+    const { Tools } = RNAccountbased.piratechain
 
-    // this.KeyTool = KeyTool
-    // this.AddressTool = AddressTool
+    this.nativeTools = Tools
+  }
+
+  async getDisplayPrivateKey(
+    privateWalletInfo: EdgeWalletInfo
+  ): Promise<string> {
+    const { pluginId } = this.currencyInfo
+    const keys = asPiratechainPrivateKeys(pluginId)(privateWalletInfo.keys)
+    return keys.mnemonic
+  }
+
+  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
+    const { keys } = asSafePiratechainWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    throw new Error('getNewWalletBirthdayBlockheight is disabled')
-    // try {
-    //   return await this.KeyTool.getBirthdayHeight(
-    //     this.networkInfo.rpcNode.defaultHost,
-    //     this.networkInfo.rpcNode.defaultPort
-    //   )
-    // } catch (e: any) {
-    //   return this.networkInfo.defaultBirthday
-    // }
+    try {
+      return await this.nativeTools.getBirthdayHeight(
+        this.networkInfo.rpcNode.defaultHost,
+        this.networkInfo.rpcNode.defaultPort
+      )
+    } catch (e: any) {
+      return this.networkInfo.defaultBirthday
+    }
   }
 
   async isValidAddress(address: string): Promise<boolean> {
-    return false
-    // return (
-    //   (await this.AddressTool.isValidShieldedAddress(address)) ||
-    //   (await this.AddressTool.isValidTransparentAddress(address))
-    // )
+    return await this.nativeTools.isValidAddress(address)
   }
 
   // will actually use MNEMONIC version of private key
@@ -80,41 +82,32 @@ export class PiratechainTools implements EdgeCurrencyTools {
     userInput: string,
     opts: JsonObject = {}
   ): Promise<Object> {
-    throw new Error('importPrivateKey is disabled')
-    // const { pluginId } = this.currencyInfo
-    // const isValid = validateMnemonic(userInput)
-    // if (!isValid)
-    //   throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
-    // const hexBuffer = await mnemonicToSeed(userInput)
-    // const hex = hexBuffer.toString('hex')
-    // const spendKey = await this.KeyTool.deriveSpendingKey(
-    //   hex,
-    //   this.networkInfo.rpcNode.networkName
-    // )
-    // if (typeof spendKey !== 'string') throw new Error('Invalid spendKey type')
+    const { pluginId } = this.currencyInfo
+    const isValid = validateMnemonic(userInput)
+    if (!isValid)
+      throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
 
-    // // Get current network height for the birthday height
-    // const currentNetworkHeight = await this.getNewWalletBirthdayBlockheight()
+    // Get current network height for the birthday height
+    const currentNetworkHeight = await this.getNewWalletBirthdayBlockheight()
 
-    // let height = currentNetworkHeight
+    let height = currentNetworkHeight
 
-    // const { birthdayHeight } = opts
-    // if (birthdayHeight != null) {
-    //   asIntegerString(birthdayHeight)
+    const { birthdayHeight } = opts
+    if (birthdayHeight != null) {
+      asIntegerString(birthdayHeight)
 
-    //   const birthdayHeightInt = parseInt(birthdayHeight)
+      const birthdayHeightInt = parseInt(birthdayHeight)
 
-    //   if (birthdayHeightInt > currentNetworkHeight) {
-    //     throw new Error('InvalidBirthdayHeight') // must be less than current block height (assuming query was successful)
-    //   }
-    //   height = birthdayHeightInt
-    // }
+      if (birthdayHeightInt > currentNetworkHeight) {
+        throw new Error('InvalidBirthdayHeight') // must be less than current block height (assuming query was successful)
+      }
+      height = birthdayHeightInt
+    }
 
-    // return {
-    //   [`${pluginId}Mnemonic`]: userInput,
-    //   [`${pluginId}SpendKey`]: spendKey,
-    //   [`${pluginId}BirthdayHeight`]: height
-    // }
+    return {
+      [`${pluginId}Mnemonic`]: userInput,
+      [`${pluginId}BirthdayHeight`]: height
+    }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
@@ -145,35 +138,19 @@ export class PiratechainTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
+    const mnemonic = piratechainPrivateKeys.mnemonic
+    if (typeof mnemonic !== 'string') {
+      throw new Error('InvalidMnemonic')
+    }
+    const unifiedViewingKey: UnifiedViewingKey =
+      await this.nativeTools.deriveViewingKey(
+        mnemonic,
+        this.networkInfo.rpcNode.networkName
+      )
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      publicKey: 'derivePublicKey is disabled',
-      unifiedViewingKeys: {
-        extfvk: '',
-        extpub: ''
-      }
+      publicKey: unifiedViewingKey
     }
-
-    // const mnemonic = piratechainPrivateKeys.mnemonic
-    // if (typeof mnemonic !== 'string') {
-    //   throw new Error('InvalidMnemonic')
-    // }
-    // const hexBuffer = await mnemonicToSeed(mnemonic)
-    // const hex = hexBuffer.toString('hex')
-    // const unifiedViewingKeys: UnifiedViewingKey =
-    //   await this.KeyTool.deriveViewingKey(
-    //     hex,
-    //     this.networkInfo.rpcNode.networkName
-    //   )
-    // const shieldedAddress = await this.AddressTool.deriveShieldedAddress(
-    //   unifiedViewingKeys.extfvk,
-    //   this.networkInfo.rpcNode.networkName
-    // )
-    // return {
-    //   birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-    //   publicKey: shieldedAddress,
-    //   unifiedViewingKeys
-    // }
   }
 
   async parseUri(
@@ -185,8 +162,8 @@ export class PiratechainTools implements EdgeCurrencyTools {
     const networks = { [pluginId]: true }
 
     const {
-      edgeParsedUri
-      // edgeParsedUri: { publicAddress }
+      edgeParsedUri,
+      edgeParsedUri: { publicAddress }
     } = parseUriCommon(
       this.currencyInfo,
       uri,
@@ -195,9 +172,9 @@ export class PiratechainTools implements EdgeCurrencyTools {
       customTokens
     )
 
-    // if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
-    //   throw new Error('InvalidPublicAddressError')
-    // }
+    if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     return edgeParsedUri
   }
@@ -207,11 +184,11 @@ export class PiratechainTools implements EdgeCurrencyTools {
     customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
-    const { nativeAmount, currencyCode /* publicAddress */ } = obj
+    const { nativeAmount, currencyCode, publicAddress } = obj
 
-    // if (!(await this.isValidAddress(publicAddress))) {
-    //   throw new Error('InvalidPublicAddressError')
-    // }
+    if (!(await this.isValidAddress(publicAddress))) {
+      throw new Error('InvalidPublicAddressError')
+    }
 
     let amount
     if (nativeAmount != null) {

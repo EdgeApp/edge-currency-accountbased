@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade react-native-piratechain to v0.4.0
+
 ## 2.5.5 (2023-10-06)
 
 - fixed: Switch Filecoin to a working block explorer (Filfox).

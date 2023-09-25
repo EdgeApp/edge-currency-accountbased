@@ -1,14 +1,14 @@
-import { abs, add, eq, gt, lte, sub } from 'biggystring'
+import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
+  EdgeFreshAddress,
   EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
-  JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 
@@ -38,17 +38,20 @@ export class PiratechainEngine extends CurrencyEngine<
   pluginId: string
   networkInfo: PiratechainNetworkInfo
   otherData!: PiratechainWalletOtherData
-  synchronizer!: PiratechainSynchronizer
   synchronizerStatus!: PiratechainSynchronizerStatus
   availableZatoshi!: string
   initialNumBlocksToDownload!: number
   initializer!: PiratechainInitializerConfig
-  alias!: string
   progressRatio!: number
   queryMutex: boolean
   makeSynchronizer: (
     config: PiratechainInitializerConfig
   ) => Promise<PiratechainSynchronizer>
+
+  // Synchronizer management
+  started: boolean
+  stopSyncing?: (value: number | PromiseLike<number>) => void
+  synchronizer?: PiratechainSynchronizer
 
   constructor(
     env: PluginEnvironment<PiratechainNetworkInfo>,
@@ -63,6 +66,8 @@ export class PiratechainEngine extends CurrencyEngine<
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
     this.queryMutex = false
+
+    this.started = false
   }
 
   setOtherData(raw: any): void {
@@ -70,7 +75,7 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    const { birthdayHeight, alias } = this.initializer
+    const { birthdayHeight } = this.initializer
 
     // walletLocalData
     if (this.otherData.blockRange.first === 0) {
@@ -81,7 +86,6 @@ export class PiratechainEngine extends CurrencyEngine<
     }
 
     // Engine variables
-    this.alias = alias
     this.initialNumBlocksToDownload = -1
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
@@ -89,6 +93,7 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   initSubscriptions(): void {
+    if (this.synchronizer == null) return
     this.synchronizer.on('update', async payload => {
       const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
       this.onUpdateBlockHeight(networkBlockHeight)
@@ -178,10 +183,8 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
-    this.initData()
-    // this.synchronizer = await this.makeSynchronizer(this.initializer)
-    // await this.synchronizer.start()
-    // this.initSubscriptions()
+    this.engineOn = true
+    this.started = true
     await super.startEngine()
   }
 
@@ -191,9 +194,9 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async queryBalance(): Promise<void> {
-    if (!this.isSynced()) return
+    if (!this.isSynced() || this.synchronizer == null) return
     try {
-      const balances = await this.synchronizer.getShieldedBalance()
+      const balances = await this.synchronizer.getBalance()
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
       this.updateBalance(this.currencyInfo.currencyCode, balances.totalZatoshi)
@@ -204,6 +207,7 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    if (this.synchronizer == null) return
     try {
       let first = this.otherData.blockRange.first
       let last = this.otherData.blockRange.last
@@ -257,33 +261,62 @@ export class PiratechainEngine extends CurrencyEngine<
       ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
     }
 
-    const memos: EdgeMemo[] = []
-    if (tx.memo != null) {
-      memos.push({
+    const edgeMemos: EdgeMemo[] = tx.memos
+      .filter(text => text !== '')
+      .map(text => ({
+        memoName: 'memo',
         type: 'text',
-        value: tx.memo
-      })
-    }
+        value: text
+      }))
 
     const edgeTransaction: EdgeTransaction = {
-      txid: tx.rawTransactionId,
-      date: tx.blockTimeInSeconds,
-      currencyCode: this.currencyInfo.currencyCode,
       blockHeight: tx.minedHeight,
-      nativeAmount: netNativeAmount,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: tx.blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
-      memos,
+      memos: edgeMemos,
+      nativeAmount: netNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
+      otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      otherParams: {},
+      txid: tx.rawTransactionId,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
+    if (!this.started) return 1000
+
+    const piratechainPrivateKeys = asPiratechainPrivateKeys(
+      this.currencyInfo.pluginId
+    )(opts?.privateKeys)
+
+    const { rpcNode } = this.networkInfo
+    this.initializer = {
+      mnemonicSeed: piratechainPrivateKeys.mnemonic,
+      birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+      alias: this.walletInfo.keys.publicKey.slice(0, 99),
+      ...rpcNode
+    }
+
+    this.synchronizer = await this.makeSynchronizer(this.initializer)
+    this.initData()
+    this.initSubscriptions()
+
+    return await new Promise(resolve => {
+      this.stopSyncing = resolve
+    })
+  }
+
   async killEngine(): Promise<void> {
-    // await this.synchronizer.stop()
+    this.started = false
+    if (this.stopSyncing != null) {
+      await this.stopSyncing(1000)
+      this.stopSyncing = undefined
+    }
+    await this.synchronizer?.stop()
     await super.killEngine()
   }
 
@@ -296,13 +329,14 @@ export class PiratechainEngine extends CurrencyEngine<
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    // this.synchronizer
-    //   .rescan(this.walletInfo.keys.birthdayHeight)
-    //   .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
+    this.synchronizer
+      ?.rescan()
+      .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
+    this.initData()
+    this.synchronizerStatus = 'SYNCING'
   }
 
   async getMaxSpendable(): Promise<string> {
-    if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const spendableBalance = sub(
       this.availableZatoshi,
       this.networkInfo.defaultNetworkFee
@@ -345,26 +379,19 @@ export class PiratechainEngine extends CurrencyEngine<
     // **********************************
     // Create the unsigned EdgeTransaction
 
-    const spendTargets = edgeSpendInfo.spendTargets.map(si => ({
-      uniqueIdentifier: si.uniqueIdentifier,
-      memo: si.memo,
-      nativeAmount: si.nativeAmount ?? '0',
-      currencyCode,
-      publicAddress
-    }))
+    const txNativeAmount = mul(totalTxAmount, '-1')
 
     const edgeTransaction: EdgeTransaction = {
-      txid: '', // txid
-      date: 0, // date
-      currencyCode, // currencyCode
-      blockHeight: 0, // blockHeight
-      nativeAmount: `-${totalTxAmount}`, // nativeAmount
-      isSend: nativeAmount.startsWith('-'),
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
       memos,
-      networkFee: this.networkInfo.defaultNetworkFee, // networkFee
-      ourReceiveAddresses: [], // ourReceiveAddresses
-      signedTx: '', // signedTx
-      spendTargets,
+      nativeAmount: txNativeAmount,
+      networkFee: this.networkInfo.defaultNetworkFee,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
       walletId: this.walletId
     }
 
@@ -380,8 +407,7 @@ export class PiratechainEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
-    if (!this.isSynced())
-      throw new Error('Cannot broadcast until wallet is synced')
+    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const { memos } = edgeTransaction
     const piratechainPrivateKeys = asPiratechainPrivateKeys(this.pluginId)(
       opts?.privateKeys
@@ -402,7 +428,7 @@ export class PiratechainEngine extends CurrencyEngine<
       toAddress: spendTarget.publicAddress,
       memo,
       fromAccountIndex: 0,
-      spendingKey: piratechainPrivateKeys.spendKey
+      mnemonicSeed: piratechainPrivateKeys.mnemonic
     }
 
     try {
@@ -418,31 +444,15 @@ export class PiratechainEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  getDisplayPrivateSeed(privateKeys: JsonObject): string {
-    const piratechainPrivateKeys = asPiratechainPrivateKeys(this.pluginId)(
-      privateKeys
-    )
-    return piratechainPrivateKeys.mnemonic
-  }
-
-  getDisplayPublicSeed(): string {
-    return this.walletInfo.keys.unifiedViewingKeys?.extfvk ?? ''
-  }
-
-  async loadEngine(): Promise<void> {
-    const { walletInfo } = this
-    await super.loadEngine()
-    this.engineOn = true
-
-    const { rpcNode } = this.networkInfo
-    this.initializer = {
-      fullViewingKey: walletInfo.keys.unifiedViewingKeys,
-      birthdayHeight: walletInfo.keys.birthdayHeight,
-      alias: walletInfo.keys.publicKey,
-      ...rpcNode
+  async getFreshAddress(): Promise<EdgeFreshAddress> {
+    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
+    const unifiedAddress = await this.synchronizer.deriveUnifiedAddress()
+    return {
+      publicAddress: unifiedAddress.saplingAddress
     }
   }
 }
+
 export async function makeCurrencyEngine(
   env: PluginEnvironment<PiratechainNetworkInfo>,
   tools: PiratechainTools,
@@ -450,16 +460,15 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafePiratechainWalletInfo(walletInfo)
-  // const { makeSynchronizer } =
-  //   env.nativeIo['edge-currency-accountbased'].piratechain ?? {}
+  const { makeSynchronizer } =
+    env.nativeIo['edge-currency-accountbased'].piratechain
 
   const engine = new PiratechainEngine(
     env,
     tools,
     safeWalletInfo,
     opts,
-    // makeSynchronizer
-    () => {}
+    makeSynchronizer
   )
 
   // Do any async initialization necessary for the engine
