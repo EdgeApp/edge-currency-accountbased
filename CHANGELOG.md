@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 2.5.3 (2023-09-27)
+
+- added: Tron `WithdrawExpireUnfreeze` transaction support
 - added: Add VELO v2 token
 
 ## 2.5.2 (2023-09-22)
