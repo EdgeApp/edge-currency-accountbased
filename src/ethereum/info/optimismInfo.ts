@@ -16,11 +16,19 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   '3c8b650257cfb5f272f799f5e2b4e65093a11a05': {
+    currencyCode: 'VELOV1',
+    displayName: 'Velodrome',
+    denominations: [{ name: 'VELOV1', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x3c8B650257cFb5f272f799F5e2b4e65093a11a05'
+    }
+  },
+  '9560e827af36c94d2ac33a39bce1fe78631088db': {
     currencyCode: 'VELO',
     displayName: 'Velodrome',
     denominations: [{ name: 'VELO', multiplier: '1000000000000000000' }],
     networkLocation: {
-      contractAddress: '0x3c8B650257cFb5f272f799F5e2b4e65093a11a05'
+      contractAddress: '0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db'
     }
   },
   '4200000000000000000000000000000000000042': {
