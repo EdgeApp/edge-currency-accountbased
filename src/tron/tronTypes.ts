@@ -137,6 +137,15 @@ export const asTronUnfreezeV2Action = asObject<TronUnfreezeV2Action>({
   })
 })
 
+export interface TronWithdrawExpireUnfreezeAction {
+  type: 'withdrawExpireUnfreeze'
+}
+
+export const asTronWithdrawExpireUnfreezeAction =
+  asObject<TronWithdrawExpireUnfreezeAction>({
+    type: asValue('withdrawExpireUnfreeze')
+  })
+
 export interface CalcTxFeeOpts {
   receiverAddress?: string
   unsignedTxHex: string
@@ -162,7 +171,7 @@ export interface TronTransaction {
   transactionHex: string
 }
 
-//  { "chainParameter": [ { "key": "getMaintenanceTimeInterval", "value": 21600000 }, { "key": "getAccountUpgradeCost", "value": 9999000000 }, { "key": "getCreateAccountFee", "value": 100000 }, { "key": "getTransactionFee", "value": 1000 }, { "key": "getAssetIssueFee", "value": 1024000000 }, { "key": "getWitnessPayPerBlock", "value": 16000000 }, { "key": "getWitnessStandbyAllowance", "value": 115200000000 }, { "key": "getCreateNewAccountFeeInSystemContract", "value": 1000000 }, { "key": "getCreateNewAccountBandwidthRate", "value": 1 }, { "key": "getAllowCreationOfContracts", "value": 1 }, { "key": "getRemoveThePowerOfTheGr", "value": -1 }, { "key": "getEnergyFee", "value": 280 }, { "key": "getExchangeCreateFee", "value": 1024000000 }, { "key": "getMaxCpuTimeOfOneTx", "value": 80 }, { "key": "getAllowUpdateAccountName" }, { "key": "getAllowSameTokenName", "value": 1 }, { "key": "getAllowDelegateResource", "value": 1 }, { "key": "getTotalEnergyLimit", "value": 90000000000 }, { "key": "getAllowTvmTransferTrc10", "value": 1 }, { "key": "getTotalEnergyCurrentLimit", "value": 90000000000 }, { "key": "getAllowMultiSign", "value": 1 }, { "key": "getAllowAdaptiveEnergy" }, { "key": "getTotalEnergyTargetLimit", "value": 6250000 }, { "key": "getTotalEnergyAverageUsage" }, { "key": "getUpdateAccountPermissionFee", "value": 100000000 }, { "key": "getMultiSignFee", "value": 1000000 }, { "key": "getAllowAccountStateRoot" }, { "key": "getAllowProtoFilterNum" }, { "key": "getAllowTvmConstantinople", "value": 1 }, { "key": "getAllowTvmSolidity059", "value": 1 }, { "key": "getAllowTvmIstanbul", "value": 1 }, { "key": "getAllowShieldedTRC20Transaction", "value": 1 }, { "key": "getForbidTransferToContract" }, { "key": "getAdaptiveResourceLimitTargetRatio", "value": 10 }, { "key": "getAdaptiveResourceLimitMultiplier", "value": 1000 }, { "key": "getChangeDelegation", "value": 1 }, { "key": "getWitness127PayPerBlock", "value": 160000000 }, { "key": "getAllowMarketTransaction" }, { "key": "getMarketSellFee" }, { "key": "getMarketCancelFee" }, { "key": "getAllowPBFT" }, { "key": "getAllowTransactionFeePool" }, { "key": "getMaxFeeLimit", "value": 10000000000 }, { "key": "getAllowOptimizeBlackHole", "value": 1 }, { "key": "getAllowNewResourceModel" }, { "key": "getAllowTvmFreeze" }, { "key": "getAllowTvmVote" }, { "key": "getAllowTvmLondon", "value": 1 }, { "key": "getAllowTvmCompatibleEvm" }, { "key": "getAllowAccountAssetOptimization" }, { "key": "getFreeNetLimit", "value": 1500 }, { "key": "getTotalNetLimit", "value": 43200000000 }, { "key": "getAllowHigherLimitForMaxCpuTimeOfOneTx", "value": 1 }, { "key": "getAllowAssetOptimization" } ]}
+//  {"chainParameter":[{"key":"getMaintenanceTimeInterval","value":21600000},{"key":"getAccountUpgradeCost","value":9999000000},{"key":"getCreateAccountFee","value":100000},{"key":"getTransactionFee","value":1000},{"key":"getAssetIssueFee","value":1024000000},{"key":"getWitnessPayPerBlock","value":16000000},{"key":"getWitnessStandbyAllowance","value":115200000000},{"key":"getCreateNewAccountFeeInSystemContract","value":1000000},{"key":"getCreateNewAccountBandwidthRate","value":1},{"key":"getAllowCreationOfContracts","value":1},{"key":"getRemoveThePowerOfTheGr","value":-1},{"key":"getEnergyFee","value":420},{"key":"getExchangeCreateFee","value":1024000000},{"key":"getMaxCpuTimeOfOneTx","value":80},{"key":"getAllowUpdateAccountName"},{"key":"getAllowSameTokenName","value":1},{"key":"getAllowDelegateResource","value":1},{"key":"getTotalEnergyLimit","value":90000000000},{"key":"getAllowTvmTransferTrc10","value":1},{"key":"getTotalEnergyCurrentLimit","value":90000000000},{"key":"getAllowMultiSign","value":1},{"key":"getAllowAdaptiveEnergy"},{"key":"getTotalEnergyTargetLimit","value":6250000},{"key":"getTotalEnergyAverageUsage"},{"key":"getUpdateAccountPermissionFee","value":100000000},{"key":"getMultiSignFee","value":1000000},{"key":"getAllowAccountStateRoot"},{"key":"getAllowProtoFilterNum"},{"key":"getAllowTvmConstantinople","value":1},{"key":"getAllowTvmSolidity059","value":1},{"key":"getAllowTvmIstanbul","value":1},{"key":"getAllowShieldedTRC20Transaction","value":1},{"key":"getForbidTransferToContract"},{"key":"getAdaptiveResourceLimitTargetRatio","value":10},{"key":"getAdaptiveResourceLimitMultiplier","value":1000},{"key":"getChangeDelegation","value":1},{"key":"getWitness127PayPerBlock","value":160000000},{"key":"getAllowMarketTransaction"},{"key":"getMarketSellFee"},{"key":"getMarketCancelFee"},{"key":"getAllowPBFT"},{"key":"getAllowTransactionFeePool"},{"key":"getMaxFeeLimit","value":15000000000},{"key":"getAllowOptimizeBlackHole","value":1},{"key":"getAllowNewResourceModel"},{"key":"getAllowTvmFreeze"},{"key":"getAllowTvmVote","value":1},{"key":"getAllowTvmLondon","value":1},{"key":"getAllowTvmCompatibleEvm"},{"key":"getAllowAccountAssetOptimization"},{"key":"getFreeNetLimit","value":600},{"key":"getTotalNetLimit","value":43200000000},{"key":"getAllowHigherLimitForMaxCpuTimeOfOneTx","value":1},{"key":"getAllowAssetOptimization","value":1},{"key":"getAllowNewReward","value":1},{"key":"getMemoFee","value":1000000},{"key":"getAllowDelegateOptimization","value":1},{"key":"getUnfreezeDelayDays","value":14},{"key":"getAllowOptimizedReturnValueOfChainId","value":1},{"key":"getAllowDynamicEnergy","value":1},{"key":"getDynamicEnergyThreshold","value":3000000000},{"key":"getDynamicEnergyIncreaseFactor","value":2000},{"key":"getDynamicEnergyMaxFactor","value":12000},{"key":"getAllowTvmShangHai","value":1},{"key":"getAllowCancelAllUnfreezeV2","value":1},{"key":"getMaxDelegateLockPeriod","value":864000}]}
 export const asChainParams = asObject({
   chainParameter: asArray(
     asObject({ key: asString, value: asOptional(asNumber) })
@@ -185,6 +194,17 @@ export const asAccountResources = asObject({
   EnergyUsed: asMaybe(asNumber, 0),
   EnergyLimit: asMaybe(asNumber, 0) // 474699462,
 })
+
+const asUnfrozenV2 = asArray(
+  asEither(
+    asObject({
+      type: asValue('ENERGY'),
+      unfreeze_amount: asNumber,
+      unfreeze_expire_time: asNumber
+    }),
+    asObject({ unfreeze_amount: asNumber, unfreeze_expire_time: asNumber })
+  )
+)
 
 export const asTRXBalance = asObject({
   // latest_opration_time: asNumber, // 1667960226000
@@ -255,6 +275,7 @@ export const asTRXBalance = asObject({
     }),
     asObject({ type: asValue('TRON_POWER') })
   ),
+  unfrozenV2: asMaybe(asUnfrozenV2, () => []),
   // address: asString, // '41d4663f01b208b180015ec840b5228df7e69150f0'
   balance: asMaybe(asNumber, 0) // 102213111
   // create_time: asNumber, // 1654096560000
@@ -420,6 +441,15 @@ export const asUnfreezeV2BalanceContract = asObject({
     })
   }),
   type: asValue('UnfreezeBalanceV2Contract')
+})
+
+export const asWithdrawExpireUnfreezeContract = asObject({
+  parameter: asObject({
+    value: asObject({
+      owner_address: asString
+    })
+  }),
+  type: asValue('WithdrawExpireUnfreezeContract')
 })
 
 export interface TronGridQuery<T> {
