@@ -1,6 +1,6 @@
 # edge-currency-accountbased
 
-## Unreleased
+## 2.5.4 (2023-10-02)
 
 - fixed: Max spend for XLM
 
