@@ -516,7 +516,7 @@ export class StellarEngine extends CurrencyEngine<
       edgeSpendInfo.networkFeeOption !== undefined &&
       edgeSpendInfo.networkFeeOption !== 'custom'
         ? this.fees[edgeSpendInfo.networkFeeOption]
-        : BASE_FEE
+        : this.fees.standard
 
     let txBuilder = new stellarApi.TransactionBuilder(account, {
       fee: feeSetting
