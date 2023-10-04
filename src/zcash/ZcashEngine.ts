@@ -128,30 +128,39 @@ export class ZcashEngine extends CurrencyEngine<
 
   onUpdateProgress(scanProgress: number): void {
     if (!this.addressesChecked && !this.isSynced()) {
-      // Sync status is split up between downloading and scanning blocks (89.5%),
-      // getting balance (0.5%), and querying transactions (10%).
+      // Balance and transaction querying is handled during the sync therefore we can treat them the same.
 
-      const balanceProgress = scanProgress * 0.99
-      const txProgress = scanProgress * 0.8
       this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        balanceProgress / 100
+        scanProgress / 100
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        txProgress / 100
+        scanProgress / 100
 
-      const totalProgress = (balanceProgress + txProgress) / 2
-
-      if (totalProgress !== this.progressRatio) {
+      if (scanProgress !== this.progressRatio) {
         if (
-          Math.abs(totalProgress - this.progressRatio) > 0.1 ||
-          totalProgress === 1
+          Math.abs(scanProgress - this.progressRatio) > 0.1 ||
+          scanProgress === 1
         ) {
-          this.progressRatio = totalProgress
+          this.progressRatio = scanProgress
           this.log.warn(
-            `Scan and download progress: ${Math.floor(totalProgress)}%`
+            `Scan and download progress: ${Math.floor(scanProgress)}%`
           )
           this.updateOnAddressesChecked()
         }
       }
+    }
+  }
+
+  // super.updateBalance calls updateOnAddressesChecked() but we want to limit that method to onUpdateProgress
+  updateBalance(tk: string, balance: string): void {
+    const currentBalance = this.walletLocalData.totalBalances[tk]
+    if (this.walletLocalData.totalBalances[tk] == null) {
+      this.walletLocalData.totalBalances[tk] = '0'
+    }
+    if (currentBalance == null || !eq(balance, currentBalance)) {
+      this.walletLocalData.totalBalances[tk] = balance
+      this.walletLocalDataDirty = true
+      this.warn(`${tk}: token Address balance: ${balance}`)
+      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
     }
   }
 
