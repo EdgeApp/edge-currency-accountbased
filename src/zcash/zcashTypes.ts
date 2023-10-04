@@ -20,7 +20,6 @@ export interface ZcashNetworkInfo {
   }
   defaultNetworkFee: string
   defaultBirthday: number
-  transactionQueryLimit: number
 }
 
 export interface ZcashSpendInfo {
@@ -62,6 +61,7 @@ export interface ZcashInitializerConfig {
   mnemonicSeed: string
   alias: string
   birthdayHeight: number
+  newWallet: boolean
 }
 
 export interface ZcashAddresses {
@@ -76,9 +76,18 @@ export type ZcashSynchronizerStatus =
   | 'SYNCING'
   | 'SYNCED'
 
+export interface ZcashBalanceEvent {
+  availableZatoshi: string
+  totalZatoshi: string
+}
+
 export interface ZcashStatusEvent {
   alias: string
   name: ZcashSynchronizerStatus
+}
+
+export interface ZcashTransactionsEvent {
+  transactions: ZcashTransaction[]
 }
 
 export interface ZcashUpdateEvent {
@@ -111,7 +120,9 @@ export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
 
 export interface ZcashSynchronizer {
   on: Subscriber<{
+    balanceChanged: ZcashBalanceEvent
     statusChanged: ZcashStatusEvent
+    transactionsChanged: ZcashTransactionsEvent
     update: ZcashUpdateEvent
   }>
   start: () => Promise<void>

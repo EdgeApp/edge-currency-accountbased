@@ -40,10 +40,8 @@ export class ZcashEngine extends CurrencyEngine<
   otherData!: ZcashWalletOtherData
   synchronizerStatus!: ZcashSynchronizerStatus
   availableZatoshi!: string
-  initialNumBlocksToDownload!: number
   initializer!: ZcashInitializerConfig
   progressRatio!: number
-  queryMutex: boolean
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>
@@ -65,7 +63,6 @@ export class ZcashEngine extends CurrencyEngine<
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
-    this.queryMutex = false
 
     this.started = false
   }
@@ -86,7 +83,6 @@ export class ZcashEngine extends CurrencyEngine<
     }
 
     // Engine variables
-    this.initialNumBlocksToDownload = -1
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
     this.progressRatio = 0
@@ -95,30 +91,25 @@ export class ZcashEngine extends CurrencyEngine<
   initSubscriptions(): void {
     if (this.synchronizer == null) return
     this.synchronizer.on('update', async payload => {
-      const { lastDownloadedHeight, scanProgress, networkBlockHeight } = payload
+      const { scanProgress, networkBlockHeight } = payload
       this.onUpdateBlockHeight(networkBlockHeight)
-      this.onUpdateProgress(
-        lastDownloadedHeight,
-        scanProgress,
-        networkBlockHeight
-      )
-      await this.queryAll()
+      this.onUpdateProgress(scanProgress)
     })
     this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
-      await this.queryAll()
     })
-  }
-
-  async queryAll(): Promise<void> {
-    if (this.queryMutex) return
-    this.queryMutex = true
-    try {
-      await this.queryBalance()
-      await this.queryTransactions()
+    this.synchronizer.on('balanceChanged', async payload => {
+      if (payload.totalZatoshi === '-1') return
+      this.availableZatoshi = payload.availableZatoshi
+      this.updateBalance(this.currencyInfo.currencyCode, payload.totalZatoshi)
+    })
+    this.synchronizer.on('transactionsChanged', async payload => {
+      const { transactions } = payload
+      transactions.forEach(tx => {
+        this.processTransaction(tx)
+      })
       this.onUpdateTransactions()
-    } catch (e: any) {}
-    this.queryMutex = false
+    })
   }
 
   onUpdateBlockHeight(networkBlockHeight: number): void {
@@ -140,11 +131,7 @@ export class ZcashEngine extends CurrencyEngine<
     }
   }
 
-  onUpdateProgress(
-    lastDownloadedHeight: number,
-    scanProgress: number,
-    networkBlockHeight: number
-  ): void {
+  onUpdateProgress(scanProgress: number): void {
     if (!this.addressesChecked && !this.isSynced()) {
       // Sync status is split up between downloading and scanning blocks (89.5%),
       // getting balance (0.5%), and querying transactions (10%).
@@ -182,61 +169,6 @@ export class ZcashEngine extends CurrencyEngine<
   isSynced(): boolean {
     // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'
-  }
-
-  async queryBalance(): Promise<void> {
-    if (!this.isSynced() || this.synchronizer == null) return
-    try {
-      const balances = await this.synchronizer.getBalance()
-      if (balances.totalZatoshi === '-1') return
-      this.availableZatoshi = balances.availableZatoshi
-      this.updateBalance(this.currencyInfo.currencyCode, balances.totalZatoshi)
-    } catch (e: any) {
-      this.warn('Failed to update balances', e)
-      this.updateBalance(this.currencyInfo.currencyCode, '0')
-    }
-  }
-
-  async queryTransactions(): Promise<void> {
-    if (this.synchronizer == null) return
-    try {
-      let first = this.otherData.blockRange.first
-      let last = this.otherData.blockRange.last
-      while (this.isSynced() && last <= this.walletLocalData.blockHeight) {
-        const transactions = await this.synchronizer.getTransactions({
-          first,
-          last
-        })
-
-        transactions.forEach(tx => this.processTransaction(tx))
-
-        if (last === this.walletLocalData.blockHeight) {
-          first = this.walletLocalData.blockHeight
-          this.walletLocalDataDirty = true
-          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-          this.updateOnAddressesChecked()
-          break
-        }
-
-        first = last + 1
-        last =
-          last + this.networkInfo.transactionQueryLimit <
-          this.walletLocalData.blockHeight
-            ? last + this.networkInfo.transactionQueryLimit
-            : this.walletLocalData.blockHeight
-
-        this.otherData.blockRange = {
-          first,
-          last
-        }
-        this.walletLocalDataDirty = true
-      }
-    } catch (e: any) {
-      this.error(
-        `Error querying ${this.currencyInfo.currencyCode} transactions `,
-        e
-      )
-    }
   }
 
   processTransaction(tx: ZcashTransaction): void {
@@ -289,6 +221,7 @@ export class ZcashEngine extends CurrencyEngine<
       mnemonicSeed: zcashPrivateKeys.mnemonic,
       birthdayHeight: zcashPrivateKeys.birthdayHeight,
       alias: this.walletInfo.keys.publicKey.slice(0, 99),
+      newWallet: false,
       ...rpcNode
     }
 
@@ -339,7 +272,6 @@ export class ZcashEngine extends CurrencyEngine<
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-    if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]

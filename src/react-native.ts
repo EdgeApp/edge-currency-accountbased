@@ -66,8 +66,14 @@ const makeZcashSynchronizer = async (
   const realSynchronizer = await ZcashMakeSynchronizer(config)
 
   realSynchronizer.subscribe({
+    onBalanceChanged(event): void {
+      emit(out, 'balanceChanged', event)
+    },
     onStatusChanged(status): void {
       emit(out, 'statusChanged', status)
+    },
+    onTransactionsChanged(event): void {
+      emit(out, 'transactionsChanged', event)
     },
     onUpdate(event): void {
       emit(out, 'update', event)
@@ -80,17 +86,11 @@ const makeZcashSynchronizer = async (
     deriveUnifiedAddress: async () => {
       return await realSynchronizer.deriveUnifiedAddress()
     },
-    getTransactions: async blockRange => {
-      return await realSynchronizer.getTransactions(blockRange)
-    },
     rescan: () => {
       return realSynchronizer.rescan()
     },
     sendToAddress: async spendInfo => {
       return await realSynchronizer.sendToAddress(spendInfo)
-    },
-    getBalance: async () => {
-      return await realSynchronizer.getBalance()
     },
     stop: async () => {
       return await realSynchronizer.stop()
