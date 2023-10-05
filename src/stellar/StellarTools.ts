@@ -1,4 +1,6 @@
 import { add, div } from 'biggystring'
+import { mnemonicToSeed, validateMnemonic } from 'bip39'
+import * as ed25519 from 'ed25519-hd-key'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -19,7 +21,8 @@ import { getLegacyDenomination } from '../common/utils'
 import {
   asSafeStellarWalletInfo,
   asStellarPrivateKeys,
-  StellarNetworkInfo
+  StellarNetworkInfo,
+  StellarPrivateKeys
 } from './stellarTypes'
 
 const URI_PREFIX = 'web+stellar'
@@ -81,11 +84,33 @@ export class StellarTools implements EdgeCurrencyTools {
     return { stellarKey: keypair.secret() }
   }
 
-  async importPrivateKey(privateKey: string): Promise<{ stellarKey: string }> {
-    privateKey.replace(/ /g, '')
-    stellarApi.Keypair.fromSecret(privateKey)
-    if (privateKey.length !== 56) throw new Error('Private key wrong length')
-    return await Promise.resolve({ stellarKey: privateKey })
+  async importPrivateKey(userInput: string): Promise<StellarPrivateKeys> {
+    let stellarKey
+    let stellarMnemonic
+
+    if (validateMnemonic(userInput)) {
+      const seed = await mnemonicToSeed(userInput)
+      const derivedSeed = ed25519.derivePath(
+        "m/44'/148'/0'",
+        seed.toString('hex')
+      ).key
+      const keypair = stellarApi.Keypair.fromRawEd25519Seed(
+        Uint8Array.from(derivedSeed) as unknown as number[]
+      )
+
+      stellarKey = keypair.secret()
+      stellarMnemonic = userInput
+    } else {
+      userInput.replace(/ /g, '')
+      stellarApi.Keypair.fromSecret(userInput)
+      if (userInput.length !== 56) throw new Error('Private key wrong length')
+      stellarKey = userInput
+    }
+
+    return await Promise.resolve({
+      stellarKey,
+      stellarMnemonic
+    })
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
