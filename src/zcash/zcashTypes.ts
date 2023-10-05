@@ -1,4 +1,5 @@
 import {
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -109,11 +110,7 @@ export const asZcashBlockRange = asObject({
 export type ZcashBlockRange = ReturnType<typeof asZcashBlockRange>
 
 export const asZcashWalletOtherData = asObject({
-  alias: asMaybe(asString),
-  blockRange: asMaybe(asZcashBlockRange, () => ({
-    first: 0,
-    last: 0
-  }))
+  isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
 
 export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>

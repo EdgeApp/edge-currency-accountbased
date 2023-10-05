@@ -11,6 +11,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -72,15 +73,9 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    const { birthdayHeight } = this.initializer
-
     // walletLocalData
-    if (this.otherData.blockRange.first === 0) {
-      this.otherData.blockRange = {
-        first: birthdayHeight,
-        last: birthdayHeight
-      }
-    }
+    this.otherData.isSdkInitializedOnDisk = true
+    this.walletLocalDataDirty = true
 
     // Engine variables
     this.synchronizerStatus = 'DISCONNECTED'
@@ -220,8 +215,8 @@ export class ZcashEngine extends CurrencyEngine<
     this.initializer = {
       mnemonicSeed: zcashPrivateKeys.mnemonic,
       birthdayHeight: zcashPrivateKeys.birthdayHeight,
-      alias: this.walletInfo.keys.publicKey.slice(0, 99),
-      newWallet: false,
+      alias: base16.stringify(base64.parse(this.walletId)),
+      newWallet: !this.otherData.isSdkInitializedOnDisk,
       ...rpcNode
     }
 
