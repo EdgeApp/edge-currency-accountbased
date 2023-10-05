@@ -54,7 +54,7 @@ export class ZcashTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asZcashPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
+    return `Seed Phrase:\n${keys.mnemonic}\n\nBirthday Height:\n${keys.birthdayHeight}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
