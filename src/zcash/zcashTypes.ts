@@ -33,9 +33,11 @@ export interface ZcashSpendInfo {
 
 export interface ZcashTransaction {
   rawTransactionId: string
+  raw?: string
   blockTimeInSeconds: number
   minedHeight: number
   value: string
+  fee?: string
   toAddress?: string
   memos: string[]
 }

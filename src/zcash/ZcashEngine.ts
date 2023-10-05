@@ -177,12 +177,10 @@ export class ZcashEngine extends CurrencyEngine<
 
   processTransaction(tx: ZcashTransaction): void {
     let netNativeAmount = tx.value
+    const networkFee = tx.fee ?? this.networkInfo.defaultNetworkFee
     if (tx.toAddress != null) {
       // check if tx is a spend
-      netNativeAmount = `-${add(
-        netNativeAmount,
-        this.networkInfo.defaultNetworkFee
-      )}`
+      netNativeAmount = `-${add(netNativeAmount, networkFee)}`
     }
 
     const edgeMemos: EdgeMemo[] = tx.memos
@@ -200,10 +198,10 @@ export class ZcashEngine extends CurrencyEngine<
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
-      networkFee: this.networkInfo.defaultNetworkFee,
+      networkFee,
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
-      signedTx: '',
+      signedTx: tx.raw ?? '',
       txid: tx.rawTransactionId,
       walletId: this.walletId
     }
