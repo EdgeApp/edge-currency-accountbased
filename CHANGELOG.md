@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: EdgeTxAction tagging to TRX freeze/unfreeze contract call transactions
+
 ## 2.6.0 (2023-10-09)
 
 - changed: Upgrade react-native-piratechain to v0.4.0
