@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.5.5 (2023-10-06)
+
 - fixed: Switch Filecoin to a working block explorer (Filfox).
 
 ## 2.5.4 (2023-10-02)
