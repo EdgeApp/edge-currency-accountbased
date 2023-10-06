@@ -42,7 +42,11 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizerStatus!: ZcashSynchronizerStatus
   availableZatoshi!: string
   initializer!: ZcashInitializerConfig
-  progressRatio!: number
+  progressRatio!: {
+    percent: number
+    lastUpdate: number
+  }
+
   makeSynchronizer: (
     config: ZcashInitializerConfig
   ) => Promise<ZcashSynchronizer>
@@ -80,7 +84,10 @@ export class ZcashEngine extends CurrencyEngine<
     // Engine variables
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
-    this.progressRatio = 0
+    this.progressRatio = {
+      percent: 0,
+      lastUpdate: 0
+    }
   }
 
   initSubscriptions(): void {
@@ -135,17 +142,16 @@ export class ZcashEngine extends CurrencyEngine<
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
         scanProgress / 100
 
-      if (scanProgress !== this.progressRatio) {
-        if (
-          Math.abs(scanProgress - this.progressRatio) > 0.1 ||
-          scanProgress === 1
-        ) {
-          this.progressRatio = scanProgress
-          this.log.warn(
-            `Scan and download progress: ${Math.floor(scanProgress)}%`
-          )
-          this.updateOnAddressesChecked()
-        }
+      if (
+        scanProgress > this.progressRatio.percent &&
+        Date.now() - this.progressRatio.lastUpdate > 1000 // throttle updates to one second
+      ) {
+        this.progressRatio.percent = scanProgress
+        this.progressRatio.lastUpdate = Date.now()
+        this.log.warn(
+          `Scan and download progress: ${Math.floor(scanProgress)}%`
+        )
+        this.updateOnAddressesChecked()
       }
     }
   }
