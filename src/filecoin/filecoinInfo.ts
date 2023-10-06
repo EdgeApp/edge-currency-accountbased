@@ -23,8 +23,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:filecoin',
 
   // Explorers:
-  addressExplorer: 'https://filscan.io/en/address/%s',
-  transactionExplorer: 'https://filscan.io/en/message/%s',
+  addressExplorer: 'https://filfox.info/en/address/%s',
+  transactionExplorer: 'https://filfox.info/en/message/%s',
 
   denominations: [
     {
