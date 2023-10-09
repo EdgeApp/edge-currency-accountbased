@@ -140,6 +140,7 @@
     "path-browserify": "^1.0.1",
     "prettier": "^2.2.0",
     "process": "^0.11.10",
+    "react-native-piratechain": "0.4.0",
     "react-native-zcash": "0.5.0",
     "rimraf": "^3.0.2",
     "stream-browserify": "^2.0.2",
@@ -153,6 +154,7 @@
     "webpack-dev-server": "^4.11.1"
   },
   "peerDependencies": {
+    "react-native-piratechain": "^0.4.0",
     "react-native-zcash": "^0.5.0"
   }
 }

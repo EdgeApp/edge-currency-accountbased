@@ -28,7 +28,7 @@ export interface PiratechainSpendInfo {
   toAddress: string
   memo: string
   fromAccountIndex: number
-  spendingKey: string
+  mnemonicSeed: string
 }
 
 export interface PiratechainTransaction {
@@ -37,7 +37,7 @@ export interface PiratechainTransaction {
   minedHeight: number
   value: string
   toAddress?: string
-  memo?: string
+  memos: string[]
 }
 
 export interface PiratechainPendingTransaction {
@@ -59,18 +59,21 @@ export interface PiratechainInitializerConfig {
   networkName: PiratechainNetworkName
   defaultHost: string
   defaultPort: number
-  fullViewingKey: UnifiedViewingKey
+  mnemonicSeed: string
   alias: string
   birthdayHeight: number
+}
+
+export interface PiratechainAddresses {
+  // unifiedAddress: string
+  saplingAddress: string
+  // transparentAddress: string
 }
 
 export type PiratechainSynchronizerStatus =
   | 'STOPPED'
   | 'DISCONNECTED'
-  | 'DOWNLOADING'
-  | 'VALIDATING'
-  | 'SCANNING'
-  | 'ENHANCING'
+  | 'SYNCING'
   | 'SYNCED'
 
 export interface PiratechainStatusEvent {
@@ -98,10 +101,10 @@ export type PiratechainBlockRange = ReturnType<typeof asPiratechainBlockRange>
 
 export const asPiratechainWalletOtherData = asObject({
   alias: asMaybe(asString),
-  blockRange: asMaybe(asPiratechainBlockRange, {
+  blockRange: asMaybe(asPiratechainBlockRange, () => ({
     first: 0,
     last: 0
-  })
+  }))
 })
 
 export type PiratechainWalletOtherData = ReturnType<
@@ -115,14 +118,15 @@ export interface PiratechainSynchronizer {
   }>
   start: () => Promise<void>
   stop: () => Promise<void>
+  deriveUnifiedAddress: () => Promise<PiratechainAddresses>
   getTransactions: (
     arg: PiratechainBlockRange
   ) => Promise<PiratechainTransaction[]>
-  rescan: (arg: number) => Promise<string>
+  rescan: () => Promise<string>
   sendToAddress: (
     arg: PiratechainSpendInfo
   ) => Promise<PiratechainPendingTransaction>
-  getShieldedBalance: () => Promise<PiratechainWalletBalance>
+  getBalance: () => Promise<PiratechainWalletBalance>
 }
 
 export type PiratechainMakeSynchronizer = () => (
@@ -131,11 +135,7 @@ export type PiratechainMakeSynchronizer = () => (
 
 export const asArrrPublicKey = asObject({
   birthdayHeight: asNumber,
-  publicKey: asString,
-  unifiedViewingKeys: asObject({
-    extfvk: asString,
-    extpub: asString
-  })
+  publicKey: asString
 })
 
 export type SafePiratechainWalletInfo = ReturnType<
@@ -145,7 +145,6 @@ export const asSafePiratechainWalletInfo = asWalletInfo(asArrrPublicKey)
 
 export interface PiratechainPrivateKeys {
   mnemonic: string
-  spendKey: string
   birthdayHeight: number
 }
 export const asPiratechainPrivateKeys = (
@@ -153,7 +152,6 @@ export const asPiratechainPrivateKeys = (
 ): Cleaner<PiratechainPrivateKeys> => {
   const asKeys = asObject({
     [`${pluginId}Mnemonic`]: asString,
-    [`${pluginId}SpendKey`]: asString,
     [`${pluginId}BirthdayHeight`]: asNumber
   })
 
@@ -162,14 +160,12 @@ export const asPiratechainPrivateKeys = (
       const clean = asKeys(raw)
       return {
         mnemonic: clean[`${pluginId}Mnemonic`] as string,
-        spendKey: clean[`${pluginId}SpendKey`] as string,
         birthdayHeight: clean[`${pluginId}BirthdayHeight`] as number
       }
     },
     clean => {
       return {
         [`${pluginId}Mnemonic`]: clean.mnemonic,
-        [`${pluginId}SpendKey`]: clean.spendKey,
         [`${pluginId}BirthdayHeight`]: clean.birthdayHeight
       }
     }

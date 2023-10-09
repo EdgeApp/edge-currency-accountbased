@@ -9,7 +9,7 @@ import { PiratechainNetworkInfo } from './piratechainTypes'
 const networkInfo: PiratechainNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
-    defaultHost: 'lightd1.pirate.black',
+    defaultHost: 'piratelightd1.cryptoforge.cc',
     defaultPort: 443
   },
   defaultBirthday: 2040000,
@@ -23,6 +23,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   pluginId: 'piratechain',
   requiredConfirmations: 10,
   unsafeBroadcastTx: true,
+  unsafeSyncNetwork: true,
   walletType: 'wallet:piratechain',
 
   // Explorers:
@@ -53,6 +54,7 @@ export const piratechain = makeOuterPlugin<
   networkInfo,
 
   async getInnerPlugin() {
+    /* webpackChunkName: "piratechain" */
     return await import('./PiratechainTools')
   }
 })

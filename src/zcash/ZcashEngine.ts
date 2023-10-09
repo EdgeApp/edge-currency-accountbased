@@ -146,36 +146,27 @@ export class ZcashEngine extends CurrencyEngine<
     networkBlockHeight: number
   ): void {
     if (!this.addressesChecked && !this.isSynced()) {
-      // Sync status is split up between downloading blocks (40%), scanning blocks (49.5%),
+      // Sync status is split up between downloading and scanning blocks (89.5%),
       // getting balance (0.5%), and querying transactions (10%).
+
+      const balanceProgress = scanProgress * 0.99
+      const txProgress = scanProgress * 0.8
       this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        (scanProgress * 0.99) / 100
-
-      let downloadProgress = 0
-      if (lastDownloadedHeight > 0) {
-        // Initial lastDownloadedHeight value is -1
-        const currentNumBlocksToDownload =
-          networkBlockHeight - lastDownloadedHeight
-        if (this.initialNumBlocksToDownload < 0) {
-          this.initialNumBlocksToDownload = currentNumBlocksToDownload
-        }
-
-        downloadProgress =
-          currentNumBlocksToDownload === 0 ||
-          this.initialNumBlocksToDownload === 0
-            ? 1
-            : 1 - currentNumBlocksToDownload / this.initialNumBlocksToDownload
-      }
+        balanceProgress / 100
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        downloadProgress * 0.8
+        txProgress / 100
 
-      const percent =
-        (this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] +
-          this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode]) /
-        2
-      if (percent !== this.progressRatio) {
-        if (Math.abs(percent - this.progressRatio) > 0.1 || percent === 1) {
-          this.progressRatio = percent
+      const totalProgress = (balanceProgress + txProgress) / 2
+
+      if (totalProgress !== this.progressRatio) {
+        if (
+          Math.abs(totalProgress - this.progressRatio) > 0.1 ||
+          totalProgress === 1
+        ) {
+          this.progressRatio = totalProgress
+          this.log.warn(
+            `Scan and download progress: ${Math.floor(totalProgress)}%`
+          )
           this.updateOnAddressesChecked()
         }
       }
