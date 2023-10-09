@@ -9,7 +9,7 @@ import { PiratechainNetworkInfo } from './piratechainTypes'
 const networkInfo: PiratechainNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
-    defaultHost: 'piratelightd1.cryptoforge.cc',
+    defaultHost: 'lightd1.pirate.black',
     defaultPort: 443
   },
   defaultBirthday: 2040000,
