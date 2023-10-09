@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.6.0 (2023-10-09)
+
 - changed: Upgrade react-native-piratechain to v0.4.0
 
 ## 2.5.5 (2023-10-06)
