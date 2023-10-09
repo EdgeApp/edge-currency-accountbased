@@ -43,6 +43,7 @@ export class ZcashEngine extends CurrencyEngine<
   availableZatoshi!: string
   initializer!: ZcashInitializerConfig
   progressRatio!: {
+    seenFirstUpdate: boolean
     percent: number
     lastUpdate: number
   }
@@ -85,6 +86,7 @@ export class ZcashEngine extends CurrencyEngine<
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
     this.progressRatio = {
+      seenFirstUpdate: false,
       percent: 0,
       lastUpdate: 0
     }
@@ -134,6 +136,12 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   onUpdateProgress(scanProgress: number): void {
+    // We can't trust the first progress report from the sdks. We'll take it if its 100 but otherwise we should toss it.
+    if (!this.progressRatio.seenFirstUpdate) {
+      this.progressRatio.seenFirstUpdate = true
+      if (scanProgress !== 100) return
+    }
+
     if (!this.addressesChecked && !this.isSynced()) {
       // Balance and transaction querying is handled during the sync therefore we can treat them the same.
 
