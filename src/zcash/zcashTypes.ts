@@ -11,9 +11,11 @@ import type {
   Addresses,
   BalanceEvent,
   InitializerConfig,
+  ShieldFundsInfo,
   SpendInfo,
   SpendSuccess,
   StatusEvent,
+  Transaction,
   TransactionEvent,
   UpdateEvent
 } from 'react-native-zcash'
@@ -51,6 +53,7 @@ export interface ZcashSynchronizer {
   deriveUnifiedAddress: () => Promise<Addresses>
   rescan: () => Promise<string>
   sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
+  shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
 }
 
 export type ZcashMakeSynchronizer = () => (

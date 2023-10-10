@@ -92,6 +92,9 @@ const makeZcashSynchronizer = async (
     sendToAddress: async spendInfo => {
       return await realSynchronizer.sendToAddress(spendInfo)
     },
+    shieldFunds: async shieldFundsInfo => {
+      return await realSynchronizer.shieldFunds(shieldFundsInfo)
+    },
     stop: async () => {
       return await realSynchronizer.stop()
     }

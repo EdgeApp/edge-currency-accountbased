@@ -35,6 +35,8 @@ import {
   ZcashWalletOtherData
 } from './zcashTypes'
 
+const AUTOSHIELD_MEMO = 'autoshield'
+
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
   SafeZcashWalletInfo
@@ -57,6 +59,11 @@ export class ZcashEngine extends CurrencyEngine<
   // Synchronizer management
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: ZcashSynchronizer
+  autoshielding: {
+    createAutoshieldTx: boolean
+    threshold: string
+    txid?: string
+  }
 
   constructor(
     env: PluginEnvironment<ZcashNetworkInfo>,
@@ -75,6 +82,10 @@ export class ZcashEngine extends CurrencyEngine<
       transparentTotalZatoshi: '0',
       saplingAvailableZatoshi: '0',
       saplingTotalZatoshi: '0'
+    }
+    this.autoshielding = {
+      createAutoshieldTx: false,
+      threshold: mul(this.networkInfo.defaultNetworkFee, '2') // Only autoshield if received shielded balance is greater than the default fee
     }
   }
 
@@ -103,6 +114,7 @@ export class ZcashEngine extends CurrencyEngine<
       const { scanProgress, networkBlockHeight } = payload
       this.onUpdateBlockHeight(networkBlockHeight)
       this.onUpdateProgress(scanProgress)
+      await this.checkAutoshielding()
     })
     this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
@@ -127,10 +139,20 @@ export class ZcashEngine extends CurrencyEngine<
       const total = add(transparentTotalZatoshi, saplingTotalZatoshi)
 
       this.updateBalance(this.currencyInfo.currencyCode, total)
+      await this.checkAutoshielding()
     })
     this.synchronizer.on('transactionsChanged', async payload => {
       const { transactions } = payload
       transactions.forEach(tx => {
+        // Check if the autoshielding transaction has confirmed
+        if (
+          tx.rawTransactionId === this.autoshielding.txid &&
+          tx.minedHeight > 0
+        ) {
+          this.autoshielding.txid = undefined
+          this.autoshielding.createAutoshieldTx = false
+        }
+
         this.processTransaction(tx)
       })
       this.onUpdateTransactions()
@@ -225,6 +247,11 @@ export class ZcashEngine extends CurrencyEngine<
         value: text
       }))
 
+    // Special case for autoshield txs
+    if (edgeMemos[0]?.value === AUTOSHIELD_MEMO) {
+      netNativeAmount = `-${networkFee}`
+    }
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
@@ -242,6 +269,20 @@ export class ZcashEngine extends CurrencyEngine<
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  async checkAutoshielding(): Promise<void> {
+    if (
+      this.isSynced() &&
+      !this.autoshielding.createAutoshieldTx &&
+      gt(
+        this.balances.transparentAvailableZatoshi,
+        this.autoshielding.threshold
+      )
+    ) {
+      this.autoshielding.createAutoshieldTx = true
+      await this.restartSyncNetwork()
+    }
+  }
+
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
@@ -249,18 +290,46 @@ export class ZcashEngine extends CurrencyEngine<
       opts?.privateKeys
     )
 
-    const { rpcNode } = this.networkInfo
-    this.initializer = {
-      mnemonicSeed: zcashPrivateKeys.mnemonic,
-      birthdayHeight: zcashPrivateKeys.birthdayHeight,
-      alias: base16.stringify(base64.parse(this.walletId)),
-      newWallet: !this.otherData.isSdkInitializedOnDisk,
-      ...rpcNode
+    if (this.synchronizer == null) {
+      const { rpcNode } = this.networkInfo
+      this.initializer = {
+        mnemonicSeed: zcashPrivateKeys.mnemonic,
+        birthdayHeight: zcashPrivateKeys.birthdayHeight,
+        alias: base16.stringify(base64.parse(this.walletId)),
+        newWallet: !this.otherData.isSdkInitializedOnDisk,
+        ...rpcNode
+      }
+
+      this.synchronizer = await this.makeSynchronizer(this.initializer)
+      this.initData()
+      this.initSubscriptions()
     }
 
-    this.synchronizer = await this.makeSynchronizer(this.initializer)
-    this.initData()
-    this.initSubscriptions()
+    if (this.synchronizer != null && this.autoshielding.createAutoshieldTx) {
+      return await new Promise(resolve => {
+        this.log.warn('Autoshield transaction broadcasting...')
+        this.synchronizer
+          ?.shieldFunds({
+            seed: zcashPrivateKeys.mnemonic,
+            memo: AUTOSHIELD_MEMO,
+            threshold: this.autoshielding.threshold
+          })
+          .then(tx => {
+            this.log.warn('Autoshield success', tx.rawTransactionId)
+            tx.blockTimeInSeconds = Date.now() / 1000
+            this.autoshielding.txid = tx.rawTransactionId
+            this.processTransaction(tx)
+            this.onUpdateTransactions()
+          })
+          .catch(e => {
+            this.autoshielding.createAutoshieldTx = false
+            this.log.error('Autoshield failed: ', e)
+          })
+          .finally(() => {
+            this.stopSyncing = resolve
+          })
+      })
+    }
 
     return await new Promise(resolve => {
       this.stopSyncing = resolve
@@ -269,11 +338,15 @@ export class ZcashEngine extends CurrencyEngine<
 
   async killEngine(): Promise<void> {
     await super.killEngine()
+    await this.restartSyncNetwork()
+    await this.synchronizer?.stop()
+  }
+
+  async restartSyncNetwork(): Promise<void> {
     if (this.stopSyncing != null) {
       await this.stopSyncing(1000)
       this.stopSyncing = undefined
     }
-    await this.synchronizer?.stop()
   }
 
   async clearBlockchainCache(): Promise<void> {
@@ -400,9 +473,9 @@ export class ZcashEngine extends CurrencyEngine<
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-    const unifiedAddress = await this.synchronizer.deriveUnifiedAddress()
+    const addresses = await this.synchronizer.deriveUnifiedAddress()
     return {
-      publicAddress: unifiedAddress.saplingAddress
+      publicAddress: addresses.unifiedAddress
     }
   }
 }
