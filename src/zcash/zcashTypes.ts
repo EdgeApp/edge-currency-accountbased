@@ -103,14 +103,6 @@ export interface ZcashUpdateEvent {
   networkBlockHeight: number
 }
 
-// Block range is inclusive
-export const asZcashBlockRange = asObject({
-  first: asNumber,
-  last: asNumber
-})
-
-export type ZcashBlockRange = ReturnType<typeof asZcashBlockRange>
-
 export const asZcashWalletOtherData = asObject({
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
@@ -127,10 +119,8 @@ export interface ZcashSynchronizer {
   start: () => Promise<void>
   stop: () => Promise<void>
   deriveUnifiedAddress: () => Promise<ZcashAddresses>
-  getTransactions: (arg: ZcashBlockRange) => Promise<ZcashTransaction[]>
   rescan: () => Promise<string>
   sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>
-  getBalance: () => Promise<ZcashWalletBalance>
 }
 
 export type ZcashMakeSynchronizer = () => (
