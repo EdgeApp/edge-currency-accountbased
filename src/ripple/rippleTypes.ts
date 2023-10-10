@@ -1,4 +1,12 @@
-import { asMaybe, asNumber, asObject, asOptional, asString } from 'cleaners'
+import {
+  asBoolean,
+  asEither,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 import { EdgeMetadata, EdgeTransaction, EdgeTxSwap } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
@@ -24,7 +32,11 @@ export const asMaybeActivateTokenParams = asMaybe(
 )
 
 export const asXrpWalletOtherData = asObject({
-  recommendedFee: asMaybe(asString, '0') // Floating point value in full XRP value
+  // A one-time flag to re-process transactions to add new data
+  txListReset: asMaybe(asBoolean, true),
+
+  // Floating point value in full XRP value
+  recommendedFee: asMaybe(asString, '0')
 })
 
 export type XrpWalletOtherData = ReturnType<typeof asXrpWalletOtherData>
@@ -77,3 +89,20 @@ export type MakeTxParams =
 export interface RippleOtherMethods {
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
 }
+
+// Nice-to-haves missing from xrpl lib:
+export const asIssuedCurrencyAmount = asObject({
+  currency: asString,
+  issuer: asString,
+  value: asString
+})
+export const asAmount = asEither(asIssuedCurrencyAmount, asString)
+
+export const asFinalFieldsCanceledOffer = asObject({
+  TakerPays: asAmount,
+  TakerGets: asAmount
+  // Add other fields that might appear in `FinalFields` as needed
+})
+export type FinalFieldsCanceledOffer = ReturnType<
+  typeof asFinalFieldsCanceledOffer
+>

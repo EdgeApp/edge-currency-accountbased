@@ -15,6 +15,7 @@ import {
   EdgeActivationApproveOptions,
   EdgeActivationQuote,
   EdgeActivationResult,
+  EdgeAssetAmount,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEngineActivationOptions,
@@ -22,6 +23,8 @@ import {
   EdgeGetActivationAssetsResults,
   EdgeSpendInfo,
   EdgeTransaction,
+  EdgeTxActionSwap,
+  EdgeTxActionSwapType,
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
@@ -29,7 +32,11 @@ import {
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 import {
+  DeletedNode,
   getBalanceChanges,
+  isCreatedNode,
+  isDeletedNode,
+  isModifiedNode,
   OfferCreate,
   Payment as PaymentJson,
   rippleTimeToUnixTime,
@@ -38,7 +45,10 @@ import {
   Wallet
 } from 'xrpl'
 import { Amount } from 'xrpl/dist/npm/models/common'
-import { AccountTxResponse } from 'xrpl/dist/npm/models/methods/accountTx'
+import {
+  AccountTxResponse,
+  AccountTxTransaction
+} from 'xrpl/dist/npm/models/methods/accountTx'
 import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -55,12 +65,14 @@ import {
 import { DIVIDE_PRECISION, EST_BLOCK_TIME_MS } from './rippleInfo'
 import { RippleTools } from './RippleTools'
 import {
+  asFinalFieldsCanceledOffer,
   asMaybeActivateTokenParams,
   asRipplePrivateKeys,
   asSafeRippleWalletInfo,
   asXrpNetworkLocation,
   asXrpTransaction,
   asXrpWalletOtherData,
+  FinalFieldsCanceledOffer,
   MakeTxParams,
   RippleOtherMethods,
   SafeRippleWalletInfo,
@@ -161,8 +173,24 @@ export class XrpEngine extends CurrencyEngine<
             fromTokenId == null
               ? this.currencyInfo
               : this.allTokensMap[fromTokenId]
+          const { pluginId } = this.currencyInfo
 
           const out: EdgeTransaction = {
+            action: {
+              type: 'swapOrderPost',
+              orderId: undefined,
+              canBePartial: true,
+              sourceAsset: {
+                pluginId,
+                tokenId: fromTokenId,
+                nativeAmount: fromNativeAmount
+              },
+              destAsset: {
+                pluginId,
+                tokenId: toTokenId,
+                nativeAmount: toNativeAmount
+              }
+            },
             blockHeight: 0, // blockHeight,
             currencyCode,
             date: Date.now() / 1000,
@@ -275,6 +303,159 @@ export class XrpEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * Parse TakerGets or TakerPays into an EdgeAssetAmount
+   * */
+  parseRippleDexTxAmount = (
+    takerAmount: Amount
+  ): EdgeAssetAmount | undefined => {
+    const {
+      currency,
+      issuer,
+      value
+      // Taker pays/gets XRP if 'TakerPays/Gets' is a plain string
+    } =
+      typeof takerAmount === 'string'
+        ? { currency: 'XRP', issuer: undefined, value: takerAmount }
+        : takerAmount
+    const isTakerToken = currency !== 'XRP' && issuer != null
+    if (isTakerToken && issuer == null) {
+      this.error('parseRippleDexTxAmount: No ussuer for token')
+      return
+    }
+    const tokenId = isTakerToken
+      ? makeTokenId({
+          currency,
+          issuer
+        })
+      : undefined
+
+    const takerVal = isTakerToken ? value : String(takerAmount)
+
+    if (takerVal == null) {
+      this.error(
+        `parseRippleDexTxAmount: Transaction has token code ${currency} with no value`
+      )
+      return
+    }
+    const takerDenom =
+      tokenId == null
+        ? this.currencyInfo.denominations[0]
+        : this.builtinTokens[tokenId].denominations[0]
+    if (takerDenom == null) {
+      this.error(`parseRippleDexTxAmount: Unknown denom ${currency}`)
+      return
+    }
+    const nativeAmount = mul(takerVal, takerDenom.multiplier)
+
+    return {
+      nativeAmount,
+      pluginId: this.currencyInfo.pluginId,
+      tokenId
+    }
+  }
+
+  /**
+   * Parse potential DEX trades.
+   * Parse offer-related nodes to determine order status for saving to the
+   * EdgeTxAction
+   **/
+  processRippleDexTx = (
+    accountTx: AccountTxTransaction
+  ): EdgeTxActionSwap | undefined => {
+    const { meta, tx } = accountTx
+    if (tx == null || typeof meta !== 'object') return
+
+    const { AffectedNodes } = meta
+    const deletedNodes = AffectedNodes.filter(
+      node =>
+        isDeletedNode(node) && node.DeletedNode.LedgerEntryType === 'Offer'
+    ) as DeletedNode[]
+    const hasDeletedNodes = deletedNodes.length > 0
+    const hasModifiedNodes =
+      AffectedNodes.filter(
+        node =>
+          isModifiedNode(node) && node.ModifiedNode.LedgerEntryType === 'Offer'
+      ).length > 0
+    const createdNodes = AffectedNodes.filter(
+      node =>
+        isCreatedNode(node) && node.CreatedNode.LedgerEntryType === 'Offer'
+    )
+    // Shouldn't happen. Only possible to have one created node per order tx
+    if (createdNodes.length > 1) {
+      this.error('processRippleDexTx: OfferCreate: multiple created nodes')
+      return
+    }
+
+    let type: EdgeTxActionSwapType | undefined
+    let sourceAsset: EdgeAssetAmount | undefined
+    let destAsset: EdgeAssetAmount | undefined
+    // Any kind of limit order state - post (open & unfilled), partially
+    // filled, fully filled, but NOT canceled.
+    if (tx.TransactionType === 'OfferCreate') {
+      // Exactly one node was created. Order opened without any fills
+      const isOpenOrder = createdNodes.length === 1 // check modifiedNodes?
+
+      // Either an existing order that had partial fills, OR
+      // a new order that only matched exact offer amounts in the book
+      const isPartiallyFilled =
+        hasModifiedNodes || (isOpenOrder && hasDeletedNodes)
+
+      // Order was fully filled
+      const isFullyFilled = hasDeletedNodes && !isOpenOrder
+
+      // Don't care about partial fills - counting them as general fills
+      type =
+        isFullyFilled || isPartiallyFilled ? 'swapOrderFill' : 'swapOrderPost'
+
+      // Parse amounts
+      const { TakerPays, TakerGets } = tx
+      sourceAsset = this.parseRippleDexTxAmount(TakerGets)
+      destAsset = this.parseRippleDexTxAmount(TakerPays)
+    } else if (tx.TransactionType === 'OfferCancel') {
+      // Assert only one offer is canceled per OfferCancel transaction
+      if (deletedNodes.length > 1) {
+        this.error('processRippleDexTx: OfferCancel: multiple deleted nodes')
+        return
+      }
+      if (deletedNodes.length === 1) {
+        // Reference the canceled offer for asset types/amounts
+        let canceledOffer: FinalFieldsCanceledOffer
+        try {
+          canceledOffer = asFinalFieldsCanceledOffer(
+            deletedNodes[0].DeletedNode.FinalFields
+          )
+        } catch (error) {
+          this.error(`Cleaning DeletedNodes FinalFields failed: ${error}`)
+          return
+        }
+        type = 'swapOrderCancel'
+
+        // Parse amounts
+        const { TakerPays, TakerGets } = canceledOffer
+        sourceAsset = this.parseRippleDexTxAmount(TakerGets)
+        destAsset = this.parseRippleDexTxAmount(TakerPays)
+      } else {
+        // The offer could not be canceled, possibly because it was already filled or expired
+        this.log.warn(
+          'processRippleDexTx: OfferCancel: without actual cancellation'
+        )
+        return
+      }
+    }
+
+    if (sourceAsset == null || destAsset == null || type == null) {
+      return
+    }
+
+    // Succeeded all checks
+    return {
+      type,
+      sourceAsset,
+      destAsset
+    }
+  }
+
   processRippleTransaction(accountTx: AccountTransaction): void {
     const { log } = this
     const { publicKey: publicAddress } = this.walletLocalData
@@ -335,6 +516,7 @@ export class XrpEngine extends CurrencyEngine<
           }
           // Parent currency like XRP
           this.addTransaction(currency, {
+            action: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode: currency,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
@@ -371,6 +553,7 @@ export class XrpEngine extends CurrencyEngine<
           }
 
           this.addTransaction(currencyCode, {
+            action: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
@@ -393,7 +576,14 @@ export class XrpEngine extends CurrencyEngine<
     const blockHeight = this.walletLocalData.blockHeight
     const address = this.walletLocalData.publicKey
     let startBlock: number = -1 // A value of -1 instructs the server to use the earliest validated ledger version available
-    if (
+
+    // See if we need to add new data to the existing EdgeTransactions on disk
+    if (this.otherData.txListReset) {
+      this.log('Resetting Ripple tx list...')
+      this.otherData.txListReset = false
+      this.walletLocalData.lastAddressQueryHeight = 0
+      this.walletLocalDataDirty = true
+    } else if (
       this.walletLocalData.lastAddressQueryHeight >
       ADDRESS_QUERY_LOOKBACK_BLOCKS
     ) {
