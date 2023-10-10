@@ -6,6 +6,7 @@ import {
   Tools as PiratechainNativeTools
 } from 'react-native-piratechain'
 import {
+  InitializerConfig,
   makeSynchronizer as ZcashMakeSynchronizer,
   Synchronizer as ZcashSynchronizer,
   Tools as ZcashNativeTools
@@ -13,7 +14,6 @@ import {
 import { bridgifyObject, emit, onMethod } from 'yaob'
 
 import { PiratechainInitializerConfig } from './piratechain/piratechainTypes'
-import { ZcashInitializerConfig } from './zcash/zcashTypes'
 
 const { EdgeCurrencyAccountbasedModule } = NativeModules
 const { sourceUri } = EdgeCurrencyAccountbasedModule.getConstants()
@@ -61,7 +61,7 @@ const makePiratechainSynchronizer = async (
 }
 
 const makeZcashSynchronizer = async (
-  config: ZcashInitializerConfig
+  config: InitializerConfig
 ): Promise<ZcashSynchronizer> => {
   const realSynchronizer = await ZcashMakeSynchronizer(config)
 
@@ -124,7 +124,7 @@ export function makePluginIo(): EdgeOtherMethods {
     }),
     zcash: bridgifyObject({
       Tools: ZcashNativeTools,
-      async makeSynchronizer(config: ZcashInitializerConfig) {
+      async makeSynchronizer(config: InitializerConfig) {
         return await makeZcashSynchronizer(config)
       }
     })

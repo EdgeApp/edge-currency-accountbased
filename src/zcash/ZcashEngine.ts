@@ -11,6 +11,12 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import type {
+  InitializerConfig,
+  SpendInfo,
+  StatusEvent,
+  Transaction
+} from 'react-native-zcash'
 import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -23,13 +29,9 @@ import {
   asZcashPrivateKeys,
   asZcashWalletOtherData,
   SafeZcashWalletInfo,
-  ZcashBalanceEvent,
-  ZcashInitializerConfig,
+  ZcashBalances,
   ZcashNetworkInfo,
-  ZcashSpendInfo,
   ZcashSynchronizer,
-  ZcashSynchronizerStatus,
-  ZcashTransaction,
   ZcashWalletOtherData
 } from './zcashTypes'
 
@@ -40,19 +42,17 @@ export class ZcashEngine extends CurrencyEngine<
   pluginId: string
   networkInfo: ZcashNetworkInfo
   otherData!: ZcashWalletOtherData
-  synchronizerStatus!: ZcashSynchronizerStatus
+  synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
-  balances: ZcashBalanceEvent
-  initializer!: ZcashInitializerConfig
+  balances: ZcashBalances
+  initializer!: InitializerConfig
   progressRatio!: {
     seenFirstUpdate: boolean
     percent: number
     lastUpdate: number
   }
 
-  makeSynchronizer: (
-    config: ZcashInitializerConfig
-  ) => Promise<ZcashSynchronizer>
+  makeSynchronizer: (config: InitializerConfig) => Promise<ZcashSynchronizer>
 
   // Synchronizer management
   started: boolean
@@ -213,7 +213,7 @@ export class ZcashEngine extends CurrencyEngine<
     return this.synchronizerStatus === 'SYNCED'
   }
 
-  processTransaction(tx: ZcashTransaction): void {
+  processTransaction(tx: Transaction): void {
     let netNativeAmount = tx.value
     const networkFee = tx.fee ?? this.networkInfo.defaultNetworkFee
     if (tx.toAddress != null) {
@@ -380,14 +380,13 @@ export class ZcashEngine extends CurrencyEngine<
 
     const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
-    const txParams: ZcashSpendInfo = {
+    const txParams: SpendInfo = {
       zatoshi: sub(
         abs(edgeTransaction.nativeAmount),
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
       memo,
-      fromAccountIndex: 0,
       mnemonicSeed: zcashPrivateKeys.mnemonic
     }
 

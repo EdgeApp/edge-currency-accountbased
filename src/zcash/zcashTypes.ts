@@ -7,6 +7,16 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
+import type {
+  Addresses,
+  BalanceEvent,
+  InitializerConfig,
+  SpendInfo,
+  SpendSuccess,
+  StatusEvent,
+  TransactionEvent,
+  UpdateEvent
+} from 'react-native-zcash'
 import { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
@@ -23,83 +33,6 @@ export interface ZcashNetworkInfo {
   defaultBirthday: number
 }
 
-export interface ZcashSpendInfo {
-  zatoshi: string
-  toAddress: string
-  memo: string
-  fromAccountIndex: number
-  mnemonicSeed: string
-}
-
-export interface ZcashTransaction {
-  rawTransactionId: string
-  raw?: string
-  blockTimeInSeconds: number
-  minedHeight: number
-  value: string
-  fee?: string
-  toAddress?: string
-  memos: string[]
-}
-
-export interface ZcashPendingTransaction {
-  txId: string
-  raw: string
-}
-
-export interface UnifiedViewingKey {
-  extfvk: string
-  extpub: string
-}
-
-export interface ZcashInitializerConfig {
-  networkName: ZcashNetworkName
-  defaultHost: string
-  defaultPort: number
-  mnemonicSeed: string
-  alias: string
-  birthdayHeight: number
-  newWallet: boolean
-}
-
-export interface ZcashAddresses {
-  unifiedAddress: string
-  saplingAddress: string
-  transparentAddress: string
-}
-
-export type ZcashSynchronizerStatus =
-  | 'STOPPED'
-  | 'DISCONNECTED'
-  | 'SYNCING'
-  | 'SYNCED'
-
-export interface ZcashBalanceEvent {
-  transparentAvailableZatoshi: string
-  transparentTotalZatoshi: string
-  saplingAvailableZatoshi: string
-  saplingTotalZatoshi: string
-}
-
-export interface ZcashStatusEvent {
-  alias: string
-  name: ZcashSynchronizerStatus
-}
-
-export interface ZcashTransactionsEvent {
-  transactions: ZcashTransaction[]
-}
-
-export interface ZcashUpdateEvent {
-  alias: string
-  isDownloading: boolean
-  isScanning: boolean
-  lastDownloadedHeight: number
-  lastScannedHeight: number
-  scanProgress: number // 0 - 100
-  networkBlockHeight: number
-}
-
 export const asZcashWalletOtherData = asObject({
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
@@ -108,21 +41,26 @@ export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
 
 export interface ZcashSynchronizer {
   on: Subscriber<{
-    balanceChanged: ZcashBalanceEvent
-    statusChanged: ZcashStatusEvent
-    transactionsChanged: ZcashTransactionsEvent
-    update: ZcashUpdateEvent
+    balanceChanged: BalanceEvent
+    statusChanged: StatusEvent
+    transactionsChanged: TransactionEvent
+    update: UpdateEvent
   }>
   start: () => Promise<void>
   stop: () => Promise<void>
-  deriveUnifiedAddress: () => Promise<ZcashAddresses>
+  deriveUnifiedAddress: () => Promise<Addresses>
   rescan: () => Promise<string>
-  sendToAddress: (arg: ZcashSpendInfo) => Promise<ZcashPendingTransaction>
+  sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
 }
 
 export type ZcashMakeSynchronizer = () => (
-  config: ZcashInitializerConfig
+  config: InitializerConfig
 ) => Promise<ZcashSynchronizer>
+
+export type ZcashBalances = Omit<
+  Omit<BalanceEvent, 'availableZatoshi'>,
+  'totalZatoshi'
+>
 
 export const asZecPublicKey = asObject({
   birthdayHeight: asNumber,
