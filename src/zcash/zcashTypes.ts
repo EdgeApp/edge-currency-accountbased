@@ -1,4 +1,5 @@
 import {
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -20,7 +21,6 @@ export interface ZcashNetworkInfo {
   }
   defaultNetworkFee: string
   defaultBirthday: number
-  transactionQueryLimit: number
 }
 
 export interface ZcashSpendInfo {
@@ -33,9 +33,11 @@ export interface ZcashSpendInfo {
 
 export interface ZcashTransaction {
   rawTransactionId: string
+  raw?: string
   blockTimeInSeconds: number
   minedHeight: number
   value: string
+  fee?: string
   toAddress?: string
   memos: string[]
 }
@@ -62,6 +64,7 @@ export interface ZcashInitializerConfig {
   mnemonicSeed: string
   alias: string
   birthdayHeight: number
+  newWallet: boolean
 }
 
 export interface ZcashAddresses {
@@ -76,9 +79,18 @@ export type ZcashSynchronizerStatus =
   | 'SYNCING'
   | 'SYNCED'
 
+export interface ZcashBalanceEvent {
+  availableZatoshi: string
+  totalZatoshi: string
+}
+
 export interface ZcashStatusEvent {
   alias: string
   name: ZcashSynchronizerStatus
+}
+
+export interface ZcashTransactionsEvent {
+  transactions: ZcashTransaction[]
 }
 
 export interface ZcashUpdateEvent {
@@ -100,18 +112,16 @@ export const asZcashBlockRange = asObject({
 export type ZcashBlockRange = ReturnType<typeof asZcashBlockRange>
 
 export const asZcashWalletOtherData = asObject({
-  alias: asMaybe(asString),
-  blockRange: asMaybe(asZcashBlockRange, () => ({
-    first: 0,
-    last: 0
-  }))
+  isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
 
 export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
 
 export interface ZcashSynchronizer {
   on: Subscriber<{
+    balanceChanged: ZcashBalanceEvent
     statusChanged: ZcashStatusEvent
+    transactionsChanged: ZcashTransactionsEvent
     update: ZcashUpdateEvent
   }>
   start: () => Promise<void>

@@ -11,8 +11,7 @@ const networkInfo: ZcashNetworkInfo = {
     defaultPort: 9067
   },
   defaultBirthday: 1310000,
-  defaultNetworkFee: '1000', // hardcoded default ZEC fee
-  transactionQueryLimit: 999
+  defaultNetworkFee: '10000' // hardcoded default ZEC fee
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
