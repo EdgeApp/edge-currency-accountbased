@@ -1,4 +1,5 @@
 import {
+  asArray,
   asBoolean,
   asCodec,
   asMaybe,
@@ -36,6 +37,7 @@ export interface ZcashNetworkInfo {
 }
 
 export const asZcashWalletOtherData = asObject({
+  missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
 

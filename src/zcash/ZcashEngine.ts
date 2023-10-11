@@ -247,6 +247,20 @@ export class ZcashEngine extends CurrencyEngine<
         value: text
       }))
 
+    // Hack for missing memos on android
+    if (
+      this.otherData.missingAndroidShieldedMemosHack.includes(
+        tx.rawTransactionId
+      ) &&
+      edgeMemos.length === 0
+    ) {
+      edgeMemos.push({
+        memoName: 'memo',
+        type: 'text',
+        value: AUTOSHIELD_MEMO
+      })
+    }
+
     // Special case for autoshield txs
     if (edgeMemos[0]?.value === AUTOSHIELD_MEMO) {
       netNativeAmount = `-${networkFee}`
@@ -318,6 +332,13 @@ export class ZcashEngine extends CurrencyEngine<
             this.log.warn('Autoshield success', tx.rawTransactionId)
             tx.blockTimeInSeconds = Date.now() / 1000
             this.autoshielding.txid = tx.rawTransactionId
+
+            // The Android SDK can't find shielding transactions memos so we can save it locally for a slightly nicer UX
+            this.otherData.missingAndroidShieldedMemosHack.push(
+              tx.rawTransactionId
+            )
+            this.walletLocalDataDirty = true
+
             this.processTransaction(tx)
             this.onUpdateTransactions()
           })
