@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.7.0 (2023-10-11)
+
 - added: EdgeTxAction tagging to TRX freeze/unfreeze contract call transactions
 - added: Support for importing XLM wallets via 12/24-word mnemonic seed phrase
 - added: Add Zcash autoshield support
