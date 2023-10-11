@@ -60,6 +60,9 @@ export interface TronNetworkFees {
 }
 
 export const asTronWalletOtherData = asObject({
+  // A one-time flag to re-process transactions to add new data
+  txListReset: asMaybe(asBoolean, true),
+
   txQueryCache: asMaybe(
     asObject({
       mainnet: asTxQueryCache,
