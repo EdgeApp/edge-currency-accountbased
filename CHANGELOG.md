@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: EdgeTxAction tagging to TRX freeze/unfreeze contract call transactions
+- added: Support for importing XLM wallets via 12/24-word mnemonic seed phrase
 
 ## 2.6.0 (2023-10-09)
 

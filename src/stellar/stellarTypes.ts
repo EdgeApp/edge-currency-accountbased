@@ -91,5 +91,6 @@ export const asSafeStellarWalletInfo = asSafeCommonWalletInfo
 
 export type StellarPrivateKeys = ReturnType<typeof asStellarPrivateKeys>
 export const asStellarPrivateKeys = asObject({
-  stellarKey: asString
+  stellarKey: asString,
+  stellarMnemonic: asMaybe(asString)
 })
