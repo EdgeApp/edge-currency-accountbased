@@ -11,6 +11,12 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import type {
+  InitializerConfig,
+  SpendInfo,
+  StatusEvent,
+  Transaction
+} from 'react-native-zcash'
 import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -23,14 +29,13 @@ import {
   asZcashPrivateKeys,
   asZcashWalletOtherData,
   SafeZcashWalletInfo,
-  ZcashInitializerConfig,
+  ZcashBalances,
   ZcashNetworkInfo,
-  ZcashSpendInfo,
   ZcashSynchronizer,
-  ZcashSynchronizerStatus,
-  ZcashTransaction,
   ZcashWalletOtherData
 } from './zcashTypes'
+
+const AUTOSHIELD_MEMO = 'autoshield'
 
 export class ZcashEngine extends CurrencyEngine<
   ZcashTools,
@@ -39,23 +44,26 @@ export class ZcashEngine extends CurrencyEngine<
   pluginId: string
   networkInfo: ZcashNetworkInfo
   otherData!: ZcashWalletOtherData
-  synchronizerStatus!: ZcashSynchronizerStatus
+  synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
-  initializer!: ZcashInitializerConfig
+  balances: ZcashBalances
+  initializer!: InitializerConfig
   progressRatio!: {
     seenFirstUpdate: boolean
     percent: number
     lastUpdate: number
   }
 
-  makeSynchronizer: (
-    config: ZcashInitializerConfig
-  ) => Promise<ZcashSynchronizer>
+  makeSynchronizer: (config: InitializerConfig) => Promise<ZcashSynchronizer>
 
   // Synchronizer management
-  started: boolean
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: ZcashSynchronizer
+  autoshielding: {
+    createAutoshieldTx: boolean
+    threshold: string
+    txid?: string
+  }
 
   constructor(
     env: PluginEnvironment<ZcashNetworkInfo>,
@@ -69,8 +77,16 @@ export class ZcashEngine extends CurrencyEngine<
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
-
-    this.started = false
+    this.balances = {
+      transparentAvailableZatoshi: '0',
+      transparentTotalZatoshi: '0',
+      saplingAvailableZatoshi: '0',
+      saplingTotalZatoshi: '0'
+    }
+    this.autoshielding = {
+      createAutoshieldTx: false,
+      threshold: mul(this.networkInfo.defaultNetworkFee, '2') // Only autoshield if received shielded balance is greater than the default fee
+    }
   }
 
   setOtherData(raw: any): void {
@@ -98,18 +114,45 @@ export class ZcashEngine extends CurrencyEngine<
       const { scanProgress, networkBlockHeight } = payload
       this.onUpdateBlockHeight(networkBlockHeight)
       this.onUpdateProgress(scanProgress)
+      await this.checkAutoshielding()
     })
     this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
     })
     this.synchronizer.on('balanceChanged', async payload => {
-      if (payload.totalZatoshi === '-1') return
-      this.availableZatoshi = payload.availableZatoshi
-      this.updateBalance(this.currencyInfo.currencyCode, payload.totalZatoshi)
+      const {
+        transparentAvailableZatoshi,
+        transparentTotalZatoshi,
+        saplingAvailableZatoshi,
+        saplingTotalZatoshi
+      } = payload
+
+      // Transparent funds will be autoshielded so the available balance should only reflect the chielded balances
+      this.availableZatoshi = saplingAvailableZatoshi
+      this.balances = {
+        transparentAvailableZatoshi,
+        transparentTotalZatoshi,
+        saplingAvailableZatoshi,
+        saplingTotalZatoshi
+      }
+
+      const total = add(transparentTotalZatoshi, saplingTotalZatoshi)
+
+      this.updateBalance(this.currencyInfo.currencyCode, total)
+      await this.checkAutoshielding()
     })
     this.synchronizer.on('transactionsChanged', async payload => {
       const { transactions } = payload
       transactions.forEach(tx => {
+        // Check if the autoshielding transaction has confirmed
+        if (
+          tx.rawTransactionId === this.autoshielding.txid &&
+          tx.minedHeight > 0
+        ) {
+          this.autoshielding.txid = undefined
+          this.autoshielding.createAutoshieldTx = false
+        }
+
         this.processTransaction(tx)
       })
       this.onUpdateTransactions()
@@ -180,7 +223,6 @@ export class ZcashEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.engineOn = true
-    this.started = true
     await super.startEngine()
   }
 
@@ -189,7 +231,7 @@ export class ZcashEngine extends CurrencyEngine<
     return this.synchronizerStatus === 'SYNCED'
   }
 
-  processTransaction(tx: ZcashTransaction): void {
+  processTransaction(tx: Transaction): void {
     let netNativeAmount = tx.value
     const networkFee = tx.fee ?? this.networkInfo.defaultNetworkFee
     if (tx.toAddress != null) {
@@ -204,6 +246,25 @@ export class ZcashEngine extends CurrencyEngine<
         type: 'text',
         value: text
       }))
+
+    // Hack for missing memos on android
+    if (
+      this.otherData.missingAndroidShieldedMemosHack.includes(
+        tx.rawTransactionId
+      ) &&
+      edgeMemos.length === 0
+    ) {
+      edgeMemos.push({
+        memoName: 'memo',
+        type: 'text',
+        value: AUTOSHIELD_MEMO
+      })
+    }
+
+    // Special case for autoshield txs
+    if (edgeMemos[0]?.value === AUTOSHIELD_MEMO) {
+      netNativeAmount = `-${networkFee}`
+    }
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.minedHeight,
@@ -222,25 +283,74 @@ export class ZcashEngine extends CurrencyEngine<
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  async checkAutoshielding(): Promise<void> {
+    if (
+      this.isSynced() &&
+      !this.autoshielding.createAutoshieldTx &&
+      gt(
+        this.balances.transparentAvailableZatoshi,
+        this.autoshielding.threshold
+      )
+    ) {
+      this.autoshielding.createAutoshieldTx = true
+      await this.restartSyncNetwork()
+    }
+  }
+
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
-    if (!this.started) return 1000
+    if (!this.engineOn) return 1000
 
     const zcashPrivateKeys = asZcashPrivateKeys(this.currencyInfo.pluginId)(
       opts?.privateKeys
     )
 
-    const { rpcNode } = this.networkInfo
-    this.initializer = {
-      mnemonicSeed: zcashPrivateKeys.mnemonic,
-      birthdayHeight: zcashPrivateKeys.birthdayHeight,
-      alias: base16.stringify(base64.parse(this.walletId)),
-      newWallet: !this.otherData.isSdkInitializedOnDisk,
-      ...rpcNode
+    if (this.synchronizer == null) {
+      const { rpcNode } = this.networkInfo
+      this.initializer = {
+        mnemonicSeed: zcashPrivateKeys.mnemonic,
+        birthdayHeight: zcashPrivateKeys.birthdayHeight,
+        alias: base16.stringify(base64.parse(this.walletId)),
+        newWallet: !this.otherData.isSdkInitializedOnDisk,
+        ...rpcNode
+      }
+
+      this.synchronizer = await this.makeSynchronizer(this.initializer)
+      this.initData()
+      this.initSubscriptions()
     }
 
-    this.synchronizer = await this.makeSynchronizer(this.initializer)
-    this.initData()
-    this.initSubscriptions()
+    if (this.synchronizer != null && this.autoshielding.createAutoshieldTx) {
+      return await new Promise(resolve => {
+        this.log.warn('Autoshield transaction broadcasting...')
+        this.synchronizer
+          ?.shieldFunds({
+            seed: zcashPrivateKeys.mnemonic,
+            memo: AUTOSHIELD_MEMO,
+            threshold: this.autoshielding.threshold
+          })
+          .then(tx => {
+            this.log.warn('Autoshield success', tx.rawTransactionId)
+            tx.blockTimeInSeconds = Date.now() / 1000
+            this.autoshielding.txid = tx.rawTransactionId
+
+            // The Android SDK can't find shielding transactions memos so we can save it locally for a slightly nicer UX
+            this.otherData.missingAndroidShieldedMemosHack.push(
+              tx.rawTransactionId
+            )
+            this.walletLocalDataDirty = true
+
+            this.processTransaction(tx)
+            this.onUpdateTransactions()
+          })
+          .catch(e => {
+            this.autoshielding.createAutoshieldTx = false
+            this.log.error('Autoshield failed: ', e)
+          })
+          .finally(() => {
+            this.stopSyncing = resolve
+          })
+      })
+    }
 
     return await new Promise(resolve => {
       this.stopSyncing = resolve
@@ -248,13 +358,16 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    this.started = false
+    await super.killEngine()
+    await this.restartSyncNetwork()
+    await this.synchronizer?.stop()
+  }
+
+  async restartSyncNetwork(): Promise<void> {
     if (this.stopSyncing != null) {
       await this.stopSyncing(1000)
       this.stopSyncing = undefined
     }
-    await this.synchronizer?.stop()
-    await super.killEngine()
   }
 
   async clearBlockchainCache(): Promise<void> {
@@ -356,14 +469,13 @@ export class ZcashEngine extends CurrencyEngine<
 
     const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
-    const txParams: ZcashSpendInfo = {
+    const txParams: SpendInfo = {
       zatoshi: sub(
         abs(edgeTransaction.nativeAmount),
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
       memo,
-      fromAccountIndex: 0,
       mnemonicSeed: zcashPrivateKeys.mnemonic
     }
 
@@ -382,9 +494,9 @@ export class ZcashEngine extends CurrencyEngine<
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-    const unifiedAddress = await this.synchronizer.deriveUnifiedAddress()
+    const addresses = await this.synchronizer.deriveUnifiedAddress()
     return {
-      publicAddress: unifiedAddress.saplingAddress
+      publicAddress: addresses.unifiedAddress
     }
   }
 }

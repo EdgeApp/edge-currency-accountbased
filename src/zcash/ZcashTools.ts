@@ -12,6 +12,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import type { UnifiedViewingKey } from 'react-native-zcash'
 import { Tools as ToolsType } from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -22,7 +23,6 @@ import {
   asSafeZcashWalletInfo,
   asZcashPrivateKeys,
   asZecPublicKey,
-  UnifiedViewingKey,
   ZcashNetworkInfo
 } from './zcashTypes'
 
