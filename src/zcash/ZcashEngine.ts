@@ -185,25 +185,22 @@ export class ZcashEngine extends CurrencyEngine<
       if (scanProgress !== 100) return
     }
 
-    if (!this.addressesChecked && !this.isSynced()) {
-      // Balance and transaction querying is handled during the sync therefore we can treat them the same.
+    // Balance and transaction querying is handled during the sync therefore we can treat them the same.
 
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        scanProgress / 100
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        scanProgress / 100
+    this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
+      scanProgress / 100
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+      scanProgress / 100
 
-      if (
-        scanProgress > this.progressRatio.percent &&
-        Date.now() - this.progressRatio.lastUpdate > 1000 // throttle updates to one second
-      ) {
-        this.progressRatio.percent = scanProgress
-        this.progressRatio.lastUpdate = Date.now()
-        this.log.warn(
-          `Scan and download progress: ${Math.floor(scanProgress)}%`
-        )
-        this.updateOnAddressesChecked()
-      }
+    if (
+      scanProgress > this.progressRatio.percent &&
+      (scanProgress === 100 ||
+        Date.now() - this.progressRatio.lastUpdate > 1000) // throttle updates to one second
+    ) {
+      this.progressRatio.percent = scanProgress
+      this.progressRatio.lastUpdate = Date.now()
+      this.log.warn(`Scan and download progress: ${Math.floor(scanProgress)}%`)
+      this.updateOnAddressesChecked()
     }
   }
 
