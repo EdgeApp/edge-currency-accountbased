@@ -86,8 +86,8 @@ const makeZcashSynchronizer = async (
     deriveUnifiedAddress: async () => {
       return await realSynchronizer.deriveUnifiedAddress()
     },
-    rescan: () => {
-      return realSynchronizer.rescan()
+    rescan: async () => {
+      return await realSynchronizer.rescan()
     },
     sendToAddress: async spendInfo => {
       return await realSynchronizer.sendToAddress(spendInfo)

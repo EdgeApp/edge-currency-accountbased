@@ -53,7 +53,7 @@ export interface ZcashSynchronizer {
   start: () => Promise<void>
   stop: () => Promise<void>
   deriveUnifiedAddress: () => Promise<Addresses>
-  rescan: () => Promise<string>
+  rescan: () => Promise<void>
   sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
 }

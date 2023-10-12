@@ -379,7 +379,7 @@ export class ZcashEngine extends CurrencyEngine<
     await super.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
-    this.synchronizer
+    await this.synchronizer
       ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
     this.initData()
