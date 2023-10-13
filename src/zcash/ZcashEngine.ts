@@ -358,6 +358,7 @@ export class ZcashEngine extends CurrencyEngine<
     await super.killEngine()
     await this.restartSyncNetwork()
     await this.synchronizer?.stop()
+    this.synchronizer = undefined
   }
 
   async restartSyncNetwork(): Promise<void> {
