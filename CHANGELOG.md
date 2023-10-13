@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Filecoin Testnet (Calibration)
+
 ## 2.7.2 (2023-10-20)
 
 - added: Add deprecated `memoType` to zcashInfo for backwards compatibility

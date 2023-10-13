@@ -4,6 +4,7 @@ import { algorand } from './algorand/algorandInfo'
 import { binance } from './binance/binanceInfo'
 import { eosPlugins } from './eos/eosInfos'
 import { ethereumPlugins } from './ethereum/ethereumInfos'
+import { calibration } from './filecoin/calibrationInfo'
 import { filecoin } from './filecoin/filecoinInfo'
 import { fio } from './fio/fioInfo'
 import { hedera } from './hedera/hederaInfo'
@@ -24,6 +25,7 @@ const plugins = {
   algorand,
   binance,
   filecoin,
+  calibration,
   fio,
   hedera,
   liberland,
