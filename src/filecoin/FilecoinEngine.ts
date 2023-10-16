@@ -399,40 +399,41 @@ export class FilecoinEngine extends CurrencyEngine<
     address: string,
     onScan: (event: { tx: EdgeTransaction; progress: number }) => void
   ): Promise<void> {
-    const messagesPerPage = 20
+    const transfersPerPage = 20
     let index = 0
-    let messagesChecked = 0
-    let messageCount = -1
+    let transfersChecked = 0
+    let transferCount = -1
     do {
-      const messagesResponse = await this.filfoxApi.getAccountMessages(
+      const transfersResponse = await this.filfoxApi.getAccountTransfers(
         address,
         index++,
-        messagesPerPage
+        transfersPerPage
       )
 
       // Only update the message count on the first query because mutating this
       // in-between pagination may cause infinite loops.
-      messageCount =
-        messageCount === -1 ? messagesResponse.totalCount : messageCount
+      transferCount =
+        transferCount === -1 ? transfersResponse.totalCount : transferCount
 
-      const messages = messagesResponse.messages
-      for (const message of messages) {
+      const transfers = transfersResponse.transfers
+      for (const transfer of transfers) {
         // Exit when we reach a transaction we may already have saved
-        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
+        if (transfer.height < this.walletLocalData.lastAddressQueryHeight)
+          return
 
         // Process message into a transaction
         const messageDetails = await this.filfoxApi.getMessageDetails(
-          message.cid
+          transfer.message
         )
         const tx = this.filfoxMessageToEdgeTransaction(messageDetails)
 
         // Calculate the progress
         const progress =
-          messageCount === 0 ? 1 : ++messagesChecked / messageCount
+          transferCount === 0 ? 1 : ++transfersChecked / transferCount
 
         onScan({ tx, progress })
       }
-    } while (messagesChecked < messageCount)
+    } while (transfersChecked < transferCount)
   }
 
   async scanTransactionsFromFilscan(

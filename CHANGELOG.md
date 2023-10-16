@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Filecoin Testnet (Calibration)
+- fixed: Missing Filecoin transactions caused by external messages for the account (e.g. FILForwarder)
 
 ## 2.7.2 (2023-10-20)
 
