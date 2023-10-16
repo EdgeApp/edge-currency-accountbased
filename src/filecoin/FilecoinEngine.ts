@@ -411,11 +411,11 @@ export class FilecoinEngine extends CurrencyEngine<
       0,
       1
     )
-    const transferCount = initialResponse.totalCount
+    let transferCount = initialResponse.totalCount
 
     // Calculate total pages and set a reasonable transfersPerPage
     const transfersPerPage = 20
-    const totalPages = Math.ceil(transferCount / transfersPerPage)
+    let totalPages = Math.ceil(transferCount / transfersPerPage)
 
     let transfersChecked = 0
     for (
@@ -429,7 +429,33 @@ export class FilecoinEngine extends CurrencyEngine<
         transfersPerPage
       )
 
-      const transfers = transfersResponse.transfers
+      let transfers = transfersResponse.transfers
+
+      // If totalCount has changed, make an additional call to get the missed transfers
+      if (transfersResponse.totalCount !== transferCount) {
+        // How many transfers were missed
+        const missedTransfersCount =
+          transfersResponse.totalCount - transferCount
+
+        // Calculate the transfer page index to query for the missing transfers
+        const previousPageIndex = currentPageIndex + 1 // Add because we're querying in reverse
+        const missedTransfersPageIndex =
+          previousPageIndex * (transfersPerPage / missedTransfersCount)
+
+        const missedTransfersResponse =
+          await this.filfoxApi.getAccountTransfers(
+            address,
+            missedTransfersPageIndex,
+            missedTransfersCount
+          )
+        transfers = [...transfers, ...missedTransfersResponse.transfers]
+
+        // Update the totalCount
+        transferCount = transfersResponse.totalCount
+        // Recalculate total pages
+        totalPages = Math.ceil(transferCount / transfersPerPage)
+      }
+
       // Loop through transfers in reverse
       for (let i = transfers.length - 1; i >= 0; i--) {
         const transfer = transfers[i]
