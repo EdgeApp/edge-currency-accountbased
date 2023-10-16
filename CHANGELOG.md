@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 2.7.1 (2023-10-16)
+
+- changed: Upgrade react-native-zcash to v0.6.2
+- changed: Update address explorer url (Zcash)
+- fixed: Set synchronizer to null in `killEngine` so it can be properly restarted (Zcash)
+
 ## 2.7.0 (2023-10-11)
 
 - added: EdgeTxAction tagging to TRX freeze/unfreeze contract call transactions
