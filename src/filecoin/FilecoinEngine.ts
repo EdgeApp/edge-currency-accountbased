@@ -458,6 +458,9 @@ export class FilecoinEngine extends CurrencyEngine<
 
       // Loop through transfers in reverse
       for (let i = transfers.length - 1; i >= 0; i--) {
+        // Exit early if the engine has been stopped
+        if (!this.engineOn) return
+
         const transfer = transfers[i]
 
         // Avoid over-processing:
