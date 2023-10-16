@@ -471,6 +471,11 @@ export class FilecoinEngine extends CurrencyEngine<
           // Skip processed message (there can be many transfers per message)
           !processedMessageCids.has(transfer.message)
         ) {
+          // Progress the last query height to optimize the next scan
+          if (transfer.height > this.walletLocalData.lastAddressQueryHeight) {
+            this.walletLocalData.lastAddressQueryHeight = transfer.height
+            this.walletLocalDataDirty = true
+          }
           // Process message into a transaction
           const messageDetails = await this.filfoxApi.getMessageDetails(
             transfer.message
