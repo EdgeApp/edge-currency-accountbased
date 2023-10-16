@@ -378,13 +378,12 @@ export class FilecoinEngine extends CurrencyEngine<
         this.scanTransactionsFromFilfox(addressString, handleScan)
       ]
 
-      const startingNetworkHeight = this.walletLocalData.blockHeight
-
       // Run scanners:
       await Promise.all(scanners)
 
-      // Save the network height at the start of the scanning
-      this.walletLocalData.lastAddressQueryHeight = startingNetworkHeight
+      // Save the network height to be leveraged in the next scan
+      this.walletLocalData.lastAddressQueryHeight =
+        this.walletLocalData.blockHeight
       this.walletLocalDataDirty = true
 
       // Make sure the sync progress is 100%
@@ -405,27 +404,39 @@ export class FilecoinEngine extends CurrencyEngine<
     }) => void
   ): Promise<void> {
     const processedMessageCids = new Set<string>()
+
+    // Initial request to get the totalCount
+    const initialResponse = await this.filfoxApi.getAccountTransfers(
+      address,
+      0,
+      1
+    )
+    const transferCount = initialResponse.totalCount
+
+    // Calculate total pages and set a reasonable transfersPerPage
     const transfersPerPage = 20
-    let index = 0
+    const totalPages = Math.ceil(transferCount / transfersPerPage)
+
     let transfersChecked = 0
-    let transferCount = -1
-    do {
+    for (
+      let currentPageIndex = totalPages - 1;
+      currentPageIndex >= 0;
+      currentPageIndex--
+    ) {
       const transfersResponse = await this.filfoxApi.getAccountTransfers(
         address,
-        index++,
+        currentPageIndex,
         transfersPerPage
       )
 
-      // Only update the message count on the first query because mutating this
-      // in-between pagination may cause infinite loops.
-      transferCount =
-        transferCount === -1 ? transfersResponse.totalCount : transferCount
-
       const transfers = transfersResponse.transfers
-      for (const transfer of transfers) {
-        // Exit when we reach a transaction we may already have saved
+      // Loop through transfers in reverse
+      for (let i = transfers.length - 1; i >= 0; i--) {
+        const transfer = transfers[i]
+
+        // Skip transfers prior to the last sync height
         if (transfer.height < this.walletLocalData.lastAddressQueryHeight)
-          return
+          continue
 
         // Avoid over-processing:
         let tx: EdgeTransaction | undefined
@@ -447,7 +458,7 @@ export class FilecoinEngine extends CurrencyEngine<
         // Keep track of messages to avoid over-processing:
         processedMessageCids.add(transfer.message)
       }
-    } while (transfersChecked < transferCount)
+    }
   }
 
   async scanTransactionsFromFilscan(
