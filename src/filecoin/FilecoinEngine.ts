@@ -496,6 +496,12 @@ export class FilecoinEngine extends CurrencyEngine<
     }
   }
 
+  /**
+   * @deprecated - Use scanTransactionsFromFilfox
+   *
+   * In order to support multiple scan sources, we'll need to resolve issues
+   * caused by updating lastQueryAddressHeight across multiple scanners.
+   */
   async scanTransactionsFromFilscan(
     address: string,
     onScan: (event: { tx: EdgeTransaction; progress: number }) => void
