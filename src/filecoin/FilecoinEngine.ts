@@ -460,13 +460,14 @@ export class FilecoinEngine extends CurrencyEngine<
       for (let i = transfers.length - 1; i >= 0; i--) {
         const transfer = transfers[i]
 
-        // Skip transfers prior to the last sync height
-        if (transfer.height < this.walletLocalData.lastAddressQueryHeight)
-          continue
-
         // Avoid over-processing:
         let tx: EdgeTransaction | undefined
-        if (!processedMessageCids.has(transfer.message)) {
+        if (
+          // Skip transfers prior to the last sync height
+          transfer.height >= this.walletLocalData.lastAddressQueryHeight &&
+          // Skip processed message (there can be many transfers per message)
+          !processedMessageCids.has(transfer.message)
+        ) {
           // Process message into a transaction
           const messageDetails = await this.filfoxApi.getMessageDetails(
             transfer.message
