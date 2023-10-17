@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Add deprecated `memoType` to zcashInfo for backwards compatibility
+- fixed: Filecoin returns a more stable spendable balance from `getMaxSpendable`
 - fixed: More accurate Filecoin fee estimation for `makeSpend`
 
 ## 2.7.1 (2023-10-16)

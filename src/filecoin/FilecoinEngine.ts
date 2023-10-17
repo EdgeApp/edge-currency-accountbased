@@ -8,7 +8,7 @@ import {
   Transaction,
   Wallet
 } from '@zondax/izari-filecoin'
-import { add, lte, mul, sub } from 'biggystring'
+import { add, gte, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -153,11 +153,27 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    const tx = await this.makeSpend(spendInfo)
-    const networkFee = tx.networkFee
-    const spendableBalance = sub(this.availableAttoFil, networkFee)
+    let previousNetworkFee = '0'
+    let spendableBalance = spendInfo.spendTargets[0].nativeAmount ?? '0'
+    let maxTries = 10
 
-    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    // Enable skip checks because we don't want insufficient funds errors
+    spendInfo.skipChecks = true
+
+    // Continuously query networkFees using `makeSpend` until `tx.networkFee`
+    // is stable before returning the `spendableBalance` amount.
+    // This allows us to do a double-check on the network fee.
+    while (maxTries-- > 0) {
+      spendInfo.spendTargets[0].nativeAmount = spendableBalance
+      const tx = await this.makeSpend(spendInfo)
+
+      spendableBalance = sub(this.availableAttoFil, tx.networkFee)
+      if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+
+      // Previous network fee must be greater than or equal to the double-check
+      if (gte(previousNetworkFee, tx.networkFee)) break
+      previousNetworkFee = tx.networkFee
+    }
 
     return spendableBalance
   }
