@@ -8,7 +8,7 @@ import {
   Transaction,
   Wallet
 } from '@zondax/izari-filecoin'
-import { add, gte, lte, mul, sub } from 'biggystring'
+import { add, gt, gte, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -180,7 +180,8 @@ export class FilecoinEngine extends CurrencyEngine<
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, skipChecks } =
+      this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
@@ -209,7 +210,14 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const networkFee = mul(txJson.GasLimit.toString(), txJson.GasFeeCap)
-    const txNativeAmount = mul(add(nativeAmount, networkFee), '-1')
+    const totalTxAmount = add(nativeAmount, networkFee)
+    const txNativeAmount = mul(totalTxAmount, '-1')
+
+    // Make sure we have enough of a balance to complete the transaction
+    const nativeBalance = this.availableAttoFil
+    if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
