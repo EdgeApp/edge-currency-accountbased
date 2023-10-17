@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add deprecated `memoType` to zcashInfo for backwards compatibility
+
 ## 2.7.1 (2023-10-16)
 
 - changed: Upgrade react-native-zcash to v0.6.2
