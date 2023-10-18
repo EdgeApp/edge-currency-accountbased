@@ -192,7 +192,7 @@ export class FilecoinEngine extends CurrencyEngine<
       txJson
     }
 
-    const networkFee = mul(txJson.GasLimit.toString(), txJson.GasPremium) // TODO: Include base fee and burn fee somehow?
+    const networkFee = mul(txJson.GasLimit.toString(), txJson.GasFeeCap)
     const txNativeAmount = mul(add(nativeAmount, networkFee), '-1')
 
     const edgeTransaction: EdgeTransaction = {
