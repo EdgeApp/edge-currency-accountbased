@@ -8,7 +8,7 @@ import {
   Transaction,
   Wallet
 } from '@zondax/izari-filecoin'
-import { add, lte, mul, sub } from 'biggystring'
+import { add, gt, gte, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -153,18 +153,35 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    const tx = await this.makeSpend(spendInfo)
-    const networkFee = tx.networkFee
-    const spendableBalance = sub(this.availableAttoFil, networkFee)
+    let previousNetworkFee = '0'
+    let spendableBalance = spendInfo.spendTargets[0].nativeAmount ?? '0'
+    let maxTries = 10
 
-    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    // Enable skip checks because we don't want insufficient funds errors
+    spendInfo.skipChecks = true
+
+    // Continuously query networkFees using `makeSpend` until `tx.networkFee`
+    // is stable before returning the `spendableBalance` amount.
+    // This allows us to do a double-check on the network fee.
+    while (maxTries-- > 0) {
+      spendInfo.spendTargets[0].nativeAmount = spendableBalance
+      const tx = await this.makeSpend(spendInfo)
+
+      spendableBalance = sub(this.availableAttoFil, tx.networkFee)
+      if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+
+      // Previous network fee must be greater than or equal to the double-check
+      if (gte(previousNetworkFee, tx.networkFee)) break
+      previousNetworkFee = tx.networkFee
+    }
 
     return spendableBalance
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { edgeSpendInfo, currencyCode, skipChecks } =
+      this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
@@ -193,7 +210,14 @@ export class FilecoinEngine extends CurrencyEngine<
     }
 
     const networkFee = mul(txJson.GasLimit.toString(), txJson.GasFeeCap)
-    const txNativeAmount = mul(add(nativeAmount, networkFee), '-1')
+    const totalTxAmount = add(nativeAmount, networkFee)
+    const txNativeAmount = mul(totalTxAmount, '-1')
+
+    // Make sure we have enough of a balance to complete the transaction
+    const nativeBalance = this.availableAttoFil
+    if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
