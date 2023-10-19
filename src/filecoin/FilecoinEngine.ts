@@ -356,16 +356,18 @@ export class FilecoinEngine extends CurrencyEngine<
         tx,
         progress
       }: {
-        tx: EdgeTransaction
+        tx: EdgeTransaction | undefined
         progress: number
       }): void => {
-        this.addTransaction(this.currencyInfo.currencyCode, tx)
-        this.onUpdateTransactions()
+        if (tx != null) {
+          this.addTransaction(this.currencyInfo.currencyCode, tx)
+          this.onUpdateTransactions()
 
-        // Progress the block-height if the message's height is greater than
-        // last poll for block-height.
-        if (this.walletLocalData.blockHeight < tx.blockHeight) {
-          this.onUpdateBlockHeight(tx.blockHeight)
+          // Progress the block-height if the message's height is greater than
+          // last poll for block-height.
+          if (this.walletLocalData.blockHeight < tx.blockHeight) {
+            this.onUpdateBlockHeight(tx.blockHeight)
+          }
         }
 
         handleScanProgress(progress)
@@ -397,8 +399,12 @@ export class FilecoinEngine extends CurrencyEngine<
 
   async scanTransactionsFromFilfox(
     address: string,
-    onScan: (event: { tx: EdgeTransaction; progress: number }) => void
+    onScan: (event: {
+      tx: EdgeTransaction | undefined
+      progress: number
+    }) => void
   ): Promise<void> {
+    const processedMessageCids = new Set<string>()
     const transfersPerPage = 20
     let index = 0
     let transfersChecked = 0
@@ -421,17 +427,25 @@ export class FilecoinEngine extends CurrencyEngine<
         if (transfer.height < this.walletLocalData.lastAddressQueryHeight)
           return
 
-        // Process message into a transaction
-        const messageDetails = await this.filfoxApi.getMessageDetails(
-          transfer.message
-        )
-        const tx = this.filfoxMessageToEdgeTransaction(messageDetails)
+        // Avoid over-processing:
+        let tx: EdgeTransaction | undefined
+        if (!processedMessageCids.has(transfer.message)) {
+          // Process message into a transaction
+          const messageDetails = await this.filfoxApi.getMessageDetails(
+            transfer.message
+          )
+          tx = this.filfoxMessageToEdgeTransaction(messageDetails)
+        }
 
         // Calculate the progress
         const progress =
           transferCount === 0 ? 1 : ++transfersChecked / transferCount
 
+        // Trigger scan progress event
         onScan({ tx, progress })
+
+        // Keep track of messages to avoid over-processing:
+        processedMessageCids.add(transfer.message)
       }
     } while (transfersChecked < transferCount)
   }
