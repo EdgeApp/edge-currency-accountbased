@@ -36,7 +36,7 @@ import {
   FilecoinWalletOtherData,
   SafeFilecoinWalletInfo
 } from './filecoinTypes'
-import { Filfox, FilfoxMessageDetailed } from './Filfox'
+import { Filfox, FilfoxMessageDetails } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
@@ -474,7 +474,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   filfoxMessageToEdgeTransaction = (
-    messageDetails: FilfoxMessageDetailed
+    messageDetails: FilfoxMessageDetails
   ): EdgeTransaction => {
     const addressString = this.address.toString()
     const ourReceiveAddresses = []

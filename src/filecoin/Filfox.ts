@@ -48,8 +48,8 @@ export const asFilfoxMessage = asObject({
   value: asString
 })
 
-export type FilfoxMessageDetailed = ReturnType<typeof asFilfoxMessageDetailed>
-export const asFilfoxMessageDetailed = asObject({
+export type FilfoxMessageDetails = ReturnType<typeof asFilfoxMessageDetails>
+export const asFilfoxMessageDetails = asObject({
   cid: asString,
   height: asNumber,
   timestamp: asNumber,
@@ -112,7 +112,7 @@ export const asFilfoxMessagesResult = asObject({
 export type FilfoxMessageDetailsResult = ReturnType<
   typeof asFilfoxMessageDetailsResult
 >
-export const asFilfoxMessageDetailsResult = asFilfoxMessageDetailed
+export const asFilfoxMessageDetailsResult = asFilfoxMessageDetails
 
 //
 // Transfers
