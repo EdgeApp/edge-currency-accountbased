@@ -273,10 +273,18 @@ export class ZcashEngine extends CurrencyEngine<
       netNativeAmount = `-${networkFee}`
     }
 
+    // The only pending transactions emitted from the sdk are the ones we create and it's possible
+    // to see them through the 'transactionsChanged' listener before the synchronizer's sendToAddress
+    // or shieldFunds resolves. In this case, we'll add the current time as the transaction date.
+    const date =
+      minedHeight === 0
+        ? Math.max(blockTimeInSeconds, Date.now() / 1000)
+        : blockTimeInSeconds
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
-      date: blockTimeInSeconds,
+      date,
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
