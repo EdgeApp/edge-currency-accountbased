@@ -1,5 +1,6 @@
 # Build output:
 /.nyc_output/
+/android/.gradle
 /android/*.jar
 /android/src/main/assets/edge-currency-accountbased/
 /dist/

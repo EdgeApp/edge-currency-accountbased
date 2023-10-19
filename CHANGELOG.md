@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Provide working type definitions for this library.
+
 ## 2.8.0 (2023-10-23)
 
 - added: Filecoin Testnet (Calibration)

@@ -1,5 +1,7 @@
 import 'regenerator-runtime/runtime'
 
+import type { EdgeCorePlugins } from 'edge-core-js/types'
+
 import { algorand } from './algorand/algorandInfo'
 import { binance } from './binance/binanceInfo'
 import { eosPlugins } from './eos/eosInfos'
@@ -38,6 +40,12 @@ const plugins = {
   tezos,
   tron,
   zcash
+}
+
+declare global {
+  interface Window {
+    addEdgeCorePlugins?: (plugins: EdgeCorePlugins) => void
+  }
 }
 
 if (

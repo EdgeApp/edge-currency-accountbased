@@ -6,14 +6,12 @@ declare module 'ethereumjs-wallet/hdkey'
 declare module 'eztz.js'
 
 declare module 'react-native' {
-  interface EdgeCurrencyAccountbasedModule {
-    getConstants: () => {
-      sourceUri: string
+  export const NativeModules: {
+    EdgeCurrencyAccountbasedModule: {
+      getConstants: () => {
+        sourceUri: string
+      }
     }
-  }
-
-  declare const NativeModules: {
-    EdgeCurrencyAccountbasedModule: EdgeCurrencyAccountbasedModule
   }
 }
 

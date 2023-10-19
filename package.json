@@ -20,11 +20,12 @@
   ],
   "main": "./lib/index.js",
   "react-native": "./lib/react-native.js",
-  "types": "./lib/src/index.d.ts",
+  "types": "./edge-currency-accountbased.d.ts",
   "files": [
     "/android/build.gradle",
     "/android/src/",
     "/CHANGELOG.md",
+    "/edge-currency-accountbased.d.ts",
     "/edge-currency-accountbased.podspec",
     "/ios/",
     "/lib/",
