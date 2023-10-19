@@ -229,14 +229,24 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   processTransaction(tx: Transaction): void {
-    let netNativeAmount = tx.value
-    const networkFee = tx.fee ?? this.networkInfo.defaultNetworkFee
-    if (tx.toAddress != null) {
+    const {
+      rawTransactionId,
+      raw,
+      blockTimeInSeconds,
+      minedHeight,
+      value,
+      fee,
+      toAddress,
+      memos
+    } = tx
+    let netNativeAmount = value
+    const networkFee = fee ?? this.networkInfo.defaultNetworkFee
+    if (toAddress != null) {
       // check if tx is a spend
       netNativeAmount = `-${add(netNativeAmount, networkFee)}`
     }
 
-    const edgeMemos: EdgeMemo[] = tx.memos
+    const edgeMemos: EdgeMemo[] = memos
       .filter(text => text !== '')
       .map(text => ({
         memoName: 'memo',
@@ -247,7 +257,7 @@ export class ZcashEngine extends CurrencyEngine<
     // Hack for missing memos on android
     if (
       this.otherData.missingAndroidShieldedMemosHack.includes(
-        tx.rawTransactionId
+        rawTransactionId
       ) &&
       edgeMemos.length === 0
     ) {
@@ -264,17 +274,17 @@ export class ZcashEngine extends CurrencyEngine<
     }
 
     const edgeTransaction: EdgeTransaction = {
-      blockHeight: tx.minedHeight,
+      blockHeight: minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
-      date: tx.blockTimeInSeconds,
+      date: blockTimeInSeconds,
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
       networkFee,
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
-      signedTx: tx.raw ?? '',
-      txid: tx.rawTransactionId,
+      signedTx: raw ?? '',
+      txid: rawTransactionId,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
