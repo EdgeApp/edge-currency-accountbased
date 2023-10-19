@@ -8,6 +8,7 @@ const networkInfo: FilecoinNetworkInfo = {
   filfoxUrl: 'https://filfox.info/api/v1',
   filscanUrl: 'https://api-v2.filscan.io/api/v1',
   hdPathCoinType: 461,
+  networkPrefix: 'Mainnet',
   rpcNode: {
     networkName: 'Mainnet',
     url: 'https://api.node.glif.io/'
