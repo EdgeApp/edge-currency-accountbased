@@ -1,6 +1,7 @@
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -89,6 +90,14 @@ export class CosmosEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     throw new Error('not implemented')
+  }
+
+  async getFreshAddress(_options: any): Promise<EdgeFreshAddress> {
+    const { bech32Address } = this.walletInfo.keys
+
+    return {
+      publicAddress: bech32Address
+    }
   }
 }
 

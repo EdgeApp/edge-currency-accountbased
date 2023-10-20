@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@binance-chain/javascript-sdk": "^4.2.0",
+    "@cosmjs/stargate": "^0.31.3",
     "@ethereumjs/common": "^4.0.0",
     "@ethereumjs/tx": "^5.0.0",
     "@fioprotocol/fiosdk": "https://github.com/peachbits/fiosdk_typescript.git#d04449fff9f9b8c1487359a5b6bf64b7b53d0b6b",
