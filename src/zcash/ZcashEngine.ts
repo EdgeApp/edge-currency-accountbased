@@ -229,14 +229,24 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   processTransaction(tx: Transaction): void {
-    let netNativeAmount = tx.value
-    const networkFee = tx.fee ?? this.networkInfo.defaultNetworkFee
-    if (tx.toAddress != null) {
+    const {
+      rawTransactionId,
+      raw,
+      blockTimeInSeconds,
+      minedHeight,
+      value,
+      fee,
+      toAddress,
+      memos
+    } = tx
+    let netNativeAmount = value
+    const networkFee = fee ?? this.networkInfo.defaultNetworkFee
+    if (toAddress != null) {
       // check if tx is a spend
       netNativeAmount = `-${add(netNativeAmount, networkFee)}`
     }
 
-    const edgeMemos: EdgeMemo[] = tx.memos
+    const edgeMemos: EdgeMemo[] = memos
       .filter(text => text !== '')
       .map(text => ({
         memoName: 'memo',
@@ -247,7 +257,7 @@ export class ZcashEngine extends CurrencyEngine<
     // Hack for missing memos on android
     if (
       this.otherData.missingAndroidShieldedMemosHack.includes(
-        tx.rawTransactionId
+        rawTransactionId
       ) &&
       edgeMemos.length === 0
     ) {
@@ -263,18 +273,26 @@ export class ZcashEngine extends CurrencyEngine<
       netNativeAmount = `-${networkFee}`
     }
 
+    // The only pending transactions emitted from the sdk are the ones we create and it's possible
+    // to see them through the 'transactionsChanged' listener before the synchronizer's sendToAddress
+    // or shieldFunds resolves. In this case, we'll add the current time as the transaction date.
+    const date =
+      minedHeight === 0
+        ? Math.max(blockTimeInSeconds, Date.now() / 1000)
+        : blockTimeInSeconds
+
     const edgeTransaction: EdgeTransaction = {
-      blockHeight: tx.minedHeight,
+      blockHeight: minedHeight,
       currencyCode: this.currencyInfo.currencyCode,
-      date: tx.blockTimeInSeconds,
+      date,
       isSend: netNativeAmount.startsWith('-'),
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
       networkFee,
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
-      signedTx: tx.raw ?? '',
-      txid: tx.rawTransactionId,
+      signedTx: raw ?? '',
+      txid: rawTransactionId,
       walletId: this.walletId
     }
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)

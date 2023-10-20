@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Add deprecated `memoType` to zcashInfo for backwards compatibility
+- fixed: Account for possible 0-date transaction listerner race-condition
 - fixed: Filecoin returns a more stable spendable balance from `getMaxSpendable`
 - fixed: More accurate Filecoin fee estimation for `makeSpend`
 
