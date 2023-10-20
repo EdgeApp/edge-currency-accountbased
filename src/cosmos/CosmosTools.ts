@@ -1,5 +1,7 @@
 import { stringToPath } from '@cosmjs/crypto'
+import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCurrencyInfo,
@@ -15,6 +17,8 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
+import { getLegacyDenomination } from '../common/utils'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
@@ -95,19 +99,69 @@ export class CosmosTools implements EdgeCurrencyTools {
     return { bech32Address: address, publicKey }
   }
 
+  isValidAddress(address: string): boolean {
+    try {
+      const pubkey = fromBech32(address)
+      if (pubkey.prefix === this.networkInfo.bech32AddressPrefix) {
+        return true
+      }
+    } catch (e) {}
+    return false
+  }
+
   async parseUri(
     uri: string,
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    throw new Error('not implemented')
+    const { pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true }
+
+    const { parsedUri, edgeParsedUri } = parseUriCommon(
+      this.currencyInfo,
+      uri,
+      networks,
+      currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens
+    )
+
+    let address = ''
+
+    if (edgeParsedUri.publicAddress != null) {
+      address = edgeParsedUri.publicAddress
+    }
+
+    if (!this.isValidAddress(address))
+      throw new Error('InvalidPublicAddressError')
+
+    edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+    return edgeParsedUri
   }
 
   async encodeUri(
     obj: EdgeEncodeUri,
     customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
-    throw new Error('not implemented')
+    const { pluginId } = this.currencyInfo
+    const { nativeAmount, currencyCode, publicAddress } = obj
+
+    if (!this.isValidAddress(publicAddress))
+      throw new Error('InvalidPublicAddressError')
+
+    let amount
+    if (typeof nativeAmount === 'string') {
+      const denom = getLegacyDenomination(
+        currencyCode ?? this.currencyInfo.currencyCode,
+        this.currencyInfo,
+        customTokens
+      )
+      if (denom == null) {
+        throw new Error('InternalErrorInvalidCurrencyCode')
+      }
+      amount = div(nativeAmount, denom.multiplier, 18)
+    }
+    const encodedUri = encodeUriCommon(obj, pluginId, amount)
+    return encodedUri
   }
 }
 
