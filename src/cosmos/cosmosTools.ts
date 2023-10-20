@@ -1,6 +1,8 @@
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import { StargateClient } from '@cosmjs/stargate'
+import { TendermintClient } from '@cosmjs/tendermint-rpc'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
@@ -30,6 +32,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
+  client?: TendermintClient
+  connectedWalletIds: Set<string>
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -37,6 +41,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
+    this.connectedWalletIds = new Set()
   }
 
   async createSigner(mnemonic: string): Promise<DirectSecp256k1HdWallet> {
@@ -162,6 +167,27 @@ export class CosmosTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async connectClient(walletId: string): Promise<TendermintClient> {
+    if (this.client == null) {
+      const stargateClient = await StargateClient.connect(
+        this.networkInfo.rpcNode
+      )
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      this.client = await stargateClient['forceGetTmClient']()
+    }
+    this.connectedWalletIds.add(walletId)
+    return this.client
+  }
+
+  async disconnectClient(walletId: string): Promise<void> {
+    this.connectedWalletIds.delete(walletId)
+
+    if (this.connectedWalletIds.size === 0) {
+      await this.client?.disconnect()
+      this.client = undefined
+    }
   }
 }
 

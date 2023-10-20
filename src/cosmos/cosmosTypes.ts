@@ -6,6 +6,7 @@ export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   pluginMnemonicKeyName: string
+  rpcNode: string
 }
 
 //

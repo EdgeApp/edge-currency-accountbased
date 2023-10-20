@@ -1,3 +1,5 @@
+import { StargateClient } from '@cosmjs/stargate'
+import { TendermintClient } from '@cosmjs/tendermint-rpc'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -25,23 +27,59 @@ export class CosmosEngine extends CurrencyEngine<
   SafeCosmosWalletInfo
 > {
   networkInfo: CosmosNetworkInfo
+  tmClient: TendermintClient
+  accountNumber: number
+  sequence: number
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
     tools: CosmosTools,
     walletInfo: SafeCosmosWalletInfo,
-    opts: EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions,
+    tmClient: TendermintClient
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+    this.tmClient = tmClient
+    this.accountNumber = 0
+    this.sequence = 0
   }
 
   setOtherData(raw: any): void {
     this.otherData = raw
   }
 
+  async getStargateClient(): Promise<StargateClient> {
+    const tmClient = await this.tools.connectClient(this.walletId)
+    return await StargateClient.create(tmClient)
+  }
+
   async queryBalance(): Promise<void> {
-    throw new Error('not implemented')
+    try {
+      const client = await this.getStargateClient()
+      const balances = await client.getAllBalances(
+        this.walletInfo.keys.bech32Address
+      )
+      const mainnetBal = balances.find(
+        bal => bal.denom === this.currencyInfo.currencyCode.toLowerCase()
+      )
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        mainnetBal?.amount ?? '0'
+      )
+
+      const { accountNumber, sequence } = await client.getSequence(
+        this.walletInfo.keys.bech32Address
+      )
+      this.accountNumber = accountNumber
+      this.sequence = sequence
+    } catch (e) {
+      if (String(e).includes('does not exist on chain')) {
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
+      } else {
+        this.log.warn('queryBalance error:', e)
+      }
+  }
   }
 
   async queryTransactions(): Promise<void> {
@@ -66,7 +104,8 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    throw new Error('not implemented')
+    await this.tools.disconnectClient(this.walletId)
+    await super.killEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -108,7 +147,8 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeCosmosWalletInfo(walletInfo)
-  const engine = new CosmosEngine(env, tools, safeWalletInfo, opts)
+  const tmClient = await tools.connectClient(walletInfo.id)
+  const engine = new CosmosEngine(env, tools, safeWalletInfo, opts, tmClient)
 
   await engine.loadEngine()
 
