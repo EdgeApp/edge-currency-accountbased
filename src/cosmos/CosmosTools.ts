@@ -1,6 +1,7 @@
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import { StargateClient } from '@cosmjs/stargate'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
@@ -30,6 +31,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
+  client?: StargateClient
+  clientCount: number
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -37,6 +40,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
+    this.clientCount = 0
   }
 
   async createSigner(mnemonic: string): Promise<DirectSecp256k1HdWallet> {
@@ -162,6 +166,21 @@ export class CosmosTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async connectClient(): Promise<void> {
+    if (this.client == null) {
+      this.client = await StargateClient.connect(this.networkInfo.rpcNode)
+    }
+    ++this.clientCount
+  }
+
+  async disconnectClient(): Promise<void> {
+    --this.clientCount
+    if (this.clientCount === 0) {
+      await this.client?.disconnect()
+      this.client = undefined
+    }
   }
 }
 

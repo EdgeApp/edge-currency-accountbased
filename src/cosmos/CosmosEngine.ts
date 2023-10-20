@@ -1,3 +1,4 @@
+import { StargateClient } from '@cosmjs/stargate'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -25,6 +26,8 @@ export class CosmosEngine extends CurrencyEngine<
   SafeCosmosWalletInfo
 > {
   networkInfo: CosmosNetworkInfo
+  accountNumber: number
+  sequence: number
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -34,14 +37,47 @@ export class CosmosEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+    this.accountNumber = 0
+    this.sequence = 0
   }
 
   setOtherData(raw: any): void {
     this.otherData = raw
   }
 
+  async getStargateClient(): Promise<StargateClient> {
+    if (this.tools.client == null) {
+      throw new Error('No StargateClient')
+    }
+    return this.tools.client
+  }
+
   async queryBalance(): Promise<void> {
-    throw new Error('not implemented')
+    try {
+      const client = await this.getStargateClient()
+      const balances = await client.getAllBalances(
+        this.walletInfo.keys.bech32Address
+      )
+      const mainnetBal = balances.find(
+        bal => bal.denom === this.currencyInfo.currencyCode.toLowerCase()
+      )
+      this.updateBalance(
+        this.currencyInfo.currencyCode,
+        mainnetBal?.amount ?? '0'
+      )
+
+      const { accountNumber, sequence } = await client.getSequence(
+        this.walletInfo.keys.bech32Address
+      )
+      this.accountNumber = accountNumber
+      this.sequence = sequence
+    } catch (e) {
+      if (String(e).includes('does not exist on chain')) {
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
+      } else {
+        this.log.warn('queryBalance error:', e)
+      }
+    }
   }
 
   async queryTransactions(): Promise<void> {
@@ -58,6 +94,7 @@ export class CosmosEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.engineOn = true
+    await this.tools.connectClient()
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
@@ -66,7 +103,8 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
-    throw new Error('not implemented')
+    await this.tools.disconnectClient()
+    await super.killEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
