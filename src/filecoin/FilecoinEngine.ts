@@ -36,7 +36,7 @@ import {
   FilecoinWalletOtherData,
   SafeFilecoinWalletInfo
 } from './filecoinTypes'
-import { Filfox, FilfoxMessageDetailed } from './Filfox'
+import { Filfox, FilfoxMessageDetails } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
@@ -356,16 +356,18 @@ export class FilecoinEngine extends CurrencyEngine<
         tx,
         progress
       }: {
-        tx: EdgeTransaction
+        tx: EdgeTransaction | undefined
         progress: number
       }): void => {
-        this.addTransaction(this.currencyInfo.currencyCode, tx)
-        this.onUpdateTransactions()
+        if (tx != null) {
+          this.addTransaction(this.currencyInfo.currencyCode, tx)
+          this.onUpdateTransactions()
 
-        // Progress the block-height if the message's height is greater than
-        // last poll for block-height.
-        if (this.walletLocalData.blockHeight < tx.blockHeight) {
-          this.onUpdateBlockHeight(tx.blockHeight)
+          // Progress the block-height if the message's height is greater than
+          // last poll for block-height.
+          if (this.walletLocalData.blockHeight < tx.blockHeight) {
+            this.onUpdateBlockHeight(tx.blockHeight)
+          }
         }
 
         handleScanProgress(progress)
@@ -376,13 +378,12 @@ export class FilecoinEngine extends CurrencyEngine<
         this.scanTransactionsFromFilfox(addressString, handleScan)
       ]
 
-      const startingNetworkHeight = this.walletLocalData.blockHeight
-
       // Run scanners:
       await Promise.all(scanners)
 
-      // Save the network height at the start of the scanning
-      this.walletLocalData.lastAddressQueryHeight = startingNetworkHeight
+      // Save the network height to be leveraged in the next scan
+      this.walletLocalData.lastAddressQueryHeight =
+        this.walletLocalData.blockHeight
       this.walletLocalDataDirty = true
 
       // Make sure the sync progress is 100%
@@ -397,44 +398,110 @@ export class FilecoinEngine extends CurrencyEngine<
 
   async scanTransactionsFromFilfox(
     address: string,
-    onScan: (event: { tx: EdgeTransaction; progress: number }) => void
+    onScan: (event: {
+      tx: EdgeTransaction | undefined
+      progress: number
+    }) => void
   ): Promise<void> {
-    const messagesPerPage = 20
-    let index = 0
-    let messagesChecked = 0
-    let messageCount = -1
-    do {
-      const messagesResponse = await this.filfoxApi.getAccountMessages(
+    const processedMessageCids = new Set<string>()
+
+    // Initial request to get the totalCount
+    const initialResponse = await this.filfoxApi.getAccountTransfers(
+      address,
+      0,
+      1
+    )
+    let transferCount = initialResponse.totalCount
+
+    // Calculate total pages and set a reasonable transfersPerPage
+    const transfersPerPage = 20
+    let totalPages = Math.ceil(transferCount / transfersPerPage)
+
+    let transfersChecked = 0
+    for (
+      let currentPageIndex = totalPages - 1;
+      currentPageIndex >= 0;
+      currentPageIndex--
+    ) {
+      const transfersResponse = await this.filfoxApi.getAccountTransfers(
         address,
-        index++,
-        messagesPerPage
+        currentPageIndex,
+        transfersPerPage
       )
 
-      // Only update the message count on the first query because mutating this
-      // in-between pagination may cause infinite loops.
-      messageCount =
-        messageCount === -1 ? messagesResponse.totalCount : messageCount
+      let transfers = transfersResponse.transfers
 
-      const messages = messagesResponse.messages
-      for (const message of messages) {
-        // Exit when we reach a transaction we may already have saved
-        if (message.height < this.walletLocalData.lastAddressQueryHeight) return
+      // If totalCount has changed, make an additional call to get the missed transfers
+      if (transfersResponse.totalCount !== transferCount) {
+        // How many transfers were missed
+        const missedTransfersCount =
+          transfersResponse.totalCount - transferCount
 
-        // Process message into a transaction
-        const messageDetails = await this.filfoxApi.getMessageDetails(
-          message.cid
-        )
-        const tx = this.filfoxMessageToEdgeTransaction(messageDetails)
+        // Calculate the transfer page index to query for the missing transfers
+        const previousPageIndex = currentPageIndex + 1 // Add because we're querying in reverse
+        const missedTransfersPageIndex =
+          previousPageIndex * (transfersPerPage / missedTransfersCount)
+
+        const missedTransfersResponse =
+          await this.filfoxApi.getAccountTransfers(
+            address,
+            missedTransfersPageIndex,
+            missedTransfersCount
+          )
+        transfers = [...transfers, ...missedTransfersResponse.transfers]
+
+        // Update the totalCount
+        transferCount = transfersResponse.totalCount
+        // Recalculate total pages
+        totalPages = Math.ceil(transferCount / transfersPerPage)
+      }
+
+      // Loop through transfers in reverse
+      for (let i = transfers.length - 1; i >= 0; i--) {
+        // Exit early if the engine has been stopped
+        if (!this.engineOn) return
+
+        const transfer = transfers[i]
+
+        // Avoid over-processing:
+        let tx: EdgeTransaction | undefined
+        if (
+          // Skip transfers prior to the last sync height
+          transfer.height >= this.walletLocalData.lastAddressQueryHeight &&
+          // Skip processed message (there can be many transfers per message)
+          !processedMessageCids.has(transfer.message)
+        ) {
+          // Progress the last query height to optimize the next scan
+          if (transfer.height > this.walletLocalData.lastAddressQueryHeight) {
+            this.walletLocalData.lastAddressQueryHeight = transfer.height
+            this.walletLocalDataDirty = true
+          }
+          // Process message into a transaction
+          const messageDetails = await this.filfoxApi.getMessageDetails(
+            transfer.message
+          )
+          tx = this.filfoxMessageToEdgeTransaction(messageDetails)
+        }
 
         // Calculate the progress
         const progress =
-          messageCount === 0 ? 1 : ++messagesChecked / messageCount
+          transferCount === 0 ? 1 : ++transfersChecked / transferCount
 
+        // Trigger scan progress event
         onScan({ tx, progress })
+
+        // Keep track of messages to avoid over-processing:
+        processedMessageCids.add(transfer.message)
       }
-    } while (messagesChecked < messageCount)
+    }
   }
 
+  /**
+   * @deprecated - Use scanTransactionsFromFilfox
+   *
+   * In order to support multiple scan sources, we'll need to resolve issues
+   * caused by updating lastQueryAddressHeight across multiple scanners.
+   */
   async scanTransactionsFromFilscan(
     address: string,
     onScan: (event: { tx: EdgeTransaction; progress: number }) => void
@@ -473,7 +540,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   filfoxMessageToEdgeTransaction = (
-    messageDetails: FilfoxMessageDetailed
+    messageDetails: FilfoxMessageDetails
   ): EdgeTransaction => {
     const addressString = this.address.toString()
     const ourReceiveAddresses = []

@@ -48,8 +48,8 @@ export const asFilfoxMessage = asObject({
   value: asString
 })
 
-export type FilfoxMessageDetailed = ReturnType<typeof asFilfoxMessageDetailed>
-export const asFilfoxMessageDetailed = asObject({
+export type FilfoxMessageDetails = ReturnType<typeof asFilfoxMessageDetails>
+export const asFilfoxMessageDetails = asObject({
   cid: asString,
   height: asNumber,
   timestamp: asNumber,
@@ -84,6 +84,17 @@ export const asFilfoxMessageDetailed = asObject({
   )
 })
 
+export type FilfoxTransfer = ReturnType<typeof asFilfoxTransfer>
+export const asFilfoxTransfer = asObject({
+  from: asString,
+  height: asNumber,
+  message: asString, // message cid
+  timestamp: asNumber,
+  to: asString,
+  type: asString,
+  value: asString
+})
+
 //
 // Messages
 //
@@ -101,7 +112,17 @@ export const asFilfoxMessagesResult = asObject({
 export type FilfoxMessageDetailsResult = ReturnType<
   typeof asFilfoxMessageDetailsResult
 >
-export const asFilfoxMessageDetailsResult = asFilfoxMessageDetailed
+export const asFilfoxMessageDetailsResult = asFilfoxMessageDetails
+
+//
+// Transfers
+//
+
+export type FilfoxTransfersResult = ReturnType<typeof asFilfoxTransfersResult>
+export const asFilfoxTransfersResult = asObject({
+  transfers: asArray(asFilfoxTransfer),
+  totalCount: asNumber
+})
 
 // -----------------------------------------------------------------------------
 // Implementation
@@ -135,6 +156,34 @@ export class Filfox {
     })
     const responseText = await response.text()
     const responseBody = asFilfoxEnvelope(asFilfoxMessagesResult)(responseText)
+
+    if ('error' in responseBody)
+      throw new Error(
+        `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
+      )
+
+    return responseBody
+  }
+
+  async getAccountTransfers(
+    address: string,
+    page: number,
+    pageSize: number = 20
+  ): Promise<FilfoxTransfersResult> {
+    const url = new URL(`${this.baseUrl}/address/${address}/transfers`)
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString()
+    })
+    url.search = searchParams.toString()
+    const response = await this.fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json'
+      }
+    })
+    const responseText = await response.text()
+    const responseBody = asFilfoxEnvelope(asFilfoxTransfersResult)(responseText)
 
     if ('error' in responseBody)
       throw new Error(
