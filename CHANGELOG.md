@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.8.0 (2023-10-23)
+
 - added: Filecoin Testnet (Calibration)
 - changed: Improved Filecoin transaction syncing
 - fixed: Missing Filecoin transactions caused by external messages for the account (e.g. FILForwarder)
