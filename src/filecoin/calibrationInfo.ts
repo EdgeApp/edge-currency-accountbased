@@ -5,31 +5,31 @@ import type { FilecoinTools } from './FilecoinTools'
 import type { FilecoinNetworkInfo } from './filecoinTypes'
 
 const networkInfo: FilecoinNetworkInfo = {
-  filfoxUrl: 'https://filfox.info/api/v1',
-  filscanUrl: 'https://api-v2.filscan.io/api/v1',
+  filfoxUrl: 'https://calibration.filfox.info/api/v1',
+  filscanUrl: 'https://api-cali.filscan.io/api/v1',
   hdPathCoinType: 461,
-  networkPrefix: 'Mainnet',
+  networkPrefix: 'Testnet',
   rpcNode: {
-    networkName: 'Mainnet',
-    url: 'https://api.node.glif.io/'
+    networkName: 'Calibration',
+    url: 'https://api.calibration.node.glif.io/'
   }
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  currencyCode: 'FIL',
-  displayName: 'Filecoin',
-  pluginId: 'filecoin',
+  currencyCode: 'tFIL',
+  displayName: 'Filecoin Testnet (Calibration)',
+  pluginId: 'calibration',
   requiredConfirmations: 900,
   unsafeBroadcastTx: true,
-  walletType: 'wallet:filecoin',
+  walletType: 'wallet:calibration',
 
   // Explorers:
-  addressExplorer: 'https://filfox.info/en/address/%s',
-  transactionExplorer: 'https://filfox.info/en/message/%s',
+  addressExplorer: 'https://calibration.filfox.info/en/address/%s',
+  transactionExplorer: 'https://calibration.filfox.info/en/message/%s',
 
   denominations: [
     {
-      name: 'FIL',
+      name: 'tFIL',
       multiplier: '1000000000000000000',
       symbol: '⨎'
     },
@@ -70,7 +70,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
+export const calibration = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
   currencyInfo,
   networkInfo,
 

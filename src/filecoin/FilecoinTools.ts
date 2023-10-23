@@ -1,4 +1,9 @@
-import { Address, SignatureType, Wallet } from '@zondax/izari-filecoin'
+import {
+  Address,
+  NetworkPrefix,
+  SignatureType,
+  Wallet
+} from '@zondax/izari-filecoin'
 import { div } from 'biggystring'
 import { fromSeed } from 'bip32'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
@@ -111,7 +116,9 @@ export class FilecoinTools implements EdgeCurrencyTools {
     const accountData = Wallet.deriveAccount(
       filecoinPrivateKeys.mnemonic,
       SignatureType.SECP256K1,
-      this.derivationPath
+      this.derivationPath,
+      undefined,
+      NetworkPrefix[this.networkInfo.networkPrefix]
     )
     const address = accountData.address.toString()
 

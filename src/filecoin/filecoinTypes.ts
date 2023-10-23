@@ -1,4 +1,4 @@
-import type { Network } from '@zondax/izari-filecoin'
+import type { Network, NetworkPrefix } from '@zondax/izari-filecoin'
 import {
   asCodec,
   asNumber,
@@ -15,6 +15,7 @@ export interface FilecoinNetworkInfo {
   filfoxUrl: string
   filscanUrl: string
   hdPathCoinType: number
+  networkPrefix: keyof typeof NetworkPrefix
   rpcNode: {
     networkName: keyof typeof Network
     url: string
