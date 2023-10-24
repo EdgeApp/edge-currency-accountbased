@@ -8,7 +8,7 @@ import {
   Transaction,
   Wallet
 } from '@zondax/izari-filecoin'
-import { add, gt, gte, lte, mul, sub } from 'biggystring'
+import { add, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -60,6 +60,16 @@ export class FilecoinEngine extends CurrencyEngine<
   filfoxApi: Filfox
   filscanApi: Filscan
   rpcExtra: RpcExtra
+
+  // Engine State:
+  lastMaxSpendable?: {
+    nativeAmount: string
+    params: {
+      GasLimit: number
+      GasFeeCap: string
+      GasPremium: string
+    }
+  }
 
   constructor(
     env: PluginEnvironment<FilecoinNetworkInfo>,
@@ -164,29 +174,43 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    let previousNetworkFee = '0'
-    let spendableBalance = spendInfo.spendTargets[0].nativeAmount ?? '0'
-    let maxTries = 10
+    const publicAddress = spendInfo.spendTargets[0].publicAddress
+
+    if (publicAddress == null) throw new Error('Missing publicAddress')
 
     // Enable skip checks because we don't want insufficient funds errors
     spendInfo.skipChecks = true
+    const spendTarget = spendInfo.spendTargets[0]
+    if (spendTarget == null) throw new Error('missing spendTargets')
+    spendTarget.nativeAmount = spendTarget.nativeAmount ?? '0'
 
-    // Continuously query networkFees using `makeSpend` until `tx.networkFee`
-    // is stable before returning the `spendableBalance` amount.
-    // This allows us to do a double-check on the network fee.
-    while (maxTries-- > 0) {
-      spendInfo.spendTargets[0].nativeAmount = spendableBalance
-      const tx = await this.makeSpend(spendInfo)
+    // Probe for an amount to use in our transaction:
+    const txForAmount = await this.makeSpend(spendInfo)
+    const probeAmount = sub(this.availableAttoFil, txForAmount.networkFee)
 
-      spendableBalance = sub(this.availableAttoFil, tx.networkFee)
-      if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    // Probe for fee params:
+    const transaction = Transaction.getNew(
+      Address.fromString(publicAddress),
+      this.address,
+      Token.fromAtto(probeAmount),
+      0
+    )
+    await transaction.prepareToSend(this.filRpc)
+    const { GasLimit, GasPremium, GasFeeCap } = transaction.toJSON()
 
-      // Previous network fee must be greater than or equal to the double-check
-      if (gte(previousNetworkFee, tx.networkFee)) break
-      previousNetworkFee = tx.networkFee
+    // Calculate actual values:
+    const networkFee = mul(GasLimit.toString(), GasFeeCap)
+    const nativeAmount = sub(this.availableAttoFil, networkFee)
+    this.lastMaxSpendable = {
+      nativeAmount,
+      params: {
+        GasLimit,
+        GasPremium,
+        GasFeeCap
+      }
     }
 
-    return spendableBalance
+    return nativeAmount
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
@@ -195,6 +219,7 @@ export class FilecoinEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
+    if (spendTarget == null) throw new Error('missing spendTargets')
     const { publicAddress, nativeAmount } = spendTarget
 
     if (publicAddress == null)
@@ -214,6 +239,15 @@ export class FilecoinEngine extends CurrencyEngine<
     await transaction.prepareToSend(this.filRpc)
 
     const txJson = transaction.toJSON()
+
+    // Override fee parameters if this is a max-spend:
+    if (this.lastMaxSpendable != null) {
+      const { nativeAmount, params } = this.lastMaxSpendable
+      if (eq(nativeAmount, nativeAmount)) {
+        Object.assign(txJson, params)
+        delete this.lastMaxSpendable
+      }
+    }
 
     const otherParams: FilecoinTxOtherParams = {
       sigJson: undefined,
