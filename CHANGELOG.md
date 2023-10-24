@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.8.1 (2023-10-24)
+
 - fixed: Provide working type definitions for this library.
 
 ## 2.8.0 (2023-10-23)
