@@ -126,6 +126,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
+    this.engineOn = true
     this.initData()
     this.initSubscriptions()
     await super.startEngine()
@@ -140,7 +141,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async resyncBlockchain(): Promise<void> {
-    await super.killEngine()
+    await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
   }
