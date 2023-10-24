@@ -6,6 +6,7 @@
 /cli/.storage/
 /dist/
 /lib/
+/scripts/cosmos-ts-protos/tmp
 
 # Package managers:
 node_modules/
