@@ -134,6 +134,16 @@ export class FilecoinEngine extends CurrencyEngine<
 
   async killEngine(): Promise<void> {
     await super.killEngine()
+
+    // Wait for any transaction scanning to finish before killing engine
+    await new Promise<void>(resolve => {
+      const id = setInterval(() => {
+        if (!this.isScanning) {
+          clearInterval(id)
+          resolve()
+        }
+      }, 300)
+    })
   }
 
   async clearBlockchainCache(): Promise<void> {
