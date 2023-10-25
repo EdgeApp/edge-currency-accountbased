@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Filecoin resync bugs
+
 ## 2.8.1 (2023-10-24)
 
 - fixed: Provide working type definitions for this library.
