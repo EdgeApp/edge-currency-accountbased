@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.8.2 (2023-10-25)
+
 - fixed: Filecoin `getMaxSpendable` fee race conditions are resolved by caching the max-spend parameters.
 - fixed: Filecoin resync bugs
 
