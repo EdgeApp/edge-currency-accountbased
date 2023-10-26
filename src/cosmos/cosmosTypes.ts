@@ -1,4 +1,5 @@
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
+import { Coin } from '@cosmjs/stargate'
 import { asCodec, asObject, asString, Cleaner } from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
@@ -21,6 +22,8 @@ export interface UpgradedRegistry {
 export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
+  chainId: string
+  defaultTransactionFee: Coin
   pluginMnemonicKeyName: string
   rpcNode: string
 }

@@ -1,4 +1,3 @@
-import { coin } from '@cosmjs/stargate'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
@@ -8,6 +7,12 @@ import type { CosmosNetworkInfo } from '../cosmosTypes'
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
+  chainId: 'thorchain-mainnet-v1',
+  defaultTransactionFee: {
+    // https://thornode.ninerealms.com/thorchain/constants NativeTransactionFee
+    denom: 'rune',
+    amount: '2000000'
+  },
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: 'https://rpc.ninerealms.com'
 }

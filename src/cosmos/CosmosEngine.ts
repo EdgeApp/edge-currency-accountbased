@@ -1,4 +1,8 @@
+import { decodeSignature, encodeSecp256k1Pubkey } from '@cosmjs/amino'
+import { encodePubkey, makeAuthInfoBytes } from '@cosmjs/proto-signing'
 import { StargateClient } from '@cosmjs/stargate'
+import { add, gt } from 'biggystring'
+import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -6,13 +10,19 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject
+  InsufficientFundsError,
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { CosmosTools } from './cosmosTools'
+import { upgradeMemos } from '../common/upgradeMemos'
+import { cleanTxLogs } from '../common/utils'
+import { CosmosTools } from './CosmosTools'
 import {
+  asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
   CosmosNetworkInfo,
   SafeCosmosWalletInfo
@@ -133,20 +143,121 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('not implemented')
+    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
+    const { edgeSpendInfo, currencyCode, nativeBalance } =
+      this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [] } = edgeSpendInfo
+    const memo: string | undefined = memos[0]?.value
+
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+    const { nativeAmount, publicAddress } = edgeSpendInfo.spendTargets[0]
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+
+    const networkFee = this.networkInfo.defaultTransactionFee.amount
+    const totalNativeAmount = add(nativeAmount, networkFee)
+    if (gt(totalNativeAmount, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
+
+    // Encode a send message.
+    const msg = this.tools.methods.transfer({
+      amount: nativeAmount,
+      fromAddress: this.walletInfo.keys.bech32Address,
+      toAddress: publicAddress
+    })
+    const body = TxBody.fromPartial({ messages: [msg], memo })
+    const bodyBytes = TxBody.encode(body).finish()
+    const unsignedTxRaw = TxRaw.fromPartial({
+      bodyBytes
+    })
+    const unsignedTxHex = base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
+
+    const otherParams = {
+      unsignedTxHex
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: `-${totalNativeAmount}`,
+      networkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: '',
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
   }
 
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    throw new Error('not implemented')
+    const { unsignedTxHex } = edgeTransaction.otherParams ?? {}
+    if (unsignedTxHex == null) throw new Error('Missing unsignedTxHex')
+    const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const txRawBytes = base16.parse(unsignedTxHex)
+    const { bodyBytes } = TxRaw.decode(txRawBytes)
+
+    const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
+    const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
+    const authInfoBytes = makeAuthInfoBytes(
+      [{ pubkey: encodePubkey(senderPubkey), sequence: this.sequence }],
+      [], // fee, but for thorchain the fee doesn't need to be defined and is automatically pulled from account
+      0, // gasLimit
+      undefined, // feeGranter
+      undefined, // feePayer (defaults to first signer)
+      1 // signMode
+    )
+
+    const signDoc = SignDoc.fromPartial({
+      accountNumber: this.accountNumber,
+      authInfoBytes,
+      bodyBytes,
+      chainId: this.networkInfo.chainId
+    })
+    const signer = await this.tools.createSigner(keys.mnemonic)
+    const signResponse = await signer.signDirect(
+      this.walletInfo.keys.bech32Address,
+      signDoc
+    )
+    const decodedSignature = decodeSignature(signResponse.signature)
+    const signedTxRaw = TxRaw.fromPartial({
+      authInfoBytes,
+      bodyBytes,
+      signatures: [decodedSignature.signature]
+    })
+    const signedTxBytes = TxRaw.encode(signedTxRaw).finish()
+    const signedTxHex = base16.stringify(signedTxBytes)
+    edgeTransaction.signedTx = signedTxHex
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('not implemented')
+    try {
+      const signedTxBytes = base16.parse(edgeTransaction.signedTx)
+      const client = await this.getStargateClient()
+      const txid = await client.broadcastTxSync(signedTxBytes)
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+
+      edgeTransaction.txid = txid
+      edgeTransaction.date = Date.now() / 1000
+      return edgeTransaction
+    } catch (e: any) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
   }
 
   async getFreshAddress(_options: any): Promise<EdgeFreshAddress> {
