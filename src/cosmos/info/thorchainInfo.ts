@@ -40,6 +40,8 @@ const upgradeRegistryAndCreateMethods = (
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
+  chainId: 'thorchain-mainnet-v1',
+  defaultTransactionFee: coin('2000000', 'rune'), // https://thornode.ninerealms.com/thorchain/constants NativeTransactionFee
   pluginMnemonicKeyName: 'thorchainMnemonic',
   rpcNode: 'https://rpc.ninerealms.com',
   upgradeRegistryAndCreateMethods
