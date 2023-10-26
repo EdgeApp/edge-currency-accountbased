@@ -1,6 +1,9 @@
 # edge-currency-accountbased
 
 ## Unreleased
+
+## 2.9.0 (2023-10-25)
+
 - added: Parse XRP DEX orders into EdgeTxActions
 
 ## 2.8.2 (2023-10-25)
