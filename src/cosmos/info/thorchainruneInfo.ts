@@ -1,3 +1,4 @@
+import { coin } from '@cosmjs/stargate'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
