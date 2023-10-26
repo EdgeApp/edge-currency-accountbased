@@ -1,6 +1,6 @@
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
-import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
 import { StargateClient } from '@cosmjs/stargate'
 import { TendermintClient } from '@cosmjs/tendermint-rpc'
 import { div } from 'biggystring'
@@ -24,6 +24,7 @@ import { getLegacyDenomination } from '../common/utils'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
+  CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
 
@@ -34,6 +35,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   networkInfo: CosmosNetworkInfo
   client?: TendermintClient
   connectedWalletIds: Set<string>
+  methods: CosmosMethods
+  registry: Registry
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -42,6 +45,11 @@ export class CosmosTools implements EdgeCurrencyTools {
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.connectedWalletIds = new Set()
+    const { methods, registry } = networkInfo.upgradeRegistryAndCreateMethods(
+      new Registry()
+    )
+    this.methods = methods
+    this.registry = registry
   }
 
   async createSigner(mnemonic: string): Promise<DirectSecp256k1HdWallet> {

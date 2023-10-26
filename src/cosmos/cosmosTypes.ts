@@ -1,12 +1,29 @@
+import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { asCodec, asObject, asString, Cleaner } from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
+
+export interface TransferOpts {
+  amount: string
+  fromAddress: string
+  toAddress: string
+}
+
+export interface CosmosMethods {
+  transfer: (opts: TransferOpts) => EncodeObject
+}
+
+export interface UpgradedRegistry {
+  methods: CosmosMethods
+  registry: Registry
+}
 
 export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   pluginMnemonicKeyName: string
   rpcNode: string
+  upgradeRegistryAndCreateMethods: (registry: Registry) => UpgradedRegistry
 }
 
 //
