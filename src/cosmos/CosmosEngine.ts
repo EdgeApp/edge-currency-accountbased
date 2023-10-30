@@ -80,6 +80,22 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
+  async queryBlockheight(): Promise<void> {
+    try {
+      const client = await this.getStargateClient()
+      const blockheight = await client.getHeight()
+      if (blockheight > this.walletLocalData.blockHeight) {
+        this.walletLocalData.blockHeight = blockheight
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onBlockHeightChanged(
+          this.walletLocalData.blockHeight
+        )
+      }
+    } catch (e: any) {
+      this.error(`queryBlockheight Error `, e)
+    }
+  }
+
   async queryTransactions(): Promise<void> {
     throw new Error('not implemented')
   }
@@ -96,6 +112,9 @@ export class CosmosEngine extends CurrencyEngine<
     this.engineOn = true
     await this.tools.connectClient()
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
