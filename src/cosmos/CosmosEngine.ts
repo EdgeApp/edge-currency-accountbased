@@ -6,7 +6,9 @@ import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeFetchFunction,
   EdgeFreshAddress,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -19,13 +21,15 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { upgradeMemos } from '../common/upgradeMemos'
-import { cleanTxLogs } from '../common/utils'
+import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
+  asShapeshiftResponse,
   CosmosNetworkInfo,
-  SafeCosmosWalletInfo
+  SafeCosmosWalletInfo,
+  ShapeshiftTx
 } from './cosmosTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
@@ -38,6 +42,7 @@ export class CosmosEngine extends CurrencyEngine<
   networkInfo: CosmosNetworkInfo
   accountNumber: number
   sequence: number
+  fetchCors: EdgeFetchFunction
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -49,6 +54,7 @@ export class CosmosEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.accountNumber = 0
     this.sequence = 0
+    this.fetchCors = getFetchCors(env.io)
   }
 
   setOtherData(raw: any): void {
@@ -107,11 +113,82 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    throw new Error('not implemented')
+    let cursor: string | undefined
+    try {
+      do {
+        const res = await this.fetchCors(
+          `https://api.${
+            this.networkInfo.shapeshiftApiName
+          }.shapeshift.com/api/v1/account/${
+            this.walletInfo.keys.bech32Address
+          }/txs?pageSize=100&cursor=${cursor ?? ''}`
+        )
+        const rawJson = await res.json()
+        const json = asShapeshiftResponse(rawJson)
+        cursor = json.cursor
+        json.txs.forEach(tx => {
+          if (tx == null) return
+          this.processCosmosTransaction(tx)
+        })
+      } while (cursor != null)
+    } catch (e) {
+      this.log.warn('queryTransactions error:', e)
+      throw e
+    }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.walletLocalDataDirty = true
+    this.updateOnAddressesChecked()
+
+    if (this.transactionsChangedArray.length > 0) {
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
   }
 
-  processCosmosTransaction(tx: any): void {
-    throw new Error('not implemented')
+  processCosmosTransaction(tx: ShapeshiftTx): void {
+    const { blockHeight, fee, memo, messages, timestamp, txid } = tx
+    const message = messages[0]
+    const { from, value } = message
+
+    const { amount: networkFee } = fee
+
+    const memos: EdgeMemo[] = []
+    if (memo != null) {
+      memos.push({
+        type: 'text',
+        value: memo
+      })
+    }
+
+    const isSend = from === this.walletInfo.keys.bech32Address
+    const ourReceiveAddresses: string[] = []
+
+    const currencyCode = value.denom.toUpperCase()
+    let nativeAmount = value.amount
+
+    if (isSend) {
+      nativeAmount = `-${add(nativeAmount, networkFee)}`
+    } else {
+      ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight,
+      currencyCode,
+      date: timestamp,
+      isSend,
+      memos,
+      nativeAmount,
+      networkFee,
+      ourReceiveAddresses,
+      signedTx: '',
+      txid,
+      walletId: this.walletId
+    }
+    this.addTransaction(currencyCode, edgeTransaction)
   }
 
   // // ****************************************************************************
