@@ -26,9 +26,11 @@ import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
   asCosmosPrivateKeys,
+  asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
   asShapeshiftResponse,
   CosmosNetworkInfo,
+  CosmosWalletOtherData,
   SafeCosmosWalletInfo,
   ShapeshiftTx
 } from './cosmosTypes'
@@ -45,6 +47,7 @@ export class CosmosEngine extends CurrencyEngine<
   accountNumber: number
   sequence: number
   fetchCors: EdgeFetchFunction
+  otherData!: CosmosWalletOtherData
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -62,7 +65,7 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   setOtherData(raw: any): void {
-    this.otherData = raw
+    this.otherData = asCosmosWalletOtherData(raw)
   }
 
   async getStargateClient(): Promise<StargateClient> {
@@ -116,6 +119,8 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactions(): Promise<void> {
     let cursor: string | undefined
+    let firstTxid: string | undefined
+    let firstTxidIndex: number | undefined
     try {
       do {
         const res = await this.fetchCors(
@@ -128,18 +133,32 @@ export class CosmosEngine extends CurrencyEngine<
         const rawJson = await res.json()
         const json = asShapeshiftResponse(rawJson)
         cursor = json.cursor
-        json.txs.forEach(tx => {
-          if (tx == null) return
+        for (const [i, tx] of json.txs.entries()) {
+          if (tx == null) continue
+          if (firstTxid == null) {
+            firstTxid = tx.txid
+            firstTxidIndex = i
+          }
+          if (tx.txid === this.otherData.newestTxid) {
+            break
+          }
           this.processCosmosTransaction(tx)
-        })
+        }
       } while (cursor != null)
     } catch (e) {
       this.log.warn('queryTransactions error:', e)
       throw e
     }
 
+    if (
+      firstTxid != null &&
+      firstTxidIndex !== this.otherData.newestTxidIndex
+    ) {
+      this.otherData.newestTxid = firstTxid
+      this.otherData.newestTxidIndex = firstTxidIndex
+      this.walletLocalDataDirty = true
+    }
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-    this.walletLocalDataDirty = true
     this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
