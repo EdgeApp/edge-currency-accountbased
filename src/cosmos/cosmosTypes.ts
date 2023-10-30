@@ -75,6 +75,12 @@ export const asShapeshiftResponse = asObject({
   txs: asArray(asMaybe(asShapeshiftTx))
 })
 
+export const asCosmosWalletOtherData = asObject({
+  newestTxid: asMaybe(asString),
+  newestTxidIndex: asMaybe(asNumber)
+})
+export type CosmosWalletOtherData = ReturnType<typeof asCosmosWalletOtherData>
+
 //
 // Wallet Info and Keys:
 //
