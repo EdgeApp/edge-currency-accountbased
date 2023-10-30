@@ -1,6 +1,16 @@
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { Coin } from '@cosmjs/stargate'
-import { asCodec, asObject, asString, Cleaner } from 'cleaners'
+import {
+  asArray,
+  asCodec,
+  asMaybe,
+  asNumber,
+  asObject,
+  asString,
+  asTuple,
+  asValue,
+  Cleaner
+} from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
 
@@ -28,6 +38,42 @@ export interface CosmosNetworkInfo {
   rpcNode: string
   upgradeRegistryAndCreateMethods: (registry: Registry) => UpgradedRegistry
 }
+
+const asShapeshiftTx = asObject({
+  txid: asString,
+  // blockHash: string
+  blockHeight: asNumber,
+  timestamp: asNumber,
+  // confirmations: number
+  fee: asObject({
+    amount: asString,
+    denom: asString
+  }),
+  // gasUsed: string
+  // gasWanted: string
+  // index: number
+  memo: asMaybe(asString),
+  // value: string
+  messages: asTuple(
+    asObject({
+      // index: string
+      // origin: string
+      from: asString,
+      to: asString,
+      type: asValue('send'),
+      value: asObject({
+        amount: asString,
+        denom: asString
+      })
+    })
+  )
+})
+export type ShapeshiftTx = ReturnType<typeof asShapeshiftTx>
+
+export const asShapeshiftResponse = asObject({
+  cursor: asMaybe(asString),
+  txs: asArray(asMaybe(asShapeshiftTx))
+})
 
 //
 // Wallet Info and Keys:
