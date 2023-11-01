@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2.9.1 (2023-11-01)
+
+- fixed: EdgeTxActionSwap direction parsing for XRP transactions
+
 ## 2.9.0 (2023-10-25)
 
 - added: Parse XRP DEX orders into EdgeTxActions
