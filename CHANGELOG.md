@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Transactions for currencies which support EIP1559 will be sent with EIP1559 fee parameters
 - fixed: Corrected token address for PYUSD on Ethereum to be the proxy contract
 
 ## 2.9.3 (2023-11-03)

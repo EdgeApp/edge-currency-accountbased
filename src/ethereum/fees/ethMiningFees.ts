@@ -278,3 +278,42 @@ function flatMap<T>(items: NestedArray<T>, destinationItems: T[] = []): T[] {
   })
   return destinationItems
 }
+
+export type GasParams =
+  | { gasPrice: string }
+  | {
+      maxPriorityFeePerGas: string
+      maxFeePerGas: string
+    }
+
+/**
+ * Returns gas parameters needed to build a transaction based on the transaction
+ * type (legacy or EIP-1559 transaction).
+ *
+ * @param transactionType The EIP-2718 8-bit uint transaction type
+ * @param gasPrice The gas price hex string value
+ * @param fetchBaseFeePerGas An async function which retrieves the
+ * current network base fee
+ * @returns An object containing the gas parameters for the transaction
+ */
+export async function getFeeParamsByTransactionType(
+  transactionType: number,
+  gasPrice: string,
+  fetchBaseFeePerGas: () => Promise<string | undefined>
+): Promise<GasParams> {
+  if (transactionType === 1) {
+    return { gasPrice }
+  } else {
+    const baseFeePerGas = await fetchBaseFeePerGas()
+    if (baseFeePerGas == null) {
+      throw new Error(
+        'Missing baseFeePerGas from network block query. ' +
+          'RPC node does not supporting EIP1559 block format.'
+      )
+    }
+    return {
+      maxPriorityFeePerGas: sub(gasPrice, baseFeePerGas, 16),
+      maxFeePerGas: gasPrice
+    }
+  }
+}
