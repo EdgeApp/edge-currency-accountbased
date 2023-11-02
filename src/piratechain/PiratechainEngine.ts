@@ -288,7 +288,7 @@ export class PiratechainEngine extends CurrencyEngine<
     this.initializer = {
       mnemonicSeed: piratechainPrivateKeys.mnemonic,
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      alias: this.walletInfo.keys.publicKey.slice(0, 99),
+      alias: this.walletId,
       ...rpcNode
     }
 
