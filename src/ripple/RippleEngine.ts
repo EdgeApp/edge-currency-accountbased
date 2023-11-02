@@ -37,6 +37,7 @@ import {
   isCreatedNode,
   isDeletedNode,
   isModifiedNode,
+  ModifiedNode,
   OfferCreate,
   Payment as PaymentJson,
   rippleTimeToUnixTime,
@@ -338,18 +339,18 @@ export class XrpEngine extends CurrencyEngine<
       )
       return
     }
-    const takerDenom =
-      tokenId == null
-        ? this.currencyInfo.denominations[0]
-        : this.builtinTokens[tokenId].denominations[0]
-    if (takerDenom == null) {
-      this.error(`parseRippleDexTxAmount: Unknown denom ${currency}`)
-      return
+
+    let takerDenom
+    if (tokenId == null) {
+      takerDenom = this.currencyInfo.denominations[0]
+    } else {
+      const builtinToken = this.builtinTokens[tokenId]
+      if (builtinToken == null) return
+      takerDenom = builtinToken.denominations[0]
     }
-    const nativeAmount = mul(takerVal, takerDenom.multiplier)
 
     return {
-      nativeAmount,
+      nativeAmount: mul(takerVal, takerDenom.multiplier),
       pluginId: this.currencyInfo.pluginId,
       tokenId
     }
@@ -362,21 +363,27 @@ export class XrpEngine extends CurrencyEngine<
    **/
   processRippleDexTx = (
     accountTx: AccountTxTransaction
+    // balances: Balance[] // TODO
   ): EdgeTxActionSwap | undefined => {
     const { meta, tx } = accountTx
     if (tx == null || typeof meta !== 'object') return
+    const { publicKey: ourPubKey } = this.walletLocalData
+    const txAccountMatch = ourPubKey === tx.Account // Did we sign/broadcast this tx?
 
+    // Parse meta nodes
     const { AffectedNodes } = meta
     const deletedNodes = AffectedNodes.filter(
       node =>
         isDeletedNode(node) && node.DeletedNode.LedgerEntryType === 'Offer'
     ) as DeletedNode[]
+
+    const modifiedNodes = AffectedNodes.filter(
+      node =>
+        isModifiedNode(node) && node.ModifiedNode.LedgerEntryType === 'Offer'
+    ) as ModifiedNode[]
+
     const hasDeletedNodes = deletedNodes.length > 0
-    const hasModifiedNodes =
-      AffectedNodes.filter(
-        node =>
-          isModifiedNode(node) && node.ModifiedNode.LedgerEntryType === 'Offer'
-      ).length > 0
+    const hasModifiedNodes = modifiedNodes.length > 0
     const createdNodes = AffectedNodes.filter(
       node =>
         isCreatedNode(node) && node.CreatedNode.LedgerEntryType === 'Offer'
@@ -394,7 +401,7 @@ export class XrpEngine extends CurrencyEngine<
     // filled, fully filled, but NOT canceled.
     if (tx.TransactionType === 'OfferCreate') {
       // Exactly one node was created. Order opened without any fills
-      const isOpenOrder = createdNodes.length === 1 // check modifiedNodes?
+      const isOpenOrder = createdNodes.length === 1
 
       // Either an existing order that had partial fills, OR
       // a new order that only matched exact offer amounts in the book
@@ -408,10 +415,27 @@ export class XrpEngine extends CurrencyEngine<
       type =
         isFullyFilled || isPartiallyFilled ? 'swapOrderFill' : 'swapOrderPost'
 
-      // Parse amounts
+      // Parse amounts/assets. Where in the tx we extract the amounts/assets
+      // from depends on if this fill came from another taker or if we are the
+      // taker.
       const { TakerPays, TakerGets } = tx
-      sourceAsset = this.parseRippleDexTxAmount(TakerGets)
-      destAsset = this.parseRippleDexTxAmount(TakerPays)
+      if (txAccountMatch) {
+        // We broadcasted this. We are the taker or poster, and the relevant
+        // info is in the top level of the tx.
+        // TODO: Handle filled amounts
+        sourceAsset = this.parseRippleDexTxAmount(TakerGets)
+        destAsset = this.parseRippleDexTxAmount(TakerPays)
+      } else {
+        // Someone else broadcasted this. They are the taker, so we need to find
+        // the relevant info about our original order in the meta
+
+        // TODO: Handle proper amounts parsing. For now, just use the taker's
+        // top-level tx.TakerPays/TakerGets, reversed. The fill amount being
+        // recorded is incorrect, but we don't show amounts anywhere in the app
+        // yet at this time.
+        sourceAsset = this.parseRippleDexTxAmount(TakerPays)
+        destAsset = this.parseRippleDexTxAmount(TakerGets)
+      }
     } else if (tx.TransactionType === 'OfferCancel') {
       // Assert only one offer is canceled per OfferCancel transaction
       if (deletedNodes.length > 1) {
