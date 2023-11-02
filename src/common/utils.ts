@@ -11,6 +11,7 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 export function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
@@ -77,6 +78,10 @@ export function hexToDecimal(num: string): string {
 
 export function decimalToHex(num: string): string {
   return add(num, '0', 16)
+}
+
+export function uint8ArrayToHex(bytes: Uint8Array): string {
+  return '0x' + base16.stringify(bytes).toLowerCase()
 }
 
 export function bufToHex(buf: Buffer): string {

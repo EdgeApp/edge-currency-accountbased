@@ -1,7 +1,8 @@
-import Common from '@ethereumjs/common'
-import { Transaction } from '@ethereumjs/tx'
+import { Common } from '@ethereumjs/common'
+import { TransactionFactory } from '@ethereumjs/tx'
 import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
@@ -219,21 +220,25 @@ export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
   } = params
 
   const common = Common.custom(chainParams)
-  const tx = Transaction.fromTxData(
+  const tx = TransactionFactory.fromTxData(
     {
       nonce: nonce != null ? decimalToHex(nonce) : undefined,
       gasPrice: decimalToHex(gasPriceL1Wei),
       gasLimit: decimalToHex(gasLimit),
       to,
       value,
-      data
+      data: data === null ? undefined : data
     },
     { common }
   )
 
-  const unsignedRawTxData = tx
-    .raw()
-    .map(buff => buff.toString('hex'))
+  const txRaw = tx.raw()
+  const byteGroups = flatMap(txRaw)
+  const unsignedRawTxData = byteGroups
+    .map(bytes => {
+      if (bytes == null) return ''
+      return base16.stringify(bytes).toLowerCase()
+    })
     .join()
   const unsignedRawTxBytesArray = unsignedRawTxData.match(/(.{1,2})/g)
   if (unsignedRawTxBytesArray == null) {
@@ -259,4 +264,17 @@ export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
   const total = ceil(mul(mul(gasPriceL1Wei, gasUsed), scalar), 0)
 
   return total
+}
+
+type NestedArray<T> = Array<T | NestedArray<T>>
+
+function flatMap<T>(items: NestedArray<T>, destinationItems: T[] = []): T[] {
+  items.forEach(item => {
+    if (item == null) return
+    if (Array.isArray(item)) {
+      return flatMap(item, destinationItems)
+    }
+    destinationItems.push(item)
+  })
+  return destinationItems
 }

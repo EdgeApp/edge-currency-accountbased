@@ -1,5 +1,5 @@
-import Common from '@ethereumjs/common'
-import { Transaction } from '@ethereumjs/tx'
+import { Common } from '@ethereumjs/common'
+import { TransactionFactory } from '@ethereumjs/tx'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
@@ -28,7 +28,6 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { upgradeMemos } from '../common/upgradeMemos'
 import {
   biggyRoundToNearestInt,
-  bufToHex,
   cleanTxLogs,
   decimalToHex,
   getFetchCors,
@@ -39,7 +38,8 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
-  toHex
+  toHex,
+  uint8ArrayToHex
 } from '../common/utils'
 import {
   NETWORK_FEES_POLL_MILLISECONDS,
@@ -1194,11 +1194,11 @@ export class EthereumEngine extends CurrencyEngine<
     this.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
     // Create and sign transaction
-    const unsignedTx = Transaction.fromTxData(txParams, { common })
+    const unsignedTx = TransactionFactory.fromTxData(txParams, { common })
     const signedTx = unsignedTx.sign(privKey)
 
-    edgeTransaction.signedTx = bufToHex(signedTx.serialize())
-    edgeTransaction.txid = bufToHex(signedTx.hash())
+    edgeTransaction.signedTx = uint8ArrayToHex(signedTx.serialize())
+    edgeTransaction.txid = uint8ArrayToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
     if (edgeTransaction.otherParams != null) {
       edgeTransaction.otherParams.nonceUsed = nonce
