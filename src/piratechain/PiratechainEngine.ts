@@ -11,6 +11,7 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -288,7 +289,7 @@ export class PiratechainEngine extends CurrencyEngine<
     this.initializer = {
       mnemonicSeed: piratechainPrivateKeys.mnemonic,
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      alias: this.walletId,
+      alias: base16.stringify(base64.parse(this.walletId)),
       ...rpcNode
     }
 
