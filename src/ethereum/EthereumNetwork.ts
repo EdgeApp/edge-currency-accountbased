@@ -135,11 +135,10 @@ interface GetTxsParams {
 
 type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'txs'
 
-interface QueryFuncs {
-  // @ts-expect-error
-  [method: UpdateMethods]: (
-    ...args: any
-  ) => Array<Promise<EthereumNetworkUpdate>>
+type QueryFuncs = {
+  [method in UpdateMethods]: Array<
+    (...args: any[]) => Promise<EthereumNetworkUpdate>
+  >
 }
 
 /**
@@ -1206,13 +1205,10 @@ export class EthereumNetwork {
 
   async check(
     method: UpdateMethods,
-    ...args: any
+    ...args: any[]
   ): Promise<EthereumNetworkUpdate> {
     return await asyncWaterfall(
-      // @ts-expect-error
-      // eslint-disable-next-line @typescript-eslint/return-await
       this.queryFuncs[method].map(func => async () => await func(...args))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ).catch(e => {
       return {}
     })
