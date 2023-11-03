@@ -42,7 +42,6 @@ import {
   asGetTransactionReceipt,
   asRpcResultString,
   BlockbookAddress,
-  BlockbookTokenBalance,
   CheckTokenBalBlockchair,
   EthereumNetworkInfo,
   EthereumTxOtherParams,
@@ -1349,10 +1348,7 @@ export class EthereumNetwork {
     }
   }
 
-  checkAddressBlockbook = async (
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    params: GetTxsParams
-  ): Promise<EthereumNetworkUpdate> => {
+  checkAddressBlockbook = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const out: EthereumNetworkUpdate = {
       newNonce: '0',
@@ -1384,8 +1380,7 @@ export class EthereumNetwork {
     out.server = server
 
     // Token balances
-    // @ts-expect-error
-    for (const token: BlockbookTokenBalance of tokens) {
+    for (const token of tokens) {
       try {
         const { symbol, balance } = asBlockbookTokenBalance(token)
         // @ts-expect-error
