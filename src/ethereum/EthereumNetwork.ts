@@ -1,8 +1,10 @@
 import { add, div, mul, sub } from 'biggystring'
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
+import { ethers } from 'ethers'
 import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -17,6 +19,7 @@ import {
   shuffleArray,
   snooze
 } from '../common/utils'
+import ETH_BAL_CHECKER_ABI from './abi/ETH_BAL_CHECKER_ABI.json'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import {
@@ -60,6 +63,7 @@ const NUM_TRANSACTIONS_TO_QUERY = 50
 interface EthereumNeeds {
   blockHeightLastChecked: number
   nonceLastChecked: number
+  tokenBalsLastChecked: number
   tokenBalLastChecked: { [currencyCode: string]: number }
   tokenTxsLastChecked: { [currencyCode: string]: number }
 }
@@ -221,6 +225,8 @@ export class EthereumNetwork {
   processEthereumNetworkUpdate: (...any) => any
   // @ts-expect-error
   checkTxsAmberdata: (...any) => any
+  // @ts-expect-error
+  checkEthBalChecker: (...any) => any
   walletId: string
   queryFuncs: QueryFuncs
 
@@ -229,6 +235,7 @@ export class EthereumNetwork {
     this.ethNeeds = {
       blockHeightLastChecked: 0,
       nonceLastChecked: 0,
+      tokenBalsLastChecked: 0,
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
@@ -263,6 +270,8 @@ export class EthereumNetwork {
     this.processEthereumNetworkUpdate =
       // @ts-expect-error
       this.processEthereumNetworkUpdate.bind(this)
+    // @ts-expect-error
+    this.checkEthBalChecker = this.checkEthBalChecker.bind(this)
     this.queryFuncs = this.buildQueryFuncs(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
@@ -495,20 +504,37 @@ export class EthereumNetwork {
     return await resultRaw.json()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async fetchPostRPC(
     method: string,
     params: Object,
     networkId: number,
     url: string
-  ) {
+  ): Promise<any> {
     const body = {
       id: networkId,
       jsonrpc: '2.0',
       method,
       params
     }
+    url = this.addRpcApiKey(url)
 
+    const response = await this.ethEngine.fetchCors(url, {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+
+    const parsedUrl = parse(url, {}, true)
+    if (!response.ok) {
+      this.throwError(response, 'fetchPostRPC', parsedUrl.hostname)
+    }
+    return await response.json()
+  }
+
+  addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
     const match = regex.exec(url)
     if (match != null) {
@@ -525,21 +551,7 @@ export class EthereumNetwork {
         throw new Error('Incorrect apikey type for RPC')
       }
     }
-
-    const response = await this.ethEngine.fetchCors(url, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
-      method: 'POST',
-      body: JSON.stringify(body)
-    })
-
-    const parsedUrl = parse(url, {}, true)
-    if (!response.ok) {
-      this.throwError(response, 'fetchPostRPC', parsedUrl.hostname)
-    }
-    return await response.json()
+    return url
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -1501,6 +1513,87 @@ export class EthereumNetwork {
     }
   }
 
+  /**
+   * Check the eth-balance-checker contract for balances
+   */
+  // @ts-expect-error
+  async checkEthBalChecker(): Promise<EthereumNetworkUpdate> {
+    const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
+      this.ethEngine
+    const { chainParams, rpcServers, ethBalCheckerContract } = networkInfo
+
+    const tokenBal: { [currencyCode: string]: string } = {}
+    if (ethBalCheckerContract == null) return tokenBal
+
+    // Address for querying ETH balance on ETH network, MATIC on MATIC, etc.
+    const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
+    const balanceQueryAddrs = [mainnetAssetAddr]
+    for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {
+      const token = asMaybeContractLocation(rawToken.networkLocation)
+      if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
+    }
+
+    let funcs: Array<() => Promise<any>> = []
+    rpcServers.forEach(rpcServer => {
+      const rpcServerWithApiKey = this.addRpcApiKey(rpcServer)
+      const ethProvider = new ethers.providers.JsonRpcProvider(
+        rpcServerWithApiKey,
+        chainParams.chainId
+      )
+
+      const contract = new ethers.Contract(
+        ethBalCheckerContract,
+        ETH_BAL_CHECKER_ABI,
+        ethProvider
+      )
+
+      funcs.push(async () => {
+        const contractCallRes = await contract.balances(
+          [walletLocalData.publicKey],
+          balanceQueryAddrs
+        )
+        if (contractCallRes.length !== balanceQueryAddrs.length) {
+          throw new Error('checkEthBalChecker balances length mismatch')
+        }
+        return contractCallRes
+      })
+    })
+
+    // Randomize provider priority to distribute RPC provider load
+    funcs = shuffleArray(funcs)
+    const balances = await asyncWaterfall(funcs).catch(e => {
+      throw new Error(`All rpc servers failed eth balance checks: ${e}`)
+    })
+
+    // Parse data from smart contract call
+    for (let i = 0; i < balances.length; i++) {
+      const tokenAddr = balanceQueryAddrs[i].toLowerCase()
+      const balanceBn = balances[i]
+
+      let balanceCurrencyCode
+      if (tokenAddr === mainnetAssetAddr) {
+        const { currencyCode } = currencyInfo
+        balanceCurrencyCode = currencyCode
+      } else {
+        const token = allTokensMap[tokenAddr.replace('0x', '')]
+        if (token == null) {
+          this.logError(
+            'checkEthBalChecker',
+            new Error(`checkEthBalChecker missing builtinToken: ${tokenAddr}`)
+          )
+          continue
+        }
+        const { currencyCode } = token
+        balanceCurrencyCode = currencyCode
+      }
+
+      tokenBal[balanceCurrencyCode] =
+        ethers.BigNumber.from(balanceBn).toString()
+    }
+
+    return { tokenBal, server: 'ethBalChecker' }
+  }
+
   // @ts-expect-error
   async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
     let cleanedResponseObj: CheckTokenBalBlockchair
@@ -1655,13 +1748,30 @@ export class EthereumNetwork {
         currencyCodes.push(currencyCode)
       }
 
-      for (const tk of currencyCodes) {
+      // If this engine supports the batch token balance query, no need to check
+      // each currencyCode individually.
+      const { ethBalCheckerContract } = this.ethEngine.networkInfo
+
+      if (ethBalCheckerContract != null) {
         await this.checkAndUpdate(
-          this.ethNeeds.tokenBalLastChecked[tk],
+          this.ethNeeds.tokenBalsLastChecked,
           BAL_POLL_MILLISECONDS,
           preUpdateBlockHeight,
-          async () => await this.check('tokenBal', tk)
+          async () => await this.check('tokenBal')
         )
+      }
+
+      for (const tk of currencyCodes) {
+        // Only check each code individually if this engine does not support
+        // batch token balance queries.
+        if (ethBalCheckerContract == null) {
+          await this.checkAndUpdate(
+            this.ethNeeds.tokenBalLastChecked[tk],
+            BAL_POLL_MILLISECONDS,
+            preUpdateBlockHeight,
+            async () => await this.check('tokenBal', tk)
+          )
+        }
 
         await this.checkAndUpdate(
           this.ethNeeds.tokenTxsLastChecked[tk],
@@ -1749,6 +1859,7 @@ export class EthereumNetwork {
         this.ethNeeds.tokenBalLastChecked[tk] = now
         this.ethEngine.updateBalance(tk, tokenBal[tk])
       }
+      this.ethNeeds.tokenBalsLastChecked = now
     }
 
     if (ethereumNetworkUpdate.tokenTxs != null) {
@@ -1793,27 +1904,28 @@ export class EthereumNetwork {
       blockbookServers,
       blockchairApiServers,
       amberdataRpcServers,
-      amberdataApiServers
+      amberdataApiServers,
+      ethBalCheckerContract
     } = settings
     const blockheight = []
     const nonce = []
     const txs = []
-    const tokenBal = []
+    const tokenBalSerial = []
 
     if (evmScanApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightEthscan)
       nonce.push(this.checkNonceEthscan)
-      tokenBal.push(this.checkTokenBalEthscan)
+      tokenBalSerial.push(this.checkTokenBalEthscan)
     }
     txs.push(this.checkTxsEthscan) // We'll fake it if we don't have a server
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
-      tokenBal.push(this.checkAddressBlockbook)
+      tokenBalSerial.push(this.checkAddressBlockbook)
       nonce.push(this.checkAddressBlockbook)
     }
     if (blockchairApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockchair)
-      tokenBal.push(this.checkTokenBalBlockchair)
+      tokenBalSerial.push(this.checkTokenBalBlockchair)
     }
     if (amberdataRpcServers.length > 0) {
       blockheight.push(this.checkBlockHeightAmberdata)
@@ -1824,10 +1936,20 @@ export class EthereumNetwork {
     }
     if (rpcServers.length > 0) {
       nonce.push(this.checkNonceRpc)
-      tokenBal.push(this.checkTokenBalRpc)
+      tokenBalSerial.push(this.checkTokenBalRpc)
     }
 
-    return { blockheight, nonce, txs, tokenBal }
+    // Decide between serial and parallel/batch (checkEthBalChecker) token
+    // balance checking
+    const tokenBal =
+      ethBalCheckerContract != null ? [this.checkEthBalChecker] : tokenBalSerial
+
+    return {
+      blockheight,
+      nonce,
+      txs,
+      tokenBal
+    }
   }
 
   // TODO: Convert to error types

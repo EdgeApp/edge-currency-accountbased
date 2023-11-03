@@ -95,6 +95,7 @@ export interface EthereumNetworkInfo {
   pluginRegularKeyName: string
   rpcServers: string[]
   uriNetworks: string[]
+  ethBalCheckerContract?: string
 }
 
 export const asEthereumFeesGasLimit = asObject({

@@ -182,7 +182,8 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   ethGasStationUrl: 'https://gasstation-mainnet.matic.network/',
-  defaultNetworkFees
+  defaultNetworkFees,
+  ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
 }
 
 const defaultSettings: any = {
