@@ -194,40 +194,6 @@ export const getFeeRateUsed = (
 export class EthereumNetwork {
   ethNeeds: EthereumNeeds
   ethEngine: EthereumEngine
-  // @ts-expect-error
-  fetchGetEtherscan: (...any) => any
-  // @ts-expect-error
-  multicastServers: (...any) => any
-  // @ts-expect-error
-  checkBlockHeightEthscan: (...any) => any
-  // @ts-expect-error
-  checkBlockHeightBlockchair: (...any) => any
-  // @ts-expect-error
-  checkBlockHeightAmberdata: (...any) => any
-  // @ts-expect-error
-  checkBlockHeightBlockbook: (...any) => any
-  // @ts-expect-error
-  checkAddressBlockbook: (...any) => any
-  // @ts-expect-error
-  checkNonceRpc: (...any) => any
-  // @ts-expect-error
-  checkNonceEthscan: (...any) => any
-  // @ts-expect-error
-  checkNonceAmberdata: (...any) => any
-  // @ts-expect-error
-  checkTokenBalEthscan: (...any) => any
-  // @ts-expect-error
-  checkTokenBalBlockchair: (...any) => any
-  // @ts-expect-error
-  checkTokenBalRpc: (...any) => any
-  // @ts-expect-error
-  checkTxsEthscan: (...any) => any
-  // @ts-expect-error
-  processEthereumNetworkUpdate: (...any) => any
-  // @ts-expect-error
-  checkTxsAmberdata: (...any) => any
-  // @ts-expect-error
-  checkEthBalChecker: (...any) => any
   walletId: string
   queryFuncs: QueryFuncs
 
@@ -240,39 +206,6 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
-    // @ts-expect-error
-    this.fetchGetEtherscan = this.fetchGetEtherscan.bind(this)
-    // @ts-expect-error
-    this.multicastServers = this.multicastServers.bind(this)
-    // @ts-expect-error
-    this.checkAddressBlockbook = this.checkAddressBlockbook.bind(this)
-    // @ts-expect-error
-    this.checkBlockHeightEthscan = this.checkBlockHeightEthscan.bind(this)
-    // @ts-expect-error
-    this.checkBlockHeightBlockchair = this.checkBlockHeightBlockchair.bind(this)
-    // @ts-expect-error
-    this.checkBlockHeightAmberdata = this.checkBlockHeightAmberdata.bind(this)
-    // @ts-expect-error
-    this.checkBlockHeightBlockbook = this.checkBlockHeightBlockbook.bind(this)
-    // @ts-expect-error
-    this.checkNonceRpc = this.checkNonceRpc.bind(this)
-    // @ts-expect-error
-    this.checkNonceEthscan = this.checkNonceEthscan.bind(this)
-    // @ts-expect-error
-    this.checkNonceAmberdata = this.checkNonceAmberdata.bind(this)
-    // @ts-expect-error
-    this.checkTokenBalEthscan = this.checkTokenBalEthscan.bind(this)
-    // @ts-expect-error
-    this.checkTokenBalBlockchair = this.checkTokenBalBlockchair.bind(this)
-    // @ts-expect-error
-    this.checkTokenBalRpc = this.checkTokenBalRpc.bind(this)
-    // @ts-expect-error
-    this.checkTxsEthscan = this.checkTxsEthscan.bind(this)
-    this.processEthereumNetworkUpdate =
-      // @ts-expect-error
-      this.processEthereumNetworkUpdate.bind(this)
-    // @ts-expect-error
-    this.checkEthBalChecker = this.checkEthBalChecker.bind(this)
     this.queryFuncs = this.buildQueryFuncs(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
@@ -469,9 +402,8 @@ export class EthereumNetwork {
     return edgeTransaction
   }
 
-  // @ts-expect-error
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchGetEtherscan(server: string, cmd: string) {
+  fetchGetEtherscan = async (server: string, cmd: string) => {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
       this.ethEngine.currencyInfo,
@@ -751,8 +683,10 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async multicastServers(func: EthFunction, ...params: any): Promise<any> {
+  multicastServers = async (
+    func: EthFunction,
+    ...params: any
+  ): Promise<any> => {
     const {
       rpcServers,
       blockcypherApiServers,
@@ -1166,8 +1100,7 @@ export class EthereumNetwork {
     return await asyncWaterfall(funcs)
   }
 
-  // @ts-expect-error
-  async checkBlockHeightEthscan(): Promise<EthereumNetworkUpdate> {
+  checkBlockHeightEthscan = async (): Promise<EthereumNetworkUpdate> => {
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_blockNumber'
     )
@@ -1175,8 +1108,7 @@ export class EthereumNetwork {
     return { blockHeight: clean.result, server }
   }
 
-  // @ts-expect-error
-  async checkBlockHeightBlockbook(): Promise<EthereumNetworkUpdate> {
+  checkBlockHeightBlockbook = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const { result: jsonObj, server } = await this.multicastServers(
         'blockbookBlockHeight',
@@ -1191,8 +1123,7 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async checkBlockHeightBlockchair(): Promise<EthereumNetworkUpdate> {
+  checkBlockHeightBlockchair = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const jsonObj = await this.fetchGetBlockchair(
         `/${this.ethEngine.currencyInfo.pluginId}/stats`,
@@ -1210,8 +1141,7 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async checkBlockHeightAmberdata(): Promise<EthereumNetworkUpdate> {
+  checkBlockHeightAmberdata = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
       const blockHeight = parseInt(asRpcResultString(jsonObj).result, 16)
@@ -1222,8 +1152,7 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async checkNonceRpc(): Promise<EthereumNetworkUpdate> {
+  checkNonceRpc = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     const { result, server } = await this.multicastServers(
       'eth_getTransactionCount_RPC',
@@ -1239,8 +1168,7 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async checkNonceEthscan(): Promise<EthereumNetworkUpdate> {
+  checkNonceEthscan = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     const { result: jsonObj, server } = await this.multicastServers(
       'eth_getTransactionCount',
@@ -1250,8 +1178,7 @@ export class EthereumNetwork {
     return { newNonce: clean.result, server }
   }
 
-  // @ts-expect-error
-  async checkNonceAmberdata(): Promise<EthereumNetworkUpdate> {
+  checkNonceAmberdata = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     try {
       const jsonObj = await this.fetchPostAmberdataRpc(
@@ -1333,8 +1260,9 @@ export class EthereumNetwork {
     return { allTransactions, server }
   }
 
-  // @ts-expect-error
-  async checkTxsEthscan(params: GetTxsParams): Promise<EthereumNetworkUpdate> {
+  checkTxsEthscan = async (
+    params: GetTxsParams
+  ): Promise<EthereumNetworkUpdate> => {
     const { startBlock, currencyCode } = params
     let server
     let allTransactions
@@ -1412,11 +1340,10 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
-  async checkAddressBlockbook(
+  checkAddressBlockbook = async (
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     params: GetTxsParams
-  ): Promise<EthereumNetworkUpdate> {
+  ): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const out: EthereumNetworkUpdate = {
       newNonce: '0',
@@ -1468,8 +1395,7 @@ export class EthereumNetwork {
     return out
   }
 
-  // @ts-expect-error
-  async checkTokenBalEthscan(tk: string): Promise<EthereumNetworkUpdate> {
+  checkTokenBalEthscan = async (tk: string): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     let response
     let jsonObj
@@ -1518,8 +1444,7 @@ export class EthereumNetwork {
   /**
    * Check the eth-balance-checker contract for balances
    */
-  // @ts-expect-error
-  async checkEthBalChecker(): Promise<EthereumNetworkUpdate> {
+  checkEthBalChecker = async (): Promise<EthereumNetworkUpdate> => {
     const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
       this.ethEngine
     const { chainParams, rpcServers, ethBalCheckerContract } = networkInfo
@@ -1602,8 +1527,7 @@ export class EthereumNetwork {
     return { tokenBal, server: 'ethBalChecker' }
   }
 
-  // @ts-expect-error
-  async checkTokenBalBlockchair(): Promise<EthereumNetworkUpdate> {
+  checkTokenBalBlockchair = async (): Promise<EthereumNetworkUpdate> => {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
     const path = `/${this.ethEngine.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
@@ -1642,8 +1566,7 @@ export class EthereumNetwork {
     return { tokenBal: response, server: 'blockchair' }
   }
 
-  // @ts-expect-error
-  async checkTokenBalRpc(tk: string): Promise<EthereumNetworkUpdate> {
+  checkTokenBalRpc = async (tk: string): Promise<EthereumNetworkUpdate> => {
     let cleanedResponseObj: RpcResultString
     let response
     let jsonObj
@@ -1802,13 +1725,12 @@ export class EthereumNetwork {
     }
   }
 
-  // @ts-expect-error
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processEthereumNetworkUpdate(
+  processEthereumNetworkUpdate = (
     now: number,
     ethereumNetworkUpdate: EthereumNetworkUpdate,
     preUpdateBlockHeight: number
-  ) {
+  ) => {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!ethereumNetworkUpdate) return
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
