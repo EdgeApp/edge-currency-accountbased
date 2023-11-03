@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.9.2 (2023-11-02)
+
 - changed: (Piratechain) Use walletId as synchronizer alias
 
 ## 2.9.1 (2023-11-01)
