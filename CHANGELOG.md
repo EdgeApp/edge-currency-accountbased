@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2.9.3 (2023-11-03)
+
+- fixed: (Piratechain) alias format from base64 to base16
+
 ## 2.9.2 (2023-11-02)
 
 - changed: (Piratechain) Use walletId as synchronizer alias
