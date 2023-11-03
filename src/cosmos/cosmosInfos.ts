@@ -1,5 +1,5 @@
-import { thorchain } from './info/thorchainInfo'
+import { thorchainrune } from './info/thorchainInfo'
 
 export const cosmosPlugins = {
-  thorchain
+  thorchainrune
 }

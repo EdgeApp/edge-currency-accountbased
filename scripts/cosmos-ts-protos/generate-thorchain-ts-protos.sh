@@ -6,7 +6,7 @@ PROTO_DIR="./scripts/cosmos-ts-protos/proto"
 
 # Replace the following variables to create typescript files for other Cosmos-cbased chains
 
-PLUGIN="thorchain" # pluginId
+PLUGIN="thorchainrune" # pluginId
 REPO_URL="https://gitlab.com/thorchain/thornode/-/archive/mainnet/thornode-mainnet.zip" # git repository
 COSMOS_SDK_REF="mainnet" # branch
 COSMOS_DIR="$PROTO_DIR/$PLUGIN"

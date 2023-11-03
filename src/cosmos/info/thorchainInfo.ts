@@ -42,7 +42,7 @@ const networkInfo: CosmosNetworkInfo = {
   bip39Path: `m/44'/931'/0'/0/0`,
   chainId: 'thorchain-mainnet-v1',
   defaultTransactionFee: coin('2000000', 'rune'), // https://thornode.ninerealms.com/thorchain/constants NativeTransactionFee
-  pluginMnemonicKeyName: 'thorchainMnemonic',
+  pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: 'https://rpc.ninerealms.com',
   upgradeRegistryAndCreateMethods
 }
@@ -50,8 +50,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
   displayName: 'THORChain',
-  pluginId: 'thorchain',
-  walletType: 'wallet:thorchain',
+  pluginId: 'thorchainrune',
+  walletType: 'wallet:thorchainrune',
 
   // Explorers:
   addressExplorer: 'https://viewblock.io/thorchain/address/%s',
@@ -74,7 +74,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: []
 }
 
-export const thorchain = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
+export const thorchainrune = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
   networkInfo,
 
