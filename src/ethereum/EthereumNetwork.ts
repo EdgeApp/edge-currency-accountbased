@@ -109,7 +109,7 @@ interface GetEthscanAllTxsOptions {
 
 interface GetEthscanAllTxsResponse {
   allTransactions: EdgeTransaction[]
-  server: string
+  server: string | undefined
 }
 
 interface BroadcastWrapper<T> {
@@ -326,10 +326,11 @@ export class EthereumNetwork {
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
 
     const value = tokenTransfer.attributes.value
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const fee = tokenTransfer.attributes.fee
-      ? tokenTransfer.attributes.fee
-      : '0'
+    const fee =
+      tokenTransfer.attributes.fee != null &&
+      tokenTransfer.attributes.fee !== ''
+        ? tokenTransfer.attributes.fee
+        : '0'
     const fromAddress = tokenTransfer.relationships.from.data.id
     const toAddress = tokenTransfer.relationships.to.data.id
 
@@ -502,8 +503,7 @@ export class EthereumNetwork {
   ): Promise<any> {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (blockcypherApiKey && blockcypherApiKey.length > 5) {
+    if (blockcypherApiKey != null && blockcypherApiKey.length > 5) {
       apiKey = '&token=' + blockcypherApiKey
     }
 
@@ -532,8 +532,7 @@ export class EthereumNetwork {
     const { blockchairApiServers } = this.ethEngine.networkInfo
 
     const keyParam =
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      includeKey && blockchairApiKey ? `&key=${blockchairApiKey}` : ''
+      includeKey && blockchairApiKey != null ? `&key=${blockchairApiKey}` : ''
     const url = `${blockchairApiServers[0]}${path}`
     const response = await this.ethEngine.fetchCors(`${url}${keyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetBlockchair', url)
@@ -608,14 +607,13 @@ export class EthereumNetwork {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     useApiKey: boolean
   ): Promise<any> {
-    const { alethioApiKey = '' } = this.ethEngine.initOptions
+    const { alethioApiKey } = this.ethEngine.initOptions
     const { alethioApiServers } = this.ethEngine.networkInfo
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
 
     const response = await this.ethEngine.fetchCors(
       url,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      alethioApiKey
+      alethioApiKey != null
         ? { headers: { Authorization: `Bearer ${alethioApiKey}` } }
         : undefined
     )
@@ -921,8 +919,7 @@ export class EthereumNetwork {
         funcs = evmScanApiServers.map(server => async () => {
           // @ts-expect-error
           const result = await this.fetchGetEtherscan(server, url)
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!result.result || typeof result.result !== 'string') {
+          if (typeof result.result !== 'string' || result.result === '') {
             const msg = `Invalid return value eth_getBalance in ${server}`
             this.ethEngine.error(msg)
             throw new Error(msg)
@@ -972,8 +969,7 @@ export class EthereumNetwork {
         funcs = evmScanApiServers.map(server => async () => {
           // @ts-expect-error
           const result = await this.fetchGetEtherscan(server, url)
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (!result.result || typeof result.result !== 'string') {
+          if (typeof result.result !== 'string' || result.result === '') {
             const msg = `Invalid return value getTokenBalance in ${server}`
             this.ethEngine.error(msg)
             throw new Error(msg)
@@ -1233,11 +1229,10 @@ export class EthereumNetwork {
     let page = 1
 
     const allTransactions: EdgeTransaction[] = []
-    let server: string = ''
+    let server: string | undefined
     const contractAddress = options.contractAddress
     const searchRegularTxs = options.searchRegularTxs
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    while (1) {
+    while (true) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
       const response = await this.multicastServers('getTransactions', {
         currencyCode,
@@ -1280,7 +1275,7 @@ export class EthereumNetwork {
     params: GetTxsParams
   ): Promise<EthereumNetworkUpdate> => {
     const { startBlock, currencyCode } = params
-    let server
+    let server: string
     let allTransactions
 
     if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
@@ -1296,8 +1291,7 @@ export class EthereumNetwork {
         asEvmScanInternalTransaction,
         { searchRegularTxs: false }
       )
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      server = txsRegularResp.server || txsInternalResp.server
+      server = txsRegularResp.server ?? txsInternalResp.server ?? ''
       allTransactions = [
         ...txsRegularResp.allTransactions,
         ...txsInternalResp.allTransactions
@@ -1312,7 +1306,7 @@ export class EthereumNetwork {
           asEvmScancanTokenTransaction,
           { contractAddress }
         )
-        server = resp.server
+        server = resp.server ?? ''
         allTransactions = resp.allTransactions
       } else {
         return {}
@@ -1343,8 +1337,7 @@ export class EthereumNetwork {
         if (tokenInfo != null) {
           const tokenContractAddress = tokenInfo.contractAddress
           if (
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            txnContractAddress &&
+            txnContractAddress != null &&
             typeof tokenContractAddress === 'string' &&
             tokenContractAddress.toLowerCase() ===
               txnContractAddress.toLowerCase()
@@ -1441,8 +1434,7 @@ export class EthereumNetwork {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        `checkTokenBalEthscan token ${tk} response ${response || ''} `,
+        `checkTokenBalEthscan token ${tk} response ${String(response ?? '')} `,
         e
       )
       throw new Error(
@@ -1619,8 +1611,7 @@ export class EthereumNetwork {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-        `checkTokenBalRpc token ${tk} response ${response || ''} `,
+        `checkTokenBalRpc token ${tk} response ${String(response ?? '')} `,
         e
       )
       throw new Error(
@@ -1745,21 +1736,17 @@ export class EthereumNetwork {
     ethereumNetworkUpdate: EthereumNetworkUpdate,
     preUpdateBlockHeight: number
   ): void => {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!ethereumNetworkUpdate) return
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (ethereumNetworkUpdate.blockHeight) {
+    if (ethereumNetworkUpdate == null) return
+    if (ethereumNetworkUpdate.blockHeight != null) {
       this.ethEngine.log(
         `${
           this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate blockHeight ${
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          ethereumNetworkUpdate.server || 'no server'
+          ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      this.ethEngine.log(`Got block height ${blockHeight || 'no blockheight'}`)
+      this.ethEngine.log(`Got block height ${blockHeight}`)
       if (
         typeof blockHeight === 'number' &&
         this.ethEngine.walletLocalData.blockHeight !== blockHeight
@@ -1774,14 +1761,12 @@ export class EthereumNetwork {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (ethereumNetworkUpdate.newNonce) {
+    if (ethereumNetworkUpdate.newNonce != null) {
       this.ethEngine.log(
         `${
           this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate nonce ${
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          ethereumNetworkUpdate.server || 'no server'
+          ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
       this.ethNeeds.nonceLastChecked = now
@@ -1795,8 +1780,7 @@ export class EthereumNetwork {
         `${
           this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenBal ${
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          ethereumNetworkUpdate.server || 'no server'
+          ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
       for (const tk of Object.keys(tokenBal)) {
@@ -1812,23 +1796,19 @@ export class EthereumNetwork {
         `${
           this.ethEngine.currencyInfo.currencyCode
         } processEthereumNetworkUpdate tokenTxs ${
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-          ethereumNetworkUpdate.server || 'no server'
+          ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
       for (const tk of Object.keys(tokenTxs)) {
         this.ethNeeds.tokenTxsLastChecked[tk] = now
         this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (tuple.edgeTransactions) {
-          for (const tx of tuple.edgeTransactions) {
-            this.ethEngine.addTransaction(tk, tx)
-          }
-          this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
-            preUpdateBlockHeight
-          this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
+        for (const tx of tuple.edgeTransactions) {
+          this.ethEngine.addTransaction(tk, tx)
         }
+        this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
+          preUpdateBlockHeight
+        this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
       }
       this.ethEngine.updateOnAddressesChecked()
     }
