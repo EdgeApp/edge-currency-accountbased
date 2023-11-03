@@ -112,9 +112,16 @@ interface GetEthscanAllTxsResponse {
   server: string
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-async function broadcastWrapper(promise: Promise<Object>, server: string) {
-  const out = {
+interface BroadcastWrapper<T> {
+  result: T
+  server: string
+}
+
+async function broadcastWrapper<T extends object>(
+  promise: Promise<T>,
+  server: string
+): Promise<BroadcastWrapper<T>> {
+  const out: BroadcastWrapper<T> = {
     result: await promise,
     server
   }
@@ -163,14 +170,13 @@ interface QueryFuncs {
  * @param {string} gasLimit - The gas limit of the transaction, in units of gas. If the
  *                            limit was not customly set, it will default to 21000.
  * @param {void | string} gasUsed - The amount of gas used in a transaction, in units of gas.
- * @returns {object} A `feeRateUsed` object to be included in an `EdgeTransaction`
+ * @returns {any} A `feeRateUsed` object to be included in an `EdgeTransaction`
  */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const getFeeRateUsed = (
   gasPrice: string,
   gasLimit: string,
   gasUsed?: string
-) => {
+): any => {
   let feeRateUsed = {}
 
   try {
@@ -402,8 +408,8 @@ export class EthereumNetwork {
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  fetchGetEtherscan = async (server: string, cmd: string) => {
+  // TODO: Clean return type
+  fetchGetEtherscan = async (server: string, cmd: string): Promise<any> => {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
       this.ethEngine.currencyInfo,
@@ -426,8 +432,8 @@ export class EthereumNetwork {
     return await response.json()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchGetBlockbook(server: string, param: string) {
+  // TODO: Clean return type
+  async fetchGetBlockbook(server: string, param: string): Promise<any> {
     const url = server + param
     const resultRaw = !server.includes('trezor')
       ? await this.ethEngine.fetchCors(url)
@@ -437,6 +443,7 @@ export class EthereumNetwork {
     return await resultRaw.json()
   }
 
+  // TODO: Clean return type
   async fetchPostRPC(
     method: string,
     params: Object,
@@ -487,8 +494,12 @@ export class EthereumNetwork {
     return url
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchPostBlockcypher(cmd: string, body: any, baseUrl: string) {
+  // TODO: Clean return type
+  async fetchPostBlockcypher(
+    cmd: string,
+    body: any,
+    baseUrl: string
+  ): Promise<any> {
     const { blockcypherApiKey } = this.ethEngine.initOptions
     let apiKey = ''
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -512,8 +523,11 @@ export class EthereumNetwork {
     return await response.json()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchGetBlockchair(path: string, includeKey: boolean = false) {
+  // TODO: Clean return type
+  async fetchGetBlockchair(
+    path: string,
+    includeKey: boolean = false
+  ): Promise<any> {
     const { blockchairApiKey } = this.ethEngine.initOptions
     const { blockchairApiServers } = this.ethEngine.networkInfo
 
@@ -526,8 +540,11 @@ export class EthereumNetwork {
     return await response.json()
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchPostAmberdataRpc(method: string, params: string[] = []) {
+  // TODO: Clean return type
+  async fetchPostAmberdataRpc(
+    method: string,
+    params: string[] = []
+  ): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataRpcServers } = this.ethEngine.networkInfo
 
@@ -557,8 +574,8 @@ export class EthereumNetwork {
     return jsonObj
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchGetAmberdataApi(path: string) {
+  // TODO: Clean return type
+  async fetchGetAmberdataApi(path: string): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
     const { amberdataApiServers } = this.ethEngine.networkInfo
     const url = `${amberdataApiServers[0]}${path}`
@@ -583,15 +600,14 @@ export class EthereumNetwork {
    *
    * @throws Exception when Alethio throttles with a 429 response code
    */
-
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  // TODO: Clean return type
   async fetchGetAlethio(
     pathOrLink: string,
     // eslint-disable-next-line @typescript-eslint/default-param-last
     isPath: boolean = true,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     useApiKey: boolean
-  ) {
+  ): Promise<any> {
     const { alethioApiKey = '' } = this.ethEngine.initOptions
     const { alethioApiServers } = this.ethEngine.networkInfo
     const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
@@ -1618,14 +1634,13 @@ export class EthereumNetwork {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAndUpdate(
     // eslint-disable-next-line @typescript-eslint/default-param-last
     lastChecked: number = 0,
     pollMillisec: number,
     preUpdateBlockHeight: number,
     checkFunc: () => Promise<EthereumNetworkUpdate>
-  ) {
+  ): Promise<void> {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
       try {
@@ -1725,12 +1740,11 @@ export class EthereumNetwork {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   processEthereumNetworkUpdate = (
     now: number,
     ethereumNetworkUpdate: EthereumNetworkUpdate,
     preUpdateBlockHeight: number
-  ) => {
+  ): void => {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!ethereumNetworkUpdate) return
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
@@ -1883,8 +1897,7 @@ export class EthereumNetwork {
   }
 
   // TODO: Convert to error types
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  throwError(res: FetchResponse, funcName: string, url: string) {
+  throwError(res: FetchResponse, funcName: string, url: string): void {
     switch (res.status) {
       case 402: // blockchair
       case 429: // amberdata
@@ -1897,8 +1910,7 @@ export class EthereumNetwork {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  logError(funcName: string, e?: Error) {
+  logError(funcName: string, e?: Error): void {
     safeErrorMessage(e).includes('rateLimited')
       ? this.ethEngine.log(funcName, e)
       : this.ethEngine.error(funcName, e)
