@@ -1122,7 +1122,7 @@ export class EthereumNetwork {
     return out
   }
 
-  async getBaseFeePerGas(): Promise<{ baseFeePerGas: string | undefined }> {
+  getBaseFeePerGas = async (): Promise<string | undefined> => {
     const {
       rpcServers,
       chainParams: { chainId }
@@ -1145,8 +1145,7 @@ export class EthereumNetwork {
           }
 
           const baseFeePerGas: string = response.result.baseFeePerGas
-
-          return { baseFeePerGas }
+          return baseFeePerGas
         })
     )
 

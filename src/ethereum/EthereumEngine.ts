@@ -1,5 +1,5 @@
-import Common from '@ethereumjs/common'
-import { Transaction } from '@ethereumjs/tx'
+import { Common } from '@ethereumjs/common'
+import { TransactionFactory } from '@ethereumjs/tx'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
@@ -28,7 +28,6 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { upgradeMemos } from '../common/upgradeMemos'
 import {
   biggyRoundToNearestInt,
-  bufToHex,
   cleanTxLogs,
   decimalToHex,
   getFetchCors,
@@ -39,7 +38,8 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
-  toHex
+  toHex,
+  uint8ArrayToHex
 } from '../common/utils'
 import {
   NETWORK_FEES_POLL_MILLISECONDS,
@@ -79,7 +79,11 @@ import {
   SafeEthWalletInfo,
   TxRpcParams
 } from './ethereumTypes'
-import { calcL1RollupFees, calcMiningFees } from './fees/ethMiningFees'
+import {
+  calcL1RollupFees,
+  calcMiningFees,
+  getFeeParamsByTransactionType
+} from './fees/ethMiningFees'
 import {
   FeeProviderFunction,
   FeeProviders,
@@ -624,7 +628,7 @@ export class EthereumEngine extends CurrencyEngine<
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!supportsEIP1559) return
 
-    const { baseFeePerGas } = await this.ethNetwork.getBaseFeePerGas()
+    const baseFeePerGas = await this.ethNetwork.getBaseFeePerGas()
     if (baseFeePerGas == null) return
     const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
@@ -1177,14 +1181,24 @@ export class EthereumEngine extends CurrencyEngine<
     const { chainParams } = this.networkInfo
     const common = Common.custom(chainParams)
 
+    // Translate legacy transaction types to EIP-1559 transaction type
+    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 1
+    // Translate legacy transaction types gas params to to EIP-1559 params
+    const gasFeeParams = await getFeeParamsByTransactionType(
+      txType,
+      gasPriceHex,
+      this.ethNetwork.getBaseFeePerGas
+    )
+
     // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
-      gasPrice: gasPriceHex,
+      ...gasFeeParams,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: txValue,
-      data
+      data,
+      type: txType
     }
 
     const privKey = Buffer.from(ethereumPrivateKeys.privateKey, 'hex')
@@ -1194,11 +1208,11 @@ export class EthereumEngine extends CurrencyEngine<
     this.warn(`signTx getAddressString ${wallet.getAddressString()}`)
 
     // Create and sign transaction
-    const unsignedTx = Transaction.fromTxData(txParams, { common })
+    const unsignedTx = TransactionFactory.fromTxData(txParams, { common })
     const signedTx = unsignedTx.sign(privKey)
 
-    edgeTransaction.signedTx = bufToHex(signedTx.serialize())
-    edgeTransaction.txid = bufToHex(signedTx.hash())
+    edgeTransaction.signedTx = uint8ArrayToHex(signedTx.serialize())
+    edgeTransaction.txid = uint8ArrayToHex(signedTx.hash())
     edgeTransaction.date = Date.now() / 1000
     if (edgeTransaction.otherParams != null) {
       edgeTransaction.otherParams.nonceUsed = nonce

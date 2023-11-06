@@ -1,7 +1,8 @@
-import Common from '@ethereumjs/common'
-import { Transaction } from '@ethereumjs/tx'
+import { Common } from '@ethereumjs/common'
+import { TransactionFactory } from '@ethereumjs/tx'
 import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
@@ -219,21 +220,25 @@ export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
   } = params
 
   const common = Common.custom(chainParams)
-  const tx = Transaction.fromTxData(
+  const tx = TransactionFactory.fromTxData(
     {
       nonce: nonce != null ? decimalToHex(nonce) : undefined,
       gasPrice: decimalToHex(gasPriceL1Wei),
       gasLimit: decimalToHex(gasLimit),
       to,
       value,
-      data
+      data: data === null ? undefined : data
     },
     { common }
   )
 
-  const unsignedRawTxData = tx
-    .raw()
-    .map(buff => buff.toString('hex'))
+  const txRaw = tx.raw()
+  const byteGroups = flatMap(txRaw)
+  const unsignedRawTxData = byteGroups
+    .map(bytes => {
+      if (bytes == null) return ''
+      return base16.stringify(bytes).toLowerCase()
+    })
     .join()
   const unsignedRawTxBytesArray = unsignedRawTxData.match(/(.{1,2})/g)
   if (unsignedRawTxBytesArray == null) {
@@ -259,4 +264,56 @@ export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
   const total = ceil(mul(mul(gasPriceL1Wei, gasUsed), scalar), 0)
 
   return total
+}
+
+type NestedArray<T> = Array<T | NestedArray<T>>
+
+function flatMap<T>(items: NestedArray<T>, destinationItems: T[] = []): T[] {
+  items.forEach(item => {
+    if (item == null) return
+    if (Array.isArray(item)) {
+      return flatMap(item, destinationItems)
+    }
+    destinationItems.push(item)
+  })
+  return destinationItems
+}
+
+export type GasParams =
+  | { gasPrice: string }
+  | {
+      maxPriorityFeePerGas: string
+      maxFeePerGas: string
+    }
+
+/**
+ * Returns gas parameters needed to build a transaction based on the transaction
+ * type (legacy or EIP-1559 transaction).
+ *
+ * @param transactionType The EIP-2718 8-bit uint transaction type
+ * @param gasPrice The gas price hex string value
+ * @param fetchBaseFeePerGas An async function which retrieves the
+ * current network base fee
+ * @returns An object containing the gas parameters for the transaction
+ */
+export async function getFeeParamsByTransactionType(
+  transactionType: number,
+  gasPrice: string,
+  fetchBaseFeePerGas: () => Promise<string | undefined>
+): Promise<GasParams> {
+  if (transactionType === 1) {
+    return { gasPrice }
+  } else {
+    const baseFeePerGas = await fetchBaseFeePerGas()
+    if (baseFeePerGas == null) {
+      throw new Error(
+        'Missing baseFeePerGas from network block query. ' +
+          'RPC node does not supporting EIP1559 block format.'
+      )
+    }
+    return {
+      maxPriorityFeePerGas: sub(gasPrice, baseFeePerGas, 16),
+      maxFeePerGas: gasPrice
+    }
+  }
 }
