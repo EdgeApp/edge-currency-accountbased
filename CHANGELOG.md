@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Corrected token address for PYUSD on Ethereum to be the proxy contract
+
 ## 2.9.3 (2023-11-03)
 
 - fixed: (Piratechain) alias format from base64 to base16
