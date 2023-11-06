@@ -1621,8 +1621,7 @@ export class EthereumNetwork {
   }
 
   async checkAndUpdate(
-    // eslint-disable-next-line @typescript-eslint/default-param-last
-    lastChecked: number = 0,
+    lastChecked: number,
     pollMillisec: number,
     preUpdateBlockHeight: number,
     checkFunc: () => Promise<EthereumNetworkUpdate>
@@ -1698,7 +1697,7 @@ export class EthereumNetwork {
         // batch token balance queries.
         if (ethBalCheckerContract == null) {
           await this.checkAndUpdate(
-            this.ethNeeds.tokenBalLastChecked[tk],
+            this.ethNeeds.tokenBalLastChecked[tk] ?? 0,
             BAL_POLL_MILLISECONDS,
             preUpdateBlockHeight,
             async () => await this.check('tokenBal', tk)
@@ -1706,7 +1705,7 @@ export class EthereumNetwork {
         }
 
         await this.checkAndUpdate(
-          this.ethNeeds.tokenTxsLastChecked[tk],
+          this.ethNeeds.tokenTxsLastChecked[tk] ?? 0,
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
           async () =>
