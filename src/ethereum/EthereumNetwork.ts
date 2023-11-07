@@ -5,6 +5,7 @@ import { FetchResponse } from 'serverlet'
 import parse from 'url-parse'
 
 import { asMaybeContractLocation } from '../common/tokenHelpers'
+import { asIntegerString } from '../common/types'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -976,6 +977,7 @@ export class EthereumNetwork {
             this.ethEngine.error(msg)
             throw new Error(msg)
           }
+          asIntegerString(result.result)
           return { server, result }
         })
 
