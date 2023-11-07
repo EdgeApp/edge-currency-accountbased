@@ -3,7 +3,9 @@
 ## Unreleased
 
 - added: Add THORChain (RUNE)
+- added: (Polygon) Add native USDC
 - changed: (Piratechain) Restart the synchronizer during initial sync if it stops providing status updates
+- changed: (Polygon) Update bridged USDC currency code to USDC.e
 
 ## 2.10.0 (2023-11-07)
 
