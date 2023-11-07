@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add a `yarn cli` command for debugging and testing plugins from the command line.
+
 ## 2.9.4 (2023-11-06)
 
 - changed: Transactions for currencies which support EIP1559 will be sent with EIP1559 fee parameters

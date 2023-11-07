@@ -3,6 +3,7 @@
 /android/.gradle
 /android/*.jar
 /android/src/main/assets/edge-currency-accountbased/
+/cli/.storage/
 /dist/
 /lib/
 
