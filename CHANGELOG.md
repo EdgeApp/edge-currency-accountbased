@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.11.0 (2023-11-08)
+
 - added: Add THORChain (RUNE)
 - added: (Polygon) Add native USDC
 - changed: (Piratechain) Restart the synchronizer during initial sync if it stops providing status updates
