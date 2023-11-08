@@ -74,7 +74,8 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'binancesmartchainMnemonic',
   pluginRegularKeyName: 'binancesmartchainKey',
   ethGasStationUrl: null,
-  defaultNetworkFees
+  defaultNetworkFees,
+  ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
 }
 
 const defaultSettings: any = {

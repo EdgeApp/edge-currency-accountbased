@@ -1104,7 +1104,8 @@ export const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
   ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
-  defaultNetworkFees
+  defaultNetworkFees,
+  ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
 }
 
 const defaultSettings: any = {
