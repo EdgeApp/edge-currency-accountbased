@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.10.0 (2023-11-07)
+
 - added: Add a `yarn cli` command for debugging and testing plugins from the command line.
 - added: Batch balance query via smart contract
 
