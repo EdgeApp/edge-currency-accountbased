@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Add THORChain (RUNE)
+- changed: (Piratechain) Restart the synchronizer during initial sync if it stops providing status updates
 
 ## 2.10.0 (2023-11-07)
 
