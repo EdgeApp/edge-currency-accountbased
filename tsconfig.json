@@ -11,5 +11,5 @@
 
     "strict": true
   },
-  "exclude": ["lib", "bin"]
+  "exclude": ["lib", "bin", "scripts/cosmos-ts-protos/tmp"]
 }
