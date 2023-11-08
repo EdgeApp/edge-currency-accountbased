@@ -69,6 +69,7 @@ export class PiratechainEngine extends CurrencyEngine<
     this.queryMutex = false
 
     this.started = false
+    this.progressRatio = 0
   }
 
   setOtherData(raw: any): void {
@@ -90,7 +91,6 @@ export class PiratechainEngine extends CurrencyEngine<
     this.initialNumBlocksToDownload = -1
     this.synchronizerStatus = 'DISCONNECTED'
     this.availableZatoshi = '0'
-    this.progressRatio = 0
   }
 
   initSubscriptions(): void {
@@ -325,6 +325,7 @@ export class PiratechainEngine extends CurrencyEngine<
       ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
     this.initData()
+    this.progressRatio = 0
     this.synchronizerStatus = 'SYNCING'
   }
 
