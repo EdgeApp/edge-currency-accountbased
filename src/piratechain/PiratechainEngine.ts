@@ -159,14 +159,10 @@ export class PiratechainEngine extends CurrencyEngine<
 
       const totalProgress = (balanceProgress + txProgress) / 2
 
-      if (totalProgress !== this.progressRatio) {
-        if (
-          Math.abs(totalProgress - this.progressRatio) > 0.1 ||
-          totalProgress === 1
-        ) {
-          this.progressRatio = totalProgress
-          this.log.warn(
-            `Scan and download progress: ${Math.floor(totalProgress)}%`
+      if (totalProgress > this.progressRatio) {
+        this.progressRatio = totalProgress
+        this.log.warn(
+          `Scan and download progress: ${Math.floor(totalProgress)}%`
           )
           this.updateOnAddressesChecked()
         }
