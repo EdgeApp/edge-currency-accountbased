@@ -8,11 +8,19 @@ import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '2791bca1f2de4661ed88a30c99a7a9449aa84174': {
+    currencyCode: 'USDC.e',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC.e', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174'
+    }
+  },
+  '3c499c542cef5e3811e1192ce70d8cc03d5c3359': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
     denominations: [{ name: 'USDC', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174'
+      contractAddress: '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359'
     }
   },
   '8f3cf7ad23cd3cadbd9735aff958023239c6a063': {
