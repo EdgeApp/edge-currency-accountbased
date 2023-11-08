@@ -32,6 +32,8 @@ import {
   SafePiratechainWalletInfo
 } from './piratechainTypes'
 
+const THIRTY_SECONDS = 30000
+
 export class PiratechainEngine extends CurrencyEngine<
   PiratechainTools,
   SafePiratechainWalletInfo
@@ -53,6 +55,7 @@ export class PiratechainEngine extends CurrencyEngine<
   started: boolean
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: PiratechainSynchronizer
+  lastUpdateFromSynchronizer?: number
 
   constructor(
     env: PluginEnvironment<PiratechainNetworkInfo>,
@@ -112,6 +115,7 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async queryAll(): Promise<void> {
+    this.lastUpdateFromSynchronizer = Date.now()
     if (this.queryMutex) return
     this.queryMutex = true
     try {
@@ -163,16 +167,40 @@ export class PiratechainEngine extends CurrencyEngine<
         this.progressRatio = totalProgress
         this.log.warn(
           `Scan and download progress: ${Math.floor(totalProgress)}%`
-          )
-          this.updateOnAddressesChecked()
-        }
+        )
+        this.updateOnAddressesChecked()
       }
     }
+  }
+
+  // Sometimes the synchronizer block downloader just kind of stops. If we
+  // haven't heard from it in a while we can give a bump to encourage it to
+  // continue.
+  async bumpSynchronizer(): Promise<void> {
+    if (
+      this.isSynced() ||
+      this.lastUpdateFromSynchronizer == null ||
+      Date.now() < this.lastUpdateFromSynchronizer + THIRTY_SECONDS
+    ) {
+      return
+    }
+
+    this.log.warn(
+      `Haven't heard from the synchronizer in a while. Applying the Fonzie Method...`
+    )
+    await this.synchronizer?.stop()
+    if (this.stopSyncing != null) {
+      await this.stopSyncing(5000)
+      this.stopSyncing = undefined
+    }
+    this.log.warn('👍 Ayyy 👍')
+    this.lastUpdateFromSynchronizer = undefined
   }
 
   async startEngine(): Promise<void> {
     this.engineOn = true
     this.started = true
+    this.addToLoop('bumpSynchronizer', THIRTY_SECONDS).catch(() => {})
     await super.startEngine()
   }
 
