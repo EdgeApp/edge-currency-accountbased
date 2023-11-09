@@ -199,4 +199,4 @@ export async function makeCurrencyTools(
   return new CosmosTools(env)
 }
 
-export { makeCurrencyEngine } from './cosmosEngine'
+export { makeCurrencyEngine } from './CosmosEngine'
