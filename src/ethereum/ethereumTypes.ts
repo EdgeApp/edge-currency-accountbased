@@ -98,6 +98,11 @@ export interface EthereumNetworkInfo {
   ethBalCheckerContract?: string
 }
 
+/**
+ * Other Methods from EthereumTools
+ */
+export const ethOtherMethodNames = ['resolveEnsName'] as const
+
 export const asEthereumFeesGasLimit = asObject({
   minGasLimit: asOptional(asString),
   regularTransaction: asString,

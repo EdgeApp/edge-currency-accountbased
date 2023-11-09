@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: ENS name resolution support
+
 ## 2.11.0 (2023-11-08)
 
 - added: Add THORChain (RUNE)

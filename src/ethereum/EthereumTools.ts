@@ -6,6 +6,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
+  EdgeLog,
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
@@ -14,15 +15,21 @@ import {
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
+import { ethers } from 'ethers'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { biggyScience, getLegacyDenomination } from '../common/utils'
+import {
+  biggyScience,
+  getLegacyDenomination,
+  multicastEthProviders
+} from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
   asEthereumPrivateKeys,
   asSafeEthWalletInfo,
+  EthereumInitOptions,
   EthereumNetworkInfo
 } from './ethereumTypes'
 
@@ -30,14 +37,19 @@ export class EthereumTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
+  log: EdgeLog
   networkInfo: EthereumNetworkInfo
+  initOptions: EthereumInitOptions
 
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    const { builtinTokens, currencyInfo, io, networkInfo, log, initOptions } =
+      env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.io = io
+    this.log = log
     this.networkInfo = networkInfo
+    this.initOptions = initOptions
   }
 
   async getDisplayPrivateKey(
@@ -357,6 +369,26 @@ export class EthereumTools implements EdgeCurrencyTools {
     }
     return cleanLocation.contractAddress.toLowerCase().replace(/^0x/, '')
   }
+
+  // #region otherMethods
+
+  /**
+   * Resolve an ENS name, for example: "bob.eth"
+   */
+  async resolveEnsName(ensName: string): Promise<string> {
+    const { chainParams, rpcServers } = this.networkInfo
+
+    return await multicastEthProviders({
+      func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
+        await ethProvider.resolveName(ensName),
+      rpcServers,
+      initOptions: this.initOptions,
+      pluginId: this.currencyInfo.pluginId,
+      chainId: chainParams.chainId
+    })
+  }
+
+  // #endregion otherMethods
 }
 
 export async function makeCurrencyTools(

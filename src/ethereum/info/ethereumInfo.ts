@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { ethOtherMethodNames } from '../ethereumTypes'
 import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
@@ -1148,6 +1149,7 @@ export const ethereum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
   networkInfo,
+  otherMethodNames: ethOtherMethodNames,
 
   async getInnerPlugin() {
     return await import(
