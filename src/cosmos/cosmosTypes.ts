@@ -15,6 +15,16 @@ import {
 
 import { asWalletInfo } from '../common/types'
 
+export interface DepositOpts {
+  assets: Array<{
+    asset: string
+    amount: string
+    decimals: string
+  }>
+  memo: string
+  signer: string
+}
+
 export interface TransferOpts {
   amount: string
   fromAddress: string
@@ -22,6 +32,7 @@ export interface TransferOpts {
 }
 
 export interface CosmosMethods {
+  deposit?: (opts: DepositOpts) => EncodeObject
   transfer: (opts: TransferOpts) => EncodeObject
 }
 
