@@ -7,11 +7,13 @@ import parse from 'url-parse'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { asIntegerString } from '../common/types'
 import {
+  addRpcApiKey,
   asyncWaterfall,
   cleanTxLogs,
   decimalToHex,
   hexToDecimal,
   isHex,
+  multicastEthProviders,
   padHex,
   pickRandom,
   promiseAny,
@@ -35,7 +37,6 @@ import {
   asBlockChairAddress,
   asCheckBlockHeightBlockchair,
   asCheckTokenBalBlockchair,
-  asEthereumInitKeys,
   asEvmScancanTokenTransaction,
   asEvmScanInternalTransaction,
   asEvmScanTransaction,
@@ -517,7 +518,11 @@ export class EthereumNetwork {
       method,
       params
     }
-    url = this.addRpcApiKey(url)
+    url = addRpcApiKey(
+      this.ethEngine.initOptions,
+      this.ethEngine.currencyInfo.pluginId,
+      url
+    )
 
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
@@ -533,26 +538,6 @@ export class EthereumNetwork {
       this.throwError(response, 'fetchPostRPC', parsedUrl.hostname)
     }
     return await response.json()
-  }
-
-  addRpcApiKey(url: string): string {
-    const regex = /{{(.*?)}}/g
-    const match = regex.exec(url)
-    if (match != null) {
-      const key = match[1]
-      const cleanKey = asEthereumInitKeys(key)
-      const apiKey = this.ethEngine.initOptions[cleanKey]
-      if (typeof apiKey === 'string') {
-        url = url.replace(match[0], apiKey)
-      } else if (apiKey == null) {
-        throw new Error(
-          `Missing ${cleanKey} in 'initOptions' for ${this.ethEngine.currencyInfo.pluginId}`
-        )
-      } else {
-        throw new Error('Incorrect apikey type for RPC')
-      }
-    }
-    return url
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -1520,8 +1505,13 @@ export class EthereumNetwork {
    */
   // @ts-expect-error
   async checkEthBalChecker(): Promise<EthereumNetworkUpdate> {
-    const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
-      this.ethEngine
+    const {
+      allTokensMap,
+      currencyInfo,
+      initOptions,
+      networkInfo,
+      walletLocalData
+    } = this.ethEngine
     const { chainParams, rpcServers, ethBalCheckerContract } = networkInfo
 
     const tokenBal: { [currencyCode: string]: string } = {}
@@ -1535,36 +1525,30 @@ export class EthereumNetwork {
       if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
     }
 
-    let funcs: Array<() => Promise<any>> = []
-    rpcServers.forEach(rpcServer => {
-      const rpcServerWithApiKey = this.addRpcApiKey(rpcServer)
-      const ethProvider = new ethers.providers.JsonRpcProvider(
-        rpcServerWithApiKey,
-        chainParams.chainId
-      )
-
+    const contractCallFn = async (
+      ethProvider: ethers.providers.JsonRpcProvider
+    ): Promise<ethers.BigNumber[]> => {
       const contract = new ethers.Contract(
         ethBalCheckerContract,
         ETH_BAL_CHECKER_ABI,
         ethProvider
       )
+      const contractCallRes = await contract.balances(
+        [walletLocalData.publicKey],
+        balanceQueryAddrs
+      )
+      if (contractCallRes.length !== balanceQueryAddrs.length) {
+        throw new Error('checkEthBalChecker balances length mismatch')
+      }
+      return contractCallRes
+    }
 
-      funcs.push(async () => {
-        const contractCallRes = await contract.balances(
-          [walletLocalData.publicKey],
-          balanceQueryAddrs
-        )
-        if (contractCallRes.length !== balanceQueryAddrs.length) {
-          throw new Error('checkEthBalChecker balances length mismatch')
-        }
-        return contractCallRes
-      })
-    })
-
-    // Randomize provider priority to distribute RPC provider load
-    funcs = shuffleArray(funcs)
-    const balances = await asyncWaterfall(funcs).catch(e => {
-      throw new Error(`All rpc servers failed eth balance checks: ${e}`)
+    const balances = await multicastEthProviders({
+      func: contractCallFn,
+      rpcServers,
+      initOptions,
+      pluginId: currencyInfo.pluginId,
+      chainId: chainParams.chainId
     })
 
     // Parse data from smart contract call

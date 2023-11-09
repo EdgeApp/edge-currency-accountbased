@@ -11,7 +11,13 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
+import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
+
+import {
+  asEthereumInitKeys,
+  EthereumInitOptions
+} from '../ethereum/ethereumTypes'
 
 export function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
@@ -476,4 +482,53 @@ export const objectCheckOneWay = (obj1: any, obj2: any): boolean => {
     }
   }
   return true
+}
+
+/**
+ * Adds the API key to an RPC server url
+ */
+export const addRpcApiKey = (
+  initOptions: EthereumInitOptions,
+  pluginId: string,
+  url: string
+): string => {
+  const regex = /{{(.*?)}}/g
+  const match = regex.exec(url)
+  if (match != null) {
+    const key = match[1]
+    const cleanKey = asEthereumInitKeys(key)
+    const apiKey = initOptions[cleanKey]
+    if (typeof apiKey === 'string') {
+      url = url.replace(match[0], apiKey)
+    } else if (apiKey == null) {
+      throw new Error(`Missing ${cleanKey} in 'initOptions' for ${pluginId}`)
+    } else {
+      throw new Error('Incorrect apikey type for RPC')
+    }
+  }
+  return url
+}
+
+/**
+ * Calls `func` on ethers JsonRpcProviders initialized with configured
+ * RPC servers. Randomizes order priority to distribute load.
+ */
+export const multicastEthProviders = async (props: {
+  func: (ethProvider: ethers.providers.JsonRpcProvider) => Promise<any>
+  rpcServers: string[]
+  initOptions: EthereumInitOptions
+  pluginId: string
+  chainId?: number
+}): Promise<any> => {
+  const { func, rpcServers, initOptions, pluginId, chainId } = props
+  const funcs: Array<() => Promise<any>> = rpcServers.map(
+    rpcServer => async () => {
+      const ethProvider = new ethers.providers.JsonRpcProvider(
+        addRpcApiKey(initOptions, pluginId, rpcServer),
+        chainId
+      )
+      return await func(ethProvider)
+    }
+  )
+  return await asyncWaterfall(shuffleArray(funcs))
 }
