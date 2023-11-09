@@ -301,7 +301,7 @@ export async function getFeeParamsByTransactionType(
   gasPrice: string,
   fetchBaseFeePerGas: () => Promise<string | undefined>
 ): Promise<GasParams> {
-  if (transactionType === 1) {
+  if (transactionType < 2) {
     return { gasPrice }
   } else {
     const baseFeePerGas = await fetchBaseFeePerGas()
