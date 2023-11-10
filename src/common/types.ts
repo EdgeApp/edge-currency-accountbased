@@ -125,5 +125,15 @@ export type MakeTxParams =
       expiration?: number
     }
   | {
+      type: 'MakeTxDeposit'
+      assets: Array<{
+        amount: string
+        asset: string
+        decimals: string
+      }>
+      memo: string
+      metadata?: EdgeMetadata
+    }
+  | {
       type: 'MakeTxDummyType'
     }
