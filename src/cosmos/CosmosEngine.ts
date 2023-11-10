@@ -1,5 +1,9 @@
 import { decodeSignature, encodeSecp256k1Pubkey } from '@cosmjs/amino'
-import { encodePubkey, makeAuthInfoBytes } from '@cosmjs/proto-signing'
+import {
+  EncodeObject,
+  encodePubkey,
+  makeAuthInfoBytes
+} from '@cosmjs/proto-signing'
 import { StargateClient } from '@cosmjs/stargate'
 import { add, gt } from 'biggystring'
 import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
@@ -210,6 +214,20 @@ export class CosmosEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
+  private createUnsignedTxHexOtherParams(
+    messages: EncodeObject[],
+    memo?: string
+  ): { unsignedTxHex: string } {
+    const body = TxBody.fromPartial({ messages, memo })
+    const bodyBytes = TxBody.encode(body).finish()
+    const unsignedTxRaw = TxRaw.fromPartial({
+      bodyBytes
+    })
+    return {
+      unsignedTxHex: base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
+    }
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -265,16 +283,8 @@ export class CosmosEngine extends CurrencyEngine<
       fromAddress: this.walletInfo.keys.bech32Address,
       toAddress: publicAddress
     })
-    const body = TxBody.fromPartial({ messages: [msg], memo })
-    const bodyBytes = TxBody.encode(body).finish()
-    const unsignedTxRaw = TxRaw.fromPartial({
-      bodyBytes
-    })
-    const unsignedTxHex = base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
 
-    const otherParams = {
-      unsignedTxHex
-    }
+    const otherParams = this.createUnsignedTxHexOtherParams([msg], memo)
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
