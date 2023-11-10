@@ -5,6 +5,7 @@
 ## 2.11.2 (2023-11-13)
 
 - fixed: EVM balance sync failure if missing API key for one node type
+- fixed: Removed unsafeBroadcastTx configuration for Filecoin
 
 ## 2.11.1 (2023-11-10)
 
