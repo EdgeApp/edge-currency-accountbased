@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.11.1 (2023-11-10)
+
 - fixed: Use transaction type 0 (legacy transactions) currencies which do no support EIP-1559
 
 ## 2.11.0 (2023-11-08)
