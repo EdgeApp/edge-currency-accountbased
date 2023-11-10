@@ -24,6 +24,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { MakeTxParams } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
@@ -33,6 +34,7 @@ import {
   asSafeCosmosWalletInfo,
   asShapeshiftResponse,
   CosmosNetworkInfo,
+  CosmosOtherMethods,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo,
   ShapeshiftTx
@@ -50,6 +52,7 @@ export class CosmosEngine extends CurrencyEngine<
   sequence: number
   fetchCors: EdgeFetchFunction
   otherData!: CosmosWalletOtherData
+  otherMethods: CosmosOtherMethods
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -62,6 +65,50 @@ export class CosmosEngine extends CurrencyEngine<
     this.accountNumber = 0
     this.sequence = 0
     this.fetchCors = getFetchCors(env.io)
+    this.otherMethods = {
+      makeTx: async (params: MakeTxParams) => {
+        switch (params.type) {
+          case 'MakeTxDeposit': {
+            if (this.tools.methods.deposit == null) {
+              throw new Error(
+                `${this.currencyInfo.displayName} does not support the deposit method`
+              )
+            }
+
+            const { assets, memo, metadata } = params
+
+            const msg = this.tools.methods.deposit({
+              assets,
+              memo,
+              signer: this.walletInfo.keys.bech32Address
+            })
+            const otherParams = this.createUnsignedTxHexOtherParams([msg], memo)
+
+            const networkFee = this.networkInfo.defaultTransactionFee.amount
+
+            const out: EdgeTransaction = {
+              blockHeight: 0, // blockHeight,
+              currencyCode: this.currencyInfo.currencyCode,
+              date: Date.now() / 1000,
+              isSend: true,
+              memos: [],
+              metadata,
+              nativeAmount: `-${networkFee}`,
+              networkFee,
+              otherParams,
+              ourReceiveAddresses: [],
+              signedTx: '',
+              txid: '',
+              walletId: this.walletId
+            }
+            return out
+          }
+          default: {
+            throw new Error(`Invalid type: ${params.type}`)
+          }
+        }
+      }
+    }
   }
 
   setOtherData(raw: any): void {
