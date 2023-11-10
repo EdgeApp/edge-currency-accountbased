@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Use transaction type 0 (legacy transactions) currencies which do no support EIP-1559
+
 ## 2.11.0 (2023-11-08)
 
 - added: Add THORChain (RUNE)

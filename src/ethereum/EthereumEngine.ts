@@ -1182,7 +1182,7 @@ export class EthereumEngine extends CurrencyEngine<
     const common = Common.custom(chainParams)
 
     // Translate legacy transaction types to EIP-1559 transaction type
-    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 1
+    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
     // Translate legacy transaction types gas params to to EIP-1559 params
     const gasFeeParams = await getFeeParamsByTransactionType(
       txType,
