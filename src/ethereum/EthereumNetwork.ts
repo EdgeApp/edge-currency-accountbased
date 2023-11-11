@@ -865,55 +865,61 @@ export class EthereumNetwork {
   }
 
   checkBlockHeightEthscan = async (): Promise<EthereumNetworkUpdate> => {
+    const { evmScanApiServers } = this.ethEngine.networkInfo
+
+    const funcs = evmScanApiServers.map(server => async () => {
+      if (!server.includes('etherscan') && !server.includes('blockscout')) {
+        throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+      }
+      let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+      // special case for blockscout
+      if (server.includes('blockscout')) {
+        blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+      }
+
+      const result = await this.fetchGetEtherscan(server, blockNumberUrlSyntax)
+      if (typeof result.result !== 'string') {
+        const msg = `Invalid return value eth_blockNumber in ${server}`
+        this.ethEngine.error(msg)
+        throw new Error(msg)
+      }
+      return { server, result }
+    })
+
+    const { result: jsonObj, server } = await asyncWaterfall(
+      shuffleArray(funcs)
+    )
+
+    const clean = asEtherscanGetBlockHeight(jsonObj)
+    return { blockHeight: clean.result, server }
+  }
+
+  async checkBlockHeightRpc(): Promise<EthereumNetworkUpdate> {
     const {
       rpcServers,
-      evmScanApiServers,
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = [
-      ...evmScanApiServers.map(server => async () => {
-        if (!server.includes('etherscan') && !server.includes('blockscout')) {
-          throw new Error(`Unsupported command eth_blockNumber in ${server}`)
-        }
-        let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
-        // special case for blockscout
-        if (server.includes('blockscout')) {
-          blockNumberUrlSyntax = `?module=block&action=eth_block_number`
-        }
-
-        const result = await this.fetchGetEtherscan(
-          server,
-          blockNumberUrlSyntax
+    const funcs = rpcServers.map(baseUrl => async () => {
+      const result = await this.fetchPostRPC(
+        'eth_blockNumber',
+        [],
+        chainId,
+        baseUrl
+      )
+      // Check if successful http response was actually an error
+      if (result.error != null) {
+        this.ethEngine.error(
+          `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
+            result.error
+          )}`
         )
-        if (typeof result.result !== 'string') {
-          const msg = `Invalid return value eth_blockNumber in ${server}`
-          this.ethEngine.error(msg)
-          throw new Error(msg)
-        }
-        return { server, result }
-      }),
-      ...rpcServers.map(baseUrl => async () => {
-        const result = await this.fetchPostRPC(
-          'eth_blockNumber',
-          [],
-          chainId,
-          baseUrl
+        throw new Error(
+          'Successful eth_blockNumber response object included an error'
         )
-        // Check if successful http response was actually an error
-        if (result.error != null) {
-          this.ethEngine.error(
-            `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
-              result.error
-            )}`
-          )
-          throw new Error(
-            'Successful eth_blockNumber response object included an error'
-          )
-        }
-        return { server: parse(baseUrl).hostname, result }
-      })
-    ]
+      }
+      return { server: parse(baseUrl).hostname, result }
+    })
 
     const { result: jsonObj, server } = await asyncWaterfall(
       shuffleArray(funcs)
@@ -1807,6 +1813,7 @@ export class EthereumNetwork {
     }
     if (rpcServers.length > 0) {
       networkAdapters.push({
+        blockheight: this.checkBlockHeightRpc,
         nonce: this.checkNonceRpc,
         tokenBal: this.checkTokenBalRpc
       })
