@@ -133,7 +133,7 @@ interface GetTxsParams {
   currencyCode: string
 }
 
-type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'txs'
+type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'tokenBals' | 'txs'
 
 type QueryFuncs = {
   [method in UpdateMethods]: Array<
@@ -1684,7 +1684,7 @@ export class EthereumNetwork {
           this.ethNeeds.tokenBalsLastChecked,
           BAL_POLL_MILLISECONDS,
           preUpdateBlockHeight,
-          async () => await this.check('tokenBal')
+          async () => await this.check('tokenBals')
         )
       }
 
@@ -1824,22 +1824,23 @@ export class EthereumNetwork {
     const blockheight = []
     const nonce = []
     const txs = []
-    const tokenBalSerial = []
+    const tokenBal = []
+    const tokenBals = []
 
     if (evmScanApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightEthscan)
       nonce.push(this.checkNonceEthscan)
-      tokenBalSerial.push(this.checkTokenBalEthscan)
+      tokenBal.push(this.checkTokenBalEthscan)
     }
     txs.push(this.checkTxsEthscan) // We'll fake it if we don't have a server
     if (blockbookServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockbook)
-      tokenBalSerial.push(this.checkAddressBlockbook)
+      tokenBal.push(this.checkAddressBlockbook)
       nonce.push(this.checkAddressBlockbook)
     }
     if (blockchairApiServers.length > 0) {
       blockheight.push(this.checkBlockHeightBlockchair)
-      tokenBalSerial.push(this.checkTokenBalBlockchair)
+      tokenBal.push(this.checkTokenBalBlockchair)
     }
     if (amberdataRpcServers.length > 0) {
       blockheight.push(this.checkBlockHeightAmberdata)
@@ -1850,19 +1851,18 @@ export class EthereumNetwork {
     }
     if (rpcServers.length > 0) {
       nonce.push(this.checkNonceRpc)
-      tokenBalSerial.push(this.checkTokenBalRpc)
+      tokenBal.push(this.checkTokenBalRpc)
     }
-
-    // Decide between serial and parallel/batch (checkEthBalChecker) token
-    // balance checking
-    const tokenBal =
-      ethBalCheckerContract != null ? [this.checkEthBalChecker] : tokenBalSerial
+    if (ethBalCheckerContract != null) {
+      tokenBals.push(this.checkEthBalChecker)
+    }
 
     return {
       blockheight,
       nonce,
       txs,
-      tokenBal
+      tokenBal,
+      tokenBals
     }
   }
 
