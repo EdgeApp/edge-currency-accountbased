@@ -133,12 +133,16 @@ interface GetTxsParams {
   currencyCode: string
 }
 
-type UpdateMethods = 'blockheight' | 'nonce' | 'tokenBal' | 'tokenBals' | 'txs'
-
-type QueryFuncs = {
-  [method in UpdateMethods]: Array<
-    (...args: any[]) => Promise<EthereumNetworkUpdate>
-  >
+type NetworkAdapterUpdateMethod = keyof Pick<
+  NetworkAdapter,
+  'blockheight' | 'nonce' | 'tokenBal' | 'tokenBals' | 'txs'
+>
+interface NetworkAdapter {
+  blockheight?: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  nonce?: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  tokenBal?: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  tokenBals?: () => Promise<EthereumNetworkUpdate>
+  txs?: (...args: any[]) => Promise<EthereumNetworkUpdate>
 }
 
 /**
@@ -199,7 +203,7 @@ export class EthereumNetwork {
   ethNeeds: EthereumNeeds
   ethEngine: EthereumEngine
   walletId: string
-  queryFuncs: QueryFuncs
+  networkAdapters: NetworkAdapter[]
 
   constructor(ethEngine: EthereumEngine) {
     this.ethEngine = ethEngine
@@ -210,7 +214,7 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
-    this.queryFuncs = this.buildQueryFuncs(this.ethEngine.networkInfo)
+    this.networkAdapters = this.buildNetworkAdapters(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
 
@@ -1204,11 +1208,13 @@ export class EthereumNetwork {
   }
 
   async check(
-    method: UpdateMethods,
+    method: NetworkAdapterUpdateMethod,
     ...args: any[]
   ): Promise<EthereumNetworkUpdate> {
     return await asyncWaterfall(
-      this.queryFuncs[method].map(func => async () => await func(...args))
+      this.qualifyNetworkAdapters(method).map(
+        adapter => async () => await adapter[method](...args)
+      )
     ).catch(e => {
       return {}
     })
@@ -1811,7 +1817,7 @@ export class EthereumNetwork {
     }
   }
 
-  buildQueryFuncs(settings: EthereumNetworkInfo): QueryFuncs {
+  buildNetworkAdapters(settings: EthereumNetworkInfo): NetworkAdapter[] {
     const {
       rpcServers,
       evmScanApiServers,
@@ -1821,49 +1827,68 @@ export class EthereumNetwork {
       amberdataApiServers,
       ethBalCheckerContract
     } = settings
-    const blockheight = []
-    const nonce = []
-    const txs = []
-    const tokenBal = []
-    const tokenBals = []
+    const networkAdapters: NetworkAdapter[] = []
 
     if (evmScanApiServers.length > 0) {
-      blockheight.push(this.checkBlockHeightEthscan)
-      nonce.push(this.checkNonceEthscan)
-      tokenBal.push(this.checkTokenBalEthscan)
+      networkAdapters.push({
+        blockheight: this.checkBlockHeightEthscan,
+        nonce: this.checkNonceEthscan,
+        tokenBal: this.checkTokenBalEthscan
+      })
     }
-    txs.push(this.checkTxsEthscan) // We'll fake it if we don't have a server
+    // We'll fake it if we don't have a server
+    networkAdapters.push({
+      txs: this.checkTxsEthscan
+    })
     if (blockbookServers.length > 0) {
-      blockheight.push(this.checkBlockHeightBlockbook)
-      tokenBal.push(this.checkAddressBlockbook)
-      nonce.push(this.checkAddressBlockbook)
+      networkAdapters.push({
+        blockheight: this.checkBlockHeightBlockbook,
+        tokenBal: this.checkAddressBlockbook,
+        nonce: this.checkAddressBlockbook
+      })
     }
     if (blockchairApiServers.length > 0) {
-      blockheight.push(this.checkBlockHeightBlockchair)
-      tokenBal.push(this.checkTokenBalBlockchair)
+      networkAdapters.push({
+        blockheight: this.checkBlockHeightBlockchair,
+        tokenBal: this.checkTokenBalBlockchair
+      })
     }
     if (amberdataRpcServers.length > 0) {
-      blockheight.push(this.checkBlockHeightAmberdata)
-      nonce.push(this.checkNonceAmberdata)
+      networkAdapters.push({
+        blockheight: this.checkBlockHeightAmberdata,
+        nonce: this.checkNonceAmberdata
+      })
     }
     if (amberdataApiServers.length > 0) {
-      // txs.push(this.checkTxsAmberdata)
+      // networkAdapters.push({
+      //   txs: this.checkTxsAmberdata
+      // })
     }
     if (rpcServers.length > 0) {
-      nonce.push(this.checkNonceRpc)
-      tokenBal.push(this.checkTokenBalRpc)
+      networkAdapters.push({
+        nonce: this.checkNonceRpc,
+        tokenBal: this.checkTokenBalRpc
+      })
     }
     if (ethBalCheckerContract != null) {
-      tokenBals.push(this.checkEthBalChecker)
+      networkAdapters.push({
+        tokenBals: this.checkEthBalChecker
+      })
     }
 
-    return {
-      blockheight,
-      nonce,
-      txs,
-      tokenBal,
-      tokenBals
-    }
+    return networkAdapters
+  }
+
+  /**
+   * Returns only the network adapters that contain the requested method.
+   */
+  qualifyNetworkAdapters<Method extends keyof NetworkAdapter>(
+    ...methods: Method[]
+  ): Array<Required<Pick<NetworkAdapter, Method>> & NetworkAdapter> {
+    return this.networkAdapters.filter((adapter): adapter is Required<
+      Pick<NetworkAdapter, Method>
+    > &
+      NetworkAdapter => methods.every(method => adapter[method] != null))
   }
 
   // TODO: Convert to error types
