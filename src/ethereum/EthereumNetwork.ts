@@ -82,15 +82,17 @@ interface EthereumNetworkUpdate {
 }
 
 type EthFunction =
-  | 'broadcastTx'
   | 'eth_call'
   | 'eth_getTransactionReceipt'
   | 'eth_estimateGas'
   | 'eth_getCode'
 
-interface BroadcastResults {
-  incrementNonce: boolean
-  decrementNonce: boolean
+export interface BroadcastResults {
+  result: {
+    incrementNonce: boolean
+    decrementNonce: boolean
+  }
+  server: string
 }
 
 interface GetEthscanAllTxsOptions {
@@ -101,22 +103,6 @@ interface GetEthscanAllTxsOptions {
 interface GetEthscanAllTxsResponse {
   allTransactions: EdgeTransaction[]
   server: string | undefined
-}
-
-interface BroadcastWrapper<T> {
-  result: T
-  server: string
-}
-
-async function broadcastWrapper<T extends object>(
-  promise: Promise<T>,
-  server: string
-): Promise<BroadcastWrapper<T>> {
-  const out: BroadcastWrapper<T> = {
-    result: await promise,
-    server
-  }
-  return out
 }
 
 interface GetTxsParams {
@@ -615,62 +601,128 @@ export class EthereumNetwork {
     return await response.json()
   }
 
-  async broadcastEtherscan(
-    edgeTransaction: EdgeTransaction,
-    baseUrl: string
+  async broadcastTx(
+    edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    // RSK also uses the "eth_sendRaw" syntax
-    const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
-    const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
-    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+    const promises = [
+      this.broadcastRPC(edgeTransaction),
+      this.broadcastEtherscan(edgeTransaction),
+      this.broadcastBlockbook(edgeTransaction),
+      this.broadcastBlockCypher(edgeTransaction)
+    ]
+
+    const broadcastResults = await promiseAny(promises)
+    this.ethEngine.log(
+      `${this.ethEngine.currencyInfo.currencyCode} multicastServers broadcastTx ${broadcastResults.server} won`
+    )
+    return broadcastResults
+  }
+
+  async broadcastEtherscan(
+    edgeTransaction: EdgeTransaction
+  ): Promise<BroadcastResults> {
+    const { evmScanApiServers } = this.ethEngine.networkInfo
+
+    const promises = evmScanApiServers.map(async baseUrl => {
+      // RSK also uses the "eth_sendRaw" syntax
+      const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
+      const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
+      return {
+        result: this.broadcastResponseHandler(
+          jsonObj,
+          baseUrl,
+          edgeTransaction
+        ),
+        server: 'etherscan'
+      }
+    })
+
+    return await promiseAny(promises)
   }
 
   async broadcastRPC(
-    edgeTransaction: EdgeTransaction,
-    networkId: number,
-    baseUrl: string
+    edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    const method = 'eth_sendRawTransaction'
-    const params = [edgeTransaction.signedTx]
+    const {
+      rpcServers,
+      chainParams: { chainId }
+    } = this.ethEngine.networkInfo
 
-    const jsonObj = await this.fetchPostRPC(method, params, networkId, baseUrl)
+    const promises = rpcServers.map(async baseUrl => {
+      const method = 'eth_sendRawTransaction'
+      const params = [edgeTransaction.signedTx]
 
-    const parsedUrl = parse(baseUrl, {}, true)
-    // @ts-expect-error
-    return this.broadcastResponseHandler(jsonObj, parsedUrl, edgeTransaction)
+      const jsonObj = await this.fetchPostRPC(method, params, chainId, baseUrl)
+
+      const parsedUrl = parse(baseUrl, {}, true)
+      return {
+        result: this.broadcastResponseHandler(
+          jsonObj,
+          parsedUrl.toString(),
+          edgeTransaction
+        ),
+        server: parsedUrl.hostname
+      }
+    })
+
+    return await promiseAny(promises)
   }
 
   async broadcastBlockCypher(
-    edgeTransaction: EdgeTransaction,
-    baseUrl: string
+    edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    const urlSuffix = `v1/${this.ethEngine.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
-    const hexTx = edgeTransaction.signedTx.replace('0x', '')
-    const jsonObj = await this.fetchPostBlockcypher(
-      urlSuffix,
-      { tx: hexTx },
-      baseUrl
-    )
-    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+    const { blockcypherApiServers } = this.ethEngine.networkInfo
+
+    const promises = blockcypherApiServers.map(async baseUrl => {
+      const urlSuffix = `v1/${this.ethEngine.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
+      const hexTx = edgeTransaction.signedTx.replace('0x', '')
+      const jsonObj = await this.fetchPostBlockcypher(
+        urlSuffix,
+        { tx: hexTx },
+        baseUrl
+      )
+      return {
+        result: this.broadcastResponseHandler(
+          jsonObj,
+          baseUrl,
+          edgeTransaction
+        ),
+        server: 'blockcypher'
+      }
+    })
+
+    return await promiseAny(promises)
   }
 
   async broadcastBlockbook(
-    edgeTransaction: EdgeTransaction,
-    baseUrl: string
+    edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
-    const jsonObj = await this.fetchGetBlockbook(
-      baseUrl,
-      `/api/v2/sendtx/${edgeTransaction.signedTx}`
-    )
+    const { blockbookServers } = this.ethEngine.networkInfo
 
-    return this.broadcastResponseHandler(jsonObj, baseUrl, edgeTransaction)
+    const promises = blockbookServers.map(async baseUrl => {
+      const jsonObj = await this.fetchGetBlockbook(
+        baseUrl,
+        `/api/v2/sendtx/${edgeTransaction.signedTx}`
+      )
+
+      return {
+        result: this.broadcastResponseHandler(
+          jsonObj,
+          baseUrl,
+          edgeTransaction
+        ),
+        server: 'blockbook'
+      }
+    })
+
+    return await promiseAny(promises)
   }
 
   broadcastResponseHandler(
     res: JsonObject,
     server: string,
     tx: EdgeTransaction
-  ): BroadcastResults {
+  ): BroadcastResults['result'] {
     if (typeof res.error !== 'undefined') {
       this.ethEngine.error(
         `FAILURE ${server}\n${JSON.stringify(res.error)}\n${cleanTxLogs(tx)}`
@@ -697,65 +749,12 @@ export class EthereumNetwork {
   ): Promise<any> => {
     const {
       rpcServers,
-      blockcypherApiServers,
-      evmScanApiServers,
-      blockbookServers,
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
     let out = { result: '', server: 'no server' }
     let funcs
     switch (func) {
-      case 'broadcastTx': {
-        // @ts-expect-error
-        const promises = []
-
-        rpcServers.forEach(baseUrl => {
-          const parsedUrl = parse(baseUrl, {}, true)
-          promises.push(
-            broadcastWrapper(
-              this.broadcastRPC(params[0], chainId, baseUrl),
-              parsedUrl.hostname
-            )
-          )
-        })
-
-        evmScanApiServers.forEach(baseUrl => {
-          promises.push(
-            broadcastWrapper(
-              this.broadcastEtherscan(params[0], baseUrl),
-              'etherscan'
-            )
-          )
-        })
-
-        blockbookServers.forEach(baseUrl => {
-          promises.push(
-            broadcastWrapper(
-              this.broadcastBlockbook(params[0], baseUrl),
-              'blockbook'
-            )
-          )
-        })
-
-        blockcypherApiServers.forEach(baseUrl => {
-          promises.push(
-            broadcastWrapper(
-              this.broadcastBlockCypher(params[0], baseUrl),
-              'blockcypher'
-            )
-          )
-        })
-
-        // @ts-expect-error
-        out = await promiseAny(promises)
-
-        this.ethEngine.log(
-          `${this.ethEngine.currencyInfo.currencyCode} multicastServers ${func} ${out.server} won`
-        )
-        break
-      }
-
       case 'eth_estimateGas':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(

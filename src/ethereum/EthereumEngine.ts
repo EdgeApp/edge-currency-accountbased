@@ -1224,7 +1224,7 @@ export class EthereumEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    await this.ethNetwork.multicastServers('broadcastTx', edgeTransaction)
+    await this.ethNetwork.broadcastTx(edgeTransaction)
 
     // Success
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
