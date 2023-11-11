@@ -83,18 +83,10 @@ interface EthereumNetworkUpdate {
 
 type EthFunction =
   | 'broadcastTx'
-  | 'eth_blockNumber'
   | 'eth_call'
-  | 'eth_getTransactionCount'
-  | 'eth_getTransactionCount_RPC'
   | 'eth_getTransactionReceipt'
-  | 'eth_getBalance'
   | 'eth_estimateGas'
-  | 'getTokenBalance'
-  | 'getTransactions'
   | 'eth_getCode'
-  | 'blockbookBlockHeight'
-  | 'blockbookAddress'
 
 interface BroadcastResults {
   incrementNonce: boolean
@@ -712,8 +704,7 @@ export class EthereumNetwork {
     } = this.ethEngine.networkInfo
 
     let out = { result: '', server: 'no server' }
-    // @ts-expect-error
-    let funcs, url
+    let funcs
     switch (func) {
       case 'broadcastTx': {
         // @ts-expect-error
@@ -765,57 +756,6 @@ export class EthereumNetwork {
         break
       }
 
-      case 'eth_blockNumber':
-        funcs = evmScanApiServers.map(server => async () => {
-          if (!server.includes('etherscan') && !server.includes('blockscout')) {
-            throw new Error(`Unsupported command eth_blockNumber in ${server}`)
-          }
-          let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
-          // special case for blockscout
-          if (server.includes('blockscout')) {
-            blockNumberUrlSyntax = `?module=block&action=eth_block_number`
-          }
-
-          const result = await this.fetchGetEtherscan(
-            server,
-            blockNumberUrlSyntax
-          )
-          if (typeof result.result !== 'string') {
-            const msg = `Invalid return value eth_blockNumber in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
-          }
-          return { server, result }
-        })
-
-        funcs.push(
-          ...rpcServers.map(baseUrl => async () => {
-            const result = await this.fetchPostRPC(
-              'eth_blockNumber',
-              [],
-              chainId,
-              baseUrl
-            )
-            // Check if successful http response was actually an error
-            if (result.error != null) {
-              this.ethEngine.error(
-                `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
-                  result.error
-                )}`
-              )
-              throw new Error(
-                'Successful eth_blockNumber response object included an error'
-              )
-            }
-            return { server: parse(baseUrl).hostname, result }
-          })
-        )
-
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
       case 'eth_estimateGas':
         funcs = rpcServers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(
@@ -862,196 +802,6 @@ export class EthereumNetwork {
           return { server: parse(baseUrl).hostname, result }
         })
 
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'eth_getTransactionCount':
-        url = `?module=proxy&action=eth_getTransactionCount&address=${params[0]}&tag=latest`
-        funcs = evmScanApiServers.map(server => async () => {
-          // if falsy URL then error thrown
-          if (!server.includes('etherscan') && !server.includes('blockscout')) {
-            throw new Error(
-              `Unsupported command eth_getTransactionCount in ${server}`
-            )
-          }
-          // @ts-expect-error
-          const result = await this.fetchGetEtherscan(server, url)
-          if (typeof result.result !== 'string') {
-            const msg = `Invalid return value eth_getTransactionCount in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
-          }
-          return { server, result }
-        })
-
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'eth_getTransactionCount_RPC':
-        funcs = rpcServers.map(baseUrl => async () => {
-          const result = await this.fetchPostRPC(
-            'eth_getTransactionCount',
-            [params[0], 'latest'],
-            chainId,
-            baseUrl
-          )
-          // Check if successful http response was actually an error
-          if (result.error != null) {
-            this.ethEngine.error(
-              `Successful eth_getTransactionCount_RPC response object from ${baseUrl} included an error ${JSON.stringify(
-                result.error
-              )}`
-            )
-            throw new Error(
-              'Successful eth_getTransactionCount_RPC response object included an error'
-            )
-          }
-          return { server: parse(baseUrl).hostname, result }
-        })
-
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'eth_getBalance':
-        url = `?module=account&action=balance&address=${params[0]}&tag=latest`
-        funcs = evmScanApiServers.map(server => async () => {
-          // @ts-expect-error
-          const result = await this.fetchGetEtherscan(server, url)
-          if (typeof result.result !== 'string' || result.result === '') {
-            const msg = `Invalid return value eth_getBalance in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
-          }
-          asIntegerString(result.result)
-          return { server, result }
-        })
-
-        funcs.push(
-          ...rpcServers.map(baseUrl => async () => {
-            const result = await this.fetchPostRPC(
-              'eth_getBalance',
-              [params[0], 'latest'],
-              chainId,
-              baseUrl
-            )
-            // Check if successful http response was actually an error
-            if (result.error != null) {
-              this.ethEngine.error(
-                `Successful eth_getBalance response object from ${baseUrl} included an error ${JSON.stringify(
-                  result.error
-                )}`
-              )
-              throw new Error(
-                'Successful eth_getBalance response object included an error'
-              )
-            }
-            // Convert hex
-            if (!isHex(result.result)) {
-              throw new Error(
-                `eth_getBalance not hex for ${parse(baseUrl).hostname}`
-              )
-            }
-            // Convert to decimal
-            result.result = hexToDecimal(result.result)
-            return { server: parse(baseUrl).hostname, result }
-          })
-        )
-
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'getTokenBalance':
-        url = `?module=account&action=tokenbalance&contractaddress=${params[1]}&address=${params[0]}&tag=latest`
-        funcs = evmScanApiServers.map(server => async () => {
-          // @ts-expect-error
-          const result = await this.fetchGetEtherscan(server, url)
-          if (typeof result.result !== 'string' || result.result === '') {
-            const msg = `Invalid return value getTokenBalance in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
-          }
-          return { server, result }
-        })
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'getTransactions': {
-        const {
-          currencyCode,
-          address,
-          startBlock,
-          page,
-          offset,
-          contractAddress,
-          searchRegularTxs
-        } = params[0]
-        let startUrl
-        if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
-          startUrl = `?action=${
-            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-            searchRegularTxs ? 'txlist' : 'txlistinternal'
-          }&module=account`
-        } else {
-          startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
-        }
-        url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-        funcs = evmScanApiServers.map(server => async () => {
-          // @ts-expect-error
-          const result = await this.fetchGetEtherscan(server, url)
-          if (
-            typeof result.result !== 'object' ||
-            typeof result.result.length !== 'number'
-          ) {
-            const msg = `Invalid return value getTransactions in ${server}`
-            if (result.result !== 'Max rate limit reached')
-              this.ethEngine.error(msg)
-            throw new Error(msg)
-          }
-          return { server, result }
-        })
-        // Randomize array
-        funcs = shuffleArray(funcs)
-
-        if (funcs.length > 0) {
-          out = await asyncWaterfall(funcs)
-        } else {
-          /*
-          // HACK: If a currency doesn't have an etherscan API compatible
-          // server we need to return an empty array
-          */
-
-          // @ts-expect-error
-          out = { ...out, result: { result: [] } }
-        }
-
-        break
-      }
-
-      case 'blockbookBlockHeight':
-        funcs = blockbookServers.map(server => async () => {
-          const result = await this.fetchGetBlockbook(server, params[0])
-          return { server, result }
-        })
-        // Randomize array
-        funcs = shuffleArray(funcs)
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'blockbookAddress':
-        funcs = blockbookServers.map(server => async () => {
-          const result = await this.fetchGetBlockbook(server, params[0])
-          return { server, result }
-        })
-        // Randomize array
-        funcs = shuffleArray(funcs)
         out = await asyncWaterfall(funcs)
         break
 
@@ -1115,18 +865,75 @@ export class EthereumNetwork {
   }
 
   checkBlockHeightEthscan = async (): Promise<EthereumNetworkUpdate> => {
-    const { result: jsonObj, server } = await this.multicastServers(
-      'eth_blockNumber'
+    const {
+      rpcServers,
+      evmScanApiServers,
+      chainParams: { chainId }
+    } = this.ethEngine.networkInfo
+
+    const funcs = [
+      ...evmScanApiServers.map(server => async () => {
+        if (!server.includes('etherscan') && !server.includes('blockscout')) {
+          throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+        }
+        let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+        // special case for blockscout
+        if (server.includes('blockscout')) {
+          blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+        }
+
+        const result = await this.fetchGetEtherscan(
+          server,
+          blockNumberUrlSyntax
+        )
+        if (typeof result.result !== 'string') {
+          const msg = `Invalid return value eth_blockNumber in ${server}`
+          this.ethEngine.error(msg)
+          throw new Error(msg)
+        }
+        return { server, result }
+      }),
+      ...rpcServers.map(baseUrl => async () => {
+        const result = await this.fetchPostRPC(
+          'eth_blockNumber',
+          [],
+          chainId,
+          baseUrl
+        )
+        // Check if successful http response was actually an error
+        if (result.error != null) {
+          this.ethEngine.error(
+            `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
+              result.error
+            )}`
+          )
+          throw new Error(
+            'Successful eth_blockNumber response object included an error'
+          )
+        }
+        return { server: parse(baseUrl).hostname, result }
+      })
+    ]
+
+    const { result: jsonObj, server } = await asyncWaterfall(
+      shuffleArray(funcs)
     )
+
     const clean = asEtherscanGetBlockHeight(jsonObj)
     return { blockHeight: clean.result, server }
   }
 
   checkBlockHeightBlockbook = async (): Promise<EthereumNetworkUpdate> => {
+    const { blockbookServers } = this.ethEngine.networkInfo
+
     try {
-      const { result: jsonObj, server } = await this.multicastServers(
-        'blockbookBlockHeight',
-        '/api/v2'
+      const funcs = blockbookServers.map(server => async () => {
+        const result = await this.fetchGetBlockbook(server, '/api/v2')
+        return { server, result }
+      })
+
+      const { result: jsonObj, server } = await asyncWaterfall(
+        shuffleArray(funcs)
       )
 
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
@@ -1167,11 +974,35 @@ export class EthereumNetwork {
   }
 
   checkNonceRpc = async (): Promise<EthereumNetworkUpdate> => {
+    const {
+      rpcServers,
+      chainParams: { chainId }
+    } = this.ethEngine.networkInfo
+
     const address = this.ethEngine.walletLocalData.publicKey
-    const { result, server } = await this.multicastServers(
-      'eth_getTransactionCount_RPC',
-      address
-    )
+
+    const funcs = rpcServers.map(baseUrl => async () => {
+      const result = await this.fetchPostRPC(
+        'eth_getTransactionCount',
+        [address, 'latest'],
+        chainId,
+        baseUrl
+      )
+      // Check if successful http response was actually an error
+      if (result.error != null) {
+        this.ethEngine.error(
+          `Successful eth_getTransactionCount_RPC response object from ${baseUrl} included an error ${JSON.stringify(
+            result.error
+          )}`
+        )
+        throw new Error(
+          'Successful eth_getTransactionCount_RPC response object included an error'
+        )
+      }
+      return { server: parse(baseUrl).hostname, result }
+    })
+
+    const { result, server } = await asyncWaterfall(shuffleArray(funcs))
 
     const cleanRes = asRpcResultString(result)
     if (/0[xX][0-9a-fA-F]+/.test(cleanRes.result)) {
@@ -1183,10 +1014,29 @@ export class EthereumNetwork {
   }
 
   checkNonceEthscan = async (): Promise<EthereumNetworkUpdate> => {
+    const { evmScanApiServers } = this.ethEngine.networkInfo
     const address = this.ethEngine.walletLocalData.publicKey
-    const { result: jsonObj, server } = await this.multicastServers(
-      'eth_getTransactionCount',
-      address
+
+    const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
+    const funcs = evmScanApiServers.map(server => async () => {
+      // if falsy URL then error thrown
+      if (!server.includes('etherscan') && !server.includes('blockscout')) {
+        throw new Error(
+          `Unsupported command eth_getTransactionCount in ${server}`
+        )
+      }
+      const result = await this.fetchGetEtherscan(server, url)
+      if (typeof result.result !== 'string') {
+        const msg = `Invalid return value eth_getTransactionCount in ${server}`
+        this.ethEngine.error(msg)
+        throw new Error(msg)
+      }
+      return { server, result }
+    })
+
+    const { result: jsonObj, server } = await asyncWaterfall(
+      // Randomize array
+      shuffleArray(funcs)
     )
     const clean = asEtherscanGetAccountNonce(jsonObj)
     return { newNonce: clean.result, server }
@@ -1226,6 +1076,8 @@ export class EthereumNetwork {
     cleanerFunc: Function,
     options: GetEthscanAllTxsOptions
   ): Promise<GetEthscanAllTxsResponse> {
+    const { evmScanApiServers } = this.ethEngine.networkInfo
+
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
 
@@ -1235,15 +1087,39 @@ export class EthereumNetwork {
     const searchRegularTxs = options.searchRegularTxs
     while (true) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
-      const response = await this.multicastServers('getTransactions', {
-        currencyCode,
-        address,
-        startBlock,
-        page,
-        offset,
-        contractAddress,
-        searchRegularTxs
+
+      let startUrl
+      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
+        startUrl = `?action=${
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+          searchRegularTxs ? 'txlist' : 'txlistinternal'
+        }&module=account`
+      } else {
+        startUrl = `?action=tokentx&contractaddress=${contractAddress}&module=account`
+      }
+
+      const url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
+      const funcs = evmScanApiServers.map(server => async () => {
+        const result = await this.fetchGetEtherscan(server, url)
+        if (
+          typeof result.result !== 'object' ||
+          typeof result.result.length !== 'number'
+        ) {
+          const msg = `Invalid return value getTransactions in ${server}`
+          if (result.result !== 'Max rate limit reached')
+            this.ethEngine.error(msg)
+          throw new Error(msg)
+        }
+        return { server, result }
       })
+
+      const response =
+        funcs.length > 0
+          ? await asyncWaterfall(shuffleArray(funcs))
+          : // HACK: If a currency doesn't have an etherscan API compatible
+            // server we need to return an empty array
+            { result: { result: [] } }
+
       server = response.server
       const transactions = response.result.result
       for (let i = 0; i < transactions.length; i++) {
@@ -1351,6 +1227,8 @@ export class EthereumNetwork {
   }
 
   checkAddressBlockbook = async (): Promise<EthereumNetworkUpdate> => {
+    const { blockbookServers } = this.ethEngine.networkInfo
+
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const out: EthereumNetworkUpdate = {
       newNonce: '0',
@@ -1358,10 +1236,15 @@ export class EthereumNetwork {
       server: ''
     }
     const query = '/api/v2/address/' + address + `?&details=tokenBalances`
-    const { result: jsonObj, server } = await this.multicastServers(
-      'blockbookAddress',
-      query
+
+    const funcs = blockbookServers.map(server => async () => {
+      const result = await this.fetchGetBlockbook(server, query)
+      return { server, result }
+    })
+    const { result: jsonObj, server } = await asyncWaterfall(
+      shuffleArray(funcs)
     )
+
     let addressInfo: BlockbookAddress
     try {
       addressInfo = asBlockbookAddress(jsonObj)
@@ -1402,6 +1285,8 @@ export class EthereumNetwork {
   }
 
   checkTokenBalEthscan = async (tk: string): Promise<EthereumNetworkUpdate> => {
+    const { evmScanApiServers } = this.ethEngine.networkInfo
+
     const address = this.ethEngine.walletLocalData.publicKey
     let response
     let jsonObj
@@ -1409,7 +1294,19 @@ export class EthereumNetwork {
     let cleanedResponseObj: RpcResultString
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
-        response = await this.multicastServers('eth_getBalance', address)
+        const url = `?module=account&action=balance&address=${address}&tag=latest`
+        const funcs = evmScanApiServers.map(server => async () => {
+          const result = await this.fetchGetEtherscan(server, url)
+          if (typeof result.result !== 'string' || result.result === '') {
+            const msg = `Invalid return value eth_getBalance in ${server}`
+            this.ethEngine.error(msg)
+            throw new Error(msg)
+          }
+          asIntegerString(result.result)
+          return { server, result }
+        })
+        response = await asyncWaterfall(shuffleArray(funcs))
+
         jsonObj = response.result
         server = response.server
       } else {
@@ -1419,11 +1316,19 @@ export class EthereumNetwork {
           typeof tokenInfo.contractAddress === 'string'
         ) {
           const contractAddress = tokenInfo.contractAddress
-          const response = await this.multicastServers(
-            'getTokenBalance',
-            address,
-            contractAddress
-          )
+
+          const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
+          const funcs = evmScanApiServers.map(server => async () => {
+            const result = await this.fetchGetEtherscan(server, url)
+            if (typeof result.result !== 'string' || result.result === '') {
+              const msg = `Invalid return value getTokenBalance in ${server}`
+              this.ethEngine.error(msg)
+              throw new Error(msg)
+            }
+            return { server, result }
+          })
+          const response = await asyncWaterfall(shuffleArray(funcs))
+
           jsonObj = response.result
           server = response.server
         }
@@ -1572,6 +1477,11 @@ export class EthereumNetwork {
   }
 
   checkTokenBalRpc = async (tk: string): Promise<EthereumNetworkUpdate> => {
+    const {
+      rpcServers,
+      chainParams: { chainId }
+    } = this.ethEngine.networkInfo
+
     let cleanedResponseObj: RpcResultString
     let response
     let jsonObj
@@ -1579,7 +1489,38 @@ export class EthereumNetwork {
     const address = this.ethEngine.walletLocalData.publicKey
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
-        response = await this.multicastServers('eth_getBalance', address)
+        const funcs = rpcServers.map(baseUrl => async () => {
+          const result = await this.fetchPostRPC(
+            'eth_getBalance',
+            [address, 'latest'],
+            chainId,
+            baseUrl
+          )
+          // Check if successful http response was actually an error
+          if (result.error != null) {
+            this.ethEngine.error(
+              `Successful eth_getBalance response object from ${baseUrl} included an error ${JSON.stringify(
+                result.error
+              )}`
+            )
+            throw new Error(
+              'Successful eth_getBalance response object included an error'
+            )
+          }
+          // Convert hex
+          if (!isHex(result.result)) {
+            throw new Error(
+              `eth_getBalance not hex for ${parse(baseUrl).hostname}`
+            )
+          }
+          // Convert to decimal
+          result.result = hexToDecimal(result.result)
+          return { server: parse(baseUrl).hostname, result }
+        })
+
+        // Randomize array
+        response = await asyncWaterfall(shuffleArray(funcs))
+
         jsonObj = response.result
         server = response.server
       } else {
