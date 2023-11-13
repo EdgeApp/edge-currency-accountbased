@@ -247,7 +247,7 @@ export class RpcAdapter
 
           const response = await this.ethEngine.ethNetwork.multicastRpc(
             'eth_call',
-            params
+            [params]
           )
           const result: string = response.result.result
 

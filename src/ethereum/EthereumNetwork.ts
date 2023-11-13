@@ -246,7 +246,7 @@ export class EthereumNetwork {
     return broadcastResults
   }
 
-  multicastRpc = async (method: RpcMethod, ...params: any): Promise<any> => {
+  multicastRpc = async (method: RpcMethod, params: any[]): Promise<any> => {
     let out: { result: any; server: string } = {
       result: '',
       server: 'no server'
@@ -259,7 +259,7 @@ export class EthereumNetwork {
       case 'eth_getCode':
         funcs = this.qualifyNetworkAdapters('multicastRpc').map(
           adapter => async () => {
-            return await adapter.multicastRpc(method, params[0])
+            return await adapter.multicastRpc(method, params)
           }
         )
 
@@ -269,7 +269,7 @@ export class EthereumNetwork {
       case 'eth_call':
         funcs = this.qualifyNetworkAdapters('multicastRpc').map(
           adapter => async () => {
-            return await adapter.multicastRpc('eth_call', [params[0], 'latest'])
+            return await adapter.multicastRpc('eth_call', params)
           }
         )
 

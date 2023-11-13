@@ -366,7 +366,7 @@ export class EthereumEngine extends CurrencyEngine<
               // Get the gasLimit from currency info or from RPC node:
               if (this.networkFees.default.gasLimit?.tokenTransaction == null) {
                 this.ethNetwork
-                  .multicastRpc('eth_estimateGas', txParam)
+                  .multicastRpc('eth_estimateGas', [txParam])
                   .then((estimateGasResult: any) => {
                     const gasLimit = add(
                       parseInt(estimateGasResult.result.result, 16).toString(),
@@ -451,7 +451,7 @@ export class EthereumEngine extends CurrencyEngine<
           } else {
             const estimateGasResult = await this.ethNetwork.multicastRpc(
               'eth_estimateGas',
-              estimateGasParams
+              [estimateGasParams]
             )
             gasLimitReturn = add(
               parseInt(estimateGasResult.result.result, 16).toString(),
@@ -563,7 +563,10 @@ export class EthereumEngine extends CurrencyEngine<
         to: this.l1RollupParams.oracleContractAddress,
         data: this.l1RollupParams.gasPricel1BaseFeeMethod
       }
-      const response = await this.ethNetwork.multicastRpc('eth_call', params)
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latests'
+      ])
       const result = asRpcResultString(response.result)
 
       this.l1RollupParams = {
@@ -586,7 +589,10 @@ export class EthereumEngine extends CurrencyEngine<
         to: this.l1RollupParams.oracleContractAddress,
         data: this.l1RollupParams.dynamicOverheadMethod
       }
-      const response = await this.ethNetwork.multicastRpc('eth_call', params)
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latests'
+      ])
 
       const result = asRpcResultString(response.result)
       this.l1RollupParams = {
