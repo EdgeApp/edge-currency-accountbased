@@ -12,8 +12,13 @@ import {
 } from '../ethereumTypes'
 import { NetworkAdapter, NetworkAdapterBase } from './types'
 
+export interface BlockchairAdapterConfig {
+  type: 'blockchair'
+  servers: string[]
+}
+
 export class BlockchairAdapter
-  extends NetworkAdapterBase
+  extends NetworkAdapterBase<BlockchairAdapterConfig>
   implements NetworkAdapter
 {
   broadcast = null
@@ -86,7 +91,7 @@ export class BlockchairAdapter
   ): Promise<any> {
     const { blockchairApiKey } = this.ethEngine.initOptions
 
-    const funcs = this.servers.map(baseUrl => async () => {
+    const funcs = this.config.servers.map(baseUrl => async () => {
       const keyParam =
         includeKey && blockchairApiKey != null ? `&key=${blockchairApiKey}` : ''
       const url = `${baseUrl}${path}`

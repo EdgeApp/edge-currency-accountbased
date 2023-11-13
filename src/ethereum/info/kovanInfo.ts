@@ -209,15 +209,20 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://kovan.poa.network',
-    'https://eth-kovan.alchemyapi.io/v2/-{{alchemyApiKey}}',
-    'https://kovan.infura.io/v3/{{infuraProjectId}}'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://kovan.poa.network',
+        'https://eth-kovan.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://kovan.infura.io/v3/{{infuraProjectId}}'
+      ]
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api-kovan.etherscan.io']
+    }
   ],
-
-  evmScanApiServers: ['https://api-kovan.etherscan.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -234,15 +239,11 @@ const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'kovanMnemonic',
   pluginRegularKeyName: 'kovanKey',

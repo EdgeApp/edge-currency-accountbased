@@ -53,14 +53,17 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://forno.celo.org',
-    'https://rpc.ankr.com/celo',
-    'https://celo-mainnet-rpc.allthatnode.com'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://forno.celo.org',
+        'https://rpc.ankr.com/celo',
+        'https://celo-mainnet-rpc.allthatnode.com'
+      ]
+    },
+    { type: 'evmscan', servers: ['https://explorer.celo.org/mainnet'] }
   ],
-  evmScanApiServers: ['https://explorer.celo.org/mainnet'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['celo'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -70,11 +73,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 52752,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'celoMnemonic',
   pluginRegularKeyName: 'celoKey',

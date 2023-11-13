@@ -76,8 +76,12 @@ export const fetchFeesFromRpc = async (
   log: EdgeLog,
   networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const { rpcServers, supportsEIP1559 = false } = networkInfo
+  const { networkAdapterConfigs, supportsEIP1559 = false } = networkInfo
   if (supportsEIP1559) return
+
+  const rpcConfig = networkAdapterConfigs.find(config => config.type === 'rpc')
+  if (rpcConfig == null) return
+  const rpcServers = rpcConfig.servers
 
   const server = pickRandom(rpcServers, 1)[0]
 
@@ -130,7 +134,14 @@ export const fetchFeesFromEvmScan = async (
   log: EdgeLog,
   networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const evmScanApiServers = networkInfo.evmScanApiServers
+  const { networkAdapterConfigs } = networkInfo
+
+  const evmScanConfig = networkAdapterConfigs.find(
+    config => config.type === 'evmscan'
+  )
+  if (evmScanConfig == null) return
+
+  const evmScanApiServers = evmScanConfig.servers
   const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log)
   if (evmScanApiServers == null || scanApiKey == null) return
 

@@ -1057,24 +1057,47 @@ const defaultNetworkFees: EthereumFees = {
 
 // Exported for fee provider test
 export const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
-    'https://mainnet.infura.io/v3/{{infuraProjectId}}',
-    'https://rpc.ankr.com/eth',
-    'https://eth-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
-    'https://cloudflare-eth.com'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://mainnet.infura.io/v3/{{infuraProjectId}}',
+        'https://rpc.ankr.com/eth',
+        'https://eth-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
+        'https://cloudflare-eth.com'
+      ],
+      ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
+    },
+    {
+      type: 'amberdata-rpc',
+      servers: ['https://rpc.web3api.io']
+    },
+    {
+      type: 'evmscan',
+      servers: [
+        'https://api.etherscan.io'
+        // 'https://blockscout.com/eth/mainnet' // not reliable enough...
+      ]
+    },
+    {
+      type: 'blockbook',
+      servers: [
+        'https://ethbook.guarda.co',
+        'https://eth1.trezor.io',
+        'https://eth2.trezor.io'
+      ]
+    },
+    {
+      type: 'blockchair',
+      servers: ['https://api.blockchair.com']
+    },
+    {
+      type: 'blockcypher',
+      servers: ['https://api.blockcypher.com']
+    }
   ],
 
-  evmScanApiServers: [
-    'https://api.etherscan.io'
-    // 'https://blockscout.com/eth/mainnet' // not reliable enough...
-  ],
-  blockcypherApiServers: ['https://api.blockcypher.com'],
-  blockbookServers: [
-    'https://ethbook.guarda.co',
-    'https://eth1.trezor.io',
-    'https://eth2.trezor.io'
-  ],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -1091,21 +1114,16 @@ export const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: ['https://api.blockchair.com'],
-  alethioApiServers: ['https://api.aleth.io/v1'],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: ['https://rpc.web3api.io'],
-  amberdataApiServers: ['https://web3api.io/api/v2'],
   amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
   ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
-  defaultNetworkFees,
-  ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
+  defaultNetworkFees
 }
 
 const defaultSettings: any = {

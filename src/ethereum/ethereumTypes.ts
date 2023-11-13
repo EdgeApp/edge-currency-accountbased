@@ -16,6 +16,7 @@ import {
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo, WalletConnectPayload } from '../common/types'
+import { NetworkAdapterConfig } from './networkAdapters/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -66,18 +67,13 @@ export interface ChainParams {
 }
 
 export interface EthereumNetworkInfo {
-  alethioApiServers: string[]
+  networkAdapterConfigs: NetworkAdapterConfig[]
   feeUpdateFrequencyMs?: number
   alethioCurrencies: {
     native: string
     token: string
   } | null
-  amberdataApiServers: string[]
   amberDataBlockchainId: string
-  amberdataRpcServers: string[]
-  blockbookServers: string[]
-  blockchairApiServers: string[]
-  blockcypherApiServers: string[]
   chainParams: ChainParams
   supportsEIP1559?: boolean
   l1RollupParams?: L1RollupParams
@@ -85,7 +81,6 @@ export interface EthereumNetworkInfo {
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
   ercTokenStandard: string
-  evmScanApiServers: string[]
   ethGasStationUrl: string | null
   hdPathCoinType: number
   iosAllowedTokens: {
@@ -93,9 +88,7 @@ export interface EthereumNetworkInfo {
   }
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
-  rpcServers: string[]
   uriNetworks: string[]
-  ethBalCheckerContract?: string
 }
 
 export const asEthereumFeesGasLimit = asObject({

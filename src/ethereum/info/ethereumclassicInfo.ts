@@ -67,10 +67,20 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://www.ethercluster.com/etc'],
-  evmScanApiServers: [], // ['https://blockscout.com/etc/mainnet'],
-  blockcypherApiServers: [],
-  blockbookServers: ['https://etcbook.guarda.co', 'https://etc1.trezor.io'],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://www.ethercluster.com/etc']
+    },
+    {
+      type: 'evmscan',
+      servers: [] // ['https://blockscout.com/etc/mainnet'],
+    },
+    {
+      type: 'blockbook',
+      servers: ['https://etcbook.guarda.co', 'https://etc1.trezor.io']
+    }
+  ],
   uriNetworks: ['ethereumclassic', 'etherclass'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -80,11 +90,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 61,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumclassicMnemonic',
   pluginRegularKeyName: 'ethereumclassicKey',

@@ -4,12 +4,26 @@ import { FetchResponse } from 'serverlet'
 import { cleanTxLogs, safeErrorMessage } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
+import { AmberdataAdapterConfig } from './AmberdataAdapter'
+import { BlockbookAdapterConfig } from './BlockbookAdapter'
+import { BlockchairAdapterConfig } from './BlockchairAdapter'
+import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
+import { EvmScanAdapterConfig } from './EvmScanAdapter'
+import { RpcAdapterConfig } from './RpcAdapter'
 
 export interface GetTxsParams {
   startBlock: number
   startDate: number
   currencyCode: string
 }
+
+export type NetworkAdapterConfig =
+  | AmberdataAdapterConfig
+  | BlockbookAdapterConfig
+  | BlockchairAdapterConfig
+  | BlockcypherAdapterConfig
+  | EvmScanAdapterConfig
+  | RpcAdapterConfig
 
 export type NetworkAdapterUpdateMethod = keyof Pick<
   NetworkAdapter,
@@ -36,13 +50,13 @@ export type NetworkAdapter = PartiallyNull<{
   fetchTxs: (...args: any[]) => Promise<EthereumNetworkUpdate>
 }>
 
-export class NetworkAdapterBase {
+export class NetworkAdapterBase<Config> {
+  config: Config
   ethEngine: EthereumEngine
-  servers: string[]
 
-  constructor(engine: EthereumEngine, servers: string[]) {
+  constructor(engine: EthereumEngine, config: Config) {
     this.ethEngine = engine
-    this.servers = servers
+    this.config = config
   }
 
   protected broadcastResponseHandler(

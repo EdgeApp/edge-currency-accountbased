@@ -5,8 +5,13 @@ import { promiseAny } from '../../common/utils'
 import { BroadcastResults } from '../EthereumNetwork'
 import { NetworkAdapter, NetworkAdapterBase } from './types'
 
+export interface BlockcypherAdapterConfig {
+  type: 'blockcypher'
+  servers: string[]
+}
+
 export class BlockcypherAdapter
-  extends NetworkAdapterBase
+  extends NetworkAdapterBase<BlockcypherAdapterConfig>
   implements NetworkAdapter
 {
   fetchNonce = null
@@ -20,7 +25,7 @@ export class BlockcypherAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.servers.map(async baseUrl => {
+    const promises = this.config.servers.map(async baseUrl => {
       const urlSuffix = `v1/${this.ethEngine.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
       const hexTx = edgeTransaction.signedTx.replace('0x', '')
       const jsonObj = await this.fetchPostBlockcypher(

@@ -1,6 +1,5 @@
 import { div, mul, sub } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
-import { FetchResponse } from 'serverlet'
 
 import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
@@ -18,6 +17,7 @@ import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
 import {
   NetworkAdapter,
+  NetworkAdapterConfig,
   NetworkAdapterUpdateMethod
 } from './networkAdapters/types'
 
@@ -232,36 +232,6 @@ export class EthereumNetwork {
     return edgeTransaction
   }
 
-  /*
-   * @param pathOrLink: A "path" is appended to the alethioServers base URL and
-   *  a "link" is a full URL that needs no further modification
-   * @param isPath: If TRUE then the pathOrLink param is interpretted as a "path"
-   *  otherwise it is interpretted as a "link"
-   *
-   * @throws Exception when Alethio throttles with a 429 response code
-   */
-  // TODO: Clean return type
-  async fetchGetAlethio(
-    pathOrLink: string,
-    // eslint-disable-next-line @typescript-eslint/default-param-last
-    isPath: boolean = true,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    useApiKey: boolean
-  ): Promise<any> {
-    const { alethioApiKey } = this.ethEngine.initOptions
-    const { alethioApiServers } = this.ethEngine.networkInfo
-    const url = isPath ? `${alethioApiServers[0]}${pathOrLink}` : pathOrLink
-
-    const response = await this.ethEngine.fetchCors(
-      url,
-      alethioApiKey != null
-        ? { headers: { Authorization: `Bearer ${alethioApiKey}` } }
-        : undefined
-    )
-    if (!response.ok) this.throwError(response, 'fetchGetAlethio', url)
-    return await response.json()
-  }
-
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> {
@@ -418,11 +388,16 @@ export class EthereumNetwork {
         currencyCodes.push(currencyCode)
       }
 
+      // The engine supports token balances batch queries if an adaptor provides
+      // the functionality.
+      const isFetchTokenBalancesSupported =
+        this.networkAdapters.find(
+          adapter => adapter.fetchTokenBalances != null
+        ) != null
+
       // If this engine supports the batch token balance query, no need to check
       // each currencyCode individually.
-      const { ethBalCheckerContract } = this.ethEngine.networkInfo
-
-      if (ethBalCheckerContract != null) {
+      if (isFetchTokenBalancesSupported) {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalsLastChecked,
           BAL_POLL_MILLISECONDS,
@@ -434,7 +409,7 @@ export class EthereumNetwork {
       for (const tk of currencyCodes) {
         // Only check each code individually if this engine does not support
         // batch token balance queries.
-        if (ethBalCheckerContract == null) {
+        if (!isFetchTokenBalancesSupported) {
           await this.checkAndUpdate(
             this.ethNeeds.tokenBalLastChecked[tk] ?? 0,
             BAL_POLL_MILLISECONDS,
@@ -555,24 +530,17 @@ export class EthereumNetwork {
   }
 
   buildNetworkAdapters(settings: EthereumNetworkInfo): NetworkAdapter[] {
-    const {
-      rpcServers,
-      evmScanApiServers,
-      blockbookServers,
-      blockchairApiServers,
-      blockcypherApiServers,
-      amberdataRpcServers,
-      amberdataApiServers
-    } = settings
-    const networkAdapters: NetworkAdapter[] = []
+    const { networkAdapterConfigs } = settings
+    const networkAdapters: NetworkAdapter[] = networkAdapterConfigs.map(
+      config => makeNetworkAdapter(config, this.ethEngine)
+    )
 
-    if (evmScanApiServers.length > 0) {
-      networkAdapters.push(
-        new EvmScanAdapter(this.ethEngine, evmScanApiServers)
-      )
-    } else {
-      const adapter = new EvmScanAdapter(this.ethEngine, [])
-      // We'll fake it if we don't have a server
+    // We'll fake transaction querying if we don't have a txs querying adapter
+    if (networkAdapters.find(adapter => adapter.fetchTxs == null) == null) {
+      const adapter = new EvmScanAdapter(this.ethEngine, {
+        type: 'evmscan',
+        servers: []
+      })
       networkAdapters.push({
         fetchTxs: adapter.fetchTxs,
         fetchBlockheight: null,
@@ -583,35 +551,6 @@ export class EthereumNetwork {
         fetchTokenBalance: null,
         fetchTokenBalances: null
       })
-    }
-
-    if (blockbookServers.length > 0) {
-      networkAdapters.push(
-        new BlockbookAdapter(this.ethEngine, blockbookServers)
-      )
-    }
-    if (blockchairApiServers.length > 0) {
-      networkAdapters.push(
-        new BlockchairAdapter(this.ethEngine, blockchairApiServers)
-      )
-    }
-    if (amberdataRpcServers.length > 0) {
-      networkAdapters.push(
-        new AmberdataAdapter(this.ethEngine, amberdataRpcServers)
-      )
-    }
-    if (amberdataApiServers.length > 0) {
-      // networkAdapters.push({
-      //   txs: this.checkTxsAmberdata
-      // })
-    }
-    if (rpcServers.length > 0) {
-      networkAdapters.push(new RpcAdapter(this.ethEngine, rpcServers))
-    }
-    if (blockcypherApiServers.length > 0) {
-      networkAdapters.push(
-        new BlockcypherAdapter(this.ethEngine, blockcypherApiServers)
-      )
     }
 
     return networkAdapters
@@ -628,18 +567,24 @@ export class EthereumNetwork {
     > &
       NetworkAdapter => methods.every(method => adapter[method] != null))
   }
+}
 
-  // TODO: Convert to error types
-  throwError(res: FetchResponse, funcName: string, url: string): void {
-    switch (res.status) {
-      case 402: // blockchair
-      case 429: // amberdata
-      case 432: // blockchair
-        throw new Error('rateLimited')
-      default:
-        throw new Error(
-          `${funcName} The server returned error code ${res.status} for ${url}`
-        )
-    }
+const makeNetworkAdapter = (
+  config: NetworkAdapterConfig,
+  ethEngine: EthereumEngine
+): NetworkAdapter => {
+  switch (config.type) {
+    case 'amberdata-rpc':
+      return new AmberdataAdapter(ethEngine, config)
+    case 'blockbook':
+      return new BlockbookAdapter(ethEngine, config)
+    case 'blockchair':
+      return new BlockchairAdapter(ethEngine, config)
+    case 'blockcypher':
+      return new BlockcypherAdapter(ethEngine, config)
+    case 'evmscan':
+      return new EvmScanAdapter(ethEngine, config)
+    case 'rpc':
+      return new RpcAdapter(ethEngine, config)
   }
 }

@@ -6,8 +6,13 @@ import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
 import { NetworkAdapter, NetworkAdapterBase } from './types'
 
+export interface AmberdataAdapterConfig {
+  type: 'amberdata-rpc'
+  servers: string[]
+}
+
 export class AmberdataAdapter
-  extends NetworkAdapterBase
+  extends NetworkAdapterBase<AmberdataAdapterConfig>
   implements NetworkAdapter
 {
   broadcast = null
@@ -50,8 +55,8 @@ export class AmberdataAdapter
   ): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
 
-    const funcs = this.servers.map(baseUrl => async () => {
-      const url = `${this.servers[0]}`
+    const funcs = this.config.servers.map(baseUrl => async () => {
+      const url = `${this.config.servers[0]}`
       const body = {
         jsonrpc: '2.0',
         method: method,
@@ -84,7 +89,7 @@ export class AmberdataAdapter
   private async fetchGetAmberdataApi(path: string): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
 
-    const funcs = this.servers.map(baseUrl => async () => {
+    const funcs = this.config.servers.map(baseUrl => async () => {
       const url = `${base58ToHexAddress}${path}`
       const response = await this.ethEngine.fetchCors(url, {
         headers: {

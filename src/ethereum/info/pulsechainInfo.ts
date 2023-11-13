@@ -44,10 +44,16 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://rpc.pulsechain.com/'],
-  evmScanApiServers: ['cors-https://scan.pulsechain.com'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://rpc.pulsechain.com/']
+    },
+    {
+      type: 'evmscan',
+      servers: ['cors-https://scan.pulsechain.com']
+    }
+  ],
   uriNetworks: ['pulsechain'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -58,11 +64,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'pulsechainMnemonic',
   pluginRegularKeyName: 'pulsechainKey',

@@ -23,13 +23,22 @@ import {
 } from '../ethereumTypes'
 import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
+export interface RpcAdapterConfig {
+  type: 'rpc'
+  servers: string[]
+  ethBalCheckerContract?: string
+}
+
+export class RpcAdapter
+  extends NetworkAdapterBase<RpcAdapterConfig>
+  implements NetworkAdapter
+{
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.servers.map(baseUrl => async () => {
+    const funcs = this.config.servers.map(baseUrl => async () => {
       const result = await this.fetchPostRPC(
         'eth_blockNumber',
         [],
@@ -65,7 +74,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const promises = this.servers.map(async baseUrl => {
+    const promises = this.config.servers.map(async baseUrl => {
       const method = 'eth_sendRawTransaction'
       const params = [edgeTransaction.signedTx]
 
@@ -90,7 +99,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.servers.map(
+    const funcs = this.config.servers.map(
       baseUrl => async () =>
         await this.fetchPostRPC(
           'eth_getBlockByNumber',
@@ -122,7 +131,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.servers.map(baseUrl => async () => {
+    const funcs = this.config.servers.map(baseUrl => async () => {
       const result = await this.fetchPostRPC(method, params, chainId, baseUrl)
       // Check if successful http response was actually an error
       if (result.error != null) {
@@ -148,7 +157,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
 
     const address = this.ethEngine.walletLocalData.publicKey
 
-    const funcs = this.servers.map(baseUrl => async () => {
+    const funcs = this.config.servers.map(baseUrl => async () => {
       const result = await this.fetchPostRPC(
         'eth_getTransactionCount',
         [address, 'latest'],
@@ -192,7 +201,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
     const address = this.ethEngine.walletLocalData.publicKey
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
-        const funcs = this.servers.map(baseUrl => async () => {
+        const funcs = this.config.servers.map(baseUrl => async () => {
           const result = await this.fetchPostRPC(
             'eth_getBalance',
             [address, 'latest'],
@@ -272,15 +281,17 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
   /**
    * Check the eth-balance-checker contract for balances
    */
+  // fetchTokenBalances is defined on this adaptor only if ethBalCheckerContract is defined
   fetchTokenBalances =
-    this.ethEngine.networkInfo.ethBalCheckerContract == null
+    this.config.ethBalCheckerContract == null
       ? null
       : async (): Promise<EthereumNetworkUpdate> => {
           const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
             this.ethEngine
-          const { chainParams, ethBalCheckerContract } = networkInfo
+          const { chainParams } = networkInfo
 
           const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+          const ethBalCheckerContract = this.config.ethBalCheckerContract
           if (ethBalCheckerContract == null) return tokenBal
 
           // Address for querying ETH balance on ETH network, MATIC on MATIC, etc.
@@ -292,7 +303,7 @@ export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
           }
 
           const funcs: Array<() => Promise<any>> = []
-          this.servers.forEach(rpcServer => {
+          this.config.servers.forEach(rpcServer => {
             let rpcServerWithApiKey: string
             try {
               rpcServerWithApiKey = this.addRpcApiKey(rpcServer)

@@ -63,17 +63,24 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://eth-ropsten.alchemyapi.io/v2/-{{alchemyApiKey}}',
-    'https://ropsten.infura.io/v3/{{infuraProjectId}}'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://eth-ropsten.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://ropsten.infura.io/v3/{{infuraProjectId}}'
+      ]
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api-ropsten.etherscan.io']
+    },
+    {
+      type: 'blockbook',
+      servers: ['https://ropsten1.trezor.io', 'https://ropsten2.trezor.io']
+    }
   ],
 
-  evmScanApiServers: ['https://api-ropsten.etherscan.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [
-    'https://ropsten1.trezor.io',
-    'https://ropsten2.trezor.io'
-  ],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -90,15 +97,11 @@ const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ropstenMnemonic',
   pluginRegularKeyName: 'ropstenKey',

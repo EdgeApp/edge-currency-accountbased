@@ -46,8 +46,13 @@ interface GetEthscanAllTxsResponse {
 
 const NUM_TRANSACTIONS_TO_QUERY = 50
 
+export interface EvmScanAdapterConfig {
+  type: 'evmscan'
+  servers: string[]
+}
+
 export class EvmScanAdapter
-  extends NetworkAdapterBase
+  extends NetworkAdapterBase<EvmScanAdapterConfig>
   implements NetworkAdapter
 {
   getBaseFeePerGas = null
@@ -55,7 +60,7 @@ export class EvmScanAdapter
   fetchTokenBalances = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
-    const funcs = this.servers.map(server => async () => {
+    const funcs = this.config.servers.map(server => async () => {
       if (!server.includes('etherscan') && !server.includes('blockscout')) {
         throw new Error(`Unsupported command eth_blockNumber in ${server}`)
       }
@@ -85,7 +90,7 @@ export class EvmScanAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.servers.map(async baseUrl => {
+    const promises = this.config.servers.map(async baseUrl => {
       // RSK also uses the "eth_sendRaw" syntax
       const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
       const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
@@ -106,7 +111,7 @@ export class EvmScanAdapter
     const address = this.ethEngine.walletLocalData.publicKey
 
     const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
-    const funcs = this.servers.map(server => async () => {
+    const funcs = this.config.servers.map(server => async () => {
       // if falsy URL then error thrown
       if (!server.includes('etherscan') && !server.includes('blockscout')) {
         throw new Error(
@@ -139,7 +144,7 @@ export class EvmScanAdapter
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
-        const funcs = this.servers.map(server => async () => {
+        const funcs = this.config.servers.map(server => async () => {
           const result = await this.fetchGetEtherscan(server, url)
           if (typeof result.result !== 'string' || result.result === '') {
             const msg = `Invalid return value eth_getBalance in ${server}`
@@ -162,7 +167,7 @@ export class EvmScanAdapter
           const contractAddress = tokenInfo.contractAddress
 
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
-          const funcs = this.servers.map(server => async () => {
+          const funcs = this.config.servers.map(server => async () => {
             const result = await this.fetchGetEtherscan(server, url)
             if (typeof result.result !== 'string' || result.result === '') {
               const msg = `Invalid return value getTokenBalance in ${server}`
@@ -296,7 +301,7 @@ export class EvmScanAdapter
       }
 
       const url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-      const funcs = this.servers.map(server => async () => {
+      const funcs = this.config.servers.map(server => async () => {
         const result = await this.fetchGetEtherscan(server, url)
         if (
           typeof result.result !== 'object' ||

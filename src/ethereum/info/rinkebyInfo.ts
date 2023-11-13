@@ -63,14 +63,19 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://eth-rinkeby.alchemyapi.io/v2/-{{alchemyApiKey}}',
-    'https://rinkeby.infura.io/v3/{{infuraProjectId}}'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://eth-rinkeby.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://rinkeby.infura.io/v3/{{infuraProjectId}}'
+      ]
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api-rinkeby.etherscan.io']
+    }
   ],
-
-  evmScanApiServers: ['https://api-rinkeby.etherscan.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -87,15 +92,11 @@ const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'rinkebyMnemonic',
   pluginRegularKeyName: 'rinkebyKey',

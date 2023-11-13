@@ -10,8 +10,13 @@ import {
 } from '../ethereumTypes'
 import { NetworkAdapter, NetworkAdapterBase } from './types'
 
+export interface BlockbookAdapterConfig {
+  type: 'blockbook'
+  servers: string[]
+}
+
 export class BlockbookAdapter
-  extends NetworkAdapterBase
+  extends NetworkAdapterBase<BlockbookAdapterConfig>
   implements NetworkAdapter
 {
   getBaseFeePerGas = null
@@ -21,7 +26,7 @@ export class BlockbookAdapter
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
-      const funcs = this.servers.map(server => async () => {
+      const funcs = this.config.servers.map(server => async () => {
         const result = await this.fetchGetBlockbook(server, '/api/v2')
         return { server, result }
       })
@@ -41,7 +46,7 @@ export class BlockbookAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.servers.map(async baseUrl => {
+    const promises = this.config.servers.map(async baseUrl => {
       const jsonObj = await this.fetchGetBlockbook(
         baseUrl,
         `/api/v2/sendtx/${edgeTransaction.signedTx}`
@@ -77,7 +82,7 @@ export class BlockbookAdapter
     }
     const query = '/api/v2/address/' + address + `?&details=tokenBalances`
 
-    const funcs = this.servers.map(server => async () => {
+    const funcs = this.config.servers.map(server => async () => {
       const result = await this.fetchGetBlockbook(server, query)
       return { server, result }
     })

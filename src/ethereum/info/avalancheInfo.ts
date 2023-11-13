@@ -173,13 +173,16 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://api.avax.network/ext/bc/C/rpc',
-    'https://rpc.ankr.com/avalanche'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://api.avax.network/ext/bc/C/rpc',
+        'https://rpc.ankr.com/avalanche'
+      ]
+    },
+    { type: 'evmscan', servers: ['https://api.snowtrace.io'] }
   ],
-  evmScanApiServers: ['https://api.snowtrace.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['avalanche'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -190,11 +193,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 9000,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'avalancheMnemonic',
   pluginRegularKeyName: 'avalancheKey',
