@@ -1537,7 +1537,13 @@ export class EthereumNetwork {
 
     let funcs: Array<() => Promise<any>> = []
     rpcServers.forEach(rpcServer => {
-      const rpcServerWithApiKey = this.addRpcApiKey(rpcServer)
+      let rpcServerWithApiKey: string
+      try {
+        rpcServerWithApiKey = this.addRpcApiKey(rpcServer)
+      } catch (e) {
+        // addRpcApiKey can throw if there's a missing apikey. skip this rpcServer
+        return
+      }
       const ethProvider = new ethers.providers.JsonRpcProvider(
         rpcServerWithApiKey,
         chainParams.chainId
