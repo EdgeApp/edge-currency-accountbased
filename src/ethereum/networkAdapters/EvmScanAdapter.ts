@@ -32,7 +32,7 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapterBase } from './types'
+import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
@@ -46,8 +46,15 @@ interface GetEthscanAllTxsResponse {
 
 const NUM_TRANSACTIONS_TO_QUERY = 50
 
-export class EvmScanAdapter extends NetworkAdapterBase {
-  blockheight = async (): Promise<EthereumNetworkUpdate> => {
+export class EvmScanAdapter
+  extends NetworkAdapterBase
+  implements NetworkAdapter
+{
+  getBaseFeePerGas = null
+  multicastRpc = null
+  fetchTokenBalances = null
+
+  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const funcs = this.servers.map(server => async () => {
       if (!server.includes('etherscan') && !server.includes('blockscout')) {
         throw new Error(`Unsupported command eth_blockNumber in ${server}`)
@@ -95,7 +102,7 @@ export class EvmScanAdapter extends NetworkAdapterBase {
     return await promiseAny(promises)
   }
 
-  nonce = async (): Promise<EthereumNetworkUpdate> => {
+  fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
 
     const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
@@ -123,7 +130,7 @@ export class EvmScanAdapter extends NetworkAdapterBase {
     return { newNonce: clean.result, server }
   }
 
-  tokenBal = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     let response
     let jsonObj
@@ -188,7 +195,7 @@ export class EvmScanAdapter extends NetworkAdapterBase {
     }
   }
 
-  txs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
+  fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
     const { startBlock, currencyCode } = params
     let server: string
     let allTransactions

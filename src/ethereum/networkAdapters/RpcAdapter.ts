@@ -21,10 +21,10 @@ import {
   asRpcResultString,
   RpcResultString
 } from '../ethereumTypes'
-import { GetTxsParams, NetworkAdapterBase } from './types'
+import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class RpcAdapter extends NetworkAdapterBase {
-  blockheight = async (): Promise<EthereumNetworkUpdate> => {
+export class RpcAdapter extends NetworkAdapterBase implements NetworkAdapter {
+  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
@@ -141,7 +141,7 @@ export class RpcAdapter extends NetworkAdapterBase {
     return await asyncWaterfall(funcs)
   }
 
-  nonce = async (): Promise<EthereumNetworkUpdate> => {
+  fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
@@ -180,7 +180,7 @@ export class RpcAdapter extends NetworkAdapterBase {
     }
   }
 
-  tokenBal = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
@@ -272,9 +272,9 @@ export class RpcAdapter extends NetworkAdapterBase {
   /**
    * Check the eth-balance-checker contract for balances
    */
-  tokenBals =
+  fetchTokenBalances =
     this.ethEngine.networkInfo.ethBalCheckerContract == null
-      ? undefined
+      ? null
       : async (): Promise<EthereumNetworkUpdate> => {
           const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
             this.ethEngine
@@ -361,7 +361,7 @@ export class RpcAdapter extends NetworkAdapterBase {
           return { tokenBal, server: 'ethBalChecker' }
         }
 
-  txs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
+  fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
     throw new Error('not implemented')
   }
 

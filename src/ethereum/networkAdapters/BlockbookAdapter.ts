@@ -8,10 +8,18 @@ import {
   asBlockbookTokenBalance,
   BlockbookAddress
 } from '../ethereumTypes'
-import { NetworkAdapterBase } from './types'
+import { NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class BlockbookAdapter extends NetworkAdapterBase {
-  blockheight = async (): Promise<EthereumNetworkUpdate> => {
+export class BlockbookAdapter
+  extends NetworkAdapterBase
+  implements NetworkAdapter
+{
+  getBaseFeePerGas = null
+  multicastRpc = null
+  fetchTokenBalances = null
+  fetchTxs = null
+
+  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const funcs = this.servers.map(server => async () => {
         const result = await this.fetchGetBlockbook(server, '/api/v2')
@@ -52,11 +60,11 @@ export class BlockbookAdapter extends NetworkAdapterBase {
     return await promiseAny(promises)
   }
 
-  nonce = async (): Promise<EthereumNetworkUpdate> => {
+  fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     return await this.checkAddressBlockbook()
   }
 
-  tokenBal = async (): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (): Promise<EthereumNetworkUpdate> => {
     return await this.checkAddressBlockbook()
   }
 

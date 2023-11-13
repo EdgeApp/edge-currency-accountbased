@@ -10,10 +10,20 @@ import {
   asCheckTokenBalBlockchair,
   CheckTokenBalBlockchair
 } from '../ethereumTypes'
-import { NetworkAdapterBase } from './types'
+import { NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class BlockchairAdapter extends NetworkAdapterBase {
-  blockheight = async (): Promise<EthereumNetworkUpdate> => {
+export class BlockchairAdapter
+  extends NetworkAdapterBase
+  implements NetworkAdapter
+{
+  broadcast = null
+  fetchNonce = null
+  fetchTokenBalances = null
+  fetchTxs = null
+  getBaseFeePerGas = null
+  multicastRpc = null
+
+  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const jsonObj = await this.fetchGetBlockchair(
         `/${this.ethEngine.currencyInfo.pluginId}/stats`,
@@ -30,7 +40,7 @@ export class BlockchairAdapter extends NetworkAdapterBase {
     }
   }
 
-  tokenBal = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
     const path = `/${this.ethEngine.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`

@@ -4,10 +4,20 @@ import { asyncWaterfall, shuffleArray } from '../../common/utils'
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
-import { NetworkAdapterBase } from './types'
+import { NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class AmberdataAdapter extends NetworkAdapterBase {
-  blockheight = async (): Promise<EthereumNetworkUpdate> => {
+export class AmberdataAdapter
+  extends NetworkAdapterBase
+  implements NetworkAdapter
+{
+  broadcast = null
+  fetchTokenBalance = null
+  fetchTokenBalances = null
+  fetchTxs = null
+  getBaseFeePerGas = null
+  multicastRpc = null
+
+  fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
       const jsonObj = await this.fetchPostAmberdataRpc('eth_blockNumber', [])
       const blockHeight = parseInt(asRpcResultString(jsonObj).result, 16)
@@ -18,7 +28,7 @@ export class AmberdataAdapter extends NetworkAdapterBase {
     }
   }
 
-  nonce = async (): Promise<EthereumNetworkUpdate> => {
+  fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     try {
       const jsonObj = await this.fetchPostAmberdataRpc(

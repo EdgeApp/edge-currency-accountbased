@@ -13,22 +13,28 @@ export interface GetTxsParams {
 
 export type NetworkAdapterUpdateMethod = keyof Pick<
   NetworkAdapter,
-  'blockheight' | 'nonce' | 'tokenBal' | 'tokenBals' | 'txs'
+  | 'fetchBlockheight'
+  | 'fetchNonce'
+  | 'fetchTokenBalance'
+  | 'fetchTokenBalances'
+  | 'fetchTxs'
 >
 
-export interface NetworkAdapter {
-  blockheight?: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  broadcast?: (tx: EdgeTransaction) => Promise<BroadcastResults>
-  getBaseFeePerGas?: () => Promise<string | undefined>
-  multicastRpc?: (
+type PartiallyNull<T> = { [K in keyof T]: T[K] | null }
+
+export type NetworkAdapter = PartiallyNull<{
+  fetchBlockheight: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  broadcast: (tx: EdgeTransaction) => Promise<BroadcastResults>
+  getBaseFeePerGas: () => Promise<string | undefined>
+  multicastRpc: (
     method: string,
     params: any[]
   ) => Promise<{ result: any; server: string }>
-  nonce?: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  tokenBal?: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  tokenBals?: () => Promise<EthereumNetworkUpdate>
-  txs?: (...args: any[]) => Promise<EthereumNetworkUpdate>
-}
+  fetchNonce: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  fetchTokenBalance: (...args: any[]) => Promise<EthereumNetworkUpdate>
+  fetchTokenBalances: () => Promise<EthereumNetworkUpdate>
+  fetchTxs: (...args: any[]) => Promise<EthereumNetworkUpdate>
+}>
 
 export class NetworkAdapterBase {
   ethEngine: EthereumEngine

@@ -3,9 +3,20 @@ import parse from 'url-parse'
 
 import { promiseAny } from '../../common/utils'
 import { BroadcastResults } from '../EthereumNetwork'
-import { NetworkAdapterBase } from './types'
+import { NetworkAdapter, NetworkAdapterBase } from './types'
 
-export class BlockcypherAdapter extends NetworkAdapterBase {
+export class BlockcypherAdapter
+  extends NetworkAdapterBase
+  implements NetworkAdapter
+{
+  fetchNonce = null
+  fetchBlockheight = null
+  fetchTokenBalance = null
+  fetchTokenBalances = null
+  fetchTxs = null
+  getBaseFeePerGas = null
+  multicastRpc = null
+
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {

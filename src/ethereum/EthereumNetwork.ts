@@ -37,6 +37,8 @@ interface EthereumNeeds {
   tokenTxsLastChecked: { [currencyCode: string]: number }
 }
 
+type NotNull<T> = { [P in keyof T]: Exclude<T[P], null> }
+
 export interface EdgeTransactionsBlockHeightTuple {
   blockHeight: number
   edgeTransactions: EdgeTransaction[]
@@ -399,14 +401,14 @@ export class EthereumNetwork {
         this.ethNeeds.blockHeightLastChecked,
         BLOCKHEIGHT_POLL_MILLISECONDS,
         preUpdateBlockHeight,
-        async () => await this.check('blockheight')
+        async () => await this.check('fetchBlockheight')
       )
 
       await this.checkAndUpdate(
         this.ethNeeds.nonceLastChecked,
         NONCE_POLL_MILLISECONDS,
         preUpdateBlockHeight,
-        async () => await this.check('nonce')
+        async () => await this.check('fetchNonce')
       )
 
       const { currencyCode } = this.ethEngine.currencyInfo
@@ -425,7 +427,7 @@ export class EthereumNetwork {
           this.ethNeeds.tokenBalsLastChecked,
           BAL_POLL_MILLISECONDS,
           preUpdateBlockHeight,
-          async () => await this.check('tokenBals')
+          async () => await this.check('fetchTokenBalances')
         )
       }
 
@@ -437,7 +439,7 @@ export class EthereumNetwork {
             this.ethNeeds.tokenBalLastChecked[tk] ?? 0,
             BAL_POLL_MILLISECONDS,
             preUpdateBlockHeight,
-            async () => await this.check('tokenBal', tk)
+            async () => await this.check('fetchTokenBalance', tk)
           )
         }
 
@@ -446,7 +448,7 @@ export class EthereumNetwork {
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
           async () =>
-            await this.check('txs', {
+            await this.check('fetchTxs', {
               startBlock: this.getQueryHeightWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
               ),
@@ -572,7 +574,14 @@ export class EthereumNetwork {
       const adapter = new EvmScanAdapter(this.ethEngine, [])
       // We'll fake it if we don't have a server
       networkAdapters.push({
-        txs: adapter.txs
+        fetchTxs: adapter.fetchTxs,
+        fetchBlockheight: null,
+        broadcast: null,
+        getBaseFeePerGas: null,
+        multicastRpc: null,
+        fetchNonce: null,
+        fetchTokenBalance: null,
+        fetchTokenBalances: null
       })
     }
 
@@ -613,8 +622,8 @@ export class EthereumNetwork {
    */
   qualifyNetworkAdapters<Method extends keyof NetworkAdapter>(
     ...methods: Method[]
-  ): Array<Required<Pick<NetworkAdapter, Method>> & NetworkAdapter> {
-    return this.networkAdapters.filter((adapter): adapter is Required<
+  ): Array<NotNull<Pick<NetworkAdapter, Method>> & NetworkAdapter> {
+    return this.networkAdapters.filter((adapter): adapter is NotNull<
       Pick<NetworkAdapter, Method>
     > &
       NetworkAdapter => methods.every(method => adapter[method] != null))
