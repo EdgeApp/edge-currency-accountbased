@@ -1,7 +1,6 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 import parse from 'url-parse'
 
-import { promiseAny } from '../../common/utils'
 import { BroadcastResults } from '../EthereumNetwork'
 import { NetworkAdapter, NetworkAdapterBase } from './types'
 
@@ -25,7 +24,7 @@ export class BlockcypherAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.config.servers.map(async baseUrl => {
+    return await this.parallelServers(async baseUrl => {
       const urlSuffix = `v1/${this.ethEngine.currencyInfo.currencyCode.toLowerCase()}/main/txs/push`
       const hexTx = edgeTransaction.signedTx.replace('0x', '')
       const jsonObj = await this.fetchPostBlockcypher(
@@ -42,8 +41,6 @@ export class BlockcypherAdapter
         server: 'blockcypher'
       }
     })
-
-    return await promiseAny(promises)
   }
 
   // TODO: Clean return type

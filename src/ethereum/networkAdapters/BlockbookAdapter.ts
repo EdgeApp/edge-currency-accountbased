@@ -1,6 +1,5 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 
-import { asyncWaterfall, promiseAny, shuffleArray } from '../../common/utils'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import {
   asBlockbookAddress,
@@ -26,13 +25,11 @@ export class BlockbookAdapter
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
-      const funcs = this.config.servers.map(server => async () => {
-        const result = await this.fetchGetBlockbook(server, '/api/v2')
-        return { server, result }
-      })
-
-      const { result: jsonObj, server } = await asyncWaterfall(
-        shuffleArray(funcs)
+      const { result: jsonObj, server } = await this.serialServers(
+        async server => {
+          const result = await this.fetchGetBlockbook(server, '/api/v2')
+          return { server, result }
+        }
       )
 
       const blockHeight = asBlockbookBlockHeight(jsonObj).blockbook.bestHeight
@@ -46,7 +43,7 @@ export class BlockbookAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.config.servers.map(async baseUrl => {
+    return await this.parallelServers(async baseUrl => {
       const jsonObj = await this.fetchGetBlockbook(
         baseUrl,
         `/api/v2/sendtx/${edgeTransaction.signedTx}`
@@ -61,8 +58,6 @@ export class BlockbookAdapter
         server: 'blockbook'
       }
     })
-
-    return await promiseAny(promises)
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
@@ -82,12 +77,11 @@ export class BlockbookAdapter
     }
     const query = '/api/v2/address/' + address + `?&details=tokenBalances`
 
-    const funcs = this.config.servers.map(server => async () => {
-      const result = await this.fetchGetBlockbook(server, query)
-      return { server, result }
-    })
-    const { result: jsonObj, server } = await asyncWaterfall(
-      shuffleArray(funcs)
+    const { result: jsonObj, server } = await this.serialServers(
+      async server => {
+        const result = await this.fetchGetBlockbook(server, query)
+        return { server, result }
+      }
     )
 
     let addressInfo: BlockbookAddress

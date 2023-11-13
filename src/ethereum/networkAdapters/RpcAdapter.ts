@@ -5,15 +5,13 @@ import parse from 'url-parse'
 
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import {
-  asyncWaterfall,
   hexToDecimal,
   isHex,
   padHex,
-  promiseAny,
-  removeHexPrefix,
-  shuffleArray
+  removeHexPrefix
 } from '../../common/utils'
 import ETH_BAL_CHECKER_ABI from '../abi/ETH_BAL_CHECKER_ABI.json'
+import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asEtherscanGetBlockHeight } from '../ethereumSchema'
 import {
@@ -33,34 +31,46 @@ export class RpcAdapter
   extends NetworkAdapterBase<RpcAdapterConfig>
   implements NetworkAdapter
 {
+  constructor(ethEngine: EthereumEngine, config: RpcAdapterConfig) {
+    super(ethEngine, config)
+
+    // Add API keys to servers
+    this.config.servers = this.config.servers
+      .map((server): string | undefined => {
+        try {
+          return this.addRpcApiKey(server)
+        } catch (error) {}
+        return undefined
+      })
+      .filter((server): server is string => server != null)
+  }
+
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
-      const result = await this.fetchPostRPC(
-        'eth_blockNumber',
-        [],
-        chainId,
-        baseUrl
-      )
-      // Check if successful http response was actually an error
-      if (result.error != null) {
-        this.ethEngine.error(
-          `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
-            result.error
-          )}`
+    const { result: jsonObj, server } = await this.serialServers(
+      async baseUrl => {
+        const result = await this.fetchPostRPC(
+          'eth_blockNumber',
+          [],
+          chainId,
+          baseUrl
         )
-        throw new Error(
-          'Successful eth_blockNumber response object included an error'
-        )
+        // Check if successful http response was actually an error
+        if (result.error != null) {
+          this.ethEngine.error(
+            `Successful eth_blockNumber response object from ${baseUrl} included an error ${JSON.stringify(
+              result.error
+            )}`
+          )
+          throw new Error(
+            'Successful eth_blockNumber response object included an error'
+          )
+        }
+        return { server: parse(baseUrl).hostname, result }
       }
-      return { server: parse(baseUrl).hostname, result }
-    })
-
-    const { result: jsonObj, server } = await asyncWaterfall(
-      shuffleArray(funcs)
     )
 
     const clean = asEtherscanGetBlockHeight(jsonObj)
@@ -74,7 +84,7 @@ export class RpcAdapter
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const promises = this.config.servers.map(async baseUrl => {
+    return await this.parallelServers(async baseUrl => {
       const method = 'eth_sendRawTransaction'
       const params = [edgeTransaction.signedTx]
 
@@ -90,8 +100,6 @@ export class RpcAdapter
         server: parsedUrl.hostname
       }
     })
-
-    return await promiseAny(promises)
   }
 
   getBaseFeePerGas = async (): Promise<string | undefined> => {
@@ -99,8 +107,8 @@ export class RpcAdapter
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.config.servers.map(
-      baseUrl => async () =>
+    return await this.serialServers(
+      async baseUrl =>
         await this.fetchPostRPC(
           'eth_getBlockByNumber',
           ['latest', false],
@@ -119,8 +127,6 @@ export class RpcAdapter
           return baseFeePerGas
         })
     )
-
-    return await asyncWaterfall(funcs)
   }
 
   multicastRpc = async (
@@ -131,7 +137,7 @@ export class RpcAdapter
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
+    return await this.serialServers(async baseUrl => {
       const result = await this.fetchPostRPC(method, params, chainId, baseUrl)
       // Check if successful http response was actually an error
       if (result.error != null) {
@@ -146,8 +152,6 @@ export class RpcAdapter
       }
       return { server: parse(baseUrl).hostname, result }
     })
-
-    return await asyncWaterfall(funcs)
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
@@ -157,7 +161,7 @@ export class RpcAdapter
 
     const address = this.ethEngine.walletLocalData.publicKey
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
+    const { result, server } = await this.serialServers(async baseUrl => {
       const result = await this.fetchPostRPC(
         'eth_getTransactionCount',
         [address, 'latest'],
@@ -177,8 +181,6 @@ export class RpcAdapter
       }
       return { server: parse(baseUrl).hostname, result }
     })
-
-    const { result, server } = await asyncWaterfall(shuffleArray(funcs))
 
     const cleanRes = asRpcResultString(result)
     if (/0[xX][0-9a-fA-F]+/.test(cleanRes.result)) {
@@ -201,7 +203,7 @@ export class RpcAdapter
     const address = this.ethEngine.walletLocalData.publicKey
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
-        const funcs = this.config.servers.map(baseUrl => async () => {
+        response = await this.serialServers(async baseUrl => {
           const result = await this.fetchPostRPC(
             'eth_getBalance',
             [address, 'latest'],
@@ -229,9 +231,6 @@ export class RpcAdapter
           result.result = hexToDecimal(result.result)
           return { server: parse(baseUrl).hostname, result }
         })
-
-        // Randomize array
-        response = await asyncWaterfall(shuffleArray(funcs))
 
         jsonObj = response.result
         server = response.server
@@ -302,17 +301,9 @@ export class RpcAdapter
             if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
           }
 
-          const funcs: Array<() => Promise<any>> = []
-          this.config.servers.forEach(rpcServer => {
-            let rpcServerWithApiKey: string
-            try {
-              rpcServerWithApiKey = this.addRpcApiKey(rpcServer)
-            } catch (e) {
-              // addRpcApiKey can throw if there's a missing apikey. skip this rpcServer
-              return undefined
-            }
+          const balances = await this.serialServers(async baseUrl => {
             const ethProvider = new ethers.providers.JsonRpcProvider(
-              rpcServerWithApiKey,
+              baseUrl,
               chainParams.chainId
             )
 
@@ -322,24 +313,19 @@ export class RpcAdapter
               ethProvider
             )
 
-            funcs.push(async () => {
-              const contractCallRes = await contract.balances(
-                [walletLocalData.publicKey],
-                balanceQueryAddrs
-              )
-              if (contractCallRes.length !== balanceQueryAddrs.length) {
-                throw new Error('checkEthBalChecker balances length mismatch')
-              }
-              return contractCallRes
-            })
-          })
-
-          // Randomize provider priority to distribute RPC provider load
-          const balances = await asyncWaterfall(shuffleArray(funcs)).catch(
-            e => {
-              throw new Error(`All rpc servers failed eth balance checks: ${e}`)
+            const contractCallRes = await contract.balances(
+              [walletLocalData.publicKey],
+              balanceQueryAddrs
+            )
+            if (contractCallRes.length !== balanceQueryAddrs.length) {
+              throw new Error('checkEthBalChecker balances length mismatch')
             }
-          )
+            return contractCallRes
+          }).catch((e: any) => {
+            throw new Error(
+              `All rpc servers failed eth balance checks: ${String(e)}`
+            )
+          })
 
           // Parse data from smart contract call
           for (let i = 0; i < balances.length; i++) {

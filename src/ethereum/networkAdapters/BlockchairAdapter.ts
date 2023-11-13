@@ -1,8 +1,4 @@
-import {
-  asyncWaterfall,
-  safeErrorMessage,
-  shuffleArray
-} from '../../common/utils'
+import { safeErrorMessage } from '../../common/utils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {
   asBlockChairAddress,
@@ -91,7 +87,7 @@ export class BlockchairAdapter
   ): Promise<any> {
     const { blockchairApiKey } = this.ethEngine.initOptions
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
+    return await this.serialServers(async baseUrl => {
       const keyParam =
         includeKey && blockchairApiKey != null ? `&key=${blockchairApiKey}` : ''
       const url = `${baseUrl}${path}`
@@ -99,7 +95,5 @@ export class BlockchairAdapter
       if (!response.ok) this.throwError(response, 'fetchGetBlockchair', url)
       return await response.json()
     })
-
-    return await asyncWaterfall(shuffleArray(funcs))
   }
 }

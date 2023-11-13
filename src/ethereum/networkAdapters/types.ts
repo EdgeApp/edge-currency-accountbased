@@ -1,7 +1,13 @@
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
-import { cleanTxLogs, safeErrorMessage } from '../../common/utils'
+import {
+  asyncWaterfall,
+  cleanTxLogs,
+  promiseAny,
+  safeErrorMessage,
+  shuffleArray
+} from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'
@@ -50,7 +56,7 @@ export type NetworkAdapter = PartiallyNull<{
   fetchTxs: (...args: any[]) => Promise<EthereumNetworkUpdate>
 }>
 
-export class NetworkAdapterBase<Config> {
+export class NetworkAdapterBase<Config extends { servers?: string[] }> {
   config: Config
   ethEngine: EthereumEngine
 
@@ -88,6 +94,24 @@ export class NetworkAdapterBase<Config> {
     safeErrorMessage(e).includes('rateLimited')
       ? this.ethEngine.log(funcName, e)
       : this.ethEngine.error(funcName, e)
+  }
+
+  protected async serialServers<T>(
+    fn: (server: string) => Promise<T>
+  ): Promise<T> {
+    const funcs = (this.config.servers ?? []).map(
+      server => async () => await fn(server)
+    )
+    return await asyncWaterfall(shuffleArray(funcs))
+  }
+
+  protected async parallelServers<T>(
+    fn: (server: string) => Promise<T>
+  ): Promise<T> {
+    const promises = (this.config.servers ?? []).map(
+      async server => await fn(server)
+    )
+    return await promiseAny(promises)
   }
 
   // TODO: Convert to error types

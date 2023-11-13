@@ -2,14 +2,7 @@ import { add, mul, sub } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { asIntegerString } from '../../common/types'
-import {
-  asyncWaterfall,
-  decimalToHex,
-  pickRandom,
-  promiseAny,
-  safeErrorMessage,
-  shuffleArray
-} from '../../common/utils'
+import { decimalToHex, pickRandom, safeErrorMessage } from '../../common/utils'
 import {
   BroadcastResults,
   EdgeTransactionsBlockHeightTuple,
@@ -60,27 +53,28 @@ export class EvmScanAdapter
   fetchTokenBalances = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
-    const funcs = this.config.servers.map(server => async () => {
-      if (!server.includes('etherscan') && !server.includes('blockscout')) {
-        throw new Error(`Unsupported command eth_blockNumber in ${server}`)
-      }
-      let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
-      // special case for blockscout
-      if (server.includes('blockscout')) {
-        blockNumberUrlSyntax = `?module=block&action=eth_block_number`
-      }
+    const { result: jsonObj, server } = await this.serialServers(
+      async server => {
+        if (!server.includes('etherscan') && !server.includes('blockscout')) {
+          throw new Error(`Unsupported command eth_blockNumber in ${server}`)
+        }
+        let blockNumberUrlSyntax = `?module=proxy&action=eth_blockNumber`
+        // special case for blockscout
+        if (server.includes('blockscout')) {
+          blockNumberUrlSyntax = `?module=block&action=eth_block_number`
+        }
 
-      const result = await this.fetchGetEtherscan(server, blockNumberUrlSyntax)
-      if (typeof result.result !== 'string') {
-        const msg = `Invalid return value eth_blockNumber in ${server}`
-        this.ethEngine.error(msg)
-        throw new Error(msg)
+        const result = await this.fetchGetEtherscan(
+          server,
+          blockNumberUrlSyntax
+        )
+        if (typeof result.result !== 'string') {
+          const msg = `Invalid return value eth_blockNumber in ${server}`
+          this.ethEngine.error(msg)
+          throw new Error(msg)
+        }
+        return { server, result }
       }
-      return { server, result }
-    })
-
-    const { result: jsonObj, server } = await asyncWaterfall(
-      shuffleArray(funcs)
     )
 
     const clean = asEtherscanGetBlockHeight(jsonObj)
@@ -90,7 +84,7 @@ export class EvmScanAdapter
   broadcast = async (
     edgeTransaction: EdgeTransaction
   ): Promise<BroadcastResults> => {
-    const promises = this.config.servers.map(async baseUrl => {
+    return await this.parallelServers(async baseUrl => {
       // RSK also uses the "eth_sendRaw" syntax
       const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
       const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
@@ -103,34 +97,30 @@ export class EvmScanAdapter
         server: 'etherscan'
       }
     })
-
-    return await promiseAny(promises)
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
 
     const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
-    const funcs = this.config.servers.map(server => async () => {
-      // if falsy URL then error thrown
-      if (!server.includes('etherscan') && !server.includes('blockscout')) {
-        throw new Error(
-          `Unsupported command eth_getTransactionCount in ${server}`
-        )
+    const { result: jsonObj, server } = await this.serialServers(
+      async server => {
+        // if falsy URL then error thrown
+        if (!server.includes('etherscan') && !server.includes('blockscout')) {
+          throw new Error(
+            `Unsupported command eth_getTransactionCount in ${server}`
+          )
+        }
+        const result = await this.fetchGetEtherscan(server, url)
+        if (typeof result.result !== 'string') {
+          const msg = `Invalid return value eth_getTransactionCount in ${server}`
+          this.ethEngine.error(msg)
+          throw new Error(msg)
+        }
+        return { server, result }
       }
-      const result = await this.fetchGetEtherscan(server, url)
-      if (typeof result.result !== 'string') {
-        const msg = `Invalid return value eth_getTransactionCount in ${server}`
-        this.ethEngine.error(msg)
-        throw new Error(msg)
-      }
-      return { server, result }
-    })
-
-    const { result: jsonObj, server } = await asyncWaterfall(
-      // Randomize array
-      shuffleArray(funcs)
     )
+
     const clean = asEtherscanGetAccountNonce(jsonObj)
     return { newNonce: clean.result, server }
   }
@@ -144,7 +134,7 @@ export class EvmScanAdapter
     try {
       if (tk === this.ethEngine.currencyInfo.currencyCode) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
-        const funcs = this.config.servers.map(server => async () => {
+        response = await this.serialServers(async server => {
           const result = await this.fetchGetEtherscan(server, url)
           if (typeof result.result !== 'string' || result.result === '') {
             const msg = `Invalid return value eth_getBalance in ${server}`
@@ -154,7 +144,6 @@ export class EvmScanAdapter
           asIntegerString(result.result)
           return { server, result }
         })
-        response = await asyncWaterfall(shuffleArray(funcs))
 
         jsonObj = response.result
         server = response.server
@@ -167,7 +156,7 @@ export class EvmScanAdapter
           const contractAddress = tokenInfo.contractAddress
 
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
-          const funcs = this.config.servers.map(server => async () => {
+          const response = await this.serialServers(async server => {
             const result = await this.fetchGetEtherscan(server, url)
             if (typeof result.result !== 'string' || result.result === '') {
               const msg = `Invalid return value getTokenBalance in ${server}`
@@ -176,7 +165,6 @@ export class EvmScanAdapter
             }
             return { server, result }
           })
-          const response = await asyncWaterfall(shuffleArray(funcs))
 
           jsonObj = response.result
           server = response.server
@@ -301,26 +289,25 @@ export class EvmScanAdapter
       }
 
       const url = `${startUrl}&address=${address}&startblock=${startBlock}&endblock=999999999&sort=asc&page=${page}&offset=${offset}`
-      const funcs = this.config.servers.map(server => async () => {
-        const result = await this.fetchGetEtherscan(server, url)
-        if (
-          typeof result.result !== 'object' ||
-          typeof result.result.length !== 'number'
-        ) {
-          const msg = `Invalid return value getTransactions in ${server}`
-          if (result.result !== 'Max rate limit reached')
-            this.ethEngine.error(msg)
-          throw new Error(msg)
-        }
-        return { server, result }
-      })
 
       const response =
-        funcs.length > 0
-          ? await asyncWaterfall(shuffleArray(funcs))
-          : // HACK: If a currency doesn't have an etherscan API compatible
+        this.config.servers.length === 0
+          ? // HACK: If a currency doesn't have an etherscan API compatible
             // server we need to return an empty array
-            { result: { result: [] } }
+            { result: { result: [] }, server: undefined }
+          : await this.serialServers(async server => {
+              const result = await this.fetchGetEtherscan(server, url)
+              if (
+                typeof result.result !== 'object' ||
+                typeof result.result.length !== 'number'
+              ) {
+                const msg = `Invalid return value getTransactions in ${server}`
+                if (result.result !== 'Max rate limit reached')
+                  this.ethEngine.error(msg)
+                throw new Error(msg)
+              }
+              return { server, result }
+            })
 
       server = response.server
       const transactions = response.result.result

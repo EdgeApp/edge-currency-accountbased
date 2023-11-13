@@ -1,6 +1,5 @@
 import parse from 'url-parse'
 
-import { asyncWaterfall, shuffleArray } from '../../common/utils'
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
@@ -55,7 +54,7 @@ export class AmberdataAdapter
   ): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
+    return await this.serialServers(async baseUrl => {
       const url = `${this.config.servers[0]}`
       const body = {
         jsonrpc: '2.0',
@@ -81,15 +80,13 @@ export class AmberdataAdapter
       const jsonObj = await response.json()
       return jsonObj
     })
-
-    return await asyncWaterfall(shuffleArray(funcs))
   }
 
   // TODO: Clean return type
   private async fetchGetAmberdataApi(path: string): Promise<any> {
     const { amberdataApiKey = '' } = this.ethEngine.initOptions
 
-    const funcs = this.config.servers.map(baseUrl => async () => {
+    return await this.serialServers(async baseUrl => {
       const url = `${base58ToHexAddress}${path}`
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
@@ -103,7 +100,5 @@ export class AmberdataAdapter
       }
       return await response.json()
     })
-
-    return await asyncWaterfall(shuffleArray(funcs))
   }
 }
