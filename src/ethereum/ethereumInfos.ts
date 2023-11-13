@@ -6,6 +6,8 @@ import { ethereumclassic } from './info/ethereumclassicInfo'
 import { ethereum } from './info/ethereumInfo'
 import { ethereumpow } from './info/ethereumpowInfo'
 import { fantom } from './info/fantomInfo'
+import { filecoinfevmcalibration } from './info/filecoinFevmCalibrationInfo'
+import { filecoinfevm } from './info/filecoinFevmInfo'
 import { goerli } from './info/goerliInfo'
 import { kovan } from './info/kovanInfo'
 import { optimism } from './info/optimismInfo'
@@ -25,6 +27,8 @@ export const ethereumPlugins = {
   ethereumclassic,
   ethereumpow,
   fantom,
+  filecoinfevm,
+  filecoinfevmcalibration,
   goerli,
   kovan,
   optimism,
