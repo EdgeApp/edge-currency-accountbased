@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: EVM balance sync failure if missing API key for one node type
+
 ## 2.11.1 (2023-11-10)
 
 - fixed: Use transaction type 0 (legacy transactions) currencies which do no support EIP-1559
