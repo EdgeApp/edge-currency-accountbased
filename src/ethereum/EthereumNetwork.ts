@@ -247,36 +247,13 @@ export class EthereumNetwork {
   }
 
   multicastRpc = async (method: RpcMethod, params: any[]): Promise<any> => {
-    let out: { result: any; server: string } = {
-      result: '',
-      server: 'no server'
-    }
-    let funcs
+    const funcs = this.qualifyNetworkAdapters('multicastRpc').map(
+      adapter => async () => {
+        return await adapter.multicastRpc(method, params)
+      }
+    )
 
-    switch (method) {
-      case 'eth_estimateGas':
-      case 'eth_getTransactionReceipt':
-      case 'eth_getCode':
-        funcs = this.qualifyNetworkAdapters('multicastRpc').map(
-          adapter => async () => {
-            return await adapter.multicastRpc(method, params)
-          }
-        )
-
-        out = await asyncWaterfall(funcs)
-        break
-
-      case 'eth_call':
-        funcs = this.qualifyNetworkAdapters('multicastRpc').map(
-          adapter => async () => {
-            return await adapter.multicastRpc('eth_call', params)
-          }
-        )
-
-        out = await asyncWaterfall(funcs)
-        break
-    }
-
+    const out: { result: any; server: string } = await asyncWaterfall(funcs)
     return out
   }
 
