@@ -246,7 +246,7 @@ export class RpcAdapter
             to: tokenInfo.contractAddress
           }
 
-          const response = await this.ethEngine.ethNetwork.multicastServers(
+          const response = await this.ethEngine.ethNetwork.multicastRpc(
             'eth_call',
             params
           )

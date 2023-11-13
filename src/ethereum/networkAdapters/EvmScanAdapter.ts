@@ -372,7 +372,7 @@ export class EvmScanAdapter
 
     let l1RollupFee = '0'
     if (isSpend && this.ethEngine.networkInfo.l1RollupParams != null) {
-      const response = await this.ethEngine.ethNetwork.multicastServers(
+      const response = await this.ethEngine.ethNetwork.multicastRpc(
         'eth_getTransactionReceipt',
         [txid]
       )

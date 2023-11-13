@@ -52,7 +52,7 @@ export interface EthereumNetworkUpdate {
   server?: string
 }
 
-type EthFunction =
+type RpcMethod =
   | 'eth_call'
   | 'eth_getTransactionReceipt'
   | 'eth_estimateGas'
@@ -241,28 +241,25 @@ export class EthereumNetwork {
 
     const broadcastResults = await promiseAny(promises)
     this.ethEngine.log(
-      `${this.ethEngine.currencyInfo.currencyCode} multicastServers broadcastTx ${broadcastResults.server} won`
+      `${this.ethEngine.currencyInfo.currencyCode} broadcastTx ${broadcastResults.server} won`
     )
     return broadcastResults
   }
 
-  multicastServers = async (
-    func: EthFunction,
-    ...params: any
-  ): Promise<any> => {
+  multicastRpc = async (method: RpcMethod, ...params: any): Promise<any> => {
     let out: { result: any; server: string } = {
       result: '',
       server: 'no server'
     }
     let funcs
 
-    switch (func) {
+    switch (method) {
       case 'eth_estimateGas':
       case 'eth_getTransactionReceipt':
       case 'eth_getCode':
         funcs = this.qualifyNetworkAdapters('multicastRpc').map(
           adapter => async () => {
-            return await adapter.multicastRpc(func, params[0])
+            return await adapter.multicastRpc(method, params[0])
           }
         )
 
