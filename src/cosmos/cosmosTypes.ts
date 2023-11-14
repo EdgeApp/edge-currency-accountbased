@@ -1,11 +1,12 @@
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import { Coin } from '@cosmjs/stargate'
+import { Coin, HttpEndpoint } from '@cosmjs/stargate'
 import {
   asArray,
   asCodec,
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
   asTuple,
   asValue,
@@ -36,7 +37,7 @@ export interface CosmosNetworkInfo {
   defaultTransactionFee: Coin
   pluginMnemonicKeyName: string
   shapeshiftApiName: string
-  rpcNode: string
+  rpcNode: HttpEndpoint
 }
 
 const asShapeshiftTx = asObject({
@@ -114,3 +115,11 @@ export const asCosmosPrivateKeys = (
     }
   )
 }
+
+export interface CosmosInitOptions {
+  ninerealmsClientId?: string
+}
+
+export const asCosmosInitOptions = asObject({
+  ninerealmsClientId: asOptional(asString)
+})

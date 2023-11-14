@@ -27,6 +27,7 @@ import {
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
+import { rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -37,13 +38,15 @@ export class CosmosTools implements EdgeCurrencyTools {
   clientCount: number
   methods: CosmosMethods
   registry: Registry
+  initOptions: JsonObject
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
+    this.initOptions = initOptions
     this.clientCount = 0
     const { methods, registry } = upgradeRegistryAndCreateMethods(
       currencyInfo.pluginId
@@ -179,7 +182,9 @@ export class CosmosTools implements EdgeCurrencyTools {
 
   async connectClient(): Promise<void> {
     if (this.client == null) {
-      this.client = await StargateClient.connect(this.networkInfo.rpcNode)
+      this.client = await StargateClient.connect(
+        rpcWithApiKey(this.networkInfo, this.initOptions)
+      )
     }
     ++this.clientCount
   }
