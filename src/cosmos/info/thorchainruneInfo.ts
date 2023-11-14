@@ -15,7 +15,10 @@ const networkInfo: CosmosNetworkInfo = {
   },
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   shapeshiftApiName: 'thorchain',
-  rpcNode: 'https://rpc.ninerealms.com'
+  rpcNode: {
+    url: 'https://rpc-v1.ninerealms.com',
+    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
