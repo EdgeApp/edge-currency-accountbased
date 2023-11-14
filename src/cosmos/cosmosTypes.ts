@@ -1,14 +1,13 @@
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { Coin, HttpEndpoint } from '@cosmjs/stargate'
 import {
-  asArray,
   asCodec,
   asMaybe,
-  asNumber,
   asObject,
   asOptional,
   asString,
   asTuple,
+  asValue,
   Cleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
@@ -47,49 +46,14 @@ export interface CosmosNetworkInfo {
   chainId: string
   defaultTransactionFee: Coin
   pluginMnemonicKeyName: string
-  shapeshiftApiName: string
   rpcNode: HttpEndpoint
 }
 
-const asShapeshiftTx = asObject({
-  txid: asString,
-  // blockHash: string
-  blockHeight: asNumber,
-  timestamp: asNumber,
-  // confirmations: number
-  fee: asObject({
-    amount: asString,
-    denom: asString
-  }),
-  // gasUsed: string
-  // gasWanted: string
-  // index: number
-  memo: asMaybe(asString),
-  // value: string
-  messages: asTuple(
-    asObject({
-      // index: string
-      // origin: string
-      from: asString,
-      to: asString,
-      // type: asValue('send'),
-      value: asObject({
-        amount: asString,
-        denom: asString
-      })
-    })
-  )
-})
-export type ShapeshiftTx = ReturnType<typeof asShapeshiftTx>
-
-export const asShapeshiftResponse = asObject({
-  cursor: asMaybe(asString),
-  txs: asArray(asMaybe(asShapeshiftTx))
-})
+export const txQueryStrings = [`transfer.sender`, `transfer.recipient`] as const
 
 export const asCosmosWalletOtherData = asObject({
-  newestTxid: asMaybe(asString),
-  newestTxidIndex: asMaybe(asNumber)
+  'transfer.sender': asMaybe(asString),
+  'transfer.recipient': asMaybe(asString)
 })
 export type CosmosWalletOtherData = ReturnType<typeof asCosmosWalletOtherData>
 
@@ -137,4 +101,28 @@ export const asCosmosInitOptions = asObject({
 
 export interface CosmosOtherMethods {
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
+}
+
+export const asTransfer = asObject({
+  type: asValue('transfer'),
+  attributes: asTuple(
+    asObject({
+      key: asValue('recipient'),
+      value: asString
+    }),
+    asObject({
+      key: asValue('sender'),
+      value: asString
+    }),
+    asObject({
+      key: asValue('amount'),
+      value: asString /* '100000000rune' */
+    })
+  )
+})
+
+export interface TransferEvent {
+  sender: string
+  recipient: string
+  coin: Coin
 }
