@@ -1,5 +1,6 @@
+import { addCoins } from '@cosmjs/amino'
 import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
-import { HttpEndpoint, StargateClient } from '@cosmjs/stargate'
+import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
   RpcClient,
   Tendermint34Client,
@@ -89,4 +90,15 @@ export const assetFromString = (assetString: string): Asset => {
   const ticker = symbol?.split('-')?.[0]
 
   return { chain, symbol, ticker, synth }
+}
+
+export const safeAddCoins = (coins: Coin[]): Coin => {
+  return coins.reduce((prev, curr) => {
+    try {
+      return addCoins(prev, curr)
+    } catch (e) {
+      // throws for mixed denoms
+    }
+    return prev
+  })
 }
