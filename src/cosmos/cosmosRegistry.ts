@@ -12,11 +12,13 @@ export const upgradeRegistryAndCreateMethods = (
 
   switch (pluginId) {
     case 'thorchainrune': {
-      registry.register('/types.MsgSend', MsgSend)
+      const transferTypeUrl = '/types.MsgSend'
+      registry.register(transferTypeUrl, MsgSend)
+
       const transfer = (opts: TransferOpts): EncodeObject => {
         const { amount, fromAddress, toAddress } = opts
         const msg = {
-          typeUrl: '/types.MsgSend',
+          typeUrl: transferTypeUrl,
           value: MsgSend.encode(
             MsgSend.fromPartial({
               fromAddress: fromBech32(fromAddress).data,
