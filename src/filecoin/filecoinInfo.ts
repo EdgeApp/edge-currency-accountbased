@@ -20,7 +20,6 @@ export const currencyInfo: EdgeCurrencyInfo = {
   displayName: 'Filecoin',
   pluginId: 'filecoin',
   requiredConfirmations: 900,
-  unsafeBroadcastTx: true,
   walletType: 'wallet:filecoin',
 
   // Explorers:

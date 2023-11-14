@@ -141,7 +141,7 @@ export const snoozeReject: Function = async (ms: number) =>
 export const snooze: Function = async (ms: number) =>
   await new Promise((resolve: Function) => setTimeout(resolve, ms))
 
-export async function promiseAny(promises: Array<Promise<any>>): Promise<any> {
+export async function promiseAny<T>(promises: Array<Promise<T>>): Promise<T> {
   return await new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {

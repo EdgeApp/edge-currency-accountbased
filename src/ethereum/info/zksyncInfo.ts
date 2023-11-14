@@ -41,10 +41,12 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://mainnet.era.zksync.io'],
-  evmScanApiServers: [],
-  blockcypherApiServers: [],
-  blockbookServers: [],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://mainnet.era.zksync.io']
+    }
+  ],
   uriNetworks: ['zksync'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -54,11 +56,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'zksyncMnemonic',
   pluginRegularKeyName: 'zksyncKey',

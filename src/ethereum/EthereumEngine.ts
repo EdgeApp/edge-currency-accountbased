@@ -366,7 +366,7 @@ export class EthereumEngine extends CurrencyEngine<
               // Get the gasLimit from currency info or from RPC node:
               if (this.networkFees.default.gasLimit?.tokenTransaction == null) {
                 this.ethNetwork
-                  .multicastServers('eth_estimateGas', txParam)
+                  .multicastRpc('eth_estimateGas', [txParam])
                   .then((estimateGasResult: any) => {
                     const gasLimit = add(
                       parseInt(estimateGasResult.result.result, 16).toString(),
@@ -432,10 +432,10 @@ export class EthereumEngine extends CurrencyEngine<
     let gasLimitReturn = miningFees.gasLimit
     try {
       // Determine if recipient is a normal or contract address
-      const getCodeResult = await this.ethNetwork.multicastServers(
-        'eth_getCode',
-        [estimateGasParams[0].to, 'latest']
-      )
+      const getCodeResult = await this.ethNetwork.multicastRpc('eth_getCode', [
+        estimateGasParams[0].to,
+        'latest'
+      ])
       // result === '0x' means we are sending to a plain address (no contract)
       const sendingToContract = getCodeResult.result.result !== '0x'
 
@@ -449,9 +449,9 @@ export class EthereumEngine extends CurrencyEngine<
             // Easy case of sending plain mainnet token with no memo/data
             gasLimitReturn = defaultGasLimit.regularTransaction
           } else {
-            const estimateGasResult = await this.ethNetwork.multicastServers(
+            const estimateGasResult = await this.ethNetwork.multicastRpc(
               'eth_estimateGas',
-              estimateGasParams
+              [estimateGasParams]
             )
             gasLimitReturn = add(
               parseInt(estimateGasResult.result.result, 16).toString(),
@@ -563,10 +563,10 @@ export class EthereumEngine extends CurrencyEngine<
         to: this.l1RollupParams.oracleContractAddress,
         data: this.l1RollupParams.gasPricel1BaseFeeMethod
       }
-      const response = await this.ethNetwork.multicastServers(
-        'eth_call',
-        params
-      )
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latests'
+      ])
       const result = asRpcResultString(response.result)
 
       this.l1RollupParams = {
@@ -589,10 +589,10 @@ export class EthereumEngine extends CurrencyEngine<
         to: this.l1RollupParams.oracleContractAddress,
         data: this.l1RollupParams.dynamicOverheadMethod
       }
-      const response = await this.ethNetwork.multicastServers(
-        'eth_call',
-        params
-      )
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latests'
+      ])
 
       const result = asRpcResultString(response.result)
       this.l1RollupParams = {
@@ -1224,7 +1224,7 @@ export class EthereumEngine extends CurrencyEngine<
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    await this.ethNetwork.multicastServers('broadcastTx', edgeTransaction)
+    await this.ethNetwork.broadcastTx(edgeTransaction)
 
     // Success
     this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)

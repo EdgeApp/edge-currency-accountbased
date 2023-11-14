@@ -272,14 +272,20 @@ const defaultNetworkFees: EthereumFees = {
 
 // Exported for fee provider test
 export const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
-    'https://rpc.ankr.com/fantom',
-    'https://rpc.ftm.tools'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
+        'https://rpc.ankr.com/fantom',
+        'https://rpc.ftm.tools'
+      ]
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api.ftmscan.com']
+    }
   ],
-  evmScanApiServers: ['https://api.ftmscan.com'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['fantom'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -291,11 +297,7 @@ export const networkInfo: EthereumNetworkInfo = {
   supportsEIP1559: true,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'fantomMnemonic',
   pluginRegularKeyName: 'fantomKey',

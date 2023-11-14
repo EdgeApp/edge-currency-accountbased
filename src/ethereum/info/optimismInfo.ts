@@ -149,10 +149,16 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://mainnet.optimism.io', 'https://rpc.ankr.com/optimism'],
-  evmScanApiServers: ['https://api-optimistic.etherscan.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://mainnet.optimism.io', 'https://rpc.ankr.com/optimism']
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api-optimistic.etherscan.io']
+    }
+  ],
   uriNetworks: ['optimism'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -172,11 +178,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'optimismMnemonic',
   pluginRegularKeyName: 'optimismKey',

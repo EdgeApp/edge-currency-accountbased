@@ -47,15 +47,19 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://rpc.ankr.com/bsc',
-    'https://bsc-dataseed.binance.org',
-    'https://bsc-dataseed1.defibit.io',
-    'https://bsc-dataseed1.ninicoin.io'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://rpc.ankr.com/bsc',
+        'https://bsc-dataseed.binance.org',
+        'https://bsc-dataseed1.defibit.io',
+        'https://bsc-dataseed1.ninicoin.io'
+      ],
+      ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
+    },
+    { type: 'evmscan', servers: ['https://api.bscscan.com'] }
   ],
-  evmScanApiServers: ['https://api.bscscan.com'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['smartchain'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -65,17 +69,12 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'binancesmartchainMnemonic',
   pluginRegularKeyName: 'binancesmartchainKey',
   ethGasStationUrl: null,
-  defaultNetworkFees,
-  ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
+  defaultNetworkFees
 }
 
 const defaultSettings: any = {

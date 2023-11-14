@@ -160,17 +160,24 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://polygon-rpc.com/',
-    'https://rpc.polycat.finance',
-    'https://rpc-mainnet.maticvigil.com',
-    'https://matic-mainnet.chainstacklabs.com',
-    'https://rpc.ankr.com/polygon',
-    'https://rpc-mainnet.matic.quiknode.pro/{{quiknodeApiKey}}/'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://polygon-rpc.com/',
+        'https://rpc.polycat.finance',
+        'https://rpc-mainnet.maticvigil.com',
+        'https://matic-mainnet.chainstacklabs.com',
+        'https://rpc.ankr.com/polygon',
+        'https://rpc-mainnet.matic.quiknode.pro/{{quiknodeApiKey}}/'
+      ],
+      ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api.polygonscan.com']
+    }
   ],
-  evmScanApiServers: ['https://api.polygonscan.com'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['polygon'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -181,17 +188,12 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null, // object or null
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   ethGasStationUrl: 'https://gasstation-mainnet.matic.network/',
-  defaultNetworkFees,
-  ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
+  defaultNetworkFees
 }
 
 const defaultSettings: any = {

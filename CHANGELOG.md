@@ -5,6 +5,10 @@
 ## 2.11.2 (2023-11-13)
 
 - fixed: EVM balance sync failure if missing API key for one node type
+- added: Filecoin FEVM
+- added: Filecoin FEVM Testnet (Calibration)
+- added: Filecoin wallets can send to 0x addresses for FEVM interop
+- fixed: Removed unsafeBroadcastTx configuration for Filecoin
 
 ## 2.11.1 (2023-11-10)
 

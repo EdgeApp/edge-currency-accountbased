@@ -19,6 +19,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import EthereumUtil from 'ethereumjs-util'
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -46,13 +47,39 @@ export class FilecoinTools implements EdgeCurrencyTools {
     this.derivationPath = `m/44'/${this.networkInfo.hdPathCoinType}'/0'/0/0`
   }
 
-  async isValidAddress(address: string): Promise<boolean> {
+  isValidAddress(addressString: string): boolean {
     try {
-      Address.fromString(address)
+      const address = this.normalizeAddress(addressString)
+
+      if (Address.isFilEthAddress(address)) {
+        // Verify checksum if it's present in the address
+        if (
+          /[A-F]/.test(addressString) &&
+          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+          !EthereumUtil.isValidChecksumAddress(addressString)
+        ) {
+          return false
+        }
+
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+        if (!EthereumUtil.isValidAddress(addressString.toLowerCase() || '')) {
+          return false
+        }
+      }
       return true
     } catch (error) {
       return false
     }
+  }
+
+  normalizeAddress(address: string): Address {
+    try {
+      return Address.fromEthAddress(
+        NetworkPrefix[this.networkInfo.networkPrefix],
+        address
+      )
+    } catch (error) {}
+    return Address.fromString(address)
   }
 
   async importPrivateKey(
@@ -147,7 +174,7 @@ export class FilecoinTools implements EdgeCurrencyTools {
       customTokens
     )
 
-    if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
+    if (publicAddress == null || !this.isValidAddress(publicAddress)) {
       throw new Error('InvalidPublicAddressError')
     }
 

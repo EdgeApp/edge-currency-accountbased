@@ -88,11 +88,13 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['http://localhost:8545'],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['http://localhost:8545']
+    }
+  ],
 
-  evmScanApiServers: [],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -109,15 +111,11 @@ const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ethDevMnemonic',
   pluginRegularKeyName: 'ethDevKey',

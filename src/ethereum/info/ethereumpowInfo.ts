@@ -44,13 +44,19 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://mainnet.ethereumpow.org'],
-
-  evmScanApiServers: [
-    // TODO:
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://mainnet.ethereumpow.org']
+    },
+    {
+      type: 'evmscan',
+      servers: [
+        // TODO:
+      ]
+    }
   ],
-  blockcypherApiServers: [],
-  blockbookServers: [],
+
   uriNetworks: ['ethereumpow'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -61,11 +67,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: null,
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ethereumpowMnemonic',
   pluginRegularKeyName: 'ethereumpowKey',

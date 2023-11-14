@@ -226,7 +226,7 @@ export class FilecoinEngine extends CurrencyEngine<
       throw new Error('Missing publicAddress in EdgeSpendInfo')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    const toAddress = Address.fromString(publicAddress)
+    const toAddress = this.tools.normalizeAddress(publicAddress)
 
     // Great new blank transaction:
     const transaction = Transaction.getNew(

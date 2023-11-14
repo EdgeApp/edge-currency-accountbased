@@ -39,15 +39,17 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: ['https://public-node.rsk.co'],
-  evmScanApiServers: ['https://blockscout.com/rsk/mainnet'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
-  blockchairApiServers: [],
-  alethioApiServers: [],
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: ['https://public-node.rsk.co']
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://blockscout.com/rsk/mainnet']
+    }
+  ],
   alethioCurrencies: null,
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '', // Only used for ETH right now
   uriNetworks: ['rsk', 'rbtc'],
   ercTokenStandard: 'RRC20',

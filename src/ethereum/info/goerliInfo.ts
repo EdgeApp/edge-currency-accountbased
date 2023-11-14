@@ -63,14 +63,20 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
-  rpcServers: [
-    'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
-    'https://goerli.infura.io/v3/{{infuraProjectId}}'
+  networkAdapterConfigs: [
+    {
+      type: 'rpc',
+      servers: [
+        'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://goerli.infura.io/v3/{{infuraProjectId}}'
+      ]
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://api-goerli.etherscan.io']
+    }
   ],
 
-  evmScanApiServers: ['https://api-goerli.etherscan.io'],
-  blockcypherApiServers: [],
-  blockbookServers: [],
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
@@ -87,15 +93,11 @@ const networkInfo: EthereumNetworkInfo = {
     IND: true,
     USDT: true
   },
-  blockchairApiServers: [],
-  alethioApiServers: [],
   alethioCurrencies: {
     // object or null
     native: 'ether',
     token: 'token'
   },
-  amberdataRpcServers: [],
-  amberdataApiServers: [],
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'goerliMnemonic',
   pluginRegularKeyName: 'goerliKey',
