@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.12.0 (2023-11-14)
+
 ## 2.11.2 (2023-11-13)
 
 - fixed: EVM balance sync failure if missing API key for one node type
