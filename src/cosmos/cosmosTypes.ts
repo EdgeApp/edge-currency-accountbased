@@ -25,7 +25,7 @@ export interface DepositOpts {
 }
 
 export interface TransferOpts {
-  amount: string
+  amount: Coin[]
   fromAddress: string
   toAddress: string
 }
@@ -45,6 +45,7 @@ export interface CosmosNetworkInfo {
   bip39Path: string
   chainId: string
   defaultTransactionFee: Coin
+  nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
 }

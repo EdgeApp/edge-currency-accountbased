@@ -13,6 +13,7 @@ const networkInfo: CosmosNetworkInfo = {
     denom: 'rune',
     amount: '2000000'
   },
+  nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: {
     url: 'https://rpc-v1.ninerealms.com',

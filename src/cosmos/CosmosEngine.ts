@@ -6,7 +6,7 @@ import {
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { parseCoins, StargateClient } from '@cosmjs/stargate'
+import { coin, parseCoins, StargateClient } from '@cosmjs/stargate'
 import { parseRawLog } from '@cosmjs/stargate/build/logs'
 import {
   fromRfc3339WithNanoseconds,
@@ -137,7 +137,7 @@ export class CosmosEngine extends CurrencyEngine<
         this.walletInfo.keys.bech32Address
       )
       const mainnetBal = balances.find(
-        bal => bal.denom === this.currencyInfo.currencyCode.toLowerCase()
+        bal => bal.denom === this.networkInfo.nativeDenom
       )
       this.updateBalance(
         this.currencyInfo.currencyCode,
@@ -294,19 +294,19 @@ export class CosmosEngine extends CurrencyEngine<
     }
     const networkFee = networkFeeCoin.amount
 
-    const { coin, recipient, sender } = event
+    const { coin: eventCoin, recipient, sender } = event
 
     if (
       (this.walletInfo.keys.bech32Address !== recipient &&
         this.walletInfo.keys.bech32Address !== sender) ||
-      this.currencyInfo.currencyCode !== coin.denom.toUpperCase()
+      this.networkInfo.nativeDenom !== eventCoin.denom
     ) {
       return
     }
     const isSend = this.walletInfo.keys.bech32Address === sender
     const ourReceiveAddresses: string[] = []
 
-    let nativeAmount = coin.amount
+    let nativeAmount = eventCoin.amount
     const currencyCode = this.currencyInfo.currencyCode
     if (isSend) {
       nativeAmount = `-${add(nativeAmount, networkFee)}`
@@ -403,7 +403,7 @@ export class CosmosEngine extends CurrencyEngine<
 
     // Encode a send message.
     const msg = this.tools.methods.transfer({
-      amount: nativeAmount,
+      amount: [coin(nativeAmount, this.networkInfo.nativeDenom)],
       fromAddress: this.walletInfo.keys.bech32Address,
       toAddress: publicAddress
     })

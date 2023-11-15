@@ -1,6 +1,5 @@
 import { fromBech32 } from '@cosmjs/encoding'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import { coin } from '@cosmjs/stargate'
 
 import { DepositOpts, TransferOpts, UpgradedRegistry } from './cosmosTypes'
 import { assetFromString } from './cosmosUtils'
@@ -50,7 +49,7 @@ export const upgradeRegistryAndCreateMethods = (
             MsgSend.fromPartial({
               fromAddress: fromBech32(fromAddress).data,
               toAddress: fromBech32(toAddress).data,
-              amount: [coin(amount, 'rune')]
+              amount
             })
           ).finish()
         }
