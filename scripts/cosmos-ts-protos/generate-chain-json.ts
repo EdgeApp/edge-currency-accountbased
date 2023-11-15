@@ -6,6 +6,10 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 const chains: { [pluginId: string]: { chainName: string; url: string } } = {
+  osmosis: {
+    chainName: 'osmosis',
+    url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/chain.json'
+  },
   thorchainrune: {
     chainName: 'thorchain',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
