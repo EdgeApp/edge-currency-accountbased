@@ -27,7 +27,7 @@ import {
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
-import { rpcWithApiKey } from './cosmosUtils'
+import { createStargateClient, rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -182,7 +182,8 @@ export class CosmosTools implements EdgeCurrencyTools {
 
   async connectClient(): Promise<void> {
     if (this.client == null) {
-      this.client = await StargateClient.connect(
+      this.client = await createStargateClient(
+        this.io.fetchCors,
         rpcWithApiKey(this.networkInfo, this.initOptions)
       )
     }
