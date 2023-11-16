@@ -58,7 +58,7 @@ export const networkInfo: EthereumNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  currencyCode: 'FIL',
+  currencyCode: 'tFIL',
   displayName: 'Filecoin FEVM (Calibration Testnet)',
   pluginId: 'filecoinfevmcalibration',
   requiredConfirmations: 900,
@@ -70,37 +70,37 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [
     {
-      name: 'FIL',
+      name: 'tFIL',
       multiplier: '1000000000000000000',
       symbol: '⨎'
     },
     {
-      name: 'milliFIL',
+      name: 'millitFIL',
       multiplier: '1000000000000000',
       symbol: 'm⨎'
     },
     {
-      name: 'microFIL',
+      name: 'microtFIL',
       multiplier: '1000000000000',
       symbol: 'µ⨎'
     },
     {
-      name: 'nanoFIL',
+      name: 'nanotFIL',
       multiplier: '1000000000',
       symbol: 'n⨎'
     },
     {
-      name: 'picoFIL',
+      name: 'picotFIL',
       multiplier: '1000000',
       symbol: 'p⨎'
     },
     {
-      name: 'femtoFIL',
+      name: 'femtotFIL',
       multiplier: '1000',
       symbol: 'f⨎'
     },
     {
-      name: 'attoFIL',
+      name: 'attotFIL',
       multiplier: '1',
       symbol: 'a⨎'
     }
