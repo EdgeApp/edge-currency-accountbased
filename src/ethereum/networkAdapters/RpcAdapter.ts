@@ -19,7 +19,7 @@ import {
   asRpcResultString,
   RpcResultString
 } from '../ethereumTypes'
-import { NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface RpcAdapterConfig {
   type: 'rpc'
@@ -27,10 +27,7 @@ export interface RpcAdapterConfig {
   ethBalCheckerContract?: string
 }
 
-export class RpcAdapter
-  extends NetworkAdapterBase<RpcAdapterConfig>
-  implements NetworkAdapter
-{
+export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   fetchTxs = null
 
   constructor(ethEngine: EthereumEngine, config: RpcAdapterConfig) {

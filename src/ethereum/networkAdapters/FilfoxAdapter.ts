@@ -4,17 +4,14 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import { Filfox, FilfoxMessageDetails } from '../../filecoin/Filfox'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {} from '../ethereumSchema'
-import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
+import { GetTxsParams, NetworkAdapter } from './types'
 
 export interface FilfoxAdapterConfig {
   type: 'filfox'
   servers: string[]
 }
 
-export class FilfoxAdapter
-  extends NetworkAdapterBase<FilfoxAdapterConfig>
-  implements NetworkAdapter
-{
+export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   fetchBlockheight = null
   broadcast = null
   getBaseFeePerGas = null
