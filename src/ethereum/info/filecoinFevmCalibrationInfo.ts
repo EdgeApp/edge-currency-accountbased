@@ -1,11 +1,29 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import { EthereumTools } from '../EthereumTools'
 import { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { evmMemoOptions } from './ethereumCommonInfo'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '8c97f94b2cdbf7dc0098057334d9908c4dc0a885': {
+    currencyCode: 'iFIL',
+    displayName: 'iFIL Inifinity Pool',
+    denominations: [{ name: 'iFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x8c97F94b2cDbF7Dc0098057334d9908C4dC0a885'
+    }
+  },
+  ac26a4ab9cf2a8c5dbab6fb4351ec0f4b07356c4: {
+    currencyCode: 'WFIL',
+    displayName: 'Wrapped FIL',
+    denominations: [{ name: 'wFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xaC26a4Ab9cF2A8c5DBaB6fb4351ec0F4b07356c4'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -110,7 +128,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: {},
-  metaTokens: []
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const filecoinfevmcalibration = makeOuterPlugin<
