@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Add `MakeTxDeposit` to support THORChain swap transactions
+- changed: Move `makeTx` params types to common
+
 ## 2.12.0 (2023-11-14)
 
 ## 2.11.2 (2023-11-13)

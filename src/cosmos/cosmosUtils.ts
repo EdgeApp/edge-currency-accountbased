@@ -13,6 +13,7 @@ import {
   CosmosInitOptions,
   CosmosNetworkInfo
 } from './cosmosTypes'
+import { Asset } from './info/proto/thorchainrune/thorchain/v1/common/common'
 
 export const rpcWithApiKey = (
   networkInfo: CosmosNetworkInfo,
@@ -75,4 +76,17 @@ export const createStargateClient = async (
   return await StargateClient.create(
     await createTendermintClient(createRpcClient(fetch, endpoint))
   )
+}
+
+// from THORSwap
+export const assetFromString = (assetString: string): Asset => {
+  const [chain, ...symbolArray] = assetString.split('.') as [
+    string,
+    ...Array<string | undefined>
+  ]
+  const synth = assetString.includes('/')
+  const symbol = symbolArray.join('.')
+  const ticker = symbol?.split('-')?.[0]
+
+  return { chain, symbol, ticker, synth }
 }

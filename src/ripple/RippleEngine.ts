@@ -55,6 +55,7 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
+import { MakeTxParams } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
@@ -74,7 +75,6 @@ import {
   asXrpTransaction,
   asXrpWalletOtherData,
   FinalFieldsCanceledOffer,
-  MakeTxParams,
   RippleOtherMethods,
   SafeRippleWalletInfo,
   XrpNetworkInfo,

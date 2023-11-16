@@ -2,7 +2,9 @@ import { fromBech32 } from '@cosmjs/encoding'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { coin } from '@cosmjs/stargate'
 
-import { TransferOpts, UpgradedRegistry } from './cosmosTypes'
+import { DepositOpts, TransferOpts, UpgradedRegistry } from './cosmosTypes'
+import { assetFromString } from './cosmosUtils'
+import { MsgDeposit } from './info/proto/thorchainrune/thorchain/v1/x/thorchain/types/msg_deposit'
 import { MsgSend } from './info/proto/thorchainrune/thorchain/v1/x/thorchain/types/msg_send'
 
 export const upgradeRegistryAndCreateMethods = (
@@ -12,6 +14,31 @@ export const upgradeRegistryAndCreateMethods = (
 
   switch (pluginId) {
     case 'thorchainrune': {
+      const depositTypeUrl = '/types.MsgSend'
+      registry.register(depositTypeUrl, MsgDeposit)
+      const deposit = (opts: DepositOpts): EncodeObject => {
+        const { assets, memo, signer } = opts
+
+        const coins = assets.map(coin => {
+          return {
+            ...coin,
+            asset: assetFromString(coin.asset)
+          }
+        })
+
+        const msg = {
+          typeUrl: depositTypeUrl,
+          value: MsgDeposit.encode(
+            MsgDeposit.fromPartial({
+              coins,
+              memo,
+              signer: fromBech32(signer).data
+            })
+          ).finish()
+        }
+        return msg
+      }
+
       const transferTypeUrl = '/types.MsgSend'
       registry.register(transferTypeUrl, MsgSend)
 
@@ -31,7 +58,7 @@ export const upgradeRegistryAndCreateMethods = (
       }
 
       return {
-        methods: { transfer },
+        methods: { deposit, transfer },
         registry
       }
     }

@@ -16,6 +16,8 @@ const chains: {
 } = {
   thorchainrune: {
     files: [
+      'thornode-mainnet/proto/thorchain/v1/x/thorchain/types/msg_deposit.proto',
+      'thornode-mainnet/proto/thorchain/v1/common/common.proto',
       'thornode-mainnet/proto/thorchain/v1/x/thorchain/types/msg_send.proto',
       'thornode-mainnet/third_party/proto/cosmos/base/v1beta1/coin.proto'
     ],

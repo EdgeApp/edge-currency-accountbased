@@ -9,11 +9,21 @@ import {
   asOptional,
   asString,
   asTuple,
-  asValue,
   Cleaner
 } from 'cleaners'
+import { EdgeTransaction } from 'edge-core-js/types'
 
-import { asWalletInfo } from '../common/types'
+import { asWalletInfo, MakeTxParams } from '../common/types'
+
+export interface DepositOpts {
+  assets: Array<{
+    asset: string
+    amount: string
+    decimals: string
+  }>
+  memo: string
+  signer: string
+}
 
 export interface TransferOpts {
   amount: string
@@ -22,6 +32,7 @@ export interface TransferOpts {
 }
 
 export interface CosmosMethods {
+  deposit?: (opts: DepositOpts) => EncodeObject
   transfer: (opts: TransferOpts) => EncodeObject
 }
 
@@ -61,7 +72,7 @@ const asShapeshiftTx = asObject({
       // origin: string
       from: asString,
       to: asString,
-      type: asValue('send'),
+      // type: asValue('send'),
       value: asObject({
         amount: asString,
         denom: asString
@@ -123,3 +134,7 @@ export interface CosmosInitOptions {
 export const asCosmosInitOptions = asObject({
   ninerealmsClientId: asOptional(asString)
 })
+
+export interface CosmosOtherMethods {
+  makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
+}

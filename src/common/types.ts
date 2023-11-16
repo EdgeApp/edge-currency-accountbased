@@ -11,7 +11,13 @@ import {
   asUnknown,
   Cleaner
 } from 'cleaners'
-import { EdgeToken, EdgeTokenInfo, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeMetadata,
+  EdgeToken,
+  EdgeTokenInfo,
+  EdgeTransaction,
+  EdgeTxSwap
+} from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
@@ -98,3 +104,36 @@ export interface WalletConnectPayload {
   networkFee: string
   tokenId?: string // can't provide tokenId until we can parse from DATA
 }
+
+/**
+ * Template for a future generalized makeTx type that can be used for all
+ * chains
+ */
+export type MakeTxParams =
+  | {
+      type: 'MakeTxDexSwap'
+      metadata?: EdgeMetadata
+      swapData?: EdgeTxSwap
+      fromTokenId?: string
+      fromNativeAmount: string
+      toTokenId?: string
+      toNativeAmount: string
+
+      /**
+       * UNIX time (seconds) to expire the DEX swap if it hasn't executed
+       */
+      expiration?: number
+    }
+  | {
+      type: 'MakeTxDeposit'
+      assets: Array<{
+        amount: string
+        asset: string
+        decimals: string
+      }>
+      memo: string
+      metadata?: EdgeMetadata
+    }
+  | {
+      type: 'MakeTxDummyType'
+    }
