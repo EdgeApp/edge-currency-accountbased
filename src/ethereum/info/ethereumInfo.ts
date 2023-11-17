@@ -1057,7 +1057,7 @@ const defaultNetworkFees: EthereumFees = {
 }
 
 // Exported for fee provider test
-export const networkInfo: EthereumNetworkInfo = {
+const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',

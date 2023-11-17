@@ -84,7 +84,7 @@ const builtinTokens: EdgeTokenMap = {
   }
 }
 
-export const networkInfo: TronNetworkInfo = {
+const networkInfo: TronNetworkInfo = {
   tronApiServers: ['https://api.trongrid.io'],
   tronNodeServers: [
     'http://3.225.171.164:8090',
