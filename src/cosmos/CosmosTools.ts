@@ -1,7 +1,6 @@
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
-import { StargateClient } from '@cosmjs/stargate'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
@@ -24,6 +23,7 @@ import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
+  CosmosClients,
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
@@ -34,7 +34,7 @@ export class CosmosTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
-  client?: StargateClient
+  clients?: CosmosClients
   clientCount: number
   methods: CosmosMethods
   registry: Registry
@@ -181,11 +181,18 @@ export class CosmosTools implements EdgeCurrencyTools {
   }
 
   async connectClient(): Promise<void> {
-    if (this.client == null) {
-      this.client = await createStargateClient(
+    if (this.clients == null) {
+      const stargateClient = await createStargateClient(
         this.io.fetchCors,
         rpcWithApiKey(this.networkInfo, this.initOptions)
       )
+      // eslint-disable-next-line @typescript-eslint/dot-notation
+      const tendermintClient = stargateClient['forceGetTmClient']()
+
+      this.clients = {
+        stargateClient,
+        tendermintClient
+      }
     }
     ++this.clientCount
   }
@@ -193,8 +200,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   async disconnectClient(): Promise<void> {
     --this.clientCount
     if (this.clientCount === 0) {
-      await this.client?.disconnect()
-      this.client = undefined
+      await this.clients?.stargateClient?.disconnect()
+      this.clients = undefined
     }
   }
 }

@@ -1,5 +1,5 @@
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import { Coin, HttpEndpoint } from '@cosmjs/stargate'
+import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
   asCodec,
   asMaybe,
@@ -126,4 +126,10 @@ export interface TransferEvent {
   sender: string
   recipient: string
   coin: Coin
+}
+
+export interface CosmosClients {
+  stargateClient: StargateClient
+  // Using the tendermint client directly allows us to control the paging
+  tendermintClient: ReturnType<StargateClient['forceGetTmClient']>
 }

@@ -6,7 +6,7 @@ import {
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { coin, parseCoins, StargateClient } from '@cosmjs/stargate'
+import { coin, parseCoins } from '@cosmjs/stargate'
 import { parseRawLog } from '@cosmjs/stargate/build/logs'
 import {
   fromRfc3339WithNanoseconds,
@@ -41,6 +41,7 @@ import {
   asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
   asTransfer,
+  CosmosClients,
   CosmosNetworkInfo,
   CosmosOtherMethods,
   CosmosWalletOtherData,
@@ -123,17 +124,17 @@ export class CosmosEngine extends CurrencyEngine<
     this.otherData = asCosmosWalletOtherData(raw)
   }
 
-  async getStargateClient(): Promise<StargateClient> {
-    if (this.tools.client == null) {
+  getClients(): CosmosClients {
+    if (this.tools.clients == null) {
       throw new Error('No StargateClient')
     }
-    return this.tools.client
+    return this.tools.clients
   }
 
   async queryBalance(): Promise<void> {
     try {
-      const client = await this.getStargateClient()
-      const balances = await client.getAllBalances(
+      const { stargateClient } = this.getClients()
+      const balances = await stargateClient.getAllBalances(
         this.walletInfo.keys.bech32Address
       )
       const mainnetBal = balances.find(
@@ -144,7 +145,7 @@ export class CosmosEngine extends CurrencyEngine<
         mainnetBal?.amount ?? '0'
       )
 
-      const { accountNumber, sequence } = await client.getSequence(
+      const { accountNumber, sequence } = await stargateClient.getSequence(
         this.walletInfo.keys.bech32Address
       )
       this.accountNumber = accountNumber
@@ -160,8 +161,8 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryBlockheight(): Promise<void> {
     try {
-      const client = await this.getStargateClient()
-      const blockheight = await client.getHeight()
+      const { stargateClient } = this.getClients()
+      const blockheight = await stargateClient.getHeight()
       if (blockheight > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = blockheight
         this.walletLocalDataDirty = true
@@ -199,11 +200,7 @@ export class CosmosEngine extends CurrencyEngine<
   async queryTransactionsInner(
     queryString: typeof txQueryStrings[number]
   ): Promise<string | undefined> {
-    const client = await this.getStargateClient()
-
-    // Using the tendermint client directly allows us to control the paging
-    // eslint-disable-next-line @typescript-eslint/dot-notation
-    const tmClient = client['forceGetTmClient']()
+    const { stargateClient, tendermintClient } = this.getClients()
 
     const txSearchParams = {
       query: `${queryString}='${this.walletInfo.keys.bech32Address}'`,
@@ -217,7 +214,7 @@ export class CosmosEngine extends CurrencyEngine<
     let earlyExit = false
     try {
       do {
-        const txRes = await tmClient.txSearch({
+        const txRes = await tendermintClient.txSearch({
           ...txSearchParams,
           page: ++page
         })
@@ -257,7 +254,7 @@ export class CosmosEngine extends CurrencyEngine<
           })
           if (transferEvents.length === 0) continue
 
-          const block = await client.getBlock(tx.height)
+          const block = await stargateClient.getBlock(tx.height)
           const date = toSeconds(
             fromRfc3339WithNanoseconds(block.header.time)
           ).seconds
@@ -477,8 +474,8 @@ export class CosmosEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction> {
     try {
       const signedTxBytes = base16.parse(edgeTransaction.signedTx)
-      const client = await this.getStargateClient()
-      const txid = await client.broadcastTxSync(signedTxBytes)
+      const { stargateClient } = this.getClients()
+      const txid = await stargateClient.broadcastTxSync(signedTxBytes)
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
 
       edgeTransaction.txid = txid
