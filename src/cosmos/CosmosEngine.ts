@@ -175,16 +175,18 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    let progress = 0
     for (const query of txQueryStrings) {
       const newestTxid = await this.queryTransactionsInner(query)
       if (newestTxid != null && this.otherData[query] !== newestTxid) {
         this.otherData[query] = newestTxid
         this.walletLocalDataDirty = true
       }
+      progress += 0.5
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        progress
+      this.updateOnAddressesChecked()
     }
-
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-    this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
