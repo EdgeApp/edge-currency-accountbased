@@ -9,7 +9,7 @@ const networkInfo: StellarNetworkInfo = {
   stellarServers: ['https://horizon.stellar.org']
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XLM',
   displayName: 'Stellar',
   pluginId: 'stellar',

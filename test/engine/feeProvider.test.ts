@@ -7,6 +7,7 @@ import {
   fetchFeesFromInfoServer
 } from '../../src/ethereum/fees/feeProviders'
 import {
+  // @ts-expect-error
   currencyInfo as ftmCurrencyInfo,
   // @ts-expect-error
   networkInfo as ftmNetworkInfo

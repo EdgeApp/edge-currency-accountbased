@@ -12,7 +12,7 @@ const networkInfo: PolkadotNetworkInfo = {
   lengthFeePerByte: '1000000'
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'DOT',
   displayName: 'Polkadot',
   pluginId: 'polkadot',

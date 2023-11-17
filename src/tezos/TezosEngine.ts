@@ -23,7 +23,6 @@ import {
   makeMutex,
   promiseAny
 } from '../common/utils'
-import { currencyInfo } from './tezosInfo'
 import { TezosTools } from './TezosTools'
 import {
   asSafeTezosWalletInfo,
@@ -45,7 +44,6 @@ const TRANSACTION_POLL_MILLISECONDS = 5000
 
 const makeSpendMutex = makeMutex()
 
-const PRIMARY_CURRENCY = currencyInfo.currencyCode
 type TezosFunction =
   | 'getHead'
   | 'getBalance'
@@ -257,7 +255,7 @@ export class TezosEngine extends CurrencyEngine<
     const transaction = asXtzGetTransaction(tx)
     const pkh = this.walletLocalData.publicKey
     const ourReceiveAddresses: string[] = []
-    const currencyCode = PRIMARY_CURRENCY
+    const currencyCode = this.currencyInfo.currencyCode
     const date = new Date(transaction.timestamp).getTime() / 1000
     const blockHeight = transaction.level
     let nativeAmount = transaction.amount.toString()
@@ -335,7 +333,7 @@ export class TezosEngine extends CurrencyEngine<
   // Check all account balance and other relevant info
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async checkAccountInnerLoop() {
-    const currencyCode = PRIMARY_CURRENCY
+    const currencyCode = this.currencyInfo.currencyCode
     const pkh = this.walletLocalData.publicKey
     if (
       typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'

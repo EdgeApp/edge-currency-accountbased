@@ -76,7 +76,7 @@ const networkInfo: EthereumNetworkInfo = {
   defaultNetworkFees
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   displayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,

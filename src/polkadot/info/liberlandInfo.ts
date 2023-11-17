@@ -24,7 +24,7 @@ const networkInfo: PolkadotNetworkInfo = {
   lengthFeePerByte: '76800000'
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'LLD',
   displayName: 'Liberland',
   pluginId: 'liberland',

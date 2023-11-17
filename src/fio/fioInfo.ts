@@ -47,7 +47,7 @@ const networkInfo: FioNetworkInfo = {
   chainId: '21dcae42c0182200e93f954a074011f9048a7624c6fe81d3c9541a614a88bd1c'
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIO',
   displayName: 'FIO',
   pluginId: 'fio',

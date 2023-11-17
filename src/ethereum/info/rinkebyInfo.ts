@@ -109,7 +109,7 @@ const defaultSettings: any = {
   otherSettings: { ...networkInfo }
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'RIN',
   displayName: 'Rinkeby Testnet',

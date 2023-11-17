@@ -109,7 +109,7 @@ const networkInfo: TronNetworkInfo = {
   defaultFreezeDurationInDays: 3
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TRX',
   displayName: 'Tron',
   pluginId: 'tron',

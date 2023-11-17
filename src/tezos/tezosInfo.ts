@@ -35,7 +35,7 @@ const networkInfo: TezosNetworkInfo = {
   }
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XTZ',
   displayName: 'Tezos',
   pluginId: 'tezos',

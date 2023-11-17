@@ -1132,7 +1132,7 @@ const defaultSettings: any = {
   otherSettings: { ...networkInfo }
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   displayName: 'Ethereum',
@@ -1176,3 +1176,7 @@ export const ethereum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
     )
   }
 })
+
+if (process.env.npm_lifecycle_event === 'test') {
+  module.exports = { ...module.exports, currencyInfo }
+}
