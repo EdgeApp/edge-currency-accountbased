@@ -11,6 +11,7 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
+import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
 export function normalizeAddress(address: string): string {
@@ -476,4 +477,24 @@ export const objectCheckOneWay = (obj1: any, obj2: any): boolean => {
     }
   }
   return true
+}
+
+/**
+ * Calls `func` on ethers JsonRpcProviders initialized with configured
+ * RPC servers. Randomizes order priority to distribute load.
+ */
+export const multicastEthProviders = async <
+  R,
+  P extends ethers.providers.Provider
+>(props: {
+  func: (ethProvider: P) => Promise<R>
+  providers: P[]
+}): Promise<R> => {
+  const { func, providers } = props
+  const funcs: Array<() => Promise<any>> = providers.map(
+    provider => async () => {
+      return await func(provider)
+    }
+  )
+  return await asyncWaterfall(shuffleArray(funcs))
 }
