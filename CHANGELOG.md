@@ -4,6 +4,7 @@
 
 - added: Add `MakeTxDeposit` to support THORChain swap transactions
 - changed: Move `makeTx` params types to common
+- fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
 
 ## 2.12.0 (2023-11-14)
 
