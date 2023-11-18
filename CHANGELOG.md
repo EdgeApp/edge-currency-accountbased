@@ -1,6 +1,8 @@
 # edge-currency-accountbased
 
-## Unreleased
+## 2.11.2-tc (2023-11-20)
+
+- fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
 
 ## 2.11.2 (2023-11-13)
 
