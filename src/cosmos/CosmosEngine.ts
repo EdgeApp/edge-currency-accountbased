@@ -548,7 +548,7 @@ export class CosmosEngine extends CurrencyEngine<
       accountNumber: this.accountNumber,
       authInfoBytes,
       bodyBytes,
-      chainId: this.networkInfo.chainId
+      chainId: this.tools.chainData.chain_id
     })
     const signer = await this.tools.createSigner(keys.mnemonic)
     const signResponse = await signer.signDirect(
