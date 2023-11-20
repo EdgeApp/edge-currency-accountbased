@@ -2,10 +2,12 @@
 
 ## Unreleased
 
+## 2.13.0 (2023-11-20)
+
 - added: Add `MakeTxDeposit` to support THORChain swap transactions
+- added: ENS name resolution support
 - changed: Move `makeTx` params types to common
 - fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
-- added: ENS name resolution support
 
 ## 2.11.2 (2023-11-13)
 
