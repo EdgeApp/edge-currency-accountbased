@@ -14,15 +14,21 @@ import {
 } from 'edge-core-js/types'
 import EthereumUtil from 'ethereumjs-util'
 import hdKey from 'ethereumjs-wallet/hdkey'
+import { ethers } from 'ethers'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { biggyScience, getLegacyDenomination } from '../common/utils'
+import {
+  biggyScience,
+  getLegacyDenomination,
+  multicastEthProviders
+} from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
   asEthereumPrivateKeys,
   asSafeEthWalletInfo,
+  EthereumInitOptions,
   EthereumNetworkInfo
 } from './ethereumTypes'
 
@@ -31,13 +37,15 @@ export class EthereumTools implements EdgeCurrencyTools {
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
   networkInfo: EthereumNetworkInfo
+  initOptions: EthereumInitOptions
 
   constructor(env: PluginEnvironment<EthereumNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    const { builtinTokens, currencyInfo, io, networkInfo, initOptions } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
+    this.initOptions = initOptions
   }
 
   async getDisplayPrivateKey(
@@ -357,7 +365,41 @@ export class EthereumTools implements EdgeCurrencyTools {
     }
     return cleanLocation.contractAddress.toLowerCase().replace(/^0x/, '')
   }
+
+  // #region otherMethods
+
+  /**
+   * Resolve an ENS name, for example: "bob.eth"
+   */
+  async resolveEnsName(ensName: string): Promise<string | null> {
+    const { networkAdapterConfigs } = this.networkInfo
+
+    const networkAdapterConfig = networkAdapterConfigs.find(
+      networkAdapterConfig => networkAdapterConfig.type === 'rpc'
+    )
+
+    if (networkAdapterConfig == null)
+      throw new Error('resolveEnsName: No RpcAdapterConfig')
+
+    const rpcServers = networkAdapterConfig.servers
+
+    const ethProviders: ethers.providers.JsonRpcProvider[] = rpcServers.map(
+      // This call only works on Ethereum networks, hence chainId of 1
+      rpcServer => new ethers.providers.JsonRpcProvider(rpcServer, 1)
+    )
+
+    return await multicastEthProviders<
+      string | null,
+      ethers.providers.JsonRpcProvider
+    >({
+      func: async (ethProvider: ethers.providers.JsonRpcProvider) =>
+        await ethProvider.resolveName(ensName),
+      providers: ethProviders
+    })
+  }
 }
+
+// #endregion otherMethods
 
 export async function makeCurrencyTools(
   env: PluginEnvironment<EthereumNetworkInfo>
