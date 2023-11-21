@@ -44,7 +44,7 @@ export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   chainId: string
-  defaultTransactionFee: Coin
+  defaultTransactionFee?: Coin // Charged by the network but not included in transaction body
   nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
@@ -139,3 +139,7 @@ export const asCosmosTxOtherParams = asObject({
 })
 
 export type CosmosTxOtherParams = ReturnType<typeof asCosmosTxOtherParams>
+
+export interface CosmosFee {
+  networkFee: string
+}

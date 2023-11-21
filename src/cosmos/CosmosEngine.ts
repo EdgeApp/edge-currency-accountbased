@@ -43,6 +43,7 @@ import {
   asSafeCosmosWalletInfo,
   asTransfer,
   CosmosClients,
+  CosmosFee,
   CosmosNetworkInfo,
   CosmosOtherMethods,
   CosmosTxOtherParams,
@@ -99,7 +100,7 @@ export class CosmosEngine extends CurrencyEngine<
               unsignedTxHex
             }
 
-            const networkFee = this.networkInfo.defaultTransactionFee.amount
+            const { networkFee } = this.calculateFee()
 
             const out: EdgeTransaction = {
               blockHeight: 0, // blockHeight,
@@ -290,12 +291,15 @@ export class CosmosEngine extends CurrencyEngine<
       body: { memo }
     } = decodeTxRaw(txRaw)
 
-    let networkFeeCoin = this.networkInfo.defaultTransactionFee
+    let networkFee = this.networkInfo.defaultTransactionFee?.amount ?? '0'
     if (fee != null) {
       const { amount } = fee
-      networkFeeCoin = safeAddCoins([networkFeeCoin, ...amount])
+      const networkFeeCoin = safeAddCoins([
+        coin('0', this.networkInfo.nativeDenom),
+        ...amount
+      ])
+      networkFee = add(networkFee, networkFeeCoin.amount)
     }
-    const networkFee = networkFeeCoin.amount
 
     const { coin: eventCoin, recipient, sender } = event
 
@@ -351,6 +355,17 @@ export class CosmosEngine extends CurrencyEngine<
     return base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
   }
 
+  private calculateFee(): CosmosFee {
+    const implicitTransactionFee =
+      this.networkInfo.defaultTransactionFee ??
+      coin('0', this.networkInfo.nativeDenom)
+
+    const networkFee = implicitTransactionFee.amount
+    return {
+      networkFee
+    }
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
@@ -394,7 +409,7 @@ export class CosmosEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
 
-    const networkFee = this.networkInfo.defaultTransactionFee.amount
+    const { networkFee } = this.calculateFee()
     const totalNativeAmount = add(nativeAmount, networkFee)
     if (gt(totalNativeAmount, nativeBalance)) {
       throw new InsufficientFundsError()
