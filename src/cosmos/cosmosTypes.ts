@@ -4,6 +4,7 @@ import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
   asCodec,
   asMaybe,
+  asNumber,
   asObject,
   asOptional,
   asString,
@@ -53,11 +54,13 @@ export interface CosmosNetworkInfo {
   nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
+  archiveNode: HttpEndpoint
 }
 
 export const txQueryStrings = [`transfer.sender`, `transfer.recipient`] as const
 
 export const asCosmosWalletOtherData = asObject({
+  archivedTxLastCheckTime: asMaybe(asNumber, 0),
   'transfer.sender': asMaybe(asString),
   'transfer.recipient': asMaybe(asString)
 })

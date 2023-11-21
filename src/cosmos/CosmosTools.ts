@@ -29,7 +29,7 @@ import {
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
-import { createStargateClient, rpcWithApiKey } from './cosmosUtils'
+import { createCosmosClients, rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -196,20 +196,10 @@ export class CosmosTools implements EdgeCurrencyTools {
 
   async connectClient(): Promise<void> {
     if (this.clients == null) {
-      const stargateClient = await createStargateClient(
+      this.clients = await createCosmosClients(
         this.io.fetchCors,
         rpcWithApiKey(this.networkInfo, this.initOptions)
       )
-      // eslint-disable-next-line @typescript-eslint/dot-notation
-      const queryClient = stargateClient['forceGetQueryClient']()
-      // eslint-disable-next-line @typescript-eslint/dot-notation
-      const tendermintClient = stargateClient['forceGetTmClient']()
-
-      this.clients = {
-        queryClient,
-        stargateClient,
-        tendermintClient
-      }
     }
     ++this.clientCount
   }
