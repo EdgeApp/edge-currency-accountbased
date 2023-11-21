@@ -67,6 +67,7 @@ export class CosmosEngine extends CurrencyEngine<
   sequence: number
   otherData!: CosmosWalletOtherData
   otherMethods: CosmosOtherMethods
+  feeCache: Map<string, CosmosFee>
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -78,6 +79,7 @@ export class CosmosEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.accountNumber = 0
     this.sequence = 0
+    this.feeCache = new Map()
     this.otherMethods = {
       makeTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -464,10 +466,16 @@ export class CosmosEngine extends CurrencyEngine<
       toAddress: publicAddress
     })
 
-    let gasFeeCoin: Coin = coin('0', this.networkInfo.nativeDenom)
-    let gasLimit = '0'
-    let networkFee = '0'
-    if (nativeAmount !== '0') {
+    let gasFeeCoin: Coin
+    let gasLimit: string
+    let networkFee: string
+    const feeCacheKey = `${publicAddress}${String(networkFeeOption)}`
+    const feeCacheFees = this.feeCache.get(feeCacheKey)
+    if (nativeAmount === '0') {
+      gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
+      gasLimit = '0'
+      networkFee = '0'
+    } else if (feeCacheFees == null) {
       const fees = await this.calculateFee({
         messages: [msg],
         memo,
@@ -476,6 +484,11 @@ export class CosmosEngine extends CurrencyEngine<
       gasFeeCoin = fees.gasFeeCoin
       gasLimit = fees.gasLimit
       networkFee = fees.networkFee
+      this.feeCache.set(feeCacheKey, fees)
+    } else {
+      gasFeeCoin = feeCacheFees.gasFeeCoin
+      gasLimit = feeCacheFees.gasLimit
+      networkFee = feeCacheFees.networkFee
     }
 
     const totalNativeAmount = add(nativeAmount, networkFee)
