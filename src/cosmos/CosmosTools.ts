@@ -187,9 +187,12 @@ export class CosmosTools implements EdgeCurrencyTools {
         rpcWithApiKey(this.networkInfo, this.initOptions)
       )
       // eslint-disable-next-line @typescript-eslint/dot-notation
+      const queryClient = stargateClient['forceGetQueryClient']()
+      // eslint-disable-next-line @typescript-eslint/dot-notation
       const tendermintClient = stargateClient['forceGetTmClient']()
 
       this.clients = {
+        queryClient,
         stargateClient,
         tendermintClient
       }

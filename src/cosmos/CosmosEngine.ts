@@ -1,3 +1,4 @@
+import { getGasPriceStep } from '@chain-registry/utils'
 import { decodeSignature, encodeSecp256k1Pubkey } from '@cosmjs/amino'
 import { toHex } from '@cosmjs/encoding'
 import {
@@ -6,14 +7,14 @@ import {
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { coin, parseCoins } from '@cosmjs/stargate'
+import { Coin, coin, parseCoins } from '@cosmjs/stargate'
 import { parseRawLog } from '@cosmjs/stargate/build/logs'
 import {
   fromRfc3339WithNanoseconds,
   toSeconds,
   TxResponse
 } from '@cosmjs/tendermint-rpc'
-import { add, gt } from 'biggystring'
+import { add, ceil, gt, mul } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
@@ -96,11 +97,16 @@ export class CosmosEngine extends CurrencyEngine<
             })
             const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
 
+            const { gasFeeCoin, gasLimit, networkFee } =
+              await this.calculateFee({
+                messages: [msg],
+                memo
+              })
             const otherParams: CosmosTxOtherParams = {
+              gasFeeCoin,
+              gasLimit,
               unsignedTxHex
             }
-
-            const { networkFee } = this.calculateFee()
 
             const out: EdgeTransaction = {
               blockHeight: 0, // blockHeight,
@@ -355,13 +361,55 @@ export class CosmosEngine extends CurrencyEngine<
     return base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
   }
 
-  private calculateFee(): CosmosFee {
-    const implicitTransactionFee =
-      this.networkInfo.defaultTransactionFee ??
-      coin('0', this.networkInfo.nativeDenom)
+  private async calculateFee(opts: {
+    messages: EncodeObject[]
+    memo?: string
+    networkFeeOption?: EdgeSpendInfo['networkFeeOption']
+  }): Promise<CosmosFee> {
+    let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
+    let gasLimit = '0'
+    let networkFee = '0'
+    if (this.networkInfo.defaultTransactionFee == null) {
+      const { messages, memo, networkFeeOption } = opts
+      const { queryClient } = this.getClients()
+      const { gasInfo } = await queryClient.tx.simulate(
+        messages,
+        memo,
+        encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
+        this.sequence
+      )
+      if (gasInfo?.gasUsed == null) {
+        throw new Error(`simulate didn't return gasUsed `)
+      }
+      // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
+      gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
 
-    const networkFee = implicitTransactionFee.amount
+      const { low, average, high } = getGasPriceStep(this.tools.chainData)
+
+      let gasPrice = average
+      switch (networkFeeOption) {
+        case 'low': {
+          gasPrice = low
+          break
+        }
+        case 'high': {
+          gasPrice = high
+          break
+        }
+        case 'custom': {
+          throw new Error('Custom fee not supported')
+        }
+      }
+
+      const gasFee = ceil(mul(gasLimit, gasPrice.toString()), 0)
+      gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
+      networkFee = gasFeeCoin.amount
+    } else {
+      networkFee = this.networkInfo.defaultTransactionFee.amount
+    }
     return {
+      gasFeeCoin,
+      gasLimit,
       networkFee
     }
   }
@@ -398,7 +446,7 @@ export class CosmosEngine extends CurrencyEngine<
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], networkFeeOption } = edgeSpendInfo
     const memo: string | undefined = memos[0]?.value
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -409,12 +457,6 @@ export class CosmosEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
 
-    const { networkFee } = this.calculateFee()
-    const totalNativeAmount = add(nativeAmount, networkFee)
-    if (gt(totalNativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
-    }
-
     // Encode a send message.
     const msg = this.tools.methods.transfer({
       amount: [coin(nativeAmount, this.networkInfo.nativeDenom)],
@@ -422,9 +464,30 @@ export class CosmosEngine extends CurrencyEngine<
       toAddress: publicAddress
     })
 
+    let gasFeeCoin: Coin = coin('0', this.networkInfo.nativeDenom)
+    let gasLimit = '0'
+    let networkFee = '0'
+    if (nativeAmount !== '0') {
+      const fees = await this.calculateFee({
+        messages: [msg],
+        memo,
+        networkFeeOption
+      })
+      gasFeeCoin = fees.gasFeeCoin
+      gasLimit = fees.gasLimit
+      networkFee = fees.networkFee
+    }
+
+    const totalNativeAmount = add(nativeAmount, networkFee)
+    if (gt(totalNativeAmount, nativeBalance)) {
+      throw new InsufficientFundsError()
+    }
+
     const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
 
     const otherParams: CosmosTxOtherParams = {
+      gasFeeCoin,
+      gasLimit,
       unsignedTxHex
     }
 
@@ -450,9 +513,9 @@ export class CosmosEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    const { unsignedTxHex } =
-      asMaybe(asCosmosTxOtherParams)(edgeTransaction.otherParams) ?? {}
-    if (unsignedTxHex == null) throw new Error('Missing unsignedTxHex')
+    const { gasFeeCoin, gasLimit, unsignedTxHex } = asCosmosTxOtherParams(
+      edgeTransaction.otherParams
+    )
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
     const txRawBytes = base16.parse(unsignedTxHex)
     const { bodyBytes } = TxRaw.decode(txRawBytes)
@@ -461,8 +524,8 @@ export class CosmosEngine extends CurrencyEngine<
     const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
     const authInfoBytes = makeAuthInfoBytes(
       [{ pubkey: encodePubkey(senderPubkey), sequence: this.sequence }],
-      [], // fee, but for thorchain the fee doesn't need to be defined and is automatically pulled from account
-      0, // gasLimit
+      [gasFeeCoin], // fee, but for thorchain the fee doesn't need to be defined and is automatically pulled from account
+      parseInt(gasLimit), // gasLimit
       undefined, // feeGranter
       undefined, // feePayer (defaults to first signer)
       1 // signMode

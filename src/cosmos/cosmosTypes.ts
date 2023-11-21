@@ -129,17 +129,27 @@ export interface TransferEvent {
 }
 
 export interface CosmosClients {
+  queryClient: ReturnType<StargateClient['forceGetQueryClient']>
   stargateClient: StargateClient
   // Using the tendermint client directly allows us to control the paging
   tendermintClient: ReturnType<StargateClient['forceGetTmClient']>
 }
 
+const asCoin = asObject({
+  denom: asString,
+  amount: asString
+})
+
 export const asCosmosTxOtherParams = asObject({
+  gasFeeCoin: asCoin,
+  gasLimit: asString,
   unsignedTxHex: asString
 })
 
 export type CosmosTxOtherParams = ReturnType<typeof asCosmosTxOtherParams>
 
 export interface CosmosFee {
+  gasFeeCoin: Coin
+  gasLimit: string
   networkFee: string
 }
