@@ -133,3 +133,9 @@ export interface CosmosClients {
   // Using the tendermint client directly allows us to control the paging
   tendermintClient: ReturnType<StargateClient['forceGetTmClient']>
 }
+
+export const asCosmosTxOtherParams = asObject({
+  unsignedTxHex: asString
+})
+
+export type CosmosTxOtherParams = ReturnType<typeof asCosmosTxOtherParams>

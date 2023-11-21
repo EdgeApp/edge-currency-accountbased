@@ -38,12 +38,14 @@ import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
   asCosmosPrivateKeys,
+  asCosmosTxOtherParams,
   asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
   asTransfer,
   CosmosClients,
   CosmosNetworkInfo,
   CosmosOtherMethods,
+  CosmosTxOtherParams,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo,
   TransferEvent,
@@ -91,7 +93,11 @@ export class CosmosEngine extends CurrencyEngine<
               memo,
               signer: this.walletInfo.keys.bech32Address
             })
-            const otherParams = this.createUnsignedTxHexOtherParams([msg], memo)
+            const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
+
+            const otherParams: CosmosTxOtherParams = {
+              unsignedTxHex
+            }
 
             const networkFee = this.networkInfo.defaultTransactionFee.amount
 
@@ -335,18 +341,14 @@ export class CosmosEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  private createUnsignedTxHexOtherParams(
-    messages: EncodeObject[],
-    memo?: string
-  ): { unsignedTxHex: string } {
+  private createUnsignedTxHex(messages: EncodeObject[], memo?: string): string {
     const body = TxBody.fromPartial({ messages, memo })
     const bodyBytes = TxBody.encode(body).finish()
     const unsignedTxRaw = TxRaw.fromPartial({
       bodyBytes
     })
-    return {
-      unsignedTxHex: base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
-    }
+
+    return base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
   }
 
   // // ****************************************************************************
@@ -405,7 +407,11 @@ export class CosmosEngine extends CurrencyEngine<
       toAddress: publicAddress
     })
 
-    const otherParams = this.createUnsignedTxHexOtherParams([msg], memo)
+    const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
+
+    const otherParams: CosmosTxOtherParams = {
+      unsignedTxHex
+    }
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
@@ -429,7 +435,8 @@ export class CosmosEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    const { unsignedTxHex } = edgeTransaction.otherParams ?? {}
+    const { unsignedTxHex } =
+      asMaybe(asCosmosTxOtherParams)(edgeTransaction.otherParams) ?? {}
     if (unsignedTxHex == null) throw new Error('Missing unsignedTxHex')
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
     const txRawBytes = base16.parse(unsignedTxHex)
