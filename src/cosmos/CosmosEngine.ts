@@ -1,16 +1,24 @@
 import { decodeSignature, encodeSecp256k1Pubkey } from '@cosmjs/amino'
+import { toHex } from '@cosmjs/encoding'
 import {
+  decodeTxRaw,
   EncodeObject,
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { StargateClient } from '@cosmjs/stargate'
+import { parseCoins, StargateClient } from '@cosmjs/stargate'
+import { parseRawLog } from '@cosmjs/stargate/build/logs'
+import {
+  fromRfc3339WithNanoseconds,
+  toSeconds,
+  TxResponse
+} from '@cosmjs/tendermint-rpc'
 import { add, gt } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
-  EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeMemo,
   EdgeSpendInfo,
@@ -26,19 +34,21 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { MakeTxParams } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
-import { cleanTxLogs, getFetchCors } from '../common/utils'
+import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
   asCosmosPrivateKeys,
   asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
-  asShapeshiftResponse,
+  asTransfer,
   CosmosNetworkInfo,
   CosmosOtherMethods,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo,
-  ShapeshiftTx
+  TransferEvent,
+  txQueryStrings
 } from './cosmosTypes'
+import { safeAddCoins } from './cosmosUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const TRANSACTION_POLL_MILLISECONDS = 3000
@@ -50,7 +60,6 @@ export class CosmosEngine extends CurrencyEngine<
   networkInfo: CosmosNetworkInfo
   accountNumber: number
   sequence: number
-  fetchCors: EdgeFetchFunction
   otherData!: CosmosWalletOtherData
   otherMethods: CosmosOtherMethods
 
@@ -64,7 +73,6 @@ export class CosmosEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.accountNumber = 0
     this.sequence = 0
-    this.fetchCors = getFetchCors(env.io)
     this.otherMethods = {
       makeTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -167,48 +175,18 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    let cursor: string | undefined
-    let firstTxid: string | undefined
-    let firstTxidIndex: number | undefined
-    try {
-      do {
-        const res = await this.fetchCors(
-          `https://api.${
-            this.networkInfo.shapeshiftApiName
-          }.shapeshift.com/api/v1/account/${
-            this.walletInfo.keys.bech32Address
-          }/txs?pageSize=100&cursor=${cursor ?? ''}`
-        )
-        const rawJson = await res.json()
-        const json = asShapeshiftResponse(rawJson)
-        cursor = json.cursor
-        for (const [i, tx] of json.txs.entries()) {
-          if (tx == null) continue
-          if (firstTxid == null) {
-            firstTxid = tx.txid
-            firstTxidIndex = i
-          }
-          if (tx.txid === this.otherData.newestTxid) {
-            break
-          }
-          this.processCosmosTransaction(tx)
-        }
-      } while (cursor != null)
-    } catch (e) {
-      this.log.warn('queryTransactions error:', e)
-      throw e
+    let progress = 0
+    for (const query of txQueryStrings) {
+      const newestTxid = await this.queryTransactionsInner(query)
+      if (newestTxid != null && this.otherData[query] !== newestTxid) {
+        this.otherData[query] = newestTxid
+        this.walletLocalDataDirty = true
+      }
+      progress += 0.5
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        progress
+      this.updateOnAddressesChecked()
     }
-
-    if (
-      firstTxid != null &&
-      firstTxidIndex !== this.otherData.newestTxidIndex
-    ) {
-      this.otherData.newestTxid = firstTxid
-      this.otherData.newestTxidIndex = firstTxidIndex
-      this.walletLocalDataDirty = true
-    }
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-    this.updateOnAddressesChecked()
 
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -218,44 +196,143 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
-  processCosmosTransaction(tx: ShapeshiftTx): void {
-    const { blockHeight, fee, memo, messages, timestamp, txid } = tx
-    const message = messages[0]
-    const { from, value } = message
+  async queryTransactionsInner(
+    queryString: typeof txQueryStrings[number]
+  ): Promise<string | undefined> {
+    const client = await this.getStargateClient()
 
-    const { amount: networkFee } = fee
+    // Using the tendermint client directly allows us to control the paging
+    // eslint-disable-next-line @typescript-eslint/dot-notation
+    const tmClient = client['forceGetTmClient']()
 
-    const memos: EdgeMemo[] = []
-    if (memo != null) {
-      memos.push({
-        type: 'text',
-        value: memo
-      })
+    const txSearchParams = {
+      query: `${queryString}='${this.walletInfo.keys.bech32Address}'`,
+      per_page: 50, // sdk default 50
+      order_by: 'desc'
+    }
+    let newestTxid: string | undefined
+    let page = 0
+    let txCountTotal
+    let txCount = 0
+    let earlyExit = false
+    try {
+      do {
+        const txRes = await tmClient.txSearch({
+          ...txSearchParams,
+          page: ++page
+        })
+        const { totalCount, txs } = txRes
+        if (txCountTotal == null) txCountTotal = totalCount
+        txCount = txCount + txs.length
+
+        for (const tx of txs) {
+          const txidHex = toHex(tx.hash).toUpperCase()
+          if (newestTxid == null) {
+            newestTxid = txidHex
+          }
+
+          if (txidHex === this.otherData[queryString]) {
+            earlyExit = true
+            break
+          }
+
+          // The bank module emits 'transfer' events with sender, recipient, and coins
+          const transferEvents: TransferEvent[] = []
+          const parsedLogs = parseRawLog(tx.result.log)
+          parsedLogs.forEach(log => {
+            log.events.forEach(event => {
+              const transferEvent = asMaybe(asTransfer)(event)
+              if (transferEvent == null) return
+              const [recipient, sender, amount] = transferEvent.attributes
+
+              const coins = parseCoins(amount.value)
+              coins.forEach(coin => {
+                transferEvents.push({
+                  sender: sender.value,
+                  recipient: recipient.value,
+                  coin
+                })
+              })
+            })
+          })
+          if (transferEvents.length === 0) continue
+
+          const block = await client.getBlock(tx.height)
+          const date = toSeconds(
+            fromRfc3339WithNanoseconds(block.header.time)
+          ).seconds
+          transferEvents.forEach(event => {
+            this.processCosmosTransaction(txidHex, date, event, tx)
+          })
+        }
+      } while (txCountTotal > txCount && !earlyExit)
+    } catch (e) {
+      this.log.warn('queryTransactions error:', e)
+      throw e
     }
 
-    const isSend = from === this.walletInfo.keys.bech32Address
+    return newestTxid
+  }
+
+  processCosmosTransaction(
+    txidHex: string,
+    date: number,
+    event: TransferEvent,
+    tx: TxResponse
+  ): void {
+    const { height, tx: txRaw } = tx
+    const signedTx = base16.stringify(txRaw)
+    const {
+      authInfo: { fee },
+      body: { memo }
+    } = decodeTxRaw(txRaw)
+
+    let networkFeeCoin = this.networkInfo.defaultTransactionFee
+    if (fee != null) {
+      const { amount } = fee
+      networkFeeCoin = safeAddCoins([networkFeeCoin, ...amount])
+    }
+    const networkFee = networkFeeCoin.amount
+
+    const { coin, recipient, sender } = event
+
+    if (
+      (this.walletInfo.keys.bech32Address !== recipient &&
+        this.walletInfo.keys.bech32Address !== sender) ||
+      this.currencyInfo.currencyCode !== coin.denom.toUpperCase()
+    ) {
+      return
+    }
+    const isSend = this.walletInfo.keys.bech32Address === sender
     const ourReceiveAddresses: string[] = []
 
-    const currencyCode = value.denom.toUpperCase()
-    let nativeAmount = value.amount
-
+    let nativeAmount = coin.amount
+    const currencyCode = this.currencyInfo.currencyCode
     if (isSend) {
       nativeAmount = `-${add(nativeAmount, networkFee)}`
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
     }
 
+    const memos: EdgeMemo[] = []
+    if (memo !== '') {
+      memos.push({
+        type: 'text',
+        value: memo
+      })
+    }
+
     const edgeTransaction: EdgeTransaction = {
-      blockHeight,
+      blockHeight: height,
       currencyCode,
-      date: timestamp,
+      date,
       isSend,
       memos,
       nativeAmount,
       networkFee,
       ourReceiveAddresses,
-      signedTx: '',
-      txid,
+      signedTx,
+      txid: txidHex,
       walletId: this.walletId
     }
     this.addTransaction(currencyCode, edgeTransaction)

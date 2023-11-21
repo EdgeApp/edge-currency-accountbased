@@ -7,6 +7,7 @@
 - added: Add `MakeTxDeposit` to support THORChain swap transactions
 - added: ENS name resolution support
 - changed: Move `makeTx` params types to common
+- changed: (RUNE) Replace shapeshift api with native rpc tx query
 - fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
 
 ## 2.11.2 (2023-11-13)
