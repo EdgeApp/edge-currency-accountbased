@@ -50,6 +50,7 @@ export interface EthereumNetworkUpdate {
   newNonce?: string
   tokenBal?: { [currencyCode: string]: string }
   tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple }
+  detectedTokenIds?: string[]
   server?: string
 }
 
@@ -470,6 +471,9 @@ export class EthereumNetwork {
         this.ethNeeds.tokenBalLastChecked[tk] = now
         this.ethEngine.updateBalance(tk, tokenBal[tk])
       }
+      this.ethEngine.currencyEngineCallbacks.onNewTokens(
+        ethereumNetworkUpdate.detectedTokenIds ?? []
+      )
       this.ethNeeds.tokenBalsLastChecked = now
     }
 

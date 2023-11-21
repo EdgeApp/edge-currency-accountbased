@@ -1,4 +1,4 @@
-import { add } from 'biggystring'
+import { add, gt } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import parse from 'url-parse'
@@ -290,6 +290,7 @@ export class RpcAdapter
           const { chainParams } = networkInfo
 
           const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+          const detectedTokenIds: string[] = []
           const ethBalCheckerContract = this.config.ethBalCheckerContract
           if (ethBalCheckerContract == null) return tokenBal
 
@@ -320,6 +321,7 @@ export class RpcAdapter
             if (contractCallRes.length !== balanceQueryAddrs.length) {
               throw new Error('checkEthBalChecker balances length mismatch')
             }
+            // this.ethEngine.log.warn(contractCallRes)
             return contractCallRes
           }).catch((e: any) => {
             throw new Error(
@@ -330,14 +332,20 @@ export class RpcAdapter
           // Parse data from smart contract call
           for (let i = 0; i < balances.length; i++) {
             const tokenAddr = balanceQueryAddrs[i].toLowerCase()
-            const balanceBn = balances[i]
+            const balanceBn = ethers.BigNumber.from(balances[i])
 
             let balanceCurrencyCode
             if (tokenAddr === mainnetAssetAddr) {
               const { currencyCode } = currencyInfo
               balanceCurrencyCode = currencyCode
             } else {
-              const token = allTokensMap[tokenAddr.replace('0x', '')]
+              const tokenId = tokenAddr.replace('0x', '')
+
+              // Notify the core that activity was detected on this token
+              if (balanceBn.gt(ethers.constants.Zero))
+                detectedTokenIds.push(tokenId)
+
+              const token = allTokensMap[tokenId]
               if (token == null) {
                 this.logError(
                   'checkEthBalChecker',
@@ -351,11 +359,10 @@ export class RpcAdapter
               balanceCurrencyCode = currencyCode
             }
 
-            tokenBal[balanceCurrencyCode] =
-              ethers.BigNumber.from(balanceBn).toString()
+            tokenBal[balanceCurrencyCode] = balanceBn.toString()
           }
 
-          return { tokenBal, server: 'ethBalChecker' }
+          return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }
         }
 
   fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
