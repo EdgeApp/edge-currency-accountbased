@@ -2,10 +2,29 @@
 
 ## Unreleased
 
+## 2.13.1 (2023-11-21)
+
+- fixed: Incorrect deposit alias for Thorchain RUNE
+
 ## 2.13.0 (2023-11-20)
 
 - added: Add `MakeTxDeposit` to support THORChain swap transactions
 - added: ENS name resolution support
+- changed: Move `makeTx` params types to common
+- changed: (RUNE) Replace shapeshift api with native rpc tx query
+- fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
+
+## 2.12.0 (2023-11-14)
+
+- added: Filecoin FEVM support
+
+## 2.11.2-tc2 (2023-11-21)
+
+- fixed: Incorrect deposit alias for Thorchain RUNE
+
+## 2.11.2-tc (2023-11-20)
+
+- added: Add `MakeTxDeposit` to support THORChain swap transactions
 - changed: Move `makeTx` params types to common
 - changed: (RUNE) Replace shapeshift api with native rpc tx query
 - fixed: Possible error in ETH transactions when calculated gasPrice is below baseFee
