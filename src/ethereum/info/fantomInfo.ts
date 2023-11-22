@@ -276,6 +276,7 @@ export const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
+        'https://fantom-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
         'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
         'https://rpc.ankr.com/fantom',
         'https://rpc.ftm.tools'
