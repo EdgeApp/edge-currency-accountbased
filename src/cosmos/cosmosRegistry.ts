@@ -14,7 +14,7 @@ export const upgradeRegistryAndCreateMethods = (
 
   switch (pluginId) {
     case 'thorchainrune': {
-      const depositTypeUrl = '/types.MsgSend'
+      const depositTypeUrl = '/types.MsgDeposit'
       registry.register(depositTypeUrl, MsgDeposit)
       const deposit = (opts: DepositOpts): EncodeObject => {
         const { assets, memo, signer } = opts
