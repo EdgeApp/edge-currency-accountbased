@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## 2.11.2-tc2 (2023-11-21)
+
+- fixed: Incorrect deposit alias for Thorchain RUNE
+
 ## 2.11.2-tc (2023-11-20)
 
 - added: Add `MakeTxDeposit` to support THORChain swap transactions
