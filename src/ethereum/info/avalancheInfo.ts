@@ -181,7 +181,12 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc.ankr.com/avalanche'
       ]
     },
-    { type: 'evmscan', servers: ['https://api.snowtrace.io'] }
+    {
+      type: 'evmscan',
+      servers: [
+        'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan'
+      ]
+    }
   ],
   uriNetworks: ['avalanche'],
   ercTokenStandard: 'ERC20',
@@ -215,8 +220,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:avalanche',
 
   // Explorers:
-  addressExplorer: 'https://snowtrace.io/address/%s',
-  transactionExplorer: 'https://snowtrace.io/tx/%s',
+  addressExplorer: 'https://avascan.info/blockchain/c/address/%s',
+  transactionExplorer: 'https://avascan.info/blockchain/c/tx/%s',
 
   denominations: [
     {
