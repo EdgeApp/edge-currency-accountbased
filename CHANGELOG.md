@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.14.0 (2023-11-24)
+
 - added: Add Pokt RPCs as option for Fantom and Polygon
 - added: Avascan replaces snowtrace as an evmScan server and explorer for Avalanche
 
