@@ -193,8 +193,7 @@ export class SolanaEngine extends CurrencyEngine<
     let before = null
     const until =
       this.otherData.newestTxid !== '' ? this.otherData.newestTxid : null
-    // @ts-expect-error
-    let txids = []
+    let txids: RpcSignatureForAddress[] = []
     try {
       // Gather all transaction IDs since we last updated
       while (true) {
@@ -210,7 +209,6 @@ export class SolanaEngine extends CurrencyEngine<
         const response: RpcSignatureForAddress[] = asArray(
           asRpcSignatureForAddress
         )(await this.fetchRpc('getSignaturesForAddress', params))
-        // @ts-expect-error
         txids = txids.concat(response)
         if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
         before = response[this.networkInfo.txQueryLimit - 1].signature

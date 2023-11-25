@@ -14,6 +14,7 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -29,12 +30,10 @@ const { Keypair, PublicKey } = solanaWeb3
 const createKeyPair = async (
   mnemonic: string,
   path: string
-  // @ts-expect-error
-): Promise<Keypair> => {
+): Promise<solanaWeb3.Keypair> => {
   const buffer = await mnemonicToSeed(mnemonic)
-  const deriveSeed = ed25519.derivePath(path, buffer.toString('hex')).key
-  // @ts-expect-error
-  return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
+  const deriveSeed = ed25519.derivePath(path, base16.stringify(buffer)).key
+  return Keypair.fromSeed(Uint8Array.from(deriveSeed))
 }
 
 export class SolanaTools implements EdgeCurrencyTools {
