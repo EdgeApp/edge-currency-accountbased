@@ -30,11 +30,13 @@ export const asRpcBalance = asObject({
   value: asNumber
 })
 
-export interface RpcSignatureForAddress {
-  signature: string
-  blocktime?: number
-  err?: any
-}
+export const asRpcSignatureForAddress = asObject({
+  signature: asString,
+  blocktime: asOptional(asNumber),
+  err: asUnknown
+})
+
+export type RpcSignatureForAddress = ReturnType<typeof asRpcSignatureForAddress>
 
 export const asRpcGetTransaction = asObject({
   meta: asObject({

@@ -1,6 +1,6 @@
 import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, mul } from 'biggystring'
-import { asNumber } from 'cleaners'
+import { asArray, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -29,6 +29,7 @@ import {
   asRecentBlockHash,
   asRpcBalance,
   asRpcGetTransaction,
+  asRpcSignatureForAddress,
   asSafeSolanaWalletInfo,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
@@ -84,8 +85,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.otherData = asSolanaWalletOtherData(raw)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async fetchRpc(method: string, params: any = []) {
+  async fetchRpc(method: string, params: any = []): Promise<unknown> {
     const body = {
       jsonrpc: '2.0',
       id: 1,
@@ -115,8 +115,7 @@ export class SolanaEngine extends CurrencyEngine<
     return response.result
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryBalance() {
+  async queryBalance(): Promise<void> {
     try {
       const response = await this.fetchRpc('getBalance', [
         this.base58PublicKey,
@@ -130,8 +129,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryBlockheight() {
+  async queryBlockheight(): Promise<void> {
     try {
       const blockheight = asNumber(await this.fetchRpc('getSlot'))
       if (blockheight > this.walletLocalData.blockHeight) {
@@ -146,8 +144,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryFee() {
+  async queryFee(): Promise<void> {
     try {
       const response = await this.fetchRpc('getRecentBlockhash')
       const {
@@ -161,8 +158,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processSolanaTransaction(tx: RpcGetTransaction, timestamp: number) {
+  processSolanaTransaction(tx: RpcGetTransaction, timestamp: number): void {
     const ourReceiveAddresses = []
     const index = tx.transaction.message.accountKeys.findIndex(
       account => account === this.base58PublicKey
@@ -193,8 +189,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.addTransaction(this.chainCode, edgeTransaction)
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async queryTransactions() {
+  async queryTransactions(): Promise<void> {
     let before = null
     const until =
       this.otherData.newestTxid !== '' ? this.otherData.newestTxid : null
@@ -202,8 +197,7 @@ export class SolanaEngine extends CurrencyEngine<
     let txids = []
     try {
       // Gather all transaction IDs since we last updated
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      while (1) {
+      while (true) {
         const params = [
           this.base58PublicKey,
           {
@@ -213,10 +207,9 @@ export class SolanaEngine extends CurrencyEngine<
             commitment: this.networkInfo.commitment
           }
         ]
-        const response: RpcSignatureForAddress[] = await this.fetchRpc(
-          'getSignaturesForAddress',
-          params
-        )
+        const response: RpcSignatureForAddress[] = asArray(
+          asRpcSignatureForAddress
+        )(await this.fetchRpc('getSignaturesForAddress', params))
         // @ts-expect-error
         txids = txids.concat(response)
         if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
@@ -295,19 +288,17 @@ export class SolanaEngine extends CurrencyEngine<
   // // Public methods
   // // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -428,7 +419,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     try {
       const params = [edgeTransaction.signedTx, { encoding: 'base64' }]
-      const txid = await this.fetchRpc('sendTransaction', params)
+      const txid = asString(await this.fetchRpc('sendTransaction', params))
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
