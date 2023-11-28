@@ -13,7 +13,9 @@ const networkInfo: SolanaNetworkInfo = {
   commitment: 'confirmed', // confirmed is faster, finalized is safer. Even faster processed is unsupported for tx querys
   txQueryLimit: 1000, // RPC default is 1000
   derivationPath: "m/44'/501'/0'/0'",
-  memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
+  memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+  tokenPublicKey: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  associatedTokenPublicKey: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -46,6 +48,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({
   currencyInfo,
   networkInfo,
+
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Solana requires bigint support')
+    }
+  },
 
   async getInnerPlugin() {
     return await import(

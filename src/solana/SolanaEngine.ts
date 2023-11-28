@@ -1,3 +1,8 @@
+import {
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
+  getAssociatedTokenAddress
+} from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, mul } from 'biggystring'
 import { asArray, asNumber, asString } from 'cleaners'
@@ -28,6 +33,7 @@ import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
   asAccountBalance,
+  asAccountInfo,
   asRecentBlockHash,
   asRpcGetTransaction,
   asRpcSignatureForAddress,
@@ -68,6 +74,7 @@ export class SolanaEngine extends CurrencyEngine<
   otherData!: SolanaWalletOtherData
   fetchCors: EdgeFetchFunction
   progressRatio: number
+  addressCache: Map<string, boolean>
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -83,6 +90,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
+    this.addressCache = new Map()
   }
 
   setOtherData(raw: any): void {
@@ -349,7 +357,7 @@ export class SolanaEngine extends CurrencyEngine<
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -361,33 +369,133 @@ export class SolanaEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    const nativeNetworkFee = this.feePerSignature
+    const isTokenTx = tokenId != null
 
-    const balanceSol = this.walletLocalData.totalBalances[this.chainCode] ?? '0'
     let totalTxAmount = '0'
-    totalTxAmount = add(nativeAmount, nativeNetworkFee)
-    if (gt(totalTxAmount, balanceSol)) {
-      throw new InsufficientFundsError()
-    }
-    // Create Solana transaction
-    const payerPublicKey = new PublicKey(this.base58PublicKey)
+    let nativeNetworkFee = this.feePerSignature
+    let parentNetworkFee: string | undefined
+    const balance = this.walletLocalData.totalBalances[currencyCode] ?? '0'
+
+    // pubkeys
+    const payer = new PublicKey(this.base58PublicKey)
+    const payee = new PublicKey(publicAddress)
+    const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
+    const associatedTokenProgramId = new PublicKey(
+      this.networkInfo.associatedTokenPublicKey
+    )
+
     const txOpts = {
       recentBlockhash: this.recentBlockhash,
-      feePayer: payerPublicKey
+      feePayer: payer
     }
-    const solTx = new Transaction(txOpts).add(
-      SystemProgram.transfer({
-        fromPubkey: payerPublicKey,
-        toPubkey: new PublicKey(publicAddress),
-        lamports: parseInt(nativeAmount)
-      })
-    )
+    const solTx = new Transaction(txOpts)
+    if (isTokenTx) {
+      const TOKEN = new PublicKey(tokenId)
+
+      // derive recipient address
+      const associatedDestinationTokenAddrPayee =
+        await getAssociatedTokenAddress(
+          TOKEN,
+          payee,
+          false,
+          tokenProgramId,
+          associatedTokenProgramId
+        )
+
+      // check if recipient exists
+      let tokenAddressExists = this.addressCache.get(publicAddress)
+      if (tokenAddressExists === undefined) {
+        const accountRes = asAccountInfo(
+          await this.fetchRpc('getAccountInfo', [
+            associatedDestinationTokenAddrPayee.toBase58(),
+            {
+              commitment: this.networkInfo.commitment,
+              encoding: 'jsonParsed'
+            }
+          ])
+        )
+
+        if (accountRes.value == null) {
+          tokenAddressExists = false
+          this.addressCache.set(publicAddress, false)
+        } else {
+          tokenAddressExists = true
+          this.addressCache.set(publicAddress, true)
+        }
+      }
+
+      // Add token account creation instruction and bump fee
+      if (!tokenAddressExists) {
+        solTx.add(
+          createAssociatedTokenAccountInstruction(
+            payer,
+            associatedDestinationTokenAddrPayee,
+            payee,
+            TOKEN,
+            tokenProgramId,
+            associatedTokenProgramId
+          )
+        )
+        nativeNetworkFee = add(nativeNetworkFee, this.feePerSignature)
+      }
+
+      parentNetworkFee = nativeNetworkFee
+      nativeNetworkFee = '0'
+      totalTxAmount = nativeAmount
+      if (gt(nativeAmount, balance)) {
+        throw new InsufficientFundsError()
+      }
+
+      const balanceSol =
+        this.walletLocalData.totalBalances[this.chainCode] ?? '0'
+      if (gt(parentNetworkFee, balanceSol)) {
+        throw new InsufficientFundsError({
+          currencyCode: this.chainCode,
+          networkFee: parentNetworkFee
+        })
+      }
+
+      // derive our address
+      const associatedDestinationTokenAddrPayer =
+        await getAssociatedTokenAddress(
+          TOKEN,
+          payer,
+          false,
+          tokenProgramId,
+          associatedTokenProgramId
+        )
+
+      solTx.add(
+        createTransferInstruction(
+          associatedDestinationTokenAddrPayer,
+          associatedDestinationTokenAddrPayee,
+          payer,
+          BigInt(nativeAmount),
+          [],
+          tokenProgramId
+        )
+      )
+    } else {
+      totalTxAmount = add(nativeAmount, nativeNetworkFee)
+
+      solTx.add(
+        SystemProgram.transfer({
+          fromPubkey: payer,
+          toPubkey: payee,
+          lamports: parseInt(nativeAmount)
+        })
+      )
+    }
+
+    if (gt(totalTxAmount, balance)) {
+      throw new InsufficientFundsError()
+    }
 
     if (memos[0]?.type === 'text') {
       const memoOpts = new TransactionInstruction({
         keys: [
           {
-            pubkey: payerPublicKey,
+            pubkey: payer,
             isSigner: true,
             isWritable: true
           }
@@ -417,6 +525,7 @@ export class SolanaEngine extends CurrencyEngine<
       networkFee: nativeNetworkFee,
       otherParams,
       ourReceiveAddresses: [],
+      parentNetworkFee,
       signedTx: '',
       txid: '',
       walletId: this.walletId
@@ -448,6 +557,12 @@ export class SolanaEngine extends CurrencyEngine<
     })
     edgeTransaction.signedTx = solTx.serialize().toString('base64')
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
+
+    // Remove all false values from addressCache
+    this.addressCache = new Map(
+      Array.from(this.addressCache.entries()).filter(([_, value]) => value)
+    )
+
     return edgeTransaction
   }
 

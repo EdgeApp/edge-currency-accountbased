@@ -1,7 +1,9 @@
 import {
   asArray,
   asCodec,
+  asEither,
   asMaybe,
+  asNull,
   asNumber,
   asObject,
   asOptional,
@@ -18,6 +20,8 @@ export interface SolanaNetworkInfo {
   txQueryLimit: number
   derivationPath: string
   memoPublicKey: string
+  tokenPublicKey: string
+  associatedTokenPublicKey: string
 }
 
 export const asSolanaWalletOtherData = asObject({
@@ -151,3 +155,18 @@ const asRpcTokenBalance = asObject({
 })
 export const asTokenBalance = asRpcResponse(asRpcTokenBalance)
 export type TokenBalance = ReturnType<typeof asTokenBalance>
+
+export const asAccountInfo = asObject({
+  // context: { apiVersion: '1.16.19', slot: 232816397 },
+  value: asEither(
+    asNull,
+    asObject({
+      // data: ['', 'base58'],
+      // executable: false,
+      // lamports: 254385770,
+      // owner: '11111111111111111111111111111111',
+      // rentEpoch: 0,
+      // space: 0
+    })
+  )
+})
