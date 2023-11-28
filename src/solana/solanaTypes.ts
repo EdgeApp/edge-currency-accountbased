@@ -195,3 +195,7 @@ export interface ParsedTxAmount {
   networkFee: string
   parentNetworkFee?: string
 }
+
+export const asSolanaInitOptions = asObject({
+  poktPortalApiKey: asOptional(asString)
+})

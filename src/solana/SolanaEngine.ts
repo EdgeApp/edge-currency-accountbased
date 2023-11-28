@@ -38,6 +38,7 @@ import {
   asRecentBlockHash,
   asRpcSignatureForAddress,
   asSafeSolanaWalletInfo,
+  asSolanaInitOptions,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
   asTokenBalance,
@@ -70,6 +71,7 @@ export class SolanaEngine extends CurrencyEngine<
   SafeSolanaWalletInfo
 > {
   networkInfo: SolanaNetworkInfo
+  initOptions: JsonObject
   base58PublicKey: string
   feePerSignature: string
   recentBlockhash: string
@@ -87,6 +89,7 @@ export class SolanaEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+    this.initOptions = env.initOptions
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = getFetchCors(env.io)
     this.feePerSignature = '5000'
@@ -122,13 +125,41 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     const funcs = this.networkInfo.rpcNodes.map(serverUrl => async () => {
+      const apiKeys = asSolanaInitOptions(this.initOptions) as {
+        [key: string]: string
+      }
+      const regex = /{{(.*)}}/g
+      const match = regex.exec(serverUrl)
+      if (match != null) {
+        const key = match[1]
+        const apiKey = apiKeys[key]
+        if (typeof apiKey === 'string') {
+          serverUrl = serverUrl.replace(match[0], apiKey)
+        } else if (apiKey == null) {
+          throw new Error(
+            `Missing ${key} in 'initOptions' for ${this.currencyInfo.pluginId}`
+          )
+        } else {
+          throw new Error('Incorrect apikey type for RPC')
+        }
+      }
+
       const res = await this.fetchCors(serverUrl, options)
       if (!res.ok) {
         throw new Error(
           `fetchRpc ${options.method} failed error: ${res.status}`
         )
       }
-      return await res.json()
+      const out = await res.json()
+
+      // look for jsonrpc error
+      if (out[0].error != null) {
+        throw new Error(
+          `fetchRpc ${options.method} failed error: ${out.error.message}`
+        )
+      }
+
+      return out
     })
 
     return await asyncWaterfall(funcs)
