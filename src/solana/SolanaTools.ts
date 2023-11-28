@@ -10,6 +10,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
@@ -17,6 +18,7 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import {
@@ -155,6 +157,15 @@ export class SolanaTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return cleanLocation.contractAddress
   }
 }
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (Solana) Add SPL token support
 - added: Missing RUNE symbol
 - added: Cosmos getMaxTx method
 
