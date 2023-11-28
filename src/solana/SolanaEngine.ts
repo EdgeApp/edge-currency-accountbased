@@ -4,7 +4,7 @@ import {
   getAssociatedTokenAddress
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
-import { add, gt, mul } from 'biggystring'
+import { add, gt, gte, lt, mul, sub } from 'biggystring'
 import { asArray, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -43,6 +43,7 @@ import {
   asTokenBalance,
   asTransaction,
   Blocktime,
+  ParsedTxAmount,
   RpcGetTransaction,
   RpcRequest,
   RpcSignatureForAddress,
@@ -211,36 +212,98 @@ export class SolanaEngine extends CurrencyEngine<
 
   processSolanaTransaction(
     tx: RpcGetTransaction['result'],
+    amounts: ParsedTxAmount,
     timestamp: number
   ): void {
     const ourReceiveAddresses = []
-    const index = tx.transaction.message.accountKeys.findIndex(
-      account => account === this.base58PublicKey
-    )
-    if (index < 0 || tx.meta == null) return
-    const amount = tx.meta.postBalances[index] - tx.meta.preBalances[index]
-    const fee = tx.meta.fee
 
-    // Failed outgoing transactions can go through the normal flow since the payload returns pre- and post- balances which account for burned fees.
-    // Failed incoming transactions need to be ignored
-    if (amount >= 0) {
-      if (tx.meta.err != null) return // ignore these
+    const { amount, networkFee, parentNetworkFee, tokenId } = amounts
+    const currencyCode =
+      tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
+
+    if (gte(amount, '0')) {
       ourReceiveAddresses.push(this.base58PublicKey)
     }
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.slot,
-      currencyCode: this.chainCode,
+      currencyCode,
       date: timestamp,
-      isSend: amount.toString().startsWith('-'),
+      isSend: amount.startsWith('-'),
       memos: [],
-      nativeAmount: amount.toString(),
-      networkFee: fee.toString(),
+      nativeAmount: amount,
+      networkFee,
       ourReceiveAddresses,
+      parentNetworkFee,
       signedTx: '',
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
-    this.addTransaction(this.chainCode, edgeTransaction)
+    this.addTransaction(currencyCode, edgeTransaction)
+  }
+
+  parseTxAmounts(tx: RpcGetTransaction['result']): ParsedTxAmount[] {
+    const out: ParsedTxAmount[] = []
+    const index = tx.transaction.message.accountKeys.findIndex(
+      account => account === this.base58PublicKey
+    )
+    if (index < 0 || tx.meta == null) return out
+
+    const {
+      fee,
+      preBalances,
+      postBalances,
+      preTokenBalances,
+      postTokenBalances
+    } = tx.meta
+    const networkFee = fee.toString()
+    const solAmount = (postBalances[index] - preBalances[index]).toString()
+    if (solAmount !== '0') {
+      const isSend = lt(solAmount, '0')
+      out.push({
+        amount: isSend ? sub(solAmount, networkFee) : solAmount,
+        networkFee: isSend ? networkFee : '0'
+      })
+    }
+
+    const skip = (
+      balObj: RpcGetTransaction['result']['meta']['postTokenBalances'][number]
+    ): boolean => {
+      return (
+        balObj == null || // don't recognize the object
+        balObj.owner !== this.base58PublicKey || // isn't related to our wallet
+        balObj.programId !== this.networkInfo.tokenPublicKey || // isn't an spl token
+        this.allTokensMap[balObj.mint] == null // never heard of it
+      )
+    }
+
+    const tokenBalanceChangeMap = new Map<string, string>()
+    for (const postTokenBal of postTokenBalances) {
+      if (postTokenBal == null || skip(postTokenBal)) continue
+      tokenBalanceChangeMap.set(
+        postTokenBal.mint,
+        postTokenBal.uiTokenAmount.amount
+      )
+    }
+    for (const preTokenBal of preTokenBalances) {
+      if (preTokenBal == null || skip(preTokenBal)) continue
+      const current = tokenBalanceChangeMap.get(preTokenBal.mint) ?? '0'
+      tokenBalanceChangeMap.set(
+        preTokenBal.mint,
+        sub(current, preTokenBal.uiTokenAmount.amount)
+      )
+    }
+
+    tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
+      out.push({
+        amount: balanceChange,
+        networkFee: '0',
+        parentNetworkFee: lt(balanceChange, '0') ? networkFee : undefined,
+        tokenId
+      })
+    })
+
+    return out
   }
 
   async queryTransactions(): Promise<void> {
@@ -273,7 +336,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (txids.length === 0) {
-      this.tokenCheckTransactionsStatus[this.chainCode] = 1
+      this.updateTxStatus(1)
       this.updateOnAddressesChecked()
       return
     }
@@ -302,10 +365,16 @@ export class SolanaEngine extends CurrencyEngine<
 
     // Process the transactions from oldest to newest
     for (let i = txids.length - 1; i >= 0; i--) {
-      this.processSolanaTransaction(
-        txResponse[i].result,
-        asBlocktime(blocktimeResponse[i]).result
-      )
+      if (txResponse[i].result.meta?.err != null) continue // ignore these
+
+      const amounts = this.parseTxAmounts(txResponse[i].result)
+      amounts.forEach(amount => {
+        this.processSolanaTransaction(
+          txResponse[i].result,
+          amount,
+          asBlocktime(blocktimeResponse[i]).result
+        )
+      })
       this.otherData.newestTxid = txids[i].signature
 
       // Update progress
@@ -313,15 +382,14 @@ export class SolanaEngine extends CurrencyEngine<
       if (percent !== this.progressRatio) {
         if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
           this.progressRatio = percent
-          this.tokenCheckTransactionsStatus[this.chainCode] = this.progressRatio
+          this.updateTxStatus(this.progressRatio)
           this.updateOnAddressesChecked()
         }
       }
     }
 
     this.walletLocalDataDirty = true
-    this.tokenCheckTransactionsStatus[this.chainCode] = 1
-    this.updateOnAddressesChecked()
+    this.updateTxStatus(1)
 
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -329,6 +397,19 @@ export class SolanaEngine extends CurrencyEngine<
       )
       this.transactionsChangedArray = []
     }
+  }
+
+  updateTxStatus(progress: number): void {
+    const codeArray = [
+      this.chainCode,
+      ...this.enabledTokenIds.map(
+        tokenId => this.allTokensMap[tokenId].currencyCode
+      )
+    ]
+    codeArray.forEach(code => {
+      this.tokenCheckTransactionsStatus[code] = progress
+    })
+    this.updateOnAddressesChecked()
   }
 
   // // ****************************************************************************

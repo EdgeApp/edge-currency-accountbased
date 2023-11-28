@@ -149,15 +149,28 @@ export const asAccountInfo = asObject({
   )
 })
 
+const asTxTokenBalance = asObject({
+  accountIndex: asNumber,
+  mint: asString,
+  owner: asString,
+  programId: asString,
+  uiTokenAmount: asObject({
+    amount: asString
+    // "decimals": asNumber,
+    // "uiAmount": 7150.402259,
+    // "uiAmountString": "7150.402259"
+  })
+})
+
 export const asRpcGetTransaction = asObject({
   meta: asObject({
     err: asOptional(asUnknown),
     fee: asNumber,
     innerInstructions: asArray(asUnknown),
     postBalances: asArray(asNumber),
-    postTokenBalances: asArray(asUnknown),
+    postTokenBalances: asArray(asMaybe(asTxTokenBalance)),
     preBalances: asArray(asNumber),
-    preTokenBalances: asArray(asUnknown)
+    preTokenBalances: asArray(asMaybe(asTxTokenBalance))
   }),
   slot: asNumber,
   transaction: asObject({
@@ -175,3 +188,10 @@ export type RpcGetTransaction = ReturnType<typeof asTransaction>
 
 export const asBlocktime = asRpcResponse(asNumber)
 export type Blocktime = ReturnType<typeof asBlocktime>
+
+export interface ParsedTxAmount {
+  amount: string
+  tokenId?: string
+  networkFee: string
+  parentNetworkFee?: string
+}
