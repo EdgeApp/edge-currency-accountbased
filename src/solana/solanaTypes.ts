@@ -42,28 +42,6 @@ export const asRpcSignatureForAddress = asObject({
 
 export type RpcSignatureForAddress = ReturnType<typeof asRpcSignatureForAddress>
 
-export const asRpcGetTransaction = asObject({
-  meta: asObject({
-    err: asOptional(asUnknown),
-    fee: asNumber,
-    innerInstructions: asArray(asUnknown),
-    postBalances: asArray(asNumber),
-    postTokenBalances: asArray(asUnknown),
-    preBalances: asArray(asNumber),
-    preTokenBalances: asArray(asUnknown)
-  }),
-  slot: asNumber,
-  transaction: asObject({
-    message: asObject({
-      accountKeys: asArray(asString),
-      recentBlockhash: asString
-    }),
-    signatures: asArray(asString)
-  })
-})
-
-export type RpcGetTransaction = ReturnType<typeof asRpcGetTransaction>
-
 export const asRecentBlockHash = asObject({
   value: asObject({
     blockhash: asString,
@@ -170,3 +148,30 @@ export const asAccountInfo = asObject({
     })
   )
 })
+
+export const asRpcGetTransaction = asObject({
+  meta: asObject({
+    err: asOptional(asUnknown),
+    fee: asNumber,
+    innerInstructions: asArray(asUnknown),
+    postBalances: asArray(asNumber),
+    postTokenBalances: asArray(asUnknown),
+    preBalances: asArray(asNumber),
+    preTokenBalances: asArray(asUnknown)
+  }),
+  slot: asNumber,
+  transaction: asObject({
+    message: asObject({
+      accountKeys: asArray(asString),
+      instructions: asArray(asUnknown),
+      recentBlockhash: asString
+    }),
+    signatures: asArray(asString)
+  })
+})
+export const asTransaction = asRpcResponse(asRpcGetTransaction)
+
+export type RpcGetTransaction = ReturnType<typeof asTransaction>
+
+export const asBlocktime = asRpcResponse(asNumber)
+export type Blocktime = ReturnType<typeof asBlocktime>

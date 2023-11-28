@@ -34,13 +34,15 @@ import {
   AccountBalance,
   asAccountBalance,
   asAccountInfo,
+  asBlocktime,
   asRecentBlockHash,
-  asRpcGetTransaction,
   asRpcSignatureForAddress,
   asSafeSolanaWalletInfo,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
   asTokenBalance,
+  asTransaction,
+  Blocktime,
   RpcGetTransaction,
   RpcRequest,
   RpcSignatureForAddress,
@@ -207,7 +209,10 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  processSolanaTransaction(tx: RpcGetTransaction, timestamp: number): void {
+  processSolanaTransaction(
+    tx: RpcGetTransaction['result'],
+    timestamp: number
+  ): void {
     const ourReceiveAddresses = []
     const index = tx.transaction.message.accountKeys.findIndex(
       account => account === this.base58PublicKey
@@ -273,50 +278,45 @@ export class SolanaEngine extends CurrencyEngine<
       return
     }
 
-    let failedTxQueryIndex = -1
+    const transactionRequests: RpcRequest[] = []
     for (let i = txids.length - 1; i >= 0; i--) {
-      // Process the transactions from oldest to newest
-      try {
-        const tx = asRpcGetTransaction(
-          await this.fetchRpc('getTransaction', [
-            txids[i].signature,
-            { encoding: 'json', commitment: this.networkInfo.commitment }
-          ])
-        )
-
-        // From testing, getSignaturesForAddress always returns a blocktime but it is optional in the RPC docs so we should be prepared to get it if it isn't present
-        let timestamp = txids[i].blocktime
-        if (timestamp == null || isNaN(timestamp))
-          timestamp = asNumber(await this.fetchRpc('getBlockTime', [tx.slot]))
-
-        this.processSolanaTransaction(tx, timestamp)
-
-        // Update progress
-        const percent = 1 - i / txids.length
-        if (percent !== this.progressRatio) {
-          if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
-            this.progressRatio = percent
-            this.tokenCheckTransactionsStatus[this.chainCode] =
-              this.progressRatio
-            this.updateOnAddressesChecked()
-          }
-        }
-      } catch (e: any) {
-        // Note the oldest failed tx query so we try again next loop
-        failedTxQueryIndex = i
-        break
-      }
+      transactionRequests.push({
+        method: 'getTransaction',
+        params: [
+          txids[i].signature,
+          { encoding: 'json', commitment: this.networkInfo.commitment }
+        ]
+      })
     }
+    const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
+      transactionRequests
+    )
+    const slots = txResponse.map(res => asTransaction(res).result.slot)
+    const blocktimeRequests: RpcRequest[] = slots.map(slot => ({
+      method: 'getBlockTime',
+      params: [slot]
+    }))
+    const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
+      blocktimeRequests
+    )
 
-    if (failedTxQueryIndex === -1) {
-      // all queries were successful so we can update the newestTxid the latest txid
-      this.otherData.newestTxid = txids[0].signature
-    } else if (txids.length > failedTxQueryIndex + 1) {
-      // If a query failed, set newestTxId to the txid immediately preceding the failed query
-      // so we try to get it again next time
-      this.otherData.newestTxid = txids[failedTxQueryIndex + 1].signature
-    } else {
-      // If the failedTxQueryIndex is the end of the array then we don't update newestTxid
+    // Process the transactions from oldest to newest
+    for (let i = txids.length - 1; i >= 0; i--) {
+      this.processSolanaTransaction(
+        txResponse[i].result,
+        asBlocktime(blocktimeResponse[i]).result
+      )
+      this.otherData.newestTxid = txids[i].signature
+
+      // Update progress
+      const percent = 1 - i / txids.length
+      if (percent !== this.progressRatio) {
+        if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
+          this.progressRatio = percent
+          this.tokenCheckTransactionsStatus[this.chainCode] = this.progressRatio
+          this.updateOnAddressesChecked()
+        }
+      }
     }
 
     this.walletLocalDataDirty = true
