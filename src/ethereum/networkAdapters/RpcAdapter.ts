@@ -289,6 +289,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
           const { chainParams } = networkInfo
 
           const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+          const detectedTokenIds: string[] = []
           const ethBalCheckerContract = this.config.ethBalCheckerContract
           if (ethBalCheckerContract == null) return tokenBal
 
@@ -329,14 +330,20 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
           // Parse data from smart contract call
           for (let i = 0; i < balances.length; i++) {
             const tokenAddr = balanceQueryAddrs[i].toLowerCase()
-            const balanceBn = balances[i]
+            const balanceBn = ethers.BigNumber.from(balances[i])
 
             let balanceCurrencyCode
             if (tokenAddr === mainnetAssetAddr) {
               const { currencyCode } = currencyInfo
               balanceCurrencyCode = currencyCode
             } else {
-              const token = allTokensMap[tokenAddr.replace('0x', '')]
+              const tokenId = tokenAddr.replace('0x', '')
+
+              // Notify the core that activity was detected on this token
+              if (balanceBn.gt(ethers.constants.Zero))
+                detectedTokenIds.push(tokenId)
+
+              const token = allTokensMap[tokenId]
               if (token == null) {
                 this.logError(
                   'checkEthBalChecker',
@@ -350,11 +357,10 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
               balanceCurrencyCode = currencyCode
             }
 
-            tokenBal[balanceCurrencyCode] =
-              ethers.BigNumber.from(balanceBn).toString()
+            tokenBal[balanceCurrencyCode] = balanceBn.toString()
           }
 
-          return { tokenBal, server: 'ethBalChecker' }
+          return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }
         }
 
   private addRpcApiKey(url: string): string {
