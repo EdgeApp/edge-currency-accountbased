@@ -99,37 +99,12 @@ export type AccountBalance = ReturnType<typeof asAccountBalance>
 
 const asRpcTokenBalance = asObject({
   // "context": { "apiVersion": "1.16.18", "slot": 232646289 },
-  value: asArray(
-    asObject({
-      account: asObject({
-        data: asObject({
-          parsed: asObject({
-            info: asObject({
-              // isNative: asBoolean,
-              // mint: asString,
-              // owner: asString,
-              // state: asString,
-              tokenAmount: asObject({
-                amount: asString
-                // decimals: asNumber
-                // "uiAmount": 0.000375,
-                // "uiAmountString": "0.000375"
-              })
-            })
-            // type: asString
-          })
-          // program: asValue('spl-token')
-          // "space": 165
-        })
-        // "executable": false,
-        // "lamports": 2039280,
-        // "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-        // "rentEpoch": 361,
-        // "space": 165
-      })
-      // pubkey: asString
-    })
-  )
+  value: asObject({
+    amount: asString
+    // decimals: 6,
+    // uiAmount: 2.301,
+    // uiAmountString: '2.301'
+  })
 })
 export const asTokenBalance = asRpcResponse(asRpcTokenBalance)
 export type TokenBalance = ReturnType<typeof asTokenBalance>

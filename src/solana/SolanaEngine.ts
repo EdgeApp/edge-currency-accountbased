@@ -5,7 +5,7 @@ import {
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, gte, lt, mul, sub } from 'biggystring'
-import { asArray, asNumber, asString } from 'cleaners'
+import { asArray, asMaybe, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -152,13 +152,6 @@ export class SolanaEngine extends CurrencyEngine<
       }
       const out = await res.json()
 
-      // look for jsonrpc error
-      if (out[0].error != null) {
-        throw new Error(
-          `fetchRpc ${options.method} failed error: ${out.error.message}`
-        )
-      }
-
       return out
     })
 
@@ -178,12 +171,23 @@ export class SolanaEngine extends CurrencyEngine<
       ]
 
       const allTokenIds = [...Object.keys(this.allTokensMap)]
+      const pubkey = new PublicKey(this.base58PublicKey)
+      const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
+      const associatedTokenProgramId = new PublicKey(
+        this.networkInfo.associatedTokenPublicKey
+      )
       for (const tokenId of allTokenIds) {
+        const associatedTokenPubkey = await getAssociatedTokenAddress(
+          new PublicKey(tokenId),
+          pubkey,
+          false,
+          tokenProgramId,
+          associatedTokenProgramId
+        )
         requests.push({
-          method: 'getTokenAccountsByOwner',
+          method: 'getTokenAccountBalance',
           params: [
-            this.base58PublicKey,
-            { mint: tokenId },
+            associatedTokenPubkey.toBase58(),
             {
               commitment: this.networkInfo.commitment,
               encoding: 'jsonParsed'
@@ -199,10 +203,10 @@ export class SolanaEngine extends CurrencyEngine<
         this.updateBalance(this.chainCode, balance.result.value.toString())
 
         for (const [i, tokenId] of allTokenIds.entries()) {
-          const tokenBal = asTokenBalance(tokenBals[i])
-          const balance =
-            tokenBal.result.value[0]?.account?.data?.parsed?.info?.tokenAmount
-              ?.amount ?? '0'
+          const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
+          // empty token addresses return an error "Invalid param: could not find account".
+          // If there was an actual error with the request it would have thrown already
+          const balance = tokenBal?.result?.value?.amount ?? '0'
           this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
         }
       }
