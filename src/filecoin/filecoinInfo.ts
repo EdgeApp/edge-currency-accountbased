@@ -15,7 +15,7 @@ const networkInfo: FilecoinNetworkInfo = {
   }
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
   displayName: 'Filecoin',
   pluginId: 'filecoin',

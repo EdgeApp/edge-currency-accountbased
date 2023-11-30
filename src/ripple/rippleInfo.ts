@@ -14,7 +14,7 @@ const networkInfo: XrpNetworkInfo = {
   baseReservePerToken: '2000000'
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XRP',
   displayName: 'XRP',
   pluginId: 'ripple',

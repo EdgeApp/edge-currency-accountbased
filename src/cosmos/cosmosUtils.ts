@@ -11,6 +11,7 @@ import { EdgeFetchFunction } from 'edge-core-js/types'
 
 import {
   asCosmosInitOptions,
+  CosmosClients,
   CosmosInitOptions,
   CosmosNetworkInfo
 } from './cosmosTypes'
@@ -70,13 +71,23 @@ const createTendermintClient = async (
   }
 }
 
-export const createStargateClient = async (
+export const createCosmosClients = async (
   fetch: EdgeFetchFunction,
   endpoint: HttpEndpoint
-): Promise<StargateClient> => {
-  return await StargateClient.create(
+): Promise<CosmosClients> => {
+  const stargateClient = await StargateClient.create(
     await createTendermintClient(createRpcClient(fetch, endpoint))
   )
+  // eslint-disable-next-line @typescript-eslint/dot-notation
+  const queryClient = stargateClient['forceGetQueryClient']()
+  // eslint-disable-next-line @typescript-eslint/dot-notation
+  const tendermintClient = stargateClient['forceGetTmClient']()
+
+  return {
+    queryClient,
+    stargateClient,
+    tendermintClient
+  }
 }
 
 // from THORSwap

@@ -16,7 +16,7 @@ const networkInfo: SolanaNetworkInfo = {
   memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SOL',
   displayName: 'Solana',
   pluginId: 'solana',

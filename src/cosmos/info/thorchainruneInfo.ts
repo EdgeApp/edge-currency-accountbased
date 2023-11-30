@@ -3,19 +3,29 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
+import data from '../info/chain-json/thorchainrune.json'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
-  chainId: 'thorchain-mainnet-v1',
+  chainInfo: {
+    data,
+    name: 'thorchain',
+    url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
+  },
   defaultTransactionFee: {
     // https://thornode.ninerealms.com/thorchain/constants NativeTransactionFee
     denom: 'rune',
     amount: '2000000'
   },
+  nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: {
     url: 'https://rpc-v1.ninerealms.com',
+    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+  },
+  archiveNode: {
+    url: 'https://rpc.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   }
 }

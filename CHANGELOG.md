@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: Osmosis (OSMO)
+- changed: (Cosmos-based) Use gas limit estimation for fees
+- changed: (Cosmos-based) Use both archive and validator nodes to optimize requests
+
 ## 2.15.0 (2023-11-30)
 
 - added: EVM memo options for FEVM currencies

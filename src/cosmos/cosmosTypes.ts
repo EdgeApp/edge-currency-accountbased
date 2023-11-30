@@ -1,8 +1,10 @@
+import { Chain } from '@chain-registry/types'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import { Coin, HttpEndpoint } from '@cosmjs/stargate'
+import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
   asCodec,
   asMaybe,
+  asNumber,
   asObject,
   asOptional,
   asString,
@@ -25,7 +27,7 @@ export interface DepositOpts {
 }
 
 export interface TransferOpts {
-  amount: string
+  amount: Coin[]
   fromAddress: string
   toAddress: string
 }
@@ -43,15 +45,22 @@ export interface UpgradedRegistry {
 export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
-  chainId: string
-  defaultTransactionFee: Coin
+  chainInfo: {
+    data: Chain
+    name: string
+    url: string
+  }
+  defaultTransactionFee?: Coin // Charged by the network but not included in transaction body
+  nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
+  archiveNode: HttpEndpoint
 }
 
 export const txQueryStrings = [`transfer.sender`, `transfer.recipient`] as const
 
 export const asCosmosWalletOtherData = asObject({
+  archivedTxLastCheckTime: asMaybe(asNumber, 0),
   'transfer.sender': asMaybe(asString),
   'transfer.recipient': asMaybe(asString)
 })
@@ -125,4 +134,30 @@ export interface TransferEvent {
   sender: string
   recipient: string
   coin: Coin
+}
+
+export interface CosmosClients {
+  queryClient: ReturnType<StargateClient['forceGetQueryClient']>
+  stargateClient: StargateClient
+  // Using the tendermint client directly allows us to control the paging
+  tendermintClient: ReturnType<StargateClient['forceGetTmClient']>
+}
+
+const asCoin = asObject({
+  denom: asString,
+  amount: asString
+})
+
+export const asCosmosTxOtherParams = asObject({
+  gasFeeCoin: asCoin,
+  gasLimit: asString,
+  unsignedTxHex: asString
+})
+
+export type CosmosTxOtherParams = ReturnType<typeof asCosmosTxOtherParams>
+
+export interface CosmosFee {
+  gasFeeCoin: Coin
+  gasLimit: string
+  networkFee: string
 }

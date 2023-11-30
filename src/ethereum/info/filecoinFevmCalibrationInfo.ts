@@ -46,7 +46,7 @@ const defaultNetworkFees: EthereumFees = {
   }
 }
 
-export const networkInfo: EthereumNetworkInfo = {
+const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
@@ -76,7 +76,7 @@ export const networkInfo: EthereumNetworkInfo = {
   defaultNetworkFees
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   displayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,

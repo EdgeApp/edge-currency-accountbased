@@ -14,7 +14,7 @@ const networkInfo: ZcashNetworkInfo = {
   defaultNetworkFee: '10000' // hardcoded default ZEC fee
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZEC',
   displayName: 'Zcash',
   pluginId: 'zcash',

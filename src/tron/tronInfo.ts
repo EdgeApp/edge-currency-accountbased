@@ -84,7 +84,7 @@ const builtinTokens: EdgeTokenMap = {
   }
 }
 
-export const networkInfo: TronNetworkInfo = {
+const networkInfo: TronNetworkInfo = {
   tronApiServers: ['https://api.trongrid.io'],
   tronNodeServers: [
     'http://3.225.171.164:8090',
@@ -109,7 +109,7 @@ export const networkInfo: TronNetworkInfo = {
   defaultFreezeDurationInDays: 3
 }
 
-export const currencyInfo: EdgeCurrencyInfo = {
+const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TRX',
   displayName: 'Tron',
   pluginId: 'tron',

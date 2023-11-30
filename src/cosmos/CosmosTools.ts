@@ -1,7 +1,8 @@
+import { ChainRegistryFetcher } from '@chain-registry/client'
+import { Chain } from '@chain-registry/types'
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
-import { StargateClient } from '@cosmjs/stargate'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
@@ -24,21 +25,23 @@ import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
+  CosmosClients,
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
-import { createStargateClient, rpcWithApiKey } from './cosmosUtils'
+import { createCosmosClients, rpcWithApiKey } from './cosmosUtils'
 
 export class CosmosTools implements EdgeCurrencyTools {
   io: EdgeIo
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CosmosNetworkInfo
-  client?: StargateClient
+  clients?: CosmosClients
   clientCount: number
   methods: CosmosMethods
   registry: Registry
   initOptions: JsonObject
+  chainData: Chain
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
     const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
@@ -53,6 +56,17 @@ export class CosmosTools implements EdgeCurrencyTools {
     )
     this.methods = methods
     this.registry = registry
+    const { data, name, url } = this.networkInfo.chainInfo
+    this.chainData = data
+    const chainUpdater = new ChainRegistryFetcher()
+    chainUpdater
+      .fetch(url)
+      .then(() => {
+        this.chainData = chainUpdater.getChain(name)
+      })
+      .catch(e => {
+        // failure is ok
+      })
   }
 
   async createSigner(mnemonic: string): Promise<DirectSecp256k1HdWallet> {
@@ -181,8 +195,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   }
 
   async connectClient(): Promise<void> {
-    if (this.client == null) {
-      this.client = await createStargateClient(
+    if (this.clients == null) {
+      this.clients = await createCosmosClients(
         this.io.fetchCors,
         rpcWithApiKey(this.networkInfo, this.initOptions)
       )
@@ -193,8 +207,8 @@ export class CosmosTools implements EdgeCurrencyTools {
   async disconnectClient(): Promise<void> {
     --this.clientCount
     if (this.clientCount === 0) {
-      await this.client?.disconnect()
-      this.client = undefined
+      await this.clients?.stargateClient?.disconnect()
+      this.clients = undefined
     }
   }
 }

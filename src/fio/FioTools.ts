@@ -26,7 +26,6 @@ import {
 } from '../common/utils'
 import { DEFAULT_APR, FIO_REG_API_ENDPOINTS } from './fioConst'
 import { fioApiErrorCodes, FioError } from './fioError'
-import { currencyInfo } from './fioInfo'
 import {
   asFioPrivateKeys,
   asSafeFioWalletInfo,
@@ -150,7 +149,7 @@ export class FioTools implements EdgeCurrencyTools {
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = parseUriCommon(
-      currencyInfo,
+      this.currencyInfo,
       uri,
       {
         fio: true
@@ -179,7 +178,7 @@ export class FioTools implements EdgeCurrencyTools {
       const nativeAmount: string = obj.nativeAmount
       const denom = getLegacyDenomination(
         currencyCode,
-        currencyInfo,
+        this.currencyInfo,
         customTokens
       )
       if (denom == null) {
