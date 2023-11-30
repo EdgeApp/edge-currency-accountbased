@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Coreum (COREUM)
 - added: Osmosis (OSMO)
 - changed: (Cosmos-based) Use gas limit estimation for fees
 - changed: (Cosmos-based) Use both archive and validator nodes to optimize requests
