@@ -1,10 +1,21 @@
 import type { Chain } from '@chain-registry/types'
-import { EdgeCurrencyInfo } from 'edge-core-js/types'
+import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
 import data from '../info/chain-json/osmosis.json'
+
+const builtinTokens: EdgeTokenMap = {
+  uion: {
+    currencyCode: 'ION',
+    displayName: 'Ion',
+    denominations: [{ name: 'ION', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'uion'
+    }
+  }
+}
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'osmo',
@@ -56,6 +67,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const osmosis = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
   networkInfo,
+  builtinTokens,
 
   checkEnvironment() {
     if (global.BigInt == null) {

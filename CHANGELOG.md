@@ -3,6 +3,8 @@
 ## Unreleased
 
 - added: (Solana) Add SPL token support
+- added: (Osmosis) Add ION token
+- added: (Cosmos-based) Add token spending
 - added: Missing RUNE symbol
 - added: Cosmos getMaxTx method
 
@@ -15,6 +17,7 @@
 - changed: Upgrade edge-core-js to 1.12.0
 - changed: (Cosmos-based) Use gas limit estimation for fees
 - changed: (Cosmos-based) Use both archive and validator nodes to optimize requests
+- changed: (Cosmos-based) Replace `transfer` with `coin_received` and `coin_spent` events for transaction processing
 
 ## 2.15.0 (2023-11-30)
 

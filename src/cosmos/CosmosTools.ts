@@ -12,6 +12,7 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
@@ -19,6 +20,7 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
@@ -210,6 +212,15 @@ export class CosmosTools implements EdgeCurrencyTools {
       await this.clients?.stargateClient?.disconnect()
       this.clients = undefined
     }
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return cleanLocation.contractAddress
   }
 }
 
