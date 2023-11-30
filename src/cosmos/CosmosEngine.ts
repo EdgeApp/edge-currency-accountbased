@@ -207,6 +207,12 @@ export class CosmosEngine extends CurrencyEngine<
         mainnetBal?.amount ?? '0'
       )
 
+      this.enabledTokenIds.forEach(tokenId => {
+        const token = this.allTokensMap[tokenId]
+        const tokenBal = balances.find(bal => bal.denom === tokenId)
+        this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
+      })
+
       const { accountNumber, sequence } = await stargateClient.getSequence(
         this.walletInfo.keys.bech32Address
       )
@@ -239,6 +245,12 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactions(): Promise<void> {
     let progress = 0
+    const allCurrencyCodes = [
+      this.currencyInfo.currencyCode,
+      ...this.enabledTokenIds.map(
+        tokenId => this.allTokensMap[tokenId].currencyCode
+      )
+    ]
     const clients =
       Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
         ? // Uses archive rpc for first sync and then only if it's been two weeks between syncs.
@@ -256,8 +268,9 @@ export class CosmosEngine extends CurrencyEngine<
         this.walletLocalDataDirty = true
       }
       progress += 0.5
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        progress
+      allCurrencyCodes.forEach(
+        code => (this.tokenCheckTransactionsStatus[code] = progress)
+      )
       this.updateOnAddressesChecked()
     }
     this.otherData.archivedTxLastCheckTime = Date.now()
