@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 2.15.0 (2023-11-30)
+
+- added: EVM memo options for FEVM currencies
+- added: WFIL and iFIL tokens to FEVM currencies
+- fixed: Token balance query in RpcAdapter had missing 'pending' parameter
+- fixed: Filecoin f4 address parsing
+
 ## 2.14.0 (2023-11-24)
 
 - added: Add Pokt RPCs as option for Fantom and Polygon
