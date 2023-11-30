@@ -6,17 +6,14 @@ import {
   asCheckTokenBalBlockchair,
   CheckTokenBalBlockchair
 } from '../ethereumTypes'
-import { NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface BlockchairAdapterConfig {
   type: 'blockchair'
   servers: string[]
 }
 
-export class BlockchairAdapter
-  extends NetworkAdapterBase<BlockchairAdapterConfig>
-  implements NetworkAdapter
-{
+export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
   broadcast = null
   fetchNonce = null
   fetchTokenBalances = null

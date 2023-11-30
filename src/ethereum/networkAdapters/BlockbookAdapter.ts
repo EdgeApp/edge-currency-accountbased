@@ -7,17 +7,14 @@ import {
   asBlockbookTokenBalance,
   BlockbookAddress
 } from '../ethereumTypes'
-import { NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface BlockbookAdapterConfig {
   type: 'blockbook'
   servers: string[]
 }
 
-export class BlockbookAdapter
-  extends NetworkAdapterBase<BlockbookAdapterConfig>
-  implements NetworkAdapter
-{
+export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
   getBaseFeePerGas = null
   multicastRpc = null
   fetchTokenBalances = null

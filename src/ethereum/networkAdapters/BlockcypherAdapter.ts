@@ -2,17 +2,14 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import parse from 'url-parse'
 
 import { BroadcastResults } from '../EthereumNetwork'
-import { NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface BlockcypherAdapterConfig {
   type: 'blockcypher'
   servers: string[]
 }
 
-export class BlockcypherAdapter
-  extends NetworkAdapterBase<BlockcypherAdapterConfig>
-  implements NetworkAdapter
-{
+export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig> {
   fetchNonce = null
   fetchBlockheight = null
   fetchTokenBalance = null

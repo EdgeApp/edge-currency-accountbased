@@ -25,7 +25,7 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
+import { GetTxsParams, NetworkAdapter } from './types'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
@@ -44,10 +44,7 @@ export interface EvmScanAdapterConfig {
   servers: string[]
 }
 
-export class EvmScanAdapter
-  extends NetworkAdapterBase<EvmScanAdapterConfig>
-  implements NetworkAdapter
-{
+export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   getBaseFeePerGas = null
   multicastRpc = null
   fetchTokenBalances = null

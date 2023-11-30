@@ -34,7 +34,7 @@ export type NetworkAdapterConfig =
   | RpcAdapterConfig
 
 export type NetworkAdapterUpdateMethod = keyof Pick<
-  NetworkAdapter,
+  NetworkAdapter<NetworkAdapterConfig>,
   | 'fetchBlockheight'
   | 'fetchNonce'
   | 'fetchTokenBalance'
@@ -42,23 +42,9 @@ export type NetworkAdapterUpdateMethod = keyof Pick<
   | 'fetchTxs'
 >
 
-type PartiallyNull<T> = { [K in keyof T]: T[K] | null }
-
-export type NetworkAdapter = PartiallyNull<{
-  fetchBlockheight: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  broadcast: (tx: EdgeTransaction) => Promise<BroadcastResults>
-  getBaseFeePerGas: () => Promise<string | undefined>
-  multicastRpc: (
-    method: string,
-    params: any[]
-  ) => Promise<{ result: any; server: string }>
-  fetchNonce: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  fetchTokenBalance: (...args: any[]) => Promise<EthereumNetworkUpdate>
-  fetchTokenBalances: () => Promise<EthereumNetworkUpdate>
-  fetchTxs: (...args: any[]) => Promise<EthereumNetworkUpdate>
-}>
-
-export class NetworkAdapterBase<Config extends { servers?: string[] }> {
+export abstract class NetworkAdapter<
+  Config extends NetworkAdapterConfig = NetworkAdapterConfig
+> {
   config: Config
   ethEngine: EthereumEngine
 
@@ -66,6 +52,33 @@ export class NetworkAdapterBase<Config extends { servers?: string[] }> {
     this.ethEngine = engine
     this.config = config
   }
+
+  abstract fetchBlockheight:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
+    | null
+
+  abstract broadcast:
+    | ((tx: EdgeTransaction) => Promise<BroadcastResults>)
+    | null
+
+  abstract getBaseFeePerGas: (() => Promise<string | undefined>) | null
+  abstract multicastRpc:
+    | ((
+        method: string,
+        params: any[]
+      ) => Promise<{ result: any; server: string }>)
+    | null
+
+  abstract fetchNonce:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
+    | null
+
+  abstract fetchTokenBalance:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
+    | null
+
+  abstract fetchTokenBalances: (() => Promise<EthereumNetworkUpdate>) | null
+  abstract fetchTxs: ((...args: any[]) => Promise<EthereumNetworkUpdate>) | null
 
   protected broadcastResponseHandler(
     res: JsonObject,

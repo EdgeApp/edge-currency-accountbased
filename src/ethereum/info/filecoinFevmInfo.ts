@@ -1,10 +1,29 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import { EthereumTools } from '../EthereumTools'
 import { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '690908f7fa93afc040cfbd9fe1ddd2c2668aa0e0': {
+    currencyCode: 'iFIL',
+    displayName: 'iFIL Inifinity Pool',
+    denominations: [{ name: 'iFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x690908f7fa93afC040CFbD9fE1dDd2C2668Aa0e0'
+    }
+  },
+  '60e1773636cf5e4a227d9ac24f20feca034ee25a': {
+    currencyCode: 'WFIL',
+    displayName: 'Wrapped FIL',
+    denominations: [{ name: 'wFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x60E1773636CF5E4A227d9AC24F20fEca034ee25A'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -60,6 +79,7 @@ export const networkInfo: EthereumNetworkInfo = {
 export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
   displayName: 'Filecoin FEVM',
+  memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevm',
   requiredConfirmations: 900,
   walletType: 'wallet:filecoinfevm',
@@ -108,7 +128,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: {},
-  metaTokens: []
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const filecoinfevm = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>(

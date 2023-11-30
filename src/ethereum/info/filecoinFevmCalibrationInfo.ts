@@ -1,10 +1,29 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import { EthereumTools } from '../EthereumTools'
 import { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import { evmMemoOptions } from './ethereumCommonInfo'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '8c97f94b2cdbf7dc0098057334d9908c4dc0a885': {
+    currencyCode: 'iFIL',
+    displayName: 'iFIL Inifinity Pool',
+    denominations: [{ name: 'iFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x8c97F94b2cDbF7Dc0098057334d9908C4dC0a885'
+    }
+  },
+  ac26a4ab9cf2a8c5dbab6fb4351ec0f4b07356c4: {
+    currencyCode: 'WFIL',
+    displayName: 'Wrapped FIL',
+    denominations: [{ name: 'wFIL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xaC26a4Ab9cF2A8c5DBaB6fb4351ec0F4b07356c4'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -58,8 +77,9 @@ export const networkInfo: EthereumNetworkInfo = {
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
-  currencyCode: 'FIL',
+  currencyCode: 'tFIL',
   displayName: 'Filecoin FEVM (Calibration Testnet)',
+  memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevmcalibration',
   requiredConfirmations: 900,
   walletType: 'wallet:filecoinfevmcalibration',
@@ -70,37 +90,37 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [
     {
-      name: 'FIL',
+      name: 'tFIL',
       multiplier: '1000000000000000000',
       symbol: '⨎'
     },
     {
-      name: 'milliFIL',
+      name: 'millitFIL',
       multiplier: '1000000000000000',
       symbol: 'm⨎'
     },
     {
-      name: 'microFIL',
+      name: 'microtFIL',
       multiplier: '1000000000000',
       symbol: 'µ⨎'
     },
     {
-      name: 'nanoFIL',
+      name: 'nanotFIL',
       multiplier: '1000000000',
       symbol: 'n⨎'
     },
     {
-      name: 'picoFIL',
+      name: 'picotFIL',
       multiplier: '1000000',
       symbol: 'p⨎'
     },
     {
-      name: 'femtoFIL',
+      name: 'femtotFIL',
       multiplier: '1000',
       symbol: 'f⨎'
     },
     {
-      name: 'attoFIL',
+      name: 'attotFIL',
       multiplier: '1',
       symbol: 'a⨎'
     }
@@ -108,7 +128,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: {},
-  metaTokens: []
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const filecoinfevmcalibration = makeOuterPlugin<

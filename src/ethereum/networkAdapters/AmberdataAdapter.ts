@@ -3,17 +3,14 @@ import parse from 'url-parse'
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
-import { NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface AmberdataAdapterConfig {
   type: 'amberdata-rpc'
   servers: string[]
 }
 
-export class AmberdataAdapter
-  extends NetworkAdapterBase<AmberdataAdapterConfig>
-  implements NetworkAdapter
-{
+export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
   broadcast = null
   fetchTokenBalance = null
   fetchTokenBalances = null

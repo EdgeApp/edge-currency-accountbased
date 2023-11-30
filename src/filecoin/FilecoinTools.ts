@@ -51,7 +51,11 @@ export class FilecoinTools implements EdgeCurrencyTools {
     try {
       const address = this.normalizeAddress(addressString)
 
-      if (Address.isFilEthAddress(address)) {
+      // Address is a hex ETH address:
+      if (
+        Address.isFilEthAddress(address) &&
+        /^(0x)?[A-Fa-f0-9]+$/.test(addressString)
+      ) {
         // Verify checksum if it's present in the address
         if (
           /[A-F]/.test(addressString) &&

@@ -397,8 +397,8 @@ export class EthereumNetwork {
           this.ethNeeds.tokenTxsLastChecked[tk] ?? 0,
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
-          async () =>
-            await this.check('fetchTxs', {
+          async (): Promise<EthereumNetworkUpdate> => {
+            const params = {
               startBlock: this.getQueryHeightWithLookback(
                 this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
               ),
@@ -406,7 +406,24 @@ export class EthereumNetwork {
                 this.ethEngine.walletLocalData.lastTransactionDate[tk]
               ),
               currencyCode: tk
-            })
+            }
+
+            // Send an empty tokenTxs network update if no network adapters
+            // qualify for 'fetchTxs':
+            if (this.qualifyNetworkAdapters('fetchTxs').length === 0) {
+              return {
+                tokenTxs: {
+                  [this.ethEngine.currencyInfo.currencyCode]: {
+                    blockHeight: params.startBlock,
+                    edgeTransactions: []
+                  }
+                },
+                server: 'none'
+              }
+            }
+
+            return await this.check('fetchTxs', params)
+          }
         )
       }
 
@@ -509,24 +526,6 @@ export class EthereumNetwork {
     const networkAdapters: NetworkAdapter[] = networkAdapterConfigs.map(
       config => makeNetworkAdapter(config, this.ethEngine)
     )
-
-    // We'll fake transaction querying if we don't have a txs querying adapter
-    if (networkAdapters.find(adapter => adapter.fetchTxs == null) == null) {
-      const adapter = new EvmScanAdapter(this.ethEngine, {
-        type: 'evmscan',
-        servers: []
-      })
-      networkAdapters.push({
-        fetchTxs: adapter.fetchTxs,
-        fetchBlockheight: null,
-        broadcast: null,
-        getBaseFeePerGas: null,
-        multicastRpc: null,
-        fetchNonce: null,
-        fetchTokenBalance: null,
-        fetchTokenBalances: null
-      })
-    }
 
     return networkAdapters
   }

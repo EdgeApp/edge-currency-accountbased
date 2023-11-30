@@ -19,7 +19,7 @@ import {
   asRpcResultString,
   RpcResultString
 } from '../ethereumTypes'
-import { GetTxsParams, NetworkAdapter, NetworkAdapterBase } from './types'
+import { NetworkAdapter } from './types'
 
 export interface RpcAdapterConfig {
   type: 'rpc'
@@ -27,10 +27,9 @@ export interface RpcAdapterConfig {
   ethBalCheckerContract?: string
 }
 
-export class RpcAdapter
-  extends NetworkAdapterBase<RpcAdapterConfig>
-  implements NetworkAdapter
-{
+export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
+  fetchTxs = null
+
   constructor(ethEngine: EthereumEngine, config: RpcAdapterConfig) {
     super(ethEngine, config)
 
@@ -247,7 +246,7 @@ export class RpcAdapter
 
           const response = await this.ethEngine.ethNetwork.multicastRpc(
             'eth_call',
-            [params]
+            [params, 'pending']
           )
           const result: string = response.result.result
 
@@ -357,10 +356,6 @@ export class RpcAdapter
 
           return { tokenBal, server: 'ethBalChecker' }
         }
-
-  fetchTxs = async (params: GetTxsParams): Promise<EthereumNetworkUpdate> => {
-    throw new Error('not implemented')
-  }
 
   private addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
