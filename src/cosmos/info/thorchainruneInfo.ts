@@ -21,11 +21,11 @@ const networkInfo: CosmosNetworkInfo = {
   nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: {
-    url: 'https://rpc-v1.ninerealms.com',
+    url: 'https://rpc.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   archiveNode: {
-    url: 'https://rpc.ninerealms.com',
+    url: 'https://rpc-v1.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   }
 }
