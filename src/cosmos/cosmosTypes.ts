@@ -8,8 +8,6 @@ import {
   asObject,
   asOptional,
   asString,
-  asTuple,
-  asValue,
   Cleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
@@ -57,12 +55,15 @@ export interface CosmosNetworkInfo {
   archiveNode: HttpEndpoint
 }
 
-export const txQueryStrings = [`transfer.sender`, `transfer.recipient`] as const
+export const txQueryStrings = [
+  `coin_spent.spender`,
+  `coin_received.receiver`
+] as const
 
 export const asCosmosWalletOtherData = asObject({
   archivedTxLastCheckTime: asMaybe(asNumber, 0),
-  'transfer.sender': asMaybe(asString),
-  'transfer.recipient': asMaybe(asString)
+  'coin_spent.spender': asMaybe(asString),
+  'coin_received.receiver': asMaybe(asString)
 })
 export type CosmosWalletOtherData = ReturnType<typeof asCosmosWalletOtherData>
 
@@ -113,30 +114,6 @@ export interface CosmosOtherMethods {
   getMaxTx: (makeTxParams: MakeTxParams) => Promise<string>
 }
 
-export const asTransfer = asObject({
-  type: asValue('transfer'),
-  attributes: asTuple(
-    asObject({
-      key: asValue('recipient'),
-      value: asString
-    }),
-    asObject({
-      key: asValue('sender'),
-      value: asString
-    }),
-    asObject({
-      key: asValue('amount'),
-      value: asString /* '100000000rune' */
-    })
-  )
-})
-
-export interface TransferEvent {
-  sender: string
-  recipient: string
-  coin: Coin
-}
-
 export interface CosmosClients {
   queryClient: ReturnType<StargateClient['forceGetQueryClient']>
   stargateClient: StargateClient
@@ -161,4 +138,10 @@ export interface CosmosFee {
   gasFeeCoin: Coin
   gasLimit: string
   networkFee: string
+}
+
+// This is the same the sdk 'Coin' but separation is necessary since we want to be able to use negative amounts that the sdk doesn't support
+export interface CosmosCoin {
+  denom: string
+  amount: string
 }
