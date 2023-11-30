@@ -9,7 +9,7 @@ import {
 } from '@cosmjs/proto-signing'
 import { Coin, coin, fromTendermintEvent } from '@cosmjs/stargate'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, lt, mul, sub } from 'biggystring'
+import { add, ceil, lt, mul, sub } from 'biggystring'
 import { Fee, SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
   EdgeCurrencyEngine,
@@ -20,7 +20,6 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  InsufficientFundsError,
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
@@ -565,9 +564,8 @@ export class CosmosEngine extends CurrencyEngine<
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-    const { edgeSpendInfo, currencyCode, nativeBalance } =
-      this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [], networkFeeOption } = edgeSpendInfo
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [], networkFeeOption, tokenId } = edgeSpendInfo
     const memo: string | undefined = memos[0]?.value
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -610,11 +608,6 @@ export class CosmosEngine extends CurrencyEngine<
       networkFee = feeCacheFees.networkFee
     }
 
-    const totalNativeAmount = add(nativeAmount, networkFee)
-    if (gt(totalNativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
-    }
-
     const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
 
     const otherParams: CosmosTxOtherParams = {
@@ -623,16 +616,24 @@ export class CosmosEngine extends CurrencyEngine<
       unsignedTxHex
     }
 
+    const amounts = this.makeEdgeTransactionAmounts(
+      nativeAmount,
+      networkFee,
+      tokenId
+    )
+    this.checkBalances(amounts, tokenId)
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
       currencyCode,
       date: 0,
       isSend: true,
       memos,
-      nativeAmount: `-${totalNativeAmount}`,
-      networkFee,
+      nativeAmount: amounts.nativeAmount,
+      networkFee: amounts.networkFee,
       otherParams,
       ourReceiveAddresses: [],
+      parentNetworkFee: amounts.parentNetworkFee,
       signedTx: '',
       txid: '',
       walletId: this.walletId
