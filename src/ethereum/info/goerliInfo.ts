@@ -6,7 +6,33 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { evmMemoOptions } from './ethereumCommonInfo'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  '07865c6e87b9f70255377e024ace6630c1eaa37f': {
+    currencyCode: 'USDC',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x07865c6E87B9F70255377e024ace6630C1Eaa37F'
+    }
+  },
+  '6ad196dbcd43996f17638b924d2fdedff6fdd677': {
+    currencyCode: 'USDT',
+    displayName: 'Tether USD',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+
+    networkLocation: {
+      contractAddress: '0x6AD196dBcd43996F17638B924d2fdEDFF6Fdd677'
+    }
+  },
+  c04b0d3107736c32e19f1c62b2af67be61d63a05: {
+    currencyCode: 'WBTC',
+    displayName: 'Wrapped Bitcoin',
+    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0xC04B0d3107736C32e19F1c62b2aF67BE61d63a05'
+    }
+  }
+}
 
 const defaultNetworkFees: EthereumFees = {
   default: {
@@ -67,6 +93,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
+        'https://eth-goerli.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
         'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://goerli.infura.io/v3/{{infuraProjectId}}'
       ]
