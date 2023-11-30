@@ -578,7 +578,7 @@ export class CosmosEngine extends CurrencyEngine<
 
     // Encode a send message.
     const msg = this.tools.methods.transfer({
-      amount: [coin(nativeAmount, this.networkInfo.nativeDenom)],
+      amount: [coin(nativeAmount, tokenId ?? this.networkInfo.nativeDenom)],
       fromAddress: this.walletInfo.keys.bech32Address,
       toAddress: publicAddress
     })
