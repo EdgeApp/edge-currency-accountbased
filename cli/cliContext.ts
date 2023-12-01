@@ -147,6 +147,7 @@ export async function makeCliEngine(
         onAddressesChecked: () => log('onAddressesChecked'),
         onBalanceChanged: () => log('onBalanceChanged'),
         onBlockHeightChanged: () => log('onBlockHeightChanged'),
+        onNewTokens: () => log('onNewTokens'),
         onStakingStatusChanged: () => log('onStakingStatusChanged'),
         onTransactionsChanged: () => log('onTransactionsChanged'),
         onTxidsChanged: () => log('onTxidsChanged'),

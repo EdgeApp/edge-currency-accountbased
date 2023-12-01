@@ -66,6 +66,7 @@ for (const fixture of fixtures) {
       emitter.emit('onBlockHeightChange', height)
     },
     onStakingStatusChanged() {},
+    onNewTokens() {},
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)
@@ -250,6 +251,7 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
     emitter.emit('onBlockHeightChange', height)
   },
   onStakingStatusChanged() {},
+  onNewTokens() {},
   onTransactionsChanged(transactionList) {
     // console.log('onTransactionsChanged:', transactionList)
     emitter.emit('onTransactionsChanged', transactionList)

@@ -3699,10 +3699,10 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^1.10.0:
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.10.0.tgz#3446788a3e576ebbe2b99dd12dfbe40aa008b7f3"
-  integrity sha512-uPL0zQMpZrL0GHJBA9DUa/uaQuQPRv4Y/4yxvlM38MDoykgy9mctFaOiT2UXk98nRQsA+BVcJ045KFbe/+DQMQ==
+edge-core-js@^1.12.0:
+  version "1.12.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.12.0.tgz#e3f431c2aecc6771c43a5fbad23c34eba15e95e5"
+  integrity sha512-T26uHPhyHsJOQwpup+l0PHTQCYm/ishPXw+JQh1Vfd2eqAi9QA/U6jk0oOfCvcRFsDKNC7Yhp2WYj+JQ5tM7FQ==
   dependencies:
     aes-js "^3.1.0"
     base-x "^4.0.0"
@@ -3718,7 +3718,7 @@ edge-core-js@^1.10.0:
     redux "^4.2.0"
     redux-keto "^0.3.5"
     redux-pixies "^0.3.6"
-    rfc4648 "^1.4.0"
+    rfc4648 "^1.5.3"
     scrypt-js "^2.0.3"
     serverlet "^0.1.2"
     yaob "^0.3.11"
@@ -7122,10 +7122,15 @@ reusify@^1.0.4:
   resolved "https://registry.yarnpkg.com/reusify/-/reusify-1.0.4.tgz#90da382b1e126efc02146e90845a88db12925d76"
   integrity sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==
 
-rfc4648@^1.1.0, rfc4648@^1.3.0, rfc4648@^1.4.0, rfc4648@^1.5.0:
+rfc4648@^1.1.0, rfc4648@^1.3.0, rfc4648@^1.5.0:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/rfc4648/-/rfc4648-1.5.1.tgz#b0b16756e33d9de8c0c7833e94b28e627ec372a4"
   integrity sha512-60e/YWs2/D3MV1ErdjhJHcmlgnyLUiG4X/14dgsfm9/zmCWLN16xI6YqJYSCd/OANM7bUNzJqPY5B8/02S9Ibw==
+
+rfc4648@^1.5.3:
+  version "1.5.3"
+  resolved "https://registry.yarnpkg.com/rfc4648/-/rfc4648-1.5.3.tgz#e62b81736c10361ca614efe618a566e93d0b41c0"
+  integrity sha512-MjOWxM065+WswwnmNONOT+bD1nXzY9Km6u3kzvnx8F8/HXGZdz3T6e6vZJ8Q/RIMUSp/nxqjH3GwvJDy8ijeQQ==
 
 rimraf@^2.6.3:
   version "2.7.1"
