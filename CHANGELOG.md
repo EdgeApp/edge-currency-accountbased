@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Missing RUNE symbol
+
 ## 2.16.0 (2023-12-01)
 
 - added: Coreum (COREUM)
