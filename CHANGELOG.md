@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.16.0 (2023-12-01)
+
 - added: Coreum (COREUM)
 - added: Osmosis (OSMO)
 - added: Goerli tokens and Pokt RPC server
