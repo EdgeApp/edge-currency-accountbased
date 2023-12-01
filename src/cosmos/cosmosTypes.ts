@@ -36,8 +36,18 @@ export interface TransferOpts {
   toAddress: string
 }
 
+export interface IBCTransferOpts {
+  amount: Coin
+  fromAddress: string
+  toAddress: string
+  memo?: string
+  channel: string
+  port: string
+}
+
 export interface CosmosMethods {
   deposit?: (opts: DepositOpts) => EncodeObject
+  ibcTransfer: (opts: IBCTransferOpts) => EncodeObject
   transfer: (opts: TransferOpts) => EncodeObject
 }
 

@@ -4,10 +4,17 @@ import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 
-import { DepositOpts, TransferOpts, UpgradedRegistry } from './cosmosTypes'
+import {
+  DepositOpts,
+  IBCTransferOpts,
+  TransferOpts,
+  UpgradedRegistry
+} from './cosmosTypes'
 import { assetFromString } from './cosmosUtils'
 import { MsgDeposit } from './info/proto/thorchainrune/thorchain/v1/x/thorchain/types/msg_deposit'
 import { MsgSend as ThorchainRuneMsgSend } from './info/proto/thorchainrune/thorchain/v1/x/thorchain/types/msg_send'
+
+const ONE_HOUR = 1000 * 60 * 60 * 24
 
 export const upgradeRegistryAndCreateMethods = (
   pluginId: string
@@ -27,6 +34,25 @@ export const upgradeRegistryAndCreateMethods = (
           fromAddress,
           toAddress,
           amount
+        })
+      ).finish()
+    }
+    return msg
+  }
+
+  const ibcTransfer = (opts: IBCTransferOpts): EncodeObject => {
+    const { memo, toAddress, fromAddress, channel, port, amount } = opts
+    const msg = {
+      typeUrl: '/ibc.applications.transfer.v1.MsgTransfer',
+      value: MsgTransfer.encode(
+        MsgTransfer.fromPartial({
+          memo,
+          receiver: toAddress,
+          sender: fromAddress,
+          sourceChannel: channel,
+          sourcePort: port,
+          token: amount,
+          timeoutTimestamp: BigInt((Date.now() + ONE_HOUR) * 1000000) // to nanoseconds
         })
       ).finish()
     }
@@ -80,14 +106,14 @@ export const upgradeRegistryAndCreateMethods = (
       }
 
       return {
-        methods: { deposit, transfer },
+        methods: { deposit, ibcTransfer, transfer },
         registry
       }
     }
   }
 
   return {
-    methods: { transfer },
+    methods: { ibcTransfer, transfer },
     registry
   }
 }

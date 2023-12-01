@@ -138,12 +138,23 @@ export class CosmosTools implements EdgeCurrencyTools {
     return { bech32Address: address, publicKey }
   }
 
-  isValidAddress(address: string): boolean {
+  isValidOurAddress(address: string): boolean {
     try {
       const pubkey = fromBech32(address)
       if (pubkey.prefix === this.networkInfo.bech32AddressPrefix) {
         return true
       }
+    } catch (e) {}
+    return false
+  }
+
+  isValidTargetAddress(address: string): boolean {
+    try {
+      const pubkey = fromBech32(address)
+      const matchingChain = chains.find(
+        chain => chain.bech32_prefix === pubkey.prefix
+      )
+      if (matchingChain != null) return true
     } catch (e) {}
     return false
   }
@@ -170,7 +181,7 @@ export class CosmosTools implements EdgeCurrencyTools {
       address = edgeParsedUri.publicAddress
     }
 
-    if (!this.isValidAddress(address))
+    if (!this.isValidTargetAddress(address))
       throw new Error('InvalidPublicAddressError')
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
@@ -184,7 +195,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!this.isValidAddress(publicAddress))
+    if (!this.isValidOurAddress(publicAddress))
       throw new Error('InvalidPublicAddressError')
 
     let amount
