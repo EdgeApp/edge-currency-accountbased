@@ -4,6 +4,7 @@
 
 - added: Coreum (COREUM)
 - added: Osmosis (OSMO)
+- added: Goerli tokens and Pokt RPC server
 - changed: (Cosmos-based) Use gas limit estimation for fees
 - changed: (Cosmos-based) Use both archive and validator nodes to optimize requests
 
