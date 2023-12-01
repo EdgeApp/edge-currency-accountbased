@@ -59,6 +59,7 @@ import { createCosmosClients, safeAddCoins } from './cosmosUtils'
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
+const TWO_MINUTES = 1000 * 60 * 2
 
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
@@ -68,6 +69,11 @@ export class CosmosEngine extends CurrencyEngine<
   fetchCors: EdgeFetchFunction
   accountNumber: number
   sequence: number
+  unconfirmedTransactionCache: {
+    cacheSequence: number
+    txids: Map<string, Date>
+  }
+
   otherData!: CosmosWalletOtherData
   otherMethods: CosmosOtherMethods
   feeCache: Map<string, CosmosFee>
@@ -83,6 +89,10 @@ export class CosmosEngine extends CurrencyEngine<
     this.fetchCors = env.io.fetchCors
     this.accountNumber = 0
     this.sequence = 0
+    this.unconfirmedTransactionCache = {
+      cacheSequence: 0,
+      txids: new Map()
+    }
     this.feeCache = new Map()
     this.otherMethods = {
       makeTx: async (params: MakeTxParams) => {
@@ -253,6 +263,10 @@ export class CosmosEngine extends CurrencyEngine<
 
         for (const tx of txs) {
           const txidHex = toHex(tx.hash).toUpperCase()
+
+          // update unconfirmed cache
+          this.removeFromUnconfirmedCache(txidHex)
+
           if (newestTxid == null) {
             newestTxid = txidHex
           }
@@ -377,6 +391,45 @@ export class CosmosEngine extends CurrencyEngine<
     return base16.stringify(TxRaw.encode(unsignedTxRaw).finish())
   }
 
+  private addToUnconfirmedCache(txid: string): void {
+    const twoMinutesFromNow = new Date(new Date().getTime() + TWO_MINUTES)
+    if (this.unconfirmedTransactionCache.txids.size === 0) {
+      this.unconfirmedTransactionCache.cacheSequence = this.sequence
+    }
+    this.unconfirmedTransactionCache.txids.set(txid, twoMinutesFromNow)
+  }
+
+  private removeFromUnconfirmedCache(txid: string): void {
+    if (this.unconfirmedTransactionCache.txids.has(txid)) {
+      this.unconfirmedTransactionCache.cacheSequence =
+        this.unconfirmedTransactionCache.cacheSequence + 1
+      this.sequence = this.unconfirmedTransactionCache.cacheSequence
+      this.unconfirmedTransactionCache.txids.delete(txid)
+    }
+  }
+
+  private getSequence(): number {
+    if (this.unconfirmedTransactionCache.txids.size === 0) {
+      return this.sequence
+    } else {
+      // If cache has any expired transactions, trash it and use the sequence
+      if (
+        [...this.unconfirmedTransactionCache.txids.values()].some(
+          expiration => expiration < new Date()
+        )
+      ) {
+        this.unconfirmedTransactionCache.txids = new Map()
+        return this.sequence
+      }
+
+      // Otherwise calculate sequence from pending txids
+      return (
+        this.unconfirmedTransactionCache.cacheSequence +
+        this.unconfirmedTransactionCache.txids.size
+      )
+    }
+  }
+
   private async calculateFee(opts: {
     messages: EncodeObject[]
     memo?: string
@@ -392,7 +445,7 @@ export class CosmosEngine extends CurrencyEngine<
         messages,
         memo,
         encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
-        this.sequence
+        this.getSequence()
       )
       if (gasInfo?.gasUsed == null) {
         throw new Error(`simulate didn't return gasUsed `)
@@ -550,7 +603,7 @@ export class CosmosEngine extends CurrencyEngine<
     const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
     const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
     const authInfoBytes = makeAuthInfoBytes(
-      [{ pubkey: encodePubkey(senderPubkey), sequence: this.sequence }],
+      [{ pubkey: encodePubkey(senderPubkey), sequence: this.getSequence() }],
       [gasFeeCoin], // fee, but for thorchain the fee doesn't need to be defined and is automatically pulled from account
       parseInt(gasLimit), // gasLimit
       undefined, // feeGranter
@@ -592,6 +645,10 @@ export class CosmosEngine extends CurrencyEngine<
 
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
+
+      // add to unconfirmed cache
+      this.addToUnconfirmedCache(txid)
+
       return edgeTransaction
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
