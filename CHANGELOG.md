@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Missing RUNE symbol
+- added: Cosmos getMaxTx method
 
 ## 2.16.0 (2023-12-01)
 
