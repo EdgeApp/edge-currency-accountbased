@@ -44,7 +44,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     {
       name: 'RUNE',
       multiplier: '100000000',
-      symbol: ''
+      symbol: 'ᚱ'
     }
   ],
 
