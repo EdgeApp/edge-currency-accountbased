@@ -112,7 +112,10 @@ export class SolanaEngine extends CurrencyEngine<
     return res[0].result
   }
 
-  async fetchRpcBulk(requests: RpcRequest[]): Promise<any[]> {
+  async fetchRpcBulk(
+    requests: RpcRequest[],
+    overrideRpcNodes?: string[]
+  ): Promise<any[]> {
     const options = {
       method: 'POST',
       headers: {
@@ -124,7 +127,8 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    const funcs = this.networkInfo.rpcNodes.map(serverUrl => async () => {
+    const rpcNodes = overrideRpcNodes ?? this.networkInfo.rpcNodes
+    const funcs = rpcNodes.map(serverUrl => async () => {
       const apiKeys = asSolanaInitOptions(this.initOptions) as {
         [key: string]: string
       }
@@ -398,7 +402,10 @@ export class SolanaEngine extends CurrencyEngine<
       )
 
       const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
-        partialTransactionRequests
+        partialTransactionRequests,
+        this.networkInfo.rpcNodes.filter(
+          url => !url.includes('gateway.pokt.network')
+        )
       )
       const slots = txResponse.map(res => asTransaction(res).result.slot)
       const blocktimeRequests: RpcRequest[] = slots.map(slot => ({

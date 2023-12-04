@@ -59,7 +59,7 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SolanaNetworkInfo = {
   rpcNodes: [
     'https://api.mainnet-beta.solana.com',
-    'https://solana-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}'
+    'https://solana-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}' // fails to return some transactions
   ],
   commitment: 'confirmed', // confirmed is faster, finalized is safer. Even faster processed is unsupported for tx querys
   txQueryLimit: 1000, // RPC default is 1000
