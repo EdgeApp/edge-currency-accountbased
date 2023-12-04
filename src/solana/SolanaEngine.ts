@@ -376,49 +376,61 @@ export class SolanaEngine extends CurrencyEngine<
       return
     }
 
-    const transactionRequests: RpcRequest[] = []
-    for (let i = txids.length - 1; i >= 0; i--) {
-      transactionRequests.push({
+    // Break apart the txids into chunks and query them from oldest to newest
+    const CHUNK_SIZE = 50
+    let numProcessedTx = 0
+    const transactionRequests = txids
+      .map(txid => ({
         method: 'getTransaction',
         params: [
-          txids[i].signature,
+          txid.signature,
           { encoding: 'json', commitment: this.networkInfo.commitment }
         ]
-      })
-    }
-    const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
-      transactionRequests
-    )
-    const slots = txResponse.map(res => asTransaction(res).result.slot)
-    const blocktimeRequests: RpcRequest[] = slots.map(slot => ({
-      method: 'getBlockTime',
-      params: [slot]
-    }))
-    const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
-      blocktimeRequests
-    )
+      }))
+      .reverse()
 
-    // Process the transactions from oldest to newest
-    for (let i = txids.length - 1; i >= 0; i--) {
-      if (txResponse[i].result.meta?.err != null) continue // ignore these
+    for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
+      const partialTransactionRequests = transactionRequests.slice(
+        i,
+        i + CHUNK_SIZE > transactionRequests.length - 1
+          ? undefined
+          : i + CHUNK_SIZE
+      )
 
-      const amounts = this.parseTxAmounts(txResponse[i].result)
-      amounts.forEach(amount => {
-        this.processSolanaTransaction(
-          txResponse[i].result,
-          amount,
-          asBlocktime(blocktimeResponse[i]).result
-        )
-      })
-      this.otherData.newestTxid = txids[i].signature
+      const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
+        partialTransactionRequests
+      )
+      const slots = txResponse.map(res => asTransaction(res).result.slot)
+      const blocktimeRequests: RpcRequest[] = slots.map(slot => ({
+        method: 'getBlockTime',
+        params: [slot]
+      }))
+      const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
+        blocktimeRequests
+      )
 
-      // Update progress
-      const percent = 1 - i / txids.length
-      if (percent !== this.progressRatio) {
-        if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
-          this.progressRatio = percent
-          this.updateTxStatus(this.progressRatio)
-          this.updateOnAddressesChecked()
+      // Process the transactions from oldest to newest
+      for (let i = 0; i < txResponse.length; i++) {
+        if (txResponse[i].result.meta?.err != null) continue // ignore these
+        const amounts = this.parseTxAmounts(txResponse[i].result)
+        amounts.forEach(amount => {
+          this.processSolanaTransaction(
+            txResponse[i].result,
+            amount,
+            asBlocktime(blocktimeResponse[i]).result
+          )
+          numProcessedTx++
+        })
+        this.otherData.newestTxid = txids[i].signature
+
+        // Update progress
+        const percent = 1 - numProcessedTx / txids.length
+        if (percent !== this.progressRatio) {
+          if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
+            this.progressRatio = percent
+            this.updateTxStatus(this.progressRatio)
+            this.updateOnAddressesChecked()
+          }
         }
       }
     }
