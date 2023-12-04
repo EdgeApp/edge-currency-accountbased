@@ -110,6 +110,7 @@ export const asCosmosInitOptions = asObject({
 
 export interface CosmosOtherMethods {
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
+  getMaxTx: (makeTxParams: MakeTxParams) => Promise<string>
 }
 
 export const asTransfer = asObject({

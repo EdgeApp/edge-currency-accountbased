@@ -14,7 +14,7 @@ import {
   toSeconds,
   TxResponse
 } from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, mul } from 'biggystring'
+import { add, ceil, gt, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
 import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
@@ -95,6 +95,42 @@ export class CosmosEngine extends CurrencyEngine<
     }
     this.feeCache = new Map()
     this.otherMethods = {
+      getMaxTx: async (params: MakeTxParams) => {
+        switch (params.type) {
+          case 'MakeTxDeposit': {
+            if (this.tools.methods.deposit == null) {
+              throw new Error(
+                `${this.currencyInfo.displayName} does not support the deposit method`
+              )
+            }
+
+            const { assets, memo } = params
+
+            if (assets.length !== 1) {
+              throw new Error('Cannot calculate max tx for more than one asset')
+            }
+
+            const msg = this.tools.methods.deposit({
+              assets,
+              memo,
+              signer: this.walletInfo.keys.bech32Address
+            })
+
+            const { networkFee } = await this.calculateFee({
+              messages: [msg],
+              memo
+            })
+
+            const balance = this.getBalance({
+              currencyCode: this.currencyInfo.currencyCode
+            })
+            return sub(balance, networkFee)
+          }
+          default: {
+            throw new Error(`Invalid type: ${params.type}`)
+          }
+        }
+      },
       makeTx: async (params: MakeTxParams) => {
         switch (params.type) {
           case 'MakeTxDeposit': {
