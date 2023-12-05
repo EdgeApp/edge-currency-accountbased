@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.17.0 (2023-12-04)
+
 - added: (Solana) Add SPL token support
 - added: (Osmosis) Add ION token
 - added: (Cosmos-based) Add token spending
