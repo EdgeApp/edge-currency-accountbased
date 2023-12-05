@@ -31,9 +31,9 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof: {
-    currencyCode: 'RENDER',
+    currencyCode: 'RNDR',
     displayName: 'Render Token',
-    denominations: [{ name: 'RENDER', multiplier: '100000000' }],
+    denominations: [{ name: 'RNDR', multiplier: '100000000' }],
     networkLocation: {
       contractAddress: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof'
     }
