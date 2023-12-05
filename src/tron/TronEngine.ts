@@ -216,20 +216,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async checkTokenBalances(): Promise<void> {
     const address = base58ToHexAddress(this.walletLocalData.publicKey)
 
-    for (const currencyCode of this.enabledTokens) {
-      const metaToken = this.allTokens.find(
-        token => token.currencyCode === currencyCode
-      )
-      if (metaToken?.contractAddress == null) continue
-      const contractAddressHex = base58ToHexAddress(metaToken.contractAddress)
-      const body = {
-        contract_address: contractAddressHex,
-        function_selector: 'balanceOf(address)',
-        parameter: padHex(address, 32),
-        owner_address: address
-      }
-
+    const balancePromises = this.enabledTokenIds.map(async tokenId => {
+      const { currencyCode } = this.allTokensMap[tokenId]
       try {
+        const contractAddressHex = base58ToHexAddress(tokenId)
+        const body = {
+          contract_address: contractAddressHex,
+          function_selector: 'balanceOf(address)',
+          parameter: padHex(address, 32),
+          owner_address: address
+        }
         const res = await this.multicastServers(
           'trx_getBalance',
           '/wallet/triggerconstantcontract',
@@ -238,16 +234,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
         const balance = asTRC20Balance(res)
 
-        if (metaToken != null) {
-          this.updateBalance(
-            metaToken.currencyCode,
-            hexToDecimal(balance.constant_result[0])
-          )
-        }
+        this.updateBalance(
+          currencyCode,
+          hexToDecimal(balance.constant_result[0])
+        )
       } catch (e) {
         this.log.error(`Failed to get balance of ${currencyCode}`, e)
       }
-    }
+    })
+
+    await Promise.all(balancePromises)
   }
 
   async checkAccountInnerLoop(): Promise<void> {
