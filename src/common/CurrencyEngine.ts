@@ -1,4 +1,4 @@
-import { add, div, eq, gt, gte, lt } from 'biggystring'
+import { abs, add, div, eq, gt, gte, lt, sub } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
   EdgeCurrencyCodeOptions,
@@ -28,6 +28,7 @@ import { makeMetaTokens, validateToken } from './tokenHelpers'
 import {
   asWalletLocalData,
   DATA_STORE_FILE,
+  EdgeTransactionHelperAmounts,
   SafeCommonWalletInfo,
   TRANSACTION_STORE_FILE,
   TXID_LIST_FILE,
@@ -97,6 +98,18 @@ export class CurrencyEngine<
   customTokens: EdgeTokenMap = {}
   enabledTokenIds: string[] = []
   enabledTokens: string[] = []
+
+  // Helpers
+  checkBalances: (
+    amounts: EdgeTransactionHelperAmounts,
+    tokenId?: string
+  ) => void
+
+  makeEdgeTransactionAmounts: (
+    nativeAmountSend: string,
+    nativeAmountFee: string,
+    tokenId?: string
+  ) => EdgeTransactionHelperAmounts
 
   constructor(
     env: PluginEnvironment<{}>,
@@ -173,6 +186,56 @@ export class CurrencyEngine<
     this.log(
       `Created Wallet Type ${this.walletInfo.type} for Currency Plugin ${this.currencyInfo.pluginId}`
     )
+
+    // Helpers
+    this.checkBalances = (
+      amounts: EdgeTransactionHelperAmounts,
+      tokenId?: string
+    ): void => {
+      const { nativeAmount, parentNetworkFee } = amounts
+      const mainnetCode = this.currencyInfo.currencyCode
+      const sendCurrencyCode =
+        tokenId != null ? this.allTokensMap[tokenId].currencyCode : mainnetCode
+      const sendBalance =
+        this.walletLocalData.totalBalances[sendCurrencyCode] ?? '0'
+      const feeCurrencyCode = mainnetCode
+      const feeBalance =
+        this.walletLocalData.totalBalances[feeCurrencyCode] ?? '0'
+
+      if (gt(abs(nativeAmount), sendBalance)) {
+        throw new InsufficientFundsError()
+      }
+      if (parentNetworkFee != null && gt(parentNetworkFee, feeBalance)) {
+        throw new InsufficientFundsError({
+          currencyCode: feeCurrencyCode,
+          networkFee: parentNetworkFee
+        })
+      }
+    }
+    this.makeEdgeTransactionAmounts = (
+      nativeAmountSend: string,
+      nativeAmountFee: string,
+      tokenId?: string
+    ): EdgeTransactionHelperAmounts => {
+      let nativeAmount = `-${nativeAmountSend}`
+      let networkFee = nativeAmountFee
+      let parentNetworkFee
+
+      const isToken = tokenId != null
+
+      if (isToken) {
+        parentNetworkFee = networkFee
+        networkFee = '0'
+      } else {
+        nativeAmount = sub(nativeAmount, networkFee)
+      }
+
+      return {
+        nativeAmount,
+        networkFee,
+        parentNetworkFee
+      }
+    }
   }
 
   protected isSpendTx(edgeTransaction: EdgeTransaction): boolean {

@@ -7,16 +7,10 @@ import {
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { Coin, coin, parseCoins } from '@cosmjs/stargate'
-import { parseRawLog } from '@cosmjs/stargate/build/logs'
-import {
-  fromRfc3339WithNanoseconds,
-  toSeconds,
-  TxResponse
-} from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
-import { SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
+import { Coin, coin, fromTendermintEvent } from '@cosmjs/stargate'
+import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
+import { add, ceil, lt, mul, sub } from 'biggystring'
+import { Fee, SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -26,7 +20,6 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  InsufficientFundsError,
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
@@ -43,18 +36,21 @@ import {
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
-  asTransfer,
   CosmosClients,
+  CosmosCoin,
   CosmosFee,
   CosmosNetworkInfo,
   CosmosOtherMethods,
   CosmosTxOtherParams,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo,
-  TransferEvent,
   txQueryStrings
 } from './cosmosTypes'
-import { createCosmosClients, safeAddCoins } from './cosmosUtils'
+import {
+  createCosmosClients,
+  reduceCoinEventsForAddress,
+  safeAddCoins
+} from './cosmosUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const TRANSACTION_POLL_MILLISECONDS = 3000
@@ -210,6 +206,12 @@ export class CosmosEngine extends CurrencyEngine<
         mainnetBal?.amount ?? '0'
       )
 
+      this.enabledTokenIds.forEach(tokenId => {
+        const token = this.allTokensMap[tokenId]
+        const tokenBal = balances.find(bal => bal.denom === tokenId)
+        this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
+      })
+
       const { accountNumber, sequence } = await stargateClient.getSequence(
         this.walletInfo.keys.bech32Address
       )
@@ -242,6 +244,12 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactions(): Promise<void> {
     let progress = 0
+    const allCurrencyCodes = [
+      this.currencyInfo.currencyCode,
+      ...this.enabledTokenIds.map(
+        tokenId => this.allTokensMap[tokenId].currencyCode
+      )
+    ]
     const clients =
       Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
         ? // Uses archive rpc for first sync and then only if it's been two weeks between syncs.
@@ -259,8 +267,9 @@ export class CosmosEngine extends CurrencyEngine<
         this.walletLocalDataDirty = true
       }
       progress += 0.5
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        progress
+      allCurrencyCodes.forEach(
+        code => (this.tokenCheckTransactionsStatus[code] = progress)
+      )
       this.updateOnAddressesChecked()
     }
     this.otherData.archivedTxLastCheckTime = Date.now()
@@ -312,33 +321,33 @@ export class CosmosEngine extends CurrencyEngine<
             break
           }
 
-          // The bank module emits 'transfer' events with sender, recipient, and coins
-          const transferEvents: TransferEvent[] = []
-          const parsedLogs = parseRawLog(tx.result.log)
-          parsedLogs.forEach(log => {
-            log.events.forEach(event => {
-              const transferEvent = asMaybe(asTransfer)(event)
-              if (transferEvent == null) return
-              const [recipient, sender, amount] = transferEvent.attributes
-
-              const coins = parseCoins(amount.value)
-              coins.forEach(coin => {
-                transferEvents.push({
-                  sender: sender.value,
-                  recipient: recipient.value,
-                  coin
-                })
-              })
-            })
-          })
-          if (transferEvents.length === 0) continue
+          const events = tx.result.events.map(fromTendermintEvent)
+          const netBalanceChanges = reduceCoinEventsForAddress(
+            events,
+            this.walletInfo.keys.bech32Address
+          )
+          if (netBalanceChanges.length === 0) continue
 
           const block = await clients.stargateClient.getBlock(tx.height)
           const date = toSeconds(
             fromRfc3339WithNanoseconds(block.header.time)
           ).seconds
-          transferEvents.forEach(event => {
-            this.processCosmosTransaction(txidHex, date, event, tx)
+          const { height, tx: txRaw } = tx
+          const signedTx = base16.stringify(txRaw)
+          const {
+            authInfo: { fee },
+            body: { memo }
+          } = decodeTxRaw(txRaw)
+          netBalanceChanges.forEach(coin => {
+            this.processCosmosTransaction(
+              txidHex,
+              date,
+              signedTx,
+              coin,
+              memo,
+              height,
+              fee
+            )
           })
         }
       } while (txCountTotal > txCount && !earlyExit)
@@ -353,15 +362,23 @@ export class CosmosEngine extends CurrencyEngine<
   processCosmosTransaction(
     txidHex: string,
     date: number,
-    event: TransferEvent,
-    tx: TxResponse
+    signedTx: string,
+    cosmosCoin: CosmosCoin,
+    memo: string,
+    height: number,
+    fee?: Fee
   ): void {
-    const { height, tx: txRaw } = tx
-    const signedTx = base16.stringify(txRaw)
-    const {
-      authInfo: { fee },
-      body: { memo }
-    } = decodeTxRaw(txRaw)
+    const { amount, denom } = cosmosCoin
+
+    const isMainnet = this.networkInfo.nativeDenom === denom
+
+    const currencyCode =
+      this.networkInfo.nativeDenom === denom
+        ? this.currencyInfo.currencyCode
+        : this.allTokensMap[denom] != null
+        ? this.allTokensMap[denom].currencyCode
+        : undefined
+    if (currencyCode == null) return
 
     let networkFee = this.networkInfo.defaultTransactionFee?.amount ?? '0'
     if (fee != null) {
@@ -373,24 +390,21 @@ export class CosmosEngine extends CurrencyEngine<
       networkFee = add(networkFee, networkFeeCoin.amount)
     }
 
-    const { coin: eventCoin, recipient, sender } = event
-
-    if (
-      (this.walletInfo.keys.bech32Address !== recipient &&
-        this.walletInfo.keys.bech32Address !== sender) ||
-      this.networkInfo.nativeDenom !== eventCoin.denom
-    ) {
-      return
-    }
-    const isSend = this.walletInfo.keys.bech32Address === sender
+    const isSend = lt(amount, '0')
     const ourReceiveAddresses: string[] = []
 
-    let nativeAmount = eventCoin.amount
-    const currencyCode = this.currencyInfo.currencyCode
+    let nativeAmount = amount
+    let parentNetworkFee: string | undefined
     if (isSend) {
-      nativeAmount = `-${add(nativeAmount, networkFee)}`
+      if (isMainnet) {
+        nativeAmount = sub(nativeAmount, networkFee)
+      } else {
+        networkFee = '0'
+        parentNetworkFee = networkFee
+      }
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
+      networkFee = '0'
     }
 
     const memos: EdgeMemo[] = []
@@ -410,6 +424,7 @@ export class CosmosEngine extends CurrencyEngine<
       nativeAmount,
       networkFee,
       ourReceiveAddresses,
+      parentNetworkFee,
       signedTx,
       txid: txidHex,
       walletId: this.walletId
@@ -549,9 +564,8 @@ export class CosmosEngine extends CurrencyEngine<
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-    const { edgeSpendInfo, currencyCode, nativeBalance } =
-      this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [], networkFeeOption } = edgeSpendInfo
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [], networkFeeOption, tokenId } = edgeSpendInfo
     const memo: string | undefined = memos[0]?.value
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -564,7 +578,7 @@ export class CosmosEngine extends CurrencyEngine<
 
     // Encode a send message.
     const msg = this.tools.methods.transfer({
-      amount: [coin(nativeAmount, this.networkInfo.nativeDenom)],
+      amount: [coin(nativeAmount, tokenId ?? this.networkInfo.nativeDenom)],
       fromAddress: this.walletInfo.keys.bech32Address,
       toAddress: publicAddress
     })
@@ -594,11 +608,6 @@ export class CosmosEngine extends CurrencyEngine<
       networkFee = feeCacheFees.networkFee
     }
 
-    const totalNativeAmount = add(nativeAmount, networkFee)
-    if (gt(totalNativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
-    }
-
     const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
 
     const otherParams: CosmosTxOtherParams = {
@@ -607,16 +616,24 @@ export class CosmosEngine extends CurrencyEngine<
       unsignedTxHex
     }
 
+    const amounts = this.makeEdgeTransactionAmounts(
+      nativeAmount,
+      networkFee,
+      tokenId
+    )
+    this.checkBalances(amounts, tokenId)
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
       currencyCode,
       date: 0,
       isSend: true,
       memos,
-      nativeAmount: `-${totalNativeAmount}`,
-      networkFee,
+      nativeAmount: amounts.nativeAmount,
+      networkFee: amounts.networkFee,
       otherParams,
       ourReceiveAddresses: [],
+      parentNetworkFee: amounts.parentNetworkFee,
       signedTx: '',
       txid: '',
       walletId: this.walletId

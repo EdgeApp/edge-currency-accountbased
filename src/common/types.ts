@@ -137,3 +137,9 @@ export type MakeTxParams =
   | {
       type: 'MakeTxDummyType'
     }
+
+export interface EdgeTransactionHelperAmounts {
+  nativeAmount: string
+  networkFee: string
+  parentNetworkFee?: string
+}

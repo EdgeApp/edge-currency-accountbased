@@ -1,17 +1,26 @@
 import { addCoins } from '@cosmjs/amino'
 import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
-import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
+import {
+  Coin,
+  Event,
+  HttpEndpoint,
+  parseCoins,
+  StargateClient
+} from '@cosmjs/stargate'
 import {
   RpcClient,
   Tendermint34Client,
   Tendermint37Client,
   TendermintClient
 } from '@cosmjs/tendermint-rpc'
+import { add } from 'biggystring'
+import { asMaybe, asObject, asString, asTuple, asValue } from 'cleaners'
 import { EdgeFetchFunction } from 'edge-core-js/types'
 
 import {
   asCosmosInitOptions,
   CosmosClients,
+  CosmosCoin,
   CosmosInitOptions,
   CosmosNetworkInfo
 } from './cosmosTypes'
@@ -112,4 +121,92 @@ export const safeAddCoins = (coins: Coin[]): Coin => {
     }
     return prev
   })
+}
+
+/**
+ * An overkill way to take all events from a transaction and reduce them down to only the balance changes relevant to the provided address.
+ * Event attributes are filtered, sorted, and passed through strict cleaners to be sure we can use it.
+ */
+
+const asAmountKey = asValue('amount')
+const asReceiverKey = asValue('receiver')
+const asSpenderKey = asValue('spender')
+const asCoinAttributeKey = asValue('amount', 'receiver', 'spender')
+
+const asCoinReceivedEvent = asObject({
+  type: asValue('coin_received'),
+  attributes: asTuple(
+    asObject({
+      key: asAmountKey,
+      value: asString /* '100000000rune' */
+    }),
+    asObject({
+      key: asReceiverKey,
+      value: asString
+    })
+  )
+})
+const asCoinSpentEvent = asObject({
+  type: asValue('coin_spent'),
+  attributes: asTuple(
+    asObject({
+      key: asAmountKey,
+      value: asString /* '100000000rune' */
+    }),
+    asObject({
+      key: asSpenderKey,
+      value: asString
+    })
+  )
+})
+
+export const reduceCoinEventsForAddress = (
+  events: Event[],
+  address: string
+): CosmosCoin[] => {
+  const coinTotalsMap = new Map<string, string>()
+  for (const event of events) {
+    const sortedEvent = {
+      type: event.type,
+      attributes: event.attributes
+        .filter(attr => asMaybe(asCoinAttributeKey)(attr.key) != null)
+        .sort((a, b) => (a.key < b.key ? -1 : 1))
+    }
+
+    const receivedEvent = asMaybe(asCoinReceivedEvent)(sortedEvent)
+    if (receivedEvent != null) {
+      const [amount, receiver] = receivedEvent.attributes.map(
+        attr => attr.value
+      )
+      if (receiver !== address) continue
+
+      const coins = parseCoins(amount)
+      coins.forEach(coin => {
+        const amount = coin.amount
+        const coinTotal = coinTotalsMap.get(coin.denom) ?? '0'
+        coinTotalsMap.set(coin.denom, add(amount, coinTotal))
+      })
+      continue
+    }
+
+    const spentEvent = asMaybe(asCoinSpentEvent)(sortedEvent)
+    if (spentEvent != null) {
+      const [amount, spender] = spentEvent.attributes.map(attr => attr.value)
+      if (spender !== address) continue
+
+      const coins = parseCoins(amount)
+      coins.forEach(coin => {
+        const amount = `-${coin.amount}`
+        const coinTotal = coinTotalsMap.get(coin.denom) ?? '0'
+        coinTotalsMap.set(coin.denom, add(amount, coinTotal))
+      })
+    }
+  }
+
+  // Remove 0 amounts
+  const out: CosmosCoin[] = []
+  coinTotalsMap.forEach((amount, denom) => {
+    if (amount !== '0') out.push({ denom, amount })
+  })
+  return out
 }
