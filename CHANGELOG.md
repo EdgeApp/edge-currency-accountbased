@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
+- added: Network adaptor to zkSync for transaction querying
+- fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
 
 ## 2.17.0 (2023-12-04)
 

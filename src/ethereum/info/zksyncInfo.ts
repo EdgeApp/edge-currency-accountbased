@@ -45,6 +45,10 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: ['https://mainnet.era.zksync.io']
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://block-explorer-api.mainnet.zksync.io']
     }
   ],
   uriNetworks: ['zksync'],
