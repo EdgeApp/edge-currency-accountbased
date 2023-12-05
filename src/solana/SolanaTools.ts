@@ -10,12 +10,15 @@ import {
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
+  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import {
@@ -29,12 +32,10 @@ const { Keypair, PublicKey } = solanaWeb3
 const createKeyPair = async (
   mnemonic: string,
   path: string
-  // @ts-expect-error
-): Promise<Keypair> => {
+): Promise<solanaWeb3.Keypair> => {
   const buffer = await mnemonicToSeed(mnemonic)
-  const deriveSeed = ed25519.derivePath(path, buffer.toString('hex')).key
-  // @ts-expect-error
-  return Keypair.fromSeed(Uint8Array.from(Buffer.from(deriveSeed, 'hex')))
+  const deriveSeed = ed25519.derivePath(path, base16.stringify(buffer)).key
+  return Keypair.fromSeed(Uint8Array.from(deriveSeed))
 }
 
 export class SolanaTools implements EdgeCurrencyTools {
@@ -117,17 +118,14 @@ export class SolanaTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || this.currencyInfo.currencyCode,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
     let address = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (edgeParsedUri.publicAddress) {
+    if (edgeParsedUri.publicAddress != null) {
       address = edgeParsedUri.publicAddress
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
@@ -142,7 +140,6 @@ export class SolanaTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!PublicKey.isOnCurve(new PublicKey(publicAddress).toBytes()))
       throw new Error('InvalidPublicAddressError')
 
@@ -160,6 +157,15 @@ export class SolanaTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async getTokenId(token: EdgeToken): Promise<string> {
+    validateToken(token)
+    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    if (cleanLocation == null) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+    return cleanLocation.contractAddress
   }
 }
 
