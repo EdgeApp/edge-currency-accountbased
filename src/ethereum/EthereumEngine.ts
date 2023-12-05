@@ -565,7 +565,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
-        'latests'
+        'latest'
       ])
       const result = asRpcResultString(response.result)
 
@@ -591,7 +591,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
-        'latests'
+        'latest'
       ])
 
       const result = asRpcResultString(response.result)
