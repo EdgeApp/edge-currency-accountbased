@@ -741,7 +741,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
           memos: [],
-          nativeAmount,
+          nativeAmount: `-${feeNativeAmount}`,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',

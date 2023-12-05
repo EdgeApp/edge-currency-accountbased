@@ -4,6 +4,7 @@
 
 - added: Network adaptor to zkSync for transaction querying
 - fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
+- fixed: (Tron) Fix unstake v2 native amount
 
 ## 2.17.0 (2023-12-04)
 
