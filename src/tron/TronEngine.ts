@@ -432,7 +432,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/${typePath}?limit=200&order_by=block_timestamp,asc&min_timestamp=${timestamp}`
     const res = await this.multicastServers('trx_getTransactions', url)
 
-    const { data, meta, success } = asTronQuery(cleaner)(res)
+    const { data, meta, success } = asTronQuery(asMaybe(cleaner))(res)
     const isComplete = meta?.links?.next == null
 
     if (!success) {
@@ -440,6 +440,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     }
 
     for (const tx of data) {
+      if (tx == null) continue
       const { timestamp: newTimestamp, txid } = await processor(tx)
       this.otherData.txQueryCache[type].txid = txid
       this.otherData.txQueryCache[type].timestamp = newTimestamp
