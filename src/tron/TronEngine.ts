@@ -919,6 +919,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   ): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs: Array<() => Promise<any>> = []
+    let timeout = 2000
 
     switch (func) {
       case 'trx_chainParams':
@@ -961,12 +962,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
             return await this.fetch(server, path, opts)
           }
         )
+        timeout = 5000
         break
     }
 
     // Randomize array
     funcs = shuffleArray(funcs)
-    out = await asyncWaterfall(funcs)
+    out = await asyncWaterfall(funcs, timeout)
     this.log(`TRX multicastServers ${func} ${out.server} won`)
     return out.result
   }
