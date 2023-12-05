@@ -49,6 +49,7 @@ import {
 import {
   createCosmosClients,
   reduceCoinEventsForAddress,
+  rpcWithApiKey,
   safeAddCoins
 } from './cosmosUtils'
 
@@ -255,7 +256,7 @@ export class CosmosEngine extends CurrencyEngine<
         ? // Uses archive rpc for first sync and then only if it's been two weeks between syncs.
           await createCosmosClients(
             this.fetchCors,
-            this.networkInfo.archiveNode
+            rpcWithApiKey(this.networkInfo.archiveNode, this.tools.initOptions)
           )
         : // Otherwise, uses regular rpc
           this.getClients()

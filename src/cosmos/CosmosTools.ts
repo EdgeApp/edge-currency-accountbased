@@ -200,7 +200,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     if (this.clients == null) {
       this.clients = await createCosmosClients(
         this.io.fetchCors,
-        rpcWithApiKey(this.networkInfo, this.initOptions)
+        rpcWithApiKey(this.networkInfo.rpcNode, this.initOptions)
       )
     }
     ++this.clientCount

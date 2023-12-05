@@ -2,6 +2,7 @@ import type { Chain } from '@chain-registry/types'
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
+import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
 import data from '../info/chain-json/osmosis.json'
@@ -61,7 +62,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   defaultSettings: {},
   memoMaxLength: 250,
   memoType: 'text',
-  metaTokens: []
+  metaTokens: makeMetaTokens(builtinTokens)
 }
 
 export const osmosis = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({

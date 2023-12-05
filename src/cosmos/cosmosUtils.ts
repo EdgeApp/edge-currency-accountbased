@@ -21,17 +21,15 @@ import {
   asCosmosInitOptions,
   CosmosClients,
   CosmosCoin,
-  CosmosInitOptions,
-  CosmosNetworkInfo
+  CosmosInitOptions
 } from './cosmosTypes'
 import { Asset } from './info/proto/thorchainrune/thorchain/v1/common/common'
 
 export const rpcWithApiKey = (
-  networkInfo: CosmosNetworkInfo,
+  endpoint: HttpEndpoint,
   initOptions: CosmosInitOptions
 ): HttpEndpoint => {
   const apiKeys = asCosmosInitOptions(initOptions) as { [key: string]: string }
-  const endpoint = networkInfo.rpcNode
   const headers: { [key: string]: string } = {}
   const regex = /{{(.*?)}}/g
   for (const [key, value] of Object.entries(endpoint.headers)) {
