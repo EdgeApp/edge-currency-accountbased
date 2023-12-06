@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Network adaptor to zkSync for transaction querying
+- changed: (Coreum) Update currency code
 - fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
 
 ## 2.17.0 (2023-12-04)
