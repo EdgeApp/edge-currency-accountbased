@@ -216,20 +216,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async checkTokenBalances(): Promise<void> {
     const address = base58ToHexAddress(this.walletLocalData.publicKey)
 
-    for (const currencyCode of this.enabledTokens) {
-      const metaToken = this.allTokens.find(
-        token => token.currencyCode === currencyCode
-      )
-      if (metaToken?.contractAddress == null) continue
-      const contractAddressHex = base58ToHexAddress(metaToken.contractAddress)
-      const body = {
-        contract_address: contractAddressHex,
-        function_selector: 'balanceOf(address)',
-        parameter: padHex(address, 32),
-        owner_address: address
-      }
-
+    const balancePromises = this.enabledTokenIds.map(async tokenId => {
+      const { currencyCode } = this.allTokensMap[tokenId]
       try {
+        const contractAddressHex = base58ToHexAddress(tokenId)
+        const body = {
+          contract_address: contractAddressHex,
+          function_selector: 'balanceOf(address)',
+          parameter: padHex(address, 32),
+          owner_address: address
+        }
         const res = await this.multicastServers(
           'trx_getBalance',
           '/wallet/triggerconstantcontract',
@@ -238,16 +234,16 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
         const balance = asTRC20Balance(res)
 
-        if (metaToken != null) {
-          this.updateBalance(
-            metaToken.currencyCode,
-            hexToDecimal(balance.constant_result[0])
-          )
-        }
+        this.updateBalance(
+          currencyCode,
+          hexToDecimal(balance.constant_result[0])
+        )
       } catch (e) {
         this.log.error(`Failed to get balance of ${currencyCode}`, e)
       }
-    }
+    })
+
+    await Promise.all(balancePromises)
   }
 
   async checkAccountInnerLoop(): Promise<void> {
@@ -378,6 +374,8 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         this.walletLocalDataDirty = true
       }
       await this.fetchTrxTransactions()
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.updateOnAddressesChecked()
       await this.fetchTrc20Transactions()
     } catch (e: any) {
       this.log.error(`Error checkTransactionsFetch fetchTrxTransactions: `, e)
@@ -432,7 +430,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/${typePath}?limit=200&order_by=block_timestamp,asc&min_timestamp=${timestamp}`
     const res = await this.multicastServers('trx_getTransactions', url)
 
-    const { data, meta, success } = asTronQuery(cleaner)(res)
+    const { data, meta, success } = asTronQuery(asMaybe(cleaner))(res)
     const isComplete = meta?.links?.next == null
 
     if (!success) {
@@ -440,6 +438,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     }
 
     for (const tx of data) {
+      if (tx == null) continue
       const { timestamp: newTimestamp, txid } = await processor(tx)
       this.otherData.txQueryCache[type].txid = txid
       this.otherData.txQueryCache[type].timestamp = newTimestamp
@@ -741,7 +740,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
           memos: [],
-          nativeAmount,
+          nativeAmount: `-${feeNativeAmount}`,
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
@@ -919,6 +918,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   ): Promise<any> {
     let out = { result: '', server: 'no server' }
     let funcs: Array<() => Promise<any>> = []
+    let timeout = 2000
 
     switch (func) {
       case 'trx_chainParams':
@@ -961,12 +961,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
             return await this.fetch(server, path, opts)
           }
         )
+        timeout = 5000
         break
     }
 
     // Randomize array
     funcs = shuffleArray(funcs)
-    out = await asyncWaterfall(funcs)
+    out = await asyncWaterfall(funcs, timeout)
     this.log(`TRX multicastServers ${func} ${out.server} won`)
     return out.result
   }
