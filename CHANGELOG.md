@@ -6,6 +6,7 @@
 - changed: (Coreum) Update currency code
 - fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
 - fixed: (Tron) Fix unstake v2 native amount
+- fixed: Over doing batch queries for token balances in Solana
 
 ## 2.17.0 (2023-12-04)
 
