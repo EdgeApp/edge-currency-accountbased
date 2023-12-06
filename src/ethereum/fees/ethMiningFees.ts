@@ -1,6 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
-import { add, ceil, div, gte, lt, lte, max, mul, sub } from 'biggystring'
+import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
@@ -19,7 +19,6 @@ export const ES_FEE_HIGH = 'high'
 export const ES_FEE_CUSTOM = 'custom'
 
 const WEI_MULTIPLIER = '1000000000'
-const TWO_GWEI = '2000000000'
 
 export function calcMiningFees(
   spendInfo: EdgeSpendInfo,
@@ -312,14 +311,22 @@ export async function getFeeParamsByTransactionType(
           'RPC node does not supporting EIP1559 block format.'
       )
     }
-    const maxFeePerGasUnPegged = sub(gasPrice, baseFeePerGas, 16)
 
-    // In case the calculated gasPrice creates a maxPriorityFeePerGas (tip)
-    // less than 2 GWEI, use at least 2 gwei
-    const maxPriorityFeePerGas = max(maxFeePerGasUnPegged, TWO_GWEI, 16)
+    // maxFeePerGas is synonymous to gasPrice
+    const maxFeePerGas = gasPrice
+
+    // Miner tip is assumed to be the difference in base-fee and max-fee
+    let maxPriorityFeePerGas = sub(maxFeePerGas, baseFeePerGas, 16)
+
+    // Insure miner tip is never negative or zero
+    if (lte(maxPriorityFeePerGas, '0')) {
+      // We cannot assume tip to be a diff, so assume 10% of the max-fee
+      maxPriorityFeePerGas = div(maxFeePerGas, '10', 0, 16)
+    }
+
     return {
       maxPriorityFeePerGas,
-      maxFeePerGas: gasPrice
+      maxFeePerGas
     }
   }
 }
