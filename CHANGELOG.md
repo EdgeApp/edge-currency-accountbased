@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Network adaptor to zkSync for transaction querying
+- changed: (Coreum) Update currency code
 - fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
 - fixed: (Tron) Fix unstake v2 native amount
 

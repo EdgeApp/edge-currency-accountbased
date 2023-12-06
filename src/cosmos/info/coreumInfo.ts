@@ -27,7 +27,7 @@ const networkInfo: CosmosNetworkInfo = {
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
-  currencyCode: 'CORE',
+  currencyCode: 'COREUM',
   displayName: 'Coreum',
   pluginId: 'coreum',
   walletType: 'wallet:coreum',
@@ -38,7 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [
     {
-      name: 'CORE',
+      name: 'COREUM',
       multiplier: '1000000',
       symbol: ''
     }
