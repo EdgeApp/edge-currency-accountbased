@@ -451,7 +451,7 @@ export class EthereumEngine extends CurrencyEngine<
           } else {
             const estimateGasResult = await this.ethNetwork.multicastRpc(
               'eth_estimateGas',
-              [estimateGasParams]
+              estimateGasParams
             )
             gasLimitReturn = add(
               parseInt(estimateGasResult.result.result, 16).toString(),
