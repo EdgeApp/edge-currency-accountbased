@@ -198,21 +198,21 @@ export class SolanaEngine extends CurrencyEngine<
             }
           ]
         })
+      }
 
-        const balances: any = await this.fetchRpcBulk(requests)
+      const balances: any = await this.fetchRpcBulk(requests)
 
-        const [mainnetBal, ...tokenBals]: [AccountBalance, TokenBalance[]] =
-          balances
-        const balance = asAccountBalance(mainnetBal)
-        this.updateBalance(this.chainCode, balance.result.value.toString())
+      const [mainnetBal, ...tokenBals]: [AccountBalance, TokenBalance[]] =
+        balances
+      const balance = asAccountBalance(mainnetBal)
+      this.updateBalance(this.chainCode, balance.result.value.toString())
 
-        for (const [i, tokenId] of allTokenIds.entries()) {
-          const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
-          // empty token addresses return an error "Invalid param: could not find account".
-          // If there was an actual error with the request it would have thrown already
-          const balance = tokenBal?.result?.value?.amount ?? '0'
-          this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
-        }
+      for (const [i, tokenId] of allTokenIds.entries()) {
+        const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
+        // empty token addresses return an error "Invalid param: could not find account".
+        // If there was an actual error with the request it would have thrown already
+        const balance = tokenBal?.result?.value?.amount ?? '0'
+        this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
       }
     } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged
