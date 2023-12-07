@@ -912,6 +912,15 @@ export class EthereumEngine extends CurrencyEngine<
       this.networkInfo
     )
 
+    // Translate legacy transaction types to EIP-1559 transaction type
+    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
+    // Translate legacy transaction types gas params to to EIP-1559 params
+    const feeParams = await getFeeParamsByTransactionType(
+      txType,
+      toHex(miningFees.gasPrice),
+      this.ethNetwork.getBaseFeePerGas
+    )
+
     //
     // Nonce:
     //
@@ -940,8 +949,8 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
+        ...feeParams,
         gas: miningFees.gasLimit,
-        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         nonceUsed,
         data,
@@ -951,8 +960,8 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
+        ...feeParams,
         gas: miningFees.gasLimit,
-        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
@@ -1099,7 +1108,6 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)
-    const gasPriceHex = toHex(otherParams.gasPrice)
     let txValue
 
     if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
@@ -1183,17 +1191,18 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Translate legacy transaction types to EIP-1559 transaction type
     const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
-    // Translate legacy transaction types gas params to to EIP-1559 params
-    const gasFeeParams = await getFeeParamsByTransactionType(
-      txType,
-      gasPriceHex,
-      this.ethNetwork.getBaseFeePerGas
-    )
+    const txFeeParams =
+      this.networkInfo.supportsEIP1559 === true
+        ? {
+            maxFeePerGas: otherParams.gasPrice,
+            maxPriorityPerGas: otherParams.minerTip
+          }
+        : { gasPrice: otherParams.gasPrice }
 
     // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
-      ...gasFeeParams,
+      ...txFeeParams,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: txValue,
@@ -1299,7 +1308,6 @@ export class EthereumEngine extends CurrencyEngine<
     const newOtherParams: EthereumTxOtherParams = {
       ...replacedTxOtherParams,
       gas: gasLimit,
-      gasPrice,
       replacedTxid
     }
 

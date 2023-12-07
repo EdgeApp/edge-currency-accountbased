@@ -279,12 +279,10 @@ function flatMap<T>(items: NestedArray<T>, destinationItems: T[] = []): T[] {
   return destinationItems
 }
 
-export type GasParams =
-  | { gasPrice: string }
-  | {
-      maxPriorityFeePerGas: string
-      maxFeePerGas: string
-    }
+export interface FeeParams {
+  gasPrice: string
+  minerTip?: string
+}
 
 /**
  * Returns gas parameters needed to build a transaction based on the transaction
@@ -300,7 +298,7 @@ export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
   fetchBaseFeePerGas: () => Promise<string | undefined>
-): Promise<GasParams> {
+): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice }
   } else {
@@ -316,17 +314,17 @@ export async function getFeeParamsByTransactionType(
     const maxFeePerGas = gasPrice
 
     // Miner tip is assumed to be the difference in base-fee and max-fee
-    let maxPriorityFeePerGas = sub(maxFeePerGas, baseFeePerGas, 16)
+    let minerTip = sub(maxFeePerGas, baseFeePerGas, 16)
 
     // Insure miner tip is never negative or zero
-    if (lte(maxPriorityFeePerGas, '0')) {
+    if (lte(minerTip, '0')) {
       // We cannot assume tip to be a diff, so assume 10% of the max-fee
-      maxPriorityFeePerGas = div(maxFeePerGas, '10', 0, 16)
+      minerTip = div(maxFeePerGas, '10', 0, 16)
     }
 
     return {
-      maxPriorityFeePerGas,
-      maxFeePerGas
+      gasPrice,
+      minerTip
     }
   }
 }
