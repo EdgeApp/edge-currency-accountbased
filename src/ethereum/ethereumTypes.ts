@@ -137,6 +137,7 @@ export type EthereumBaseMultiplier = ReturnType<
 export type KeysOfEthereumBaseMultiplier = keyof EthereumBaseMultiplier
 
 export const asEthereumFee = asObject({
+  baseFee: asOptional(asString),
   baseFeeMultiplier: asOptional(asEthereumBaseFeeMultiplier),
   gasLimit: asOptional(asEthereumFeesGasLimit),
   gasPrice: asOptional(asEthereumFeesGasPrice),

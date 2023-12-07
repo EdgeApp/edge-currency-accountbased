@@ -297,12 +297,11 @@ export interface FeeParams {
 export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
-  fetchBaseFeePerGas: () => Promise<string | undefined>
+  baseFeePerGas: string | undefined
 ): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice }
   } else {
-    const baseFeePerGas = await fetchBaseFeePerGas()
     if (baseFeePerGas == null) {
       throw new Error(
         'Missing baseFeePerGas from network block query. ' +

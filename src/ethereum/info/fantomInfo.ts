@@ -251,6 +251,7 @@ const builtinTokens: EdgeTokenMap = {
 
 const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFee: undefined,
     baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',

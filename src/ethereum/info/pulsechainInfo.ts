@@ -19,6 +19,7 @@ const builtinTokens: EdgeTokenMap = {
 
 const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFee: undefined,
     baseFeeMultiplier: {
       lowFee: '1',
       standardFeeLow: '1.25',
