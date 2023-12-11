@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: Replace 2 gwei priority fee minimum non-negative minimum
+- changed: Query and cache network base-fee for EIP1559 currencies
+
 ## 2.17.1 (2023-12-07)
 
 - added: Network adaptor to zkSync for transaction querying

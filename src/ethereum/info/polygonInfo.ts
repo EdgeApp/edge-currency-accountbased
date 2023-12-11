@@ -140,6 +140,7 @@ const builtinTokens: EdgeTokenMap = {
 // Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFee: undefined,
     baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',

@@ -19,6 +19,7 @@ const builtinTokens: EdgeTokenMap = {
 
 const defaultNetworkFees: EthereumFees = {
   default: {
+    baseFee: undefined,
     baseFeeMultiplier: undefined,
     gasLimit: {
       regularTransaction: '21000',
@@ -37,6 +38,7 @@ const defaultNetworkFees: EthereumFees = {
     minPriorityFee: undefined
   },
   '1983987abc9837fbabc0982347ad828': {
+    baseFee: undefined,
     baseFeeMultiplier: undefined,
     // @ts-expect-error
     gasLimit: {
@@ -55,6 +57,7 @@ const defaultNetworkFees: EthereumFees = {
     minPriorityFee: undefined
   },
   '2983987abc9837fbabc0982347ad828': {
+    baseFee: undefined,
     baseFeeMultiplier: undefined,
     // @ts-expect-error
     gasLimit: {

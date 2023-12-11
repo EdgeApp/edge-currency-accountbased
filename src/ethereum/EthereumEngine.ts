@@ -527,6 +527,7 @@ export class EthereumEngine extends CurrencyEngine<
    */
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async updateNetworkFees() {
+    // Update network gasPrice:
     for (const externalFeeProvider of this.externalFeeProviders) {
       try {
         const ethereumFee = await externalFeeProvider()
@@ -550,6 +551,17 @@ export class EthereumEngine extends CurrencyEngine<
             externalFeeProvider.name
           }. ${JSON.stringify(e)}`
         )
+      }
+    }
+
+    // Update network baseFee:
+    if (this.networkInfo.supportsEIP1559 === true) {
+      try {
+        const baseFee = await this.ethNetwork.getBaseFeePerGas()
+        if (baseFee == null) return
+        this.networkFees.default.baseFee = baseFee
+      } catch (error: any) {
+        this.error(`Error fetching base fee: ${JSON.stringify(error)}`)
       }
     }
   }
@@ -694,10 +706,21 @@ export class EthereumEngine extends CurrencyEngine<
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
     this.infoFeeProvider()
-      .then(info => {
+      .then(async info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
         this.networkFees = mergeDeeply(this.networkFees, info)
+
+        // Update network baseFee:
+        if (this.networkInfo.supportsEIP1559 === true) {
+          try {
+            const baseFee = await this.ethNetwork.getBaseFeePerGas()
+            if (baseFee == null) return
+            this.networkFees.default.baseFee = baseFee
+          } catch (error) {
+            this.error(`Error fetching base fee: ${JSON.stringify(error)}`)
+          }
+        }
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
       .finally(
@@ -912,6 +935,15 @@ export class EthereumEngine extends CurrencyEngine<
       this.networkInfo
     )
 
+    // Translate legacy transaction types to EIP-1559 transaction type
+    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
+    // Translate legacy transaction types gas params to to EIP-1559 params
+    const feeParams = await getFeeParamsByTransactionType(
+      txType,
+      toHex(miningFees.gasPrice),
+      this.networkFees.default.baseFee
+    )
+
     //
     // Nonce:
     //
@@ -940,8 +972,8 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [publicAddress],
+        ...feeParams,
         gas: miningFees.gasLimit,
-        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         nonceUsed,
         data,
@@ -951,8 +983,8 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams = {
         from: [this.walletLocalData.publicKey],
         to: [contractAddress],
+        ...feeParams,
         gas: miningFees.gasLimit,
-        gasPrice: miningFees.gasPrice,
         gasUsed: '0',
         tokenRecipientAddress: publicAddress,
         nonceUsed,
@@ -1099,7 +1131,6 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Do signing
     const gasLimitHex = toHex(otherParams.gas)
-    const gasPriceHex = toHex(otherParams.gasPrice)
     let txValue
 
     if (edgeTransaction.currencyCode === this.currencyInfo.currencyCode) {
@@ -1183,17 +1214,18 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Translate legacy transaction types to EIP-1559 transaction type
     const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
-    // Translate legacy transaction types gas params to to EIP-1559 params
-    const gasFeeParams = await getFeeParamsByTransactionType(
-      txType,
-      gasPriceHex,
-      this.ethNetwork.getBaseFeePerGas
-    )
+    const txFeeParams =
+      this.networkInfo.supportsEIP1559 === true
+        ? {
+            maxFeePerGas: otherParams.gasPrice,
+            maxPriorityPerGas: otherParams.minerTip
+          }
+        : { gasPrice: otherParams.gasPrice }
 
     // Transaction Parameters
     const txParams = {
       nonce: nonceHex,
-      ...gasFeeParams,
+      ...txFeeParams,
       gasLimit: gasLimitHex,
       to: otherParams.to[0],
       value: txValue,
@@ -1299,7 +1331,6 @@ export class EthereumEngine extends CurrencyEngine<
     const newOtherParams: EthereumTxOtherParams = {
       ...replacedTxOtherParams,
       gas: gasLimit,
-      gasPrice,
       replacedTxid
     }
 
