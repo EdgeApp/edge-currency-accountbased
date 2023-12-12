@@ -29,7 +29,7 @@ const networkInfo: CosmosNetworkInfo = {
   nativeDenom: 'uosmo',
   pluginMnemonicKeyName: 'osmosisMnemonic',
   rpcNode: {
-    url: 'https://osmosis-rpc.publicnode.com:443',
+    url: 'https://rpc.osmosis.zone:443',
     headers: {}
   },
   archiveNode: {
