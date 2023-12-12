@@ -118,7 +118,7 @@ export interface CosmosClients {
   queryClient: ReturnType<StargateClient['forceGetQueryClient']>
   stargateClient: StargateClient
   // Using the tendermint client directly allows us to control the paging
-  tendermintClient: ReturnType<StargateClient['forceGetTmClient']>
+  cometClient: ReturnType<StargateClient['forceGetCometClient']>
 }
 
 const asCoin = asObject({
