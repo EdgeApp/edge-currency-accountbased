@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Osmosis and Coreum RPC urls
+
 ## 2.17.2 (2023-12-11)
 
 - fixed: Replace 2 gwei priority fee minimum non-negative minimum

@@ -8,6 +8,7 @@ import {
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
 import { Coin, coin, fromTendermintEvent } from '@cosmjs/stargate'
+import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
 import { add, ceil, lt, mul, sub } from 'biggystring'
 import { Fee, SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
@@ -299,7 +300,7 @@ export class CosmosEngine extends CurrencyEngine<
     let earlyExit = false
     try {
       do {
-        const txRes = await clients.tendermintClient.txSearch({
+        const txRes = await clients.cometClient.txSearch({
           ...txSearchParams,
           page: ++page
         })
@@ -666,7 +667,7 @@ export class CosmosEngine extends CurrencyEngine<
     )
 
     const signDoc = SignDoc.fromPartial({
-      accountNumber: this.accountNumber,
+      accountNumber: longify(this.accountNumber),
       authInfoBytes,
       bodyBytes,
       chainId: this.tools.chainData.chain_id

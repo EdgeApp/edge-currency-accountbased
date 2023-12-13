@@ -17,7 +17,7 @@ const networkInfo: CosmosNetworkInfo = {
   nativeDenom: 'ucore',
   pluginMnemonicKeyName: 'coreumMnemonic',
   rpcNode: {
-    url: 'https://coreum-rpc.publicnode.com:443',
+    url: 'https://full-node.mainnet-1.coreum.dev:26657',
     headers: {}
   },
   archiveNode: {
