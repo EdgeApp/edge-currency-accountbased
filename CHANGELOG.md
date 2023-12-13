@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.17.3 (2023-12-13)
+
 - changed: Update Osmosis and Coreum RPC urls
 
 ## 2.17.2 (2023-12-11)
