@@ -105,11 +105,6 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-const PROCESS_TX_NAME_LIST = [
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens],
-  'regaddress'
-]
 const SYNC_NETWORK_INTERVAL = 10000
 
 interface PreparedTrx {
@@ -275,8 +270,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   checkUnStakeTx(otherParams: TxOtherParams): boolean {
     return (
-      otherParams.name ===
-        ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens] ||
+      otherParams.name === 'unstakefio' ||
       (otherParams.data != null &&
         otherParams.data.memo === STAKING_REWARD_MEMO)
     )
@@ -400,7 +394,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Transfer funds transaction
-    if (PROCESS_TX_NAME_LIST.includes(trxName)) {
+    if (trxName != null) {
       nativeAmount = '0'
 
       if (trxName === 'regaddress') {
@@ -418,10 +412,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
       }
 
-      if (
-        trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens] &&
-        data.amount != null
-      ) {
+      if (trxName === 'transfer' && data.amount != null) {
         nativeAmount = data.amount.toString()
         actorSender = data.actor
         if (data.payee_public_key === this.walletInfo.keys.publicKey) {
@@ -501,10 +492,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Fee / Reward transaction
-    if (
-      trxName === ACTIONS_TO_TX_ACTION_NAME.transfer &&
-      data.quantity != null
-    ) {
+    if (trxName === 'transfer' && data.quantity != null) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
       const denom = getDenomination(
@@ -694,8 +682,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
 
         for (let i = actions.length - 1; i > -1; i--) {
-          const action = actions[i]
-          asFioHistoryNodeAction(action)
+          const action = asFioHistoryNodeAction(actions[i])
           const blockNum = this.processTransaction(action, this.actor)
 
           if (blockNum > newHighestTxHeight) {

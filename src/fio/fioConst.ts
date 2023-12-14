@@ -11,6 +11,7 @@ import {
 } from 'cleaners'
 
 import { asAny } from '../common/types'
+import { FioTxName } from './fioSchema'
 
 export const FIO_REG_API_ENDPOINTS = {
   buyAddress: 'buy-address',
@@ -142,7 +143,7 @@ export type FioDomain = ReturnType<typeof asFioDomain>
 
 export interface TxOtherParams {
   account: string
-  name: string
+  name: FioTxName
   authorization: Array<{ actor: string; permission: string }>
   data?: {
     amount?: number
@@ -151,7 +152,7 @@ export interface TxOtherParams {
     actor?: string
   } & any
   action?: {
-    name: string
+    name: FioTxName
     params: any
   }
   meta: {
