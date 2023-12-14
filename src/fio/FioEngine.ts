@@ -66,7 +66,8 @@ import {
   asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse,
-  FioHistoryNodeAction
+  FioHistoryNodeAction,
+  FioTxName
 } from './fioSchema'
 import { FioTools } from './FioTools'
 import {
@@ -276,12 +277,13 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     )
   }
 
-  updateStakingStatus(
-    nativeAmount: string,
-    blockTime: string,
-    txId: string,
-    txName: string
-  ): void {
+  updateStakingStatus(params: {
+    nativeAmount: string
+    blockTime: string
+    txId: string
+    txName: FioTxName
+  }): void {
+    const { nativeAmount, blockTime, txId, txName } = params
     const unlockDate = this.getUnlockDate(new Date(this.getUTCDate(blockTime)))
 
     /*
@@ -464,12 +466,12 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
 
       if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus(
-          data.amount != null ? data.amount.toString() : '0',
-          action.block_time,
-          action.action_trace.trx_id,
-          trxName
-        )
+        this.updateStakingStatus({
+          nativeAmount: data.amount != null ? data.amount.toString() : '0',
+          blockTime: action.block_time,
+          txId: action.action_trace.trx_id,
+          txName: trxName
+        })
       }
 
       otherParams.meta.isTransferProcessed = true
@@ -550,12 +552,12 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
 
       if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus(
-          fioAmount,
-          action.block_time,
-          action.action_trace.trx_id,
-          trxName
-        )
+        this.updateStakingStatus({
+          nativeAmount: fioAmount,
+          blockTime: action.block_time,
+          txId: action.action_trace.trx_id,
+          txName: trxName
+        })
       }
 
       otherParams.meta.isFeeProcessed = true
