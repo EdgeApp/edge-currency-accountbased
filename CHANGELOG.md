@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.18.0 (2023-12-15)
+
 - added: Token balance detection for FTM, AVAX, and OP networks
 
 ## 2.17.3 (2023-12-13)
