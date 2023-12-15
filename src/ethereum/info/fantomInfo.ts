@@ -281,7 +281,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
         'https://rpc.ankr.com/fantom',
         'https://rpc.ftm.tools'
-      ]
+      ],
+      ethBalCheckerContract: '0x07f697424abe762bb808c109860c04ea488ff92b'
     },
     {
       type: 'evmscan',

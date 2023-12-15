@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Token balance detection for FTM, AVAX, and OP networks
+
 ## 2.17.3 (2023-12-13)
 
 - changed: Update Osmosis and Coreum RPC urls
