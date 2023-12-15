@@ -52,7 +52,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['cors-https://scan.pulsechain.com']
+      servers: ['https://scan.pulsechain.com']
     }
   ],
   uriNetworks: ['pulsechain'],
