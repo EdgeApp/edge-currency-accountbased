@@ -775,8 +775,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const sentTx = this.transactionList[currencyCode].find(
           edgeTx => edgeTx.txid === txid
         )
-        if (sentTx == null) break
-        const nativeAmount = sentTx.nativeAmount
+        const nativeAmount = sentTx?.nativeAmount ?? '0'
 
         const edgeTransaction: EdgeTransaction = {
           action: {
