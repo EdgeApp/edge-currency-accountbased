@@ -86,8 +86,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:filecoinfevmcalibration',
 
   // Explorers:
-  addressExplorer: 'https://filfox.info/en/address/%s',
-  transactionExplorer: 'https://filfox.info/en/message/%s',
+  addressExplorer: 'https://calibration.filfox.info/en/address/%s',
+  transactionExplorer: 'https://calibration.filfox.info/en/message/%s',
 
   denominations: [
     {
