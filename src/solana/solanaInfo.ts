@@ -6,6 +6,14 @@ import type { SolanaTools } from './SolanaTools'
 import type { SolanaNetworkInfo } from './solanaTypes'
 
 const builtinTokens: EdgeTokenMap = {
+  DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
+    currencyCode: 'BONK',
+    displayName: 'Bonk',
+    denominations: [{ name: 'BONK', multiplier: '100000' }],
+    networkLocation: {
+      contractAddress: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'
+    }
+  },
   kshrEkxuc7zPAvLxvabxoERKxK6BfariPcjBoiHvM7B: {
     currencyCode: 'GMT',
     displayName: 'STEPN',
