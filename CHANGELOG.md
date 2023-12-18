@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+added: (Solana) Add BONK
+
 ## 2.18.0 (2023-12-15)
 
 - added: Token balance detection for FTM, AVAX, and OP networks
