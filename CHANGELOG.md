@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.18.1 (2023-12-18)
+
 added: (Solana) Add BONK
 
 ## 2.18.0 (2023-12-15)
