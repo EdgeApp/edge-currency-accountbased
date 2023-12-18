@@ -690,7 +690,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           date: Math.floor(timestamp / 1000),
           memos: [],
           isSend: true,
-          nativeAmount: mul(nativeAmount, '-1'),
+          nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
@@ -775,8 +775,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const sentTx = this.transactionList[currencyCode].find(
           edgeTx => edgeTx.txid === txid
         )
-        if (sentTx == null) break
-        const nativeAmount = sentTx.nativeAmount
+        const nativeAmount = sentTx?.nativeAmount ?? '0'
 
         const edgeTransaction: EdgeTransaction = {
           action: {
@@ -792,7 +791,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           date: Math.floor(timestamp / 1000),
           currencyCode,
           blockHeight: blockNumber,
-          nativeAmount,
+          nativeAmount: `-${feeNativeAmount}`,
           isSend: false,
           memos: [],
           networkFee: feeNativeAmount,
