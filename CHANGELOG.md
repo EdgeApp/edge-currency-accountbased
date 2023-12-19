@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+-fixed: Various regressions and bugs caused by recent refactors
+
 ## 2.18.1 (2023-12-18)
 
 added: (Solana) Add BONK
