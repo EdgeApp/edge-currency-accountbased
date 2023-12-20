@@ -297,7 +297,7 @@ const networkInfo: EthereumNetworkInfo = {
   },
   hdPathCoinType: 60,
   feeUpdateFrequencyMs: 60000,
-  supportsEIP1559: false,
+  supportsEIP1559: true,
   checkUnconfirmedTransactions: false,
   iosAllowedTokens: {},
   alethioCurrencies: null, // object or null
