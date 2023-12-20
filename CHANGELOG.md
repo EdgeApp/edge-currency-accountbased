@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.18.4 (2023-12-20)
+
 - added: (Optimism) Add native USDC
 - changed: (Optimism) Rename wrapped USDC to USDC.e
 
