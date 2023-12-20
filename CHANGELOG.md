@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: `minerTip` to `feeRateUsed` for EIP-1559 transaction
+- fixed: Fallback query for baseFee if not cached for EIP-1559 currencies
 - fixed: Incorrect spelling for EIP-1559 parameter (maxPriorityFeePerGas)
 
 ## 2.18.2 (2023-12-18)

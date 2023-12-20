@@ -297,18 +297,11 @@ export interface FeeParams {
 export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
-  baseFeePerGas: string | undefined
+  baseFeePerGas: string
 ): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice }
   } else {
-    if (baseFeePerGas == null) {
-      throw new Error(
-        'Missing baseFeePerGas from network block query. ' +
-          'RPC node does not supporting EIP1559 block format.'
-      )
-    }
-
     // maxFeePerGas is synonymous to gasPrice as a decimal
     const maxFeePerGas = add(gasPrice, '0', 10)
 

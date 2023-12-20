@@ -941,7 +941,8 @@ export class EthereumEngine extends CurrencyEngine<
     const feeParams = await getFeeParamsByTransactionType(
       txType,
       toHex(miningFees.gasPrice),
-      this.networkFees.default.baseFee
+      this.networkFees.default.baseFee ??
+        (await this.ethNetwork.getBaseFeePerGas())
     )
 
     //

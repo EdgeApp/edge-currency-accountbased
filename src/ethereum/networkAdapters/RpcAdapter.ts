@@ -101,7 +101,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     })
   }
 
-  getBaseFeePerGas = async (): Promise<string | undefined> => {
+  getBaseFeePerGas = async (): Promise<string> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
