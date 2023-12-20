@@ -48,11 +48,19 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   '7f5c764cbc14f9669b88837ca1490cca17c31607': {
+    currencyCode: 'USDC.e',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC.e', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607'
+    }
+  },
+  '0b2c639c533813f4aa9d7837caf62653d097ff85': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
     denominations: [{ name: 'USDC', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0x7F5c764cBc14f9669B88837ca1490cCa17c31607'
+      contractAddress: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85'
     }
   },
   da10009cbd5d07dd0cecc66161fc93d7c9000da1: {
