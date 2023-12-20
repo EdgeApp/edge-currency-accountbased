@@ -1,4 +1,4 @@
-import { div, mul, sub } from 'biggystring'
+import { add, div, mul, sub } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
@@ -95,28 +95,37 @@ export interface BroadcastResults {
  * @param {string} gasLimit - The gas limit of the transaction, in units of gas. If the
  *                            limit was not customly set, it will default to 21000.
  * @param {void | string} gasUsed - The amount of gas used in a transaction, in units of gas.
+ * @param {void | string} minerTip – The gas price of the transaction in ***wei*** to pay to the miner for EIP-1559 txs.
  * @returns {any} A `feeRateUsed` object to be included in an `EdgeTransaction`
  */
 export const getFeeRateUsed = (
   gasPrice: string,
   gasLimit: string,
-  gasUsed?: string
+  gasUsed?: string,
+  minerTip?: string
 ): any => {
   let feeRateUsed = {}
 
-  try {
-    feeRateUsed = {
-      // Convert gasPrice from wei to gwei
-      gasPrice: div(
-        gasPrice,
-        WEI_MULTIPLIER.toString(),
-        WEI_MULTIPLIER.toString().length - 1
-      ),
-      ...(gasUsed !== undefined ? { gasUsed: gasUsed } : {}),
-      gasLimit: gasLimit
-    }
-  } catch (e: any) {
-    console.log(`Failed to construct feeRateUssed: ${e}`)
+  feeRateUsed = {
+    // Convert gasPrice from wei to gwei
+    gasPrice: div(
+      add(gasPrice, '0', 10),
+      WEI_MULTIPLIER.toString(),
+      WEI_MULTIPLIER.toString().length - 1,
+      10
+    ),
+    ...(gasUsed !== undefined ? { gasUsed } : {}),
+    ...(minerTip !== undefined
+      ? {
+          minerTip: div(
+            add(minerTip, '0', 10),
+            WEI_MULTIPLIER.toString(),
+            WEI_MULTIPLIER.toString().length - 1,
+            10
+          )
+        }
+      : {}),
+    gasLimit: gasLimit
   }
 
   return feeRateUsed
