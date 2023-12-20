@@ -1,5 +1,5 @@
 import { Common } from '@ethereumjs/common'
-import { TransactionFactory } from '@ethereumjs/tx'
+import { TransactionFactory, TypedTxData } from '@ethereumjs/tx'
 import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
@@ -941,7 +941,8 @@ export class EthereumEngine extends CurrencyEngine<
     const feeParams = await getFeeParamsByTransactionType(
       txType,
       toHex(miningFees.gasPrice),
-      this.networkFees.default.baseFee
+      this.networkFees.default.baseFee ??
+        (await this.ethNetwork.getBaseFeePerGas())
     )
 
     //
@@ -1071,7 +1072,12 @@ export class EthereumEngine extends CurrencyEngine<
       blockHeight: 0, // blockHeight
       currencyCode, // currencyCode
       date: 0, // date
-      feeRateUsed: getFeeRateUsed(miningFees.gasPrice, otherParams.gas),
+      feeRateUsed: getFeeRateUsed(
+        miningFees.gasPrice,
+        otherParams.gas,
+        undefined,
+        feeParams.minerTip
+      ),
       isSend: nativeAmount.startsWith('-'),
       memos,
       nativeAmount, // nativeAmount
@@ -1218,12 +1224,12 @@ export class EthereumEngine extends CurrencyEngine<
       this.networkInfo.supportsEIP1559 === true
         ? {
             maxFeePerGas: otherParams.gasPrice,
-            maxPriorityPerGas: otherParams.minerTip
+            maxPriorityFeePerGas: otherParams.minerTip
           }
         : { gasPrice: otherParams.gasPrice }
 
     // Transaction Parameters
-    const txParams = {
+    const txParams: TypedTxData = {
       nonce: nonceHex,
       ...txFeeParams,
       gasLimit: gasLimitHex,

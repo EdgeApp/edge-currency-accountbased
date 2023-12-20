@@ -2,9 +2,14 @@
 
 ## Unreleased
 
+- added: `minerTip` to `feeRateUsed` for EIP-1559 transaction
+- changed: Added back EIP1559 support to Fantom
+- fixed: Fallback query for baseFee if not cached for EIP-1559 currencies
+- fixed: Incorrect spelling for EIP-1559 parameter (maxPriorityFeePerGas)
+
 ## 2.18.2 (2023-12-18)
 
--fixed: Various regressions and bugs caused by recent refactors
+- fixed: Various regressions and bugs caused by recent refactors
 
 ## 2.18.1 (2023-12-18)
 

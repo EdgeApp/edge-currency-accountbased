@@ -4,11 +4,7 @@ import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
-import {
-  decimalToHex,
-  hexToDecimal,
-  normalizeAddress
-} from '../../common/utils'
+import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
   CalcL1RollupFeeParams,
   EthereumFee,
@@ -301,20 +297,13 @@ export interface FeeParams {
 export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
-  baseFeePerGas: string | undefined
+  baseFeePerGas: string
 ): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice }
   } else {
-    if (baseFeePerGas == null) {
-      throw new Error(
-        'Missing baseFeePerGas from network block query. ' +
-          'RPC node does not supporting EIP1559 block format.'
-      )
-    }
-
-    // maxFeePerGas is synonymous to gasPrice
-    const maxFeePerGas = hexToDecimal(gasPrice)
+    // maxFeePerGas is synonymous to gasPrice as a decimal
+    const maxFeePerGas = add(gasPrice, '0', 10)
 
     // Miner tip is assumed to be the difference in base-fee and max-fee
     let minerTip = sub(maxFeePerGas, baseFeePerGas)
