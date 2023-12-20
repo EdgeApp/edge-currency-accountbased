@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Optimism) Add native USDC
+- changed: (Optimism) Rename wrapped USDC to USDC.e
+
 ## 2.18.3 (2023-12-20)
 
 - added: `minerTip` to `feeRateUsed` for EIP-1559 transaction
