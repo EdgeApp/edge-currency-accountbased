@@ -289,7 +289,7 @@ export interface FeeParams {
  * type (legacy or EIP-1559 transaction).
  *
  * @param transactionType The EIP-2718 8-bit uint transaction type
- * @param gasPrice The gas price hex string value
+ * @param gasPrice The gas price string value
  * @param fetchBaseFeePerGas An async function which retrieves the
  * current network base fee
  * @returns An object containing the gas parameters for the transaction

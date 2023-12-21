@@ -940,7 +940,7 @@ export class EthereumEngine extends CurrencyEngine<
     // Translate legacy transaction types gas params to to EIP-1559 params
     const feeParams = await getFeeParamsByTransactionType(
       txType,
-      toHex(miningFees.gasPrice),
+      miningFees.gasPrice,
       this.networkFees.default.baseFee ??
         (await this.ethNetwork.getBaseFeePerGas())
     )
