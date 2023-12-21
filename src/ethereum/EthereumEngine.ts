@@ -1332,16 +1332,25 @@ export class EthereumEngine extends CurrencyEngine<
     if (spendTarget == null) return null
 
     // Accelerate transaction by doubling the gas price:
-    const gasPrice = mul(replacedTxOtherParams.gasPrice, '2')
+    // Translate legacy transaction types to EIP-1559 transaction type
+    const txType = this.networkInfo.supportsEIP1559 === true ? 2 : 0
+    // Translate legacy transaction types gas params to to EIP-1559 params
+    const doubledFeeParams = await getFeeParamsByTransactionType(
+      txType,
+      mul(replacedTxOtherParams.gasPrice, '2'),
+      this.networkFees.default.baseFee ??
+        (await this.ethNetwork.getBaseFeePerGas())
+    )
     const gasLimit = replacedTxOtherParams.gas
     const newOtherParams: EthereumTxOtherParams = {
       ...replacedTxOtherParams,
+      ...doubledFeeParams,
       gas: gasLimit,
       replacedTxid
     }
 
     let { nativeAmount } = spendTarget
-    let nativeNetworkFee = mul(gasPrice, gasLimit)
+    let nativeNetworkFee = mul(doubledFeeParams.gasPrice, gasLimit)
     let totalTxAmount = '0'
     let parentNetworkFee: string | undefined
 
@@ -1380,7 +1389,12 @@ export class EthereumEngine extends CurrencyEngine<
     return {
       ...edgeTransaction,
       txid: '',
-      feeRateUsed: getFeeRateUsed(gasPrice, gasLimit),
+      feeRateUsed: getFeeRateUsed(
+        doubledFeeParams.gasPrice,
+        gasLimit,
+        replacedTxOtherParams.gasUsed,
+        doubledFeeParams.minerTip
+      ),
       nativeAmount,
       networkFee: nativeNetworkFee,
       otherParams: newOtherParams,

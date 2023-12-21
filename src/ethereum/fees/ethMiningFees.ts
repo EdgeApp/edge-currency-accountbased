@@ -303,7 +303,7 @@ export async function getFeeParamsByTransactionType(
     return { gasPrice }
   } else {
     // maxFeePerGas is synonymous to gasPrice as a decimal
-    const maxFeePerGas = add(gasPrice, '0', 10)
+    const maxFeePerGas = gasPrice
 
     // Miner tip is assumed to be the difference in base-fee and max-fee
     let minerTip = sub(maxFeePerGas, baseFeePerGas)

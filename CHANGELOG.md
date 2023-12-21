@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Accelerate for EIP-1559 type transactions
+
 ## 2.18.4 (2023-12-20)
 
 - added: (Optimism) Add native USDC
