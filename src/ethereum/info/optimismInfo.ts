@@ -126,6 +126,14 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0xbfC044a234E45412eCfeC2Cd6aAe2dd0C083a7cd'
     }
+  },
+  '1f514a61bcde34f94bc39731235690ab9da737f7': {
+    currencyCode: 'TAROT',
+    displayName: 'Tarot',
+    denominations: [{ name: 'TAROT', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x1f514a61bcde34f94bc39731235690ab9da737f7'
+    }
   }
 }
 
