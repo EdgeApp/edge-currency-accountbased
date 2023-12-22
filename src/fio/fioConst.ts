@@ -188,6 +188,16 @@ export const asFioWalletOtherData = asObject({
   ),
   srps: asMaybe(asNumber, 0),
   stakingRoe: asMaybe(asString, ''),
+  lockedBalances: asMaybe(
+    asObject({
+      staked: asString,
+      locked: asString
+    }),
+    {
+      staked: '0',
+      locked: '0'
+    }
+  ),
   stakingStatus: asMaybe(asEdgeStakingStatus, () => ({
     stakedAmounts: []
   }))

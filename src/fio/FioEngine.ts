@@ -244,22 +244,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   doInitialBalanceCallback(): void {
     super.doInitialBalanceCallback()
 
-    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
-    for (const currencyCodeKey of Object.values(balanceCurrencyCodes)) {
-      try {
-        this.currencyEngineCallbacks.onBalanceChanged(
-          currencyCodeKey,
-          this.walletLocalData.totalBalances[currencyCodeKey] ?? '0'
-        )
-      } catch (e: any) {
-        this.log.error(
-          'doInitialBalanceCallback Error for currencyCode',
-          currencyCodeKey,
-          e
-        )
-      }
-    }
-
     try {
       this.currencyEngineCallbacks.onStakingStatusChanged({
         ...this.otherData.stakingStatus
@@ -277,87 +261,108 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     )
   }
 
-  updateStakingStatus(params: {
+  updateStakingStatus(params?: {
     nativeAmount: string
     blockTime: string
     txId: string
     txName: FioTxName
   }): void {
-    const { nativeAmount, blockTime, txId, txName } = params
-    const unlockDate = this.getUnlockDate(new Date(this.getUTCDate(blockTime)))
-
-    /*
-    Compare each stakedAmount's unlockDate with the transaction's unlockDate to
-    find the correct stakedAmount object to place where the transaction.
-    */
-    const stakedAmountIndex =
-      this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
-        return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
-      })
-
-    /*
-    If no stakedAmount object was found, then insert a new object into the
-    stakedAmounts array. Insert into the array at the correct index maintaining
-    a sorting by unlockDate in descending order.
-    */
-    if (stakedAmountIndex < 0) {
-      // Search for the correct index to insert the new stakedAmount object
-      const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
-        stakedAmount =>
-          unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
-      )
-      // If needleIndex is -1 (not found), then insert into the end of the array
-      const index =
-        needleIndex < 0
-          ? this.otherData.stakingStatus.stakedAmounts.length
-          : needleIndex
-      // Insert the new stakedAmount object
-      this.otherData.stakingStatus.stakedAmounts.splice(index, 0, {
-        nativeAmount,
-        unlockDate,
-        otherParams: {
-          date: new Date(blockTime),
-          txs: [{ txId, nativeAmount, blockTime, txName }]
-        }
-      })
-    } else {
-      const stakedAmount = {
-        ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
-        nativeAmount: '0'
+    // First two entries in stakedAmounts will always be the locked and staked amounts
+    this.otherData.stakingStatus.stakedAmounts[0] = {
+      nativeAmount: this.otherData.lockedBalances.locked,
+      unlockDate: undefined,
+      otherParams: {
+        type: 'LOCKED'
       }
-      const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
-        // @ts-expect-error
-        ({ txId: itemTxId, txName: itemTxName }) =>
-          itemTxId === txId && itemTxName === txName
-      )
-
-      if (addedTxIndex < 0) {
-        stakedAmount.otherParams.txs.push({
-          txId,
-          nativeAmount,
-          blockTime,
-          txName
-        })
-      } else {
-        stakedAmount.otherParams.txs[addedTxIndex] = {
-          txId,
-          nativeAmount,
-          blockTime,
-          txName
-        }
+    }
+    this.otherData.stakingStatus.stakedAmounts[1] = {
+      nativeAmount: this.otherData.lockedBalances.staked,
+      unlockDate: undefined,
+      otherParams: {
+        type: 'STAKED'
       }
-
-      for (const tx of stakedAmount.otherParams.txs) {
-        stakedAmount.nativeAmount = add(
-          stakedAmount.nativeAmount,
-          tx.nativeAmount
-        )
-      }
-
-      this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
-        stakedAmount
     }
 
+    if (params != null) {
+      const { nativeAmount, blockTime, txId, txName } = params
+      const unlockDate = this.getUnlockDate(
+        new Date(this.getUTCDate(blockTime))
+      )
+
+      /**
+       * Compare each stakedAmount's unlockDate with the transaction's unlockDate to
+       * find the correct stakedAmount object to place where the transaction.
+       */
+      const stakedAmountIndex =
+        this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
+          return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
+        })
+
+      /**
+       * If no stakedAmount object was found, then insert a new object into the
+       * stakedAmounts array. Insert into the array at the correct index maintaining
+       * a sorting by unlockDate in descending order.
+       */
+      if (stakedAmountIndex < 0) {
+        // Search for the correct index to insert the new stakedAmount object
+        const needleIndex =
+          this.otherData.stakingStatus.stakedAmounts.findIndex(
+            stakedAmount =>
+              unlockDate.getTime() >=
+              (stakedAmount.unlockDate?.getTime() ?? Infinity)
+          )
+        // If needleIndex is -1 (not found), then insert into the end of the array
+        const index =
+          needleIndex < 0
+            ? this.otherData.stakingStatus.stakedAmounts.length
+            : needleIndex
+        // Insert the new stakedAmount object
+        this.otherData.stakingStatus.stakedAmounts.splice(index, 0, {
+          nativeAmount,
+          unlockDate,
+          otherParams: {
+            date: new Date(blockTime),
+            txs: [{ txId, nativeAmount, blockTime, txName }]
+          }
+        })
+      } else {
+        const stakedAmount = {
+          ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
+          nativeAmount: '0'
+        }
+        const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
+          // @ts-expect-error
+          ({ txId: itemTxId, txName: itemTxName }) =>
+            itemTxId === txId && itemTxName === txName
+        )
+
+        if (addedTxIndex < 0) {
+          stakedAmount.otherParams.txs.push({
+            txId,
+            nativeAmount,
+            blockTime,
+            txName
+          })
+        } else {
+          stakedAmount.otherParams.txs[addedTxIndex] = {
+            txId,
+            nativeAmount,
+            blockTime,
+            txName
+          }
+        }
+
+        for (const tx of stakedAmount.otherParams.txs) {
+          stakedAmount.nativeAmount = add(
+            stakedAmount.nativeAmount,
+            tx.nativeAmount
+          )
+        }
+
+        this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
+          stakedAmount
+      }
+    }
     this.localDataDirty()
     try {
       this.currencyEngineCallbacks.onStakingStatusChanged({
@@ -1011,7 +1016,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
-    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
 
     // Initialize balance
     if (
@@ -1034,8 +1038,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.otherData.stakingRoe = roe
 
       this.updateBalance(currencyCode, nativeAmount)
-      this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
-      this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
+
+      // Update staking status if locked balances changed
+      if (
+        balances.staked !== this.otherData.lockedBalances.staked ||
+        balances.locked !== this.otherData.lockedBalances.locked
+      ) {
+        this.otherData.lockedBalances = balances
+        this.localDataDirty()
+        this.updateStakingStatus()
+      }
     } catch (e: any) {
       this.log.warn('checkAccountInnerLoop getFioBalance error: ', e)
     }
@@ -1373,10 +1385,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       currencyCode: spendInfo.currencyCode
     })
 
-    const lockedAmount =
-      this.walletLocalData.totalBalances[
-        this.networkInfo.balanceCurrencyCodes.locked
-      ] ?? '0'
+    const lockedAmount = this.otherData.lockedBalances.locked
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
@@ -1395,10 +1404,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 
-    const lockedBalance =
-      this.walletLocalData.totalBalances[
-        this.networkInfo.balanceCurrencyCodes.locked
-      ] ?? '0'
+    const lockedBalance = this.otherData.lockedBalances.locked
     const availableBalance = sub(nativeBalance, lockedBalance)
 
     // Set common vars
@@ -1472,10 +1478,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
 
         const unlockDate = this.getUnlockDate(new Date())
-        const stakedBalance =
-          this.walletLocalData.totalBalances[
-            this.networkInfo.balanceCurrencyCodes.staked
-          ] ?? '0'
+        const stakedBalance = this.otherData.lockedBalances.staked
         if (gt(quantity, stakedBalance) || gt(`${fee}`, availableBalance)) {
           throw new InsufficientFundsError()
         }
