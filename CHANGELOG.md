@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.18.6 (2023-12-26)
+
 - fixed: `makeSpend` regression for non-EIP-1559 transactions
 
 ## 2.18.5 (2023-12-21)
