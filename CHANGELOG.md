@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: `makeSpend` regression for non-EIP-1559 transactions
+
 ## 2.18.5 (2023-12-21)
 
 - fixed: Accelerate for EIP-1559 type transactions
