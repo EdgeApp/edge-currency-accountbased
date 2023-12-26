@@ -292,7 +292,7 @@ export interface FeeParams {
  * @param gasPrice The gas price string value
  * @param fetchBaseFeePerGas An async function which retrieves the
  * current network base fee
- * @returns An object containing the gas parameters for the transaction
+ * @returns An object containing the gas parameters for the transaction (hex values)
  */
 export async function getFeeParamsByTransactionType(
   transactionType: number,
@@ -300,7 +300,7 @@ export async function getFeeParamsByTransactionType(
   baseFeePerGas: string
 ): Promise<FeeParams> {
   if (transactionType < 2) {
-    return { gasPrice }
+    return { gasPrice: mul('1', gasPrice, 16) }
   } else {
     // maxFeePerGas is synonymous to gasPrice as a decimal
     const maxFeePerGas = gasPrice
