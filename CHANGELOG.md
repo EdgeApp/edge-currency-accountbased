@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: ETC spend error regression caused by EIP-1559 upgrade in EthereumEngine
+
 ## 2.18.6 (2023-12-26)
 
 - fixed: `makeSpend` regression for non-EIP-1559 transactions

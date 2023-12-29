@@ -101,32 +101,35 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     })
   }
 
-  getBaseFeePerGas = async (): Promise<string> => {
-    const {
-      chainParams: { chainId }
-    } = this.ethEngine.networkInfo
+  getBaseFeePerGas =
+    this.ethEngine.networkInfo.supportsEIP1559 !== true
+      ? null
+      : async (): Promise<string> => {
+          const {
+            chainParams: { chainId }
+          } = this.ethEngine.networkInfo
 
-    return await this.serialServers(
-      async baseUrl =>
-        await this.fetchPostRPC(
-          'eth_getBlockByNumber',
-          ['latest', false],
-          chainId,
-          baseUrl
-        ).then(response => {
-          if (response.error != null) {
-            const errorMessage = `multicast get_baseFeePerGas error response from ${baseUrl}: ${JSON.stringify(
-              response.error
-            )}`
-            this.ethEngine.warn(errorMessage)
-            throw new Error(errorMessage)
-          }
+          return await this.serialServers(
+            async baseUrl =>
+              await this.fetchPostRPC(
+                'eth_getBlockByNumber',
+                ['latest', false],
+                chainId,
+                baseUrl
+              ).then(response => {
+                if (response.error != null) {
+                  const errorMessage = `multicast get_baseFeePerGas error response from ${baseUrl}: ${JSON.stringify(
+                    response.error
+                  )}`
+                  this.ethEngine.warn(errorMessage)
+                  throw new Error(errorMessage)
+                }
 
-          const baseFeePerGas: string = response.result.baseFeePerGas
-          return baseFeePerGas
-        })
-    )
-  }
+                const baseFeePerGas: string = response.result.baseFeePerGas
+                return baseFeePerGas
+              })
+          )
+        }
 
   multicastRpc = async (
     method: string,
