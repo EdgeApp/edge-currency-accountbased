@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.18.7 (2023-12-29)
+
 - fixed: ETC spend error regression caused by EIP-1559 upgrade in EthereumEngine
 
 ## 2.18.6 (2023-12-26)
