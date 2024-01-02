@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Optimism) Add Tarot token
+
 ## 2.18.7 (2023-12-29)
 
 - fixed: ETC spend error regression caused by EIP-1559 upgrade in EthereumEngine
