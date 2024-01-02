@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Optimism) Add Tarot token
+- removed: Remove arbitrary limit of 5 unconfirmed transactions for EVM currencies
 
 ## 2.18.7 (2023-12-29)
 
