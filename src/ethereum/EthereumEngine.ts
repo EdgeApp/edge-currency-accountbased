@@ -1160,30 +1160,17 @@ export class EthereumEngine extends CurrencyEngine<
     // Nonce:
 
     let nonce: string | undefined = otherParams.nonceUsed
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!nonce) {
+    if (nonce == null) {
       // Use an unconfirmed nonce if
       // 1. We have unconfirmed spending txs in the transaction list
       // 2. It is greater than the confirmed nonce
-      // 3. Is no more than 5 higher than confirmed nonce
       // Otherwise, use the next nonce
       if (
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        this.walletLocalData.numUnconfirmedSpendTxs &&
+        this.walletLocalData.numUnconfirmedSpendTxs != null &&
         gt(this.otherData.unconfirmedNextNonce, this.otherData.nextNonce)
       ) {
-        const diff = sub(
-          this.otherData.unconfirmedNextNonce,
-          this.otherData.nextNonce
-        )
-        if (lte(diff, '5')) {
-          nonce = this.otherData.unconfirmedNextNonce
-          this.walletLocalDataDirty = true
-        } else {
-          const e = new Error('Excessive pending spend transactions')
-          e.name = 'ErrorExcessivePendingSpends'
-          throw e
-        }
+        nonce = this.otherData.unconfirmedNextNonce
+        this.walletLocalDataDirty = true
       } else {
         nonce = this.otherData.nextNonce
       }
