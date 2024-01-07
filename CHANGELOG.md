@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 3.0.0 (2024-01-06)
+
+- changed: Moved FIO staked balances from the balances object to stakingStatus
+
 ## 2.18.8 (2024-01-03)
 
 - added: (Optimism) Add Tarot token
