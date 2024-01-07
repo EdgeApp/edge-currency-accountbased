@@ -1,4 +1,12 @@
-import { asArray, asNumber, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asValue
+} from 'cleaners'
 
 export const asGetFioName = asObject({
   fio_domains: asArray(
@@ -16,6 +24,11 @@ export const asGetFioName = asObject({
   )
 })
 
+export const asFioTxName = asMaybe(
+  asValue('unstakefio', 'transfer', 'regaddress'),
+  null
+)
+
 export const asFioHistoryNodeAction = asObject({
   account_action_seq: asNumber,
   block_num: asNumber,
@@ -24,7 +37,7 @@ export const asFioHistoryNodeAction = asObject({
     receiver: asString,
     act: asObject({
       account: asString,
-      name: asString,
+      name: asFioTxName,
       authorization: asArray(
         asObject({
           actor: asString,
@@ -63,4 +76,5 @@ export const asGetFioBalanceResponse = asObject({
   roe: asString
 })
 
+export type FioTxName = ReturnType<typeof asFioTxName>
 export type FioHistoryNodeAction = ReturnType<typeof asFioHistoryNodeAction>

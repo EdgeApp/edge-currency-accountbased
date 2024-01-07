@@ -39,10 +39,6 @@ export interface FioNetworkInfo {
   fallbackRef: string
   freeAddressRef: string
   errorCodes: typeof fioRegApiErrorCodes
-  balanceCurrencyCodes: {
-    staked: 'FIO:STAKED'
-    locked: 'FIO:LOCKED'
-  }
   chainId: string
 }
 

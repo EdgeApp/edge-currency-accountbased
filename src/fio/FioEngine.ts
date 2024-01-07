@@ -66,7 +66,8 @@ import {
   asGetFioBalanceResponse,
   asGetFioName,
   asHistoryResponse,
-  FioHistoryNodeAction
+  FioHistoryNodeAction,
+  FioTxName
 } from './fioSchema'
 import { FioTools } from './FioTools'
 import {
@@ -105,11 +106,6 @@ import {
 const ADDRESS_POLL_MILLISECONDS = 10000
 const BLOCKCHAIN_POLL_MILLISECONDS = 15000
 const TRANSACTION_POLL_MILLISECONDS = 10000
-const PROCESS_TX_NAME_LIST = [
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens],
-  ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens],
-  'regaddress'
-]
 const SYNC_NETWORK_INTERVAL = 10000
 
 interface PreparedTrx {
@@ -248,22 +244,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   doInitialBalanceCallback(): void {
     super.doInitialBalanceCallback()
 
-    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
-    for (const currencyCodeKey of Object.values(balanceCurrencyCodes)) {
-      try {
-        this.currencyEngineCallbacks.onBalanceChanged(
-          currencyCodeKey,
-          this.walletLocalData.totalBalances[currencyCodeKey] ?? '0'
-        )
-      } catch (e: any) {
-        this.log.error(
-          'doInitialBalanceCallback Error for currencyCode',
-          currencyCodeKey,
-          e
-        )
-      }
-    }
-
     try {
       this.currencyEngineCallbacks.onStakingStatusChanged({
         ...this.otherData.stakingStatus
@@ -275,93 +255,114 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   checkUnStakeTx(otherParams: TxOtherParams): boolean {
     return (
-      otherParams.name ===
-        ACTIONS_TO_TX_ACTION_NAME[ACTIONS.unStakeFioTokens] ||
+      otherParams.name === 'unstakefio' ||
       (otherParams.data != null &&
         otherParams.data.memo === STAKING_REWARD_MEMO)
     )
   }
 
-  updateStakingStatus(
-    nativeAmount: string,
-    blockTime: string,
-    txId: string,
-    txName: string
-  ): void {
-    const unlockDate = this.getUnlockDate(new Date(this.getUTCDate(blockTime)))
-
-    /*
-    Compare each stakedAmount's unlockDate with the transaction's unlockDate to
-    find the correct stakedAmount object to place where the transaction.
-    */
-    const stakedAmountIndex =
-      this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
-        return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
-      })
-
-    /*
-    If no stakedAmount object was found, then insert a new object into the
-    stakedAmounts array. Insert into the array at the correct index maintaining
-    a sorting by unlockDate in descending order.
-    */
-    if (stakedAmountIndex < 0) {
-      // Search for the correct index to insert the new stakedAmount object
-      const needleIndex = this.otherData.stakingStatus.stakedAmounts.findIndex(
-        stakedAmount =>
-          unlockDate.getTime() >= (stakedAmount.unlockDate?.getTime() ?? 0)
-      )
-      // If needleIndex is -1 (not found), then insert into the end of the array
-      const index =
-        needleIndex < 0
-          ? this.otherData.stakingStatus.stakedAmounts.length
-          : needleIndex
-      // Insert the new stakedAmount object
-      this.otherData.stakingStatus.stakedAmounts.splice(index, 0, {
-        nativeAmount,
-        unlockDate,
-        otherParams: {
-          date: new Date(blockTime),
-          txs: [{ txId, nativeAmount, blockTime, txName }]
-        }
-      })
-    } else {
-      const stakedAmount = {
-        ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
-        nativeAmount: '0'
+  updateStakingStatus(params?: {
+    nativeAmount: string
+    blockTime: string
+    txId: string
+    txName: FioTxName
+  }): void {
+    // First two entries in stakedAmounts will always be the locked and staked amounts
+    this.otherData.stakingStatus.stakedAmounts[0] = {
+      nativeAmount: this.otherData.lockedBalances.locked,
+      unlockDate: undefined,
+      otherParams: {
+        type: 'LOCKED'
       }
-      const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
-        // @ts-expect-error
-        ({ txId: itemTxId, txName: itemTxName }) =>
-          itemTxId === txId && itemTxName === txName
-      )
-
-      if (addedTxIndex < 0) {
-        stakedAmount.otherParams.txs.push({
-          txId,
-          nativeAmount,
-          blockTime,
-          txName
-        })
-      } else {
-        stakedAmount.otherParams.txs[addedTxIndex] = {
-          txId,
-          nativeAmount,
-          blockTime,
-          txName
-        }
+    }
+    this.otherData.stakingStatus.stakedAmounts[1] = {
+      nativeAmount: this.otherData.lockedBalances.staked,
+      unlockDate: undefined,
+      otherParams: {
+        type: 'STAKED'
       }
-
-      for (const tx of stakedAmount.otherParams.txs) {
-        stakedAmount.nativeAmount = add(
-          stakedAmount.nativeAmount,
-          tx.nativeAmount
-        )
-      }
-
-      this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
-        stakedAmount
     }
 
+    if (params != null) {
+      const { nativeAmount, blockTime, txId, txName } = params
+      const unlockDate = this.getUnlockDate(
+        new Date(this.getUTCDate(blockTime))
+      )
+
+      /**
+       * Compare each stakedAmount's unlockDate with the transaction's unlockDate to
+       * find the correct stakedAmount object to place where the transaction.
+       */
+      const stakedAmountIndex =
+        this.otherData.stakingStatus.stakedAmounts.findIndex(stakedAmount => {
+          return stakedAmount.unlockDate?.getTime() === unlockDate.getTime()
+        })
+
+      /**
+       * If no stakedAmount object was found, then insert a new object into the
+       * stakedAmounts array. Insert into the array at the correct index maintaining
+       * a sorting by unlockDate in descending order.
+       */
+      if (stakedAmountIndex < 0) {
+        // Search for the correct index to insert the new stakedAmount object
+        const needleIndex =
+          this.otherData.stakingStatus.stakedAmounts.findIndex(
+            stakedAmount =>
+              unlockDate.getTime() >=
+              (stakedAmount.unlockDate?.getTime() ?? Infinity)
+          )
+        // If needleIndex is -1 (not found), then insert into the end of the array
+        const index =
+          needleIndex < 0
+            ? this.otherData.stakingStatus.stakedAmounts.length
+            : needleIndex
+        // Insert the new stakedAmount object
+        this.otherData.stakingStatus.stakedAmounts.splice(index, 0, {
+          nativeAmount,
+          unlockDate,
+          otherParams: {
+            date: new Date(blockTime),
+            txs: [{ txId, nativeAmount, blockTime, txName }]
+          }
+        })
+      } else {
+        const stakedAmount = {
+          ...this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex],
+          nativeAmount: '0'
+        }
+        const addedTxIndex = stakedAmount.otherParams.txs.findIndex(
+          // @ts-expect-error
+          ({ txId: itemTxId, txName: itemTxName }) =>
+            itemTxId === txId && itemTxName === txName
+        )
+
+        if (addedTxIndex < 0) {
+          stakedAmount.otherParams.txs.push({
+            txId,
+            nativeAmount,
+            blockTime,
+            txName
+          })
+        } else {
+          stakedAmount.otherParams.txs[addedTxIndex] = {
+            txId,
+            nativeAmount,
+            blockTime,
+            txName
+          }
+        }
+
+        for (const tx of stakedAmount.otherParams.txs) {
+          stakedAmount.nativeAmount = add(
+            stakedAmount.nativeAmount,
+            tx.nativeAmount
+          )
+        }
+
+        this.otherData.stakingStatus.stakedAmounts[stakedAmountIndex] =
+          stakedAmount
+      }
+    }
     this.localDataDirty()
     try {
       this.currencyEngineCallbacks.onStakingStatusChanged({
@@ -400,7 +401,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Transfer funds transaction
-    if (PROCESS_TX_NAME_LIST.includes(trxName)) {
+    if (trxName != null) {
       nativeAmount = '0'
 
       if (trxName === 'regaddress') {
@@ -418,10 +419,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
       }
 
-      if (
-        trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens] &&
-        data.amount != null
-      ) {
+      if (trxName === 'transfer' && data.amount != null) {
         nativeAmount = data.amount.toString()
         actorSender = data.actor
         if (data.payee_public_key === this.walletInfo.keys.publicKey) {
@@ -473,12 +471,12 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
 
       if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus(
-          data.amount != null ? data.amount.toString() : '0',
-          action.block_time,
-          action.action_trace.trx_id,
-          trxName
-        )
+        this.updateStakingStatus({
+          nativeAmount: data.amount != null ? data.amount.toString() : '0',
+          blockTime: action.block_time,
+          txId: action.action_trace.trx_id,
+          txName: trxName
+        })
       }
 
       otherParams.meta.isTransferProcessed = true
@@ -501,10 +499,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Fee / Reward transaction
-    if (
-      trxName === ACTIONS_TO_TX_ACTION_NAME.transfer &&
-      data.quantity != null
-    ) {
+    if (trxName === 'transfer' && data.quantity != null) {
       const [amount] = data.quantity.split(' ')
       const exchangeAmount = amount.toString()
       const denom = getDenomination(
@@ -562,12 +557,12 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
 
       if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus(
-          fioAmount,
-          action.block_time,
-          action.action_trace.trx_id,
-          trxName
-        )
+        this.updateStakingStatus({
+          nativeAmount: fioAmount,
+          blockTime: action.block_time,
+          txId: action.action_trace.trx_id,
+          txName: trxName
+        })
       }
 
       otherParams.meta.isFeeProcessed = true
@@ -694,8 +689,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
 
         for (let i = actions.length - 1; i > -1; i--) {
-          const action = actions[i]
-          asFioHistoryNodeAction(action)
+          const action = asFioHistoryNodeAction(actions[i])
           const blockNum = this.processTransaction(action, this.actor)
 
           if (blockNum > newHighestTxHeight) {
@@ -1022,7 +1016,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
-    const balanceCurrencyCodes = this.networkInfo.balanceCurrencyCodes
 
     // Initialize balance
     if (
@@ -1045,8 +1038,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.otherData.stakingRoe = roe
 
       this.updateBalance(currencyCode, nativeAmount)
-      this.updateBalance(balanceCurrencyCodes.staked, balances.staked)
-      this.updateBalance(balanceCurrencyCodes.locked, balances.locked)
+
+      // Update staking status if locked balances changed
+      if (
+        balances.staked !== this.otherData.lockedBalances.staked ||
+        balances.locked !== this.otherData.lockedBalances.locked
+      ) {
+        this.otherData.lockedBalances = balances
+        this.localDataDirty()
+        this.updateStakingStatus()
+      }
     } catch (e: any) {
       this.log.warn('checkAccountInnerLoop getFioBalance error: ', e)
     }
@@ -1384,10 +1385,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       currencyCode: spendInfo.currencyCode
     })
 
-    const lockedAmount =
-      this.walletLocalData.totalBalances[
-        this.networkInfo.balanceCurrencyCodes.locked
-      ] ?? '0'
+    const lockedAmount = this.otherData.lockedBalances.locked
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
@@ -1406,10 +1404,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 
-    const lockedBalance =
-      this.walletLocalData.totalBalances[
-        this.networkInfo.balanceCurrencyCodes.locked
-      ] ?? '0'
+    const lockedBalance = this.otherData.lockedBalances.locked
     const availableBalance = sub(nativeBalance, lockedBalance)
 
     // Set common vars
@@ -1483,10 +1478,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
 
         const unlockDate = this.getUnlockDate(new Date())
-        const stakedBalance =
-          this.walletLocalData.totalBalances[
-            this.networkInfo.balanceCurrencyCodes.staked
-          ] ?? '0'
+        const stakedBalance = this.otherData.lockedBalances.staked
         if (gt(quantity, stakedBalance) || gt(`${fee}`, availableBalance)) {
           throw new InsufficientFundsError()
         }
