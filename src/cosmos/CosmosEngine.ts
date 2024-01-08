@@ -19,6 +19,7 @@ import {
   EdgeFreshAddress,
   EdgeMemo,
   EdgeSpendInfo,
+  EdgeStakingStatus,
   EdgeTransaction,
   EdgeWalletInfo,
   JsonObject,
@@ -75,6 +76,7 @@ export class CosmosEngine extends CurrencyEngine<
   otherData!: CosmosWalletOtherData
   otherMethods: CosmosOtherMethods
   feeCache: Map<string, CosmosFee>
+  stakedBalanceCache: string
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -92,6 +94,7 @@ export class CosmosEngine extends CurrencyEngine<
       txids: new Map()
     }
     this.feeCache = new Map()
+    this.stakedBalanceCache = '0'
     this.otherMethods = {
       getMaxTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -213,6 +216,24 @@ export class CosmosEngine extends CurrencyEngine<
         const tokenBal = balances.find(bal => bal.denom === tokenId)
         this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
       })
+
+      const stakedBalance = await stargateClient.getBalanceStaked(
+        this.walletInfo.keys.bech32Address
+      )
+      if (
+        stakedBalance != null &&
+        this.stakedBalanceCache !== stakedBalance.amount
+      ) {
+        const stakingStatus: EdgeStakingStatus = {
+          stakedAmounts: [
+            {
+              nativeAmount: stakedBalance.amount
+            }
+          ]
+        }
+        this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
+        this.stakedBalanceCache = stakedBalance.amount
+      }
 
       const { accountNumber, sequence } = await stargateClient.getSequence(
         this.walletInfo.keys.bech32Address
