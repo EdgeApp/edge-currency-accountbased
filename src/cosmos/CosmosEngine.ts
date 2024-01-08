@@ -644,6 +644,27 @@ export class CosmosEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  async signMessage(message: string, privateKeys: JsonObject): Promise<string> {
+    const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const bytes = base16.parse(message)
+    const signDoc = SignDoc.decode(bytes)
+
+    const signer = await this.tools.createSigner(keys.mnemonic)
+    const signResponse = await signer.signDirect(
+      this.walletInfo.keys.bech32Address,
+      signDoc
+    )
+    const decodedSignature = decodeSignature(signResponse.signature)
+    const signedTxRaw = TxRaw.fromPartial({
+      authInfoBytes: signDoc.authInfoBytes,
+      bodyBytes: signDoc.bodyBytes,
+      signatures: [decodedSignature.signature]
+    })
+    const signedTxBytes = TxRaw.encode(signedTxRaw).finish()
+    const signedTxHex = base16.stringify(signedTxBytes)
+    return signedTxHex
+  }
+
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
