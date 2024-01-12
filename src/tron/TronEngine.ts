@@ -548,6 +548,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
         const feeNativeAmount = retArray[0].fee.toString()
 
+        // Don't create edgeTransaction for TRX if fee is zero
+        if (feeNativeAmount === '0') break
+
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
           currencyCode,
