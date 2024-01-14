@@ -1,4 +1,4 @@
-import { add, div, gt, lt, lte, mul, sub } from 'biggystring'
+import { add, div, eq, gt, lt, lte, mul, sub } from 'biggystring'
 import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -548,6 +548,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
         const feeNativeAmount = retArray[0].fee.toString()
 
+        // Don't create edgeTransaction for TRX if fee is zero
+        if (feeNativeAmount === '0') break
+
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
           currencyCode,
@@ -846,7 +849,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const ourReceiveAddresses: string[] = []
 
     let nativeAmount = value
-    const parentNetworkFee = fee
+    const parentNetworkFee = fee.toString()
 
     if (from === this.walletLocalData.publicKey) {
       // Send
@@ -873,9 +876,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       walletId: this.walletId
     }
 
-    // Record the parentNetworkFee if it's a send
-    if (lt(nativeAmount, '0')) {
-      edgeTransaction.parentNetworkFee = parentNetworkFee.toString()
+    // Record the parentNetworkFee if it's a send and the fee isn't zero
+    if (lt(nativeAmount, '0') && !eq(parentNetworkFee, '0')) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
     }
 
     this.addTransaction(metaToken.currencyCode, edgeTransaction)

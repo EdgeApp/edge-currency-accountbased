@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Tron) Stop saving zero fee EdgeTransactions
+
 ## 3.0.0 (2024-01-06)
 
 - changed: Moved FIO staked balances from the balances object to stakingStatus
