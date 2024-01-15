@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Cosmos) Add signMessage method
+- added: (Cosmos) Add staked balance query
 - fixed: (Tron) Stop saving zero fee EdgeTransactions
 
 ## 3.0.0 (2024-01-06)
@@ -43,7 +45,7 @@
 
 ## 2.18.1 (2023-12-18)
 
-added: (Solana) Add BONK
+- added: (Solana) Add BONK
 
 ## 2.18.0 (2023-12-15)
 
