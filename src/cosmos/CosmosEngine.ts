@@ -77,6 +77,7 @@ export class CosmosEngine extends CurrencyEngine<
   otherMethods: CosmosOtherMethods
   feeCache: Map<string, CosmosFee>
   stakedBalanceCache: string
+  stakingSupported: boolean
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -95,6 +96,7 @@ export class CosmosEngine extends CurrencyEngine<
     }
     this.feeCache = new Map()
     this.stakedBalanceCache = '0'
+    this.stakingSupported = true
     this.otherMethods = {
       getMaxTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -217,22 +219,33 @@ export class CosmosEngine extends CurrencyEngine<
         this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
       })
 
-      const stakedBalance = await stargateClient.getBalanceStaked(
-        this.walletInfo.keys.bech32Address
-      )
-      if (
-        stakedBalance != null &&
-        this.stakedBalanceCache !== stakedBalance.amount
-      ) {
-        const stakingStatus: EdgeStakingStatus = {
-          stakedAmounts: [
-            {
-              nativeAmount: stakedBalance.amount
+      if (this.stakingSupported) {
+        try {
+          const stakedBalance = await stargateClient.getBalanceStaked(
+            this.walletInfo.keys.bech32Address
+          )
+          if (
+            stakedBalance != null &&
+            this.stakedBalanceCache !== stakedBalance.amount
+          ) {
+            const stakingStatus: EdgeStakingStatus = {
+              stakedAmounts: [
+                {
+                  nativeAmount: stakedBalance.amount
+                }
+              ]
             }
-          ]
+            this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
+            this.stakedBalanceCache = stakedBalance.amount
+          }
+        } catch (e) {
+          // Staking is not supported on all chains. Failure is OK. Other errors are not OK
+          if (String(e).includes('unknown query path')) {
+            this.stakingSupported = false
+          } else {
+            throw e
+          }
         }
-        this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
-        this.stakedBalanceCache = stakedBalance.amount
       }
 
       const { accountNumber, sequence } = await stargateClient.getSequence(
