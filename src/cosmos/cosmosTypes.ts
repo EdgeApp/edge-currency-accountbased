@@ -117,7 +117,7 @@ export interface CosmosOtherMethods {
 export interface CosmosClients {
   queryClient: ReturnType<StargateClient['forceGetQueryClient']>
   stargateClient: StargateClient
-  // Using the tendermint client directly allows us to control the paging
+  // Using the comet client directly allows us to control the paging
   cometClient: ReturnType<StargateClient['forceGetCometClient']>
 }
 
