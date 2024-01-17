@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Thorchain) Use dynamic fees from thornode
+
 ## 3.0.1 (2024-01-14)
 
 - added: (Cosmos) Add signMessage method

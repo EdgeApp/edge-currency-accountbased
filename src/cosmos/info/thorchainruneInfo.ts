@@ -13,10 +13,9 @@ const networkInfo: CosmosNetworkInfo = {
     name: 'thorchain',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
-  defaultTransactionFee: {
-    // https://thornode.ninerealms.com/thorchain/constants NativeTransactionFee
-    denom: 'rune',
-    amount: '2000000'
+  defaultTransactionFeeUrl: {
+    url: 'https://thornode.ninerealms.com/thorchain/network',
+    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',

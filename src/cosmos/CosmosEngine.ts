@@ -38,6 +38,7 @@ import {
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
   asSafeCosmosWalletInfo,
+  asThornodeNetwork,
   CosmosClients,
   CosmosCoin,
   CosmosFee,
@@ -77,6 +78,7 @@ export class CosmosEngine extends CurrencyEngine<
   otherMethods: CosmosOtherMethods
   feeCache: Map<string, CosmosFee>
   stakedBalanceCache: string
+  stakingSupported: boolean
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -95,6 +97,7 @@ export class CosmosEngine extends CurrencyEngine<
     }
     this.feeCache = new Map()
     this.stakedBalanceCache = '0'
+    this.stakingSupported = true
     this.otherMethods = {
       getMaxTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -217,22 +220,33 @@ export class CosmosEngine extends CurrencyEngine<
         this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
       })
 
-      const stakedBalance = await stargateClient.getBalanceStaked(
-        this.walletInfo.keys.bech32Address
-      )
-      if (
-        stakedBalance != null &&
-        this.stakedBalanceCache !== stakedBalance.amount
-      ) {
-        const stakingStatus: EdgeStakingStatus = {
-          stakedAmounts: [
-            {
-              nativeAmount: stakedBalance.amount
+      if (this.stakingSupported) {
+        try {
+          const stakedBalance = await stargateClient.getBalanceStaked(
+            this.walletInfo.keys.bech32Address
+          )
+          if (
+            stakedBalance != null &&
+            this.stakedBalanceCache !== stakedBalance.amount
+          ) {
+            const stakingStatus: EdgeStakingStatus = {
+              stakedAmounts: [
+                {
+                  nativeAmount: stakedBalance.amount
+                }
+              ]
             }
-          ]
+            this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
+            this.stakedBalanceCache = stakedBalance.amount
+          }
+        } catch (e) {
+          // Staking is not supported on all chains. Failure is OK. Other errors are not OK
+          if (String(e).includes('unknown query path')) {
+            this.stakingSupported = false
+          } else {
+            throw e
+          }
         }
-        this.currencyEngineCallbacks.onStakingStatusChanged(stakingStatus)
-        this.stakedBalanceCache = stakedBalance.amount
       }
 
       const { accountNumber, sequence } = await stargateClient.getSequence(
@@ -359,8 +373,12 @@ export class CosmosEngine extends CurrencyEngine<
           const signedTx = base16.stringify(txRaw)
           const {
             authInfo: { fee },
-            body: { memo }
+            body: { memo, messages }
           } = decodeTxRaw(txRaw)
+          const dynamicNetworkFee = await this.totalDynamicNetworkFee(
+            messages,
+            block.header.height
+          )
           netBalanceChanges.forEach(coin => {
             this.processCosmosTransaction(
               txidHex,
@@ -369,6 +387,7 @@ export class CosmosEngine extends CurrencyEngine<
               coin,
               memo,
               height,
+              dynamicNetworkFee,
               fee
             )
           })
@@ -389,6 +408,7 @@ export class CosmosEngine extends CurrencyEngine<
     cosmosCoin: CosmosCoin,
     memo: string,
     height: number,
+    dynamicNetworkFee: string,
     fee?: Fee
   ): void {
     const { amount, denom } = cosmosCoin
@@ -403,7 +423,7 @@ export class CosmosEngine extends CurrencyEngine<
         : undefined
     if (currencyCode == null) return
 
-    let networkFee = this.networkInfo.defaultTransactionFee?.amount ?? '0'
+    let networkFee = '0'
     if (fee != null) {
       const { amount } = fee
       const networkFeeCoin = safeAddCoins([
@@ -420,10 +440,12 @@ export class CosmosEngine extends CurrencyEngine<
     let parentNetworkFee: string | undefined
     if (isSend) {
       if (isMainnet) {
+        networkFee = add(networkFee, dynamicNetworkFee)
         nativeAmount = sub(nativeAmount, networkFee)
       } else {
         networkFee = '0'
-        parentNetworkFee = networkFee
+        parentNetworkFee =
+          dynamicNetworkFee !== '0' ? dynamicNetworkFee : undefined
       }
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
@@ -504,16 +526,48 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
+  private async totalDynamicNetworkFee(
+    messages: EncodeObject[],
+    blockheight?: number
+  ): Promise<string> {
+    let networkFee = '0'
+    if (this.networkInfo.defaultTransactionFeeUrl == null) {
+      return networkFee
+    }
+
+    const { url, headers } = rpcWithApiKey(
+      this.networkInfo.defaultTransactionFeeUrl,
+      this.tools.initOptions
+    )
+    const heightQueryParam = blockheight == null ? '' : `?height=${blockheight}`
+    const res = await this.fetchCors(`${url}${heightQueryParam}`, {
+      method: 'GET',
+      headers
+    })
+    const raw = await res.json()
+    const clean = asThornodeNetwork(raw)
+    for (const msg of messages) {
+      switch (msg.typeUrl) {
+        case '/types.MsgDeposit':
+          networkFee = add(networkFee, clean.native_outbound_fee_rune)
+          break
+        case '/types.MsgSend':
+          networkFee = add(networkFee, clean.native_tx_fee_rune)
+      }
+    }
+    return networkFee
+  }
+
   private async calculateFee(opts: {
     messages: EncodeObject[]
     memo?: string
     networkFeeOption?: EdgeSpendInfo['networkFeeOption']
   }): Promise<CosmosFee> {
+    const { messages, memo, networkFeeOption } = opts
     let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
     let gasLimit = '0'
     let networkFee = '0'
-    if (this.networkInfo.defaultTransactionFee == null) {
-      const { messages, memo, networkFeeOption } = opts
+    if (this.networkInfo.defaultTransactionFeeUrl == null) {
       const { queryClient } = this.getClients()
       const { gasInfo } = await queryClient.tx.simulate(
         messages,
@@ -548,8 +602,10 @@ export class CosmosEngine extends CurrencyEngine<
       gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
       networkFee = gasFeeCoin.amount
     } else {
-      networkFee = this.networkInfo.defaultTransactionFee.amount
+      // Only Thorchain uses defaultTransactionFeeUrl
+      networkFee = await this.totalDynamicNetworkFee(messages)
     }
+
     return {
       gasFeeCoin,
       gasLimit,
