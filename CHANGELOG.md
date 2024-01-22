@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.0.2 (2024-01-22)
+
 - changed: (Thorchain) Use dynamic fees from thornode
 
 ## 3.0.1 (2024-01-14)
