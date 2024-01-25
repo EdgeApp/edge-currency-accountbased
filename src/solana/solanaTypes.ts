@@ -8,6 +8,7 @@ import {
   asObject,
   asOptional,
   asString,
+  asTuple,
   asUnknown,
   Cleaner
 } from 'cleaners'
@@ -16,6 +17,7 @@ import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface SolanaNetworkInfo {
   rpcNodes: string[]
+  rpcNodesArchival: string[]
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number
   derivationPath: string
@@ -94,6 +96,9 @@ const asRpcResponse = <T>(cleaner: Cleaner<T>): Cleaner<{ result: T }> =>
     result: cleaner
     // id: 1
   })
+export const asRpcSignatureForAddressResponse = asTuple(
+  asRpcResponse(asArray(asRpcSignatureForAddress))
+)
 export const asAccountBalance = asRpcResponse(asRpcBalance)
 export type AccountBalance = ReturnType<typeof asAccountBalance>
 

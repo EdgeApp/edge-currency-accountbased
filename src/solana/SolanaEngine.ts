@@ -5,7 +5,7 @@ import {
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
 import { add, gt, gte, lt, mul, sub } from 'biggystring'
-import { asArray, asMaybe, asNumber, asString } from 'cleaners'
+import { asMaybe, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -36,7 +36,7 @@ import {
   asAccountInfo,
   asBlocktime,
   asRecentBlockHash,
-  asRpcSignatureForAddress,
+  asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
   asSolanaInitOptions,
   asSolanaPrivateKeys,
@@ -362,9 +362,11 @@ export class SolanaEngine extends CurrencyEngine<
             commitment: this.networkInfo.commitment
           }
         ]
-        const response: RpcSignatureForAddress[] = asArray(
-          asRpcSignatureForAddress
-        )(await this.fetchRpc('getSignaturesForAddress', params))
+        const raw: unknown = await this.fetchRpcBulk(
+          [{ method: 'getSignaturesForAddress', params }],
+          this.networkInfo.rpcNodesArchival
+        )
+        const response = asRpcSignatureForAddressResponse(raw)[0].result
         txids = txids.concat(response)
         if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
         before = response[this.networkInfo.txQueryLimit - 1].signature
@@ -403,9 +405,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
         partialTransactionRequests,
-        this.networkInfo.rpcNodes.filter(
-          url => !url.includes('gateway.pokt.network')
-        )
+        this.networkInfo.rpcNodesArchival
       )
       const slots = txResponse.map(res => asTransaction(res).result.slot)
       const blocktimeRequests: RpcRequest[] = slots.map(slot => ({
@@ -413,7 +413,8 @@ export class SolanaEngine extends CurrencyEngine<
         params: [slot]
       }))
       const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
-        blocktimeRequests
+        blocktimeRequests,
+        this.networkInfo.rpcNodesArchival
       )
 
       // Process the transactions from oldest to newest
