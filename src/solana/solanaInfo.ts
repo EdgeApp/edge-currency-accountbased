@@ -69,6 +69,10 @@ const networkInfo: SolanaNetworkInfo = {
     'https://api.mainnet-beta.solana.com',
     'https://solana-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}' // fails to return some transactions
   ],
+  rpcNodesArchival: [
+    'https://api.mainnet-beta.solana.com',
+    'https://solana-mainnet.g.alchemy.com/v2/{{alchemyApiKey}}'
+  ],
   commitment: 'confirmed', // confirmed is faster, finalized is safer. Even faster processed is unsupported for tx querys
   txQueryLimit: 1000, // RPC default is 1000
   derivationPath: "m/44'/501'/0'/0'",

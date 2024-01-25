@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Solana) Versioned transaction parsing
+
 ## 3.0.2 (2024-01-22)
 
 - changed: (Thorchain) Use dynamic fees from thornode
