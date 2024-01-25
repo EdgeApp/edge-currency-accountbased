@@ -284,7 +284,7 @@ export class SolanaEngine extends CurrencyEngine<
   parseTxAmounts(tx: RpcGetTransaction['result']): ParsedTxAmount[] {
     const out: ParsedTxAmount[] = []
     const index = tx.transaction.message.accountKeys.findIndex(
-      account => account === this.base58PublicKey
+      account => account.pubkey === this.base58PublicKey
     )
     if (index < 0 || tx.meta == null) return out
 
@@ -390,7 +390,11 @@ export class SolanaEngine extends CurrencyEngine<
         method: 'getTransaction',
         params: [
           txid.signature,
-          { encoding: 'json', commitment: this.networkInfo.commitment }
+          {
+            encoding: 'jsonParsed',
+            commitment: this.networkInfo.commitment,
+            maxSupportedTransactionVersion: 0
+          }
         ]
       }))
       .reverse()

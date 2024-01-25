@@ -155,7 +155,11 @@ export const asRpcGetTransaction = asObject({
   slot: asNumber,
   transaction: asObject({
     message: asObject({
-      accountKeys: asArray(asString),
+      accountKeys: asArray(
+        asObject({
+          pubkey: asString
+        })
+      ),
       instructions: asArray(asUnknown),
       recentBlockhash: asString
     }),
