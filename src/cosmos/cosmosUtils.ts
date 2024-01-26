@@ -8,10 +8,11 @@ import {
   StargateClient
 } from '@cosmjs/stargate'
 import {
+  Comet38Client,
+  CometClient,
   RpcClient,
   Tendermint34Client,
-  Tendermint37Client,
-  TendermintClient
+  Tendermint37Client
 } from '@cosmjs/tendermint-rpc'
 import { add } from 'biggystring'
 import { asMaybe, asObject, asString, asTuple, asValue } from 'cleaners'
@@ -65,17 +66,16 @@ const createRpcClient = (
   }
 }
 
-const createTendermintClient = async (
-  rpc: RpcClient
-): Promise<TendermintClient> => {
-  const tm37Client = await Tendermint37Client.create(rpc)
-  const version = (await tm37Client.status()).nodeInfo.version
-  if (version.startsWith('0.37.')) {
-    return tm37Client
-  } else {
-    const tm34Client = await Tendermint34Client.create(rpc)
-    return tm34Client
+const createCometClient = async (rpc: RpcClient): Promise<CometClient> => {
+  const cometClient = await Comet38Client.create(rpc)
+  const version = (await cometClient.status()).nodeInfo.version
+  if (version.startsWith('0.38.')) {
+    return cometClient
   }
+  if (version.startsWith('0.37.')) {
+    return await Tendermint37Client.create(rpc)
+  }
+  return await Tendermint34Client.create(rpc)
 }
 
 export const createCosmosClients = async (
@@ -83,7 +83,7 @@ export const createCosmosClients = async (
   endpoint: HttpEndpoint
 ): Promise<CosmosClients> => {
   const stargateClient = await StargateClient.create(
-    await createTendermintClient(createRpcClient(fetch, endpoint))
+    await createCometClient(createRpcClient(fetch, endpoint))
   )
   // eslint-disable-next-line @typescript-eslint/dot-notation
   const queryClient = stargateClient['forceGetQueryClient']()
