@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Solana) Versioned transaction parsing
+- added: Add deprecated `memoType` to piratechainInfo for backwards compatibility
 
 ## 3.0.2 (2024-01-22)
 
