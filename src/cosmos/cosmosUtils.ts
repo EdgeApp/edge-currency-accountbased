@@ -178,6 +178,7 @@ export const reduceCoinEventsForAddress = (
       )
       if (receiver !== address) continue
 
+      if (amount.includes('-')) continue // Ignore airdrop denoms with hyphens that parseCoins can't handle
       const coins = parseCoins(amount)
       coins.forEach(coin => {
         const amount = coin.amount
@@ -192,6 +193,7 @@ export const reduceCoinEventsForAddress = (
       const [amount, spender] = spentEvent.attributes.map(attr => attr.value)
       if (spender !== address) continue
 
+      if (amount.includes('-')) continue // Ignore airdrop denoms with hyphens that parseCoins can't handle
       const coins = parseCoins(amount)
       coins.forEach(coin => {
         const amount = `-${coin.amount}`
