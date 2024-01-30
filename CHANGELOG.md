@@ -4,6 +4,7 @@
 
 - added: (Solana) Versioned transaction parsing
 - added: Add deprecated `memoType` to piratechainInfo for backwards compatibility
+- added: (Thorchain) Overestimate network fee to ensure confirmation
 - changed: (Cosmos) Ignore events with nonstandard hyphenated denoms
 
 ## 3.0.2 (2024-01-22)
