@@ -604,6 +604,11 @@ export class CosmosEngine extends CurrencyEngine<
     } else {
       // Only Thorchain uses defaultTransactionFeeUrl
       networkFee = await this.totalDynamicNetworkFee(messages)
+
+      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
+      // This would most commonly be an issue for max spends but we should overestimate
+      // the fee for all spends.
+      networkFee = mul(networkFee, '1.01')
     }
 
     return {
