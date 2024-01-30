@@ -4,7 +4,7 @@ import {
   getAssociatedTokenAddress
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
-import { add, gt, gte, lt, mul, sub } from 'biggystring'
+import { add, eq, gt, gte, lt, mul, sub } from 'biggystring'
 import { asMaybe, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -511,6 +511,31 @@ export class SolanaEngine extends CurrencyEngine<
     await this.startEngine()
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    // todo: Stop using deprecated currencyCode
+    const { currencyCode } = spendInfo
+    let spendableBalance = this.getBalance({
+      currencyCode
+    })
+
+    if (currencyCode === this.currencyInfo.currencyCode) {
+      spendableBalance = sub(spendableBalance, this.feePerSignature)
+    } else {
+      const solBalance = this.getBalance({
+        currencyCode: this.currencyInfo.currencyCode
+      })
+      if (lt(sub(solBalance, this.minimumAddressBalance), '0')) {
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee: this.feePerSignature
+        })
+      }
+    }
+    if (lt(spendableBalance, '0')) throw new InsufficientFundsError()
+
+    return spendableBalance
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
@@ -644,7 +669,9 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
+    if (eq(totalTxAmount, balance)) {
+      // This is a max send so we don't need to consider the minimumAddressBalance
+    } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
       throw new InsufficientFundsError()
     }
 
