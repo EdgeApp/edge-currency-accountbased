@@ -80,6 +80,7 @@ export class SolanaEngine extends CurrencyEngine<
   fetchCors: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
+  minimumAddressBalance: string
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -97,6 +98,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
+    this.minimumAddressBalance = '0'
   }
 
   setOtherData(raw: any): void {
@@ -232,6 +234,18 @@ export class SolanaEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       this.error(`queryBlockheight Error `, e)
+    }
+  }
+
+  // https://solana.com/docs/core/rent
+  async queryMinimumBalance(): Promise<void> {
+    try {
+      const minimumBalance = asNumber(
+        await this.fetchRpc('getMinimumBalanceForRentExemption', [50])
+      )
+      this.minimumAddressBalance = minimumBalance.toString()
+    } catch (e: any) {
+      this.error(`queryMinimumBalance Error `, e)
     }
   }
 
@@ -480,6 +494,9 @@ export class SolanaEngine extends CurrencyEngine<
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
+    this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
@@ -588,7 +605,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balanceSol =
         this.walletLocalData.totalBalances[this.chainCode] ?? '0'
-      if (gt(parentNetworkFee, balanceSol)) {
+      if (gt(add(parentNetworkFee, this.minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           currencyCode: this.chainCode,
           networkFee: parentNetworkFee
@@ -627,7 +644,7 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    if (gt(totalTxAmount, balance)) {
+    if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
       throw new InsufficientFundsError()
     }
 

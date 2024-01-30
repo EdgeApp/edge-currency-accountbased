@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Solana) Incorporate rent threshold into insufficient funds checks
+
 ## 3.0.3 (2024-01-29)
 
 - added: (Solana) Versioned transaction parsing
