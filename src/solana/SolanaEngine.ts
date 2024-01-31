@@ -4,7 +4,7 @@ import {
   getAssociatedTokenAddress
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
-import { add, gt, gte, lt, mul, sub } from 'biggystring'
+import { add, eq, gt, gte, lt, mul, sub } from 'biggystring'
 import { asMaybe, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -80,6 +80,7 @@ export class SolanaEngine extends CurrencyEngine<
   fetchCors: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
+  minimumAddressBalance: string
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -97,6 +98,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
+    this.minimumAddressBalance = '0'
   }
 
   setOtherData(raw: any): void {
@@ -232,6 +234,18 @@ export class SolanaEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       this.error(`queryBlockheight Error `, e)
+    }
+  }
+
+  // https://solana.com/docs/core/rent
+  async queryMinimumBalance(): Promise<void> {
+    try {
+      const minimumBalance = asNumber(
+        await this.fetchRpc('getMinimumBalanceForRentExemption', [50])
+      )
+      this.minimumAddressBalance = minimumBalance.toString()
+    } catch (e: any) {
+      this.error(`queryMinimumBalance Error `, e)
     }
   }
 
@@ -480,6 +494,9 @@ export class SolanaEngine extends CurrencyEngine<
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
+    this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
@@ -492,6 +509,31 @@ export class SolanaEngine extends CurrencyEngine<
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
+  }
+
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    // todo: Stop using deprecated currencyCode
+    const { currencyCode } = spendInfo
+    let spendableBalance = this.getBalance({
+      currencyCode
+    })
+
+    if (currencyCode === this.currencyInfo.currencyCode) {
+      spendableBalance = sub(spendableBalance, this.feePerSignature)
+    } else {
+      const solBalance = this.getBalance({
+        currencyCode: this.currencyInfo.currencyCode
+      })
+      if (lt(sub(solBalance, this.minimumAddressBalance), '0')) {
+        throw new InsufficientFundsError({
+          currencyCode: this.currencyInfo.currencyCode,
+          networkFee: this.feePerSignature
+        })
+      }
+    }
+    if (lt(spendableBalance, '0')) throw new InsufficientFundsError()
+
+    return spendableBalance
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
@@ -588,7 +630,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balanceSol =
         this.walletLocalData.totalBalances[this.chainCode] ?? '0'
-      if (gt(parentNetworkFee, balanceSol)) {
+      if (gt(add(parentNetworkFee, this.minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           currencyCode: this.chainCode,
           networkFee: parentNetworkFee
@@ -627,7 +669,9 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    if (gt(totalTxAmount, balance)) {
+    if (eq(totalTxAmount, balance)) {
+      // This is a max send so we don't need to consider the minimumAddressBalance
+    } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
       throw new InsufficientFundsError()
     }
 
