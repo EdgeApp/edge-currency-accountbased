@@ -73,7 +73,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   hdPathCoinType: 52752,
   checkUnconfirmedTransactions: false,
-  iosAllowedTokens: {},
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'celoMnemonic',

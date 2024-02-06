@@ -83,9 +83,6 @@ export interface EthereumNetworkInfo {
   ercTokenStandard: string
   ethGasStationUrl: string | null
   hdPathCoinType: number
-  iosAllowedTokens: {
-    [currencyCode: string]: true
-  }
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]

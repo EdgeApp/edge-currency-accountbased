@@ -60,7 +60,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   hdPathCoinType: 60,
   checkUnconfirmedTransactions: false,
-  iosAllowedTokens: {},
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'zksyncMnemonic',
