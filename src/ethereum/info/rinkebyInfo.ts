@@ -95,7 +95,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'rinkebyMnemonic',
   pluginRegularKeyName: 'rinkebyKey',
-  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
+  ethGasStationUrl: null,
   defaultNetworkFees
 }
 

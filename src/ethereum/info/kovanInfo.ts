@@ -242,7 +242,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'kovanMnemonic',
   pluginRegularKeyName: 'kovanKey',
-  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
+  ethGasStationUrl: null,
   defaultNetworkFees
 }
 

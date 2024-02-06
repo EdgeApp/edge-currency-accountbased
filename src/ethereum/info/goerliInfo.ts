@@ -123,7 +123,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'goerliMnemonic',
   pluginRegularKeyName: 'goerliKey',
-  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
+  ethGasStationUrl: null,
   defaultNetworkFees
 }
 
