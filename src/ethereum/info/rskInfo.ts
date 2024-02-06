@@ -58,7 +58,6 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 30,
     name: 'Rootstock Mainnet'
   },
-  checkUnconfirmedTransactions: false,
   hdPathCoinType: 137,
   pluginMnemonicKeyName: 'rskMnemonic',
   pluginRegularKeyName: 'rskKey',

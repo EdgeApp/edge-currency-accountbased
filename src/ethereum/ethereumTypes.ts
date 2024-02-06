@@ -77,7 +77,6 @@ export interface EthereumNetworkInfo {
   chainParams: ChainParams
   supportsEIP1559?: boolean
   l1RollupParams?: L1RollupParams
-  checkUnconfirmedTransactions: boolean
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
   ercTokenStandard: string

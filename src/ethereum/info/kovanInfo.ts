@@ -234,7 +234,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  checkUnconfirmedTransactions: true,
   alethioCurrencies: {
     // object or null
     native: 'ether',

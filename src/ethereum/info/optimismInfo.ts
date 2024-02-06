@@ -194,7 +194,6 @@ const networkInfo: EthereumNetworkInfo = {
       '0xf45e65d800000000000000000000000000000000000000000000000000000000'
   },
   hdPathCoinType: 60,
-  checkUnconfirmedTransactions: false,
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'optimismMnemonic',

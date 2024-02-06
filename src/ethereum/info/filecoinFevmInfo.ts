@@ -67,7 +67,6 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 461,
   feeUpdateFrequencyMs: 20000,
   supportsEIP1559: true,
-  checkUnconfirmedTransactions: false,
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'filecoinfevmMnemonic',
