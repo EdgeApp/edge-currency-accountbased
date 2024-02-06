@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: Arbitrum One network support
+- added: Base network support
+- removed: Unused `EthereumNetworkInfo` params
+
 ## 3.0.4 (2024-01-30)
 
 - changed: (Solana) Incorporate rent threshold into insufficient funds checks
