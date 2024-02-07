@@ -183,7 +183,7 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 10,
     name: 'Optimism'
   },
-  l1RollupParams: {
+  optimismRollupParams: {
     gasPriceL1Wei: '1000000000',
     gasPricel1BaseFeeMethod: '0x519b4bd3',
     maxGasPriceL1Multiplier: '1.25',

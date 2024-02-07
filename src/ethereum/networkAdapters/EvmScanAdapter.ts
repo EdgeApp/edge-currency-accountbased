@@ -355,7 +355,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
 
     let l1RollupFee = '0'
-    if (isSpend && this.ethEngine.networkInfo.l1RollupParams != null) {
+    if (isSpend && this.ethEngine.networkInfo.optimismRollupParams != null) {
       const response = await this.ethEngine.ethNetwork.multicastRpc(
         'eth_getTransactionReceipt',
         [txid]

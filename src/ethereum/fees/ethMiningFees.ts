@@ -6,7 +6,7 @@ import { base16 } from 'rfc4648'
 
 import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
-  CalcL1RollupFeeParams,
+  CalcOptimismRollupFeeParams,
   EthereumFee,
   EthereumFees,
   EthereumMiningFees,
@@ -206,7 +206,9 @@ const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s
 // This is a naive (optimistic??) implementation but is good enough as an
 // estimate since it isn't possible to calculate this exactly without having
 // signatures yet.
-export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
+export const calcOptimismRollupFees = (
+  params: CalcOptimismRollupFeeParams
+): string => {
   const {
     chainParams,
     data,

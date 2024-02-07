@@ -76,7 +76,7 @@ export interface EthereumNetworkInfo {
   amberDataBlockchainId: string
   chainParams: ChainParams
   supportsEIP1559?: boolean
-  l1RollupParams?: L1RollupParams
+  optimismRollupParams?: OptimismRollupParams
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
   ercTokenStandard: string
@@ -163,7 +163,7 @@ export interface EthereumMiningFees {
   useEstimatedGasLimit: boolean
 }
 
-export interface L1RollupParams {
+export interface OptimismRollupParams {
   gasPriceL1Wei: string
   gasPricel1BaseFeeMethod: string
   maxGasPriceL1Multiplier: string
@@ -173,7 +173,7 @@ export interface L1RollupParams {
   dynamicOverheadMethod: string
 }
 
-export interface CalcL1RollupFeeParams {
+export interface CalcOptimismRollupFeeParams {
   nonce?: string
   gasLimit: string
   to: string
