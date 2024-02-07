@@ -77,6 +77,9 @@ export interface EthereumNetworkInfo {
   chainParams: ChainParams
   supportsEIP1559?: boolean
   optimismRollupParams?: OptimismRollupParams
+  arbitrumRollupParams?: {
+    nodeInterfaceAddress: string
+  }
   // eslint-disable-next-line no-use-before-define
   defaultNetworkFees: EthereumFees
   ercTokenStandard: string

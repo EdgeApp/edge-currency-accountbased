@@ -80,6 +80,7 @@ import {
   TxRpcParams
 } from './ethereumTypes'
 import {
+  calcArbitrumRollupFees,
   calcMiningFees,
   calcOptimismRollupFees,
   getFeeParamsByTransactionType
@@ -826,6 +827,19 @@ export class EthereumEngine extends CurrencyEngine<
             fixedOverhead: this.optimismRollupParams.fixedOverhead
           }
           l1Fee = calcOptimismRollupFees(txData)
+        } else if (this.networkInfo.arbitrumRollupParams != null) {
+          const rpcServers = this.ethNetwork.networkAdapters
+            .filter(adaptor => adaptor.config.type === 'rpc')
+            .map(adaptor => adaptor.config.servers)
+            .flat()
+          const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+            destinationAddress: publicAddress,
+            nodeInterfaceAddress:
+              this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
+            rpcServers,
+            txData: data ?? '0x'
+          })
+          l1Fee = mul(l1Gas, l1GasPrice)
         }
         const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
@@ -1023,6 +1037,7 @@ export class EthereumEngine extends CurrencyEngine<
     let parentNetworkFee = null
     let l1Fee = '0'
 
+    //  Optimism-style L1 fees are deducted automatically from the account. Arbitrum-style L1 gas must be included in the transaction object.
     if (this.optimismRollupParams != null) {
       const txData: CalcOptimismRollupFeeParams = {
         nonce: otherParams.nonceUsed,
@@ -1036,6 +1051,20 @@ export class EthereumEngine extends CurrencyEngine<
         fixedOverhead: this.optimismRollupParams.fixedOverhead
       }
       l1Fee = calcOptimismRollupFees(txData)
+    } else if (this.networkInfo.arbitrumRollupParams != null) {
+      const rpcServers = this.ethNetwork.networkAdapters
+        .filter(adaptor => adaptor.config.type === 'rpc')
+        .map(adaptor => adaptor.config.servers)
+        .flat()
+      const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+        destinationAddress: publicAddress,
+        nodeInterfaceAddress:
+          this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
+        rpcServers,
+        txData: data ?? '0x'
+      })
+      l1Fee = mul(l1Gas, l1GasPrice)
+      otherParams.gas = add(otherParams.gas, l1Gas)
     }
 
     //
