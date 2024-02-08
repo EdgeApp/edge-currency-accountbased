@@ -20,6 +20,8 @@ import {
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
+export type EdgeTokenId = string | null // to be replaced after edge-core-js upgrade
+
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
 export const TXID_LIST_FILE = 'txEngineFolder/txidList.json'
@@ -102,7 +104,7 @@ export function asIntegerString(raw: unknown): string {
 export interface WalletConnectPayload {
   nativeAmount: string
   networkFee: string
-  tokenId?: string // can't provide tokenId until we can parse from DATA
+  tokenId: EdgeTokenId // can't provide tokenId until we can parse from DATA
 }
 
 /**

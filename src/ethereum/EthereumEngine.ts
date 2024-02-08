@@ -392,7 +392,8 @@ export class EthereumEngine extends CurrencyEngine<
 
           return {
             nativeAmount,
-            networkFee
+            networkFee,
+            tokenId: null
           }
         } catch (e: any) {
           this.warn(`Wallet connect call_request `, e)
