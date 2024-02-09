@@ -5,6 +5,7 @@
 ## 3.0.4 (2024-01-30)
 
 - changed: (Solana) Incorporate rent threshold into insufficient funds checks
+- fixed: (Fantom) Include decimal values in fee rates from EVM scan to fix 'transaction underpriced' errors
 
 ## 3.0.3 (2024-01-29)
 

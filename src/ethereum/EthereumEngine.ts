@@ -525,8 +525,7 @@ export class EthereumEngine extends CurrencyEngine<
    *  Fetch network fees from various providers in order of priority, stopping
    *  and writing upon successful result.
    */
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async updateNetworkFees() {
+  async updateNetworkFees(): Promise<void> {
     // Update network gasPrice:
     for (const externalFeeProvider of this.externalFeeProviders) {
       try {
@@ -723,11 +722,13 @@ export class EthereumEngine extends CurrencyEngine<
         }
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
-      .finally(
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        async () =>
-          await this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs)
-      )
+      .finally(() => {
+        this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs).catch(err =>
+          this.warn(
+            `Error setting up updateNetworkFees addToLoop: ${String(err)}`
+          )
+        )
+      })
     this.addToLoop('updateL1RollupParams', ROLLUP_FEE_PARAMS).catch(() => {})
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.ethNetwork.needsLoop()
