@@ -2,7 +2,8 @@ import { getGasPriceStep } from '@chain-registry/utils'
 import {
   decodeSignature,
   encodeSecp256k1Pubkey,
-  makeSignDoc
+  makeSignDoc,
+  Secp256k1HdWallet
 } from '@cosmjs/amino'
 import { toHex } from '@cosmjs/encoding'
 import {
@@ -44,7 +45,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { base16 } from 'rfc4648'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -908,12 +909,80 @@ export class CosmosEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  async signMessage(message: string, privateKeys: JsonObject): Promise<string> {
+  async signMessage(
+    message: string,
+    privateKeys: JsonObject,
+    opts?: JsonObject
+  ): Promise<string> {
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const signer = await this.tools.createSigner(keys.mnemonic)
+
+    if (opts?.otherParams != null) {
+      switch (opts.otherParams.method) {
+        case 'cosmos_getAccounts': {
+          asCosmosWcGetAccountsRpcPayload(opts.otherParams)
+          const accounts = await signer.getAccounts()
+          const result = accounts.map(account => {
+            return {
+              ...account,
+              pubkey: base64.stringify(account.pubkey)
+            }
+          })
+          return JSON.stringify(result)
+        }
+        case 'cosmos_signDirect': {
+          const payload = asCosmosWcSignDirectRpcPayload(opts.otherParams)
+          const { signDoc } = payload.params
+          const signDirectDoc = SignDoc.fromPartial({
+            accountNumber: longify(signDoc.accountNumber),
+            authInfoBytes: safeParse(signDoc.authInfoBytes),
+            bodyBytes: safeParse(signDoc.bodyBytes),
+            chainId: signDoc.chainId
+          })
+          const signResponse = await signer.signDirect(
+            this.walletInfo.keys.bech32Address,
+            signDirectDoc
+          )
+          const result = {
+            signature: signResponse.signature,
+            signed: payload.params.signDoc
+          }
+          return JSON.stringify(result)
+        }
+        case 'cosmos_signAmino': {
+          const payload = asCosmosWcSignAminoRpcPayload(opts.otherParams)
+          const { signDoc } = payload.params
+
+          const aminoDoc = makeSignDoc(
+            signDoc.msgs,
+            signDoc.fee,
+            signDoc.chain_id,
+            signDoc.memo,
+            signDoc.account_number,
+            signDoc.sequence
+          )
+          const aminoSigner = await Secp256k1HdWallet.fromMnemonic(
+            signer.mnemonic
+          )
+          const signResponse = await aminoSigner.signAmino(
+            this.walletInfo.keys.bech32Address,
+            aminoDoc
+          )
+          const result = {
+            signature: signResponse.signature,
+            signed: signDoc
+          }
+          return JSON.stringify(result)
+        }
+        default: {
+          throw new Error(`Invalid method: ${opts.method}`)
+        }
+      }
+    }
+
     const bytes = base16.parse(message)
     const signDoc = SignDoc.decode(bytes)
 
-    const signer = await this.tools.createSigner(keys.mnemonic)
     const signResponse = await signer.signDirect(
       this.walletInfo.keys.bech32Address,
       signDoc
