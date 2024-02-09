@@ -6,6 +6,10 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 const chains: { [pluginId: string]: { chainName: string; url: string } } = {
+  axelar: {
+    chainName: 'axelar',
+    url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/chain.json'
+  },
   coreum: {
     chainName: 'coreum',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/coreum/chain.json'
