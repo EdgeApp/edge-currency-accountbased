@@ -168,9 +168,9 @@ export const fetchFeesFromEvmScan = async (
 
   const { SafeGasPrice, ProposeGasPrice, FastGasPrice } =
     asEvmScanGasResponseResult(esGasResponse.result)
-  const newSafeLow = parseInt(SafeGasPrice)
-  let newAverage = parseInt(ProposeGasPrice)
-  let newFast = parseInt(FastGasPrice)
+  const newSafeLow = parseFloat(SafeGasPrice)
+  let newAverage = parseFloat(ProposeGasPrice)
+  let newFast = parseFloat(FastGasPrice)
 
   // Correct inconsistencies, convert values
   if (newAverage <= newSafeLow) newAverage = newSafeLow + 1
