@@ -10,6 +10,10 @@ const chains: { [pluginId: string]: { chainName: string; url: string } } = {
     chainName: 'coreum',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/coreum/chain.json'
   },
+  cosmoshub: {
+    chainName: 'cosmoshub',
+    url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/chain.json'
+  },
   osmosis: {
     chainName: 'osmosis',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/chain.json'

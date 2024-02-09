@@ -8,6 +8,7 @@
 
 ## 3.0.4 (2024-01-30)
 
+- added: Cosmos Hub (ATOM) support
 - changed: (Solana) Incorporate rent threshold into insufficient funds checks
 - fixed: (Fantom) Include decimal values in fee rates from EVM scan to fix 'transaction underpriced' errors
 
