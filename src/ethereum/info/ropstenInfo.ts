@@ -92,14 +92,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  checkUnconfirmedTransactions: true,
-  iosAllowedTokens: {
-    REP: true,
-    WINGS: true,
-    HUR: true,
-    IND: true,
-    USDT: true
-  },
   alethioCurrencies: {
     // object or null
     native: 'ether',
@@ -108,7 +100,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ropstenMnemonic',
   pluginRegularKeyName: 'ropstenKey',
-  ethGasStationUrl: 'https://www.ethgasstation.info/json/ethgasAPI.json',
+  ethGasStationUrl: null,
   defaultNetworkFees
 }
 

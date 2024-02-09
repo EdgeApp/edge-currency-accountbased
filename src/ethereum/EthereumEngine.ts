@@ -57,7 +57,7 @@ import {
   asEthereumWalletOtherData,
   asRpcResultString,
   asSafeEthWalletInfo,
-  CalcL1RollupFeeParams,
+  CalcOptimismRollupFeeParams,
   EIP712TypedDataParam,
   EthereumBaseMultiplier,
   EthereumEstimateGasParams,
@@ -74,14 +74,15 @@ import {
   EthereumWalletOtherData,
   EvmWcRpcPayload,
   KeysOfEthereumBaseMultiplier,
-  L1RollupParams,
   LastEstimatedGasLimit,
+  OptimismRollupParams,
   SafeEthWalletInfo,
   TxRpcParams
 } from './ethereumTypes'
 import {
-  calcL1RollupFees,
+  calcArbitrumRollupFees,
   calcMiningFees,
+  calcOptimismRollupFees,
   getFeeParamsByTransactionType
 } from './fees/ethMiningFees'
 import {
@@ -104,7 +105,7 @@ export class EthereumEngine extends CurrencyEngine<
   utils: EthereumUtils
   infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
-  l1RollupParams?: L1RollupParams
+  optimismRollupParams?: OptimismRollupParams
   networkFees: EthereumFees
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
@@ -123,8 +124,8 @@ export class EthereumEngine extends CurrencyEngine<
       contractAddress: '',
       gasLimit: ''
     }
-    if (this.networkInfo.l1RollupParams != null) {
-      this.l1RollupParams = this.networkInfo.l1RollupParams
+    if (this.networkInfo.optimismRollupParams != null) {
+      this.optimismRollupParams = this.networkInfo.optimismRollupParams
     }
     this.networkFees = this.networkInfo.defaultNetworkFees
     this.fetchCors = getFetchCors(env.io)
@@ -565,14 +566,14 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
-  async updateL1RollupParams(): Promise<void> {
-    if (this.l1RollupParams == null) return
+  async updateOptimismRollupParams(): Promise<void> {
+    if (this.optimismRollupParams == null) return
 
     // L1GasPrice
     try {
       const params = {
-        to: this.l1RollupParams.oracleContractAddress,
-        data: this.l1RollupParams.gasPricel1BaseFeeMethod
+        to: this.optimismRollupParams.oracleContractAddress,
+        data: this.optimismRollupParams.gasPricel1BaseFeeMethod
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
@@ -580,12 +581,12 @@ export class EthereumEngine extends CurrencyEngine<
       ])
       const result = asRpcResultString(response.result)
 
-      this.l1RollupParams = {
-        ...this.l1RollupParams,
+      this.optimismRollupParams = {
+        ...this.optimismRollupParams,
         gasPriceL1Wei: ceil(
           mul(
             hexToDecimal(result.result),
-            this.l1RollupParams.maxGasPriceL1Multiplier
+            this.optimismRollupParams.maxGasPriceL1Multiplier
           ),
           0
         )
@@ -597,8 +598,8 @@ export class EthereumEngine extends CurrencyEngine<
     // Dynamic overhead (scalar)
     try {
       const params = {
-        to: this.l1RollupParams.oracleContractAddress,
-        data: this.l1RollupParams.dynamicOverheadMethod
+        to: this.optimismRollupParams.oracleContractAddress,
+        data: this.optimismRollupParams.dynamicOverheadMethod
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
@@ -606,8 +607,8 @@ export class EthereumEngine extends CurrencyEngine<
       ])
 
       const result = asRpcResultString(response.result)
-      this.l1RollupParams = {
-        ...this.l1RollupParams,
+      this.optimismRollupParams = {
+        ...this.optimismRollupParams,
         dynamicOverhead: hexToDecimal(result.result)
       }
     } catch (e: any) {
@@ -729,7 +730,9 @@ export class EthereumEngine extends CurrencyEngine<
           )
         )
       })
-    this.addToLoop('updateL1RollupParams', ROLLUP_FEE_PARAMS).catch(() => {})
+    this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS).catch(
+      () => {}
+    )
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.ethNetwork.needsLoop()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -812,18 +815,31 @@ export class EthereumEngine extends CurrencyEngine<
         const fee = mul(miningFees.gasPrice, miningFees.gasLimit)
         let l1Fee = '0'
 
-        if (this.l1RollupParams != null) {
-          const txData: CalcL1RollupFeeParams = {
+        if (this.optimismRollupParams != null) {
+          const txData: CalcOptimismRollupFeeParams = {
             nonce: this.otherData.unconfirmedNextNonce,
-            gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
+            gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
             gasLimit: miningFees.gasLimit,
             to: publicAddress,
             value: decimalToHex(mid),
             chainParams: this.networkInfo.chainParams,
-            dynamicOverhead: this.l1RollupParams.dynamicOverhead,
-            fixedOverhead: this.l1RollupParams.fixedOverhead
+            dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
+            fixedOverhead: this.optimismRollupParams.fixedOverhead
           }
-          l1Fee = calcL1RollupFees(txData)
+          l1Fee = calcOptimismRollupFees(txData)
+        } else if (this.networkInfo.arbitrumRollupParams != null) {
+          const rpcServers = this.ethNetwork.networkAdapters
+            .filter(adaptor => adaptor.config.type === 'rpc')
+            .map(adaptor => adaptor.config.servers)
+            .flat()
+          const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+            destinationAddress: publicAddress,
+            nodeInterfaceAddress:
+              this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
+            rpcServers,
+            txData: data ?? '0x'
+          })
+          l1Fee = mul(l1Gas, l1GasPrice)
         }
         const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
@@ -1021,19 +1037,34 @@ export class EthereumEngine extends CurrencyEngine<
     let parentNetworkFee = null
     let l1Fee = '0'
 
-    if (this.l1RollupParams != null) {
-      const txData: CalcL1RollupFeeParams = {
+    //  Optimism-style L1 fees are deducted automatically from the account. Arbitrum-style L1 gas must be included in the transaction object.
+    if (this.optimismRollupParams != null) {
+      const txData: CalcOptimismRollupFeeParams = {
         nonce: otherParams.nonceUsed,
-        gasPriceL1Wei: this.l1RollupParams.gasPriceL1Wei,
+        gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
         gasLimit: otherParams.gas,
         to: otherParams.to[0],
         value: value,
         data: otherParams.data,
         chainParams: this.networkInfo.chainParams,
-        dynamicOverhead: this.l1RollupParams.dynamicOverhead,
-        fixedOverhead: this.l1RollupParams.fixedOverhead
+        dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
+        fixedOverhead: this.optimismRollupParams.fixedOverhead
       }
-      l1Fee = calcL1RollupFees(txData)
+      l1Fee = calcOptimismRollupFees(txData)
+    } else if (this.networkInfo.arbitrumRollupParams != null) {
+      const rpcServers = this.ethNetwork.networkAdapters
+        .filter(adaptor => adaptor.config.type === 'rpc')
+        .map(adaptor => adaptor.config.servers)
+        .flat()
+      const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+        destinationAddress: publicAddress,
+        nodeInterfaceAddress:
+          this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
+        rpcServers,
+        txData: data ?? '0x'
+      })
+      l1Fee = mul(l1Gas, l1GasPrice)
+      otherParams.gas = add(otherParams.gas, l1Gas)
     }
 
     //

@@ -183,7 +183,7 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 10,
     name: 'Optimism'
   },
-  l1RollupParams: {
+  optimismRollupParams: {
     gasPriceL1Wei: '1000000000',
     gasPricel1BaseFeeMethod: '0x519b4bd3',
     maxGasPriceL1Multiplier: '1.25',
@@ -194,8 +194,6 @@ const networkInfo: EthereumNetworkInfo = {
       '0xf45e65d800000000000000000000000000000000000000000000000000000000'
   },
   hdPathCoinType: 60,
-  checkUnconfirmedTransactions: false,
-  iosAllowedTokens: {},
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'optimismMnemonic',

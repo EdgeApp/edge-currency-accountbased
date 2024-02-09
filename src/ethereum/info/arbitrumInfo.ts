@@ -7,12 +7,28 @@ import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
-  '2ad7868ca212135c6119fd7ad1ce51cfc5702892': {
+  af88d065e77c8cc2239327c5edb3a432268e5831: {
+    currencyCode: 'USDC',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'
+    }
+  },
+  ff970a61a04b1ca14834a43f5de4533ebddb5cc8: {
+    currencyCode: 'USDC.e',
+    displayName: 'USD Coin',
+    denominations: [{ name: 'USDC.e', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
+    }
+  },
+  fd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9: {
     currencyCode: 'USDT',
     displayName: 'Tether',
     denominations: [{ name: 'USDT', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0x2ad7868ca212135c6119fd7ad1ce51cfc5702892'
+      contractAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
     }
   }
 }
@@ -44,32 +60,43 @@ const defaultNetworkFees: EthereumFees = {
   }
 }
 
+// Exported for fee provider test
 const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://mainnet.ethereumpow.org']
+      servers: [
+        'https://arb1.arbitrum.io/rpc',
+        'https://arbitrum-one.public.blastapi.io',
+        'https://rpc.ankr.com/arbitrum',
+        'https://arbitrum-one.rpc.grove.city/v1/lb/{{poktPortalApiKey}}'
+      ],
+      ethBalCheckerContract: '0x151E24A486D7258dd7C33Fb67E4bB01919B7B32c'
     },
     {
       type: 'evmscan',
-      servers: [
-        // TODO:
-      ]
+      servers: ['https://api.arbiscan.io']
+    },
+    {
+      type: 'blockchair',
+      servers: ['https://api.blockchair.com']
     }
   ],
 
-  uriNetworks: ['ethereumpow'],
+  uriNetworks: ['arbitrum'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 10001,
-    name: 'ETHW-mainnet'
+    chainId: 42161,
+    name: 'Arbitrum One'
   },
-  supportsEIP1559: true,
+  arbitrumRollupParams: {
+    nodeInterfaceAddress: '0x00000000000000000000000000000000000000C8'
+  },
   hdPathCoinType: 60,
   alethioCurrencies: null,
   amberDataBlockchainId: '',
-  pluginMnemonicKeyName: 'ethereumpowMnemonic',
-  pluginRegularKeyName: 'ethereumpowKey',
+  pluginMnemonicKeyName: 'arbitrumMnemonic',
+  pluginRegularKeyName: 'arbitrumKey',
   ethGasStationUrl: null,
   defaultNetworkFees
 }
@@ -81,26 +108,21 @@ const defaultSettings: any = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
-  currencyCode: 'ETHW',
-  displayName: 'EthereumPoW',
+  currencyCode: 'ETH',
+  displayName: 'Arbitrum One',
   memoOptions: evmMemoOptions,
-  pluginId: 'ethereumpow',
-  walletType: 'wallet:ethereumpow',
+  pluginId: 'arbitrum',
+  walletType: 'wallet:arbitrum',
 
   // Explorers:
-  addressExplorer: 'https://www.oklink.com/en/ethw/address/%s',
-  transactionExplorer: 'https://www.oklink.com/en/ethw/tx/%s',
+  addressExplorer: 'https://arbiscan.io/address/%s',
+  transactionExplorer: 'https://arbiscan.io/tx/%s',
 
   denominations: [
     {
-      name: 'ETHW',
+      name: 'ETH',
       multiplier: '1000000000000000000',
       symbol: 'Ξ'
-    },
-    {
-      name: 'mETHW',
-      multiplier: '1000000000000000',
-      symbol: 'mΞ'
     }
   ],
 
@@ -110,7 +132,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const ethereumpow = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
+export const arbitrum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
   networkInfo,

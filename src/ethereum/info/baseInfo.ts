@@ -7,31 +7,29 @@ import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
-  e9e7cea3dedca5984780bafc599bd69add087d56: {
-    currencyCode: 'BUSD',
-    displayName: 'Binance USD',
-    denominations: [{ name: 'BUSD', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56'
-    }
-  },
-  '8ac76a51cc950d9822d68b83fe1ad97b32cd580d': {
+  '833589fcd6edb6e08f4c7c32d4f71b54bda02913': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000000000000000' }],
+    denominations: [{ name: 'USDC', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d'
+      contractAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
     }
   }
 }
 
+// Fees are in Wei
 const defaultNetworkFees: EthereumFees = {
   default: {
     baseFee: undefined,
-    baseFeeMultiplier: undefined,
+    baseFeeMultiplier: {
+      lowFee: '1',
+      standardFeeLow: '1.25',
+      standardFeeHigh: '1.5',
+      highFee: '1.75'
+    },
     gasLimit: {
       regularTransaction: '21000',
-      tokenTransaction: '200000',
+      tokenTransaction: '300000',
       minGasLimit: '21000'
     },
     gasPrice: {
@@ -41,9 +39,9 @@ const defaultNetworkFees: EthereumFees = {
       standardFeeLowAmount: '100000000000000000',
       standardFeeHighAmount: '10000000000000000000',
       highFee: '40000000001',
-      minGasPrice: '1000000000'
+      minGasPrice: '100000'
     },
-    minPriorityFee: undefined
+    minPriorityFee: '2000000000'
   }
 }
 
@@ -52,26 +50,41 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://rpc.ankr.com/bsc',
-        'https://bsc-dataseed.binance.org',
-        'https://bsc-dataseed1.defibit.io',
-        'https://bsc-dataseed1.ninicoin.io'
+        'https://base-mainnet.public.blastapi.io',
+        'https://rpc.ankr.com/base'
       ],
-      ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
+      ethBalCheckerContract: '0x3ba5A41eA17fd4950a641a057dC0bEb8E8ff1521'
     },
-    { type: 'evmscan', servers: ['https://api.bscscan.com'] }
+    {
+      type: 'evmscan',
+      servers: ['https://api.basescan.org']
+    },
+    {
+      type: 'blockchair',
+      servers: ['https://api.blockchair.com']
+    }
   ],
-  uriNetworks: ['smartchain'],
+  uriNetworks: ['base'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 56,
-    name: 'Binance Smart Chain'
+    chainId: 8453,
+    name: 'Base'
+  },
+  optimismRollupParams: {
+    gasPriceL1Wei: '1000000000',
+    gasPricel1BaseFeeMethod: '0x519b4bd3',
+    maxGasPriceL1Multiplier: '1.25',
+    fixedOverhead: '2100',
+    dynamicOverhead: '1000000',
+    oracleContractAddress: '0x420000000000000000000000000000000000000F',
+    dynamicOverheadMethod:
+      '0xf45e65d800000000000000000000000000000000000000000000000000000000'
   },
   hdPathCoinType: 60,
   alethioCurrencies: null, // object or null
-  amberDataBlockchainId: '', // ETH mainnet
-  pluginMnemonicKeyName: 'binancesmartchainMnemonic',
-  pluginRegularKeyName: 'binancesmartchainKey',
+  amberDataBlockchainId: '',
+  pluginMnemonicKeyName: 'baseMnemonic',
+  pluginRegularKeyName: 'baseKey',
   ethGasStationUrl: null,
   defaultNetworkFees
 }
@@ -83,21 +96,21 @@ const defaultSettings: any = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
-  currencyCode: 'BNB',
-  displayName: 'BNB Smart Chain',
+  currencyCode: 'ETH',
+  displayName: 'Base',
   memoOptions: evmMemoOptions,
-  pluginId: 'binancesmartchain',
-  walletType: 'wallet:binancesmartchain',
+  pluginId: 'base',
+  walletType: 'wallet:base',
 
   // Explorers:
-  addressExplorer: 'https://bscscan.com/address/%s',
-  transactionExplorer: 'https://bscscan.com/tx/%s',
+  addressExplorer: 'https://basescan.org/address/%s',
+  transactionExplorer: 'https://basescan.org/tx/%s',
 
   denominations: [
     {
-      name: 'BNB',
+      name: 'ETH',
       multiplier: '1000000000000000000',
-      symbol: 'BNB'
+      symbol: 'Ξ'
     }
   ],
 
@@ -107,10 +120,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const binancesmartchain = makeOuterPlugin<
-  EthereumNetworkInfo,
-  EthereumTools
->({
+export const base = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
   networkInfo,

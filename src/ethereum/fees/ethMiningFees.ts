@@ -2,11 +2,17 @@ import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
 import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
+import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
-import { decimalToHex, normalizeAddress } from '../../common/utils'
 import {
-  CalcL1RollupFeeParams,
+  asyncWaterfall,
+  decimalToHex,
+  normalizeAddress
+} from '../../common/utils'
+import NODE_INTERFACE_ABI from '../abi/NODE_INTERFACE_ABI.json'
+import {
+  CalcOptimismRollupFeeParams,
   EthereumFee,
   EthereumFees,
   EthereumMiningFees,
@@ -206,7 +212,9 @@ const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s
 // This is a naive (optimistic??) implementation but is good enough as an
 // estimate since it isn't possible to calculate this exactly without having
 // signatures yet.
-export const calcL1RollupFees = (params: CalcL1RollupFeeParams): string => {
+export const calcOptimismRollupFees = (
+  params: CalcOptimismRollupFeeParams
+): string => {
   const {
     chainParams,
     data,
@@ -319,4 +327,50 @@ export async function getFeeParamsByTransactionType(
       minerTip: mul('1', minerTip, 16)
     }
   }
+}
+
+// Copied from https://github.com/OffchainLabs/arbitrum-tutorials/blob/master/packages/gas-estimation/scripts/exec.ts
+export const calcArbitrumRollupFees = async (params: {
+  rpcServers: string[]
+  nodeInterfaceAddress: string
+  destinationAddress: string
+  txData: string
+}): Promise<{
+  l1Gas: string
+  l1GasPrice: string
+}> => {
+  const { rpcServers, nodeInterfaceAddress, destinationAddress, txData } =
+    params
+  const getFee = async (
+    rpcUrl: string
+  ): Promise<{
+    l1Gas: string
+    l1GasPrice: string
+  }> => {
+    const baseL2Provider = new ethers.providers.StaticJsonRpcProvider(rpcUrl)
+    const nodeInterface = new ethers.Contract(
+      nodeInterfaceAddress,
+      NODE_INTERFACE_ABI,
+      baseL2Provider
+    )
+
+    const gasEstimateComponents =
+      await nodeInterface.callStatic.gasEstimateComponents(
+        destinationAddress,
+        false,
+        txData,
+        {
+          blockTag: 'latest'
+        }
+      )
+
+    return {
+      l1Gas: gasEstimateComponents.gasEstimateForL1.toString(),
+      l1GasPrice: gasEstimateComponents.baseFee.toString()
+    }
+  }
+
+  return await asyncWaterfall(
+    rpcServers.map(rpcUrl => async () => await getFee(rpcUrl))
+  )
 }

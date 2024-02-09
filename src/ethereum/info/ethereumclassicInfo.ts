@@ -91,8 +91,6 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Ethereum Classic'
   },
   hdPathCoinType: 61,
-  checkUnconfirmedTransactions: false,
-  iosAllowedTokens: {},
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumclassicMnemonic',

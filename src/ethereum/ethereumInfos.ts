@@ -1,4 +1,6 @@
+import { arbitrum } from './info/arbitrumInfo'
 import { avalanche } from './info/avalancheInfo'
+import { base } from './info/baseInfo'
 import { binancesmartchain } from './info/binancesmartchainInfo'
 import { celo } from './info/celoInfo'
 import { ethDev } from './info/ethDevInfo'
@@ -19,7 +21,9 @@ import { rsk } from './info/rskInfo'
 import { zksync } from './info/zksyncInfo'
 
 export const ethereumPlugins = {
+  arbitrum,
   avalanche,
+  base,
   binancesmartchain,
   celo,
   ethDev,
