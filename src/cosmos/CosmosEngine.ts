@@ -1,5 +1,9 @@
 import { getGasPriceStep } from '@chain-registry/utils'
-import { decodeSignature, encodeSecp256k1Pubkey } from '@cosmjs/amino'
+import {
+  decodeSignature,
+  encodeSecp256k1Pubkey,
+  makeSignDoc
+} from '@cosmjs/amino'
 import { toHex } from '@cosmjs/encoding'
 import {
   decodeTxRaw,
@@ -7,11 +11,26 @@ import {
   encodePubkey,
   makeAuthInfoBytes
 } from '@cosmjs/proto-signing'
-import { Coin, coin, fromTendermintEvent } from '@cosmjs/stargate'
+import {
+  AminoTypes,
+  Coin,
+  coin,
+  createBankAminoConverters,
+  createIbcAminoConverters,
+  fromTendermintEvent
+} from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
 import { add, ceil, lt, mul, sub } from 'biggystring'
-import { Fee, SignDoc, TxBody, TxRaw } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
+import {
+  AuthInfo,
+  Fee,
+  SignDoc,
+  TxBody,
+  TxRaw
+} from 'cosmjs-types/cosmos/tx/v1beta1/tx'
+import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
+import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -29,7 +48,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { MakeTxParams } from '../common/types'
+import { EdgeTokenId, MakeTxParams } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
@@ -37,6 +56,9 @@ import {
   asCosmosPrivateKeys,
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
+  asCosmosWcGetAccountsRpcPayload,
+  asCosmosWcSignAminoRpcPayload,
+  asCosmosWcSignDirectRpcPayload,
   asSafeCosmosWalletInfo,
   asThornodeNetwork,
   CosmosClients,
@@ -46,6 +68,7 @@ import {
   CosmosOtherMethods,
   CosmosTxOtherParams,
   CosmosWalletOtherData,
+  CosmosWcRpcPayload,
   SafeCosmosWalletInfo,
   txQueryStrings
 } from './cosmosTypes'
@@ -53,7 +76,8 @@ import {
   createCosmosClients,
   reduceCoinEventsForAddress,
   rpcWithApiKey,
-  safeAddCoins
+  safeAddCoins,
+  safeParse
 } from './cosmosUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
@@ -185,7 +209,165 @@ export class CosmosEngine extends CurrencyEngine<
             throw new Error(`Invalid type: ${params.type}`)
           }
         }
+      },
+      parseWalletConnectV2Payload: async (rawPayload: CosmosWcRpcPayload) => {
+        try {
+          switch (rawPayload?.method) {
+            case 'cosmos_getAccounts': {
+              return {
+                nativeAmount: '0',
+                networkFee: '0',
+                tokenId: null
+              }
+            }
+            case 'cosmos_signDirect': {
+              const payload = asCosmosWcSignDirectRpcPayload(rawPayload)
+              const { authInfoBytes, bodyBytes } = payload.params.signDoc
+
+              const decodedTxBody = TxBody.decode(safeParse(bodyBytes))
+
+              const { nativeAmount, tokenId } =
+                this.getAmountAndTokenIdFromKnownMessageTypes(
+                  decodedTxBody.messages
+                )
+
+              const parsedAuthInfoBytes = AuthInfo.decode(
+                safeParse(authInfoBytes)
+              )
+
+              let networkFee = '0'
+              const fee = parsedAuthInfoBytes.fee
+              if (fee != null) {
+                const totalFeeCoins = safeAddCoins([
+                  coin('0', this.networkInfo.nativeDenom),
+                  ...fee.amount
+                ])
+                networkFee = totalFeeCoins.amount
+              }
+
+              return {
+                nativeAmount,
+                networkFee,
+                tokenId
+              }
+            }
+            case 'cosmos_signAmino': {
+              const payload = asCosmosWcSignAminoRpcPayload(rawPayload)
+              const { signDoc } = payload.params
+
+              const aminoDoc = makeSignDoc(
+                signDoc.msgs,
+                signDoc.fee,
+                signDoc.chain_id,
+                signDoc.memo,
+                signDoc.account_number,
+                signDoc.sequence
+              )
+
+              const aminoTypes = new AminoTypes({
+                ...createBankAminoConverters,
+                ...createIbcAminoConverters
+              })
+
+              const messages = aminoDoc.msgs.map(msg =>
+                aminoTypes.fromAmino(msg)
+              )
+
+              const { nativeAmount, tokenId } =
+                this.getAmountAndTokenIdFromKnownMessageTypes(messages)
+
+              let networkFee = '0'
+              const fee = signDoc.fee
+              if (fee != null) {
+                const totalFeeCoins = safeAddCoins([
+                  coin('0', this.networkInfo.nativeDenom),
+                  ...fee.amount
+                ])
+                networkFee = totalFeeCoins.amount
+              }
+
+              return {
+                nativeAmount,
+                networkFee,
+                tokenId
+              }
+            }
+            default: {
+              throw new Error(`Invalid method: ${rawPayload?.method}`)
+            }
+          }
+        } catch (e: any) {
+          this.warn(`Wallet connect call_request `, e)
+          throw e
+        }
       }
+    }
+  }
+
+  // This parses common actions into nativeAmount and tokenId
+  getAmountAndTokenIdFromKnownMessageTypes(messages: EncodeObject[]): {
+    nativeAmount: string
+    tokenId: EdgeTokenId
+  } {
+    let tokenId = null
+    let totalCoinAmount: Coin | undefined
+    for (const msg of messages) {
+      switch (msg.typeUrl) {
+        case '/ibc.applications.transfer.v1.MsgTransfer': {
+          const decodedMsg = this.tools.registry.decode(msg)
+          const value = MsgTransfer.fromPartial(decodedMsg)
+
+          // We're assuming the first denom is the most relevant and we'll derive the amount and tokenId from it
+          if (tokenId === undefined) {
+            tokenId =
+              this.allTokensMap[value.token.denom] != null
+                ? value.token.denom
+                : null
+          }
+
+          const transferCoin = coin(value.token.amount, value.token.denom)
+          if (totalCoinAmount == null) {
+            totalCoinAmount = transferCoin
+          } else {
+            totalCoinAmount = safeAddCoins([totalCoinAmount, transferCoin])
+          }
+
+          break
+        }
+        case '/cosmwasm.wasm.v1.MsgExecuteContract': {
+          const decodedMsg = this.tools.registry.decode(msg)
+          const msgExecuteContract = MsgExecuteContract.fromPartial(decodedMsg)
+          const { funds } = msgExecuteContract
+          if (funds.length > 0) {
+            // We're assuming the first denom is the most relevant and we'll derive the amount and tokenId from it
+            const { denom } = funds[0]
+
+            if (tokenId === undefined) {
+              tokenId = this.allTokensMap[denom] != null ? denom : null
+            }
+
+            let sumCoin = coin('0', denom)
+            for (const fund of funds) {
+              sumCoin = safeAddCoins([sumCoin, fund])
+            }
+            if (totalCoinAmount == null) {
+              totalCoinAmount = sumCoin
+            } else {
+              totalCoinAmount = safeAddCoins([totalCoinAmount, sumCoin])
+            }
+          }
+
+          break
+        }
+        default: {
+          // unknown typeUrl
+        }
+      }
+    }
+
+    return {
+      nativeAmount: totalCoinAmount?.amount ?? '0',
+      tokenId
     }
   }
 
