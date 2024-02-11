@@ -91,6 +91,20 @@ export const builtinTokens: EdgeTokenMap = {
       issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'
     }
   },
+  'EUR-rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B': {
+    currencyCode: 'EUR.bs',
+    displayName: 'Bitstamp EUR',
+    denominations: [
+      {
+        name: 'EUR.bs',
+        multiplier: '1000000000000000000'
+      }
+    ],
+    networkLocation: {
+      currency: 'EUR',
+      issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B'
+    }
+  },
   'USD-rEn9eRkX25wfGPLysUMAvZ84jAzFNpT5fL': {
     currencyCode: 'USD.st',
     displayName: 'Stably USD',

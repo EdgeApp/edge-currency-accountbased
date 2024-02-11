@@ -4,6 +4,7 @@
 
 - added: Arbitrum One network support
 - added: Base network support
+- added: Bitstamp EUR Ripple token
 - removed: Unused `EthereumNetworkInfo` params
 
 ## 3.0.4 (2024-01-30)
