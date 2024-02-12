@@ -22,6 +22,78 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d'
     }
+  },
+  '55d398326f99059ff775485246999027b3197955': {
+    currencyCode: 'BSC-USD',
+    displayName: 'Binance-Peg BSC-USD',
+    denominations: [{ name: 'BSC-USD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x55d398326f99059fF775485246999027B3197955'
+    }
+  },
+  ba2ae424d960c26247dd6c32edc70b295c744c43: {
+    currencyCode: 'DOGE',
+    displayName: 'Binance-Peg Dogecoin Token',
+    denominations: [{ name: 'DOGE', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0xbA2aE424d960c26247Dd6c32edC70B295c744C43'
+    }
+  },
+  '7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c': {
+    currencyCode: 'BTCB',
+    displayName: 'Bitcoin BEP2',
+    denominations: [{ name: 'BTCB', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c'
+    }
+  },
+  '2170ed0880ac9a755fd29b2688956bd959f933f8': {
+    currencyCode: 'ETH',
+    displayName: 'Binance-Peg Ethereum Token',
+    denominations: [{ name: 'ETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8'
+    }
+  },
+  '40af3827f39d0eacbf4a168f8d4ee67c121d11c9': {
+    currencyCode: 'TUSD',
+    displayName: 'TrueUSD',
+    denominations: [{ name: 'TUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x40af3827F39D0EAcBF4A168f8D4ee67c121D11c9'
+    }
+  },
+  '7083609fce4d1d8dc0c979aab8c869ea2c873402': {
+    currencyCode: 'DOT',
+    displayName: 'Binance-Peg Polkadot Token',
+    denominations: [{ name: 'DOT', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402'
+    }
+  },
+  bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c: {
+    currencyCode: 'WBNB',
+    displayName: 'Wrapped BNB',
+    denominations: [{ name: 'BNB', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
+    }
+  },
+  f8a0bf9cf54bb92f17374d9e9a321e6a111a51bd: {
+    currencyCode: 'LINK',
+    displayName: 'Binance-Peg ChainLink Token',
+    denominations: [{ name: 'LINK', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD'
+    }
+  },
+  cc42724c6683b7e57334c4e856f4c9965ed682bd: {
+    currencyCode: 'MATIC',
+    displayName: 'Matic Token',
+    denominations: [{ name: 'MATIC', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xCC42724C6683B7E57334c4E856f4c9965ED682bD'
+    }
   }
 }
 
