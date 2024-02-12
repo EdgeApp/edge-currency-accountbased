@@ -542,10 +542,15 @@ export class CosmosEngine extends CurrencyEngine<
           }
 
           const events = tx.result.events.map(fromTendermintEvent)
-          const netBalanceChanges = reduceCoinEventsForAddress(
-            events,
-            this.walletInfo.keys.bech32Address
-          )
+          let netBalanceChanges: CosmosCoin[] = []
+          try {
+            netBalanceChanges = reduceCoinEventsForAddress(
+              events,
+              this.walletInfo.keys.bech32Address
+            )
+          } catch (e) {
+            this.log.warn('reduceCoinEventsForAddress error:', String(e))
+          }
           if (netBalanceChanges.length === 0) continue
 
           const block = await clients.stargateClient.getBlock(tx.height)
