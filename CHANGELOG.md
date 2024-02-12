@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.0 (2024-02-12)
+
 - added: Arbitrum One network support
 - added: Base network support
 - added: (Coreum) Add tokens
