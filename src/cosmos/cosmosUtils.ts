@@ -17,6 +17,7 @@ import {
 import { add } from 'biggystring'
 import { asMaybe, asObject, asString, asTuple, asValue } from 'cleaners'
 import { EdgeFetchFunction } from 'edge-core-js/types'
+import { base16, base64 } from 'rfc4648'
 
 import {
   asCosmosInitOptions,
@@ -209,4 +210,15 @@ export const reduceCoinEventsForAddress = (
     if (amount !== '0') out.push({ denom, amount })
   })
   return out
+}
+
+// Sometimes bytes from dapps are base16 and sometimes they are base64. This function will parse the input and return the bytes and the type.
+export const safeParse = (input: string): Uint8Array => {
+  try {
+    const parsed = base16.parse(input)
+    return parsed
+  } catch (e) {
+    const parsed = base64.parse(input)
+    return parsed
+  }
 }

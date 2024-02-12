@@ -27,6 +27,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { EdgeTokenId } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
@@ -114,7 +115,7 @@ export class AlgorandEngine extends CurrencyEngine<
           const nativeAmount =
             algoTx.amount != null ? algoTx.amount.toString() : '0'
           const networkFee = algoTx.fee.toFixed()
-          let tokenId: string | undefined
+          let tokenId: EdgeTokenId = null
 
           if (algoTx.type === 'axfer') {
             const assetIndex = algoTx.assetIndex.toString()

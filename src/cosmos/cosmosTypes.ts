@@ -2,17 +2,24 @@ import { Chain } from '@chain-registry/types'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
+  asArray,
   asCodec,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
+  asUnknown,
+  asValue,
   Cleaner
 } from 'cleaners'
 import { EdgeTransaction } from 'edge-core-js/types'
 
-import { asWalletInfo, MakeTxParams } from '../common/types'
+import {
+  asWalletInfo,
+  MakeTxParams,
+  WalletConnectPayload
+} from '../common/types'
 
 export interface DepositOpts {
   assets: Array<{
@@ -112,6 +119,9 @@ export const asCosmosInitOptions = asObject({
 export interface CosmosOtherMethods {
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>
   getMaxTx: (makeTxParams: MakeTxParams) => Promise<string>
+  parseWalletConnectV2Payload: (
+    payload: CosmosWcRpcPayload
+  ) => Promise<WalletConnectPayload>
 }
 
 export interface CosmosClients {
@@ -164,3 +174,51 @@ export const asThornodeNetwork = asObject({
   // total_reserve: asString, // '8596638591565880',
   // vaults_migrating: false
 })
+
+/**
+ * WalletConnect payloads
+ */
+export const asCosmosWcGetAccountsRpcPayload = asObject({
+  method: asValue('cosmos_getAccounts'),
+  params: asObject({})
+})
+const asSignDirect = asValue('cosmos_signDirect')
+export const asCosmosWcSignDirectRpcPayload = asObject({
+  method: asSignDirect,
+  params: asObject({
+    signerAddress: asString,
+    signDoc: asObject({
+      chainId: asString,
+      accountNumber: asString,
+      authInfoBytes: asString,
+      bodyBytes: asString
+    })
+  })
+})
+export const asCosmosWcSignAminoRpcPayload = asObject({
+  method: asValue('cosmos_signAmino'),
+  params: asObject({
+    signerAddress: asString,
+    signDoc: asObject({
+      chain_id: asString,
+      account_number: asString,
+      sequence: asString,
+      memo: asString,
+      msgs: asArray(
+        asObject({
+          type: asString,
+          value: asUnknown
+        })
+      ),
+      fee: asObject({
+        amount: asArray(asObject({ denom: asString, amount: asString })),
+        gas: asString
+      })
+    })
+  })
+})
+
+export type CosmosWcRpcPayload =
+  | ReturnType<typeof asCosmosWcGetAccountsRpcPayload>
+  | ReturnType<typeof asCosmosWcSignDirectRpcPayload>
+  | ReturnType<typeof asCosmosWcSignAminoRpcPayload>

@@ -1,6 +1,8 @@
 import { fromBech32 } from '@cosmjs/encoding'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx'
+import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
+import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 
 import { DepositOpts, TransferOpts, UpgradedRegistry } from './cosmosTypes'
 import { assetFromString } from './cosmosUtils'
@@ -10,7 +12,10 @@ import { MsgSend as ThorchainRuneMsgSend } from './info/proto/thorchainrune/thor
 export const upgradeRegistryAndCreateMethods = (
   pluginId: string
 ): UpgradedRegistry => {
-  const registry = new Registry()
+  const registry = new Registry([
+    ['/ibc.applications.transfer.v1.MsgTransfer', MsgTransfer],
+    ['/cosmwasm.wasm.v1.MsgExecuteContract', MsgExecuteContract]
+  ])
 
   // Base Cosmos actions
   let transfer = (opts: TransferOpts): EncodeObject => {
