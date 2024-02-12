@@ -4,6 +4,7 @@
 
 - added: Arbitrum One network support
 - added: Base network support
+- added: (Coreum) Add tokens
 - added: Bitstamp EUR Ripple token
 - added: BSC Tokens BSC-USD,DOGE,BTCB,ETH,TUSD,DOT,WBNB,LINK, and MATIC
 - removed: Unused `EthereumNetworkInfo` params
