@@ -261,12 +261,13 @@ export const fetchFeesFromEvmGasStation = async (
 
 export const fetchFeesFromInfoServer = async (
   fetch: EdgeFetchFunction,
-  { pluginId }: EdgeCurrencyInfo
+  { pluginId }: EdgeCurrencyInfo,
+  opts: { timeout?: number } = {}
 ): Promise<EthereumFees> => {
   const result = await fetchInfo(
     `v1/networkFees/${pluginId}`,
     undefined,
-    undefined,
+    opts.timeout,
     fetch
   )
   const json = await result.json()

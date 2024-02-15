@@ -17,7 +17,10 @@ import { fakeLog } from '../fake/fakeLog'
 // TODO: Loop for all plugins
 describe(`FTM Network Fees`, function () {
   it('Validate Info Server Fees', async function () {
-    const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo)
+    this.timeout(5000)
+    const fees = await fetchFeesFromInfoServer(fetch, ftmCurrencyInfo, {
+      timeout: 5000
+    })
     validateGasPrices(fees.default.gasPrice, true)
     // Info server should provide gas limit as well
     assert.equal(fees.default.gasLimit?.regularTransaction, '21000')
