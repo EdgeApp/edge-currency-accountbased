@@ -1,4 +1,5 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
+import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import {
   GetObtData,
@@ -8,7 +9,7 @@ import {
 import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
 import { add, div, gt, lt, max, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -54,6 +55,7 @@ import {
   FioWalletOtherData,
   HISTORY_NODE_ACTIONS,
   HISTORY_NODE_PAGE_SIZE,
+  MAINNET_LOCKS_ERROR,
   NO_FIO_NAMES,
   PUBLIC_KEY_NOT_FOUND,
   STAKING_LOCK_PERIOD,
@@ -811,6 +813,21 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           )
           break
         }
+        case 'getCurrencyBalance': {
+          const currencyBalRes = await this.fetchCors(
+            `${apiUrl}chain/get_currency_balance`,
+            {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(params)
+            }
+          )
+          res = await currencyBalRes.json()
+          break
+        }
         default:
           res = await fioSdk.genericAction(actionName, params)
       }
@@ -952,6 +969,42 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       if (res?.data?.json?.message === NO_FIO_NAMES) {
         res = { fio_domains: [], fio_addresses: [] }
       }
+    } else if (actionName === 'getCurrencyBalance') {
+      res = await promiseNy(
+        this.networkInfo.apiUrls.map(
+          async apiUrl =>
+            await timeout(
+              this.fioApiRequest(apiUrl, 'getCurrencyBalance', {
+                code: 'fio.token',
+                account: this.actor,
+                symbol: 'FIO'
+              }),
+              10000
+            )
+        ),
+        (result: any) => {
+          return JSON.stringify(result)
+        },
+        2
+      )
+      if (res?.data?.json?.message === PUBLIC_KEY_NOT_FOUND) {
+        res = { balance: 0, available: 0, staked: 0, srps: 0, roe: '' }
+      }
+
+      const clean = asTuple(asString)(res)
+      const exchangeAmount = clean[0].split(' ')[0]
+      const nativeAmount = mul(
+        exchangeAmount,
+        this.currencyInfo.denominations[0].multiplier ?? '1000000000'
+      )
+
+      res = {
+        balance: parseInt(nativeAmount),
+        available: 0,
+        staked: 0,
+        srps: 0,
+        roe: '0'
+      }
     } else if (actionName === 'getFioBalance') {
       res = await promiseNy(
         this.networkInfo.apiUrls.map(
@@ -1027,9 +1080,24 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
-      const { balance, available, staked, srps, roe } = asGetFioBalanceResponse(
-        await this.multicastServers('getFioBalance')
-      )
+      let balanceRes: BalanceResponse
+      try {
+        balanceRes = asGetFioBalanceResponse(
+          await this.multicastServers('getFioBalance')
+        )
+      } catch (e: any) {
+        if (e?.json?.message === MAINNET_LOCKS_ERROR) {
+          // This is a fallback query for this chain bug https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/852688908/2024-02-07+Token+Locking+Issue+on+Unstake
+          // Only the balance of the wallet will be returned and staked amounts will appear as zero until the account is corrected. This can be removed once all affected accounts are fixed.
+          balanceRes = asGetFioBalanceResponse(
+            await this.multicastServers('getCurrencyBalance')
+          )
+          this.log.warn('Returning FIO balance only due to chain bug')
+        } else {
+          throw e
+        }
+      }
+      const { balance, available, staked, srps, roe } = balanceRes
       const nativeAmount = String(balance)
       balances.staked = String(staked)
       balances.locked = sub(nativeAmount, String(available))

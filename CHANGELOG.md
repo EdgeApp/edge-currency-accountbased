@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (FIO) Use a backup balance method for accounts affected by unstake chain data issue
+
 ## 3.0.4 (2024-01-30)
 
 - changed: (Solana) Incorporate rent threshold into insufficient funds checks

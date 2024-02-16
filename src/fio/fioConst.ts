@@ -207,3 +207,5 @@ export type FioWalletOtherData = ReturnType<typeof asFioWalletOtherData>
 
 export const NO_FIO_NAMES = 'No FIO names'
 export const PUBLIC_KEY_NOT_FOUND = 'Public key not found'
+export const MAINNET_LOCKS_ERROR =
+  'Unexpected number of results found for main net locks'
