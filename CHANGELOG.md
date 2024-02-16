@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.0.4-1 (2024-02-15)
+
 - changed: (FIO) Use a backup balance method for accounts affected by unstake chain data issue
 
 ## 3.0.4 (2024-01-30)
