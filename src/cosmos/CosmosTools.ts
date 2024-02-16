@@ -1,10 +1,11 @@
 import { ChainRegistryFetcher } from '@chain-registry/client'
-import { Chain } from '@chain-registry/types'
+import type { Chain } from '@chain-registry/types'
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
+import { chains } from 'chain-registry'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -58,13 +59,19 @@ export class CosmosTools implements EdgeCurrencyTools {
     )
     this.methods = methods
     this.registry = registry
-    const { data, name, url } = this.networkInfo.chainInfo
-    this.chainData = data
+    const { chainId, url } = this.networkInfo.chainInfo
+    const chainData = chains.find(
+      chain => chain.chain_id === chainId && chain.network_type === 'mainnet'
+    )
+    if (chainData == null) {
+      throw new Error('Unknown chain')
+    }
+    this.chainData = chainData
     const chainUpdater = new ChainRegistryFetcher()
     chainUpdater
       .fetch(url)
       .then(() => {
-        this.chainData = chainUpdater.getChain(name)
+        this.chainData = chainUpdater.getChain(this.chainData.chain_name)
       })
       .catch(e => {
         // failure is ok

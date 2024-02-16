@@ -275,6 +275,13 @@
   dependencies:
     "@babel/runtime" "^7.21.0"
 
+"@chain-registry/types@^0.18.0":
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-0.18.0.tgz#68d91054a5b36ff621248f2843f3ff62dc9ade7f"
+  integrity sha512-jRFOKOMIAcA5Qp5cXEiAPyXs13WbSP19kvcb8qm5vaRwXvHMufPd/ZxLC80yq/LB62FeZeaVYfsjorLf3M6tTw==
+  dependencies:
+    "@babel/runtime" "^7.21.0"
+
 "@chain-registry/utils@^1.14.0":
   version "1.14.0"
   resolved "https://registry.yarnpkg.com/@chain-registry/utils/-/utils-1.14.0.tgz#e6043009d80bfb702067c3a92970fae9350f8689"
@@ -3046,6 +3053,14 @@ chai@^4.2.0:
     loupe "^2.3.1"
     pathval "^1.1.1"
     type-detect "^4.0.5"
+
+chain-registry@^1.28.1:
+  version "1.28.1"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-1.28.1.tgz#3aa6fd1199e06e1e95fe6a53b55076962effb980"
+  integrity sha512-WYFhulujAss5llO75CAoLVbMs+EmiYH6N/+XAtV2xBCI0V8eI2yBxHI93w9YsagizE8Ew9wCuNZk8QdAXPNHtg==
+  dependencies:
+    "@babel/runtime" "^7.21.0"
+    "@chain-registry/types" "^0.18.0"
 
 chalk@^2.0.0, chalk@^2.4.1:
   version "2.4.2"

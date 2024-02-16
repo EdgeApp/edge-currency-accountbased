@@ -3,14 +3,12 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
-import data from '../info/chain-json/thorchainrune.json'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
-    data,
-    name: 'thorchain',
+    chainId: 'thorchain-mainnet-v1',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
   defaultTransactionFeeUrl: {

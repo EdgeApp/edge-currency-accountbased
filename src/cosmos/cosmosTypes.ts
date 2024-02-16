@@ -1,4 +1,3 @@
-import { Chain } from '@chain-registry/types'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
 import {
@@ -51,8 +50,7 @@ export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   chainInfo: {
-    data: Chain
-    name: string
+    chainId: string
     url: string
   }
   defaultTransactionFeeUrl?: HttpEndpoint
