@@ -1,6 +1,17 @@
 import { addCoins } from '@cosmjs/amino'
 import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
-import { Coin, Event, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
+import {
+  Coin,
+  Event,
+  HttpEndpoint,
+  QueryClient,
+  setupAuthExtension,
+  setupBankExtension,
+  setupIbcExtension,
+  setupStakingExtension,
+  setupTxExtension,
+  StargateClient
+} from '@cosmjs/stargate'
 import {
   Comet38Client,
   CometClient,
@@ -81,9 +92,15 @@ export const createCosmosClients = async (
     await createCometClient(createRpcClient(fetch, endpoint))
   )
   // eslint-disable-next-line @typescript-eslint/dot-notation
-  const queryClient = stargateClient['forceGetQueryClient']()
-  // eslint-disable-next-line @typescript-eslint/dot-notation
   const cometClient = stargateClient['forceGetCometClient']()
+  const queryClient = QueryClient.withExtensions(
+    cometClient,
+    setupAuthExtension,
+    setupBankExtension,
+    setupStakingExtension,
+    setupTxExtension,
+    setupIbcExtension
+  )
 
   return {
     queryClient,
