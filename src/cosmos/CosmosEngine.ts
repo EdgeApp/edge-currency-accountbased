@@ -613,10 +613,10 @@ export class CosmosEngine extends CurrencyEngine<
 
     let networkFee = '0'
     if (fee != null) {
-      const { amount } = fee
+      const { amount: feeCoin } = fee
       const networkFeeCoin = safeAddCoins([
         coin('0', this.networkInfo.nativeDenom),
-        ...amount
+        ...feeCoin
       ])
       networkFee = add(networkFee, networkFeeCoin.amount)
     }
