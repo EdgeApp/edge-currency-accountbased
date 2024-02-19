@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
 - fixed: Cosmos token balance query
 - fixed: (PLS) update evmscan adapter servers for Pulsechain to fix transaction history queries
 

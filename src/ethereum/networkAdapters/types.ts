@@ -16,6 +16,7 @@ import { BlockchairAdapterConfig } from './BlockchairAdapter'
 import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
 import { FilfoxAdapterConfig } from './FilfoxAdapter'
+import { PulsechainScanAdapterConfig } from './PulsechainScanAdapter'
 import { RpcAdapterConfig } from './RpcAdapter'
 
 export interface GetTxsParams {
@@ -31,6 +32,7 @@ export type NetworkAdapterConfig =
   | BlockcypherAdapterConfig
   | EvmScanAdapterConfig
   | FilfoxAdapterConfig
+  | PulsechainScanAdapterConfig
   | RpcAdapterConfig
 
 export type NetworkAdapterUpdateMethod = keyof Pick<

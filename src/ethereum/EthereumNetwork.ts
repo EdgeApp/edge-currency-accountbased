@@ -15,6 +15,7 @@ import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
 import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
+import { PulsechainScanAdapter } from './networkAdapters/PulsechainScanAdapter'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
 import {
   NetworkAdapter,
@@ -561,6 +562,8 @@ const makeNetworkAdapter = (
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':
       return new FilfoxAdapter(ethEngine, config)
+    case 'pulsechain-scan':
+      return new PulsechainScanAdapter(ethEngine, config)
     case 'rpc':
       return new RpcAdapter(ethEngine, config)
   }
