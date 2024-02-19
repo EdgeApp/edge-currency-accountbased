@@ -305,6 +305,19 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
+  tokenIdFromDenom(denom: string): EdgeTokenId {
+    if (this.networkInfo.nativeDenom === denom) return null
+
+    const tokenId = Object.keys(this.allTokensMap).find(
+      tokenId =>
+        this.allTokensMap[tokenId].networkLocation?.contractAddress === denom
+    )
+    if (tokenId === undefined) {
+      throw new Error(`Unrecognized denom: ${denom}`)
+    }
+    return tokenId
+  }
+
   // This parses common actions into nativeAmount and tokenId
   getAmountAndTokenIdFromKnownMessageTypes(messages: EncodeObject[]): {
     nativeAmount: string
@@ -320,10 +333,7 @@ export class CosmosEngine extends CurrencyEngine<
 
           // We're assuming the first denom is the most relevant and we'll derive the amount and tokenId from it
           if (tokenId === undefined) {
-            tokenId =
-              this.allTokensMap[value.token.denom] != null
-                ? value.token.denom
-                : null
+            tokenId = this.tokenIdFromDenom(value.token.denom)
           }
 
           const transferCoin = coin(value.token.amount, value.token.denom)
@@ -344,7 +354,7 @@ export class CosmosEngine extends CurrencyEngine<
             const { denom } = funds[0]
 
             if (tokenId === undefined) {
-              tokenId = this.allTokensMap[denom] != null ? denom : null
+              tokenId = this.tokenIdFromDenom(denom)
             }
 
             let sumCoin = coin('0', denom)
@@ -399,7 +409,9 @@ export class CosmosEngine extends CurrencyEngine<
 
       this.enabledTokenIds.forEach(tokenId => {
         const token = this.allTokensMap[tokenId]
-        const tokenBal = balances.find(bal => bal.denom === tokenId)
+        const tokenBal = balances.find(
+          bal => bal.denom === token.networkLocation?.contractAddress
+        )
         this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
       })
 
@@ -603,13 +615,18 @@ export class CosmosEngine extends CurrencyEngine<
 
     const isMainnet = this.networkInfo.nativeDenom === denom
 
+    let tokenId: EdgeTokenId
+    try {
+      tokenId = this.tokenIdFromDenom(denom)
+    } catch (e) {
+      // unknown token denom, ignoring
+      return
+    }
+
     const currencyCode =
-      this.networkInfo.nativeDenom === denom
+      tokenId === null
         ? this.currencyInfo.currencyCode
-        : this.allTokensMap[denom] != null
-        ? this.allTokensMap[denom].currencyCode
-        : undefined
-    if (currencyCode == null) return
+        : this.allTokensMap[tokenId].currencyCode
 
     let networkFee = '0'
     if (fee != null) {
@@ -849,8 +866,15 @@ export class CosmosEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
 
     // Encode a send message.
+    const denom =
+      tokenId != null
+        ? this.allTokensMap[tokenId].networkLocation?.contractAddress
+        : this.networkInfo.nativeDenom
+    if (denom == null) {
+      throw new Error('Unknown denom')
+    }
     const msg = this.tools.methods.transfer({
-      amount: [coin(nativeAmount, tokenId ?? this.networkInfo.nativeDenom)],
+      amount: [coin(nativeAmount, denom)],
       fromAddress: this.walletInfo.keys.bech32Address,
       toAddress: publicAddress
     })

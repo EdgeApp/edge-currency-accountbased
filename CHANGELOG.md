@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Cosmos token balance query
+
 ## 3.1.1 (2024-02-14)
 
 - changed: (FIO) Use a backup balance method for accounts affected by unstake chain data issue
