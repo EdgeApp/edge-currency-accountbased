@@ -220,7 +220,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     if (cleanLocation == null) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    return cleanLocation.contractAddress.toLowerCase()
+    return cleanLocation.contractAddress.toLowerCase().replace(/^ibc[/]/, 'ibc')
   }
 }
 
