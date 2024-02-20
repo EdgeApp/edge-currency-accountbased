@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.2 (2024-02-20)
+
 - fixed: Cosmos token balance query
 
 ## 3.1.1 (2024-02-14)
