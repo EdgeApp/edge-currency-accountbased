@@ -84,6 +84,9 @@ export class PiratechainTools implements EdgeCurrencyTools {
   ): Promise<Object> {
     const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(userInput)
+    if (userInput.split(' ').length !== 24) {
+      throw new Error('Mnemonic must be 24 words')
+    }
     if (!isValid)
       throw new Error(`Invalid ${this.currencyInfo.currencyCode} mnemonic`)
 
