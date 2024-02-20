@@ -355,7 +355,7 @@ export const calcArbitrumRollupFees = async (params: {
     )
 
     const gasEstimateComponents =
-      await nodeInterface.callStatic.gasEstimateComponents(
+      await nodeInterface.callStatic.gasEstimateL1Component(
         destinationAddress,
         false,
         txData,
