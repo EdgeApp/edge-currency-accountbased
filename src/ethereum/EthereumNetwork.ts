@@ -356,7 +356,7 @@ export class EthereumNetwork {
         currencyCodes.push(currencyCode)
       }
 
-      // The engine supports token balances batch queries if an adaptor provides
+      // The engine supports token balances batch queries if an adapter provides
       // the functionality.
       const isFetchTokenBalancesSupported =
         this.networkAdapters.find(

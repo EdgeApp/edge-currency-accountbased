@@ -830,8 +830,8 @@ export class EthereumEngine extends CurrencyEngine<
           l1Fee = calcOptimismRollupFees(txData)
         } else if (this.networkInfo.arbitrumRollupParams != null) {
           const rpcServers = this.ethNetwork.networkAdapters
-            .filter(adaptor => adaptor.config.type === 'rpc')
-            .map(adaptor => adaptor.config.servers)
+            .filter(adapter => adapter.config.type === 'rpc')
+            .map(adapter => adapter.config.servers)
             .flat()
           const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
             destinationAddress: publicAddress,
@@ -1054,8 +1054,8 @@ export class EthereumEngine extends CurrencyEngine<
       l1Fee = calcOptimismRollupFees(txData)
     } else if (this.networkInfo.arbitrumRollupParams != null) {
       const rpcServers = this.ethNetwork.networkAdapters
-        .filter(adaptor => adaptor.config.type === 'rpc')
-        .map(adaptor => adaptor.config.servers)
+        .filter(adapter => adapter.config.type === 'rpc')
+        .map(adapter => adapter.config.servers)
         .flat()
       const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
         destinationAddress: publicAddress,

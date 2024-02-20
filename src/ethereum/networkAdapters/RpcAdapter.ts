@@ -282,7 +282,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   /**
    * Check the eth-balance-checker contract for balances
    */
-  // fetchTokenBalances is defined on this adaptor only if ethBalCheckerContract is defined
+  // fetchTokenBalances is defined on this adapter only if ethBalCheckerContract is defined
   fetchTokenBalances =
     this.config.ethBalCheckerContract == null
       ? null
