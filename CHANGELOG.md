@@ -2,7 +2,9 @@
 
 ## Unreleased
 
+- added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
 - fixed: Cosmos token balance query
+- fixed: (PLS) update evmscan adapter servers for Pulsechain to fix transaction history queries
 
 ## 3.1.1 (2024-02-14)
 
@@ -97,7 +99,7 @@
 
 ## 2.17.1 (2023-12-07)
 
-- added: Network adaptor to zkSync for transaction querying
+- added: Network adapter to zkSync for transaction querying
 - changed: (Coreum) Update currency code
 - fixed: Gas estimation regression for spend routines that use eth_estimateGas RPC call
 - fixed: (Tron) Fix unstake v2 native amount

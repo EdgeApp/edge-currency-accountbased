@@ -387,14 +387,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         }
       }
     } else {
-      // Receive
-      if (tokenTx) {
-        nativeAmount = tx.value
-        networkFee = '0'
-      } else {
-        nativeAmount = tx.value
-        networkFee = '0'
-      }
+      nativeAmount = tx.value
+      networkFee = '0'
       ourReceiveAddresses.push(this.ethEngine.walletLocalData.publicKey)
     }
 

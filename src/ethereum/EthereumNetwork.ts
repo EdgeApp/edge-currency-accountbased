@@ -15,6 +15,7 @@ import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
 import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
+import { PulsechainScanAdapter } from './networkAdapters/PulsechainScanAdapter'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
 import {
   NetworkAdapter,
@@ -331,24 +332,6 @@ export class EthereumNetwork {
     }
   }
 
-  getQueryHeightWithLookback(queryHeight: number): number {
-    if (queryHeight > ADDRESS_QUERY_LOOKBACK_BLOCKS) {
-      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-      return queryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS
-    } else {
-      return 0
-    }
-  }
-
-  getQueryDateWithLookback(date: number): number {
-    if (date > ADDRESS_QUERY_LOOKBACK_SEC) {
-      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
-      return date - ADDRESS_QUERY_LOOKBACK_SEC
-    } else {
-      return 0
-    }
-  }
-
   async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
       const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
@@ -373,7 +356,7 @@ export class EthereumNetwork {
         currencyCodes.push(currencyCode)
       }
 
-      // The engine supports token balances batch queries if an adaptor provides
+      // The engine supports token balances batch queries if an adapter provides
       // the functionality.
       const isFetchTokenBalancesSupported =
         this.networkAdapters.find(
@@ -409,11 +392,17 @@ export class EthereumNetwork {
           preUpdateBlockHeight,
           async (): Promise<EthereumNetworkUpdate> => {
             const params = {
-              startBlock: this.getQueryHeightWithLookback(
-                this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk]
+              // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+              startBlock: Math.max(
+                this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] -
+                  ADDRESS_QUERY_LOOKBACK_BLOCKS,
+                0
               ),
-              startDate: this.getQueryDateWithLookback(
-                this.ethEngine.walletLocalData.lastTransactionDate[tk]
+              // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
+              startDate: Math.max(
+                this.ethEngine.walletLocalData.lastTransactionDate[tk] -
+                  ADDRESS_QUERY_LOOKBACK_SEC,
+                0
               ),
               currencyCode: tk
             }
@@ -573,6 +562,8 @@ const makeNetworkAdapter = (
       return new EvmScanAdapter(ethEngine, config)
     case 'filfox':
       return new FilfoxAdapter(ethEngine, config)
+    case 'pulsechain-scan':
+      return new PulsechainScanAdapter(ethEngine, config)
     case 'rpc':
       return new RpcAdapter(ethEngine, config)
   }
