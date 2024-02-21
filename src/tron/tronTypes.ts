@@ -369,6 +369,7 @@ export const asTRC20Transaction = asObject({
 export const asTRC20TransactionInfo = asObject({
   // id: asString, // 'd0807adb3c5412aa150787b944c96ee898c997debdc27e2f6a643c771edb5933',
   fee: asOptional(asNumber, 0), // 2790,
+  energy_penalty_total: asOptional(asNumber, 0),
   blockNumber: asNumber // 5467102,
   // blockTimeStamp: 1546455621000,
   // contractResult: [''],
@@ -484,6 +485,7 @@ export const asTronQuery = <T>(
 
 export const asEstimateEnergy = asObject({
   energy_used: asNumber, // 14650
+  energy_penalty: asOptional(asNumber, 0), // 14650
   transaction: asObject({
     ret: asArray(
       asObject({
