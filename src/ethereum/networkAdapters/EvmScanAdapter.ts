@@ -310,6 +310,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       const transactions = response.result.result
       for (let i = 0; i < transactions.length; i++) {
         try {
+          if (
+            searchRegularTxs != null &&
+            !searchRegularTxs &&
+            transactions[i].contractAddress === ''
+          ) {
+            // ignore base currency in internal transactions
+            continue
+          }
           const cleanedTx = cleanerFunc(transactions[i])
           const tx = await this.processEvmScanTransaction(
             cleanedTx,
