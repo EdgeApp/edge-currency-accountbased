@@ -329,6 +329,12 @@ export async function getFeeParamsByTransactionType(
   }
 }
 
+let baseFeeCache = {
+  destinationAddress: '',
+  l1Gas: '0',
+  l1GasPrice: '10000000000'
+}
+
 // Copied from https://github.com/OffchainLabs/arbitrum-tutorials/blob/master/packages/gas-estimation/scripts/exec.ts
 export const calcArbitrumRollupFees = async (params: {
   rpcServers: string[]
@@ -341,6 +347,14 @@ export const calcArbitrumRollupFees = async (params: {
 }> => {
   const { rpcServers, nodeInterfaceAddress, destinationAddress, txData } =
     params
+
+  if (destinationAddress === baseFeeCache.destinationAddress) {
+    return {
+      l1Gas: baseFeeCache.l1Gas,
+      l1GasPrice: baseFeeCache.l1GasPrice
+    }
+  }
+
   const getFee = async (
     rpcUrl: string
   ): Promise<{
@@ -370,7 +384,15 @@ export const calcArbitrumRollupFees = async (params: {
     }
   }
 
-  return await asyncWaterfall(
+  const out = await asyncWaterfall(
     rpcServers.map(rpcUrl => async () => await getFee(rpcUrl))
   )
+
+  baseFeeCache = {
+    destinationAddress,
+    l1Gas: out.l1Gas,
+    l1GasPrice: out.l1GasPrice
+  }
+
+  return out
 }
