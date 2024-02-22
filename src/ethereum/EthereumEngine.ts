@@ -840,7 +840,7 @@ export class EthereumEngine extends CurrencyEngine<
             rpcServers,
             txData: data ?? '0x'
           })
-          l1Fee = mul(l1Gas, l1GasPrice)
+          l1Fee = mul(mul(l1Gas, l1GasPrice), '1.1')
         }
         const totalAmount = add(add(mid, fee), l1Fee)
         if (gt(totalAmount, balance)) {
@@ -1064,7 +1064,7 @@ export class EthereumEngine extends CurrencyEngine<
         rpcServers,
         txData: data ?? '0x'
       })
-      l1Fee = mul(l1Gas, l1GasPrice)
+      l1Fee = mul(mul(l1Gas, l1GasPrice), '1.1')
       otherParams.gas = add(otherParams.gas, l1Gas)
     }
 
