@@ -245,3 +245,8 @@ export type CosmosWcRpcPayload =
   | ReturnType<typeof asCosmosWcGetAccountsRpcPayload>
   | ReturnType<typeof asCosmosWcSignDirectRpcPayload>
   | ReturnType<typeof asCosmosWcSignAminoRpcPayload>
+
+export interface IbcChannel {
+  channel: string
+  port: string
+}
