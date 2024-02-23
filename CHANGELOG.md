@@ -4,6 +4,7 @@
 
 - added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
 - added: (Tron) Add energy penalties to fee calculation
+- added: Add more Arbitrum tokens
 - fixed: (PLS) update evmscan adapter servers for Pulsechain to fix transaction history queries
 
 ## 3.1.2 (2024-02-20)
