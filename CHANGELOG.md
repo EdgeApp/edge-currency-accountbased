@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Tron) Add energy penalties to fee calculation
+- added: Add more Arbitrum tokens
 
 ## 3.1.2 (2024-02-20)
 

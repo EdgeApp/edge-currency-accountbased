@@ -30,6 +30,70 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'
     }
+  },
+  f97f4df75117a78c1a5a0dbb814af92458539fb4: {
+    currencyCode: 'LINK',
+    displayName: 'Chainlink',
+    denominations: [{ name: 'LINK', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4'
+    }
+  },
+  da10009cbd5d07dd0cecc66161fc93d7c9000da1: {
+    currencyCode: 'DAI',
+    displayName: 'Dai Stablecoin',
+    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'
+    }
+  },
+  fa7f8980b0f1e64a2062791cc3b0871572f1f7f0: {
+    currencyCode: 'UNI',
+    displayName: 'Uniswap',
+    denominations: [{ name: 'UNI', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0'
+    }
+  },
+  '912ce59144191c1204e64559fe8253a0e49e6548': {
+    currencyCode: 'ARB',
+    displayName: 'Arbitrum',
+    denominations: [{ name: 'ARB', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x912CE59144191C1204E64559FE8253a0e49E6548'
+    }
+  },
+  '4d15a3a2286d883af0aa1b3f21367843fac63e07': {
+    currencyCode: 'TUSD',
+    displayName: 'TrueUSD',
+    denominations: [{ name: 'TUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4D15a3A2286D883AF0AA1B3f21367843FAc63E07'
+    }
+  },
+  '2f2a2543b76a4166549f7aab2e75bef0aefc5b0f': {
+    currencyCode: 'WBTC',
+    displayName: 'Wrapped BTC',
+    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f'
+    }
+  },
+  fc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a: {
+    currencyCode: 'GMX',
+    displayName: 'GMX',
+    denominations: [{ name: 'GMX', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a'
+    }
+  },
+  '82af49447d8a07e3bd95bd0d56f35241523fbab1': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped Ether',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+    }
   }
 }
 
