@@ -59,6 +59,7 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'zkSync'
   },
   hdPathCoinType: 60,
+  supportsEIP1559: true,
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'zksyncMnemonic',
