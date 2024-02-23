@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Tron) Add energy penalties to fee calculation
+
 ## 3.1.2 (2024-02-20)
 
 - fixed: Cosmos token balance query

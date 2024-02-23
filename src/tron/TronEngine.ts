@@ -839,7 +839,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       }
     )
 
-    const { blockNumber: blockHeight, fee } = asTRC20TransactionInfo(res)
+    const {
+      blockNumber: blockHeight,
+      energy_penalty_total: energyPenaltyTotal,
+      fee
+    } = asTRC20TransactionInfo(res)
 
     const metaToken = this.allTokens.find(
       token => token.contractAddress === contractAddress
@@ -849,7 +853,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const ourReceiveAddresses: string[] = []
 
     let nativeAmount = value
-    const parentNetworkFee = fee.toString()
+    const parentNetworkFee = (fee + energyPenaltyTotal).toString()
 
     if (from === this.walletLocalData.publicKey) {
       // Send
@@ -1027,7 +1031,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           }
 
           this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] =
-            json.energy_used
+            json.energy_used + json.energy_penalty
         } catch (e) {
           this.log.warn('trx_estimateEnergy error. Using a high default.', e)
         }
