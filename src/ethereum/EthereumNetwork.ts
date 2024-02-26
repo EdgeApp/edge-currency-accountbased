@@ -391,17 +391,19 @@ export class EthereumNetwork {
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
           async (): Promise<EthereumNetworkUpdate> => {
+            const lastTransactionQueryHeight =
+              this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] ?? 0
+            const lastTransactionDate =
+              this.ethEngine.walletLocalData.lastTransactionDate[tk] ?? 0
             const params = {
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
               startBlock: Math.max(
-                this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] -
-                  ADDRESS_QUERY_LOOKBACK_BLOCKS,
+                lastTransactionQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS,
                 0
               ),
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
               startDate: Math.max(
-                this.ethEngine.walletLocalData.lastTransactionDate[tk] -
-                  ADDRESS_QUERY_LOOKBACK_SEC,
+                lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
                 0
               ),
               currencyCode: tk
