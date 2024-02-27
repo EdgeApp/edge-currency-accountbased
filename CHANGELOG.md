@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (ETC) Update RPC urls
+
 ## 3.1.2-2 (2024-02-26)
 
 - fixed: (OP) Include L1 rollup fee in balance check for `makeSpend`
