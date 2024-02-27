@@ -73,7 +73,12 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://www.ethercluster.com/etc']
+      servers: [
+        'https://etc.rivet.link',
+        'https://geth-de.etc-network.info',
+        'https://geth-at.etc-network.info',
+        'https://etc.etcdesktop.com'
+      ]
     },
     {
       type: 'evmscan',
