@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (OP) Include L1 rollup fee in balance check for `makeSpend`
+
 ## 3.1.2-1 (2024-02-23)
 
 - added: (Tron) Add energy penalties to fee calculation

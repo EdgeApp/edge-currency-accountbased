@@ -1082,10 +1082,10 @@ export class EthereumEngine extends CurrencyEngine<
     } else {
       parentNetworkFee = add(nativeNetworkFee, l1Fee)
       // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
-      if (!skipChecks && gt(nativeNetworkFee, nativeBalance)) {
+      if (!skipChecks && gt(parentNetworkFee, nativeBalance)) {
         throw new InsufficientFundsError({
           currencyCode: this.currencyInfo.currencyCode,
-          networkFee: nativeNetworkFee
+          networkFee: parentNetworkFee
         })
       }
       const balanceToken =
