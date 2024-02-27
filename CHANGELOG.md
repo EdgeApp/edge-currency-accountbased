@@ -3,9 +3,12 @@
 ## Unreleased
 
 - added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
-- changed: (ETC) Update RPC urls
 - fixed: (PLS) update evmscan adapter servers for Pulsechain to fix transaction history queries
 - fixed: Polluting fetchTx call params with NaN causing error responses
+
+## 3.1.2-3 (2024-02-27)
+
+- changed: (ETC) Update RPC urls
 
 ## 3.1.2-2 (2024-02-26)
 
