@@ -4,8 +4,11 @@
 
 - added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
 - fixed: (PLS) update evmscan adapter servers for Pulsechain to fix transaction history queries
-- fixed: (OP) Include L1 rollup fee in balance check for `makeSpend`
 - fixed: Polluting fetchTx call params with NaN causing error responses
+
+## 3.1.2-2 (2024-02-26)
+
+- fixed: (OP) Include L1 rollup fee in balance check for `makeSpend`
 
 ## 3.1.2-1 (2024-02-23)
 
