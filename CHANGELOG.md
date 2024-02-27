@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.2-3 (2024-02-27)
+
 - changed: (ETC) Update RPC urls
 
 ## 3.1.2-2 (2024-02-26)
