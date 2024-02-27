@@ -1,17 +1,14 @@
-import type { Chain } from '@chain-registry/types'
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
-import data from './chain-json/axelar.json'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'axelar',
   bip39Path: `m/44'/118'/0'/0/0`,
   chainInfo: {
-    data: data as Chain,
-    name: 'axelar',
+    chainId: 'axelar-dojo-1',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/chain.json'
   },
   nativeDenom: 'uaxl',

@@ -1,11 +1,9 @@
-import type { Chain } from '@chain-registry/types'
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
-import data from '../info/chain-json/osmosis.json'
 
 const builtinTokens: EdgeTokenMap = {
   uion: {
@@ -22,8 +20,7 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'osmo',
   bip39Path: `m/44'/118'/0'/0/0`,
   chainInfo: {
-    data: data as Chain,
-    name: 'osmosis',
+    chainId: 'osmosis-1',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/chain.json'
   },
   nativeDenom: 'uosmo',

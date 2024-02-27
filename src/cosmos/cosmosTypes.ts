@@ -1,6 +1,15 @@
-import { Chain } from '@chain-registry/types'
 import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import { Coin, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
+import {
+  AuthExtension,
+  BankExtension,
+  Coin,
+  HttpEndpoint,
+  IbcExtension,
+  QueryClient,
+  StakingExtension,
+  StargateClient,
+  TxExtension
+} from '@cosmjs/stargate'
 import {
   asArray,
   asCodec,
@@ -37,8 +46,18 @@ export interface TransferOpts {
   toAddress: string
 }
 
+export interface IBCTransferOpts {
+  amount: Coin
+  fromAddress: string
+  toAddress: string
+  memo?: string
+  channel: string
+  port: string
+}
+
 export interface CosmosMethods {
   deposit?: (opts: DepositOpts) => EncodeObject
+  ibcTransfer: (opts: IBCTransferOpts) => EncodeObject
   transfer: (opts: TransferOpts) => EncodeObject
 }
 
@@ -51,8 +70,7 @@ export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   chainInfo: {
-    data: Chain
-    name: string
+    chainId: string
     url: string
   }
   defaultTransactionFeeUrl?: HttpEndpoint
@@ -125,7 +143,12 @@ export interface CosmosOtherMethods {
 }
 
 export interface CosmosClients {
-  queryClient: ReturnType<StargateClient['forceGetQueryClient']>
+  queryClient: QueryClient &
+    AuthExtension &
+    BankExtension &
+    StakingExtension &
+    TxExtension &
+    IbcExtension
   stargateClient: StargateClient
   // Using the comet client directly allows us to control the paging
   cometClient: ReturnType<StargateClient['forceGetCometClient']>
@@ -222,3 +245,8 @@ export type CosmosWcRpcPayload =
   | ReturnType<typeof asCosmosWcGetAccountsRpcPayload>
   | ReturnType<typeof asCosmosWcSignDirectRpcPayload>
   | ReturnType<typeof asCosmosWcSignAminoRpcPayload>
+
+export interface IbcChannel {
+  channel: string
+  port: string
+}

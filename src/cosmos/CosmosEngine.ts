@@ -5,7 +5,7 @@ import {
   makeSignDoc,
   Secp256k1HdWallet
 } from '@cosmjs/amino'
-import { toHex } from '@cosmjs/encoding'
+import { fromBech32, toHex } from '@cosmjs/encoding'
 import {
   decodeTxRaw,
   EncodeObject,
@@ -49,6 +49,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { EdgeTokenId, MakeTxParams } from '../common/types'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
@@ -70,11 +71,13 @@ import {
   CosmosTxOtherParams,
   CosmosWalletOtherData,
   CosmosWcRpcPayload,
+  IbcChannel,
   SafeCosmosWalletInfo,
   txQueryStrings
 } from './cosmosTypes'
 import {
   createCosmosClients,
+  getIbcChannelAndPort,
   reduceCoinEventsForAddress,
   rpcWithApiKey,
   safeAddCoins,
@@ -851,6 +854,47 @@ export class CosmosEngine extends CurrencyEngine<
     await this.startEngine()
   }
 
+  /**
+   * Allow sending native asset to any chain
+   * Allow sending ibc asset on same chain
+   * Allow sending ibc asset to chain it was bridged from
+   */
+  async validateTransfer(
+    recipientAddress: string,
+    tokenId: EdgeTokenId,
+    channelInfo: IbcChannel
+  ): Promise<void> {
+    if (tokenId === null) return
+
+    const edgeToken = this.allTokensMap[tokenId]
+    const cleanLocation = asMaybeContractLocation(edgeToken.networkLocation)
+    const denom = cleanLocation?.contractAddress
+    if (denom == null) {
+      throw new Error('Unknown denom')
+    }
+
+    const { queryClient } = this.getClients()
+    try {
+      // see if it's a native asset. this will throw if it is not
+      await queryClient.bank.denomMetadata(denom)
+      return
+    } catch (e) {
+      // see if it's an ibc asset
+      const ibcAsset = await queryClient.ibc.transfer.denomTrace(denom)
+      const matches = ibcAsset.denomTrace?.path.match(/transfer\/channel-\d+/) // ie. "transfer/channel-2/transfer/channel-122/transfer/channel-1"
+      if (matches == null) {
+        return
+      }
+
+      // the first match is the most recent channel the asset was transferred through
+      if (`${channelInfo.port}/${channelInfo.channel}` === matches[0]) {
+        return
+      }
+    }
+
+    throw new Error('Invalid transfer')
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
@@ -873,11 +917,34 @@ export class CosmosEngine extends CurrencyEngine<
     if (denom == null) {
       throw new Error('Unknown denom')
     }
-    const msg = this.tools.methods.transfer({
-      amount: [coin(nativeAmount, denom)],
-      fromAddress: this.walletInfo.keys.bech32Address,
-      toAddress: publicAddress
-    })
+
+    let msg: EncodeObject
+    if (
+      // check if it's an ibc transfer
+      this.networkInfo.bech32AddressPrefix !== fromBech32(publicAddress).prefix
+    ) {
+      const channelInfo = getIbcChannelAndPort(
+        this.tools.chainData.chain_name,
+        publicAddress
+      )
+      await this.validateTransfer(publicAddress, tokenId ?? null, channelInfo)
+
+      const { channel, port } = channelInfo
+      msg = this.tools.methods.ibcTransfer({
+        channel,
+        port,
+        memo,
+        amount: coin(nativeAmount, denom),
+        fromAddress: this.walletInfo.keys.bech32Address,
+        toAddress: publicAddress
+      })
+    } else {
+      msg = this.tools.methods.transfer({
+        amount: [coin(nativeAmount, denom)],
+        fromAddress: this.walletInfo.keys.bech32Address,
+        toAddress: publicAddress
+      })
+    }
 
     let gasFeeCoin: Coin
     let gasLimit: string

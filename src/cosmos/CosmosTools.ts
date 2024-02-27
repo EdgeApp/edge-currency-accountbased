@@ -1,10 +1,11 @@
 import { ChainRegistryFetcher } from '@chain-registry/client'
-import { Chain } from '@chain-registry/types'
+import type { Chain } from '@chain-registry/types'
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
+import { chains } from 'chain-registry'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -58,13 +59,19 @@ export class CosmosTools implements EdgeCurrencyTools {
     )
     this.methods = methods
     this.registry = registry
-    const { data, name, url } = this.networkInfo.chainInfo
-    this.chainData = data
+    const { chainId, url } = this.networkInfo.chainInfo
+    const chainData = chains.find(
+      chain => chain.chain_id === chainId && chain.network_type === 'mainnet'
+    )
+    if (chainData == null) {
+      throw new Error('Unknown chain')
+    }
+    this.chainData = chainData
     const chainUpdater = new ChainRegistryFetcher()
     chainUpdater
       .fetch(url)
       .then(() => {
-        this.chainData = chainUpdater.getChain(name)
+        this.chainData = chainUpdater.getChain(this.chainData.chain_name)
       })
       .catch(e => {
         // failure is ok
@@ -131,12 +138,23 @@ export class CosmosTools implements EdgeCurrencyTools {
     return { bech32Address: address, publicKey }
   }
 
-  isValidAddress(address: string): boolean {
+  isValidOurAddress(address: string): boolean {
     try {
       const pubkey = fromBech32(address)
       if (pubkey.prefix === this.networkInfo.bech32AddressPrefix) {
         return true
       }
+    } catch (e) {}
+    return false
+  }
+
+  isValidTargetAddress(address: string): boolean {
+    try {
+      const pubkey = fromBech32(address)
+      const matchingChain = chains.find(
+        chain => chain.bech32_prefix === pubkey.prefix
+      )
+      if (matchingChain != null) return true
     } catch (e) {}
     return false
   }
@@ -163,7 +181,7 @@ export class CosmosTools implements EdgeCurrencyTools {
       address = edgeParsedUri.publicAddress
     }
 
-    if (!this.isValidAddress(address))
+    if (!this.isValidTargetAddress(address))
       throw new Error('InvalidPublicAddressError')
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
@@ -177,7 +195,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!this.isValidAddress(publicAddress))
+    if (!this.isValidOurAddress(publicAddress))
       throw new Error('InvalidPublicAddressError')
 
     let amount

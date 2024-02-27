@@ -1,6 +1,19 @@
+import { getIbcInfo, getTransferChannel } from '@chain-registry/utils'
 import { addCoins } from '@cosmjs/amino'
+import { fromBech32 } from '@cosmjs/encoding'
 import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
-import { Coin, Event, HttpEndpoint, StargateClient } from '@cosmjs/stargate'
+import {
+  Coin,
+  Event,
+  HttpEndpoint,
+  QueryClient,
+  setupAuthExtension,
+  setupBankExtension,
+  setupIbcExtension,
+  setupStakingExtension,
+  setupTxExtension,
+  StargateClient
+} from '@cosmjs/stargate'
 import {
   Comet38Client,
   CometClient,
@@ -9,6 +22,7 @@ import {
   Tendermint37Client
 } from '@cosmjs/tendermint-rpc'
 import { add } from 'biggystring'
+import { chains, ibc } from 'chain-registry'
 import { asMaybe, asObject, asString, asTuple, asValue } from 'cleaners'
 import { EdgeFetchFunction } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
@@ -17,7 +31,8 @@ import {
   asCosmosInitOptions,
   CosmosClients,
   CosmosCoin,
-  CosmosInitOptions
+  CosmosInitOptions,
+  IbcChannel
 } from './cosmosTypes'
 import { Asset } from './info/proto/thorchainrune/thorchain/v1/common/common'
 
@@ -81,9 +96,15 @@ export const createCosmosClients = async (
     await createCometClient(createRpcClient(fetch, endpoint))
   )
   // eslint-disable-next-line @typescript-eslint/dot-notation
-  const queryClient = stargateClient['forceGetQueryClient']()
-  // eslint-disable-next-line @typescript-eslint/dot-notation
   const cometClient = stargateClient['forceGetCometClient']()
+  const queryClient = QueryClient.withExtensions(
+    cometClient,
+    setupAuthExtension,
+    setupBankExtension,
+    setupStakingExtension,
+    setupTxExtension,
+    setupIbcExtension
+  )
 
   return {
     queryClient,
@@ -230,4 +251,37 @@ export const extendedParseCoins = (input: string): Coin[] => {
         denom: match[2]
       }
     })
+}
+
+export const getIbcChannelAndPort = (
+  fromChainName: string,
+  toAddress: string
+): IbcChannel => {
+  const chain = chains.find(
+    chain => chain.bech32_prefix === fromBech32(toAddress).prefix
+  )
+  if (chain == null) throw new Error('Unrecognized denom')
+
+  const toChainName = chain.chain_name
+  const ibcInfo = getIbcInfo(ibc, fromChainName, toChainName)
+  if (ibcInfo == null) {
+    throw new Error(
+      `No IBC channels between ${fromChainName} and ${toChainName}`
+    )
+  }
+
+  const channel = getTransferChannel(ibcInfo)
+
+  // channel data is alphabetical by chain name
+  if (fromChainName < toChainName) {
+    return {
+      channel: channel.chain_1.channel_id,
+      port: channel.chain_1.port_id
+    }
+  } else {
+    return {
+      channel: channel.chain_2.channel_id,
+      port: channel.chain_2.port_id
+    }
+  }
 }

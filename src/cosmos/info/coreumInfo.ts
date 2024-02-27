@@ -1,11 +1,9 @@
-import type { Chain } from '@chain-registry/types'
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
-import data from '../info/chain-json/coreum.json'
 
 const builtinTokens: EdgeTokenMap = {
   'usara-core1r9gc0rnxnzpq33u82f44aufgdwvyxv4wyepyck98m9v2pxua6naqr8h03z': {
@@ -131,8 +129,7 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'core',
   bip39Path: `m/44'/990'/0'/0/0`,
   chainInfo: {
-    data: data as Chain,
-    name: 'coreum',
+    chainId: 'coreum-mainnet-1',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/coreum/chain.json'
   },
   nativeDenom: 'ucore',
