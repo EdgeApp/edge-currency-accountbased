@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.0 (2024-02-27)
+
 - added: Cosmos IBC transaction support
 - added: (PLS) Integrate new v2 API for Pulsechain as a pulsechain-scan adapter
 - changed: (Zcash/Piratechain) Enforce 24 word seed length for imports
