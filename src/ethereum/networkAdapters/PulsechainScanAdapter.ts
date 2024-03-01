@@ -146,7 +146,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
       currencyCode,
-      date: parseInt(scanTx.timestamp),
+      date: new Date(scanTx.timestamp).getTime() / 1000,
       feeRateUsed:
         gasPrice != null
           ? getFeeRateUsed(gasPrice, scanTx.gas_limit, scanTx.gas_used)
