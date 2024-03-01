@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Algorand explorer urls
+
 ## 3.2.0 (2024-02-27)
 
 - added: Cosmos IBC transaction support

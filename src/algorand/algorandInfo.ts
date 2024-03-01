@@ -39,8 +39,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:algorand',
 
   // Explorers:
-  addressExplorer: 'https://algoexplorer.io/address/%s',
-  transactionExplorer: 'https://algoexplorer.io/tx/%s',
+  addressExplorer: 'https://explorer.bitquery.io/algorand/address/%s',
+  transactionExplorer: 'https://explorer.bitquery.io/algorand/tx/%s',
 
   denominations: [
     {
