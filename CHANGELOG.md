@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.1 (2024-03-01)
+
 - changed: Update Algorand explorer urls
 - fixed: (PLS) fix transaction history date parsing from pulsechain-scan network adapter
 
