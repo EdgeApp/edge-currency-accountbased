@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Pokt network api urls
+
 ## 3.2.1 (2024-03-01)
 
 - changed: Update Algorand explorer urls

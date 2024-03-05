@@ -96,7 +96,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-goerli.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
+        'https://eth-goerli.rpc.grove.city/v1/{{poktPortalApiKey}}',
         'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://goerli.infura.io/v3/{{infuraProjectId}}'
       ]

@@ -1068,7 +1068,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
-        'https://eth-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}',
+        'https://eth-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
         'https://cloudflare-eth.com'
       ],
       ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'

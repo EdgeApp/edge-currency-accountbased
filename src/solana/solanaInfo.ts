@@ -67,7 +67,7 @@ const builtinTokens: EdgeTokenMap = {
 const networkInfo: SolanaNetworkInfo = {
   rpcNodes: [
     'https://api.mainnet-beta.solana.com',
-    'https://solana-mainnet.gateway.pokt.network/v1/lb/{{poktPortalApiKey}}' // fails to return some transactions
+    'https://solana-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}' // fails to return some transactions
   ],
   rpcNodesArchival: [
     'https://api.mainnet-beta.solana.com',
