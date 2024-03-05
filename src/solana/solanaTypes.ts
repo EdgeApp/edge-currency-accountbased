@@ -44,20 +44,15 @@ export const asRpcSignatureForAddress = asObject({
 
 export type RpcSignatureForAddress = ReturnType<typeof asRpcSignatureForAddress>
 
-export const asRecentBlockHash = asObject({
-  value: asObject({
-    blockhash: asString,
-    feeCalculator: asObject({
-      lamportsPerSignature: asNumber
-    })
-  })
-})
-
 export const asLatestBlockhash = asObject({
   value: asObject({
     blockhash: asString
   })
 })
+
+export const asGetRecentPrioritizationFees = asArray(
+  asObject({ prioritizationFee: asNumber, slot: asNumber })
+)
 
 export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
 export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
@@ -189,4 +184,8 @@ export interface ParsedTxAmount {
 export const asSolanaInitOptions = asObject({
   alchemyApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString)
+})
+
+export const asSolanaCustomFee = asObject({
+  microLamports: asString
 })

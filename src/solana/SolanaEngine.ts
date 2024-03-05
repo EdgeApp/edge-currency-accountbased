@@ -4,7 +4,7 @@ import {
   getAssociatedTokenAddress
 } from '@solana/spl-token'
 import * as solanaWeb3 from '@solana/web3.js'
-import { add, eq, gt, gte, lt, mul, sub } from 'biggystring'
+import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
 import { asMaybe, asNumber, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -35,10 +35,11 @@ import {
   asAccountBalance,
   asAccountInfo,
   asBlocktime,
+  asGetRecentPrioritizationFees,
   asLatestBlockhash,
-  asRecentBlockHash,
   asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
+  asSolanaCustomFee,
   asSolanaInitOptions,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
@@ -56,6 +57,7 @@ import {
 } from './solanaTypes'
 
 const {
+  ComputeBudgetProgram,
   PublicKey,
   Keypair,
   SystemProgram,
@@ -75,6 +77,7 @@ export class SolanaEngine extends CurrencyEngine<
   initOptions: JsonObject
   base58PublicKey: string
   feePerSignature: string
+  priorityFee: string
   recentBlockhash: string
   chainCode: string
   otherData!: SolanaWalletOtherData
@@ -95,6 +98,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = getFetchCors(env.io)
     this.feePerSignature = '5000'
+    this.priorityFee = '0'
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
@@ -252,11 +256,13 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryFee(): Promise<void> {
     try {
-      const response = await this.fetchRpc('getRecentBlockhash')
-      const {
-        feeCalculator: { lamportsPerSignature }
-      } = asRecentBlockHash(response).value
-      this.feePerSignature = lamportsPerSignature.toString()
+      const response = await this.fetchRpc('getRecentPrioritizationFees')
+      const recentPriorityFees = asGetRecentPrioritizationFees(response)
+      // if the array is empty, or request otherwise fails, it's ok to just use the default
+      const latestPriorityFee = recentPriorityFees.sort(
+        (a, b) => a.slot - b.slot
+      )[0]
+      this.priorityFee = latestPriorityFee.prioritizationFee.toString()
     } catch (e: any) {
       this.error(`queryFee Error `, e)
     }
@@ -526,22 +532,28 @@ export class SolanaEngine extends CurrencyEngine<
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     // todo: Stop using deprecated currencyCode
     const { currencyCode } = spendInfo
-    let spendableBalance = this.getBalance({
+    const balance = this.getBalance({
       currencyCode
     })
 
+    spendInfo.spendTargets[0].nativeAmount = '1'
+    const edgeTx = await this.makeSpend(spendInfo)
+
+    let spendableBalance: string
     if (currencyCode === this.currencyInfo.currencyCode) {
-      spendableBalance = sub(spendableBalance, this.feePerSignature)
+      spendableBalance = sub(balance, edgeTx.networkFee)
     } else {
       const solBalance = this.getBalance({
         currencyCode: this.currencyInfo.currencyCode
       })
-      if (lt(sub(solBalance, this.minimumAddressBalance), '0')) {
+      const solRequired = sub(solBalance, edgeTx.networkFee)
+      if (lt(sub(solRequired, this.minimumAddressBalance), '0')) {
         throw new InsufficientFundsError({
           currencyCode: this.currencyInfo.currencyCode,
           networkFee: this.feePerSignature
         })
       }
+      spendableBalance = balance
     }
     if (lt(spendableBalance, '0')) throw new InsufficientFundsError()
 
@@ -551,7 +563,12 @@ export class SolanaEngine extends CurrencyEngine<
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [], tokenId } = edgeSpendInfo
+    const {
+      customNetworkFee,
+      memos = [],
+      networkFeeOption,
+      tokenId
+    } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -583,6 +600,33 @@ export class SolanaEngine extends CurrencyEngine<
       feePayer: payer
     }
     const solTx = new Transaction(txOpts)
+
+    // calculate priority fee. Multipliers are arbitrary just to establish some ranges
+    let microLamports = '0'
+    switch (networkFeeOption) {
+      case 'low':
+        microLamports = max('0', mul(this.priorityFee, '0.75'))
+        break
+      case 'standard':
+        microLamports = this.priorityFee
+        break
+      case 'high':
+        microLamports = max('1', mul(this.priorityFee, '1.25'))
+        break
+      case 'custom': {
+        microLamports = asSolanaCustomFee(customNetworkFee).microLamports
+        break
+      }
+    }
+
+    if (gt(microLamports, '0')) {
+      const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: parseInt(microLamports)
+      })
+      solTx.add(priorityFeeInstruction)
+      nativeNetworkFee = add(nativeNetworkFee, microLamports)
+    }
+
     if (isTokenTx) {
       const TOKEN = new PublicKey(tokenId)
 
