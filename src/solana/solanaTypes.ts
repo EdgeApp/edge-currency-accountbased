@@ -53,6 +53,12 @@ export const asRecentBlockHash = asObject({
   })
 })
 
+export const asLatestBlockhash = asObject({
+  value: asObject({
+    blockhash: asString
+  })
+})
+
 export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
 export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
 

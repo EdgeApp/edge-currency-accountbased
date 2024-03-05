@@ -35,6 +35,7 @@ import {
   asAccountBalance,
   asAccountInfo,
   asBlocktime,
+  asLatestBlockhash,
   asRecentBlockHash,
   asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
@@ -253,13 +254,21 @@ export class SolanaEngine extends CurrencyEngine<
     try {
       const response = await this.fetchRpc('getRecentBlockhash')
       const {
-        blockhash,
         feeCalculator: { lamportsPerSignature }
       } = asRecentBlockHash(response).value
       this.feePerSignature = lamportsPerSignature.toString()
-      this.recentBlockhash = blockhash
     } catch (e: any) {
       this.error(`queryFee Error `, e)
+    }
+  }
+
+  async queryBlockhash(): Promise<void> {
+    try {
+      const response = await this.fetchRpc('getLatestBlockhash')
+      const { blockhash } = asLatestBlockhash(response).value
+      this.recentBlockhash = blockhash
+    } catch (e: any) {
+      this.error(`queryBlockhash Error `, e)
     }
   }
 
@@ -498,6 +507,9 @@ export class SolanaEngine extends CurrencyEngine<
       () => {}
     )
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBlockhash', BLOCKCHAIN_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
