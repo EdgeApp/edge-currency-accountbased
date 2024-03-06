@@ -403,7 +403,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Transfer funds transaction
-    if (trxName != null) {
+    if (
+      trxName === 'trnsfiopubky' ||
+      trxName === 'unstakefio' ||
+      trxName === 'regaddress'
+    ) {
       nativeAmount = '0'
 
       if (trxName === 'regaddress') {
@@ -421,7 +425,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
       }
 
-      if (trxName === 'transfer' && data.amount != null) {
+      if (trxName === 'trnsfiopubky' && data.amount != null) {
         nativeAmount = data.amount.toString()
         actorSender = data.actor
         if (data.payee_public_key === this.walletInfo.keys.publicKey) {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Missing FIO transactions due to missing 'trnsfiopubky' tx type
+
 ## 3.2.2 (2024-03-05)
 
 - added: (Solana) Priority fee settings

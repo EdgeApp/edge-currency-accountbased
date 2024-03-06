@@ -25,7 +25,7 @@ export const asGetFioName = asObject({
 })
 
 export const asFioTxName = asMaybe(
-  asValue('unstakefio', 'transfer', 'regaddress'),
+  asValue('unstakefio', 'transfer', 'regaddress', 'trnsfiopubky'),
   null
 )
 
