@@ -18,6 +18,7 @@ const builtinTokens: EdgeTokenMap = {
 
 const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://mainnet.liberland.org/'],
+  ss58Format: 42,
   subscanBaseUrl: undefined,
   subscanQueryLimit: 100,
   partialFeeOffsetMultiplier: '2',

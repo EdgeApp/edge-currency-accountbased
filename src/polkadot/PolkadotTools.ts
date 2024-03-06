@@ -91,7 +91,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
-    const keyring = new Keyring({ ss58Format: 0 })
+    const keyring = new Keyring({ ss58Format: this.networkInfo.ss58Format })
     const pair = keyring.addFromUri(walletInfo.keys[`${pluginId}Mnemonic`])
     return {
       publicKey: pair.address

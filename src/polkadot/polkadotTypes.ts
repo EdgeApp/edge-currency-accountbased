@@ -15,6 +15,7 @@ import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface PolkadotNetworkInfo {
   rpcNodes: string[]
+  ss58Format: number
   subscanBaseUrl: string | undefined
   subscanQueryLimit: number
   lengthFeePerByte: string

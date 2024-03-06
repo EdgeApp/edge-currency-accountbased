@@ -560,7 +560,7 @@ export class PolkadotEngine extends CurrencyEngine<
     )
 
     if (this.keypair == null) {
-      this.keypair = new Keyring({ ss58Format: 0 })
+      this.keypair = new Keyring({ ss58Format: this.networkInfo.ss58Format })
       if (polkadotPrivateKeys.mnemonic != null) {
         this.keypair.addFromUri(polkadotPrivateKeys.mnemonic)
       } else {
