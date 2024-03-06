@@ -188,12 +188,6 @@ export interface CalcOptimismRollupFeeParams {
   gasPriceL1Wei: string
 }
 
-export interface LastEstimatedGasLimit {
-  publicAddress: string
-  contractAddress: string | undefined
-  gasLimit: string
-}
-
 export const asEvmScancanTokenTransaction = asObject({
   blockNumber: asString,
   timeStamp: asString,
