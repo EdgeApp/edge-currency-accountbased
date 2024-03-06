@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 3.2.2 (2024-03-05)
+
+- added: (Solana) Priority fee settings
 - changed: Update Pokt network api urls
 
 ## 3.2.1 (2024-03-01)
