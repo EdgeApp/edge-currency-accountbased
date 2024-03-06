@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (zkSync) fixed gas limit estimation failures due to caching last estimations
+
 ## 3.2.3 (2024-03-06)
 
 - added: Unique ss58 encoding for Polkadot currencies

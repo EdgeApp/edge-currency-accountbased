@@ -74,7 +74,6 @@ import {
   EthereumWalletOtherData,
   EvmWcRpcPayload,
   KeysOfEthereumBaseMultiplier,
-  LastEstimatedGasLimit,
   OptimismRollupParams,
   SafeEthWalletInfo,
   TxRpcParams
@@ -99,7 +98,6 @@ export class EthereumEngine extends CurrencyEngine<
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
-  lastEstimatedGasLimit: LastEstimatedGasLimit
   fetchCors: EdgeFetchFunction
   otherMethods: EthereumOtherMethods
   utils: EthereumUtils
@@ -119,11 +117,6 @@ export class EthereumEngine extends CurrencyEngine<
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
-    this.lastEstimatedGasLimit = {
-      publicAddress: '',
-      contractAddress: '',
-      gasLimit: ''
-    }
     if (this.networkInfo.optimismRollupParams != null) {
       this.optimismRollupParams = this.networkInfo.optimismRollupParams
     }
@@ -417,19 +410,8 @@ export class EthereumEngine extends CurrencyEngine<
     miningFees: EthereumMiningFees
     publicAddress: string
   }): Promise<string> {
-    const { contractAddress, estimateGasParams, miningFees, publicAddress } =
-      context
+    const { estimateGasParams, miningFees } = context
     const hasUserMemo = estimateGasParams[0].data != null
-
-    // If destination address is the same from the previous
-    // estimate call, use the previously calculated gasLimit.
-    if (
-      this.lastEstimatedGasLimit.gasLimit !== '' &&
-      this.lastEstimatedGasLimit.publicAddress === publicAddress &&
-      this.lastEstimatedGasLimit.contractAddress === contractAddress
-    ) {
-      return this.lastEstimatedGasLimit.gasLimit
-    }
 
     let gasLimitReturn = miningFees.gasLimit
     try {
@@ -467,12 +449,6 @@ export class EthereumEngine extends CurrencyEngine<
               gasLimitReturn = mul(gasLimitReturn, '2')
             }
           }
-          // Save locally to compare for future estimate calls
-          this.lastEstimatedGasLimit = {
-            publicAddress,
-            contractAddress,
-            gasLimit: gasLimitReturn
-          }
         } catch (e: any) {
           // If no defaults, then we must estimate by RPC, so try again
           if (defaultGasLimit == null) {
@@ -509,7 +485,6 @@ export class EthereumEngine extends CurrencyEngine<
       ) {
         // Revert gasLimit back to the value from calcMiningFee
         gasLimitReturn = miningFees.gasLimit
-        this.lastEstimatedGasLimit.gasLimit = ''
         throw new Error('Calculated gasLimit less than minimum')
       }
     } catch (e: any) {
