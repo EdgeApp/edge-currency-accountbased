@@ -8,6 +8,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
+  EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -600,6 +601,20 @@ export class PolkadotEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  // This ensures that local wallets originally created with incorrect ss58 encoding can still get the correct address
+  async getFreshAddress(): Promise<EdgeFreshAddress> {
+    const keyring = new Keyring()
+    const { publicKey } = this.walletInfo.keys
+    const decodedAddress = keyring.decodeAddress(publicKey)
+    const encodedAddress = keyring.encodeAddress(
+      decodedAddress,
+      this.networkInfo.ss58Format
+    )
+    return {
+      publicAddress: encodedAddress
+    }
   }
 }
 
