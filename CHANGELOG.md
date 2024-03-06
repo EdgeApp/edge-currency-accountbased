@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.3 (2024-03-06)
+
 - added: Unique ss58 encoding for Polkadot currencies
 - fixed: Missing FIO transactions due to missing 'trnsfiopubky' tx type
 
