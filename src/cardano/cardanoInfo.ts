@@ -4,7 +4,9 @@ import { makeOuterPlugin } from '../common/innerPlugin'
 import type { CardanoTools } from './CardanoTools'
 import type { CardanoNetworkInfo } from './cardanoTypes'
 
-const networkInfo: CardanoNetworkInfo = {}
+const networkInfo: CardanoNetworkInfo = {
+  networkId: 1
+}
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ADA',
@@ -27,6 +29,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const cardano = makeOuterPlugin<CardanoNetworkInfo, CardanoTools>({
   currencyInfo,
   networkInfo,
+
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Cardano requires bigint support')
+    }
+  },
 
   async getInnerPlugin() {
     return await import(

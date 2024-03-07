@@ -2,6 +2,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
+  EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -98,6 +99,14 @@ export class CardanoEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
     throw new Error('unimplemented')
+  }
+
+  async getFreshAddress(_options: any): Promise<EdgeFreshAddress> {
+    const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
+
+    return {
+      publicAddress: bech32Address
+    }
   }
 }
 
