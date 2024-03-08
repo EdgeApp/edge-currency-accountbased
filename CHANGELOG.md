@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (zkSync) fixed getMaxSpendable insufficient funds error caused by misusing gas estimation parameters
+
 ## 3.2.4 (2024-03-06)
 
 - fixed: (zkSync) fixed gas limit estimation failures due to caching last estimations

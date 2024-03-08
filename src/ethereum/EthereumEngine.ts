@@ -1,6 +1,16 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory, TypedTxData } from '@ethereumjs/tx'
-import { add, ceil, div, gt, lt, lte, mul, sub } from 'biggystring'
+import {
+  add,
+  ceil,
+  div,
+  gt,
+  lt,
+  lte,
+  max as bigMax,
+  mul,
+  sub
+} from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -745,7 +755,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (publicAddress == null) {
       throw new Error('makeSpend Missing publicAddress')
     }
-    const { contractAddress, data, value } = this.getTxParameterInformation(
+    const { contractAddress, data } = this.getTxParameterInformation(
       edgeSpendInfo,
       currencyCode,
       this.currencyInfo
@@ -772,14 +782,14 @@ export class EthereumEngine extends CurrencyEngine<
           this.networkInfo
         )
         if (miningFees.useEstimatedGasLimit) {
-          miningFees.gasLimit = await this.estimateGasLimit({
+          const estimatedGasLimit = await this.estimateGasLimit({
             contractAddress,
             estimateGasParams: [
               {
                 to: contractAddress ?? publicAddress,
                 from: this.walletLocalData.publicKey,
                 gas: '0xffffff',
-                value,
+                value: decimalToHex(spendInfo.spendTargets[0].nativeAmount),
                 data
               },
               'latest'
@@ -787,6 +797,7 @@ export class EthereumEngine extends CurrencyEngine<
             miningFees,
             publicAddress
           })
+          miningFees.gasLimit = bigMax(estimatedGasLimit, miningFees.gasLimit)
         }
         const fee = mul(miningFees.gasPrice, miningFees.gasLimit)
         let l1Fee = '0'
