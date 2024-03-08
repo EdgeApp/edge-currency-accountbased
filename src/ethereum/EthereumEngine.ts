@@ -1,16 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory, TypedTxData } from '@ethereumjs/tx'
-import {
-  add,
-  ceil,
-  div,
-  gt,
-  lt,
-  lte,
-  max as bigMax,
-  mul,
-  sub
-} from 'biggystring'
+import { add, ceil, div, gt, lt, lte, max, mul, sub } from 'biggystring'
 import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -761,88 +751,107 @@ export class EthereumEngine extends CurrencyEngine<
       this.currencyInfo
     )
 
+    // For mainnet currency, the fee can scale with the amount sent so we use
+    // an algorithm to calculate the max spendable amount which subtracts fees
+    // from the balance and returns the result:
     if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
-      // For mainnet currency, the fee can scale with the amount sent so we should find the
-      // appropriate amount by recursively calling calcMiningFee. This is adapted from the
-      // same function in edge-core-js.
+      // Use the balance as the initial amount for the spend info before calculating the fees:
+      spendInfo.spendTargets[0].nativeAmount = balance
 
-      const getMax = async (min: string, max: string): Promise<string> => {
-        const diff = sub(max, min)
-        if (lte(diff, '1')) {
-          return min
-        }
-        const mid = add(min, div(diff, '2'))
+      // Use our calcMiningFee function to calculate the fees:
+      const miningFees = calcMiningFees(
+        spendInfo,
+        this.networkFees,
+        this.currencyInfo,
+        this.networkInfo
+      )
 
-        // Try the average:
-        spendInfo.spendTargets[0].nativeAmount = mid
-        const miningFees = calcMiningFees(
-          spendInfo,
-          this.networkFees,
-          this.currencyInfo,
-          this.networkInfo
-        )
-        if (miningFees.useEstimatedGasLimit) {
-          const estimatedGasLimit = await this.estimateGasLimit({
-            contractAddress,
-            estimateGasParams: [
-              {
-                to: contractAddress ?? publicAddress,
-                from: this.walletLocalData.publicKey,
-                gas: '0xffffff',
-                value: decimalToHex(spendInfo.spendTargets[0].nativeAmount),
-                data
-              },
-              'latest'
-            ],
-            miningFees,
-            publicAddress
-          })
-          miningFees.gasLimit = bigMax(estimatedGasLimit, miningFees.gasLimit)
-        }
-        const fee = mul(miningFees.gasPrice, miningFees.gasLimit)
-        let l1Fee = '0'
+      // If our results require a call to the RPC server to estimate the gas limit, then we
+      // need to do that now:
+      if (miningFees.useEstimatedGasLimit) {
+        // Determine the preliminary fee amount and subtract that from the balance
+        // in order to avoid an insufficient funds error response from the RPC call.
+        const preliminaryFee = mul(miningFees.gasPrice, miningFees.gasLimit)
+        const preliminaryAmount = sub(balance, preliminaryFee)
 
-        if (this.optimismRollupParams != null) {
-          const txData: CalcOptimismRollupFeeParams = {
-            nonce: this.otherData.unconfirmedNextNonce,
-            gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
-            gasLimit: miningFees.gasLimit,
-            to: publicAddress,
-            value: decimalToHex(mid),
-            chainParams: this.networkInfo.chainParams,
-            dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
-            fixedOverhead: this.optimismRollupParams.fixedOverhead
-          }
-          l1Fee = calcOptimismRollupFees(txData)
-        } else if (this.networkInfo.arbitrumRollupParams != null) {
-          const rpcServers = this.ethNetwork.networkAdapters
-            .filter(adapter => adapter.config.type === 'rpc')
-            .map(adapter => adapter.config.servers)
-            .flat()
-          const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
-            destinationAddress: publicAddress,
-            nodeInterfaceAddress:
-              this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
-            rpcServers,
-            txData: data ?? '0x'
-          })
-          l1Fee = mul(mul(l1Gas, l1GasPrice), '1.1')
-        }
-        const totalAmount = add(add(mid, fee), l1Fee)
-        if (gt(totalAmount, balance)) {
-          return await getMax(min, mid)
-        } else {
-          return await getMax(mid, max)
-        }
+        // Estimate the gas limit:
+        const estimatedGasLimit = await this.estimateGasLimit({
+          contractAddress,
+          estimateGasParams: [
+            {
+              to: contractAddress ?? publicAddress,
+              from: this.walletLocalData.publicKey,
+              gas: '0xffffff',
+              value: decimalToHex(preliminaryAmount),
+              data
+            },
+            'latest'
+          ],
+          miningFees,
+          publicAddress
+        })
+
+        // Update the gasLimit field in our miningFees object to use the
+        // largest determined limit:
+        miningFees.gasLimit = max(estimatedGasLimit, miningFees.gasLimit)
       }
 
-      return await getMax('0', add(balance, '1'))
+      // Calculate the primary network fee:
+      const primaryNetworkFee = mul(miningFees.gasPrice, miningFees.gasLimit)
+
+      // Get the L1 fee if applicable (for some rollup chains):
+      let rollupFee = '0'
+      if (this.optimismRollupParams != null) {
+        // We'll use this as our baseline case for the maximum spendable amount
+        // when calculating the rollup fees:
+        const maxSpendableBeforeRollupFee = sub(balance, primaryNetworkFee)
+
+        const txData: CalcOptimismRollupFeeParams = {
+          nonce: this.otherData.unconfirmedNextNonce,
+          gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
+          gasLimit: miningFees.gasLimit,
+          to: publicAddress,
+          value: decimalToHex(maxSpendableBeforeRollupFee),
+          chainParams: this.networkInfo.chainParams,
+          dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
+          fixedOverhead: this.optimismRollupParams.fixedOverhead
+        }
+        rollupFee = calcOptimismRollupFees(txData)
+      } else if (this.networkInfo.arbitrumRollupParams != null) {
+        const rpcServers = this.ethNetwork.networkAdapters
+          .filter(adapter => adapter.config.type === 'rpc')
+          .map(adapter => adapter.config.servers)
+          .flat()
+        const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+          destinationAddress: publicAddress,
+          nodeInterfaceAddress:
+            this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
+          rpcServers,
+          txData: data ?? '0x'
+        })
+        rollupFee = mul(mul(l1Gas, l1GasPrice), '1.1')
+      }
+
+      // Update total fee:
+      const totalFee = add(primaryNetworkFee, rollupFee)
+
+      // Calculate the max spendable amount which accounts for all fees:
+      const maxSpendable = sub(balance, totalFee)
+
+      if (lte(maxSpendable, '0')) {
+        throw new InsufficientFundsError()
+      }
+
+      return maxSpendable
     } else {
+      // For tokens, the max spendable amount is the same as the balance:
       spendInfo.spendTargets[0].nativeAmount = balance
+
+      // Call makeSpend to invoke balance checks on the primary currency:
       await this.makeSpend(spendInfo)
-      return this.getBalance({
-        currencyCode: spendInfo.currencyCode
-      })
+
+      // Return the balance as the max spendable amount:
+      return balance
     }
   }
 
