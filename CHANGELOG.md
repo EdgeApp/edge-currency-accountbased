@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.5 (2024-03-11)
+
 - fixed: Performance issue with getMaxSpendable caused by recursive calls
 - fixed: (zkSync) fixed getMaxSpendable insufficient funds error caused by misusing gas estimation parameters
 
