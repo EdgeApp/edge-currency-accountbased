@@ -149,7 +149,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
           )}`
         )
         throw new Error(
-          `Successful ${method} response object included an error`
+          `Successful ${method} response object included an error: ${result.error.message}`
         )
       }
       return { server: parse(baseUrl).hostname, result }
