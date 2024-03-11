@@ -1,6 +1,7 @@
 import {
   asArray,
   asCodec,
+  asMaybe,
   asNumber,
   asObject,
   asString,
@@ -97,3 +98,83 @@ export const asKoiosBalance = asArray(
     )
   })
 )
+
+export const asCardanoWalletOtherData = asObject({
+  latestQueryTransactionsBlockHeight: asMaybe(asNumber, 0),
+  latestQueryTransactionsTxid: asMaybe(asString, '')
+})
+export type CardanoWalletOtherData = ReturnType<typeof asCardanoWalletOtherData>
+
+export const asKoiosAddressTransactions = asArray(
+  asObject({
+    tx_hash: asString, // 'f144a8264acf4bdfe2e1241170969c930d64ab6b0996a4a45237b623f1dd670e',
+    // epoch_no: asNumber, // 321,
+    block_height: asNumber // 42325043,
+    // block_time: asNumber // 1506635091
+  })
+)
+
+const asPaymentAddr = asObject({
+  bech32: asString
+  // cred: asOptional(asString)
+})
+
+const asInputOrOutput = asObject({
+  payment_addr: asPaymentAddr,
+  // stake_addr: asOptional(asString),
+  // tx_hash: asString,
+  // tx_index: asNumber,
+  value: asString
+  // datum_hash: asOptional(asString),
+  // inline_datum: asOptional(
+  //   asObject({
+  //     bytes: asString,
+  //     value: asObject({ int: asNumber })
+  //   })
+  // ),
+  // reference_script: asOptional(
+  //   asObject({
+  //     hash: asString,
+  //     size: asNumber,
+  //     type: asString,
+  //     bytes: asString,
+  //     value: asOptional(asString)
+  //   })
+  // ),
+  // asset_list: asOptional(
+  //   asArray(
+  //     asObject({
+  //       policy_id: asString,
+  //       asset_name: asString,
+  //       fingerprint: asString,
+  //       decimals: asNumber,
+  //       quantity: asString
+  //     })
+  //   )
+  // )
+})
+
+export const asKoiosTransaction = asObject({
+  tx_hash: asString,
+  // block_hash: asString,
+  block_height: asNumber,
+  // epoch_no: asNumber,
+  // epoch_slot: asNumber,
+  // absolute_slot: asNumber,
+  tx_timestamp: asNumber,
+  // tx_block_index: asNumber,
+  // tx_size: asNumber,
+  // total_output: asString,
+  fee: asString,
+  // deposit: asOptional(asString),
+  // invalid_before: asOptional(asString),
+  // invalid_after: asOptional(asString),
+  // collateral_inputs:
+  // collateral_output:
+  // reference_inputs:
+  inputs: asArray(asInputOrOutput),
+  outputs: asArray(asInputOrOutput)
+})
+export type KoiosNetworkTx = ReturnType<typeof asKoiosTransaction>
+
+export const asKoiosTransactionsRes = asArray(asKoiosTransaction)

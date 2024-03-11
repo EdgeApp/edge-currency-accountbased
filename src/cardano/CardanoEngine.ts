@@ -1,9 +1,11 @@
+import { add, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   JsonObject
@@ -14,10 +16,15 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getFetchCors } from '../common/utils'
 import { CardanoTools } from './CardanoTools'
 import {
+  asCardanoWalletOtherData,
+  asKoiosAddressTransactions,
   asKoiosBalance,
   asKoiosBlockheight,
+  asKoiosTransactionsRes,
   asSafeCardanoWalletInfo,
   CardanoNetworkInfo,
+  CardanoWalletOtherData,
+  KoiosNetworkTx,
   SafeCardanoWalletInfo
 } from './cardanoTypes'
 
@@ -31,6 +38,7 @@ export class CardanoEngine extends CurrencyEngine<
 > {
   fetchCors: EdgeFetchFunction
   networkInfo: CardanoNetworkInfo
+  otherData!: CardanoWalletOtherData
 
   constructor(
     env: PluginEnvironment<CardanoNetworkInfo>,
@@ -45,7 +53,7 @@ export class CardanoEngine extends CurrencyEngine<
   }
 
   setOtherData(_raw: any): void {
-    this.otherData = {}
+    this.otherData = asCardanoWalletOtherData(_raw)
   }
 
   async fetchGet(method: string): Promise<unknown> {
@@ -111,11 +119,64 @@ export class CardanoEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    throw new Error('unimplemented')
-  }
+    const countPerPage = 1000 // default
+    const latestQueryTransactionsBlockHeight =
+      this.otherData.latestQueryTransactionsBlockHeight
+    const latestQueryTransactionsTxid =
+      this.otherData.latestQueryTransactionsTxid
+    while (true) {
+      const rawTxidList = await this.fetchPost('address_txs', {
+        _addresses: [this.walletInfo.keys.bech32Address],
+        _after_block_height: latestQueryTransactionsBlockHeight // return value includes block height
+      })
+      const cleanTxidList = asKoiosAddressTransactions(rawTxidList)
 
-  processCardanoTransaction(): void {
-    throw new Error('unimplemented')
+      const newestTxInList = cleanTxidList[0]
+      if (
+        newestTxInList == null ||
+        newestTxInList.tx_hash === latestQueryTransactionsTxid
+      ) {
+        break
+      }
+
+      const txids = cleanTxidList
+        .filter(tx => tx.block_height >= latestQueryTransactionsBlockHeight)
+        .reverse()
+        .map(tx => tx.tx_hash)
+
+      if (txids.length === 0) {
+        break
+      }
+      const rawTxInfos = await this.fetchPost(`tx_info`, {
+        _tx_hashes: txids
+      })
+      const txs = asKoiosTransactionsRes(rawTxInfos)
+
+      for (const tx of txs) {
+        const edgeTx = processCardanoTransaction({
+          currencyCode: this.currencyInfo.currencyCode,
+          publicKey: this.walletInfo.keys.bech32Address,
+          tokenId: null,
+          tx,
+          walletId: this.walletId
+        })
+        this.addTransaction(this.currencyInfo.currencyCode, edgeTx)
+        this.otherData.latestQueryTransactionsBlockHeight = tx.block_height
+        this.otherData.latestQueryTransactionsTxid = tx.tx_hash
+      }
+      if (cleanTxidList.length < countPerPage) break
+    }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.updateOnAddressesChecked()
+
+    if (this.transactionsChangedArray.length > 0) {
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
   }
 
   // // ****************************************************************************
@@ -187,4 +248,54 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+export const processCardanoTransaction = (opts: {
+  currencyCode: string
+  publicKey: string
+  tokenId: EdgeTokenId
+  tx: KoiosNetworkTx
+  walletId: string
+}): EdgeTransaction => {
+  const { currencyCode, publicKey, tokenId, tx, walletId } = opts
+  const {
+    tx_hash: txid,
+    block_height: blockHeight,
+    tx_timestamp: date,
+    fee,
+    inputs,
+    outputs
+  } = tx
+
+  let netNativeAmount: string = '0'
+  const ourReceiveAddressesSet = new Set<string>()
+  for (const input of inputs) {
+    if (input.payment_addr.bech32 === publicKey) {
+      netNativeAmount = sub(netNativeAmount, input.value)
+    }
+  }
+  for (const output of outputs) {
+    if (output.payment_addr.bech32 === publicKey) {
+      netNativeAmount = add(netNativeAmount, output.value)
+      ourReceiveAddressesSet.add(publicKey)
+    }
+  }
+  const isSend = netNativeAmount.startsWith('-')
+
+  const edgeTransaction: EdgeTransaction = {
+    blockHeight,
+    currencyCode,
+    date,
+    isSend,
+    memos: [],
+    nativeAmount: netNativeAmount,
+    networkFee: isSend ? fee : '0',
+    ourReceiveAddresses: [...ourReceiveAddressesSet.values()], // blank if you sent money otherwise array of addresses that are yours in this transaction
+    signedTx: '',
+    tokenId,
+    txid,
+    walletId: walletId
+  }
+
+  return edgeTransaction
 }
