@@ -13,6 +13,7 @@ import { asMaybe, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeDenomination,
   EdgeEnginePrivateKeyOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -117,6 +118,32 @@ interface PreparedTrx {
   packed_trx: string
 }
 
+interface UpdateStakingStatus {
+  nativeAmount: string
+  blockTime: string
+  txId: string
+  txName: FioTxName
+}
+interface ParseActionParams {
+  action: FioHistoryNodeAction
+  actor: string
+  currencyCode: string
+  denom: EdgeDenomination
+  highestTxHeight: number
+  publicKey: string
+  walletId: string
+  findTransaction: FindTransaction
+  getTransactionList: GetTransactionList
+}
+interface ParseActionResult {
+  blockNum: number
+  transaction?: EdgeTransaction
+  updateStakingStatus?: UpdateStakingStatus
+}
+
+export type FindTransaction = (currencyCode: string, txId: string) => number
+export type GetTransactionList = (currencyCode: string) => EdgeTransaction[]
+
 export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   fetchCors: EdgeFetchFunction
   otherMethods: Object
@@ -186,30 +213,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     this.otherData = asFioWalletOtherData(raw)
   }
 
-  // Normalize date if not exists "Z" parameter
-  getUTCDate(dateString: string): number {
-    const date = new Date(dateString)
-
-    return Date.UTC(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      date.getHours(),
-      date.getMinutes(),
-      date.getSeconds()
-    )
-  }
-
-  /*
-  Unstaked FIO is locked until 7 days after the start of the GMT day for when
-  the transaction occurred (block-time).
-  */
-  getUnlockDate(txDate: Date): Date {
-    const blockTimeBeginingOfGmtDay =
-      Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
-    return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
-  }
-
   // Poll on the blockheight
   async checkBlockchainInnerLoop(): Promise<void> {
     try {
@@ -255,14 +258,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
   }
 
-  checkUnStakeTx(otherParams: TxOtherParams): boolean {
-    return (
-      otherParams.name === 'unstakefio' ||
-      (otherParams.data != null &&
-        otherParams.data.memo === STAKING_REWARD_MEMO)
-    )
-  }
-
   updateStakingStatus(params?: {
     nativeAmount: string
     blockTime: string
@@ -287,9 +282,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
     if (params != null) {
       const { nativeAmount, blockTime, txId, txName } = params
-      const unlockDate = this.getUnlockDate(
-        new Date(this.getUTCDate(blockTime))
-      )
+      const unlockDate = getUnlockDate(new Date(getUTCDate(blockTime)))
 
       /**
        * Compare each stakedAmount's unlockDate with the transaction's unlockDate to
@@ -384,212 +377,38 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     actor: string,
     currencyCode: string = this.currencyInfo.currencyCode
   ): number {
-    const {
-      act: { name: trxName, data, account, authorization }
-    } = action.action_trace
-    let nativeAmount
-    let actorSender
-    let networkFee = '0'
-    let otherParams: TxOtherParams = {
-      account,
-      name: trxName,
-      authorization,
-      data,
-      meta: {}
-    }
-    const ourReceiveAddresses = []
-    if (action.block_num <= this.otherData.highestTxHeight) {
-      return action.block_num
+    const denom = getDenomination(
+      currencyCode,
+      this.currencyInfo,
+      this.allTokensMap
+    )
+    if (denom == null) {
+      this.error(`Received unsupported currencyCode: ${currencyCode}`)
+      return 0
     }
 
-    // Transfer funds transaction
-    if (
-      trxName === 'trnsfiopubky' ||
-      trxName === 'unstakefio' ||
-      trxName === 'regaddress'
-    ) {
-      nativeAmount = '0'
-
-      if (trxName === 'regaddress') {
-        // The action must have been authorized by the engine's actor in order
-        // for use to consider this a spend transaction.
-        // Otherwise, we should ignore regaddress actions which are received
-        // address, until we have some metadata explaining the receive.
-        if (
-          action.action_trace.act.authorization.some(
-            auth => auth.actor === this.actor
-          )
-        ) {
-          networkFee = String(action.action_trace.act.data.max_fee ?? 0)
-          nativeAmount = `-${networkFee}`
-        }
-      }
-
-      if (trxName === 'trnsfiopubky' && data.amount != null) {
-        nativeAmount = data.amount.toString()
-        actorSender = data.actor
-        if (data.payee_public_key === this.walletInfo.keys.publicKey) {
-          ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
-          if (actorSender === actor) {
-            nativeAmount = '0'
-          }
-        } else {
-          nativeAmount = `-${nativeAmount}`
-        }
-      }
-
-      const index = this.findTransaction(
-        currencyCode,
-        action.action_trace.trx_id
-      )
-      // Check if fee transaction have already added
-      if (index > -1) {
-        const existingTrx = this.transactionList[currencyCode][index]
-        otherParams = {
-          ...existingTrx.otherParams,
-          ...otherParams,
-          data: {
-            ...(existingTrx.otherParams?.data ?? {}),
-            ...otherParams.data
-          },
-          meta: {
-            ...(existingTrx.otherParams?.meta ?? {}),
-            ...otherParams.meta
-          }
-        }
-
-        if (otherParams.meta.isTransferProcessed != null) {
-          return action.block_num
-        }
-        if (otherParams.meta.isFeeProcessed != null) {
-          if (trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens]) {
-            nativeAmount = sub(nativeAmount, existingTrx.networkFee)
-            networkFee = existingTrx.networkFee
-          } else {
-            nativeAmount = existingTrx.nativeAmount
-            networkFee = '0'
-          }
-        } else {
-          this.error(
-            'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
-          )
-        }
-      }
-
-      if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus({
-          nativeAmount: data.amount != null ? data.amount.toString() : '0',
-          blockTime: action.block_time,
-          txId: action.action_trace.trx_id,
-          txName: trxName
-        })
-      }
-
-      otherParams.meta.isTransferProcessed = true
-
-      const edgeTransaction: EdgeTransaction = {
-        blockHeight: action.block_num > 0 ? action.block_num : 0,
-        currencyCode,
-        date: this.getUTCDate(action.block_time) / 1000,
-        isSend: nativeAmount.startsWith('-'),
-        memos: [],
-        nativeAmount,
-        networkFee,
-        otherParams,
-        ourReceiveAddresses,
-        signedTx: '',
-        txid: action.action_trace.trx_id,
-        walletId: this.walletId
-      }
-      this.addTransaction(currencyCode, edgeTransaction)
+    const { blockNum, transaction, updateStakingStatus } = parseAction({
+      action,
+      actor,
+      currencyCode,
+      denom,
+      highestTxHeight: this.otherData.highestTxHeight,
+      publicKey: this.walletInfo.keys.publicKey,
+      walletId: this.walletId,
+      findTransaction: (currencyCode: string, txid: string): number =>
+        this.findTransaction(currencyCode, txid),
+      getTransactionList: (currencyCode: string): EdgeTransaction[] =>
+        this.transactionList[currencyCode]
+    })
+    if (updateStakingStatus != null) {
+      this.updateStakingStatus(updateStakingStatus)
     }
 
-    // Fee / Reward transaction
-    if (trxName === 'transfer' && data.quantity != null) {
-      const [amount] = data.quantity.split(' ')
-      const exchangeAmount = amount.toString()
-      const denom = getDenomination(
-        currencyCode,
-        this.currencyInfo,
-        this.allTokensMap
-      )
-      if (denom == null) {
-        this.error(`Received unsupported currencyCode: ${currencyCode}`)
-        return 0
-      }
-
-      const fioAmount = mul(exchangeAmount, denom.multiplier)
-      if (data.to === actor) {
-        nativeAmount = `${fioAmount}`
-        networkFee = `-${fioAmount}`
-      } else {
-        nativeAmount = `-${fioAmount}`
-        networkFee = fioAmount
-      }
-
-      const index = this.findTransaction(
-        currencyCode,
-        action.action_trace.trx_id
-      )
-      // Check if transfer transaction have already added
-      if (index > -1) {
-        const existingTrx = this.transactionList[currencyCode][index]
-        otherParams = {
-          ...otherParams,
-          ...existingTrx.otherParams,
-          data: {
-            ...otherParams.data,
-            ...(existingTrx.otherParams?.data ?? {})
-          },
-          meta: {
-            ...otherParams.meta,
-            ...(existingTrx.otherParams?.meta ?? {})
-          }
-        }
-        if (otherParams.meta.isFeeProcessed != null) {
-          return action.block_num
-        }
-        if (otherParams.meta.isTransferProcessed != null) {
-          if (data.to !== actor) {
-            nativeAmount = sub(existingTrx.nativeAmount, networkFee)
-          } else {
-            networkFee = '0'
-          }
-        } else {
-          this.error(
-            'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
-          )
-        }
-      }
-
-      if (this.checkUnStakeTx(otherParams)) {
-        this.updateStakingStatus({
-          nativeAmount: fioAmount,
-          blockTime: action.block_time,
-          txId: action.action_trace.trx_id,
-          txName: trxName
-        })
-      }
-
-      otherParams.meta.isFeeProcessed = true
-      const edgeTransaction: EdgeTransaction = {
-        blockHeight: action.block_num > 0 ? action.block_num : 0,
-        currencyCode,
-        date: this.getUTCDate(action.block_time) / 1000,
-        isSend: nativeAmount.startsWith('-'),
-        memos: [],
-        nativeAmount,
-        networkFee,
-        otherParams,
-        ourReceiveAddresses: [],
-        signedTx: '',
-        txid: action.action_trace.trx_id,
-        walletId: this.walletId
-      }
-      this.addTransaction(currencyCode, edgeTransaction)
+    if (transaction != null) {
+      this.addTransaction(currencyCode, transaction)
     }
 
-    return action.block_num
+    return blockNum
   }
 
   async getSortedHistoryNodesLastActionSeqNumbers(): Promise<
@@ -1549,7 +1368,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           }
         }
 
-        const unlockDate = this.getUnlockDate(new Date())
+        const unlockDate = getUnlockDate(new Date())
         const stakedBalance = this.otherData.lockedBalances.staked
         if (gt(quantity, stakedBalance) || gt(`${fee}`, availableBalance)) {
           throw new InsufficientFundsError()
@@ -2069,4 +1888,237 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+// Normalize date if not exists "Z" parameter
+const getUTCDate = (dateString: string): number => {
+  const date = new Date(dateString)
+
+  return Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds()
+  )
+}
+
+/**
+ * Unstaked FIO is locked until 7 days after the start of the GMT day for when
+ * the transaction occurred (block-time).
+ */
+const getUnlockDate = (txDate: Date): Date => {
+  const blockTimeBeginingOfGmtDay =
+    Math.floor(txDate.getTime() / DAY_INTERVAL) * DAY_INTERVAL
+  return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
+}
+
+const checkUnStakeTx = (otherParams: TxOtherParams): boolean => {
+  return (
+    otherParams.name === 'unstakefio' ||
+    (otherParams.data != null && otherParams.data.memo === STAKING_REWARD_MEMO)
+  )
+}
+
+export const parseAction = ({
+  action,
+  actor,
+  currencyCode,
+  denom,
+  highestTxHeight,
+  publicKey,
+  walletId,
+  findTransaction,
+  getTransactionList
+}: ParseActionParams): ParseActionResult => {
+  const {
+    act: { name: trxName, data, account, authorization }
+  } = action.action_trace
+  let nativeAmount
+  let actorSender
+  let networkFee = '0'
+  let otherParams: TxOtherParams = {
+    account,
+    name: trxName,
+    authorization,
+    data,
+    meta: {}
+  }
+  const ourReceiveAddresses = []
+  if (action.block_num <= highestTxHeight) {
+    return { blockNum: action.block_num }
+  }
+  let updateStakingStatus: UpdateStakingStatus | undefined
+
+  // Transfer funds transaction
+  if (
+    trxName === 'trnsfiopubky' ||
+    trxName === 'unstakefio' ||
+    trxName === 'regaddress'
+  ) {
+    nativeAmount = '0'
+
+    if (trxName === 'regaddress') {
+      // The action must have been authorized by the engine's actor in order
+      // for use to consider this a spend transaction.
+      // Otherwise, we should ignore regaddress actions which are received
+      // address, until we have some metadata explaining the receive.
+      if (
+        action.action_trace.act.authorization.some(auth => auth.actor === actor)
+      ) {
+        networkFee = String(action.action_trace.act.data.max_fee ?? 0)
+        nativeAmount = `-${networkFee}`
+      }
+    }
+
+    if (trxName === 'trnsfiopubky' && data.amount != null) {
+      nativeAmount = data.amount.toString()
+      actorSender = data.actor
+      if (data.payee_public_key === publicKey) {
+        ourReceiveAddresses.push(publicKey)
+        if (actorSender === actor) {
+          nativeAmount = '0'
+        }
+      } else {
+        nativeAmount = `-${nativeAmount}`
+      }
+    }
+
+    const index = findTransaction(currencyCode, action.action_trace.trx_id)
+    // Check if fee transaction have already added
+    if (index > -1) {
+      const existingTrx = getTransactionList(currencyCode)[index]
+      otherParams = {
+        ...existingTrx.otherParams,
+        ...otherParams,
+        data: {
+          ...(existingTrx.otherParams?.data ?? {}),
+          ...otherParams.data
+        },
+        meta: {
+          ...(existingTrx.otherParams?.meta ?? {}),
+          ...otherParams.meta
+        }
+      }
+
+      if (otherParams.meta.isTransferProcessed != null) {
+        return { blockNum: action.block_num }
+      }
+      if (otherParams.meta.isFeeProcessed != null) {
+        if (trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens]) {
+          nativeAmount = sub(nativeAmount, existingTrx.networkFee)
+          networkFee = existingTrx.networkFee
+        } else {
+          nativeAmount = existingTrx.nativeAmount
+          networkFee = '0'
+        }
+      } else {
+        throw new Error(
+          'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
+        )
+      }
+    }
+
+    if (checkUnStakeTx(otherParams)) {
+      updateStakingStatus = {
+        nativeAmount: data.amount != null ? data.amount.toString() : '0',
+        blockTime: action.block_time,
+        txId: action.action_trace.trx_id,
+        txName: trxName
+      }
+    }
+
+    otherParams.meta.isTransferProcessed = true
+
+    const transaction: EdgeTransaction = {
+      blockHeight: action.block_num > 0 ? action.block_num : 0,
+      currencyCode,
+      date: getUTCDate(action.block_time) / 1000,
+      isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
+      networkFee,
+      otherParams,
+      ourReceiveAddresses,
+      signedTx: '',
+      txid: action.action_trace.trx_id,
+      walletId
+    }
+    return { blockNum: action.block_num, transaction, updateStakingStatus }
+  }
+
+  // Fee / Reward transaction
+  if (trxName === 'transfer' && data.quantity != null) {
+    const [amount] = data.quantity.split(' ')
+    const exchangeAmount = amount.toString()
+    const fioAmount = mul(exchangeAmount, denom.multiplier)
+    if (data.to === actor) {
+      nativeAmount = `${fioAmount}`
+      networkFee = `-${fioAmount}`
+    } else {
+      nativeAmount = `-${fioAmount}`
+      networkFee = fioAmount
+    }
+
+    const index = findTransaction(currencyCode, action.action_trace.trx_id)
+    // Check if transfer transaction have already added
+    if (index > -1) {
+      const existingTrx = getTransactionList(currencyCode)[index]
+      otherParams = {
+        ...otherParams,
+        ...existingTrx.otherParams,
+        data: {
+          ...otherParams.data,
+          ...(existingTrx.otherParams?.data ?? {})
+        },
+        meta: {
+          ...otherParams.meta,
+          ...(existingTrx.otherParams?.meta ?? {})
+        }
+      }
+      if (otherParams.meta.isFeeProcessed != null) {
+        return { blockNum: action.block_num }
+      }
+      if (otherParams.meta.isTransferProcessed != null) {
+        if (data.to !== actor) {
+          nativeAmount = sub(existingTrx.nativeAmount, networkFee)
+        } else {
+          networkFee = '0'
+        }
+      } else {
+        throw new Error(
+          'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
+        )
+      }
+    }
+
+    if (checkUnStakeTx(otherParams)) {
+      updateStakingStatus = {
+        nativeAmount: fioAmount,
+        blockTime: action.block_time,
+        txId: action.action_trace.trx_id,
+        txName: trxName
+      }
+    }
+
+    otherParams.meta.isFeeProcessed = true
+    const transaction: EdgeTransaction = {
+      blockHeight: action.block_num > 0 ? action.block_num : 0,
+      currencyCode,
+      date: getUTCDate(action.block_time) / 1000,
+      isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
+      networkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      txid: action.action_trace.trx_id,
+      walletId
+    }
+    return { blockNum: action.block_num, transaction, updateStakingStatus }
+  }
+
+  return { blockNum: action.block_num }
 }
