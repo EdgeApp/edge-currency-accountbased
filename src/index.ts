@@ -5,6 +5,7 @@ import type { EdgeCorePlugins } from 'edge-core-js/types'
 import { algorand } from './algorand/algorandInfo'
 import { binance } from './binance/binanceInfo'
 import { cardano } from './cardano/cardanoInfo'
+import { cardanotestnet } from './cardano/cardanoTestnetInfo'
 import { cosmosPlugins } from './cosmos/cosmosInfos'
 import { eosPlugins } from './eos/eosInfos'
 import { ethereumPlugins } from './ethereum/ethereumInfos'
@@ -30,6 +31,7 @@ const plugins = {
   algorand,
   binance,
   cardano,
+  cardanotestnet,
   filecoin,
   calibration,
   fio,
