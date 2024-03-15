@@ -37,7 +37,7 @@
     "clean": "rimraf dist lib android/src/main/assets/edge-currency-accountbased",
     "cli": "node -r sucrase/register cli/cli.ts",
     "fix": "eslint . --fix",
-    "lint": "eslint .",
+    "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint .",
     "make-checkpoints": "node -r sucrase/register scripts/makeCheckpoints.ts",
     "make-cosmos-protos": "node -r sucrase/register ./scripts/cosmos-ts-protos/generate-ts-protos.ts",
     "make-cosmos-chain-json": "node -r sucrase/register ./scripts/cosmos-ts-protos/generate-chain-json.ts",
