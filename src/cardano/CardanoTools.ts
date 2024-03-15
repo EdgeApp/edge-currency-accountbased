@@ -21,6 +21,7 @@ import {
   asCardanoPrivateKeys,
   asSafeCardanoWalletInfo,
   CardanoNetworkInfo,
+  EpochParams,
   SafeCardanoWalletInfo
 } from './cardanoTypes'
 
@@ -29,6 +30,7 @@ export class CardanoTools implements EdgeCurrencyTools {
   io: EdgeIo
   currencyInfo: EdgeCurrencyInfo
   networkInfo: CardanoNetworkInfo
+  epochParams?: EpochParams
 
   constructor(env: PluginEnvironment<CardanoNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
