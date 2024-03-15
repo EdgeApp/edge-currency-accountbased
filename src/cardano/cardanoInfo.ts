@@ -5,7 +5,8 @@ import type { CardanoTools } from './CardanoTools'
 import type { CardanoNetworkInfo } from './cardanoTypes'
 
 const networkInfo: CardanoNetworkInfo = {
-  networkId: 1
+  networkId: 1,
+  rpcServer: 'https://api.koios.rest'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
