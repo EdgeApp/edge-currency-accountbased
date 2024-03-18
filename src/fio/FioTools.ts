@@ -154,6 +154,7 @@ export class FioTools implements EdgeCurrencyTools {
       {
         fio: true
       },
+      this.builtinTokens,
       FIO_CURRENCY_CODE
     )
     const valid = checkAddress(edgeParsedUri.publicAddress ?? '')
@@ -179,7 +180,8 @@ export class FioTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens
+        customTokens,
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

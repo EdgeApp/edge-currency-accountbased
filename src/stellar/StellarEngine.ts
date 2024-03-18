@@ -475,7 +475,7 @@ export class StellarEngine extends CurrencyEngine<
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -558,7 +558,7 @@ export class StellarEngine extends CurrencyEngine<
     nativeAmount = add(networkFee, nativeAmount) // Add fee to total
     const nativeBalance2 = sub(nativeBalance, this.networkInfo.baseReserve) // Subtract the 1 min XLM
     if (gt(nativeAmount, nativeBalance2)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     nativeAmount = `-${nativeAmount}`
@@ -578,7 +578,7 @@ export class StellarEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      tokenId: null,
+      tokenId,
       txid: '', // txid
       walletId: this.walletId
     }

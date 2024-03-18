@@ -408,7 +408,8 @@ export class ZcashEngine extends CurrencyEngine<
       this.availableZatoshi,
       this.networkInfo.defaultNetworkFee
     )
-    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lte(spendableBalance, '0'))
+      throw new InsufficientFundsError({ tokenId: null })
 
     return spendableBalance
   }
@@ -416,7 +417,7 @@ export class ZcashEngine extends CurrencyEngine<
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -435,11 +436,11 @@ export class ZcashEngine extends CurrencyEngine<
           '0'
       )
     ) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     if (gt(totalTxAmount, this.availableZatoshi)) {
-      throw new InsufficientFundsError('Amount exceeds available balance')
+      throw new InsufficientFundsError({ tokenId })
     }
 
     // **********************************
@@ -457,7 +458,7 @@ export class ZcashEngine extends CurrencyEngine<
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      tokenId: null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

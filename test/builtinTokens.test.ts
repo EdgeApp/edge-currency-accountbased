@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { EdgeCorePluginOptions, makeFakeIo } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
+import { makeMetaTokens } from '../src/common/tokenHelpers'
 import { BooleanMap } from '../src/common/types'
 import plugins from '../src/index'
 import { fakeLog } from './fake/fakeLog'
@@ -33,7 +34,8 @@ describe('builtinTokens', function () {
         plugin.getBuiltinTokens == null ? {} : await plugin.getBuiltinTokens()
       const actual = Object.keys(builtinTokens)
 
-      expect(plugin.currencyInfo.metaTokens.length).equals(actual.length)
+      const metaTokens = makeMetaTokens(builtinTokens)
+      expect(metaTokens.length).equals(actual.length)
 
       const tools = await plugin.makeCurrencyTools()
       const expected = await Promise.all(

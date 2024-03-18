@@ -1035,7 +1035,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const exchangeAmount = div(nativeAmount, denom.multiplier, nativePrecision)
     const networkFee = '0'
     if (gt(nativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     const quantity =
@@ -1077,7 +1077,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '', // txid
       walletId: this.walletId
     }

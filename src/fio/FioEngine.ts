@@ -1272,8 +1272,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
+    const { tokenId } = spendInfo
     const balance = this.getBalance({
-      currencyCode: spendInfo.currencyCode
+      tokenId
     })
 
     const lockedAmount = this.otherData.lockedBalances.locked
@@ -1283,7 +1284,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const spendableAmount = sub(sub(balance, edgeTx.networkFee), lockedAmount)
 
     if (lt(spendableAmount, '0')) {
-      throw new InsufficientFundsError({ networkFee: edgeTx.networkFee })
+      throw new InsufficientFundsError({
+        networkFee: edgeTx.networkFee,
+        tokenId
+      })
     }
 
     return spendableAmount
@@ -1293,7 +1297,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     const lockedBalance = this.otherData.lockedBalances.locked
     const availableBalance = sub(nativeBalance, lockedBalance)
@@ -1371,7 +1375,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         const unlockDate = getUnlockDate(new Date())
         const stakedBalance = this.otherData.lockedBalances.staked
         if (gt(quantity, stakedBalance) || gt(`${fee}`, availableBalance)) {
-          throw new InsufficientFundsError()
+          throw new InsufficientFundsError({ tokenId })
         }
 
         const accrued = mul(
@@ -1581,7 +1585,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       },
       ourReceiveAddresses: [],
       signedTx: '',
-      tokenId: null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

@@ -80,6 +80,3 @@ export const asFinalFieldsCanceledOffer = asObject({
   TakerGets: asAmount
   // Add other fields that might appear in `FinalFields` as needed
 })
-export type FinalFieldsCanceledOffer = ReturnType<
-  typeof asFinalFieldsCanceledOffer
->

@@ -15,6 +15,8 @@ import {
   EdgeActivationApproveOptions,
   EdgeActivationQuote,
   EdgeActivationResult,
+  EdgeAssetAction,
+  EdgeAssetActionType,
   EdgeAssetAmount,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -23,8 +25,6 @@ import {
   EdgeGetActivationAssetsResults,
   EdgeSpendInfo,
   EdgeTransaction,
-  EdgeTxActionSwap,
-  EdgeTxActionSwapType,
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
@@ -74,7 +74,6 @@ import {
   asXrpNetworkLocation,
   asXrpTransaction,
   asXrpWalletOtherData,
-  FinalFieldsCanceledOffer,
   RippleOtherMethods,
   SafeRippleWalletInfo,
   XrpNetworkInfo,
@@ -174,23 +173,10 @@ export class XrpEngine extends CurrencyEngine<
             fromTokenId == null
               ? this.currencyInfo
               : this.allTokensMap[fromTokenId]
-          const { pluginId } = this.currencyInfo
 
           const out: EdgeTransaction = {
-            action: {
-              type: 'swapOrderPost',
-              orderId: undefined,
-              canBePartial: true,
-              sourceAsset: {
-                pluginId,
-                tokenId: fromTokenId,
-                nativeAmount: fromNativeAmount
-              },
-              destAsset: {
-                pluginId,
-                tokenId: toTokenId,
-                nativeAmount: toNativeAmount
-              }
+            assetAction: {
+              assetActionType: 'swapOrderPost'
             },
             blockHeight: 0, // blockHeight,
             currencyCode,
@@ -330,7 +316,7 @@ export class XrpEngine extends CurrencyEngine<
           currency,
           issuer
         })
-      : undefined
+      : null
 
     const takerVal = isTakerToken ? value : String(takerAmount)
 
@@ -365,11 +351,9 @@ export class XrpEngine extends CurrencyEngine<
   processRippleDexTx = (
     accountTx: AccountTxTransaction
     // balances: Balance[] // TODO
-  ): EdgeTxActionSwap | undefined => {
+  ): EdgeAssetAction | undefined => {
     const { meta, tx } = accountTx
     if (tx == null || typeof meta !== 'object') return
-    const { publicKey: ourPubKey } = this.walletLocalData
-    const txAccountMatch = ourPubKey === tx.Account // Did we sign/broadcast this tx?
 
     // Parse meta nodes
     const { AffectedNodes } = meta
@@ -395,9 +379,7 @@ export class XrpEngine extends CurrencyEngine<
       return
     }
 
-    let type: EdgeTxActionSwapType | undefined
-    let sourceAsset: EdgeAssetAmount | undefined
-    let destAsset: EdgeAssetAmount | undefined
+    let type: EdgeAssetActionType | undefined
     // Any kind of limit order state - post (open & unfilled), partially
     // filled, fully filled, but NOT canceled.
     if (tx.TransactionType === 'OfferCreate') {
@@ -415,28 +397,6 @@ export class XrpEngine extends CurrencyEngine<
       // Don't care about partial fills - counting them as general fills
       type =
         isFullyFilled || isPartiallyFilled ? 'swapOrderFill' : 'swapOrderPost'
-
-      // Parse amounts/assets. Where in the tx we extract the amounts/assets
-      // from depends on if this fill came from another taker or if we are the
-      // taker.
-      const { TakerPays, TakerGets } = tx
-      if (txAccountMatch) {
-        // We broadcasted this. We are the taker or poster, and the relevant
-        // info is in the top level of the tx.
-        // TODO: Handle filled amounts
-        sourceAsset = this.parseRippleDexTxAmount(TakerGets)
-        destAsset = this.parseRippleDexTxAmount(TakerPays)
-      } else {
-        // Someone else broadcasted this. They are the taker, so we need to find
-        // the relevant info about our original order in the meta
-
-        // TODO: Handle proper amounts parsing. For now, just use the taker's
-        // top-level tx.TakerPays/TakerGets, reversed. The fill amount being
-        // recorded is incorrect, but we don't show amounts anywhere in the app
-        // yet at this time.
-        sourceAsset = this.parseRippleDexTxAmount(TakerPays)
-        destAsset = this.parseRippleDexTxAmount(TakerGets)
-      }
     } else if (tx.TransactionType === 'OfferCancel') {
       // Assert only one offer is canceled per OfferCancel transaction
       if (deletedNodes.length > 1) {
@@ -445,21 +405,13 @@ export class XrpEngine extends CurrencyEngine<
       }
       if (deletedNodes.length === 1) {
         // Reference the canceled offer for asset types/amounts
-        let canceledOffer: FinalFieldsCanceledOffer
         try {
-          canceledOffer = asFinalFieldsCanceledOffer(
-            deletedNodes[0].DeletedNode.FinalFields
-          )
+          asFinalFieldsCanceledOffer(deletedNodes[0].DeletedNode.FinalFields)
         } catch (error) {
           this.error(`Cleaning DeletedNodes FinalFields failed: ${error}`)
           return
         }
         type = 'swapOrderCancel'
-
-        // Parse amounts
-        const { TakerPays, TakerGets } = canceledOffer
-        sourceAsset = this.parseRippleDexTxAmount(TakerGets)
-        destAsset = this.parseRippleDexTxAmount(TakerPays)
       } else {
         // The offer could not be canceled, possibly because it was already filled or expired
         this.log.warn(
@@ -469,15 +421,13 @@ export class XrpEngine extends CurrencyEngine<
       }
     }
 
-    if (sourceAsset == null || destAsset == null || type == null) {
+    if (type == null) {
       return
     }
 
     // Succeeded all checks
     return {
-      type,
-      sourceAsset,
-      destAsset
+      assetActionType: type
     }
   }
 
@@ -541,7 +491,7 @@ export class XrpEngine extends CurrencyEngine<
           }
           // Parent currency like XRP
           this.addTransaction(currency, {
-            action: this.processRippleDexTx(accountTx),
+            assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode: currency,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
@@ -579,7 +529,7 @@ export class XrpEngine extends CurrencyEngine<
           }
 
           this.addTransaction(currencyCode, {
-            action: this.processRippleDexTx(accountTx),
+            assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
@@ -801,17 +751,18 @@ export class XrpEngine extends CurrencyEngine<
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
-    const { currencyCode } = spendInfo
+    const { tokenId } = spendInfo
     let spendableBalance = this.getBalance({
-      currencyCode
+      tokenId
     })
 
     const totalReserve = this.getTotalReserve()
 
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       spendableBalance = sub(spendableBalance, totalReserve)
     }
-    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lte(spendableBalance, '0'))
+      throw new InsufficientFundsError({ tokenId })
 
     return spendableBalance
   }
@@ -895,18 +846,19 @@ export class XrpEngine extends CurrencyEngine<
       const totalReserve = this.getTotalReserve()
 
       if (gt(add(nativeAmount, totalReserve), nativeBalance))
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
     } else {
       parentNetworkFee = TOKEN_FEE
       // Tokens
-      if (gt(nativeAmount, nativeBalance)) throw new InsufficientFundsError()
+      if (gt(nativeAmount, nativeBalance))
+        throw new InsufficientFundsError({ tokenId })
       const parentBalance =
         this.walletLocalData.totalBalances[parentCurrencyCode] ?? '0'
 
       if (gt(parentNetworkFee, parentBalance)) {
         throw new InsufficientFundsError({
-          currencyCode: parentCurrencyCode,
-          networkFee: parentNetworkFee
+          networkFee: parentNetworkFee,
+          tokenId: null
         })
       }
     }
@@ -1084,6 +1036,7 @@ export class XrpEngine extends CurrencyEngine<
       assetOptions: [
         {
           paymentWalletId: this.walletId,
+          tokenId: null,
           currencyPluginId: this.currencyInfo.pluginId
         }
       ]
@@ -1092,31 +1045,36 @@ export class XrpEngine extends CurrencyEngine<
 
   engineActivateWallet = async ({
     activateTokenIds,
-    paymentTokenId,
-    paymentWallet
+    paymentInfo
   }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
     if (activateTokenIds == null)
       throw new Error(
         `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
       )
-    if (paymentTokenId != null)
+    const { wallet, tokenId } = paymentInfo ?? {}
+    if (tokenId != null)
       throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
-    if (paymentWallet?.id !== this.walletId)
+    if (wallet?.id !== this.walletId)
       throw new Error('Must pay with same wallet you are activating token with')
 
     for (const activateTokenId of activateTokenIds) {
-      if (this.allTokensMap[activateTokenId] == null)
+      if (
+        activateTokenId !== null &&
+        this.allTokensMap[activateTokenId] == null
+      )
         throw new Error(`Invalid tokenId to activate ${activateTokenId}`)
     }
 
     const out = {
       paymentWalletId: this.walletId,
+      paymentTokenId: null,
       fromNativeAmount: '0',
       networkFee: {
         nativeAmount: mul(
           SET_TRUST_LINE_FEE,
           activateTokenIds.length.toString()
         ),
+        tokenId: null,
         currencyPluginId: this.currencyInfo.pluginId
       },
       approve: async (
@@ -1125,13 +1083,14 @@ export class XrpEngine extends CurrencyEngine<
         const { metadata } = options
         const transactions: EdgeTransaction[] = []
         for (const activateTokenId of activateTokenIds) {
-          const activationTx = await paymentWallet.makeSpend({
+          const activationTx = await wallet.makeSpend({
             spendTargets: [],
             metadata,
+            tokenId: tokenId ?? null,
             otherParams: { activateTokenId }
           })
-          const signedTx = await paymentWallet.signTx(activationTx)
-          const edgeTransaction = await paymentWallet.broadcastTx(signedTx)
+          const signedTx = await wallet.signTx(activationTx)
+          const edgeTransaction = await wallet.broadcastTx(signedTx)
 
           this.warn(
             `SUCCESS activateWallet.approve()\n${cleanTxLogs(edgeTransaction)}`

@@ -297,7 +297,7 @@ export class EthereumEngine extends CurrencyEngine<
         }
 
         const spendInfo: EdgeSpendInfo = {
-          currencyCode: this.currencyInfo.currencyCode,
+          tokenId: null,
           spendTargets: [spendTarget],
           memos: [
             {
@@ -782,9 +782,10 @@ export class EthereumEngine extends CurrencyEngine<
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
+    const { tokenId } = edgeSpendInfo
 
     const balance = this.getBalance({
-      currencyCode: spendInfo.currencyCode
+      tokenId
     })
 
     const spendTarget = spendInfo.spendTargets[0]
@@ -801,7 +802,7 @@ export class EthereumEngine extends CurrencyEngine<
     // For mainnet currency, the fee can scale with the amount sent so we use
     // an algorithm to calculate the max spendable amount which subtracts fees
     // from the balance and returns the result:
-    if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       // Use the balance as the initial amount for the spend info before calculating the fees:
       spendInfo.spendTargets[0].nativeAmount = balance
 
@@ -887,7 +888,7 @@ export class EthereumEngine extends CurrencyEngine<
       const maxSpendable = sub(balance, totalFee)
 
       if (lte(maxSpendable, '0')) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
 
       return maxSpendable
@@ -1120,7 +1121,7 @@ export class EthereumEngine extends CurrencyEngine<
       nativeNetworkFee = add(nativeNetworkFee, l1Fee)
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
       if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       nativeAmount = mul(totalTxAmount, '-1')
     } else {
@@ -1128,14 +1129,14 @@ export class EthereumEngine extends CurrencyEngine<
       // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
       if (!skipChecks && gt(parentNetworkFee, nativeBalance)) {
         throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee: parentNetworkFee
+          networkFee: parentNetworkFee,
+          tokenId: null
         })
       }
       const balanceToken =
         this.walletLocalData.totalBalances[currencyCode] ?? '0'
       if (!skipChecks && gt(nativeAmount, balanceToken)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = mul(nativeAmount, '-1')
@@ -1162,7 +1163,7 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '', // txid
       walletId: this.walletId
     }
@@ -1338,7 +1339,7 @@ export class EthereumEngine extends CurrencyEngine<
   async accelerate(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction | null> {
-    const { currencyCode } = edgeTransaction
+    const { currencyCode, tokenId } = edgeTransaction
 
     const txOtherParams = asMaybe(asEthereumTxOtherParams)(
       edgeTransaction.otherParams
@@ -1429,7 +1430,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (currencyCode === this.currencyInfo.currencyCode) {
       totalTxAmount = add(nativeNetworkFee, nativeAmount)
       if (gt(totalTxAmount, parentNativeBalance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       nativeAmount = mul(totalTxAmount, '-1')
     } else {
@@ -1437,14 +1438,14 @@ export class EthereumEngine extends CurrencyEngine<
       // Check if there's enough parent currency to pay the transaction fee, and if not return the parent currency code and amount
       if (gt(nativeNetworkFee, parentNativeBalance)) {
         throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee: nativeNetworkFee
+          networkFee: nativeNetworkFee,
+          tokenId
         })
       }
       const balanceToken =
         this.walletLocalData.totalBalances[currencyCode] ?? '0'
       if (gt(nativeAmount, balanceToken)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = mul(nativeAmount, '-1')

@@ -24,7 +24,11 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
+import {
+  asMaybeContractLocation,
+  makeMetaTokens,
+  validateToken
+} from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
@@ -149,9 +153,14 @@ export class EosTools implements EdgeCurrencyTools {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = parseUriCommon(this.currencyInfo, uri, {
-      [this.networkInfo.uriProtocol]: true
-    })
+    const { edgeParsedUri } = parseUriCommon(
+      this.currencyInfo,
+      uri,
+      {
+        [this.networkInfo.uriProtocol]: true
+      },
+      this.builtinTokens
+    )
 
     if (!checkAddress(edgeParsedUri.publicAddress ?? '')) {
       throw new Error('InvalidPublicAddressError')
@@ -174,7 +183,8 @@ export class EosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens
+        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

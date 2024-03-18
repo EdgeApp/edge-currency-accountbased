@@ -426,7 +426,7 @@ export class BinanceEngine extends CurrencyEngine<
     let totalTxAmount = '0'
     totalTxAmount = add(nativeAmount, nativeNetworkFee)
     if (gt(totalTxAmount, balanceBnb)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId: null })
     }
     nativeAmount = mul(totalTxAmount, '-1')
 

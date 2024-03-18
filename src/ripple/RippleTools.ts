@@ -21,7 +21,7 @@ import {
 import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { validateToken } from '../common/tokenHelpers'
+import { makeMetaTokens, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
@@ -154,7 +154,8 @@ export class RippleTools implements EdgeCurrencyTools {
     const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
-      networks
+      networks,
+      this.builtinTokens
     )
     const valid = isValidAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
@@ -180,7 +181,8 @@ export class RippleTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens
+        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

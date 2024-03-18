@@ -180,8 +180,8 @@ export class EthereumTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-      currencyCode || this.currencyInfo.currencyCode,
+      this.builtinTokens,
+      currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
 
@@ -272,16 +272,16 @@ export class EthereumTools implements EdgeCurrencyTools {
               ? biggyScience(parameters.uint256)
               : edgeParsedUri.nativeAmount
 
-          // Get meta token from contract address
-          const metaToken = this.currencyInfo.metaTokens.find(
-            metaToken => metaToken.contractAddress === contractAddress
+          // Get token from contract address
+          const edgeToken = Object.values(this.builtinTokens).find(
+            token => token.networkLocation?.contractAddress === contractAddress
           )
 
-          // If there is a currencyCode param, the metaToken must be found
+          // If there is a currencyCode param, the token must be found
           // and it's currency code must matching the currencyCode param.
           if (
             currencyCode != null &&
-            (metaToken == null || metaToken.currencyCode !== currencyCode)
+            (edgeToken == null || edgeToken.currencyCode !== currencyCode)
           ) {
             throw new Error('InternalErrorInvalidCurrencyCode')
           }
@@ -298,7 +298,7 @@ export class EthereumTools implements EdgeCurrencyTools {
 
           return {
             ...edgeParsedUri,
-            currencyCode: metaToken?.currencyCode,
+            currencyCode: edgeToken?.currencyCode,
             nativeAmount,
             publicAddress
           }
@@ -337,7 +337,8 @@ export class EthereumTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens
+        customTokens,
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

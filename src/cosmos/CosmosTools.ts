@@ -171,6 +171,7 @@ export class CosmosTools implements EdgeCurrencyTools {
       this.currencyInfo,
       uri,
       networks,
+      this.builtinTokens,
       currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
@@ -203,7 +204,8 @@ export class CosmosTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode ?? this.currencyInfo.currencyCode,
         this.currencyInfo,
-        customTokens
+        customTokens,
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')
