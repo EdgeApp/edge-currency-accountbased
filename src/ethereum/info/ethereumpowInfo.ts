@@ -66,7 +66,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  alethioCurrencies: null,
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ethereumpowMnemonic',
   pluginRegularKeyName: 'ethereumpowKey',

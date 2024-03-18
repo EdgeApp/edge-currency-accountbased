@@ -198,7 +198,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 9000,
-  alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'avalancheMnemonic',
   pluginRegularKeyName: 'avalancheKey',

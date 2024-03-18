@@ -1110,11 +1110,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  alethioCurrencies: {
-    // object or null
-    native: 'ether',
-    token: 'token'
-  },
   amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',

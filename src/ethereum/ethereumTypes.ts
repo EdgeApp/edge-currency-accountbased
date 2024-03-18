@@ -23,7 +23,6 @@ export interface EthereumInitOptions {
   evmScanApiKey?: string | string[]
   infuraProjectId?: string
   blockchairApiKey?: string
-  alethioApiKey?: string
   amberdataApiKey?: string
   gasStationApiKey?: string
   quiknodeApiKey?: string
@@ -36,7 +35,6 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   blockcypherApiKey: asOptional(asString),
   infuraProjectId: asOptional(asString),
   blockchairApiKey: asOptional(asString),
-  alethioApiKey: asOptional(asString),
   amberdataApiKey: asOptional(asString),
   gasStationApiKey: asOptional(asString),
   quiknodeApiKey: asOptional(asString),
@@ -69,10 +67,6 @@ export interface ChainParams {
 export interface EthereumNetworkInfo {
   networkAdapterConfigs: NetworkAdapterConfig[]
   feeUpdateFrequencyMs?: number
-  alethioCurrencies: {
-    native: string
-    token: string
-  } | null
   amberDataBlockchainId: string
   chainParams: ChainParams
   supportsEIP1559?: boolean
@@ -301,32 +295,6 @@ export const asEthereumWalletOtherData = asObject({
 export type EthereumWalletOtherData = ReturnType<
   typeof asEthereumWalletOtherData
 >
-
-export interface AlethioTokenTransferAttributes {
-  blockCreationTime: number
-  symbol: string
-  fee: string | undefined
-  value: string
-  globalRank: number[]
-}
-
-export interface AlethioTransactionDataObj {
-  data: { id: string }
-  links: { related: string }
-}
-
-export interface AlethioTransactionRelationships {
-  from: AlethioTransactionDataObj
-  to: AlethioTransactionDataObj
-  transaction: AlethioTransactionDataObj
-  token: AlethioTransactionDataObj
-}
-
-export interface AlethioTokenTransfer {
-  type: string
-  attributes: AlethioTokenTransferAttributes
-  relationships: AlethioTransactionRelationships
-}
 
 export const asBlockbookBlockHeight = asObject({
   blockbook: asObject({

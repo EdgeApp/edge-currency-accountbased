@@ -72,7 +72,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: true,
   hdPathCoinType: 60,
-  alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'baseMnemonic',
   pluginRegularKeyName: 'baseKey',

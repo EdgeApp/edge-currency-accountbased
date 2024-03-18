@@ -50,7 +50,6 @@ const networkInfo: EthereumNetworkInfo = {
       servers: ['https://blockscout.com/rsk/mainnet']
     }
   ],
-  alethioCurrencies: null,
   amberDataBlockchainId: '', // Only used for ETH right now
   uriNetworks: ['rsk', 'rbtc'],
   ercTokenStandard: 'RRC20',
