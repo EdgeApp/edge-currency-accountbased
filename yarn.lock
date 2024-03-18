@@ -3456,7 +3456,7 @@ crypto-js@^3.1.9-1:
   resolved "https://registry.yarnpkg.com/crypto-js/-/crypto-js-3.3.0.tgz#846dd1cce2f68aacfa156c8578f926a609b7976b"
   integrity sha512-DIT51nX0dCfKltpRiXV+/TVZq+Qq2NgF4644+K7Ttnla7zEzqc+kjJyiB96BHNyUTBxyjzRcZYpUdZa+QAqi6Q==
 
-currency-codes@^1.1.2:
+currency-codes@^1.5.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/currency-codes/-/currency-codes-1.5.1.tgz#7ed12dc00be91414937c71855ff5ea6059b88d47"
   integrity sha512-hqy8vtlIYKzO6pe2TE0V4/riZALIc7nhtE9cvxk5FDRCvfGplgzUvpTmZlMsyO+NeK5U41j+sQXJOo8l8v9kdg==
@@ -3740,16 +3740,16 @@ ed25519@0.0.4:
     bindings "^1.2.1"
     nan "^2.0.9"
 
-edge-core-js@^1.12.0:
-  version "1.12.0"
-  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.12.0.tgz#e3f431c2aecc6771c43a5fbad23c34eba15e95e5"
-  integrity sha512-T26uHPhyHsJOQwpup+l0PHTQCYm/ishPXw+JQh1Vfd2eqAi9QA/U6jk0oOfCvcRFsDKNC7Yhp2WYj+JQ5tM7FQ==
+edge-core-js@^1.14.0:
+  version "1.14.0"
+  resolved "https://registry.yarnpkg.com/edge-core-js/-/edge-core-js-1.14.0.tgz#16569cf6a24b50e26e0105eca554bd041ce15a01"
+  integrity sha512-P2yGTyu4eqoFUHFnrmkemxJrFFezql+cL2ZZ01JDyRJFgeAwy9zlEmg1Aj4IgOq8hzoNUFTd68fKTVPZZRDKEA==
   dependencies:
     aes-js "^3.1.0"
     base-x "^4.0.0"
     biggystring "^4.0.0"
     cleaners "^0.3.14"
-    currency-codes "^1.1.2"
+    currency-codes "^1.5.1"
     disklet "^0.5.2"
     edge-sync-client "^0.2.8"
     elliptic "^6.4.0"
@@ -3762,7 +3762,7 @@ edge-core-js@^1.12.0:
     rfc4648 "^1.5.3"
     scrypt-js "^2.0.3"
     serverlet "^0.1.2"
-    yaob "^0.3.11"
+    yaob "^0.3.12"
     yavent "^0.1.3"
 
 edge-sync-client@^0.2.8:
@@ -8746,10 +8746,10 @@ yaml@^1.10.0, yaml@^1.10.2:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz#2301c5ffbf12b467de8da2333a459e29e7920e4b"
   integrity sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==
 
-yaob@^0.3.11, yaob@^0.3.6:
-  version "0.3.11"
-  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.11.tgz#54dc4e03f5edabf7a0701c57e73e97cc69d2fc42"
-  integrity sha512-RRMKxWsjMGF9X7fyPny0w3icGriQCCT7FMtNrmxxyjxQIQn8GB4+CT4SWpgUca82RBvjRt5pRqKmbnvmMfKc9A==
+yaob@^0.3.12, yaob@^0.3.6:
+  version "0.3.12"
+  resolved "https://registry.yarnpkg.com/yaob/-/yaob-0.3.12.tgz#fb37da4749f1202cc96dedeb8763082c914b5e35"
+  integrity sha512-HVXUb7s4ZawrEtpAEpuNwsD6oHCqapY9aCnMEeZnk3lIAlTO85Gw7pT2xzmYy3Q4CKPcG9pCW3h2rgf9vBTuqg==
   dependencies:
     rfc4648 "^1.1.0"
 

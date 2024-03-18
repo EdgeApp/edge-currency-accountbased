@@ -296,6 +296,7 @@ export class PiratechainEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
+      tokenId: null,
       txid: tx.rawTransactionId,
       walletId: this.walletId
     }
@@ -408,6 +409,7 @@ export class PiratechainEngine extends CurrencyEngine<
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }

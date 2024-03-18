@@ -1132,6 +1132,7 @@
           "FIO73pdX8TKfEn4XRnzS6C2T65QW2RtrD6NBNzoAYxUg9D1BtgR5f"
         ],
         "signedTx": "",
+        "tokenId": null,
         "txid": "29eeac4a711ab300a1a0a28497f8a34d30914aff014f266cf3980eb476b352b5",
         "walletId": "FIO_fake_walletId"
       },
@@ -1165,6 +1166,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "d3eb44c524b1125d3ceb838753a153e4a01a1429efaf0a92e03cb652ae31a6f4",
         "walletId": "FIO_fake_walletId"
       },
@@ -1199,6 +1201,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "d3eb44c524b1125d3ceb838753a153e4a01a1429efaf0a92e03cb652ae31a6f4",
         "walletId": "FIO_fake_walletId"
       },
@@ -1234,6 +1237,7 @@
           "FIO73pdX8TKfEn4XRnzS6C2T65QW2RtrD6NBNzoAYxUg9D1BtgR5f"
         ],
         "signedTx": "",
+        "tokenId": null,
         "txid": "0ad3fb998f02c68b60a35d65d2497a91cecd6a9ab0e1d0299e7c6402cc46d20e",
         "walletId": "FIO_fake_walletId"
       },
@@ -1267,6 +1271,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "a6db8b4ef360b6e6db7c71f37f37d1c91666b0755db592d1c5132f966f0ddc17",
         "walletId": "FIO_fake_walletId"
       },
@@ -1301,6 +1306,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "a6db8b4ef360b6e6db7c71f37f37d1c91666b0755db592d1c5132f966f0ddc17",
         "walletId": "FIO_fake_walletId"
       },
@@ -1334,6 +1340,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "7199d9500821ae6a1e46393f6e2e2980f0134f64d233aa04cc1198ebf0b2aa8b",
         "walletId": "FIO_fake_walletId"
       },
@@ -1368,6 +1375,7 @@
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
+        "tokenId": null,
         "txid": "7199d9500821ae6a1e46393f6e2e2980f0134f64d233aa04cc1198ebf0b2aa8b",
         "walletId": "FIO_fake_walletId"
       },
@@ -1403,6 +1411,7 @@
           "FIO73pdX8TKfEn4XRnzS6C2T65QW2RtrD6NBNzoAYxUg9D1BtgR5f"
         ],
         "signedTx": "",
+        "tokenId": null,
         "txid": "b861a733b1f1b89c91912871b6eb3e4b52d54a682f80ebe94629a904971d35b2",
         "walletId": "FIO_fake_walletId"
       }

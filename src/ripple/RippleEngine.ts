@@ -205,6 +205,7 @@ export class XrpEngine extends CurrencyEngine<
             },
             ourReceiveAddresses: [],
             signedTx: '',
+            tokenId: fromTokenId ?? null,
             txid: '',
             walletId: this.walletId
           }
@@ -551,6 +552,7 @@ export class XrpEngine extends CurrencyEngine<
             otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
+            tokenId: null,
             txid: hash.toLowerCase(),
             walletId: this.walletId
           })
@@ -588,6 +590,7 @@ export class XrpEngine extends CurrencyEngine<
             otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
+            tokenId,
             txid: hash.toLowerCase(),
             walletId: this.walletId
           })
@@ -817,7 +820,7 @@ export class XrpEngine extends CurrencyEngine<
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     const parentCurrencyCode = this.currencyInfo.currencyCode
 
@@ -859,6 +862,7 @@ export class XrpEngine extends CurrencyEngine<
         },
         ourReceiveAddresses: [],
         signedTx: '',
+        tokenId: tokenId ?? null,
         txid: '',
         walletId: this.walletId
       }
@@ -976,6 +980,7 @@ export class XrpEngine extends CurrencyEngine<
       ourReceiveAddresses: [], // ourReceiveAddresses
       parentNetworkFee,
       signedTx: '', // signedTx
+      tokenId: tokenId ?? null,
       txid: '', // txid
       walletId: this.walletId
     }

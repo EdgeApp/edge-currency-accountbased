@@ -282,6 +282,7 @@ export class TezosEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses,
       signedTx: '',
+      tokenId: null,
       txid: tx.hash,
       walletId: this.walletId
     }
@@ -482,6 +483,7 @@ export class TezosEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }

@@ -55,6 +55,9 @@ describe(`EOS activation`, function () {
     },
     onStakingStatusChanged() {},
     onNewTokens() {},
+    onTokenBalanceChanged(tokenId, balance) {
+      emitter.emit('onTokenBalanceChange', tokenId, balance)
+    },
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)

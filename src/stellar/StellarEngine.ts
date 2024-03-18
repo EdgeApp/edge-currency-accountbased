@@ -264,6 +264,7 @@ export class StellarEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee: '0',
       signedTx: '',
+      tokenId: null,
       txid: tx.transaction_hash,
       walletId: this.walletId
     }
@@ -577,6 +578,7 @@ export class StellarEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: null,
       txid: '', // txid
       walletId: this.walletId
     }

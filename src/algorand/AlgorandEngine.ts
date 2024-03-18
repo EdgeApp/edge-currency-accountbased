@@ -255,6 +255,7 @@ export class AlgorandEngine extends CurrencyEngine<
     } = tx
 
     let currencyCode: string
+    let tokenId: EdgeTokenId
     let nativeAmount: string
     let networkFee: string
     let parentNetworkFee: string | undefined
@@ -279,6 +280,7 @@ export class AlgorandEngine extends CurrencyEngine<
         }
 
         currencyCode = this.currencyInfo.currencyCode
+        tokenId = null
         break
       }
       case 'axfer': {
@@ -304,6 +306,7 @@ export class AlgorandEngine extends CurrencyEngine<
         const edgeToken: EdgeToken | undefined = this.allTokensMap[assetId]
         if (edgeToken == null) return
         currencyCode = edgeToken.currencyCode
+        tokenId = assetId.toString()
 
         break
       }
@@ -327,6 +330,7 @@ export class AlgorandEngine extends CurrencyEngine<
         }
 
         currencyCode = this.currencyInfo.currencyCode
+        tokenId = null
         break
       }
       default: {
@@ -364,6 +368,7 @@ export class AlgorandEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
+      tokenId,
       txid: id,
       walletId: this.walletId
     }
@@ -565,7 +570,7 @@ export class AlgorandEngine extends CurrencyEngine<
     const note =
       memos[0]?.type === 'text' ? utf8.parse(memos[0].value) : undefined
 
-    const { customNetworkFee } = edgeSpendInfo
+    const { customNetworkFee, tokenId } = edgeSpendInfo
     const customFee = asMaybeCustomFee(customNetworkFee).fee
 
     let rawTx: Transaction
@@ -656,6 +661,7 @@ export class AlgorandEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee,
       signedTx: '',
+      tokenId: tokenId ?? null,
       txid: '',
       walletId: this.walletId
     }

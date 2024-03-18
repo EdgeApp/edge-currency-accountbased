@@ -278,6 +278,7 @@ export class FilecoinEngine extends CurrencyEngine<
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }
@@ -627,6 +628,7 @@ export class FilecoinEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
+      tokenId: null,
       txid: messageDetails.cid,
       walletId: this.walletId
     }
@@ -664,6 +666,7 @@ export class FilecoinEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
+      tokenId: null,
       txid: message.cid,
       walletId: this.walletId
     }

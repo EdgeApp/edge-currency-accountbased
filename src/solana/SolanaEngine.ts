@@ -304,6 +304,7 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
+      tokenId: tokenId ?? null,
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
@@ -767,6 +768,7 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee,
       signedTx: '',
+      tokenId: tokenId ?? null,
       txid: '',
       walletId: this.walletId
     }

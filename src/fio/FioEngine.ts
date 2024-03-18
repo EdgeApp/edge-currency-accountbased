@@ -1581,6 +1581,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       },
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }
@@ -2042,6 +2043,7 @@ export const parseAction = ({
       otherParams,
       ourReceiveAddresses,
       signedTx: '',
+      tokenId: null,
       txid: action.action_trace.trx_id,
       walletId
     }
@@ -2114,6 +2116,7 @@ export const parseAction = ({
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: action.action_trace.trx_id,
       walletId
     }

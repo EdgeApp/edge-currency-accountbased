@@ -232,6 +232,16 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const { from, to, memo, symbol } = act.data
     const exchangeAmount = act.data.amount.toString()
     const currencyCode = symbol
+    const contractAddress = this.allTokens.find(
+      token => token.currencyCode === currencyCode
+    )?.contractAddress
+    if (contractAddress == null) {
+      return 0
+    }
+    const tokenId =
+      currencyCode === this.currencyInfo.currencyCode
+        ? null
+        : contractAddress?.toLowerCase()
     const ourReceiveAddresses = []
     const denom = getDenomination(
       currencyCode,
@@ -274,6 +284,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       ourReceiveAddresses,
       parentNetworkFee: '0',
       signedTx: '',
+      tokenId,
       txid: trxId,
       walletId: this.walletId
     }
@@ -315,6 +326,16 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       const { from, to, memo, amount, symbol } = action.act.data
       const exchangeAmount = amount.toString()
       const currencyCode = symbol
+      const contractAddress = this.allTokens.find(
+        token => token.currencyCode === currencyCode
+      )?.contractAddress
+      if (contractAddress == null) {
+        return 0
+      }
+      const tokenId =
+        currencyCode === this.currencyInfo.currencyCode
+          ? null
+          : contractAddress?.toLowerCase()
 
       const denom = getDenomination(
         currencyCode,
@@ -355,6 +376,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         ourReceiveAddresses,
         parentNetworkFee: '0',
         signedTx: '',
+        tokenId,
         txid,
         walletId: this.walletId
       }
@@ -886,6 +908,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         },
         ourReceiveAddresses: [],
         signedTx: '',
+        tokenId: null,
         txid: '',
         walletId: this.walletId
       }
@@ -956,7 +979,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     const tokenInfo = this.getTokenInfo(currencyCode)
     if (tokenInfo == null) throw new Error('Unable to find token info')
@@ -1054,6 +1077,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: tokenId ?? null,
       txid: '', // txid
       walletId: this.walletId
     }
