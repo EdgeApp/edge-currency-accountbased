@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: Update subscan transfers endpoint url
+- fixed: Correctly use the ETH transaction hash as txid for FEVM transactions to fix duplicate transaction bug on Filecoin FEVM
 
 ## 3.2.5 (2024-03-11)
 
