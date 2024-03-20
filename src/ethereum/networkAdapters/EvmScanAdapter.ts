@@ -1,5 +1,9 @@
 import { add, mul, sub } from 'biggystring'
-import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeConfirmationState,
+  EdgeTokenId,
+  EdgeTransaction
+} from 'edge-core-js/types'
 
 import { asIntegerString } from '../../common/types'
 import { decimalToHex, pickRandom, safeErrorMessage } from '../../common/utils'
@@ -414,9 +418,13 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     let blockHeight = parseInt(tx.blockNumber)
     if (blockHeight < 0) blockHeight = 0
 
+    const confirmations: EdgeConfirmationState | undefined =
+      tx.isError === '1' ? 'failed' : undefined
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight,
       currencyCode,
+      confirmations,
       date: parseInt(tx.timeStamp),
       feeRateUsed:
         gasPrice != null
