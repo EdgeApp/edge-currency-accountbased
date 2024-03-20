@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update subscan transfers endpoint url
+
 ## 3.2.5 (2024-03-11)
 
 - fixed: Performance issue with getMaxSpendable caused by recursive calls

@@ -236,7 +236,7 @@ export class PolkadotEngine extends CurrencyEngine<
       let count = 0
       let transfers = []
       try {
-        const response = await this.fetchSubscan('/scan/transfers', payload)
+        const response = await this.fetchSubscan('/v2/scan/transfers', payload)
         const cleanResponse = asTransactions(response.data)
         count = cleanResponse.count
         transfers = cleanResponse.transfers
