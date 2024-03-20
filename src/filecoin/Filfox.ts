@@ -51,6 +51,7 @@ export const asFilfoxMessage = asObject({
 export type FilfoxMessageDetails = ReturnType<typeof asFilfoxMessageDetails>
 export const asFilfoxMessageDetails = asObject({
   cid: asString,
+  ethTransactionHash: asString,
   height: asNumber,
   timestamp: asNumber,
   from: asString,

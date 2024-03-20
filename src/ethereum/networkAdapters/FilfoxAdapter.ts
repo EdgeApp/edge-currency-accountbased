@@ -299,7 +299,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
-      txid: messageDetails.cid,
+      txid: messageDetails.ethTransactionHash,
       walletId: this.ethEngine.walletId
     }
 
