@@ -6,7 +6,9 @@ import type { CardanoNetworkInfo } from './cardanoTypes'
 
 const networkInfo: CardanoNetworkInfo = {
   networkId: 0,
-  rpcServer: 'https://preprod.koios.rest'
+  koiosServer: 'https://preprod.koios.rest',
+  blockfrostServer: 'https://cardano-preprod.blockfrost.io',
+  maestroServer: 'https://preprod.gomaestro-api.org'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

@@ -4,6 +4,7 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
   asTuple,
   asUnknown,
@@ -14,7 +15,9 @@ import { asWalletInfo } from '../common/types'
 
 export interface CardanoNetworkInfo {
   networkId: number
-  rpcServer: string
+  koiosServer: string
+  blockfrostServer: string
+  maestroServer: string
 }
 
 export type SafeCardanoWalletInfo = ReturnType<typeof asSafeCardanoWalletInfo>
@@ -252,6 +255,8 @@ export const asKoiosNetworkParameters = asObject({
 export type EpochParams = ReturnType<typeof asKoiosNetworkParameters>
 
 export const asCardanoInitOptions = asObject({
-  koiosApiKey: asString
+  koiosApiKey: asOptional(asString),
+  blockfrostProjectId: asOptional(asString),
+  maestroApiKey: asOptional(asString)
 })
 export type CardanoInitOptions = ReturnType<typeof asCardanoInitOptions>

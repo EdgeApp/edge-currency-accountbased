@@ -1,6 +1,6 @@
 import * as Cardano from '@emurgo/cardano-serialization-lib-nodejs'
 import { add, gt, mul, sub } from 'biggystring'
-import { asMaybe, asString, asTuple } from 'cleaners'
+import { asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -18,7 +18,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs, getFetchCors } from '../common/utils'
+import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
 import { CardanoTools } from './CardanoTools'
 import {
   asCardanoInitOptions,
@@ -77,7 +77,7 @@ export class CardanoEngine extends CurrencyEngine<
 
   async fetchGet(method: string): Promise<unknown> {
     const res = await this.fetchCors(
-      `${this.networkInfo.rpcServer}/api/v1/${method}`
+      `${this.networkInfo.koiosServer}/api/v1/${method}`
     )
     if (!res.ok) {
       const message = await res.text()
@@ -94,7 +94,7 @@ export class CardanoEngine extends CurrencyEngine<
       body: JSON.stringify(body)
     }
     const res = await this.fetchCors(
-      `${this.networkInfo.rpcServer}/api/v1/${method}`,
+      `${this.networkInfo.koiosServer}/api/v1/${method}`,
       opts
     )
     if (!res.ok) {
@@ -118,7 +118,7 @@ export class CardanoEngine extends CurrencyEngine<
       body: body
     }
     const res = await this.fetchCors(
-      `${this.networkInfo.rpcServer}/api/v1/${method}`,
+      `${this.networkInfo.koiosServer}/api/v1/${method}`,
       opts
     )
     if (!res.ok) {
@@ -127,6 +127,75 @@ export class CardanoEngine extends CurrencyEngine<
     }
     const json = await res.json()
     return json
+  }
+
+  async multiBroadcast(signedTx: Uint8Array): Promise<string> {
+    const opts = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/cbor'
+      },
+      body: signedTx
+    }
+    const broadcast = async (
+      name: string,
+      url: string,
+      headers: JsonObject
+    ): Promise<string> => {
+      const res = await this.fetchCors(url, {
+        ...opts,
+        headers: { ...opts.headers, ...headers }
+      })
+      if (!res.ok) {
+        const message = await res.text()
+        throw new Error(`${name} error: ${message}`)
+      }
+      const txid = asString(await res.text())
+      this.log.warn(`${name} broadcast success`)
+      return txid
+    }
+
+    const koios = async (): Promise<string> => {
+      if (this.initOptions.koiosApiKey == null) {
+        throw new Error('Missing koiosApiKey')
+      }
+      const headers = {
+        Authorization: `Bearer ${this.initOptions.koiosApiKey}`
+      }
+      return await broadcast(
+        'Koios',
+        `${this.networkInfo.koiosServer}/api/v1/submittx`,
+        headers
+      )
+    }
+    const blockfrost = async (): Promise<string> => {
+      if (this.initOptions.blockfrostProjectId == null) {
+        throw new Error('Missing blockfrostProjectId')
+      }
+      const headers = {
+        project_id: `${this.initOptions.blockfrostProjectId}`
+      }
+      return await broadcast(
+        'Blockfrost',
+        `${this.networkInfo.blockfrostServer}/api/v0/tx/submit`,
+        headers
+      )
+    }
+    const maestro = async (): Promise<string> => {
+      if (this.initOptions.maestroApiKey == null) {
+        throw new Error('Missing maestroApiKey')
+      }
+      const headers = {
+        'api-key': `${this.initOptions.maestroApiKey}`
+      }
+      return await broadcast(
+        'Maestro',
+        `${this.networkInfo.maestroServer}/v1/txmanager`,
+        headers
+      )
+    }
+
+    return await promiseAny([blockfrost(), koios(), maestro()])
   }
 
   async queryBlockheight(): Promise<void> {
@@ -463,12 +532,9 @@ export class CardanoEngine extends CurrencyEngine<
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
     try {
-      const raw = await this.fetchPostAuthenticated(
-        'submittx',
+      const txid = await this.multiBroadcast(
         base16.parse(edgeTransaction.signedTx)
       )
-      const txid = asMaybe(asString)(raw)
-      if (txid == null) throw new Error(String(raw))
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
