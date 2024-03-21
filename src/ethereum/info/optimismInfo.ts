@@ -183,16 +183,7 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 10,
     name: 'Optimism'
   },
-  optimismRollupParams: {
-    gasPriceL1Wei: '1000000000',
-    gasPricel1BaseFeeMethod: '0x519b4bd3',
-    maxGasPriceL1Multiplier: '1.25',
-    fixedOverhead: '2100',
-    dynamicOverhead: '1000000',
-    oracleContractAddress: '0x420000000000000000000000000000000000000F',
-    dynamicOverheadMethod:
-      '0xf45e65d800000000000000000000000000000000000000000000000000000000'
-  },
+  optimismRollup: true,
   hdPathCoinType: 60,
   alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',

@@ -76,7 +76,7 @@ export interface EthereumNetworkInfo {
   amberDataBlockchainId: string
   chainParams: ChainParams
   supportsEIP1559?: boolean
-  optimismRollupParams?: OptimismRollupParams
+  optimismRollup?: boolean
   arbitrumRollupParams?: {
     nodeInterfaceAddress: string
   }
@@ -167,25 +167,19 @@ export interface EthereumMiningFees {
 }
 
 export interface OptimismRollupParams {
-  gasPriceL1Wei: string
-  gasPricel1BaseFeeMethod: string
-  maxGasPriceL1Multiplier: string
-  fixedOverhead: string
-  dynamicOverhead: string
-  oracleContractAddress: string
-  dynamicOverheadMethod: string
+  baseFee: string
+  baseFeeScalar: string
+  blobBaseFee: string
+  blobBaseFeeScalar: string
 }
 
-export interface CalcOptimismRollupFeeParams {
+export interface CalcOptimismRollupFeeParams extends OptimismRollupParams {
   nonce?: string
   gasLimit: string
   to: string
   value?: string
   data?: string | null | undefined
   chainParams: ChainParams
-  dynamicOverhead: string
-  fixedOverhead: string
-  gasPriceL1Wei: string
 }
 
 export const asEvmScancanTokenTransaction = asObject({

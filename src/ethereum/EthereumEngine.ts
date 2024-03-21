@@ -117,8 +117,13 @@ export class EthereumEngine extends CurrencyEngine<
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
-    if (this.networkInfo.optimismRollupParams != null) {
-      this.optimismRollupParams = this.networkInfo.optimismRollupParams
+    if (this.networkInfo.optimismRollup === true) {
+      this.optimismRollupParams = {
+        baseFee: '1000000000',
+        baseFeeScalar: '1368',
+        blobBaseFee: '1',
+        blobBaseFeeScalar: '659851'
+      }
     }
     this.networkFees = this.networkInfo.defaultNetworkFees
     this.fetchCors = getFetchCors(env.io)
@@ -545,11 +550,13 @@ export class EthereumEngine extends CurrencyEngine<
   async updateOptimismRollupParams(): Promise<void> {
     if (this.optimismRollupParams == null) return
 
-    // L1GasPrice
+    const oracleContractAddress = '0x420000000000000000000000000000000000000F'
+
+    // Base fee
     try {
       const params = {
-        to: this.optimismRollupParams.oracleContractAddress,
-        data: this.optimismRollupParams.gasPricel1BaseFeeMethod
+        to: oracleContractAddress,
+        data: '0x519b4bd3' // L1 base fee method
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
@@ -559,36 +566,76 @@ export class EthereumEngine extends CurrencyEngine<
 
       this.optimismRollupParams = {
         ...this.optimismRollupParams,
-        gasPriceL1Wei: ceil(
+        baseFee: ceil(
           mul(
             hexToDecimal(result.result),
-            this.optimismRollupParams.maxGasPriceL1Multiplier
+            '1.25' // maxGasPriceL1Multiplier
           ),
           0
         )
       }
     } catch (e: any) {
-      this.log.warn('Failed to update l1GasPrice', e)
+      this.log.warn('Failed to update base fee', e)
     }
 
-    // Dynamic overhead (scalar)
+    // Blob base fee
     try {
       const params = {
-        to: this.optimismRollupParams.oracleContractAddress,
-        data: this.optimismRollupParams.dynamicOverheadMethod
+        to: oracleContractAddress,
+        data: '0xf8206140' // L1 Blob base fee method
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
         'latest'
       ])
-
       const result = asRpcResultString(response.result)
+
       this.optimismRollupParams = {
         ...this.optimismRollupParams,
-        dynamicOverhead: hexToDecimal(result.result)
+        blobBaseFee: ceil(hexToDecimal(result.result), 0)
       }
     } catch (e: any) {
-      this.log.warn('Failed to update dynamicOverhead', e)
+      this.log.warn('Failed to update blob base fee', e)
+    }
+
+    // Base fee scalar
+    try {
+      const params = {
+        to: oracleContractAddress,
+        data: '0xc5985918' // base fee scalar method
+      }
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latest'
+      ])
+      const result = asRpcResultString(response.result)
+
+      this.optimismRollupParams = {
+        ...this.optimismRollupParams,
+        baseFeeScalar: hexToDecimal(result.result)
+      }
+    } catch (e: any) {
+      this.log.warn('Failed to update base fee scalar', e)
+    }
+
+    // Blob base fee scalar
+    try {
+      const params = {
+        to: oracleContractAddress,
+        data: '0x68d5dca6' // blob base fee method
+      }
+      const response = await this.ethNetwork.multicastRpc('eth_call', [
+        params,
+        'latest'
+      ])
+      const result = asRpcResultString(response.result)
+
+      this.optimismRollupParams = {
+        ...this.optimismRollupParams,
+        blobBaseFeeScalar: hexToDecimal(result.result)
+      }
+    } catch (e: any) {
+      this.log.warn('Failed to update blob base fee scalar', e)
     }
   }
 
@@ -807,14 +854,15 @@ export class EthereumEngine extends CurrencyEngine<
         const maxSpendableBeforeRollupFee = sub(balance, primaryNetworkFee)
 
         const txData: CalcOptimismRollupFeeParams = {
+          baseFee: this.optimismRollupParams.baseFee,
+          baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
+          blobBaseFee: this.optimismRollupParams.blobBaseFee,
+          blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
           nonce: this.otherData.unconfirmedNextNonce,
-          gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
           gasLimit: miningFees.gasLimit,
           to: publicAddress,
           value: decimalToHex(maxSpendableBeforeRollupFee),
-          chainParams: this.networkInfo.chainParams,
-          dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
-          fixedOverhead: this.optimismRollupParams.fixedOverhead
+          chainParams: this.networkInfo.chainParams
         }
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
@@ -1036,15 +1084,16 @@ export class EthereumEngine extends CurrencyEngine<
     //  Optimism-style L1 fees are deducted automatically from the account. Arbitrum-style L1 gas must be included in the transaction object.
     if (this.optimismRollupParams != null) {
       const txData: CalcOptimismRollupFeeParams = {
+        baseFee: this.optimismRollupParams.baseFee,
+        baseFeeScalar: this.optimismRollupParams.baseFeeScalar,
+        blobBaseFee: this.optimismRollupParams.blobBaseFee,
+        blobBaseFeeScalar: this.optimismRollupParams.blobBaseFeeScalar,
         nonce: otherParams.nonceUsed,
-        gasPriceL1Wei: this.optimismRollupParams.gasPriceL1Wei,
         gasLimit: otherParams.gas,
         to: otherParams.to[0],
         value: value,
         data: otherParams.data,
-        chainParams: this.networkInfo.chainParams,
-        dynamicOverhead: this.optimismRollupParams.dynamicOverhead,
-        fixedOverhead: this.optimismRollupParams.fixedOverhead
+        chainParams: this.networkInfo.chainParams
       }
       l1Fee = calcOptimismRollupFees(txData)
     } else if (this.networkInfo.arbitrumRollupParams != null) {
