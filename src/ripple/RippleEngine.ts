@@ -813,7 +813,7 @@ export class XrpEngine extends CurrencyEngine<
         },
         ourReceiveAddresses: [],
         signedTx: '',
-        tokenId: tokenId ?? null,
+        tokenId,
         txid: '',
         walletId: this.walletId
       }
@@ -932,7 +932,7 @@ export class XrpEngine extends CurrencyEngine<
       ourReceiveAddresses: [], // ourReceiveAddresses
       parentNetworkFee,
       signedTx: '', // signedTx
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '', // txid
       walletId: this.walletId
     }
@@ -1051,7 +1051,7 @@ export class XrpEngine extends CurrencyEngine<
       throw new Error(
         `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
       )
-    const { wallet, tokenId } = paymentInfo ?? {}
+    const { wallet, tokenId } = paymentInfo ?? { tokenId: null }
     if (tokenId != null)
       throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
     if (wallet?.id !== this.walletId)
@@ -1086,7 +1086,7 @@ export class XrpEngine extends CurrencyEngine<
           const activationTx = await wallet.makeSpend({
             spendTargets: [],
             metadata,
-            tokenId: tokenId ?? null,
+            tokenId,
             otherParams: { activateTokenId }
           })
           const signedTx = await wallet.signTx(activationTx)

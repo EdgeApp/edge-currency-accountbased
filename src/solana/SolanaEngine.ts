@@ -285,7 +285,7 @@ export class SolanaEngine extends CurrencyEngine<
   ): void {
     const ourReceiveAddresses = []
 
-    const { amount, networkFee, parentNetworkFee, tokenId } = amounts
+    const { amount, networkFee, parentNetworkFee, tokenId = null } = amounts
     const currencyCode =
       tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
 
@@ -304,7 +304,7 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }

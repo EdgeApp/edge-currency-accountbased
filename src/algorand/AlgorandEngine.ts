@@ -758,7 +758,7 @@ export class AlgorandEngine extends CurrencyEngine<
       throw new Error(
         `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
       )
-    const { tokenId, wallet } = paymentInfo ?? {}
+    const { tokenId, wallet } = paymentInfo ?? { tokenId: null }
     if (tokenId != null)
       throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
     if (wallet?.id !== this.walletId)
@@ -797,7 +797,7 @@ export class AlgorandEngine extends CurrencyEngine<
     }
 
     const out = {
-      paymentTokenId: tokenId ?? null,
+      paymentTokenId: tokenId,
       paymentWalletId: this.walletId,
       fromNativeAmount: '0',
       networkFee: {

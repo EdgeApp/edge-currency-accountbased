@@ -8,7 +8,7 @@ import {
   asOptional,
   asString
 } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
 
 import { EthereumNetworkUpdate, getFeeRateUsed } from '../EthereumNetwork'
 import { EthereumTxOtherParams } from '../ethereumTypes'
@@ -101,14 +101,17 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
       scanTx.from.hash.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-    const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
-      tokenId =>
-        this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
-    )
-    if (tokenTx && knownTokenId === undefined) {
-      throw new Error('Unknown token')
+    let tokenId: EdgeTokenId = null
+    if (tokenTx) {
+      const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
+        tokenId =>
+          this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
+      )
+      if (knownTokenId === undefined) {
+        throw new Error('Unknown token')
+      }
+      tokenId = knownTokenId
     }
-    const tokenId = tokenTx ? knownTokenId : null
     const gasPrice = scanTx.gas_price
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, scanTx.gas_used) : '0'
@@ -166,7 +169,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid,
       walletId: this.ethEngine.walletId
     }
