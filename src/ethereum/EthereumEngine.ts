@@ -117,8 +117,12 @@ export class EthereumEngine extends CurrencyEngine<
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
-    if (this.networkInfo.optimismRollupParams != null) {
-      this.optimismRollupParams = this.networkInfo.optimismRollupParams
+    if (this.networkInfo.optimismRollup === true) {
+      this.optimismRollupParams = {
+        gasPriceL1Wei: '1000000000',
+        fixedOverhead: '2100',
+        dynamicOverhead: '1000000'
+      }
     }
     this.networkFees = this.networkInfo.defaultNetworkFees
     this.fetchCors = getFetchCors(env.io)
@@ -545,11 +549,13 @@ export class EthereumEngine extends CurrencyEngine<
   async updateOptimismRollupParams(): Promise<void> {
     if (this.optimismRollupParams == null) return
 
+    const oracleContractAddress = '0x420000000000000000000000000000000000000F'
+
     // L1GasPrice
     try {
       const params = {
-        to: this.optimismRollupParams.oracleContractAddress,
-        data: this.optimismRollupParams.gasPricel1BaseFeeMethod
+        to: oracleContractAddress,
+        data: '0x519b4bd3' // L1 base fee method
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
@@ -562,7 +568,7 @@ export class EthereumEngine extends CurrencyEngine<
         gasPriceL1Wei: ceil(
           mul(
             hexToDecimal(result.result),
-            this.optimismRollupParams.maxGasPriceL1Multiplier
+            '1.25' // maxGasPriceL1Multiplier
           ),
           0
         )
@@ -574,8 +580,8 @@ export class EthereumEngine extends CurrencyEngine<
     // Dynamic overhead (scalar)
     try {
       const params = {
-        to: this.optimismRollupParams.oracleContractAddress,
-        data: this.optimismRollupParams.dynamicOverheadMethod
+        to: oracleContractAddress,
+        data: '0xf45e65d8' // dynamic overhead method
       }
       const response = await this.ethNetwork.multicastRpc('eth_call', [
         params,
