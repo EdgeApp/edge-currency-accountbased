@@ -1,6 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
-import { add, ceil, div, gte, lt, lte, mul, sub } from 'biggystring'
+import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
 import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
@@ -207,7 +207,7 @@ export function calcMiningFees(
   return out
 }
 
-const MAX_SIGNATURE_COST = '1040' // (32 + 32 + 1) * 16 max cost for adding r, s, v signatures to raw transaction
+const MAX_SIGNATURE_COST = 1040 // (32 + 32 + 1) * 16 max cost for adding r, s, v signatures to raw transaction
 
 // This is a naive (optimistic??) implementation but is good enough as an
 // estimate since it isn't possible to calculate this exactly without having
@@ -216,11 +216,12 @@ export const calcOptimismRollupFees = (
   params: CalcOptimismRollupFeeParams
 ): string => {
   const {
+    baseFee,
+    baseFeeScalar,
+    blobBaseFee,
+    blobBaseFeeScalar,
     chainParams,
     data,
-    dynamicOverhead,
-    fixedOverhead,
-    gasPriceL1Wei,
     gasLimit,
     nonce,
     to,
@@ -231,7 +232,7 @@ export const calcOptimismRollupFees = (
   const tx = TransactionFactory.fromTxData(
     {
       nonce: nonce != null ? decimalToHex(nonce) : undefined,
-      gasPrice: decimalToHex(gasPriceL1Wei),
+      gasPrice: decimalToHex(baseFee),
       gasLimit: decimalToHex(gasLimit),
       to,
       value,
@@ -239,6 +240,8 @@ export const calcOptimismRollupFees = (
     },
     { common }
   )
+
+  // Fee calculation formula from https://specs.optimism.io/protocol/exec-engine.html#ecotone-l1-cost-fee-changes-eip-4844-da
 
   const txRaw = tx.raw()
   const byteGroups = flatMap(txRaw)
@@ -253,23 +256,26 @@ export const calcOptimismRollupFees = (
     throw new Error('Invalid rawTx string')
   }
 
-  let rawTxCost = 0
+  let txCompressedSize = 0
   for (let i = 0; i < unsignedRawTxBytesArray.length; i++) {
     if (unsignedRawTxBytesArray[i] === '00') {
-      rawTxCost += 4 // cost for zero byte
+      txCompressedSize += 4 // cost for zero byte
     } else {
-      rawTxCost += 16 // cost for non-zero byte
+      txCompressedSize += 16 // cost for non-zero byte
     }
   }
 
-  const gasUsed = add(
-    add(rawTxCost.toString(), fixedOverhead),
-    MAX_SIGNATURE_COST
+  txCompressedSize = txCompressedSize + MAX_SIGNATURE_COST
+
+  const totalBaseFee = mul(baseFeeScalar, baseFee)
+  const totalBlobFee = mul(blobBaseFeeScalar, blobBaseFee)
+  const weightedGasPrice = add(mul('16', totalBaseFee), totalBlobFee)
+
+  const total = div(
+    mul(txCompressedSize.toString(), weightedGasPrice),
+    '16000000',
+    0
   )
-
-  const scalar = div(dynamicOverhead, '1000000', 18)
-
-  const total = ceil(mul(mul(gasPriceL1Wei, gasUsed), scalar), 0)
 
   return total
 }

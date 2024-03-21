@@ -167,9 +167,10 @@ export interface EthereumMiningFees {
 }
 
 export interface OptimismRollupParams {
-  gasPriceL1Wei: string
-  fixedOverhead: string
-  dynamicOverhead: string
+  baseFee: string
+  baseFeeScalar: string
+  blobBaseFee: string
+  blobBaseFeeScalar: string
 }
 
 export interface CalcOptimismRollupFeeParams extends OptimismRollupParams {
