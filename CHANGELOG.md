@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Added initOptions to FilecoinEngine for GLIF API key to fix sync issues
+
 ## 3.2.7 (2024-03-21)
 
 - changed: Use EIP-4844 fee calculation for Optimism and Base

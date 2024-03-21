@@ -27,6 +27,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { upgradeMemos } from '../common/upgradeMemos'
 import { FilecoinTools } from './FilecoinTools'
 import {
+  asFilecoinInitOptions,
   asFilecoinPrivateKeys,
   asFilecoinTxOtherParams,
   asFilecoinWalletOtherData,
@@ -85,9 +86,11 @@ export class FilecoinEngine extends CurrencyEngine<
     this.networkInfo = networkInfo
     this.pluginId = this.currencyInfo.pluginId
 
+    const initOptions = asFilecoinInitOptions(env.initOptions)
+
     this.filRpc = new RPC(Network[env.networkInfo.rpcNode.networkName], {
       url: env.networkInfo.rpcNode.url,
-      token: env.currencyInfo.currencyCode
+      token: initOptions.glifApiKey
     })
     this.filfoxApi = new Filfox(env.networkInfo.filfoxUrl, env.io.fetchCors)
     this.filscanApi = new Filscan(env.networkInfo.filscanUrl, env.io.fetchCors)
