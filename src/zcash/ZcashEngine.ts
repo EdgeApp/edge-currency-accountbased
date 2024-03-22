@@ -80,7 +80,9 @@ export class ZcashEngine extends CurrencyEngine<
       transparentAvailableZatoshi: '0',
       transparentTotalZatoshi: '0',
       saplingAvailableZatoshi: '0',
-      saplingTotalZatoshi: '0'
+      saplingTotalZatoshi: '0',
+      orchardAvailableZatoshi: '0',
+      orchardTotalZatoshi: '0'
     }
     this.autoshielding = {
       createAutoshieldTx: false,
@@ -123,19 +125,29 @@ export class ZcashEngine extends CurrencyEngine<
         transparentAvailableZatoshi,
         transparentTotalZatoshi,
         saplingAvailableZatoshi,
-        saplingTotalZatoshi
+        saplingTotalZatoshi,
+        orchardAvailableZatoshi,
+        orchardTotalZatoshi
       } = payload
 
       // Transparent funds will be autoshielded so the available balance should only reflect the chielded balances
-      this.availableZatoshi = saplingAvailableZatoshi
+      this.availableZatoshi = add(
+        saplingAvailableZatoshi,
+        orchardAvailableZatoshi
+      )
       this.balances = {
         transparentAvailableZatoshi,
         transparentTotalZatoshi,
         saplingAvailableZatoshi,
-        saplingTotalZatoshi
+        saplingTotalZatoshi,
+        orchardAvailableZatoshi,
+        orchardTotalZatoshi
       }
 
-      const total = add(transparentTotalZatoshi, saplingTotalZatoshi)
+      const total = add(
+        add(transparentTotalZatoshi, saplingTotalZatoshi),
+        orchardTotalZatoshi
+      )
 
       this.updateBalance(this.currencyInfo.currencyCode, total)
       await this.checkAutoshielding()
