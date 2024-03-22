@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.2.8 (2024-03-22)
+
 - fixed: Added initOptions to FilecoinEngine for GLIF API key to fix sync issues
 
 ## 3.2.7 (2024-03-21)
