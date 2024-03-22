@@ -22,6 +22,14 @@ export interface FilecoinNetworkInfo {
   }
 }
 
+export interface FilecoinInitOptions {
+  glifApiKey: string
+}
+
+export const asFilecoinInitOptions = asObject<FilecoinInitOptions>({
+  glifApiKey: asOptional(asString, '')
+})
+
 export type FilecoinWalletOtherData = ReturnType<
   typeof asFilecoinWalletOtherData
 >
