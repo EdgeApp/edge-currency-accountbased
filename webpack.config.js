@@ -60,6 +60,10 @@ module.exports = {
     })
   ],
   resolve: {
+    alias: {
+      '@emurgo/cardano-serialization-lib-nodejs':
+        '@emurgo/cardano-serialization-lib-asmjs'
+    },
     extensions: ['.ts', '.js'],
     fallback: {
       // assert: require.resolve('assert'),
