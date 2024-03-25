@@ -15,7 +15,6 @@ import {
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asErrorMessage } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -385,7 +384,6 @@ export class BinanceEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 

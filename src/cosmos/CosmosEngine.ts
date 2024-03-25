@@ -51,7 +51,6 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { EdgeTokenId, MakeTxParams } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
@@ -896,7 +895,6 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], networkFeeOption, tokenId } = edgeSpendInfo
     const memo: string | undefined = memos[0]?.value

@@ -17,7 +17,6 @@ import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   getDenomination,
@@ -1426,7 +1425,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { memos = [], tokenId } = spendInfo
     const { currencyCode } =
       tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
@@ -1496,8 +1494,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
-
     // Check for other transaction types first
     if (edgeSpendInfoIn.otherParams != null) {
       let action:

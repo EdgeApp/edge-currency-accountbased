@@ -21,7 +21,6 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -324,7 +323,6 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     if (
       spendInfo.spendTargets.length === 0 ||
       spendInfo.spendTargets[0].publicAddress == null
@@ -392,7 +390,6 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 

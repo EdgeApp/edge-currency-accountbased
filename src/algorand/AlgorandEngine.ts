@@ -28,7 +28,6 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { EdgeTokenId } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
@@ -489,7 +488,6 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { tokenId } = spendInfo
     let balance = this.getBalance({
       tokenId
@@ -539,7 +537,6 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { customNetworkFee, memos = [], tokenId } = edgeSpendInfo

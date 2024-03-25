@@ -21,7 +21,6 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
@@ -562,7 +561,6 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const {
       customNetworkFee,

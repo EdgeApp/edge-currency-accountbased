@@ -28,7 +28,6 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -1271,7 +1270,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { tokenId } = spendInfo
     const balance = this.getBalance({
       tokenId
@@ -1294,7 +1292,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, nativeBalance, currencyCode } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo

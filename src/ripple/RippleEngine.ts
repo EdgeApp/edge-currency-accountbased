@@ -56,7 +56,6 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { MakeTxParams } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
   cleanTxLogs,
@@ -750,7 +749,6 @@ export class XrpEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { tokenId } = spendInfo
     let spendableBalance = this.getBalance({
       tokenId
@@ -768,7 +766,6 @@ export class XrpEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo

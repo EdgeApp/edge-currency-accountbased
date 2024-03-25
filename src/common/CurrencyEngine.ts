@@ -43,6 +43,7 @@ import {
   normalizeAddress,
   safeErrorMessage
 } from './utils'
+import { validateMemos } from './validateMemos'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -878,6 +879,7 @@ export class CurrencyEngine<
     skipChecks: boolean
   } {
     const { skipChecks = false, tokenId } = edgeSpendInfo
+    validateMemos(edgeSpendInfo, this.currencyInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (!skipChecks && st.publicAddress === this.walletLocalData.publicKey) {

@@ -14,7 +14,6 @@ import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -398,7 +397,6 @@ export class TezosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     return await makeSpendMutex(
       async () => await this.makeSpendInner(edgeSpendInfoIn)
     )

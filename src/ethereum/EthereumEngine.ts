@@ -25,7 +25,6 @@ import ethWallet from 'ethereumjs-wallet'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   biggyRoundToNearestInt,
   cleanTxLogs,
@@ -780,7 +779,6 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
     const { tokenId } = edgeSpendInfo
 
@@ -964,7 +962,6 @@ export class EthereumEngine extends CurrencyEngine<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo) {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, skipChecks } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
