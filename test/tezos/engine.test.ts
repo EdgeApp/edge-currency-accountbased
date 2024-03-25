@@ -52,6 +52,9 @@ describe(`Tezos engine`, function () {
     },
     onStakingStatusChanged() {},
     onNewTokens() {},
+    onTokenBalanceChanged(tokenId, balance) {
+      emitter.emit('onTokenBalanceChanged', tokenId, balance)
+    },
     onTransactionsChanged(transactionList) {
       emitter.emit('onTransactionsChanged', transactionList)
     },
@@ -123,7 +126,7 @@ describe(`Tezos engine`, function () {
     }
   })
   const edgeSpendInfo: EdgeSpendInfo = {
-    currencyCode: 'XTZ',
+    tokenId: null,
     spendTargets: [
       {
         nativeAmount: '3000000',
@@ -193,6 +196,7 @@ describe(`Tezos engine`, function () {
       },
       ourReceiveAddresses: ['tz3RDC3Jdn4j15J7bBHZd29EUee9gVB1CxD9'],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: ''
     }

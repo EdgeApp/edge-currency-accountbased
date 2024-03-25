@@ -378,6 +378,7 @@ export class HederaEngine extends CurrencyEngine<
         },
         ourReceiveAddresses, // ourReceiveAddresses
         signedTx: '', // signedTx
+        tokenId: null,
         txid: hashToTxid(base64.parse(tx.transaction_hash)),
         walletId: this.walletId
       })
@@ -477,6 +478,7 @@ export class HederaEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }

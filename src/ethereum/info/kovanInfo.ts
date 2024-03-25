@@ -234,11 +234,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  alethioCurrencies: {
-    // object or null
-    native: 'ether',
-    token: 'token'
-  },
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'kovanMnemonic',
   pluginRegularKeyName: 'kovanKey',

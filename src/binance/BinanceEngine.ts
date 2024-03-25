@@ -196,6 +196,7 @@ export class BinanceEngine extends CurrencyEngine<
       networkFee: nativeNetworkFee,
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
+      tokenId: null,
       txid: tx.hash,
       walletId: this.walletId
     }
@@ -443,6 +444,7 @@ export class BinanceEngine extends CurrencyEngine<
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: null,
       txid: '', // txid
       walletId: this.walletId
     }

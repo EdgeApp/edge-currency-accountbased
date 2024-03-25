@@ -16,6 +16,7 @@ import {
   EdgeLog,
   EdgeMetaToken,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTokenMap,
   EdgeTransaction,
   InsufficientFundsError,
@@ -102,13 +103,13 @@ export class CurrencyEngine<
   // Helpers
   checkBalances: (
     amounts: EdgeTransactionHelperAmounts,
-    tokenId?: string
+    tokenId: EdgeTokenId
   ) => void
 
   makeEdgeTransactionAmounts: (
     nativeAmountSend: string,
     nativeAmountFee: string,
-    tokenId?: string
+    tokenId: EdgeTokenId
   ) => EdgeTransactionHelperAmounts
 
   constructor(
@@ -190,7 +191,7 @@ export class CurrencyEngine<
     // Helpers
     this.checkBalances = (
       amounts: EdgeTransactionHelperAmounts,
-      tokenId?: string
+      tokenId: EdgeTokenId
     ): void => {
       const { nativeAmount, parentNetworkFee } = amounts
       const mainnetCode = this.currencyInfo.currencyCode
@@ -215,7 +216,7 @@ export class CurrencyEngine<
     this.makeEdgeTransactionAmounts = (
       nativeAmountSend: string,
       nativeAmountFee: string,
-      tokenId?: string
+      tokenId: EdgeTokenId
     ): EdgeTransactionHelperAmounts => {
       let nativeAmount = `-${nativeAmountSend}`
       let networkFee = nativeAmountFee

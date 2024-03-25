@@ -67,7 +67,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  alethioCurrencies: null, // object or null
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'pulsechainMnemonic',
   pluginRegularKeyName: 'pulsechainKey',

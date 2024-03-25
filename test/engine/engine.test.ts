@@ -67,6 +67,9 @@ for (const fixture of fixtures) {
     },
     onStakingStatusChanged() {},
     onNewTokens() {},
+    onTokenBalanceChanged(tokenId, balance) {
+      emitter.emit('onTokenBalanceChanged', tokenId, balance)
+    },
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
       emitter.emit('onTransactionsChanged', transactionList)
@@ -252,6 +255,9 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
   },
   onStakingStatusChanged() {},
   onNewTokens() {},
+  onTokenBalanceChanged(tokenId, balance) {
+    emitter.emit('onTokenBalanceChanged', tokenId, balance)
+  },
   onTransactionsChanged(transactionList) {
     // console.log('onTransactionsChanged:', transactionList)
     emitter.emit('onTransactionsChanged', transactionList)

@@ -292,6 +292,7 @@ export class ZcashEngine extends CurrencyEngine<
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
       signedTx: raw ?? '',
+      tokenId: null,
       txid: rawTransactionId,
       walletId: this.walletId
     }
@@ -456,6 +457,7 @@ export class ZcashEngine extends CurrencyEngine<
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }

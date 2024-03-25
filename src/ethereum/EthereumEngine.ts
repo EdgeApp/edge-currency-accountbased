@@ -968,7 +968,7 @@ export class EthereumEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 
-    const { pendingTxs = [] } = edgeSpendInfo
+    const { pendingTxs = [], tokenId } = edgeSpendInfo
 
     // Ethereum can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -1162,6 +1162,7 @@ export class EthereumEngine extends CurrencyEngine<
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: tokenId ?? null,
       txid: '', // txid
       walletId: this.walletId
     }

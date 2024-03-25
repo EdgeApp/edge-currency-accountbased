@@ -157,7 +157,6 @@ const networkInfo: EthereumNetworkInfo = {
     nodeInterfaceAddress: '0x00000000000000000000000000000000000000C8'
   },
   hdPathCoinType: 60,
-  alethioCurrencies: null,
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'arbitrumMnemonic',
   pluginRegularKeyName: 'arbitrumKey',

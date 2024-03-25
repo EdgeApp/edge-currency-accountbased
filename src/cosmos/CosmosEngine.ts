@@ -204,6 +204,7 @@ export class CosmosEngine extends CurrencyEngine<
               otherParams,
               ourReceiveAddresses: [],
               signedTx: '',
+              tokenId: null,
               txid: '',
               walletId: this.walletId
             }
@@ -679,6 +680,7 @@ export class CosmosEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx,
+      tokenId,
       txid: txidHex,
       walletId: this.walletId
     }
@@ -982,9 +984,9 @@ export class CosmosEngine extends CurrencyEngine<
     const amounts = this.makeEdgeTransactionAmounts(
       nativeAmount,
       networkFee,
-      tokenId
+      tokenId ?? null
     )
-    this.checkBalances(amounts, tokenId)
+    this.checkBalances(amounts, tokenId ?? null)
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
@@ -998,6 +1000,7 @@ export class CosmosEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee: amounts.parentNetworkFee,
       signedTx: '',
+      tokenId: tokenId ?? null,
       txid: '',
       walletId: this.walletId
     }

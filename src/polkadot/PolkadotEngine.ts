@@ -200,6 +200,7 @@ export class PolkadotEngine extends CurrencyEngine<
       networkFee: fee,
       ourReceiveAddresses,
       signedTx: '',
+      tokenId: null,
       txid: hash,
       walletId: this.walletId
     }
@@ -391,7 +392,7 @@ export class PolkadotEngine extends CurrencyEngine<
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -498,6 +499,7 @@ export class PolkadotEngine extends CurrencyEngine<
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: tokenId ?? null,
       txid: '',
       walletId: this.walletId
     }

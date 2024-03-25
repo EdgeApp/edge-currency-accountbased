@@ -522,6 +522,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses: ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -561,6 +562,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -606,6 +608,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -652,6 +655,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -697,6 +701,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -747,6 +752,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
           signedTx: '',
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
@@ -799,6 +805,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           memos: [],
           networkFee: feeNativeAmount,
           ourReceiveAddresses,
+          tokenId: null,
           signedTx: '',
           walletId: this.walletId
         }
@@ -876,6 +883,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       networkFee: '0',
       ourReceiveAddresses,
       signedTx: '',
+      tokenId: contractAddress,
       txid,
       walletId: this.walletId
     }
@@ -1266,6 +1274,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       otherParams: txOtherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }
@@ -1318,6 +1327,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       otherParams: txOtherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
 
       walletId: this.walletId
@@ -1373,6 +1383,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       otherParams: txOtherParams,
       ourReceiveAddresses: [],
       signedTx: '',
+      tokenId: null,
       txid: '',
       walletId: this.walletId
     }
@@ -1431,6 +1442,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       ourReceiveAddresses: [],
       signedTx: '',
       otherParams: txOtherParams,
+      tokenId: null,
       walletId: this.walletId,
       metadata: {
         notes: 'WithdrawExpireUnfreeze'
@@ -1575,7 +1587,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const { edgeSpendInfo, currencyCode } = super.makeSpendCheck(
       edgeSpendInfoIn
     )
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     const isTokenTransfer = currencyCode !== this.currencyInfo.currencyCode
 
@@ -1670,6 +1682,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       otherParams: txOtherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
+      tokenId: tokenId ?? null,
       txid: '', // txid
       walletId: this.walletId
     }

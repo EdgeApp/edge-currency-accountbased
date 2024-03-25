@@ -1,14 +1,10 @@
-import { add, div, mul, sub } from 'biggystring'
+import { add, div } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
-import {
-  AlethioTokenTransfer,
-  EthereumNetworkInfo,
-  EthereumTxOtherParams
-} from './ethereumTypes'
+import { EthereumNetworkInfo } from './ethereumTypes'
 import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
 import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
@@ -149,99 +145,6 @@ export class EthereumNetwork {
     }
     this.networkAdapters = this.buildNetworkAdapters(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
-  }
-
-  processAlethioTransaction(
-    tokenTransfer: AlethioTokenTransfer,
-    currencyCode: string
-  ): EdgeTransaction | null {
-    let netNativeAmount: string
-    const ourReceiveAddresses: string[] = []
-    let nativeNetworkFee: string
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-
-    const value = tokenTransfer.attributes.value
-    const fee =
-      tokenTransfer.attributes.fee != null &&
-      tokenTransfer.attributes.fee !== ''
-        ? tokenTransfer.attributes.fee
-        : '0'
-    const fromAddress = tokenTransfer.relationships.from.data.id
-    const toAddress = tokenTransfer.relationships.to.data.id
-
-    if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
-      nativeNetworkFee = fee
-    } else {
-      nativeNetworkFee = '0'
-    }
-
-    const isSpend =
-      fromAddress.toLowerCase() ===
-      this.ethEngine.walletLocalData.publicKey.toLowerCase()
-
-    if (isSpend) {
-      if (fromAddress.toLowerCase() === toAddress.toLowerCase()) {
-        // Spend to self. netNativeAmount is just the fee
-        netNativeAmount = mul(nativeNetworkFee, '-1')
-      } else {
-        // spend to someone else
-        netNativeAmount = sub('0', value)
-
-        // For spends, include the network fee in the transaction amount if not a token tx
-        if (!tokenTx) {
-          netNativeAmount = sub(netNativeAmount, nativeNetworkFee)
-        }
-      }
-    } else if (
-      toAddress.toLowerCase() ===
-      this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    ) {
-      // Receive transaction
-      netNativeAmount = value
-      ourReceiveAddresses.push(
-        this.ethEngine.walletLocalData.publicKey.toLowerCase()
-      )
-    } else {
-      return null
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [fromAddress],
-      to: [toAddress],
-      gas: '0',
-      gasPrice: '0',
-      gasUsed: '0',
-      isFromMakeSpend: false
-    }
-
-    let blockHeight = tokenTransfer.attributes.globalRank[0]
-    if (blockHeight < 0) blockHeight = 0
-
-    let parentNetworkFee
-    let networkFee = '0'
-    if (tokenTx && isSpend) {
-      parentNetworkFee = nativeNetworkFee
-    } else {
-      networkFee = nativeNetworkFee
-    }
-
-    const edgeTransaction: EdgeTransaction = {
-      blockHeight,
-      currencyCode,
-      date: tokenTransfer.attributes.blockCreationTime,
-      isSend: netNativeAmount.startsWith('-'),
-      memos: [],
-      nativeAmount: netNativeAmount,
-      networkFee,
-      otherParams,
-      ourReceiveAddresses,
-      parentNetworkFee,
-      signedTx: '',
-      txid: tokenTransfer.relationships.transaction.data.id,
-      walletId: this.walletId
-    }
-
-    return edgeTransaction
   }
 
   async broadcastTx(

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade edge-core-js to v1.14.0
+
 ## 3.2.8 (2024-03-22)
 
 - fixed: Added initOptions to FilecoinEngine for GLIF API key to fix sync issues
