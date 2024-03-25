@@ -4,7 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
-import { evmMemoOptions } from './ethereumCommonInfo'
+import { evmMemoOptions, makeEvmDefaultSettings } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   ff795577d9ac8bd7d90ee22b6c1703490b6512fd: {
@@ -113,11 +113,6 @@ const networkInfo: EthereumNetworkInfo = {
   defaultNetworkFees
 }
 
-const defaultSettings: any = {
-  customFeeSettings: ['gasLimit', 'gasPrice'],
-  otherSettings: { ...networkInfo }
-}
-
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
@@ -144,8 +139,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
-  defaultSettings,
-  memoType: 'hex',
+  defaultSettings: makeEvmDefaultSettings(networkInfo),
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

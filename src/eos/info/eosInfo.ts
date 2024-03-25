@@ -46,12 +46,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
       multiplier: '10000',
       symbol: 'E'
     }
-  ],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 256,
-  metaTokens: []
+  ]
 }
 
 export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({

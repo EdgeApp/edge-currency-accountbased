@@ -39,12 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Copied from Zcash:
-  memoOptions: [{ type: 'text', maxLength: 512 }],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoType: 'text',
-  metaTokens: []
+  memoOptions: [{ type: 'text', maxLength: 512 }]
 }
 
 export const piratechain = makeOuterPlugin<

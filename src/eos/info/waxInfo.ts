@@ -34,12 +34,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
       multiplier: '100000000',
       symbol: 'W'
     }
-  ],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 256,
-  metaTokens: []
+  ]
 }
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({

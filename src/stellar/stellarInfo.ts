@@ -34,13 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     { type: 'hex', maxBytes: 32, minBytes: 32 }
     // We also support a transaction ID for returned funds
   ],
-  multipleMemos: true,
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 19,
-  memoType: 'text',
-  metaTokens: []
+  multipleMemos: true
 }
 
 export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({

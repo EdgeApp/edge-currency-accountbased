@@ -64,9 +64,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   // No memo support:
   memoOptions: [],
 
-  // Deprecated:
-  defaultSettings: { ...networkInfo },
-  metaTokens: []
+  // Deprecated, but secretly used by edge-react-gui:
+  defaultSettings: {
+    errorCodes: networkInfo.errorCodes,
+    defaultRef: networkInfo.defaultRef,
+    fallbackRef: networkInfo.fallbackRef,
+    fioAddressRegUrl: networkInfo.fioAddressRegUrl,
+    freeAddressRef: networkInfo.freeAddressRef
+  }
 }
 
 export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({

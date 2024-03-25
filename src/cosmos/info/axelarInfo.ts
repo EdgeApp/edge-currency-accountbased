@@ -41,13 +41,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', maxLength: 250 }],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 250,
-  memoType: 'text',
-  metaTokens: []
+  memoOptions: [{ type: 'text', maxLength: 250 }]
 }
 
 export const axelar = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({

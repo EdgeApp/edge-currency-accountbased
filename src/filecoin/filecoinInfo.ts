@@ -62,11 +62,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1',
       symbol: 'a⨎'
     }
-  ],
-
-  // Deprecated:
-  defaultSettings: {},
-  metaTokens: []
+  ]
 }
 
 export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({

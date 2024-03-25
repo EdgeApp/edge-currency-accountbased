@@ -45,7 +45,6 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
-  defaultSettings: {},
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

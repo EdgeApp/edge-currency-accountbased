@@ -38,14 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     // https://xrpl.org/transaction-common-fields.html#memos-field
     { type: 'text', memoName: 'memo', maxLength: 990 }
   ],
-  multipleMemos: true,
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 10,
-  memoMaxValue: '4294967295',
-  memoType: 'number',
-  metaTokens: []
+  multipleMemos: true
 }
 
 export const builtinTokens: EdgeTokenMap = {

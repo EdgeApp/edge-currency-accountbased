@@ -34,13 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // https://github.com/bnb-chain/javascript-sdk/blob/master/docs/api-docs/classes/bncclient.md#transfer
-  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 128 }],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 128,
-  memoType: 'text',
-  metaTokens: []
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 128 }]
 }
 
 export const binance = makeOuterPlugin<BinanceNetworkInfo, BinanceTools>({
