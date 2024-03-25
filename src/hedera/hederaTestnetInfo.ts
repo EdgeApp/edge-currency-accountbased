@@ -34,11 +34,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1',
       symbol: 'tℏ'
     }
-  ],
-
-  // Deprecated:
-  defaultSettings: {},
-  metaTokens: []
+  ]
 }
 
 export const hederatestnet = makeOuterPlugin<HederaNetworkInfo, HederaTools>({

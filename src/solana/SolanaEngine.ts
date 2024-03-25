@@ -21,7 +21,6 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
@@ -285,7 +284,7 @@ export class SolanaEngine extends CurrencyEngine<
   ): void {
     const ourReceiveAddresses = []
 
-    const { amount, networkFee, parentNetworkFee, tokenId } = amounts
+    const { amount, networkFee, parentNetworkFee, tokenId = null } = amounts
     const currencyCode =
       tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
 
@@ -304,7 +303,7 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
@@ -532,37 +531,36 @@ export class SolanaEngine extends CurrencyEngine<
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
     // todo: Stop using deprecated currencyCode
-    const { currencyCode } = spendInfo
+    const { tokenId } = spendInfo
     const balance = this.getBalance({
-      currencyCode
+      tokenId
     })
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
 
     let spendableBalance: string
-    if (currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       spendableBalance = sub(balance, edgeTx.networkFee)
     } else {
       const solBalance = this.getBalance({
-        currencyCode: this.currencyInfo.currencyCode
+        tokenId: null
       })
       const solRequired = sub(solBalance, edgeTx.networkFee)
       if (lt(sub(solRequired, this.minimumAddressBalance), '0')) {
         throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee: this.feePerSignature
+          networkFee: this.feePerSignature,
+          tokenId: null
         })
       }
       spendableBalance = balance
     }
-    if (lt(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lt(spendableBalance, '0')) throw new InsufficientFundsError({ tokenId })
 
     return spendableBalance
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const {
       customNetworkFee,
@@ -682,15 +680,15 @@ export class SolanaEngine extends CurrencyEngine<
       nativeNetworkFee = '0'
       totalTxAmount = nativeAmount
       if (gt(nativeAmount, balance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
 
       const balanceSol =
         this.walletLocalData.totalBalances[this.chainCode] ?? '0'
       if (gt(add(parentNetworkFee, this.minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
-          currencyCode: this.chainCode,
-          networkFee: parentNetworkFee
+          networkFee: parentNetworkFee,
+          tokenId: null
         })
       }
 
@@ -729,7 +727,7 @@ export class SolanaEngine extends CurrencyEngine<
     if (eq(totalTxAmount, balance)) {
       // This is a max send so we don't need to consider the minimumAddressBalance
     } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     if (memos[0]?.type === 'text') {
@@ -768,7 +766,7 @@ export class SolanaEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

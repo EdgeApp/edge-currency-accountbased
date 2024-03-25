@@ -1,5 +1,5 @@
 import { add, mul, sub } from 'biggystring'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
 
 import { asIntegerString } from '../../common/types'
 import { decimalToHex, pickRandom, safeErrorMessage } from '../../common/utils'
@@ -349,14 +349,17 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       tx.from.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-    const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
-      tokenId =>
-        this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
-    )
-    if (tokenTx && knownTokenId === undefined) {
-      throw new Error('Unknown token')
+    let tokenId: EdgeTokenId = null
+    if (tokenTx) {
+      const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
+        tokenId =>
+          this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
+      )
+      if (knownTokenId === undefined) {
+        throw new Error('Unknown token')
+      }
+      tokenId = knownTokenId
     }
-    const tokenId = tokenTx ? knownTokenId : null
     const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
@@ -427,7 +430,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       ourReceiveAddresses,
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid,
       walletId: this.ethEngine.walletId
     }

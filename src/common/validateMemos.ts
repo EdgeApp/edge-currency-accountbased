@@ -18,37 +18,14 @@ export function validateMemos(
   currencyInfo: EdgeCurrencyInfo
 ): void {
   const { memos = [] } = spendInfo
-  const {
-    displayName,
-    memoMaxLength,
-    memoMaxValue,
-    memoOptions = [],
-    multipleMemos = false,
-    memoType
-  } = currencyInfo
-
-  // Not all coins keep the legacy memo type in the modern list,
-  // but we still need to validate the legacy type if present:
-  const allOptions = [...memoOptions]
-  if (memoType === 'text') {
-    allOptions.push({ type: 'text', maxLength: memoMaxLength })
-  }
-  if (memoType === 'number') {
-    allOptions.push({ type: 'number', maxValue: memoMaxValue })
-  }
-  if (memoType === 'hex') {
-    allOptions.push({
-      type: 'hex',
-      maxBytes: memoMaxLength == null ? undefined : memoMaxLength / 2
-    })
-  }
+  const { displayName, memoOptions = [], multipleMemos = false } = currencyInfo
 
   // What we should call a "memo" in our error messages:
   const { memoName = 'memo' } = memoOptions[0] ?? {}
 
   // Now validate our memos:
   for (const memo of memos) {
-    const options = allOptions.filter(option => memo.type === option.type)
+    const options = memoOptions.filter(option => memo.type === option.type)
     if (options.length < 1) {
       throw new Error(`${displayName} ${memoName}: cannot be type ${memo.type}`)
     }

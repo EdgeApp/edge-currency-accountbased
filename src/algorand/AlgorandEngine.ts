@@ -28,7 +28,6 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { EdgeTokenId } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
@@ -489,11 +488,11 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
+    const { tokenId } = spendInfo
     let balance = this.getBalance({
-      currencyCode: spendInfo.currencyCode
+      tokenId
     })
-    if (spendInfo.currencyCode === this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       balance = sub(balance, this.totalReserve)
     }
 
@@ -538,14 +537,13 @@ export class AlgorandEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { customNetworkFee, memos = [], tokenId } = edgeSpendInfo
 
     const spendableAlgoBalance = sub(
       this.getBalance({
-        currencyCode: this.currencyInfo.currencyCode
+        tokenId
       }),
       this.totalReserve
     )
@@ -570,7 +568,6 @@ export class AlgorandEngine extends CurrencyEngine<
     const note =
       memos[0]?.type === 'text' ? utf8.parse(memos[0].value) : undefined
 
-    const { customNetworkFee, tokenId } = edgeSpendInfo
     const customFee = asMaybeCustomFee(customNetworkFee).fee
 
     let rawTx: Transaction
@@ -595,7 +592,7 @@ export class AlgorandEngine extends CurrencyEngine<
         recipient = publicAddress
 
         if (gt(abs(nativeAmount), spendableAlgoBalance)) {
-          throw new InsufficientFundsError()
+          throw new InsufficientFundsError({ tokenId })
         }
 
         break
@@ -626,13 +623,13 @@ export class AlgorandEngine extends CurrencyEngine<
 
         if (gt(parentNetworkFee, spendableAlgoBalance)) {
           throw new InsufficientFundsError({
-            currencyCode: this.currencyInfo.currencyCode,
-            networkFee: fee
+            networkFee: fee,
+            tokenId
           })
         }
 
         if (gt(abs(nativeAmount), nativeBalance)) {
-          throw new InsufficientFundsError()
+          throw new InsufficientFundsError({ tokenId })
         }
 
         break
@@ -661,7 +658,7 @@ export class AlgorandEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }
@@ -742,6 +739,7 @@ export class AlgorandEngine extends CurrencyEngine<
     return {
       assetOptions: [
         {
+          tokenId: null,
           paymentWalletId: this.walletId,
           currencyPluginId: this.currencyInfo.pluginId
         }
@@ -751,16 +749,16 @@ export class AlgorandEngine extends CurrencyEngine<
 
   engineActivateWallet = async ({
     activateTokenIds,
-    paymentTokenId,
-    paymentWallet
+    paymentInfo
   }: EdgeEngineActivationOptions): Promise<EdgeActivationQuote> => {
     if (activateTokenIds == null)
       throw new Error(
         `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
       )
-    if (paymentTokenId != null)
+    const { tokenId, wallet } = paymentInfo ?? { tokenId: null }
+    if (tokenId != null)
       throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
-    if (paymentWallet?.id !== this.walletId)
+    if (wallet?.id !== this.walletId)
       throw new Error('Must pay with same wallet you are activating token with')
 
     const minTxFee = this.networkInfo.minimumTxFee.toFixed()
@@ -768,11 +766,14 @@ export class AlgorandEngine extends CurrencyEngine<
     const approvalSpendInfos: EdgeSpendInfo[] = []
 
     for (const activateTokenId of activateTokenIds) {
-      if (this.allTokensMap[activateTokenId] == null)
+      if (
+        activateTokenId !== null &&
+        this.allTokensMap[activateTokenId] == null
+      )
         throw new Error(`Invalid tokenId to activate ${activateTokenId}`)
 
       const spendInfo: EdgeSpendInfo = {
-        currencyCode: this.allTokensMap[activateTokenId].currencyCode,
+        tokenId: activateTokenId,
         skipChecks: true,
         spendTargets: [
           { publicAddress: this.walletInfo.keys.publicKey, nativeAmount: '0' }
@@ -793,9 +794,11 @@ export class AlgorandEngine extends CurrencyEngine<
     }
 
     const out = {
+      paymentTokenId: tokenId,
       paymentWalletId: this.walletId,
       fromNativeAmount: '0',
       networkFee: {
+        tokenId: null,
         nativeAmount: totalNetworkFee,
         currencyPluginId: this.currencyInfo.pluginId
       },
@@ -807,10 +810,10 @@ export class AlgorandEngine extends CurrencyEngine<
         for (const spendInfo of approvalSpendInfos) {
           const edgeTx = await this.makeSpend(spendInfo)
           edgeTx.metadata = { ...metadata }
-          let signedTx = await paymentWallet.signTx(edgeTx)
-          signedTx = await paymentWallet.broadcastTx(signedTx)
+          let signedTx = await wallet.signTx(edgeTx)
+          signedTx = await wallet.broadcastTx(signedTx)
           broadcastTransactions.push(signedTx)
-          await paymentWallet.saveTx(signedTx)
+          await wallet.saveTx(signedTx)
         }
 
         return { transactions: broadcastTransactions }

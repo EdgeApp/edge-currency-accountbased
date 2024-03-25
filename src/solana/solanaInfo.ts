@@ -104,7 +104,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['microLamports'] },
-  memoType: 'text',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

@@ -66,14 +66,6 @@ const networkInfo: EthereumNetworkInfo = {
   defaultNetworkFees
 }
 
-const defaultSettings: any = {
-  customFeeSettings: ['gasLimit', 'gasPrice'],
-  otherSettings: {
-    chainParams: networkInfo.chainParams,
-    ercTokenStandard: networkInfo.ercTokenStandard
-  }
-}
-
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
@@ -95,8 +87,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
-  defaultSettings,
-  memoType: 'hex',
+  defaultSettings: {
+    customFeeSettings: ['gasLimit', 'gasPrice'],
+    otherSettings: {
+      chainParams: networkInfo.chainParams,
+      ercTokenStandard: networkInfo.ercTokenStandard
+      // Skip networkAdapterConfigs
+    }
+  },
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

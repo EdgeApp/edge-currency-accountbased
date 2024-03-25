@@ -16,6 +16,7 @@ import { serialize } from 'uri-js'
 import parse from 'url-parse'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { makeMetaTokens } from '../common/tokenHelpers'
 import { parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination } from '../common/utils'
 import {
@@ -140,7 +141,8 @@ export class StellarTools implements EdgeCurrencyTools {
     const { parsedUri, edgeParsedUri } = parseUriCommon(
       this.currencyInfo,
       uri,
-      networks
+      networks,
+      this.builtinTokens
     )
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
@@ -194,7 +196,8 @@ export class StellarTools implements EdgeCurrencyTools {
       const denom = getLegacyDenomination(
         currencyCode,
         this.currencyInfo,
-        customTokens
+        [...customTokens, ...makeMetaTokens(this.builtinTokens)],
+        this.builtinTokens
       )
       if (denom == null) {
         throw new Error('InternalErrorInvalidCurrencyCode')

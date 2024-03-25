@@ -48,7 +48,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
-  memoType: 'text',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

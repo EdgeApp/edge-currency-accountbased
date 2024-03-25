@@ -38,12 +38,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
       multiplier: '10000',
       symbol: 'T'
     }
-  ],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoMaxLength: 256,
-  metaTokens: []
+  ]
 }
 
 export const telos = makeOuterPlugin<EosNetworkInfo, EosTools>({

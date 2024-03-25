@@ -14,7 +14,6 @@ import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -398,7 +397,6 @@ export class TezosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     return await makeSpendMutex(
       async () => await this.makeSpendInner(edgeSpendInfoIn)
     )
@@ -409,7 +407,7 @@ export class TezosEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
@@ -463,7 +461,7 @@ export class TezosEngine extends CurrencyEngine<
     }
     nativeAmount = add(nativeAmount, networkFee)
     if (gt(nativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
     nativeAmount = '-' + nativeAmount
 
@@ -483,7 +481,7 @@ export class TezosEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [],
       signedTx: '',
-      tokenId: null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

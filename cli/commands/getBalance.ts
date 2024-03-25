@@ -9,7 +9,7 @@ export class GetBalance extends Command<CurrencyContext> {
   tokenId = Option.String({ required: false })
 
   async execute(): Promise<number> {
-    const { tokenId } = this
+    const { tokenId = null } = this
     const { settings, stdout } = this.context
     const { engine, plugin, pluginId, currencyInfo } = await getCliEngine(
       this.context
@@ -22,7 +22,7 @@ export class GetBalance extends Command<CurrencyContext> {
     const allTokens = { ...builtinTokens, ...customTokens }
     const { currencyCode } = tokenId == null ? currencyInfo : allTokens[tokenId]
 
-    const nativeBalance = await engine.getBalance({ currencyCode })
+    const nativeBalance = await engine.getBalance({ tokenId })
     stdout.write(`${currencyCode}: ${nativeBalance}\n`)
 
     return 0

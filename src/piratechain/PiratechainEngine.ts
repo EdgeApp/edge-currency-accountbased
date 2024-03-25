@@ -15,7 +15,6 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { PiratechainTools } from './PiratechainTools'
 import {
@@ -359,16 +358,16 @@ export class PiratechainEngine extends CurrencyEngine<
       this.availableZatoshi,
       this.networkInfo.defaultNetworkFee
     )
-    if (lte(spendableBalance, '0')) throw new InsufficientFundsError()
+    if (lte(spendableBalance, '0'))
+      throw new InsufficientFundsError({ tokenId: null })
 
     return spendableBalance
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     if (!this.isSynced()) throw new Error('Cannot spend until wallet is synced')
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     const { publicAddress, nativeAmount } = spendTarget
 
@@ -387,11 +386,11 @@ export class PiratechainEngine extends CurrencyEngine<
           '0'
       )
     ) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     if (gt(totalTxAmount, this.availableZatoshi)) {
-      throw new InsufficientFundsError('Amount exceeds available balance')
+      throw new InsufficientFundsError({ tokenId })
     }
 
     // **********************************
@@ -409,7 +408,7 @@ export class PiratechainEngine extends CurrencyEngine<
       networkFee: this.networkInfo.defaultNetworkFee,
       ourReceiveAddresses: [],
       signedTx: '',
-      tokenId: null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

@@ -51,7 +51,6 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { EdgeTokenId, MakeTxParams } from '../common/types'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
@@ -154,7 +153,7 @@ export class CosmosEngine extends CurrencyEngine<
             })
 
             const balance = this.getBalance({
-              currencyCode: this.currencyInfo.currencyCode
+              tokenId: null
             })
             return sub(balance, networkFee)
           }
@@ -627,10 +626,8 @@ export class CosmosEngine extends CurrencyEngine<
       return
     }
 
-    const currencyCode =
-      tokenId === null
-        ? this.currencyInfo.currencyCode
-        : this.allTokensMap[tokenId].currencyCode
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
     let networkFee = '0'
     if (fee != null) {
@@ -866,7 +863,7 @@ export class CosmosEngine extends CurrencyEngine<
     tokenId: EdgeTokenId,
     channelInfo: IbcChannel
   ): Promise<void> {
-    if (tokenId === null) return
+    if (tokenId == null) return
 
     const edgeToken = this.allTokensMap[tokenId]
     const cleanLocation = asMaybeContractLocation(edgeToken.networkLocation)
@@ -898,7 +895,6 @@ export class CosmosEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], networkFeeOption, tokenId } = edgeSpendInfo
     const memo: string | undefined = memos[0]?.value
@@ -929,7 +925,7 @@ export class CosmosEngine extends CurrencyEngine<
         this.tools.chainData.chain_name,
         publicAddress
       )
-      await this.validateTransfer(publicAddress, tokenId ?? null, channelInfo)
+      await this.validateTransfer(publicAddress, tokenId, channelInfo)
 
       const { channel, port } = channelInfo
       msg = this.tools.methods.ibcTransfer({
@@ -984,9 +980,9 @@ export class CosmosEngine extends CurrencyEngine<
     const amounts = this.makeEdgeTransactionAmounts(
       nativeAmount,
       networkFee,
-      tokenId ?? null
+      tokenId
     )
-    this.checkBalances(amounts, tokenId ?? null)
+    this.checkBalances(amounts, tokenId)
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
@@ -1000,7 +996,7 @@ export class CosmosEngine extends CurrencyEngine<
       ourReceiveAddresses: [],
       parentNetworkFee: amounts.parentNetworkFee,
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

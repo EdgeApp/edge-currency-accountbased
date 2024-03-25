@@ -16,7 +16,6 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { getFetchCors, hexToBuf } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
@@ -414,9 +413,8 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
 
     if (this.otherData.hederaAccount == null) {
       throw Error('ErrorAccountNotActivated')
@@ -445,7 +443,7 @@ export class HederaEngine extends CurrencyEngine<
     if (
       gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode] ?? '0')
     ) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     if (this.otherData.hederaAccount == null) {
@@ -478,7 +476,7 @@ export class HederaEngine extends CurrencyEngine<
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      tokenId: null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

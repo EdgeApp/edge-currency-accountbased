@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade edge-core-js to v2.2.1
+
 ## 3.3.0 (2024-03-25)
 
 - changed: Upgrade edge-core-js to v1.14.0

@@ -21,7 +21,6 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   cleanTxLogs,
   decimalToHex,
@@ -324,18 +323,19 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    spendInfo = upgradeMemos(spendInfo, this.currencyInfo)
     if (
       spendInfo.spendTargets.length === 0 ||
       spendInfo.spendTargets[0].publicAddress == null
     )
       throw new Error('Missing public address')
 
+    const { tokenId } = spendInfo
+
     const balance = this.getBalance({
-      currencyCode: spendInfo.currencyCode
+      tokenId
     })
 
-    if (spendInfo.currencyCode !== this.currencyInfo.currencyCode) {
+    if (tokenId == null) {
       const tempSpendTarget = [
         {
           publicAddress: spendInfo.spendTargets[0].publicAddress,
@@ -390,7 +390,6 @@ export class PolkadotEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
@@ -404,7 +403,7 @@ export class PolkadotEngine extends CurrencyEngine<
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
     const balance = this.getBalance({
-      currencyCode
+      tokenId
     })
 
     let totalTxAmount
@@ -417,7 +416,7 @@ export class PolkadotEngine extends CurrencyEngine<
       )
 
       if (gt(nativeAmount, spendableBalance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
 
       const transfer = await this.api.tx.balances.transferKeepAlive(
@@ -441,11 +440,11 @@ export class PolkadotEngine extends CurrencyEngine<
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
 
       if (gt(totalTxAmount, spendableBalance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
     } else {
       if (gt(nativeAmount, balance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       totalTxAmount = nativeAmount
       const transfer = await this.api.tx.assets.transfer(
@@ -468,7 +467,7 @@ export class PolkadotEngine extends CurrencyEngine<
       )
 
       const feeBalance = this.getBalance({
-        currencyCode: this.currencyInfo.currencyCode
+        tokenId: null
       })
       const spendableFeeBalance = sub(
         feeBalance,
@@ -476,8 +475,8 @@ export class PolkadotEngine extends CurrencyEngine<
       )
       if (gt(nativeNetworkFee, spendableFeeBalance)) {
         throw new InsufficientFundsError({
-          currencyCode: this.currencyInfo.currencyCode,
-          networkFee: nativeNetworkFee
+          networkFee: nativeNetworkFee,
+          tokenId
         })
       }
     }
@@ -499,7 +498,7 @@ export class PolkadotEngine extends CurrencyEngine<
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '',
       walletId: this.walletId
     }

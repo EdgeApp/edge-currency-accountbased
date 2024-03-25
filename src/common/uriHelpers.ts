@@ -3,7 +3,8 @@ import {
   EdgeCurrencyInfo,
   EdgeEncodeUri,
   EdgeMetaToken,
-  EdgeParsedUri
+  EdgeParsedUri,
+  EdgeTokenMap
 } from 'edge-core-js/types'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
@@ -16,6 +17,7 @@ export function parseUriCommon(
   currencyInfo: EdgeCurrencyInfo,
   uri: string,
   networks: { [network: string]: boolean },
+  builtinTokens: EdgeTokenMap,
   currencyCode?: string,
   customTokens: EdgeMetaToken[] = []
 ): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
@@ -75,7 +77,8 @@ export function parseUriCommon(
     const denom = getLegacyDenomination(
       currencyCode ?? '',
       currencyInfo,
-      customTokens
+      customTokens,
+      builtinTokens
     )
     if (denom == null) {
       throw new Error('InternalErrorInvalidCurrencyCode')

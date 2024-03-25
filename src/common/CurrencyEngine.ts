@@ -1,7 +1,6 @@
 import { abs, add, div, eq, gt, gte, lt, sub } from 'biggystring'
 import { Disklet } from 'disklet'
 import {
-  EdgeCurrencyCodeOptions,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineCallbacks,
   EdgeCurrencyEngineOptions,
@@ -17,6 +16,7 @@ import {
   EdgeMetaToken,
   EdgeSpendInfo,
   EdgeTokenId,
+  EdgeTokenIdOptions,
   EdgeTokenMap,
   EdgeTransaction,
   InsufficientFundsError,
@@ -43,6 +43,7 @@ import {
   normalizeAddress,
   safeErrorMessage
 } from './utils'
+import { validateMemos } from './validateMemos'
 
 const SAVE_DATASTORE_MILLISECONDS = 10000
 const MAX_TRANSACTIONS = 1000
@@ -204,12 +205,12 @@ export class CurrencyEngine<
         this.walletLocalData.totalBalances[feeCurrencyCode] ?? '0'
 
       if (gt(abs(nativeAmount), sendBalance)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
       if (parentNetworkFee != null && gt(parentNetworkFee, feeBalance)) {
         throw new InsufficientFundsError({
-          currencyCode: feeCurrencyCode,
-          networkFee: parentNetworkFee
+          networkFee: parentNetworkFee,
+          tokenId: null
         })
       }
     }
@@ -800,8 +801,10 @@ export class CurrencyEngine<
     this.changeEnabledTokenIdsSync(tokenIds)
   }
 
-  getBalance(options: EdgeCurrencyCodeOptions): string {
-    const { currencyCode = this.currencyInfo.currencyCode } = options
+  getBalance(options: EdgeTokenIdOptions): string {
+    const { tokenId } = options
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
     const nativeBalance = this.walletLocalData.totalBalances[currencyCode]
     if (nativeBalance == null) {
@@ -810,8 +813,10 @@ export class CurrencyEngine<
     return nativeBalance
   }
 
-  getNumTransactions(options: EdgeCurrencyCodeOptions): number {
-    const { currencyCode = this.currencyInfo.currencyCode } = options
+  getNumTransactions(options: EdgeTokenIdOptions): number {
+    const { tokenId } = options
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
     if (this.walletLocalData.numTransactions[currencyCode] == null) {
       return 0
@@ -823,7 +828,10 @@ export class CurrencyEngine<
   async getTransactions(
     options: EdgeGetTransactionsOptions
   ): Promise<EdgeTransaction[]> {
-    const { currencyCode = this.currencyInfo.currencyCode } = options
+    const { startDate, endDate, tokenId } = options
+
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
     await this.loadTransactions()
 
@@ -831,39 +839,13 @@ export class CurrencyEngine<
       return []
     }
 
-    let startIndex: number = 0
-    let startEntries: number = 0
-    if (options === null) {
-      return this.transactionList[currencyCode].slice(0)
-    }
-    if (options.startIndex != null && options.startIndex > 0) {
-      startIndex = options.startIndex
-      if (startIndex >= this.transactionList[currencyCode].length) {
-        startIndex = this.transactionList[currencyCode].length - 1
-      }
-    }
-    if (options.startEntries != null && options.startEntries > 0) {
-      startEntries = options.startEntries
-      if (
-        startEntries + startIndex >
-        this.transactionList[currencyCode].length
-      ) {
-        // Don't read past the end of the transactionList
-        startEntries = this.transactionList[currencyCode].length - startIndex
-      }
-    }
-
-    // Copy the appropriate entries from the arrayTransactions
-    let returnArray = []
-
-    if (startEntries !== 0) {
-      returnArray = this.transactionList[currencyCode].slice(
-        startIndex,
-        startEntries + startIndex
+    const returnArray = this.transactionList[currencyCode].filter(tx => {
+      return (
+        new Date(tx.date) >= (startDate ?? new Date(0)) &&
+        new Date(tx.date) <= (endDate ?? new Date())
       )
-    } else {
-      returnArray = this.transactionList[currencyCode].slice(startIndex)
-    }
+    })
+
     return returnArray
   }
 
@@ -896,7 +878,8 @@ export class CurrencyEngine<
     denom: EdgeDenomination
     skipChecks: boolean
   } {
-    const { skipChecks = false } = edgeSpendInfo
+    const { skipChecks = false, tokenId } = edgeSpendInfo
+    validateMemos(edgeSpendInfo, this.currencyInfo)
 
     for (const st of edgeSpendInfo.spendTargets) {
       if (!skipChecks && st.publicAddress === this.walletLocalData.publicKey) {
@@ -904,17 +887,12 @@ export class CurrencyEngine<
       }
     }
 
-    let currencyCode: string = ''
-    if (typeof edgeSpendInfo.currencyCode === 'string') {
-      currencyCode = edgeSpendInfo.currencyCode
-      if (currencyCode !== this.currencyInfo.currencyCode) {
-        if (!this.enabledTokens.includes(currencyCode)) {
-          throw new Error('Error: Token not supported or enabled')
-        }
-      }
-    } else {
-      currencyCode = this.currencyInfo.currencyCode
+    if (tokenId != null && !this.enabledTokenIds.includes(tokenId)) {
+      throw new Error('Error: Token not enabled')
     }
+
+    const { currencyCode } =
+      tokenId == null ? this.currencyInfo : this.allTokensMap[tokenId]
 
     const nativeBalance =
       this.walletLocalData.totalBalances[currencyCode] ?? '0'
@@ -936,11 +914,10 @@ export class CurrencyEngine<
       const nativeBalance =
         this.walletLocalData.totalBalances[currencyCode] ?? '0'
       if (!skipChecks && lt(nativeBalance, nativeAmount)) {
-        throw new InsufficientFundsError()
+        throw new InsufficientFundsError({ tokenId })
       }
     }
 
-    edgeSpendInfo.currencyCode = currencyCode
     const denom = getDenomination(
       currencyCode,
       this.currencyInfo,

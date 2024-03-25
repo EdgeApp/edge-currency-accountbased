@@ -118,10 +118,7 @@ export function calcMiningFees(
   }
 
   let useLimit: 'regularTransaction' | 'tokenTransaction' = 'regularTransaction'
-  if (
-    spendInfo.currencyCode != null &&
-    spendInfo.currencyCode !== currencyInfo.currencyCode
-  ) {
+  if (spendInfo.tokenId !== null) {
     useLimit = 'tokenTransaction'
   }
 

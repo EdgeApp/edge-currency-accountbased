@@ -133,8 +133,6 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', memoName: 'note' }],
 
   // Deprecated:
-  defaultSettings: {},
-  memoType: 'text',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

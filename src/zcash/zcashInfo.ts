@@ -37,12 +37,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // https://zips.z.cash/zip-0302
-  memoOptions: [{ type: 'text', maxLength: 512 }],
-
-  // Deprecated:
-  defaultSettings: {},
-  memoType: 'text',
-  metaTokens: []
+  memoOptions: [{ type: 'text', maxLength: 512 }]
 }
 
 export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({

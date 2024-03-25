@@ -94,7 +94,8 @@ export function bufToHex(buf: Buffer): string {
 export function getLegacyDenomination(
   name: string,
   currencyInfo: EdgeCurrencyInfo,
-  legacyTokens: EdgeMetaToken[]
+  legacyTokens: EdgeMetaToken[],
+  builtinTokens: EdgeTokenMap
 ): EdgeDenomination | undefined {
   // Look in the primary currency info:
   for (const denomination of currencyInfo.denominations) {
@@ -109,8 +110,8 @@ export function getLegacyDenomination(
   }
 
   // Look in the builtin tokens:
-  for (const metaToken of currencyInfo.metaTokens) {
-    for (const denomination of metaToken.denominations) {
+  for (const token of Object.values(builtinTokens)) {
+    for (const denomination of token.denominations) {
       if (denomination.name === name) return denomination
     }
   }

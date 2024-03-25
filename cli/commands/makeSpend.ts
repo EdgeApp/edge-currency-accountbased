@@ -12,7 +12,7 @@ export class MakeSpend extends Command<CurrencyContext> {
   tokenId = Option.String('--tokenId', { required: false })
 
   async execute(): Promise<number> {
-    const { address, amount, tokenId } = this
+    const { address, amount, tokenId = null } = this
     const { stdout, state } = this.context
     const { engine } = await getCliEngine(this.context)
 

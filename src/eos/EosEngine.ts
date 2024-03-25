@@ -27,7 +27,6 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -976,7 +975,6 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, nativeBalance, denom } =
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
@@ -1035,7 +1033,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     const exchangeAmount = div(nativeAmount, denom.multiplier, nativePrecision)
     const networkFee = '0'
     if (gt(nativeAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     const quantity =
@@ -1077,7 +1075,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       },
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
-      tokenId: tokenId ?? null,
+      tokenId,
       txid: '', // txid
       walletId: this.walletId
     }

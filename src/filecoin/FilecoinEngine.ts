@@ -24,7 +24,6 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { upgradeMemos } from '../common/upgradeMemos'
 import { FilecoinTools } from './FilecoinTools'
 import {
   asFilecoinInitOptions,
@@ -217,10 +216,9 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    edgeSpendInfoIn = upgradeMemos(edgeSpendInfoIn, this.currencyInfo)
     const { edgeSpendInfo, currencyCode, skipChecks } =
       this.makeSpendCheck(edgeSpendInfoIn)
-    const { memos = [] } = edgeSpendInfo
+    const { memos = [], tokenId } = edgeSpendInfo
     const spendTarget = edgeSpendInfo.spendTargets[0]
     if (spendTarget == null) throw new Error('missing spendTargets')
     const { publicAddress, nativeAmount } = spendTarget
@@ -264,7 +262,7 @@ export class FilecoinEngine extends CurrencyEngine<
     // Make sure we have enough of a balance to complete the transaction
     const nativeBalance = this.availableAttoFil
     if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
-      throw new InsufficientFundsError()
+      throw new InsufficientFundsError({ tokenId })
     }
 
     const edgeTransaction: EdgeTransaction = {
