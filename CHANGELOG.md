@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.0.0 (2024-03-25)
+
 - added: Add Cardano (ADA)
 - added: Add Cardano PreProd Testnet
 - changed: Upgrade edge-core-js to v2.2.1
