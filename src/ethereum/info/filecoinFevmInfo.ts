@@ -4,7 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import { EthereumTools } from '../EthereumTools'
 import { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
-import { evmMemoOptions } from './ethereumCommonInfo'
+import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '690908f7fa93afc040cfbd9fe1ddd2c2668aa0e0': {
@@ -76,6 +76,7 @@ const networkInfo: EthereumNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
+  customFeeTemplate: evmCustomFeeTemplate,
   displayName: 'Filecoin FEVM',
   memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevm',

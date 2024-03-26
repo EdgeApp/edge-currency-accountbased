@@ -91,6 +91,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://explorer.solana.com/address/%s',
   transactionExplorer: 'https://explorer.solana.com/tx/%s',
 
+  customFeeTemplate: [
+    {
+      displayName: 'Micro Lamports',
+      key: 'microLamports',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'SOL',

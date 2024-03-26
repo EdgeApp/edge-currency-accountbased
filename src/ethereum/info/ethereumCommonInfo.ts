@@ -11,6 +11,19 @@ export const evmMemoOptions: EdgeMemoOption[] = [
   }
 ]
 
+export const evmCustomFeeTemplate /* : EdgeObjectTemplate */ = [
+  {
+    displayName: 'Gas Limit',
+    key: 'gasLimit',
+    type: 'string' as const
+  },
+  {
+    displayName: 'Gas Price (Gwei)',
+    key: 'gasPrice',
+    type: 'string' as const
+  }
+]
+
 /**
  * The core has deprecated `defaultSettings`,
  * but the GUI still looks at it, so give the GUI just what it needs.
