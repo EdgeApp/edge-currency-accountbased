@@ -54,6 +54,7 @@ export async function restoreContext(context: CurrencyContext): Promise<void> {
 
   // Boot the plugin:
   const plugin = pluginFactory({
+    infoPayload: {},
     initOptions: initOptions[lastPluginId] ?? {},
     io: context,
     log,

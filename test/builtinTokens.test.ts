@@ -9,6 +9,7 @@ import { fakeLog } from './fake/fakeLog'
 
 const fakeIo = makeFakeIo()
 const fakePluginOptions: EdgeCorePluginOptions = {
+  infoPayload: {},
   initOptions: {},
   io: fakeIo,
   log: fakeLog,

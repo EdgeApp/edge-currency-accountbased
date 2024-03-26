@@ -21,6 +21,7 @@ describe(`EOS activation`, function () {
 
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
+    infoPayload: {},
     initOptions: {},
     io: {
       ...fakeIo,

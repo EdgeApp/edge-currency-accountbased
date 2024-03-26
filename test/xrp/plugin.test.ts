@@ -20,6 +20,7 @@ for (const fixture of fixtures) {
 
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
+    infoPayload: {},
     initOptions: {},
     // @ts-expect-error
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
