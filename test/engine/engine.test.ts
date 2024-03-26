@@ -26,6 +26,7 @@ import fixtures from './fixtures'
 const fakeIo = makeFakeIo()
 const opts: EdgeCorePluginOptions = {
   initOptions: {},
+  infoPayload: {},
   io: { ...fakeIo, fetch, fetchCors: fetch },
   log: fakeLog,
   nativeIo: {},
@@ -285,6 +286,7 @@ const currencyEngineOptions: EdgeCurrencyEngineOptions = {
   enabledTokenIds: []
 }
 const env: PluginEnvironment<{}> = {
+  infoPayload: {},
   initOptions: {},
   io: {} as any,
   log: {} as any,

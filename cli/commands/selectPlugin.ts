@@ -35,6 +35,7 @@ export class SelectPlugin extends Command<CurrencyContext> {
 
     // Boot the plugin:
     const plugin = pluginFactory({
+      infoPayload: {},
       initOptions,
       io: this.context,
       log,

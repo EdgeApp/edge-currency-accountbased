@@ -22,6 +22,7 @@ import { fakeLog } from '../fake/fakeLog'
 describe(`Tezos engine`, function () {
   const fakeIo = makeFakeIo()
   const opts: EdgeCorePluginOptions = {
+    infoPayload: {},
     initOptions: {},
     io: {
       ...fakeIo,

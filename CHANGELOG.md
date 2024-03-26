@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Mark failed transactions processed from EVM scan networks with 'failed' confirmation status
+
 ## 4.0.0 (2024-03-25)
 
 - added: Add Cardano (ADA)
