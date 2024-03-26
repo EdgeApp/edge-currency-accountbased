@@ -4,7 +4,11 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
-import { evmMemoOptions, makeEvmDefaultSettings } from './ethereumCommonInfo'
+import {
+  evmCustomFeeTemplate,
+  evmMemoOptions,
+  makeEvmDefaultSettings
+} from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {}
 
@@ -97,6 +101,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'RIN',
+  customFeeTemplate: evmCustomFeeTemplate,
   displayName: 'Rinkeby Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'rinkeby',

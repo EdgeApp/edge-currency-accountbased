@@ -35,6 +35,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://testnet.algoexplorer.io/address/%s',
   transactionExplorer: 'https://testnet.algoexplorer.io/tx/%s',
 
+  customFeeTemplate: [
+    {
+      displayName: 'Fee',
+      key: 'fee',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'ALGO',

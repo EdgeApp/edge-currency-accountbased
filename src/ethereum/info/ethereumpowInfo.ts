@@ -4,7 +4,11 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
-import { evmMemoOptions, makeEvmDefaultSettings } from './ethereumCommonInfo'
+import {
+  evmCustomFeeTemplate,
+  evmMemoOptions,
+  makeEvmDefaultSettings
+} from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '2ad7868ca212135c6119fd7ad1ce51cfc5702892': {
@@ -76,6 +80,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETHW',
+  customFeeTemplate: evmCustomFeeTemplate,
   displayName: 'EthereumPoW',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereumpow',
