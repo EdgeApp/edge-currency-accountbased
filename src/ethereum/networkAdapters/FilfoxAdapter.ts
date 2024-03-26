@@ -1,3 +1,4 @@
+import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
@@ -273,12 +274,22 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       )
       .reduce((sum, transfer) => add(sum, transfer.value), '0')
 
+    // Infer the network prefix from the messageDetails:
+    const fromAddress = Address.fromString(messageDetails.from)
+    const networkPrefix = fromAddress.getNetworkPrefix()
+
+    // Use the network prefix and the addressString to create a formatted address:
+    const ownFilecoinFormattedAddress = Address.fromEthAddress(
+      networkPrefix,
+      addressString
+    ).toString()
+
     // Handle native amount:
     let nativeAmount: string
-    if (messageDetails.from === addressString) {
+    if (messageDetails.from === ownFilecoinFormattedAddress) {
       // For spends, always include network fee
       nativeAmount = `-${networkFee}`
-      if (messageDetails.to !== addressString) {
+      if (messageDetails.to !== ownFilecoinFormattedAddress) {
         // For spends not to self, subtract tx value
         nativeAmount = sub(nativeAmount, messageDetails.value)
       }

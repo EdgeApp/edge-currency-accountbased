@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Filecoin FEVM) Incorrectly identifying all transactions as receives
+
 ## 4.1.0 (2024-03-25)
 
 - changed: Mark failed transactions processed from EVM scan networks with 'failed' confirmation status
