@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Zcash) Orchard pool support
+- added: (Zcash) ZIP-317 dynamic fee support
+
 ## 4.1.1 (2024-03-26)
 
 - fixed: (Filecoin FEVM) Incorrectly identifying all transactions as receives
