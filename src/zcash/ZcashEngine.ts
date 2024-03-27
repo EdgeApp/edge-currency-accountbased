@@ -1,4 +1,4 @@
-import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
+import { abs, add, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -414,15 +414,26 @@ export class ZcashEngine extends CurrencyEngine<
     this.synchronizerStatus = 'SYNCING'
   }
 
-  async getMaxSpendable(): Promise<string> {
-    const spendableBalance = sub(
-      this.availableZatoshi,
-      this.networkInfo.defaultNetworkFee
-    )
-    if (lte(spendableBalance, '0'))
-      throw new InsufficientFundsError({ tokenId: null })
+  async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
+    const { memos = [], spendTargets } = edgeSpendInfo
+    const { publicAddress } = spendTargets[0]
 
-    return spendableBalance
+    if (publicAddress == null) {
+      throw new Error('makeSpend Missing publicAddress')
+    }
+    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
+    try {
+      // We anticipate this to fail and return an error message we cna parse the spendable amount from
+      await this.synchronizer.proposeTransfer({
+        toAddress: publicAddress,
+        zatoshi: this.availableZatoshi,
+        memo: memos[0]?.value ?? ''
+      })
+    } catch (e) {
+      const networkFee = extractFeeFromProposeTransferErrorString(String(e))
+      return sub(this.availableZatoshi, networkFee)
+    }
+    return this.availableZatoshi
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
@@ -437,7 +448,19 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
-    const totalTxAmount = add(nativeAmount, this.networkInfo.defaultNetworkFee)
+    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
+    const proposal = await this.synchronizer.proposeTransfer({
+      toAddress: publicAddress,
+      zatoshi: nativeAmount,
+      memo: memos[0]?.value ?? ''
+    })
+    if (proposal.transactionCount > 1) {
+      throw new Error('Unable to handle multiple transactions')
+    }
+    this.log.warn('450. proposal\n', JSON.stringify(proposal))
+    const networkFee = proposal.totalFee
+
+    const totalTxAmount = add(nativeAmount, networkFee)
 
     if (
       gt(
@@ -465,7 +488,7 @@ export class ZcashEngine extends CurrencyEngine<
       isSend: true,
       memos,
       nativeAmount: txNativeAmount,
-      networkFee: this.networkInfo.defaultNetworkFee,
+      networkFee,
       ourReceiveAddresses: [],
       signedTx: '',
       tokenId,
@@ -551,4 +574,20 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+/**
+ * Parses error thrown from proposeTransfer and extracts spendable amount and fee
+ * Example:	"Error while sending funds: Insufficient balance (have 780000, need 790000 including fee)"
+ */
+const extractFeeFromProposeTransferErrorString = (str: string): string => {
+  const regex = /(\d+)/g
+  const matches = str.match(regex)
+
+  if (matches == null || matches.length !== 2) {
+    throw new Error('Error parsing proposeTransfer error string')
+  }
+  const balance = parseInt(matches[0]).toString()
+  const fee = sub(parseInt(matches[1]).toString(), balance)
+  return fee
 }
