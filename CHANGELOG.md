@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Expose the modern `customFeeTemplate` fields on the relevant currency infos.
+
 ## 4.1.1 (2024-03-26)
 
 - fixed: (Filecoin FEVM) Incorrectly identifying all transactions as receives

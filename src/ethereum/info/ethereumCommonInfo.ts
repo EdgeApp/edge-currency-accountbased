@@ -1,4 +1,8 @@
-import type { EdgeMemoOption, JsonObject } from 'edge-core-js/types'
+import type {
+  EdgeMemoOption,
+  EdgeObjectTemplate,
+  JsonObject
+} from 'edge-core-js/types'
 
 import type { EthereumNetworkInfo } from '../ethereumTypes'
 
@@ -8,6 +12,19 @@ export const evmMemoOptions: EdgeMemoOption[] = [
     type: 'hex',
     hidden: true,
     memoName: 'data'
+  }
+]
+
+export const evmCustomFeeTemplate: EdgeObjectTemplate = [
+  {
+    displayName: 'Gas Limit',
+    key: 'gasLimit',
+    type: 'string'
+  },
+  {
+    displayName: 'Gas Price (Gwei)',
+    key: 'gasPrice',
+    type: 'string'
   }
 ]
 

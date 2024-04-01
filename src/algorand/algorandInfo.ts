@@ -42,6 +42,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://explorer.bitquery.io/algorand/address/%s',
   transactionExplorer: 'https://explorer.bitquery.io/algorand/tx/%s',
 
+  customFeeTemplate: [
+    {
+      displayName: 'Fee',
+      key: 'fee',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'ALGO',

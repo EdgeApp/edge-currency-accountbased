@@ -5,7 +5,11 @@ import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { ethOtherMethodNames } from '../ethereumTypes'
-import { evmMemoOptions, makeEvmDefaultSettings } from './ethereumCommonInfo'
+import {
+  evmCustomFeeTemplate,
+  evmMemoOptions,
+  makeEvmDefaultSettings
+} from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '111111111117dc0aa78b770fa6a738034120c302': {
@@ -1120,6 +1124,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
+  customFeeTemplate: evmCustomFeeTemplate,
   displayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereum',
