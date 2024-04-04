@@ -315,9 +315,11 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       for (let i = 0; i < transactions.length; i++) {
         try {
           const cleanedTx = cleanerFunc(transactions[i])
-          const tx = await this.processEvmScanTransaction(
+          const l1RollupFee = await this.getL1RollupFee(cleanedTx)
+          const tx = this.processEvmScanTransaction(
             cleanedTx,
-            currencyCode
+            currencyCode,
+            l1RollupFee
           )
           allTransactions.push(tx)
         } catch (e: any) {
@@ -338,10 +340,32 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return { allTransactions, server }
   }
 
-  private async processEvmScanTransaction(
+  private async getL1RollupFee(
+    tx: EvmScanTransaction | EvmScanInternalTransaction
+  ): Promise<string> {
+    const txid = tx.hash ?? tx.transactionHash
+    const isSpend =
+      tx.from.toLowerCase() ===
+      this.ethEngine.walletLocalData.publicKey.toLowerCase()
+
+    let l1RollupFee = '0'
+    if (isSpend && this.ethEngine.networkInfo.optimismRollup === true) {
+      const response = await this.ethEngine.ethNetwork.multicastRpc(
+        'eth_getTransactionReceipt',
+        [txid]
+      )
+      const json = asGetTransactionReceipt(response.result.result)
+      l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
+    }
+
+    return l1RollupFee
+  }
+
+  private processEvmScanTransaction(
     tx: EvmScanTransaction | EvmScanInternalTransaction,
-    currencyCode: string
-  ): Promise<EdgeTransaction> {
+    currencyCode: string,
+    l1RollupFee: string
+  ): EdgeTransaction {
     const ourReceiveAddresses: string[] = []
 
     const txid = tx.hash ?? tx.transactionHash
@@ -367,16 +391,6 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
     const nativeNetworkFee: string =
       gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
-
-    let l1RollupFee = '0'
-    if (isSpend && this.ethEngine.networkInfo.optimismRollup === true) {
-      const response = await this.ethEngine.ethNetwork.multicastRpc(
-        'eth_getTransactionReceipt',
-        [txid]
-      )
-      const json = asGetTransactionReceipt(response.result.result)
-      l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
-    }
 
     let nativeAmount: string
     let networkFee: string
