@@ -317,7 +317,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         try {
           const cleanedTx = cleanerFunc(transactions[i])
           const l1RollupFee = await this.getL1RollupFee(cleanedTx)
-          const tx = this.processEvmScanTransaction(
+          const tx = processEvmScanTransaction(
             this.ethEngine,
             cleanedTx,
             currencyCode,
@@ -362,104 +362,103 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     return l1RollupFee
   }
+}
 
-  private processEvmScanTransaction(
-    ethEngine: EthereumEngine,
-    tx: EvmScanTransaction | EvmScanInternalTransaction,
-    currencyCode: string,
-    l1RollupFee: string
-  ): EdgeTransaction {
-    const ourReceiveAddresses: string[] = []
+export function processEvmScanTransaction(
+  ethEngine: EthereumEngine,
+  tx: EvmScanTransaction | EvmScanInternalTransaction,
+  currencyCode: string,
+  l1RollupFee: string
+): EdgeTransaction {
+  const ourReceiveAddresses: string[] = []
 
-    const txid = tx.hash ?? tx.transactionHash
-    if (txid == null) {
-      throw new Error('Invalid transaction result format')
-    }
-
-    const isSpend =
-      tx.from.toLowerCase() ===
-      ethEngine.walletLocalData.publicKey.toLowerCase()
-    const tokenTx = currencyCode !== ethEngine.currencyInfo.currencyCode
-    let tokenId: EdgeTokenId = null
-    if (tokenTx) {
-      const knownTokenId = Object.keys(ethEngine.allTokensMap).find(
-        tokenId => ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
-      )
-      if (knownTokenId === undefined) {
-        throw new Error('Unknown token')
-      }
-      tokenId = knownTokenId
-    }
-    const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
-    const nativeNetworkFee: string =
-      gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
-
-    let nativeAmount: string
-    let networkFee: string
-    let parentNetworkFee: string | undefined
-
-    if (isSpend) {
-      if (tokenTx) {
-        nativeAmount = sub('0', tx.value)
-        networkFee = '0'
-        parentNetworkFee = add(nativeNetworkFee, l1RollupFee)
-      } else {
-        // Spend to self. netNativeAmount is just the fee
-        if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-          nativeAmount = sub(sub('0', nativeNetworkFee), l1RollupFee)
-          networkFee = add(nativeNetworkFee, l1RollupFee)
-        } else {
-          nativeAmount = sub(
-            sub(sub('0', tx.value), nativeNetworkFee),
-            l1RollupFee
-          )
-          networkFee = add(nativeNetworkFee, l1RollupFee)
-        }
-      }
-    } else {
-      nativeAmount = tx.value
-      networkFee = '0'
-      ourReceiveAddresses.push(ethEngine.walletLocalData.publicKey)
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [tx.from],
-      to: [tx.to],
-      gas: tx.gas,
-      gasPrice: gasPrice ?? '',
-      gasUsed: tx.gasUsed,
-      isFromMakeSpend: false
-    }
-
-    let blockHeight = parseInt(tx.blockNumber)
-    if (blockHeight < 0) blockHeight = 0
-
-    const confirmations: EdgeConfirmationState | undefined =
-      tx.isError === '1' ? 'failed' : undefined
-
-    const edgeTransaction: EdgeTransaction = {
-      blockHeight,
-      currencyCode,
-      confirmations,
-      date: parseInt(tx.timeStamp),
-      feeRateUsed:
-        gasPrice != null
-          ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
-          : undefined,
-      isSend: nativeAmount.startsWith('-'),
-      memos: [],
-      nativeAmount,
-      networkFee,
-      otherParams,
-      ourReceiveAddresses,
-      parentNetworkFee,
-      signedTx: '',
-      tokenId,
-      txid,
-      walletId: ethEngine.walletId
-    }
-
-    return edgeTransaction
-    // or should be this.addTransaction(currencyCode, edgeTransaction)?
+  const txid = tx.hash ?? tx.transactionHash
+  if (txid == null) {
+    throw new Error('Invalid transaction result format')
   }
+
+  const isSpend =
+    tx.from.toLowerCase() === ethEngine.walletLocalData.publicKey.toLowerCase()
+  const tokenTx = currencyCode !== ethEngine.currencyInfo.currencyCode
+  let tokenId: EdgeTokenId = null
+  if (tokenTx) {
+    const knownTokenId = Object.keys(ethEngine.allTokensMap).find(
+      tokenId => ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
+    )
+    if (knownTokenId === undefined) {
+      throw new Error('Unknown token')
+    }
+    tokenId = knownTokenId
+  }
+  const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
+  const nativeNetworkFee: string =
+    gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
+
+  let nativeAmount: string
+  let networkFee: string
+  let parentNetworkFee: string | undefined
+
+  if (isSpend) {
+    if (tokenTx) {
+      nativeAmount = sub('0', tx.value)
+      networkFee = '0'
+      parentNetworkFee = add(nativeNetworkFee, l1RollupFee)
+    } else {
+      // Spend to self. netNativeAmount is just the fee
+      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
+        nativeAmount = sub(sub('0', nativeNetworkFee), l1RollupFee)
+        networkFee = add(nativeNetworkFee, l1RollupFee)
+      } else {
+        nativeAmount = sub(
+          sub(sub('0', tx.value), nativeNetworkFee),
+          l1RollupFee
+        )
+        networkFee = add(nativeNetworkFee, l1RollupFee)
+      }
+    }
+  } else {
+    nativeAmount = tx.value
+    networkFee = '0'
+    ourReceiveAddresses.push(ethEngine.walletLocalData.publicKey)
+  }
+
+  const otherParams: EthereumTxOtherParams = {
+    from: [tx.from],
+    to: [tx.to],
+    gas: tx.gas,
+    gasPrice: gasPrice ?? '',
+    gasUsed: tx.gasUsed,
+    isFromMakeSpend: false
+  }
+
+  let blockHeight = parseInt(tx.blockNumber)
+  if (blockHeight < 0) blockHeight = 0
+
+  const confirmations: EdgeConfirmationState | undefined =
+    tx.isError === '1' ? 'failed' : undefined
+
+  const edgeTransaction: EdgeTransaction = {
+    blockHeight,
+    currencyCode,
+    confirmations,
+    date: parseInt(tx.timeStamp),
+    feeRateUsed:
+      gasPrice != null
+        ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
+        : undefined,
+    isSend: nativeAmount.startsWith('-'),
+    memos: [],
+    nativeAmount,
+    networkFee,
+    otherParams,
+    ourReceiveAddresses,
+    parentNetworkFee,
+    signedTx: '',
+    tokenId,
+    txid,
+    walletId: ethEngine.walletId
+  }
+
+  return edgeTransaction
+  // or should be this.addTransaction(currencyCode, edgeTransaction)?
 }
