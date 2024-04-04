@@ -7,6 +7,7 @@ import {
 
 import { asIntegerString } from '../../common/types'
 import { decimalToHex, pickRandom, safeErrorMessage } from '../../common/utils'
+import { EthereumEngine } from '../EthereumEngine'
 import {
   BroadcastResults,
   EdgeTransactionsBlockHeightTuple,
@@ -317,6 +318,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           const cleanedTx = cleanerFunc(transactions[i])
           const l1RollupFee = await this.getL1RollupFee(cleanedTx)
           const tx = this.processEvmScanTransaction(
+            this.ethEngine,
             cleanedTx,
             currencyCode,
             l1RollupFee
@@ -362,6 +364,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   }
 
   private processEvmScanTransaction(
+    ethEngine: EthereumEngine,
     tx: EvmScanTransaction | EvmScanInternalTransaction,
     currencyCode: string,
     l1RollupFee: string
@@ -375,13 +378,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     const isSpend =
       tx.from.toLowerCase() ===
-      this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
+      ethEngine.walletLocalData.publicKey.toLowerCase()
+    const tokenTx = currencyCode !== ethEngine.currencyInfo.currencyCode
     let tokenId: EdgeTokenId = null
     if (tokenTx) {
-      const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
-        tokenId =>
-          this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
+      const knownTokenId = Object.keys(ethEngine.allTokensMap).find(
+        tokenId => ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
       )
       if (knownTokenId === undefined) {
         throw new Error('Unknown token')
@@ -417,7 +419,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     } else {
       nativeAmount = tx.value
       networkFee = '0'
-      ourReceiveAddresses.push(this.ethEngine.walletLocalData.publicKey)
+      ourReceiveAddresses.push(ethEngine.walletLocalData.publicKey)
     }
 
     const otherParams: EthereumTxOtherParams = {
@@ -454,7 +456,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       signedTx: '',
       tokenId,
       txid,
-      walletId: this.ethEngine.walletId
+      walletId: ethEngine.walletId
     }
 
     return edgeTransaction
