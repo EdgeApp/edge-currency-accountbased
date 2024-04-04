@@ -1,13 +1,14 @@
 import { add, mul, sub } from 'biggystring'
 import {
   EdgeConfirmationState,
+  EdgeCurrencyInfo,
   EdgeTokenId,
+  EdgeTokenMap,
   EdgeTransaction
 } from 'edge-core-js/types'
 
 import { asIntegerString } from '../../common/types'
 import { decimalToHex, pickRandom, safeErrorMessage } from '../../common/utils'
-import { EthereumEngine } from '../EthereumEngine'
 import {
   BroadcastResults,
   EdgeTransactionsBlockHeightTuple,
@@ -318,9 +319,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           const cleanedTx = cleanerFunc(transactions[i])
           const l1RollupFee = await this.getL1RollupFee(cleanedTx)
           const tx = processEvmScanTransaction(
-            this.ethEngine,
+            {
+              allTokensMap: this.ethEngine.allTokensMap,
+              currencyInfo: this.ethEngine.currencyInfo,
+              forWhichAddress: this.ethEngine.walletLocalData.publicKey,
+              forWhichCurrencyCode: currencyCode,
+              forWhichWalletId: this.ethEngine.walletId
+            },
             cleanedTx,
-            currencyCode,
             l1RollupFee
           )
           allTransactions.push(tx)
@@ -364,10 +370,25 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   }
 }
 
+/**
+ * This is context info about the evm transaction being processed.
+ * It contains information about the wallet, currency, and tokens which
+ * the transaction is being processed for.
+ **/
+export interface TransactionProcessingContext {
+  allTokensMap: EdgeTokenMap
+  currencyInfo: EdgeCurrencyInfo
+  /** Which wallet address which the transaction is being processed for */
+  forWhichAddress: string
+  /** Which currencyCode is the transaction being processed for */
+  forWhichCurrencyCode: string
+  /** Which walletId is the transaction being processed for */
+  forWhichWalletId: string
+}
+
 export function processEvmScanTransaction(
-  ethEngine: EthereumEngine,
+  context: TransactionProcessingContext,
   tx: EvmScanTransaction | EvmScanInternalTransaction,
-  currencyCode: string,
   l1RollupFee: string
 ): EdgeTransaction {
   const ourReceiveAddresses: string[] = []
@@ -378,12 +399,15 @@ export function processEvmScanTransaction(
   }
 
   const isSpend =
-    tx.from.toLowerCase() === ethEngine.walletLocalData.publicKey.toLowerCase()
-  const tokenTx = currencyCode !== ethEngine.currencyInfo.currencyCode
+    tx.from.toLowerCase() === context.forWhichAddress.toLowerCase()
+  const tokenTx =
+    context.forWhichCurrencyCode !== context.currencyInfo.currencyCode
   let tokenId: EdgeTokenId = null
   if (tokenTx) {
-    const knownTokenId = Object.keys(ethEngine.allTokensMap).find(
-      tokenId => ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
+    const knownTokenId = Object.keys(context.allTokensMap).find(
+      tokenId =>
+        context.allTokensMap[tokenId].currencyCode ===
+        context.forWhichCurrencyCode
     )
     if (knownTokenId === undefined) {
       throw new Error('Unknown token')
@@ -419,7 +443,7 @@ export function processEvmScanTransaction(
   } else {
     nativeAmount = tx.value
     networkFee = '0'
-    ourReceiveAddresses.push(ethEngine.walletLocalData.publicKey)
+    ourReceiveAddresses.push(context.forWhichAddress)
   }
 
   const otherParams: EthereumTxOtherParams = {
@@ -439,7 +463,7 @@ export function processEvmScanTransaction(
 
   const edgeTransaction: EdgeTransaction = {
     blockHeight,
-    currencyCode,
+    currencyCode: context.forWhichCurrencyCode,
     confirmations,
     date: parseInt(tx.timeStamp),
     feeRateUsed:
@@ -456,7 +480,7 @@ export function processEvmScanTransaction(
     signedTx: '',
     tokenId,
     txid,
-    walletId: ethEngine.walletId
+    walletId: context.forWhichWalletId
   }
 
   return edgeTransaction
