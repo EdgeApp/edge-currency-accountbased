@@ -56,7 +56,7 @@ function getMemoError(
     option.maxLength != null &&
     memo.value.length > option.maxLength
   ) {
-    return `cannot be longer than ${option.maxLength}`
+    return `cannot be longer than ${option.maxLength} characters`
   }
 
   if (option.type === 'number') {
