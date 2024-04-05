@@ -410,7 +410,9 @@ export function processEvmScanTransaction(
         context.forWhichCurrencyCode
     )
     if (knownTokenId === undefined) {
-      throw new Error('Unknown token')
+      throw new Error(
+        `Unknown token ${tokenId} for ${context.forWhichCurrencyCode}`
+      )
     }
     tokenId = knownTokenId
   }
