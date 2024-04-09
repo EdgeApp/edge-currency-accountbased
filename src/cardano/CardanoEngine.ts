@@ -1,5 +1,5 @@
 import * as Cardano from '@emurgo/cardano-serialization-lib-nodejs'
-import { add, gt, mul, sub } from 'biggystring'
+import { add, mul, sub } from 'biggystring'
 import { asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -468,14 +468,7 @@ export class CardanoEngine extends CurrencyEngine<
       }
     }
 
-    const balance =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
-
-    let totalTxAmount = '0'
-    totalTxAmount = add(nativeAmount, nativeNetworkFee)
-    if (gt(totalTxAmount, balance)) {
-      throw new InsufficientFundsError({ tokenId })
-    }
+    const totalTxAmount = add(nativeAmount, nativeNetworkFee)
     nativeAmount = mul(totalTxAmount, '-1')
 
     // **********************************
