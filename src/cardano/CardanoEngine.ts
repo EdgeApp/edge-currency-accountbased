@@ -405,10 +405,17 @@ export class CardanoEngine extends CurrencyEngine<
       const output = Cardano.TransactionOutput.new(changeAddr, inputValue)
       unspentOutputs.add(Cardano.TransactionUnspentOutput.new(input, output))
     }
-    txBuilder.add_inputs_from(
-      unspentOutputs,
-      Cardano.CoinSelectionStrategyCIP2.LargestFirst
-    )
+    try {
+      txBuilder.add_inputs_from(
+        unspentOutputs,
+        Cardano.CoinSelectionStrategyCIP2.LargestFirst
+      )
+    } catch (error) {
+      if (String(error).includes('UTxO Balance Insufficient')) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+      throw error
+    }
 
     // Adds a change output if there are more ADA in utxo than we need for the transaction,
     // these coins will be returned to change address
