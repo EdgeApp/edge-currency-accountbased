@@ -1,7 +1,9 @@
 import { add, mul, sub } from 'biggystring'
 import {
   EdgeConfirmationState,
+  EdgeCurrencyInfo,
   EdgeTokenId,
+  EdgeTokenMap,
   EdgeTransaction
 } from 'edge-core-js/types'
 
@@ -315,9 +317,17 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       for (let i = 0; i < transactions.length; i++) {
         try {
           const cleanedTx = cleanerFunc(transactions[i])
-          const tx = await this.processEvmScanTransaction(
+          const l1RollupFee = await this.getL1RollupFee(cleanedTx)
+          const tx = processEvmScanTransaction(
+            {
+              allTokensMap: this.ethEngine.allTokensMap,
+              currencyInfo: this.ethEngine.currencyInfo,
+              forWhichAddress: this.ethEngine.walletLocalData.publicKey,
+              forWhichCurrencyCode: currencyCode,
+              forWhichWalletId: this.ethEngine.walletId
+            },
             cleanedTx,
-            currencyCode
+            l1RollupFee
           )
           allTransactions.push(tx)
         } catch (e: any) {
@@ -338,35 +348,13 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return { allTransactions, server }
   }
 
-  private async processEvmScanTransaction(
-    tx: EvmScanTransaction | EvmScanInternalTransaction,
-    currencyCode: string
-  ): Promise<EdgeTransaction> {
-    const ourReceiveAddresses: string[] = []
-
+  private async getL1RollupFee(
+    tx: EvmScanTransaction | EvmScanInternalTransaction
+  ): Promise<string> {
     const txid = tx.hash ?? tx.transactionHash
-    if (txid == null) {
-      throw new Error('Invalid transaction result format')
-    }
-
     const isSpend =
       tx.from.toLowerCase() ===
       this.ethEngine.walletLocalData.publicKey.toLowerCase()
-    const tokenTx = currencyCode !== this.ethEngine.currencyInfo.currencyCode
-    let tokenId: EdgeTokenId = null
-    if (tokenTx) {
-      const knownTokenId = Object.keys(this.ethEngine.allTokensMap).find(
-        tokenId =>
-          this.ethEngine.allTokensMap[tokenId].currencyCode === currencyCode
-      )
-      if (knownTokenId === undefined) {
-        throw new Error('Unknown token')
-      }
-      tokenId = knownTokenId
-    }
-    const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
-    const nativeNetworkFee: string =
-      gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
 
     let l1RollupFee = '0'
     if (isSpend && this.ethEngine.networkInfo.optimismRollup === true) {
@@ -378,72 +366,125 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
     }
 
-    let nativeAmount: string
-    let networkFee: string
-    let parentNetworkFee: string | undefined
-
-    if (isSpend) {
-      if (tokenTx) {
-        nativeAmount = sub('0', tx.value)
-        networkFee = '0'
-        parentNetworkFee = add(nativeNetworkFee, l1RollupFee)
-      } else {
-        // Spend to self. netNativeAmount is just the fee
-        if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
-          nativeAmount = sub(sub('0', nativeNetworkFee), l1RollupFee)
-          networkFee = add(nativeNetworkFee, l1RollupFee)
-        } else {
-          nativeAmount = sub(
-            sub(sub('0', tx.value), nativeNetworkFee),
-            l1RollupFee
-          )
-          networkFee = add(nativeNetworkFee, l1RollupFee)
-        }
-      }
-    } else {
-      nativeAmount = tx.value
-      networkFee = '0'
-      ourReceiveAddresses.push(this.ethEngine.walletLocalData.publicKey)
-    }
-
-    const otherParams: EthereumTxOtherParams = {
-      from: [tx.from],
-      to: [tx.to],
-      gas: tx.gas,
-      gasPrice: gasPrice ?? '',
-      gasUsed: tx.gasUsed,
-      isFromMakeSpend: false
-    }
-
-    let blockHeight = parseInt(tx.blockNumber)
-    if (blockHeight < 0) blockHeight = 0
-
-    const confirmations: EdgeConfirmationState | undefined =
-      tx.isError === '1' ? 'failed' : undefined
-
-    const edgeTransaction: EdgeTransaction = {
-      blockHeight,
-      currencyCode,
-      confirmations,
-      date: parseInt(tx.timeStamp),
-      feeRateUsed:
-        gasPrice != null
-          ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
-          : undefined,
-      isSend: nativeAmount.startsWith('-'),
-      memos: [],
-      nativeAmount,
-      networkFee,
-      otherParams,
-      ourReceiveAddresses,
-      parentNetworkFee,
-      signedTx: '',
-      tokenId,
-      txid,
-      walletId: this.ethEngine.walletId
-    }
-
-    return edgeTransaction
-    // or should be this.addTransaction(currencyCode, edgeTransaction)?
+    return l1RollupFee
   }
+}
+
+/**
+ * This is context info about the evm transaction being processed.
+ * It contains information about the wallet, currency, and tokens which
+ * the transaction is being processed for.
+ **/
+export interface TransactionProcessingContext {
+  allTokensMap: EdgeTokenMap
+  currencyInfo: EdgeCurrencyInfo
+  /** Which wallet address which the transaction is being processed for */
+  forWhichAddress: string
+  /** Which currencyCode is the transaction being processed for */
+  forWhichCurrencyCode: string
+  /** Which walletId is the transaction being processed for */
+  forWhichWalletId: string
+}
+
+export function processEvmScanTransaction(
+  context: TransactionProcessingContext,
+  tx: EvmScanTransaction | EvmScanInternalTransaction,
+  l1RollupFee: string
+): EdgeTransaction {
+  const ourReceiveAddresses: string[] = []
+
+  const txid = tx.hash ?? tx.transactionHash
+  if (txid == null) {
+    throw new Error('Invalid transaction result format')
+  }
+
+  const isSpend =
+    tx.from.toLowerCase() === context.forWhichAddress.toLowerCase()
+  const tokenTx =
+    context.forWhichCurrencyCode !== context.currencyInfo.currencyCode
+  let tokenId: EdgeTokenId = null
+  if (tokenTx) {
+    const knownTokenId = Object.keys(context.allTokensMap).find(
+      tokenId =>
+        context.allTokensMap[tokenId].currencyCode ===
+        context.forWhichCurrencyCode
+    )
+    if (knownTokenId === undefined) {
+      throw new Error(
+        `Unknown token ${tokenId} for ${context.forWhichCurrencyCode}`
+      )
+    }
+    tokenId = knownTokenId
+  }
+  const gasPrice = 'gasPrice' in tx ? tx.gasPrice : undefined
+  const nativeNetworkFee: string =
+    gasPrice != null ? mul(gasPrice, tx.gasUsed) : '0'
+
+  let nativeAmount: string
+  let networkFee: string
+  let parentNetworkFee: string | undefined
+
+  if (isSpend) {
+    if (tokenTx) {
+      nativeAmount = sub('0', tx.value)
+      networkFee = '0'
+      parentNetworkFee = add(nativeNetworkFee, l1RollupFee)
+    } else {
+      // Spend to self. netNativeAmount is just the fee
+      if (tx.from.toLowerCase() === tx.to.toLowerCase()) {
+        nativeAmount = sub(sub('0', nativeNetworkFee), l1RollupFee)
+        networkFee = add(nativeNetworkFee, l1RollupFee)
+      } else {
+        nativeAmount = sub(
+          sub(sub('0', tx.value), nativeNetworkFee),
+          l1RollupFee
+        )
+        networkFee = add(nativeNetworkFee, l1RollupFee)
+      }
+    }
+  } else {
+    nativeAmount = tx.value
+    networkFee = '0'
+    ourReceiveAddresses.push(context.forWhichAddress)
+  }
+
+  const otherParams: EthereumTxOtherParams = {
+    from: [tx.from],
+    to: [tx.to],
+    gas: tx.gas,
+    gasPrice: gasPrice ?? '',
+    gasUsed: tx.gasUsed,
+    isFromMakeSpend: false
+  }
+
+  let blockHeight = parseInt(tx.blockNumber)
+  if (blockHeight < 0) blockHeight = 0
+
+  const confirmations: EdgeConfirmationState | undefined =
+    tx.isError === '1' ? 'failed' : undefined
+
+  const edgeTransaction: EdgeTransaction = {
+    blockHeight,
+    currencyCode: context.forWhichCurrencyCode,
+    confirmations,
+    date: parseInt(tx.timeStamp),
+    feeRateUsed:
+      gasPrice != null
+        ? getFeeRateUsed(gasPrice, tx.gas, tx.gasUsed)
+        : undefined,
+    isSend: nativeAmount.startsWith('-'),
+    memos: [],
+    nativeAmount,
+    networkFee,
+    otherParams,
+    ourReceiveAddresses,
+    parentNetworkFee,
+    signedTx: '',
+    tokenId,
+    txid,
+    walletId: context.forWhichWalletId
+  }
+
+  return edgeTransaction
+  // or should be this.addTransaction(currencyCode, edgeTransaction)?
 }
