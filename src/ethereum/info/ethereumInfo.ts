@@ -996,6 +996,30 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xc944e90c64b2c07662a292be6244bdf05cda44a7'
     }
   },
+  bb0e17ef65f82ab018d8edd776e8dd940327b28b: {
+    currencyCode: 'AXS',
+    displayName: 'Axie Infinity Shard',
+    denominations: [{ name: 'AXS', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b'
+    }
+  },
+  ddb3422497e61e13543bea06989c0789117555c5: {
+    currencyCode: 'COTI',
+    displayName: 'COTI',
+    denominations: [{ name: 'COTI', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xDDB3422497E61e13543BeA06989C0789117555c5'
+    }
+  },
+  '7ddc52c4de30e94be3a6a0a2b259b2850f421989': {
+    currencyCode: 'GMT',
+    displayName: 'GMT',
+    denominations: [{ name: 'GMT', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x7Ddc52c4De30e94Be3A6A0A2b259b2850f421989'
+    }
+  },
   '3845badade8e6dff049820680d1f14bd3903a5d0': {
     currencyCode: 'SAND',
     displayName: 'SAND',

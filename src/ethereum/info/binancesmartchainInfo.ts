@@ -91,6 +91,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD'
     }
   },
+  fb6115445bff7b52feb98650c87f44907e58f802: {
+    currencyCode: 'AAVE',
+    displayName: 'Binance-Peg Aave Token',
+    denominations: [{ name: 'AAVE', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xfb6115445Bff7b52FeB98650C87f44907E58f802'
+    }
+  },
   cc42724c6683b7e57334c4e856f4c9965ed682bd: {
     currencyCode: 'MATIC',
     displayName: 'Matic Token',
