@@ -1,6 +1,5 @@
 import {
   asArray,
-  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -13,7 +12,6 @@ import {
 import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface HederaNetworkInfo {
-  creatorApiServers: [string]
   mirrorNodes: [string]
   client: string
   checksumNetworkID: string
@@ -21,25 +19,11 @@ export interface HederaNetworkInfo {
 }
 
 export const asHederaWalletOtherData = asObject({
-  activationRequestId: asMaybe(asString),
-  accountActivationQuoteAddress: asMaybe(asString),
-  accountActivationQuoteAmount: asMaybe(asString),
   hederaAccount: asMaybe(asString),
-  latestTimestamp: asMaybe(asString, '1535068800'), // genesis '2018-08-24T00:00:00.000Z'
-  paymentSubmitted: asMaybe(asBoolean)
+  latestTimestamp: asMaybe(asString, '1535068800') // genesis '2018-08-24T00:00:00.000Z'
 })
 
 export type HederaWalletOtherData = ReturnType<typeof asHederaWalletOtherData>
-
-export const hederaOtherMethodNames = [
-  'getActivationSupportedCurrencies',
-  'getActivationCost',
-  'validateAccount'
-] as const
-
-export const asGetActivationCost = asObject({
-  hbar: asString
-})
 
 export const asGetHederaAccount = asObject({
   accounts: asArray(
@@ -76,17 +60,6 @@ export const asMirrorNodeTransactionResponse = asObject({
       charged_tx_fee: asNumber
     })
   )
-})
-
-export const asGetAccountActivationQuote = asObject({
-  amount: asString,
-  address: asString,
-  request_id: asString
-})
-
-export const asCheckAccountCreationStatus = asObject({
-  status: asString,
-  account_id: asOptional(asString)
 })
 
 export type SafeHederaWalletInfo = ReturnType<typeof asSafeHederaWalletInfo>

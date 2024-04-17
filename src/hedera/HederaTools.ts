@@ -18,7 +18,6 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getFetchCors, getLegacyDenomination } from '../common/utils'
 import {
-  asGetActivationCost,
   asHederaPrivateKeys,
   asSafeHederaWalletInfo,
   HederaNetworkInfo
@@ -182,35 +181,6 @@ export class HederaTools implements EdgeCurrencyTools {
     const amount = div(nativeAmount, denom.multiplier, 8)
 
     return encodeUriCommon(obj, pluginId, amount)
-  }
-
-  //
-  // otherMethods
-  //
-
-  async getActivationSupportedCurrencies(): Promise<{
-    result: { [code: string]: boolean }
-  }> {
-    return { result: { ETH: true } }
-  }
-
-  async getActivationCost(): Promise<string | number> {
-    const creatorApiServer = this.networkInfo.creatorApiServers[0]
-
-    try {
-      const response = await this.fetchCors(`${creatorApiServer}/account/cost`)
-      return asGetActivationCost(await response.json()).hbar
-    } catch (e: any) {
-      this.log.warn(
-        'getActivationCost error unable to get account activation cost',
-        e
-      )
-      throw new Error('ErrorUnableToGetCost')
-    }
-  }
-
-  async validateAccount(): Promise<{ result: '' | 'AccountAvailable' }> {
-    return { result: 'AccountAvailable' }
   }
 }
 

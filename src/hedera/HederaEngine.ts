@@ -1,5 +1,5 @@
 import * as hedera from '@hashgraph/sdk'
-import { add, eq, gt, toFixed } from 'biggystring'
+import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -16,11 +16,9 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { getFetchCors, hexToBuf } from '../common/utils'
+import { getFetchCors } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
-  asCheckAccountCreationStatus,
-  asGetAccountActivationQuote,
   asGetHederaAccount,
   asHederaPrivateKeys,
   asHederaWalletOtherData,
@@ -39,8 +37,6 @@ export class HederaEngine extends CurrencyEngine<
   client: hedera.Client
   fetchCors: EdgeFetchFunction
   accountNameChecked: boolean
-  otherMethods: Object
-  creatorApiServers: [string]
   mirrorNodes: [string]
   maxFee: number
   otherData!: HederaWalletOtherData
@@ -53,130 +49,17 @@ export class HederaEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
 
-    const { client, creatorApiServers, mirrorNodes, maxFee } = env.networkInfo
+    const { client, mirrorNodes, maxFee } = env.networkInfo
     // @ts-expect-error
     this.client = hedera.Client[`for${client}`]()
     this.fetchCors = getFetchCors(env.io)
     this.accountNameChecked = false
-    this.creatorApiServers = creatorApiServers
     this.mirrorNodes = mirrorNodes
     this.maxFee = maxFee
-
-    this.otherMethods = {
-      getAccountActivationQuote: async (params: Object) => {
-        // @ts-expect-error
-        const { currencyCode, activePublicKey } = params
-        if (currencyCode == null || activePublicKey == null) {
-          throw new Error('ErrorInvalidParams')
-        }
-
-        // Activation requests don't expire (currently) so just return the address and amount if we already have it instead of overwriting the previous request
-        const { accountActivationQuoteAmount, accountActivationQuoteAddress } =
-          this.otherData
-        if (
-          accountActivationQuoteAmount != null &&
-          accountActivationQuoteAddress != null
-        ) {
-          return {
-            paymentAddress: accountActivationQuoteAddress,
-            currencyCode,
-            amount: toFixed(accountActivationQuoteAmount, 3, 9),
-            exchangeAmount: '0'
-          }
-        }
-
-        const options = {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            currency: currencyCode,
-            public_key: activePublicKey
-          })
-        }
-
-        try {
-          const response = await this.fetchCors(
-            `${this.creatorApiServers[0]}/account`,
-            options
-          )
-
-          if (!response.ok) {
-            throw new Error(await response.text())
-          }
-
-          const json = asGetAccountActivationQuote(await response.json())
-
-          const { request_id: requestId, address, amount } = json
-          this.warn(`activationRequestId: ${requestId}`)
-
-          this.otherData.activationRequestId = requestId
-          this.otherData.accountActivationQuoteAddress = address
-          this.otherData.accountActivationQuoteAmount = amount
-          this.walletLocalDataDirty = true
-
-          return {
-            paymentAddress: address,
-            currencyCode,
-            amount: toFixed(amount, 3, 18),
-            exchangeAmount: '0'
-          }
-        } catch (e: any) {
-          this.warn(
-            'getAccountActivationQuote: error submitting account activation request',
-            e
-          )
-          throw new Error('ErrorActivationRequest')
-        }
-      },
-      submitActivationPayment: async (txn: EdgeTransaction) => {
-        const requestId = this.otherData.activationRequestId
-        if (requestId == null) {
-          // @ts-expect-error
-          throw new Error({
-            message: 'ErrorNoActivationPending'
-          })
-        }
-
-        const options = {
-          method: 'PUT',
-          headers: {
-            Accept: 'application/octet-stream',
-            'Content-Type': 'application/octet-stream'
-          },
-          body: hexToBuf(txn.signedTx)
-        }
-
-        const paymentUrl = `${this.creatorApiServers[0]}/request/${requestId}/payment`
-
-        try {
-          const response = await this.fetchCors(paymentUrl, options)
-          if (!response.ok) {
-            this.warn(
-              `submitActivationPayment failed to submit payment
-                ${await response.text()}`
-            )
-            throw new Error('ErrorActivationPayment')
-          }
-        } catch (e: any) {
-          this.warn('submitActivationPayment error: ', e)
-          throw e
-        }
-
-        this.otherData.paymentSubmitted = true
-        this.walletLocalDataDirty = true
-
-        return txn
-      }
-    }
   }
 
   async checkAccountCreationStatus(): Promise<void> {
     if (this.accountNameChecked) return
-
-    const { activationRequestId, paymentSubmitted } = this.otherData
 
     let accountId
 
@@ -194,40 +77,6 @@ export class HederaEngine extends CurrencyEngine<
       this.accountNameChecked = true
     } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
-    }
-
-    // Double check with activation server
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (accountId == null && paymentSubmitted && activationRequestId != null) {
-      try {
-        const response = await this.fetchCors(
-          `${this.creatorApiServers[0]}/request/${activationRequestId}/status`
-        )
-        const json = asCheckAccountCreationStatus(await response.json())
-
-        if (json.status === 'transaction_error') {
-          this.otherData.activationRequestId = undefined
-          this.otherData.accountActivationQuoteAddress = undefined
-          this.otherData.accountActivationQuoteAmount = undefined
-          this.walletLocalDataDirty = true
-          this.warn(
-            `hederaEngine error from account activation status ${JSON.stringify(
-              json
-            )}`
-          )
-          throw new Error('ErrorAccountActivation')
-        }
-
-        if (json.status === 'success' && json.account_id != null) {
-          accountId = json.account_id
-        }
-      } catch (e: any) {
-        this.warn(
-          `error checking Hedera account creation status, ID: ${activationRequestId} error `,
-          e
-        )
-        if (e?.message === 'ErrorAccountActivation') throw e
-      }
     }
 
     if (accountId != null) {
