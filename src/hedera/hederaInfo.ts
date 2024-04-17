@@ -6,7 +6,7 @@ import type { HederaNetworkInfo } from './hederaTypes'
 
 const networkInfo: HederaNetworkInfo = {
   mirrorNodes: ['https://mainnet-public.mirrornode.hedera.com'],
-  client: 'Mainnet',
+  client: 'mainnet',
   checksumNetworkID: '0',
   maxFee: 900000
 }

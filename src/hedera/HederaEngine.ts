@@ -1,4 +1,13 @@
-import * as hedera from '@hashgraph/sdk'
+import {
+  AccountId,
+  Client,
+  Hbar,
+  PrivateKey,
+  Timestamp,
+  Transaction,
+  TransactionId,
+  TransferTransaction
+} from '@hashgraph/sdk'
 import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -34,7 +43,7 @@ export class HederaEngine extends CurrencyEngine<
   HederaTools,
   SafeHederaWalletInfo
 > {
-  client: hedera.Client
+  client: Client
   fetchCors: EdgeFetchFunction
   accountNameChecked: boolean
   mirrorNodes: [string]
@@ -50,8 +59,7 @@ export class HederaEngine extends CurrencyEngine<
     super(env, tools, walletInfo, opts)
 
     const { client, mirrorNodes, maxFee } = env.networkInfo
-    // @ts-expect-error
-    this.client = hedera.Client[`for${client}`]()
+    this.client = Client.forName(client)
     this.fetchCors = getFetchCors(env.io)
     this.accountNameChecked = false
     this.mirrorNodes = mirrorNodes
@@ -59,9 +67,7 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async checkAccountCreationStatus(): Promise<void> {
-    if (this.accountNameChecked) return
-
-    let accountId
+    if (this.accountNameChecked || this.otherData.hederaAccount != null) return
 
     // Use mirror node to see if there's an account associated with the public key
     try {
@@ -71,19 +77,14 @@ export class HederaEngine extends CurrencyEngine<
       const { accounts } = asGetHederaAccount(await response.json())
       for (const account of accounts) {
         if (this.walletInfo.keys.publicKey.includes(account.key.key)) {
-          accountId = account.account
+          this.otherData.hederaAccount = account.account
+          this.walletLocalDataDirty = true
+          this.currencyEngineCallbacks.onAddressChanged()
+          this.accountNameChecked = true
         }
       }
-      this.accountNameChecked = true
     } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
-    }
-
-    if (accountId != null) {
-      this.otherData.hederaAccount = accountId
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onAddressChanged()
-      this.accountNameChecked = true
     }
   }
 
@@ -284,9 +285,9 @@ export class HederaEngine extends CurrencyEngine<
       throw new NoAmountSpecifiedError()
     }
 
-    const hbar = hedera.Hbar.fromTinybar(nativeAmount)
-    const txnFee = hedera.Hbar.fromTinybar(this.maxFee)
-    const networkFee = txnFee.asTinybar().toString()
+    const hbar = Hbar.fromTinybars(nativeAmount)
+    const txnFee = Hbar.fromTinybars(this.maxFee)
+    const networkFee = txnFee.toTinybars().toString()
     nativeAmount = add(nativeAmount, networkFee)
 
     if (
@@ -299,15 +300,18 @@ export class HederaEngine extends CurrencyEngine<
       throw new Error('creating a transfer without an account ID')
     }
 
-    const txnId = new hedera.TransactionId(this.otherData.hederaAccount)
+    const txnId = new TransactionId(
+      AccountId.fromString(this.otherData.hederaAccount),
+      Timestamp.fromDate(new Date())
+    )
 
-    const transferTx = new hedera.TransferTransaction()
+    const transferTx = new TransferTransaction()
       .setTransactionId(txnId)
       .addHbarTransfer(this.otherData.hederaAccount, hbar.negated())
       .addHbarTransfer(publicAddress, hbar)
       .setMaxTransactionFee(txnFee)
       .setTransactionMemo(memo)
-      .build(this.client)
+      .freezeWith(this.client)
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0, // blockHeight
@@ -352,15 +356,19 @@ export class HederaEngine extends CurrencyEngine<
       throw new Error('missing privateKey in walletInfo')
     }
 
-    const transferTx = hedera.Transaction.fromBytes(
+    const transferTx = Transaction.fromBytes(
       base64.parse(edgeTransaction.otherParams.transferTx)
     )
-    await transferTx.sign(hedera.Ed25519PrivateKey.fromString(privateKey))
+    await transferTx.sign(PrivateKey.fromStringED25519(privateKey))
+    const txid = transferTx.transactionId
+    if (txid == null) {
+      throw new Error('Error generating txid')
+    }
 
     return {
       ...edgeTransaction,
       signedTx: base64.stringify(transferTx.toBytes()),
-      txid: hashToTxid(transferTx.hash()),
+      txid: txid.toString(),
       date: Date.now() / 1000,
       otherParams: {
         ...edgeTransaction.otherParams
@@ -376,9 +384,7 @@ export class HederaEngine extends CurrencyEngine<
     }
 
     try {
-      const txn = hedera.Transaction.fromBytes(
-        base64.parse(edgeTransaction.signedTx)
-      )
+      const txn = Transaction.fromBytes(base64.parse(edgeTransaction.signedTx))
       await txn.execute(this.client)
     } catch (e: any) {
       this.warn('broadcastTx error', e)

@@ -1,10 +1,3 @@
-export const validAddress = (address: string = ''): boolean => {
-  // HIP-15
-  return /^(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))\.(0|(?:[1-9]\d*))(?:-([a-z]{5}))?$/.test(
-    address
-  )
-}
-
 export const createChecksum = (
   addr: string,
   checksumNetworkID: string

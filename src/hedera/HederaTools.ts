@@ -1,4 +1,4 @@
-import * as hedera from '@hashgraph/sdk'
+import { AccountId, Mnemonic, PrivateKey } from '@hashgraph/sdk'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
@@ -22,11 +22,8 @@ import {
   asSafeHederaWalletInfo,
   HederaNetworkInfo
 } from './hederaTypes'
-import { createChecksum, validAddress } from './hederaUtils'
+import { createChecksum } from './hederaUtils'
 
-// if users want to import their mnemonic phrase in e.g. MyHbarWallet.com
-// they can just leave the passphrase field blank
-const mnemonicPassphrase = ''
 const Ed25519PrivateKeyPrefix = '302e020100300506032b657004220420'
 
 export class HederaTools implements EdgeCurrencyTools {
@@ -84,14 +81,14 @@ export class HederaTools implements EdgeCurrencyTools {
         const privateKeyString = userInput
           .replace(/^0x/, '')
           .replace(Ed25519PrivateKeyPrefix, '')
-
         privateKey =
-          hedera.Ed25519PrivateKey.fromString(privateKeyString).toString()
+          PrivateKey.fromStringED25519(privateKeyString).toStringDer()
       } else if (validateMnemonic(userInput)) {
-        const mnemonic = hedera.Mnemonic.fromString(userInput)
-        const sdkPrivateKey = await mnemonic.toPrivateKey(mnemonicPassphrase)
+        const mnemonic = await Mnemonic.fromString(userInput)
+        // Use of deprecated method to maintain compatibility with wallets created with the Hedera SDK v1 derivation path 44/3030/0/0
+        const sdkPrivateKey = await mnemonic.toEd25519PrivateKey()
         privateMnemonic = userInput
-        privateKey = sdkPrivateKey.toString()
+        privateKey = sdkPrivateKey.toStringDer()
       } else {
         throw new Error('InvalidPrivateKey')
       }
@@ -118,13 +115,21 @@ export class HederaTools implements EdgeCurrencyTools {
       throw new Error('Invalid private key')
     }
 
-    const privateKey = hedera.Ed25519PrivateKey.fromString(
+    const privateKey = PrivateKey.fromStringED25519(
       walletInfo.keys[`${pluginId}Key`]
     )
 
     return {
-      publicKey: privateKey.publicKey.toString()
+      publicKey: privateKey.publicKey.toStringDer()
     }
+  }
+
+  validAddress(address: string): boolean {
+    try {
+      AccountId.fromString(address)
+      return true
+    } catch (e) {}
+    return false
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
@@ -144,7 +149,7 @@ export class HederaTools implements EdgeCurrencyTools {
       const { checksumNetworkID } = this.networkInfo
       const [address, checksum] = publicAddress.split('-')
       if (
-        !validAddress(publicAddress) ||
+        !this.validAddress(publicAddress) ||
         (checksum != null &&
           checksum !== createChecksum(address, checksumNetworkID))
       )
@@ -160,7 +165,7 @@ export class HederaTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const { publicAddress, nativeAmount } = obj
-    if (!validAddress(publicAddress)) {
+    if (!this.validAddress(publicAddress)) {
       throw new Error('InvalidPublicAddressError')
     }
 
