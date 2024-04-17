@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Updated Liberland rpc list
+
 ## 4.2.0 (2024-04-09)
 
 - added: Expose the modern `customFeeTemplate` fields on the relevant currency infos.
