@@ -8,7 +8,7 @@ These are compatible with edge-core-js v0.21.2 or later.
 
 ## Installing
 
-Fist, add this library to your project:
+First, add this library to your project:
 
 ```sh
 npm i -s edge-currency-accountbased
@@ -49,14 +49,18 @@ and then adjust your script URL to http://localhost:8082/edge-currency-accountba
 
 ### React Native
 
-This package will automatically install itself using React Native autolinking. To integrate the plugins with edge-core-js, add its URI to the context component:
+In addition to installing `edge-currency-accountbased`, you must also install
+Zcash and Pirate Chain React Native libraries as peer dependencies
+Follow the instructions in the [Zcash React Native](https://www.npmjs.com/package/react-native-zcash) and [Pirate Chain React Native](https://www.npmjs.com/package/react-native-piratechain) packages to install the required native dependencies.
+
+The `edge-currency-accountbased` package will automatically install itself using React Native autolinking.
+To integrate the plugins with edge-core-js, add its URI to the context component:
 
 ```jsx
 import { pluginUri, makePluginIo } from 'edge-currency-accountbased'
-
 <MakeEdgeContext
   nativeIo={{
-    'edge-currency-accountbased': makePluginIo(),
+    'edge-currency-accountbased': makePluginIo()
   }}
   pluginUris={[pluginUri]}
   // Plus other props as required...
@@ -89,7 +93,7 @@ You can also do `updot edge-currency-accountbased` from within `edge-react-gui` 
 Please note that our team considers (but does not guarantee) PR's to add new currencies / blockchains to this repo's master branch (included into production version of Edge Wallet). Among other requirements the code must satisfy the following guidelines:
 
 - Rebase of your branch upon this repo's `master` branch. For more info:
-https://github.com/edx/edx-platform/wiki/How-to-Rebase-a-Pull-Request
+  https://github.com/edx/edx-platform/wiki/How-to-Rebase-a-Pull-Request
 
 ### Naming Convention
 
