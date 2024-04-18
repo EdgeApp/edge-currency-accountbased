@@ -8,7 +8,7 @@ const networkInfo: HederaNetworkInfo = {
   mirrorNodes: ['https://mainnet-public.mirrornode.hedera.com'],
   client: 'mainnet',
   checksumNetworkID: '0',
-  maxFee: 900000
+  maxFee: 100000000
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

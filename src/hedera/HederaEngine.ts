@@ -387,7 +387,10 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
-    return { publicAddress: this.otherData.hederaAccount ?? '' }
+    return {
+      publicAddress:
+        this.otherData.hederaAccount ?? `0.0.${this.walletInfo.keys.publicKey}`
+    }
   }
 
   getBlockHeight(): number {
