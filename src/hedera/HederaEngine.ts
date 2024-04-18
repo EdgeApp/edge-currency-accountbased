@@ -96,9 +96,8 @@ export class HederaEngine extends CurrencyEngine<
     const accountId = this.otherData.hederaAccount
 
     if (accountId == null) {
-      if (this.accountNameChecked) {
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
-      }
+      this.updateBalance(this.currencyInfo.currencyCode, '0')
+      this.updateOnAddressesChecked()
       return
     }
 
@@ -128,10 +127,8 @@ export class HederaEngine extends CurrencyEngine<
 
   async getNewTransactions(): Promise<void> {
     if (this.otherData.hederaAccount == null) {
-      if (this.accountNameChecked) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-        this.updateOnAddressesChecked()
-      }
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.updateOnAddressesChecked()
       return
     }
     try {
