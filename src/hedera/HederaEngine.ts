@@ -126,8 +126,7 @@ export class HederaEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async getNewTransactions() {
+  async getNewTransactions(): Promise<void> {
     if (this.otherData.hederaAccount == null) {
       if (this.accountNameChecked) {
         this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
@@ -154,8 +153,7 @@ export class HederaEngine extends CurrencyEngine<
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  processTxs(txs: EdgeTransaction[]) {
+  processTxs(txs: EdgeTransaction[]): void {
     if (txs.length > 0) {
       const latestTx = txs[txs.length - 1]
 
@@ -240,17 +238,13 @@ export class HederaEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
     this.engineOn = true
     this.accountNameChecked = this.otherData.hederaAccount != null
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('getNewTransactions', 1000)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('queryBalance', 5000)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.addToLoop('checkAccountCreationStatus', 5000)
+    this.addToLoop('getNewTransactions', 1000).catch(() => {})
+    this.addToLoop('queryBalance', 5000).catch(() => {})
+    this.addToLoop('checkAccountCreationStatus', 5000).catch(() => {})
 
     await super.startEngine()
   }
@@ -395,8 +389,7 @@ export class HederaEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getFreshAddress(options: Object): Promise<EdgeFreshAddress> {
+  async getFreshAddress(): Promise<EdgeFreshAddress> {
     return { publicAddress: this.otherData.hederaAccount ?? '' }
   }
 

@@ -11,8 +11,10 @@ import {
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeTokenMap,
-  EdgeWalletInfo
+  EdgeWalletInfo,
+  JsonObject
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -57,18 +59,17 @@ export class HederaTools implements EdgeCurrencyTools {
     return keys.publicKey
   }
 
-  async createPrivateKey(walletType: string): Promise<Object> {
+  async createPrivateKey(walletType: string): Promise<JsonObject> {
     if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
 
-    const entropy = this.io.random(32)
-    // @ts-expect-error
+    const entropy = base16.stringify(this.io.random(32))
     const mnemonic = entropyToMnemonic(entropy)
     return await this.importPrivateKey(mnemonic)
   }
 
-  async importPrivateKey(userInput: string): Promise<Object> {
+  async importPrivateKey(userInput: string): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
     try {
       let privateMnemonic
@@ -102,7 +103,7 @@ export class HederaTools implements EdgeCurrencyTools {
     }
   }
 
-  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
+  async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
