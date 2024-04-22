@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (Hedera) Replace account purchase with auto account creation
 - added: Ethereum default tokens AXS, COTI, and GMT
 - added: Binance Smart Chain default token AAVE
 - added: Polygon default token VOXEL

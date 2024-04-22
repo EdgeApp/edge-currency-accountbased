@@ -86,7 +86,7 @@
     "@fioprotocol/fiosdk": "https://github.com/peachbits/fiosdk_typescript.git#d04449fff9f9b8c1487359a5b6bf64b7b53d0b6b",
     "@greymass/eosio": "^0.6.8",
     "@greymass/eosio-resources": "^0.7.0",
-    "@hashgraph/sdk": "^1.1.9",
+    "@hashgraph/sdk": "^2.44.0",
     "@polkadot/api": "^10.9.1",
     "@solana/spl-token": "^0.3.9",
     "@solana/web3.js": "^1.32.0",
