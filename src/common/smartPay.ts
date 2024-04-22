@@ -1,4 +1,4 @@
-import { mul } from 'biggystring'
+import { eq, gt, lt, mul } from 'biggystring'
 import { asEither, asNumber, asObject, asString, asValue } from 'cleaners'
 import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js/types'
 
@@ -13,10 +13,10 @@ const asSmartPayQrDecode = asEither(
     status: asValue('ok'),
     msg: asString,
     data: asObject({
-      amount: asNumber,
+      amount: asString,
       name: asString,
       key: asString,
-      timeout: asNumber
+      timeout: asString
     })
   }),
   asObject({
@@ -81,13 +81,13 @@ export const parsePixKey = async (
       }
       const { data: decodeData } = decode
       const { amount, key, name, timeout: decodeTimeout } = decodeData
-      if (decodeTimeout > 0 && decodeTimeout < 120) {
+      if (gt(decodeTimeout, '0') && lt(decodeTimeout, '120')) {
         throw new Error('ErrorPixExpired')
       }
 
       let nativeAmount: string | undefined
       let expireDate: Date | undefined
-      if (amount !== 0) {
+      if (!eq(amount, '0')) {
         const paramsObj: QueryParams = {
           type: 'buy',
           profile: 'transfer',
@@ -95,7 +95,7 @@ export const parsePixKey = async (
           conv: 'txusdt',
           target: 'amount',
           user: smartPayUserId,
-          amount: amount === 0 ? 100 : amount
+          amount
         }
         const params = makeQueryParams(paramsObj)
 
@@ -117,7 +117,7 @@ export const parsePixKey = async (
 
         nativeAmount = mul(amountTxusdt, token.denominations[0].multiplier)
         const timeout = Math.min(
-          decodeTimeout > 0 ? decodeTimeout : MAX_TIMEOUT_S,
+          gt(decodeTimeout, '0') ? Number(decodeTimeout) : MAX_TIMEOUT_S,
           quoteTimeout > 0 ? quoteTimeout : MAX_TIMEOUT_S
         )
         expireDate = new Date(now.getTime() + timeout * 1000)

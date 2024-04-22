@@ -7,6 +7,7 @@
 - added: Polygon default token VOXEL
 - added: zkSync default tokens DAI and USDT
 - changed: Updated Liberland rpc list
+- changed: Update Smartpay cleaners to match API changes
 
 ## 4.2.0 (2024-04-09)
 
