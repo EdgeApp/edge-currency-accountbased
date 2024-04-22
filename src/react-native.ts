@@ -89,6 +89,9 @@ const makeZcashSynchronizer = async (
     rescan: async () => {
       return await realSynchronizer.rescan()
     },
+    proposeTransfer: async spendInfo => {
+      return await realSynchronizer.proposeTransfer(spendInfo)
+    },
     sendToAddress: async spendInfo => {
       return await realSynchronizer.sendToAddress(spendInfo)
     },

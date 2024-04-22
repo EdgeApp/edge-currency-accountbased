@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zcash) Orchard pool support
+- added: (Zcash) ZIP-317 dynamic fee support
 - added: (Hedera) Replace account purchase with auto account creation
 - added: Ethereum default tokens AXS, COTI, and GMT
 - added: Binance Smart Chain default token AAVE
