@@ -131,6 +131,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xa1c57f48f0deb89f569dfbe6e2b7f46d33606fd4'
     }
   },
+  d0258a3fd00f38aa8090dfee343f10a9d4d30d3f: {
+    currencyCode: 'VOXEL',
+    displayName: 'VOXEL',
+    denominations: [{ name: 'VOXEL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xd0258a3fD00f38aa8090dfee343f10A9D4d30D3F'
+    }
+  },
   '53e0bca35ec356bd5dddfebbd1fc0fd03fabad39': {
     currencyCode: 'LINK',
     displayName: 'Chainlink',

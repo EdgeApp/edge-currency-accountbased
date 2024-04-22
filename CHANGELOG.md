@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- added: Ethereum default tokens AXS, COTI, and GMT
+- added: Binance Smart Chain default token AAVE
+- added: Polygon default token VOXEL
+- added: zkSync default tokens DAI and USDT
 - changed: Updated Liberland rpc list
 
 ## 4.2.0 (2024-04-09)

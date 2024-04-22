@@ -7,6 +7,22 @@ import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
+  '493257fd37edb34451f62edf8d2a0c418852ba4c': {
+    currencyCode: 'USDT',
+    displayName: 'USDT',
+    denominations: [{ name: 'USDT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0x493257fD37EDB34451f62EDf8D2a0C418852bA4C'
+    }
+  },
+  '4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656': {
+    currencyCode: 'DAI',
+    displayName: 'DAI',
+    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x4B9eb6c0b6ea15176BBF62841C6B2A8a398cb656'
+    }
+  },
   '3355df6d4c9c3035724fd0e3914de96a5a83aaf4': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
