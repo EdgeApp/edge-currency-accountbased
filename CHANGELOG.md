@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.3.0 (2024-04-22)
+
 - added: (Zcash) Orchard pool support
 - added: (Zcash) ZIP-317 dynamic fee support
 - added: (Hedera) Replace account purchase with auto account creation
