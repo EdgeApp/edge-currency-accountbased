@@ -271,20 +271,18 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     cleanerFunc: Function,
     options: GetEthscanAllTxsOptions
   ): Promise<GetEthscanAllTxsResponse> {
+    const { contractAddress, searchRegularTxs = false } = options
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
 
     const allTransactions: EdgeTransaction[] = []
     let server: string | undefined
-    const contractAddress = options.contractAddress
-    const searchRegularTxs = options.searchRegularTxs
     while (true) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
 
       let startUrl
       if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
         startUrl = `?action=${
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           searchRegularTxs ? 'txlist' : 'txlistinternal'
         }&module=account`
       } else {
