@@ -210,10 +210,10 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         { searchRegularTxs: false }
       )
       server = txsRegularResp.server ?? txsInternalResp.server ?? ''
-      allTransactions = [
+      allTransactions = mergeEdgeTransactions([
         ...txsRegularResp.allTransactions,
         ...txsInternalResp.allTransactions
-      ]
+      ])
     } else {
       const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
       if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
@@ -485,4 +485,48 @@ export function processEvmScanTransaction(
 
   return edgeTransaction
   // or should be this.addTransaction(currencyCode, edgeTransaction)?
+}
+
+export function mergeEdgeTransactions(
+  transactions: EdgeTransaction[]
+): EdgeTransaction[] {
+  // The Map key is the txid and tokenId concatenated
+  const txidToTransaction: Map<string, EdgeTransaction> = new Map()
+  for (const transaction of transactions) {
+    const uniqueKey = `${transaction.txid}:${transaction.tokenId ?? ''}`
+    const existingTransaction = txidToTransaction.get(uniqueKey)
+    if (existingTransaction == null) {
+      txidToTransaction.set(uniqueKey, transaction)
+      continue
+    }
+
+    // Assertions:
+    if (existingTransaction.networkFee !== transaction.networkFee) {
+      throw new Error(
+        `Failed to merge transaction '${uniqueKey}': Mismatch networkFee`
+      )
+    }
+    if (existingTransaction.parentNetworkFee !== transaction.parentNetworkFee) {
+      throw new Error(
+        `Failed to merge transaction '${uniqueKey}': Mismatch parentNetworkFee`
+      )
+    }
+
+    // Update the existing transaction:
+    const nativeAmount = add(
+      existingTransaction.nativeAmount,
+      transaction.nativeAmount
+    )
+    txidToTransaction.set(uniqueKey, {
+      ...existingTransaction,
+      isSend: nativeAmount.startsWith('-'),
+      nativeAmount,
+      ourReceiveAddresses: [
+        ...existingTransaction.ourReceiveAddresses,
+        ...transaction.ourReceiveAddresses
+      ]
+    })
+  }
+
+  return Array.from(txidToTransaction.values())
 }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Merge internal transactions transfer amounts for EVM currencies
+
 ## 4.3.0 (2024-04-22)
 
 - added: (Zcash) Orchard pool support
