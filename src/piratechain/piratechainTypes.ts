@@ -6,7 +6,7 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
-import { Subscriber } from 'yaob'
+import type { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
 

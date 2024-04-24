@@ -1,5 +1,5 @@
-import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
-import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
+import type { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
+import type { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
 import {
   asArray,
   asBoolean,

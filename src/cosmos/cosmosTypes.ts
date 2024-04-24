@@ -1,5 +1,5 @@
-import { EncodeObject, Registry } from '@cosmjs/proto-signing'
-import {
+import type { EncodeObject, Registry } from '@cosmjs/proto-signing'
+import type {
   AuthExtension,
   BankExtension,
   Coin,

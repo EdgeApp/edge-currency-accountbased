@@ -3,7 +3,7 @@
 import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
-import { PiratechainTools } from './PiratechainTools'
+import type { PiratechainTools } from './PiratechainTools'
 import { PiratechainNetworkInfo } from './piratechainTypes'
 
 const networkInfo: PiratechainNetworkInfo = {

@@ -16,7 +16,7 @@ import {
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo, WalletConnectPayload } from '../common/types'
-import { NetworkAdapterConfig } from './networkAdapters/types'
+import type { NetworkAdapterConfig } from './networkAdapters/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string

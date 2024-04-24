@@ -7,7 +7,7 @@ import {
   asOptional,
   asString
 } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
+import type { EdgeTransaction } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo, MakeTxParams } from '../common/types'
 

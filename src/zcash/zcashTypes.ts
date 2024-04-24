@@ -22,7 +22,7 @@ import type {
   TransferSpendInfo,
   UpdateEvent
 } from 'react-native-zcash'
-import { Subscriber } from 'yaob'
+import type { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
 

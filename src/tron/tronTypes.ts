@@ -12,7 +12,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { JsonObject } from 'edge-core-js/types'
+import type { JsonObject } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
