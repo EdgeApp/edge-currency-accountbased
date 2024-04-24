@@ -35,6 +35,11 @@ export interface TronNetworkInfo {
   trc20BalCheckerContract: string
 }
 
+export const asTronInfoPayload = asObject({
+  tronApiServers: asOptional(asArray(asString)),
+  tronNodeServers: asOptional(asArray(asString))
+})
+
 export const asTxQueryCache = asObject({
   txid: asString,
   timestamp: asNumber

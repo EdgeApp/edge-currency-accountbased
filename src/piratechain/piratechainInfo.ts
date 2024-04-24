@@ -4,7 +4,10 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { PiratechainTools } from './PiratechainTools'
-import { PiratechainNetworkInfo } from './piratechainTypes'
+import {
+  asPiratechainInfoPayload,
+  PiratechainNetworkInfo
+} from './piratechainTypes'
 
 const networkInfo: PiratechainNetworkInfo = {
   rpcNode: {
@@ -47,6 +50,7 @@ export const piratechain = makeOuterPlugin<
   PiratechainTools
 >({
   currencyInfo,
+  infoPayloadCleaner: asPiratechainInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

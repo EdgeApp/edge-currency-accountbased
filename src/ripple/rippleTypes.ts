@@ -1,4 +1,5 @@
 import {
+  asArray,
   asBoolean,
   asEither,
   asMaybe,
@@ -17,6 +18,10 @@ export interface XrpNetworkInfo {
   baseReserve: string
   baseReservePerToken: string
 }
+
+export const asXrpInfoPayload = asObject({
+  rippledServers: asOptional(asArray(asString))
+})
 
 export interface XrpCustomToken {
   currencyCode: string

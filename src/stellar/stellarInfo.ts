@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { StellarTools } from './StellarTools'
-import type { StellarNetworkInfo } from './stellarTypes'
+import { asStellarInfoPayload, StellarNetworkInfo } from './stellarTypes'
 
 const networkInfo: StellarNetworkInfo = {
   baseReserve: '10000000',
@@ -39,6 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({
   currencyInfo,
+  infoPayloadCleaner: asStellarInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

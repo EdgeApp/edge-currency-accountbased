@@ -2,8 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
-import type { EosNetworkInfo } from '../eosTypes'
-import { eosOtherMethodNames } from '../eosTypes'
+import {
+  asEosInfoPayload,
+  EosNetworkInfo,
+  eosOtherMethodNames
+} from '../eosTypes'
 import { eosCustomTokenTemplate, eosMemoOptions } from './eosCommonInfo'
 
 // ----WAX MAIN NET----
@@ -40,6 +43,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({
   currencyInfo: waxCurrencyInfo,
+  infoPayloadCleaner: asEosInfoPayload,
   networkInfo: waxNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 

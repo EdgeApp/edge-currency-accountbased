@@ -37,6 +37,11 @@ export interface AlgorandNetworkInfo {
   minimumAddressBalance: string
 }
 
+export const asAlgorandInfoPayload = asObject({
+  algodServers: asOptional(asArray(asString)),
+  indexerServers: asOptional(asArray(asString))
+})
+
 export const asAccountInformation = asObject({
   // address: asString,
   amount: asNumber,

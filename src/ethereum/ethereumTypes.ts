@@ -84,6 +84,25 @@ export interface EthereumNetworkInfo {
   uriNetworks: string[]
 }
 
+const asNetworkAdaptorConfigType = asValue(
+  'amberdata-rpc',
+  'blockbook',
+  'blockchair',
+  'blockcypher',
+  'evmscan',
+  'filfox',
+  'pulsechain-scan',
+  'rpc'
+)
+const asNetworkAdaptorConfig = asObject({
+  type: asNetworkAdaptorConfigType,
+  servers: asArray(asString),
+  ethBalCheckerContract: asOptional(asString)
+})
+export const asEthereumInfoPayload = asObject({
+  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
+})
+
 /**
  * Other Methods from EthereumTools
  */

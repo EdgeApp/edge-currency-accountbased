@@ -79,6 +79,14 @@ export interface CosmosNetworkInfo {
   rpcNode: HttpEndpoint
   archiveNode: HttpEndpoint
 }
+const asHttpEndpoint = asObject({
+  url: asString,
+  headers: asObject({ asString })
+})
+export const asCosmosInfoPayload = asObject({
+  rpcNode: asOptional(asHttpEndpoint),
+  archiveNode: asOptional(asHttpEndpoint)
+})
 
 export const txQueryStrings = [
   `coin_spent.spender`,

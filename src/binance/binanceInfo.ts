@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { BinanceTools } from './BinanceTools'
-import type { BinanceNetworkInfo } from './binanceTypes'
+import { asBinanceInfoPayload, BinanceNetworkInfo } from './binanceTypes'
 
 const networkInfo: BinanceNetworkInfo = {
   binanceApiServers: [
@@ -39,6 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const binance = makeOuterPlugin<BinanceNetworkInfo, BinanceTools>({
   currencyInfo,
+  infoPayloadCleaner: asBinanceInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

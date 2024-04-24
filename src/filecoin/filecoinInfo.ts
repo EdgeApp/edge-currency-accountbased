@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { FilecoinTools } from './FilecoinTools'
-import type { FilecoinNetworkInfo } from './filecoinTypes'
+import { asFilecoinInfoPayload, FilecoinNetworkInfo } from './filecoinTypes'
 
 const networkInfo: FilecoinNetworkInfo = {
   filfoxUrl: 'https://filfox.info/api/v1',
@@ -74,6 +74,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
   currencyInfo,
+  infoPayloadCleaner: asFilecoinInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

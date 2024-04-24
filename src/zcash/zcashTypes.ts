@@ -5,7 +5,9 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
+  asValue,
   Cleaner
 } from 'cleaners'
 import type {
@@ -37,6 +39,16 @@ export interface ZcashNetworkInfo {
   defaultNetworkFee: string
   defaultBirthday: number
 }
+
+export const asZcashInfoPayload = asObject({
+  rpcNode: asOptional(
+    asObject({
+      networkName: asValue('mainnet', 'testnet'),
+      defaultHost: asString,
+      defaultPort: asNumber
+    })
+  )
+})
 
 export const asZcashWalletOtherData = asObject({
   missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),

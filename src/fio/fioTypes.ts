@@ -42,6 +42,15 @@ export interface FioNetworkInfo {
   chainId: string
 }
 
+export const asFioInfoPayload = asObject({
+  apiUrls: asOptional(asArray(asString)),
+  historyNodeUrls: asOptional(asArray(asString)),
+  fioRegApiUrl: asOptional(asString),
+  fioDomainRegUrl: asOptional(asString),
+  fioAddressRegUrl: asOptional(asString),
+  fioStakingApyUrl: asOptional(asString)
+})
+
 export type FioRequestTypes = 'PENDING' | 'SENT'
 
 export interface FioRefBlock {

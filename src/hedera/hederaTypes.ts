@@ -6,6 +6,7 @@ import {
   asObject,
   asOptional,
   asString,
+  asTuple,
   Cleaner
 } from 'cleaners'
 
@@ -17,6 +18,10 @@ export interface HederaNetworkInfo {
   checksumNetworkID: string
   maxFee: number
 }
+
+export const asHederaInfoPayload = asObject({
+  mirrorNodes: asOptional(asTuple(asString))
+})
 
 export const asHederaWalletOtherData = asObject({
   hederaAccount: asMaybe(asString),

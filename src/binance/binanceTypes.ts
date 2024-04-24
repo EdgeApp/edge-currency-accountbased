@@ -14,6 +14,11 @@ export interface BinanceNetworkInfo {
   beaconChainApiServers: string[]
 }
 
+export const asBinanceInfoPayload = asObject({
+  binanceApiServers: asOptional(asArray(asString)),
+  beaconChainApiServers: asOptional(asArray(asString))
+})
+
 export const asBinanceApiNodeInfo = asObject({
   sync_info: asObject({
     latest_block_height: asNumber

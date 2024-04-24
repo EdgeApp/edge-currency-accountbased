@@ -1,4 +1,11 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
 
@@ -15,6 +22,11 @@ export interface TezosNetworkInfo {
     storage: string
   }
 }
+
+export const asTezosInfoPayload = asObject({
+  tezosRpcNodes: asOptional(asArray(asString)),
+  tezosApiServers: asOptional(asArray(asString))
+})
 
 export const asTezosWalletOtherData = asObject({
   numberTransactions: asMaybe(asNumber, 0)

@@ -3,7 +3,9 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
+  asValue,
   Cleaner
 } from 'cleaners'
 import type { Subscriber } from 'yaob'
@@ -22,6 +24,16 @@ export interface PiratechainNetworkInfo {
   defaultBirthday: number
   transactionQueryLimit: number
 }
+
+export const asPiratechainInfoPayload = asObject({
+  rpcNode: asOptional(
+    asObject({
+      networkName: asValue('mainnet', 'testnet'),
+      defaultHost: asString,
+      defaultPort: asNumber
+    })
+  )
+})
 
 export interface PiratechainSpendInfo {
   zatoshi: string

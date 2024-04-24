@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import type { SolanaTools } from './SolanaTools'
-import type { SolanaNetworkInfo } from './solanaTypes'
+import { asSolanaInfoPayload, SolanaNetworkInfo } from './solanaTypes'
 
 const builtinTokens: EdgeTokenMap = {
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
@@ -123,6 +123,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({
   currencyInfo,
+  infoPayloadCleaner: asSolanaInfoPayload,
   networkInfo,
   builtinTokens,
 
