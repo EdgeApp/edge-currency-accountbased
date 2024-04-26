@@ -171,6 +171,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
       this.totalReserve = minBalance.toString()
 
+      const detectedTokenIds: string[] = []
       const newUnactivatedTokenIds: string[] = []
       for (const [tokenId, edgeToken] of Object.entries(this.allTokensMap)) {
         const asset = assets.find(
@@ -180,6 +181,10 @@ export class AlgorandEngine extends CurrencyEngine<
         if (asset != null) {
           const balance = asset.amount.toString()
           this.updateBalance(edgeToken.currencyCode, balance)
+
+          if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+            detectedTokenIds.push(tokenId)
+          }
         } else {
           // Enabled tokens that don't have a balance are unactivated
           this.updateBalance(edgeToken.currencyCode, '0')
@@ -187,6 +192,10 @@ export class AlgorandEngine extends CurrencyEngine<
             newUnactivatedTokenIds.push(tokenId)
           }
         }
+      }
+
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
 
       if (round > this.walletLocalData.blockHeight) {
