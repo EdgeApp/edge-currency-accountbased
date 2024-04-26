@@ -24,7 +24,6 @@ import {
   getOtherParams,
   hexToDecimal,
   makeMutex,
-  padHex,
   shuffleArray
 } from '../common/utils'
 import { TronTools } from './TronTools'
@@ -78,6 +77,7 @@ import {
 
 const {
   utils: {
+    abi: { decodeParams, encodeParams },
     crypto: { signTransaction },
     transaction: { txJsonToPb, txPbToTxID }
   }
@@ -214,35 +214,52 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
   async checkTokenBalances(): Promise<void> {
     const address = base58ToHexAddress(this.walletLocalData.publicKey)
+    const detectedTokenIds: string[] = []
+    const tokenIds = Object.keys(this.allTokensMap)
+    try {
+      const encodedParams = encodeParams(
+        ['address[]', 'address[]'],
+        [
+          [address.slice(2)],
+          tokenIds.map(address => base58ToHexAddress(address).slice(2))
+        ]
+      )
 
-    const balancePromises = this.enabledTokenIds.map(async tokenId => {
-      const { currencyCode } = this.allTokensMap[tokenId]
-      try {
-        const contractAddressHex = base58ToHexAddress(tokenId)
-        const body = {
-          contract_address: contractAddressHex,
-          function_selector: 'balanceOf(address)',
-          parameter: padHex(address, 32),
-          owner_address: address
-        }
-        const res = await this.multicastServers(
-          'trx_getBalance',
-          '/wallet/triggerconstantcontract',
-          body
-        )
-
-        const balance = asTRC20Balance(res)
-
-        this.updateBalance(
-          currencyCode,
-          hexToDecimal(balance.constant_result[0])
-        )
-      } catch (e) {
-        this.log.error(`Failed to get balance of ${currencyCode}`, e)
+      const body = {
+        owner_address: address,
+        contract_address: base58ToHexAddress(
+          this.networkInfo.trc20BalCheckerContract
+        ),
+        function_selector: 'balances(address[],address[])',
+        parameter: encodedParams.slice(2)
       }
-    })
 
-    await Promise.all(balancePromises)
+      const res = await this.multicastServers(
+        'trx_getBalance',
+        '/wallet/triggerconstantcontract',
+        body
+      )
+
+      const rawBalances = asTRC20Balance(res).constant_result[0]
+      const decoded = decodeParams([], ['uint256[]'], `0x${rawBalances}`)
+
+      for (let i = 0; i < tokenIds.length; i++) {
+        const tokenId = tokenIds[i]
+        const balance = hexToDecimal(decoded[0][i]._hex)
+        const { currencyCode } = this.allTokensMap[tokenId]
+        this.updateBalance(currencyCode, balance)
+
+        if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+          detectedTokenIds.push(tokenId)
+        }
+      }
+
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+      }
+    } catch (e) {
+      this.log.error('checkTokenBalances error', e)
+    }
   }
 
   async checkAccountInnerLoop(): Promise<void> {

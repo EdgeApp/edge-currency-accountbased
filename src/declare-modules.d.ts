@@ -17,6 +17,14 @@ declare module 'react-native' {
 
 declare module 'tronweb' {
   export const utils: {
+    abi: {
+      decodeParams: (
+        names: string[],
+        types: string[],
+        output: string
+      ) => [[{ _hex: string }]]
+      encodeParams: (types: string[], values: any[]) => string
+    }
     crypto: {
       decode58Check: (addr: string) => number[]
       getBase58CheckAddress: (addrBytes: number[]) => string

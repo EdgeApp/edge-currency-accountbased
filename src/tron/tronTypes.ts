@@ -32,6 +32,7 @@ export interface TronNetworkInfo {
   defaultDerivationPath: string
   defaultFeeLimit: number
   defaultFreezeDurationInDays: number
+  trc20BalCheckerContract: string
 }
 
 export const asTxQueryCache = asObject({

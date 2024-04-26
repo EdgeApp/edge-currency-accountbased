@@ -108,7 +108,8 @@ const networkInfo: TronNetworkInfo = {
   ],
   defaultDerivationPath: "m/44'/195'/0'/0/0", // Default for initial release was "m/44'/195'/0'/0",
   defaultFeeLimit: 1000000000, // TODO: 1000 TRX. Should probably update.
-  defaultFreezeDurationInDays: 3
+  defaultFreezeDurationInDays: 3,
+  trc20BalCheckerContract: 'TN8RtFXeQZyFHGmH1iiSRm5r4CRz1yWkCf'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
