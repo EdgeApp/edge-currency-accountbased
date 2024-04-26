@@ -167,31 +167,25 @@ export class AlgorandEngine extends CurrencyEngine<
       )
       const { assets, amount, 'min-balance': minBalance, round } = accountInfo
 
+      this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+
       this.totalReserve = minBalance.toString()
 
       const newUnactivatedTokenIds: string[] = []
-      for (const cc of this.enabledTokens) {
-        if (cc === this.currencyInfo.currencyCode) {
-          this.updateBalance(this.currencyInfo.currencyCode, amount.toString())
+      for (const [tokenId, edgeToken] of Object.entries(this.allTokensMap)) {
+        const asset = assets.find(
+          asset => asset['asset-id'].toFixed() === tokenId
+        )
+
+        if (asset != null) {
+          const balance = asset.amount.toString()
+          this.updateBalance(edgeToken.currencyCode, balance)
         } else {
-          const tokenId = Object.keys(this.allTokensMap).find(
-            tokenId => this.allTokensMap[tokenId].currencyCode === cc
-          )
-          if (tokenId == null) {
-            this.updateBalance(cc, '0')
-            continue
-          }
-
-          const asset = assets.find(
-            asset => asset['asset-id'].toFixed() === tokenId
-          )
-          if (asset == null) {
+          // Enabled tokens that don't have a balance are unactivated
+          this.updateBalance(edgeToken.currencyCode, '0')
+          if (this.enabledTokenIds.includes(tokenId)) {
             newUnactivatedTokenIds.push(tokenId)
-            this.updateBalance(cc, '0')
-            continue
           }
-
-          this.updateBalance(cc, asset.amount.toString())
         }
       }
 
