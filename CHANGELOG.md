@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.3.1 (2024-04-29)
+
 - fixed: Merge internal transactions transfer amounts for EVM currencies
 
 ## 4.3.0 (2024-04-22)
