@@ -985,8 +985,6 @@ export class EthereumEngine extends CurrencyEngine<
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
-    let otherParams: EthereumTxOtherParams
-
     const miningFees = calcMiningFees(
       edgeSpendInfo,
       this.networkFees,
@@ -1028,6 +1026,7 @@ export class EthereumEngine extends CurrencyEngine<
     )
 
     // Set otherParams
+    let otherParams: EthereumTxOtherParams
     if (contractAddress == null) {
       otherParams = {
         from: [this.walletLocalData.publicKey],
