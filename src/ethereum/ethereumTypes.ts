@@ -15,7 +15,11 @@ import {
 } from 'cleaners'
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
-import { asSafeCommonWalletInfo, WalletConnectPayload } from '../common/types'
+import {
+  asIntegerString,
+  asSafeCommonWalletInfo,
+  WalletConnectPayload
+} from '../common/types'
 import type { NetworkAdapterConfig } from './networkAdapters/types'
 
 export interface EthereumInitOptions {
@@ -529,3 +533,9 @@ export const asEthereumPrivateKeys = (
     }
   )
 }
+
+export const asMaybeEvmOverrideGasLimitLocation = asMaybe(
+  asObject({
+    overrideGasLimit: asIntegerString
+  })
+)

@@ -1,7 +1,7 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
 import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
-import { EdgeCurrencyInfo, EdgeSpendInfo } from 'edge-core-js/types'
+import { EdgeSpendInfo, EdgeToken } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
@@ -12,6 +12,7 @@ import {
 } from '../../common/utils'
 import NODE_INTERFACE_ABI from '../abi/NODE_INTERFACE_ABI.json'
 import {
+  asMaybeEvmOverrideGasLimitLocation,
   CalcOptimismRollupFeeParams,
   EthereumFee,
   EthereumFees,
@@ -29,7 +30,7 @@ const WEI_MULTIPLIER = '1000000000'
 export function calcMiningFees(
   spendInfo: EdgeSpendInfo,
   networkFees: EthereumFees,
-  currencyInfo: EdgeCurrencyInfo,
+  edgeToken: EdgeToken | null,
   networkInfo: EthereumNetworkInfo
 ): EthereumMiningFees {
   let useGasLimitDefaults = true
@@ -196,8 +197,15 @@ export function calcMiningFees(
     default:
       throw new Error(`Invalid networkFeeOption`)
   }
+
+  const { overrideGasLimit } =
+    asMaybeEvmOverrideGasLimitLocation(edgeToken?.networkLocation) ?? {}
+  if (overrideGasLimit != null) {
+    useGasLimitDefaults = false
+  }
+
   const out: EthereumMiningFees = {
-    gasLimit: customGasLimit ?? gasLimit,
+    gasLimit: customGasLimit ?? overrideGasLimit ?? gasLimit,
     gasPrice: customGasPrice ?? gasPrice,
     useEstimatedGasLimit: useGasLimitDefaults
   }

@@ -198,6 +198,7 @@ export const builtinTokens: EdgeTokenMap = {
     displayName: 'Badger',
     denominations: [{ name: 'BADGER', multiplier: '1000000000000000000' }],
     networkLocation: {
+      overrideGasLimit: '300000',
       contractAddress: '0x3472A5A71965499acd81997a54BBA8D852C6E53d'
     }
   },
@@ -222,6 +223,7 @@ export const builtinTokens: EdgeTokenMap = {
     displayName: 'Basic Attention Token',
     denominations: [{ name: 'BAT', multiplier: '1000000000000000000' }],
     networkLocation: {
+      overrideGasLimit: '75000',
       contractAddress: '0x0D8775F648430679A709E98d2b0Cb6250d2887EF'
     }
   },
@@ -486,6 +488,7 @@ export const builtinTokens: EdgeTokenMap = {
     displayName: 'Kin',
     denominations: [{ name: 'KIN', multiplier: '1000000000000000000' }],
     networkLocation: {
+      overrideGasLimit: '300000',
       contractAddress: '0x818Fc6C2Ec5986bc6E2CBf00939d90556aB12ce5'
     }
   },
@@ -710,6 +713,7 @@ export const builtinTokens: EdgeTokenMap = {
     displayName: 'SALT',
     denominations: [{ name: 'SALT', multiplier: '100000000' }],
     networkLocation: {
+      overrideGasLimit: '300000',
       contractAddress: '0x4156D3342D5c385a87D264F90653733592000581'
     }
   },

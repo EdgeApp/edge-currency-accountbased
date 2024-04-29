@@ -808,7 +808,7 @@ export class EthereumEngine extends CurrencyEngine<
       const miningFees = calcMiningFees(
         spendInfo,
         this.networkFees,
-        this.currencyInfo,
+        null,
         this.networkInfo
       )
 
@@ -985,10 +985,11 @@ export class EthereumEngine extends CurrencyEngine<
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
 
+    const edgeToken = tokenId != null ? this.builtinTokens[tokenId] : null
     const miningFees = calcMiningFees(
       edgeSpendInfo,
       this.networkFees,
-      this.currencyInfo,
+      edgeToken,
       this.networkInfo
     )
 
