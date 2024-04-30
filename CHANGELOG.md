@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (EVM) Hardcode gas limit values for some tokens to be prioritized over eth_estimateGas result
+- added: (Thorchain) Add synth assets
 - added: Update node and server lists from info server payload provided by the core
 
 ## 4.4.0 (2024-05-14)
