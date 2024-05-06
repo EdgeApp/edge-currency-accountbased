@@ -25,6 +25,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'AXL',
+  // customFeeTemplate: cosmosCustomTokenTemplate,
   displayName: 'Axelar',
   pluginId: 'axelar',
   walletType: 'wallet:axelar',

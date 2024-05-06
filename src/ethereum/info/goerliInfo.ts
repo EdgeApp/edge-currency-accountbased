@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
+  evmCustomTokenTemplate,
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
@@ -130,6 +131,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'GOR',
   customFeeTemplate: evmCustomFeeTemplate,
+  customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Goerli Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'goerli',

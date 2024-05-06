@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
+  evmCustomTokenTemplate,
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
@@ -72,6 +73,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'RBTC',
   customFeeTemplate: evmCustomFeeTemplate,
+  customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Rootstock',
   memoOptions: evmMemoOptions,
   pluginId: 'rsk',

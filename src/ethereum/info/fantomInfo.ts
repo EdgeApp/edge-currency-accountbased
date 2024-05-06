@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
+  evmCustomTokenTemplate,
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
@@ -313,6 +314,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'FTM',
   customFeeTemplate: evmCustomFeeTemplate,
+  customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Fantom',
   memoOptions: evmMemoOptions,
   pluginId: 'fantom',

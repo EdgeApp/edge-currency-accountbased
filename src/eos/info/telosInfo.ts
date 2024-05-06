@@ -4,7 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import type { EosNetworkInfo } from '../eosTypes'
 import { eosOtherMethodNames } from '../eosTypes'
-import { eosMemoOptions } from './eosCommonInfo'
+import { eosCustomTokenTemplate, eosMemoOptions } from './eosCommonInfo'
 
 // ----TELOS MAIN NET----
 export const telosNetworkInfo: EosNetworkInfo = {
@@ -23,6 +23,7 @@ export const telosNetworkInfo: EosNetworkInfo = {
 
 export const telosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TLOS',
+  customTokenTemplate: eosCustomTokenTemplate,
   displayName: 'Telos',
   memoOptions: eosMemoOptions,
   pluginId: 'telos',

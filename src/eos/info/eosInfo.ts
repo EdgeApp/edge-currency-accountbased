@@ -4,7 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import type { EosNetworkInfo } from '../eosTypes'
 import { eosOtherMethodNames } from '../eosTypes'
-import { eosMemoOptions } from './eosCommonInfo'
+import { eosCustomTokenTemplate, eosMemoOptions } from './eosCommonInfo'
 
 // ----EOSIO MAIN NET----
 export const eosNetworkInfo: EosNetworkInfo = {
@@ -30,6 +30,7 @@ export const eosNetworkInfo: EosNetworkInfo = {
 
 export const eosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'EOS',
+  customTokenTemplate: eosCustomTokenTemplate,
   displayName: 'EOS',
   memoOptions: eosMemoOptions,
   pluginId: 'eos',

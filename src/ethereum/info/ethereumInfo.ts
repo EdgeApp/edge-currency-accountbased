@@ -7,6 +7,7 @@ import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import { ethOtherMethodNames } from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
+  evmCustomTokenTemplate,
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
@@ -1149,6 +1150,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
+  customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereum',

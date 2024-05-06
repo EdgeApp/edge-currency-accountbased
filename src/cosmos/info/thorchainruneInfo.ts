@@ -29,6 +29,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
+  // customFeeTemplate: cosmosCustomTokenTemplate,
   displayName: 'THORChain',
   pluginId: 'thorchainrune',
   walletType: 'wallet:thorchainrune',
