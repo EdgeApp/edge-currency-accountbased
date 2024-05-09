@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Update Zcash and Tezos nodes.
+
 ## 4.3.1 (2024-04-29)
 
 - fixed: Merge internal transactions transfer amounts for EVM currencies
