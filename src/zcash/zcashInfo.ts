@@ -7,8 +7,8 @@ import type { ZcashNetworkInfo } from './zcashTypes'
 const networkInfo: ZcashNetworkInfo = {
   rpcNode: {
     networkName: 'mainnet',
-    defaultHost: 'mainnet.lightwalletd.com',
-    defaultPort: 9067
+    defaultHost: 'zec.rocks',
+    defaultPort: 443
   },
   defaultBirthday: 1310000,
   defaultNetworkFee: '10000' // hardcoded default ZEC fee
