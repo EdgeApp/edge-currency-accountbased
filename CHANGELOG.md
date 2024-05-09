@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.3.2 (2024-05-09)
+
 - changed: Update Zcash and Tezos nodes.
 
 ## 4.3.1 (2024-04-29)
