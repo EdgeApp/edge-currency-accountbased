@@ -100,7 +100,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
   customTokenTemplate: [
     {
-      displayName: 'Contract Address',
+      displayName: 'Token Address',
       key: 'contractAddress',
       type: 'string'
     }
