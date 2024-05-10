@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (DOT) Fix incorrect insufficient funds error for max spend of native DOT currency in Polkadot engine
+
 ## 4.3.0-1 (2024-05-09)
 
 - changed: Update Zcash and Tezos nodes.
