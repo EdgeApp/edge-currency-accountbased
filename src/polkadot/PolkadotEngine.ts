@@ -335,7 +335,7 @@ export class PolkadotEngine extends CurrencyEngine<
       tokenId
     })
 
-    if (tokenId == null) {
+    if (tokenId != null) {
       const tempSpendTarget = [
         {
           publicAddress: spendInfo.spendTargets[0].publicAddress,
