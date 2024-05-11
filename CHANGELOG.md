@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.3.0-2 (2024-05-10)
+
 - fixed: (DOT) Fix incorrect insufficient funds error for max spend of native DOT currency in Polkadot engine
 
 ## 4.3.0-1 (2024-05-09)
