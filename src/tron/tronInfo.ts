@@ -121,6 +121,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://tronscan.org/#/address/%s',
   transactionExplorer: 'https://tronscan.org/#/transaction/%s',
 
+  customTokenTemplate: [
+    {
+      displayName: 'Contract Address',
+      key: 'contractAddress',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'TRX',

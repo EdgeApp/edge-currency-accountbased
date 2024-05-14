@@ -4,7 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import type { EosNetworkInfo } from '../eosTypes'
 import { eosOtherMethodNames } from '../eosTypes'
-import { eosMemoOptions } from './eosCommonInfo'
+import { eosCustomTokenTemplate, eosMemoOptions } from './eosCommonInfo'
 
 // ----WAX MAIN NET----
 export const waxNetworkInfo: EosNetworkInfo = {
@@ -19,6 +19,7 @@ export const waxNetworkInfo: EosNetworkInfo = {
 
 export const waxCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'WAX',
+  customTokenTemplate: eosCustomTokenTemplate,
   displayName: 'Wax',
   memoOptions: eosMemoOptions,
   pluginId: 'wax',

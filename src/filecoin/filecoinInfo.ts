@@ -26,6 +26,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   addressExplorer: 'https://filfox.info/en/address/%s',
   transactionExplorer: 'https://filfox.info/en/message/%s',
 
+  customTokenTemplate: [
+    {
+      displayName: 'Contract Address',
+      key: 'contractAddress',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'FIL',

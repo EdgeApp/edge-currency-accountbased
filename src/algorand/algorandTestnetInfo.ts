@@ -42,6 +42,13 @@ const currencyInfo: EdgeCurrencyInfo = {
       type: 'string'
     }
   ],
+  customTokenTemplate: [
+    {
+      displayName: 'Contract Address',
+      key: 'contractAddress',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'ALGO',

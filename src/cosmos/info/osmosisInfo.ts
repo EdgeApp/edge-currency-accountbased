@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
 import type { CosmosNetworkInfo } from '../cosmosTypes'
+import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   uion: {
@@ -37,6 +38,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'OSMO',
+  customFeeTemplate: cosmosCustomTokenTemplate,
   displayName: 'Osmosis',
   pluginId: 'osmosis',
   walletType: 'wallet:osmosis',

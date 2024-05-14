@@ -28,6 +28,14 @@ export const evmCustomFeeTemplate: EdgeObjectTemplate = [
   }
 ]
 
+export const evmCustomTokenTemplate: EdgeObjectTemplate = [
+  {
+    displayName: 'Contract Address',
+    key: 'contractAddress',
+    type: 'string'
+  }
+]
+
 /**
  * The core has deprecated `defaultSettings`,
  * but the GUI still looks at it, so give the GUI just what it needs.

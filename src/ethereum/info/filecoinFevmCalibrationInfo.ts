@@ -77,6 +77,7 @@ const networkInfo: EthereumNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   customFeeTemplate: evmCustomFeeTemplate,
+  // customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevmcalibration',

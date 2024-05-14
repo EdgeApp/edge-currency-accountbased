@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
+  evmCustomTokenTemplate,
   evmMemoOptions,
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
@@ -213,6 +214,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'AVAX',
   customFeeTemplate: evmCustomFeeTemplate,
+  customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Avalanche',
   memoOptions: evmMemoOptions,
   pluginId: 'avalanche', // matching mnemonic here

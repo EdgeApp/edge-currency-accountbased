@@ -98,6 +98,13 @@ const currencyInfo: EdgeCurrencyInfo = {
       type: 'string'
     }
   ],
+  customTokenTemplate: [
+    {
+      displayName: 'Token Address',
+      key: 'contractAddress',
+      type: 'string'
+    }
+  ],
   denominations: [
     {
       name: 'SOL',
