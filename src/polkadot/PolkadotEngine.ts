@@ -166,12 +166,15 @@ export class PolkadotEngine extends CurrencyEngine<
       block_num: blockHeight,
       block_timestamp: date,
       module,
-      amount, // large denomination
+      amount: transferAmount, // large denomination
       fee // small denomination
     } = tx
 
-    // Skip unsuccessful and irrelevant transactions
-    if (!success || module !== 'balances') return
+    // Skip irrelevant transactions
+    if (module !== 'balances') return
+
+    // Fix amount for unsuccessful transactions
+    const amount = success ? transferAmount : '0'
 
     const denom = getDenomination(
       this.currencyInfo.currencyCode,

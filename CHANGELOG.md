@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Polkadot) Show unsuccessful transactions that were charged a fee
+
 ## 4.3.3 (2024-05-10)
 
 - fixed: (DOT) Fix incorrect insufficient funds error for max spend of native DOT currency in Polkadot engine
