@@ -146,7 +146,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'COREUM',
-  // customFeeTemplate: cosmosCustomTokenTemplate,
+  // customTokenTemplate: cosmosCustomTokenTemplate,
   displayName: 'Coreum',
   pluginId: 'coreum',
   walletType: 'wallet:coreum',

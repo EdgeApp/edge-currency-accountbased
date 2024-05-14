@@ -38,7 +38,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'OSMO',
-  customFeeTemplate: cosmosCustomTokenTemplate,
+  customTokenTemplate: cosmosCustomTokenTemplate,
   displayName: 'Osmosis',
   pluginId: 'osmosis',
   walletType: 'wallet:osmosis',

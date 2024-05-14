@@ -25,7 +25,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ATOM',
-  // customFeeTemplate: cosmosCustomTokenTemplate,
+  // customTokenTemplate: cosmosCustomTokenTemplate,
   displayName: 'Cosmos Hub',
   pluginId: 'cosmoshub',
   walletType: 'wallet:cosmoshub',

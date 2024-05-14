@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: `EdgeCurrencyInfo.customTokenTemplate` fields for all chains that support custom templates.
 - added: Add bulk balance fetching and `onNewTokens` callback to Algorand, Cosmos, Solana, XRP, and Tron engines
 - fixed: (Polkadot) Show unsuccessful transactions that were charged a fee
 
