@@ -618,6 +618,7 @@ export class XrpEngine extends CurrencyEngine<
       this.updateBalance(this.currencyInfo.currencyCode, Balance)
       this.nonce = Sequence
 
+      const detectedTokenIds: string[] = []
       const getBalInfo = await this.tools.rippleApi.getBalances(address)
       getBalInfo.forEach(({ currency, issuer, value }) => {
         if (issuer == null) return
@@ -628,8 +629,16 @@ export class XrpEngine extends CurrencyEngine<
           if (multiplier == null) return
           const assetAmount = toFixed(mul(value, multiplier), 0, 0)
           this.updateBalance(edgeToken.currencyCode, assetAmount)
+
+          if (gt(assetAmount, '0') && !this.enabledTokenIds.includes(tokenId)) {
+            detectedTokenIds.push(tokenId)
+          }
         }
       })
+
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+      }
 
       // If get here, we've checked balances for all possible tokens the user
       // could have enabled. Mark all assets as checked

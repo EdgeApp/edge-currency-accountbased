@@ -22,7 +22,7 @@ import {
 } from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { add, ceil, lt, mul, sub } from 'biggystring'
+import { add, ceil, gt, lt, mul, sub } from 'biggystring'
 import {
   AuthInfo,
   Fee,
@@ -410,13 +410,23 @@ export class CosmosEngine extends CurrencyEngine<
         mainnetBal?.amount ?? '0'
       )
 
-      this.enabledTokenIds.forEach(tokenId => {
+      const detectedTokenIds: string[] = []
+      Object.keys(this.allTokensMap).forEach(tokenId => {
         const token = this.allTokensMap[tokenId]
         const tokenBal = balances.find(
           bal => bal.denom === token.networkLocation?.contractAddress
         )
-        this.updateBalance(token.currencyCode, tokenBal?.amount ?? '0')
+        const balance = tokenBal?.amount ?? '0'
+        this.updateBalance(token.currencyCode, balance)
+
+        if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+          detectedTokenIds.push(tokenId)
+        }
       })
+
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+      }
 
       if (this.stakingSupported) {
         try {

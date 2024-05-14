@@ -213,12 +213,21 @@ export class SolanaEngine extends CurrencyEngine<
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
 
+      const detectedTokenIds: string[] = []
       for (const [i, tokenId] of allTokenIds.entries()) {
         const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
         // empty token addresses return an error "Invalid param: could not find account".
         // If there was an actual error with the request it would have thrown already
         const balance = tokenBal?.result?.value?.amount ?? '0'
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
+
+        if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+          detectedTokenIds.push(tokenId)
+        }
+      }
+
+      if (detectedTokenIds.length > 0) {
+        this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
       }
     } catch (e: any) {
       // Nodes will return 0 for uninitiated accounts so thrown errors should be logged

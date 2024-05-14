@@ -77,7 +77,8 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://eth-ropsten.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://ropsten.infura.io/v3/{{infuraProjectId}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x8D9708f3F514206486D7E988533f770a16d074a7'
     },
     {
       type: 'evmscan',

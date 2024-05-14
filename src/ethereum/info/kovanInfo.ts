@@ -224,7 +224,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://kovan.poa.network',
         'https://eth-kovan.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://kovan.infura.io/v3/{{infuraProjectId}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x55ABBa8d669D60A10c104CC493ec5ef389EC92bb'
     },
     {
       type: 'evmscan',

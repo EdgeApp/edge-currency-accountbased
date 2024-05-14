@@ -77,7 +77,8 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://eth-rinkeby.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://rinkeby.infura.io/v3/{{infuraProjectId}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x3183B673f4816C94BeF53958BaF93C671B7F8Cf2'
     },
     {
       type: 'evmscan',

@@ -104,7 +104,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://eth-goerli.rpc.grove.city/v1/{{poktPortalApiKey}}',
         'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
         'https://goerli.infura.io/v3/{{infuraProjectId}}'
-      ]
+      ],
+      ethBalCheckerContract: '0x9788C4E93f9002a7ad8e72633b11E8d1ecd51f9b'
     },
     {
       type: 'evmscan',

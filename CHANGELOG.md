@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Add bulk balance fetching and `onNewTokens` callback to Algorand, Cosmos, Solana, XRP, and Tron engines
 - fixed: (Polkadot) Show unsuccessful transactions that were charged a fee
 
 ## 4.3.3 (2024-05-10)
