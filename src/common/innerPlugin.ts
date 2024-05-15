@@ -1,3 +1,4 @@
+import { Cleaner } from 'cleaners'
 import {
   EdgeCorePluginOptions,
   EdgeCurrencyEngine,
@@ -9,6 +10,8 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+
+import { mergeDeeply } from './utils'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -42,6 +45,7 @@ export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
 export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  infoPayloadCleaner: Cleaner<Partial<NetworkInfo>>
   networkInfo: NetworkInfo
   checkEnvironment?: () => void
   getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools>>
@@ -58,11 +62,28 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
     const {
       builtinTokens = {},
       currencyInfo,
-      networkInfo,
+      networkInfo: defaultNetworkInfo,
+      infoPayloadCleaner,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
-    const innerEnv = { ...env, builtinTokens, currencyInfo, networkInfo }
+
+    let networkInfo: NetworkInfo = defaultNetworkInfo
+    try {
+      networkInfo = mergeDeeply(
+        defaultNetworkInfo,
+        infoPayloadCleaner(env.infoPayload)
+      )
+    } catch (e) {
+      env.log.warn('infoPayload cleaner error:', e)
+    }
+
+    const innerEnv = {
+      ...env,
+      builtinTokens,
+      currencyInfo,
+      networkInfo
+    }
 
     // Logic to load the inner plugin:
     let pluginPromise: Promise<InnerPlugin<NetworkInfo, Tools>> | undefined

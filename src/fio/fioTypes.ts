@@ -1,5 +1,5 @@
-import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
-import { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
+import type { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
+import type { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNamesResponse'
 import {
   asArray,
   asBoolean,
@@ -41,6 +41,15 @@ export interface FioNetworkInfo {
   errorCodes: typeof fioRegApiErrorCodes
   chainId: string
 }
+
+export const asFioInfoPayload = asObject({
+  apiUrls: asOptional(asArray(asString)),
+  historyNodeUrls: asOptional(asArray(asString)),
+  fioRegApiUrl: asOptional(asString),
+  fioDomainRegUrl: asOptional(asString),
+  fioAddressRegUrl: asOptional(asString),
+  fioStakingApyUrl: asOptional(asString)
+})
 
 export type FioRequestTypes = 'PENDING' | 'SENT'
 

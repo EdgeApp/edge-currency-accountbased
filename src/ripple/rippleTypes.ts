@@ -1,4 +1,5 @@
 import {
+  asArray,
   asBoolean,
   asEither,
   asMaybe,
@@ -7,7 +8,7 @@ import {
   asOptional,
   asString
 } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
+import type { EdgeTransaction } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo, MakeTxParams } from '../common/types'
 
@@ -17,6 +18,10 @@ export interface XrpNetworkInfo {
   baseReserve: string
   baseReservePerToken: string
 }
+
+export const asXrpInfoPayload = asObject({
+  rippledServers: asOptional(asArray(asString))
+})
 
 export interface XrpCustomToken {
   currencyCode: string

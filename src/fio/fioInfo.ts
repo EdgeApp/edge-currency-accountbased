@@ -3,7 +3,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './FioTools'
-import { FioNetworkInfo, fioOtherMethodNames } from './fioTypes'
+import {
+  asFioInfoPayload,
+  FioNetworkInfo,
+  fioOtherMethodNames
+} from './fioTypes'
 
 const networkInfo: FioNetworkInfo = {
   apiUrls: [
@@ -76,6 +80,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({
   currencyInfo,
+  infoPayloadCleaner: asFioInfoPayload,
   networkInfo,
   otherMethodNames: fioOtherMethodNames,
 

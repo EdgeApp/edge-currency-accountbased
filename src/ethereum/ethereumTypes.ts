@@ -16,7 +16,7 @@ import {
 import { EdgeSpendInfo } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo, WalletConnectPayload } from '../common/types'
-import { NetworkAdapterConfig } from './networkAdapters/types'
+import type { NetworkAdapterConfig } from './networkAdapters/types'
 
 export interface EthereumInitOptions {
   blockcypherApiKey?: string
@@ -83,6 +83,25 @@ export interface EthereumNetworkInfo {
   pluginRegularKeyName: string
   uriNetworks: string[]
 }
+
+const asNetworkAdaptorConfigType = asValue(
+  'amberdata-rpc',
+  'blockbook',
+  'blockchair',
+  'blockcypher',
+  'evmscan',
+  'filfox',
+  'pulsechain-scan',
+  'rpc'
+)
+const asNetworkAdaptorConfig = asObject({
+  type: asNetworkAdaptorConfigType,
+  servers: asArray(asString),
+  ethBalCheckerContract: asOptional(asString)
+})
+export const asEthereumInfoPayload = asObject({
+  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
+})
 
 /**
  * Other Methods from EthereumTools

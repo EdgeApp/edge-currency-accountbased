@@ -22,6 +22,10 @@ export interface PolkadotNetworkInfo {
   partialFeeOffsetMultiplier: string
 }
 
+export const asPolkadotInfoPayload = asObject({
+  rpcNodes: asOptional(asArray(asString))
+})
+
 export const asPolkadotWalletOtherData = asObject({
   txCount: asMaybe(asNumber, 0)
 })

@@ -12,7 +12,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import { JsonObject } from 'edge-core-js/types'
+import type { JsonObject } from 'edge-core-js/types'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -34,6 +34,11 @@ export interface TronNetworkInfo {
   defaultFreezeDurationInDays: number
   trc20BalCheckerContract: string
 }
+
+export const asTronInfoPayload = asObject({
+  tronApiServers: asOptional(asArray(asString)),
+  tronNodeServers: asOptional(asArray(asString))
+})
 
 export const asTxQueryCache = asObject({
   txid: asString,

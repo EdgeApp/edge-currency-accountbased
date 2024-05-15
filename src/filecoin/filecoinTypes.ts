@@ -22,6 +22,18 @@ export interface FilecoinNetworkInfo {
   }
 }
 
+const networkName = asValue('Mainnet', 'Calibration', 'Butterfly')
+export const asFilecoinInfoPayload = asObject({
+  filfoxUrl: asOptional(asString),
+  filscanUrl: asOptional(asString),
+  rpcNode: asOptional(
+    asObject({
+      networkName: networkName,
+      url: asString
+    })
+  )
+})
+
 export interface FilecoinInitOptions {
   glifApiKey: string
 }

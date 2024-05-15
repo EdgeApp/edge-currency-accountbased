@@ -5,7 +5,9 @@ import {
   asMaybe,
   asNumber,
   asObject,
+  asOptional,
   asString,
+  asValue,
   Cleaner
 } from 'cleaners'
 import type {
@@ -22,7 +24,7 @@ import type {
   TransferSpendInfo,
   UpdateEvent
 } from 'react-native-zcash'
-import { Subscriber } from 'yaob'
+import type { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
 
@@ -37,6 +39,16 @@ export interface ZcashNetworkInfo {
   defaultNetworkFee: string
   defaultBirthday: number
 }
+
+export const asZcashInfoPayload = asObject({
+  rpcNode: asOptional(
+    asObject({
+      networkName: asValue('mainnet', 'testnet'),
+      defaultHost: asString,
+      defaultPort: asNumber
+    })
+  )
+})
 
 export const asZcashWalletOtherData = asObject({
   missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),

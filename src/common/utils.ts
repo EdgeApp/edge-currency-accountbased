@@ -380,7 +380,7 @@ export function safeErrorMessage(e?: Error): string {
 }
 
 /**
- * Merges several Javascript objects deeply,
+ * Merges several JSON objects deeply,
  * preferring the items from later objects.
  */
 export function mergeDeeply(...objects: any[]): any {
@@ -390,12 +390,11 @@ export function mergeDeeply(...objects: any[]): any {
     if (o == null) continue
 
     for (const key of Object.keys(o)) {
-      if (o[key] == null) continue
+      if (o[key] === undefined) continue
 
-      out[key] =
-        out[key] != null && typeof o[key] === 'object'
-          ? mergeDeeply(out[key], o[key])
-          : o[key]
+      const isObject =
+        out[key] != null && typeof o[key] === 'object' && !Array.isArray(o[key])
+      out[key] = isObject ? mergeDeeply(out[key], o[key]) : o[key]
     }
   }
 

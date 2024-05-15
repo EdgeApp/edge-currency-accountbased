@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { TezosTools } from './TezosTools'
-import type { TezosNetworkInfo } from './tezosTypes'
+import { asTezosInfoPayload, TezosNetworkInfo } from './tezosTypes'
 
 const networkInfo: TezosNetworkInfo = {
   // Testnet (alphanet):
@@ -63,6 +63,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const tezos = makeOuterPlugin<TezosNetworkInfo, TezosTools>({
   currencyInfo,
+  infoPayloadCleaner: asTezosInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

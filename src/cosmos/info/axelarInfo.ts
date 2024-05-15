@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
-import type { CosmosNetworkInfo } from '../cosmosTypes'
+import { asCosmosInfoPayload, CosmosNetworkInfo } from '../cosmosTypes'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'axelar',
@@ -47,6 +47,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const axelar = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
+  infoPayloadCleaner: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {

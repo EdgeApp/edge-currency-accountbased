@@ -2,7 +2,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { RippleTools } from './RippleTools'
-import type { XrpNetworkInfo } from './rippleTypes'
+import { asXrpInfoPayload, XrpNetworkInfo } from './rippleTypes'
 
 export const DIVIDE_PRECISION = 18
 export const EST_BLOCK_TIME_MS = 3500
@@ -117,6 +117,7 @@ export const builtinTokens: EdgeTokenMap = {
 export const ripple = makeOuterPlugin<XrpNetworkInfo, RippleTools>({
   builtinTokens,
   currencyInfo,
+  infoPayloadCleaner: asXrpInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

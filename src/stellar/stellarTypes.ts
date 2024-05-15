@@ -1,4 +1,11 @@
-import { asMaybe, asNumber, asObject, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -6,6 +13,10 @@ export interface StellarNetworkInfo {
   baseReserve: string
   stellarServers: string[]
 }
+
+export const asStellarInfoPayload = asObject({
+  stellarServers: asOptional(asArray(asString))
+})
 
 export interface StellarBalance {
   balance: string

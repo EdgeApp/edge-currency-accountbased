@@ -1,4 +1,11 @@
-import { asMaybe, asNumber, asObject, asOptional, asString } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString
+} from 'cleaners'
 
 import { asWalletInfo } from '../common/types'
 
@@ -11,6 +18,13 @@ export interface EosNetworkInfo {
   powerUpServers: string[]
   uriProtocol: string
 }
+
+export const asEosInfoPayload = asObject({
+  eosDfuseServers: asOptional(asArray(asString)),
+  eosHyperionNodes: asOptional(asArray(asString)),
+  eosNodes: asOptional(asArray(asString)),
+  powerUpServers: asOptional(asArray(asString))
+})
 
 export const eosOtherMethodNames = [
   'getActivationCost',

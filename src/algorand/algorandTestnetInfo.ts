@@ -3,7 +3,7 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import type { AlgorandTools } from './AlgorandTools'
-import { AlgorandNetworkInfo } from './algorandTypes'
+import { AlgorandNetworkInfo, asAlgorandInfoPayload } from './algorandTypes'
 
 const builtinTokens: EdgeTokenMap = {
   '10458941': {
@@ -71,6 +71,7 @@ export const algorandtestnet = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
+  infoPayloadCleaner: asAlgorandInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

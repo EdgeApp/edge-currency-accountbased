@@ -3,7 +3,11 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
-import type { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import {
+  asEthereumInfoPayload,
+  EthereumFees,
+  EthereumNetworkInfo
+} from '../ethereumTypes'
 import {
   evmCustomFeeTemplate,
   evmCustomTokenTemplate,
@@ -240,6 +244,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const avalanche = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
+  infoPayloadCleaner: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

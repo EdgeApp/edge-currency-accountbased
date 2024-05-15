@@ -2,8 +2,12 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
-import { EthereumTools } from '../EthereumTools'
-import { EthereumFees, EthereumNetworkInfo } from '../ethereumTypes'
+import type { EthereumTools } from '../EthereumTools'
+import {
+  asEthereumInfoPayload,
+  EthereumFees,
+  EthereumNetworkInfo
+} from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
@@ -136,6 +140,7 @@ export const filecoinfevmcalibration = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
+  infoPayloadCleaner: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {
