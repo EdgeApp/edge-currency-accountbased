@@ -2,11 +2,13 @@
 
 ## Unreleased
 
+- added: (EVM) Hardcode gas limit values for some tokens to be prioritized over eth_estimateGas result
+- added: Update node and server lists from info server payload provided by the core
+
 ## 4.4.0 (2024-05-14)
 
 - added: `EdgeCurrencyInfo.customTokenTemplate` fields for all chains that support custom templates.
 - added: Add bulk balance fetching and `onNewTokens` callback to Algorand, Cosmos, Solana, XRP, and Tron engines
-- added: Update node and server lists from info server payload provided by the core
 - fixed: (Polkadot) Show unsuccessful transactions that were charged a fee
 
 ## 4.3.3 (2024-05-10)
