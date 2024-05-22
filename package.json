@@ -79,7 +79,7 @@
   "dependencies": {
     "@binance-chain/javascript-sdk": "^4.2.0",
     "@chain-registry/client": "^1.15.0",
-    "@cosmjs/stargate": "^0.32.2",
+    "@cosmjs/stargate": "^0.32.3",
     "@emurgo/cardano-serialization-lib-nodejs": "^11.5.0",
     "@ethereumjs/common": "^4.0.0",
     "@ethereumjs/tx": "^5.0.0",
