@@ -627,7 +627,7 @@ export class AlgorandEngine extends CurrencyEngine<
         if (gt(parentNetworkFee, spendableAlgoBalance)) {
           throw new InsufficientFundsError({
             networkFee: fee,
-            tokenId
+            tokenId: null
           })
         }
 

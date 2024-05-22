@@ -1436,7 +1436,7 @@ export class EthereumEngine extends CurrencyEngine<
       if (gt(nativeNetworkFee, parentNativeBalance)) {
         throw new InsufficientFundsError({
           networkFee: nativeNetworkFee,
-          tokenId
+          tokenId: null
         })
       }
       const balanceToken =
