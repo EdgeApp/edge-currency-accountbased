@@ -479,7 +479,7 @@ export class PolkadotEngine extends CurrencyEngine<
       if (gt(nativeNetworkFee, spendableFeeBalance)) {
         throw new InsufficientFundsError({
           networkFee: nativeNetworkFee,
-          tokenId
+          tokenId: null
         })
       }
     }
