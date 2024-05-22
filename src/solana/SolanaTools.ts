@@ -1,4 +1,4 @@
-import * as solanaWeb3 from '@solana/web3.js'
+import { Keypair, PublicKey } from '@solana/web3.js'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
@@ -27,12 +27,10 @@ import {
   SolanaNetworkInfo
 } from './solanaTypes'
 
-const { Keypair, PublicKey } = solanaWeb3
-
 const createKeyPair = async (
   mnemonic: string,
   path: string
-): Promise<solanaWeb3.Keypair> => {
+): Promise<Keypair> => {
   const buffer = await mnemonicToSeed(mnemonic)
   const deriveSeed = ed25519.derivePath(path, base16.stringify(buffer)).key
   return Keypair.fromSeed(Uint8Array.from(deriveSeed))

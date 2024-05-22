@@ -113,8 +113,7 @@ export class TezosTools implements EdgeCurrencyTools {
       address = uri
     } else if (uri.slice(0, 10) === 'web+tezos:') {
       operation = decodeMainnet(uri)
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!operation[0] || !operation[0].content) {
+      if (operation[0]?.content == null) {
         throw new Error('InvalidUriError')
       }
       content = operation[0].content

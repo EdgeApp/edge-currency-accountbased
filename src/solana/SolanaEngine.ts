@@ -1,9 +1,16 @@
 import {
   createAssociatedTokenAccountInstruction,
   createTransferInstruction,
-  getAssociatedTokenAddress
+  getAssociatedTokenAddressSync
 } from '@solana/spl-token'
-import * as solanaWeb3 from '@solana/web3.js'
+import {
+  ComputeBudgetProgram,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction
+} from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
 import { asMaybe, asNumber, asString } from 'cleaners'
 import {
@@ -54,15 +61,6 @@ import {
   SolanaWalletOtherData,
   TokenBalance
 } from './solanaTypes'
-
-const {
-  ComputeBudgetProgram,
-  PublicKey,
-  Keypair,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction
-} = solanaWeb3
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
 const BLOCKCHAIN_POLL_MILLISECONDS = 20000
@@ -187,7 +185,7 @@ export class SolanaEngine extends CurrencyEngine<
         this.networkInfo.associatedTokenPublicKey
       )
       for (const tokenId of allTokenIds) {
-        const associatedTokenPubkey = await getAssociatedTokenAddress(
+        const associatedTokenPubkey = getAssociatedTokenAddressSync(
           new PublicKey(tokenId),
           pubkey,
           false,
@@ -639,14 +637,13 @@ export class SolanaEngine extends CurrencyEngine<
       const TOKEN = new PublicKey(tokenId)
 
       // derive recipient address
-      const associatedDestinationTokenAddrPayee =
-        await getAssociatedTokenAddress(
-          TOKEN,
-          payee,
-          false,
-          tokenProgramId,
-          associatedTokenProgramId
-        )
+      const associatedDestinationTokenAddrPayee = getAssociatedTokenAddressSync(
+        TOKEN,
+        payee,
+        false,
+        tokenProgramId,
+        associatedTokenProgramId
+      )
 
       // check if recipient exists
       let tokenAddressExists = this.addressCache.get(publicAddress)
@@ -702,14 +699,13 @@ export class SolanaEngine extends CurrencyEngine<
       }
 
       // derive our address
-      const associatedDestinationTokenAddrPayer =
-        await getAssociatedTokenAddress(
-          TOKEN,
-          payer,
-          false,
-          tokenProgramId,
-          associatedTokenProgramId
-        )
+      const associatedDestinationTokenAddrPayer = getAssociatedTokenAddressSync(
+        TOKEN,
+        payer,
+        false,
+        tokenProgramId,
+        associatedTokenProgramId
+      )
 
       solTx.add(
         createTransferInstruction(
