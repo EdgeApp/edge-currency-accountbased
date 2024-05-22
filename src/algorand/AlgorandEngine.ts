@@ -546,7 +546,7 @@ export class AlgorandEngine extends CurrencyEngine<
 
     const spendableAlgoBalance = sub(
       this.getBalance({
-        tokenId
+        tokenId: null
       }),
       this.totalReserve
     )

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Algorand) Fix ALGO balance lookup for token transactions
+
 ## 4.5.0 (2024-05-15)
 
 - added: (EVM) Hardcode gas limit values for some tokens to be prioritized over eth_estimateGas result
