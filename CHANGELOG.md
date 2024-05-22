@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.5.1 (2024-05-22)
+
 - fixed: (Algorand) Fix ALGO balance lookup for token transactions
 
 ## 4.5.0 (2024-05-15)
