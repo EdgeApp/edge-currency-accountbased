@@ -1,4 +1,4 @@
-import { add, mul, sub } from 'biggystring'
+import { add, max, mul, sub } from 'biggystring'
 import {
   EdgeConfirmationState,
   EdgeCurrencyInfo,
@@ -500,17 +500,33 @@ export function mergeEdgeTransactions(
       continue
     }
 
-    // Assertions:
-    if (existingTransaction.networkFee !== transaction.networkFee) {
+    // A non-zero network fee is expected to always be present in at least
+    // one transaction for native currency transactions. If both sides
+    // transactions have a non-zero network fee, they are expected to match.
+    if (
+      existingTransaction.networkFee !== '0' &&
+      transaction.networkFee !== '0' &&
+      transaction.networkFee !== existingTransaction.networkFee
+    ) {
       throw new Error(
         `Failed to merge transaction '${uniqueKey}': Mismatch networkFee`
       )
     }
+
+    // Parent network is expected to always match for token transactions:
     if (existingTransaction.parentNetworkFee !== transaction.parentNetworkFee) {
       throw new Error(
         `Failed to merge transaction '${uniqueKey}': Mismatch parentNetworkFee`
       )
     }
+
+    // We can safely assume that the networkFees for each transaction are
+    // either the same or one or both are zero. So, we can take the max
+    // of the two networkFees to get the merged networkFee:
+    const mergedNetworkFee = max(
+      existingTransaction.networkFee,
+      transaction.networkFee
+    )
 
     // Update the existing transaction:
     const nativeAmount = add(
@@ -521,6 +537,7 @@ export function mergeEdgeTransactions(
       ...existingTransaction,
       isSend: nativeAmount.startsWith('-'),
       nativeAmount,
+      networkFee: mergedNetworkFee,
       ourReceiveAddresses: [
         ...existingTransaction.ourReceiveAddresses,
         ...transaction.ourReceiveAddresses

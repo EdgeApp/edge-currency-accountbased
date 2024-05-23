@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Stuck wallet syncing caused by error thrown from mismatching networkFee assertion in mergeEdgeTransactions
+
 ## 4.5.1 (2024-05-22)
 
 - fixed: (Algorand) Fix ALGO balance lookup for token transactions

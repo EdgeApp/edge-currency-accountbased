@@ -65,6 +65,36 @@ describe(`mergeEdgeTransactions for native currency transactions`, function () {
     assert.deepEqual(result, expected)
   })
 
+  // When the internal transaction sends some amount to the transaction sender,
+  // then typically the network fee on the received transaction is zero because
+  // the sender paid for the network fee:
+  it(`will merge internal transaction receiving (with zero networkFee)`, function () {
+    const regularTx = {
+      ...templateTx,
+      isSend: true,
+      nativeAmount: '-42',
+      networkFee: '42'
+    }
+    const internalTx = {
+      ...templateTx,
+      isSend: false,
+      nativeAmount: '100',
+      networkFee: '0',
+      ourReceiveAddresses: [bobAddress]
+    }
+    const result = mergeEdgeTransactions([regularTx, internalTx])
+    const expected = [
+      {
+        ...templateTx,
+        isSend: false,
+        nativeAmount: '58',
+        networkFee: '42',
+        ourReceiveAddresses: [bobAddress]
+      }
+    ]
+    assert.deepEqual(result, expected)
+  })
+
   // When the internal transaction gives more back then sent:
   it(`will merge internal transaction receiving of funds`, function () {
     const regularTx = {
@@ -113,7 +143,7 @@ describe(`mergeEdgeTransactions for native currency transactions`, function () {
     assert.deepEqual(result, expected)
   })
 
-  it(`will throw on mismatching networkFee`, function () {
+  it(`will throw on mismatching non-zero networkFee`, function () {
     const regularTx = {
       ...templateTx,
       isSend: true,
@@ -125,7 +155,7 @@ describe(`mergeEdgeTransactions for native currency transactions`, function () {
       ...templateTx,
       isSend: true,
       nativeAmount: '100',
-      networkFee: '0'
+      networkFee: '24'
     }
     assert.throws(
       () => mergeEdgeTransactions([regularTx, internalTx]),
