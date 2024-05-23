@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.5.2 (2024-05-23)
+
 - fixed: (EVM) Stuck wallet syncing caused by error thrown from mismatching networkFee assertion in mergeEdgeTransactions
 
 ## 4.5.1 (2024-05-22)
