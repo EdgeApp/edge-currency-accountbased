@@ -788,10 +788,11 @@ export class SolanaEngine extends CurrencyEngine<
       throw new Error('Missing unsignedSerializedSolTx')
 
     const keypair = Keypair.fromSecretKey(
-      Uint8Array.from(base16.parse(solanaPrivateKeys.privateKey))
+      base16.parse(solanaPrivateKeys.privateKey)
     )
 
     const solTx = Transaction.from(unsignedSerializedSolTx)
+    await this.queryBlockhash()
     solTx.recentBlockhash = this.recentBlockhash
     solTx.sign({
       publicKey: keypair.publicKey,
