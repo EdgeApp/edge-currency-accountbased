@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.5.3 (2024-05-28)
+
 - added: Added two alternative evmscan servers to zkSync
 
 ## 4.5.2 (2024-05-23)
