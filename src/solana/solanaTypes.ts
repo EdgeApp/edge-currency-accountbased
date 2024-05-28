@@ -190,6 +190,7 @@ export const asSolanaInitOptions = asObject({
   alchemyApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString)
 })
+export type SolanaInitOptions = ReturnType<typeof asSolanaInitOptions>
 
 export const asSolanaCustomFee = asObject({
   microLamports: asString

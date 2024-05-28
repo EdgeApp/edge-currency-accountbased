@@ -46,7 +46,6 @@ import {
   asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
-  asSolanaInitOptions,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
   asTokenBalance,
@@ -71,7 +70,6 @@ export class SolanaEngine extends CurrencyEngine<
   SafeSolanaWalletInfo
 > {
   networkInfo: SolanaNetworkInfo
-  initOptions: JsonObject
   base58PublicKey: string
   feePerSignature: string
   priorityFee: string
@@ -91,7 +89,6 @@ export class SolanaEngine extends CurrencyEngine<
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
-    this.initOptions = env.initOptions
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = getFetchCors(env.io)
     this.feePerSignature = '5000'
@@ -133,25 +130,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     const rpcNodes = overrideRpcNodes ?? this.networkInfo.rpcNodes
     const funcs = rpcNodes.map(serverUrl => async () => {
-      const apiKeys = asSolanaInitOptions(this.initOptions) as {
-        [key: string]: string
-      }
-      const regex = /{{(.*)}}/g
-      const match = regex.exec(serverUrl)
-      if (match != null) {
-        const key = match[1]
-        const apiKey = apiKeys[key]
-        if (typeof apiKey === 'string') {
-          serverUrl = serverUrl.replace(match[0], apiKey)
-        } else if (apiKey == null) {
-          throw new Error(
-            `Missing ${key} in 'initOptions' for ${this.currencyInfo.pluginId}`
-          )
-        } else {
-          throw new Error('Incorrect apikey type for RPC')
-        }
-      }
-
+      serverUrl = this.tools.rpcWithApiKey(serverUrl)
       const res = await this.fetchCors(serverUrl, options)
       if (!res.ok) {
         throw new Error(
@@ -513,6 +492,7 @@ export class SolanaEngine extends CurrencyEngine<
 
   async startEngine(): Promise<void> {
     this.engineOn = true
+    await this.tools.connectClient()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
@@ -528,6 +508,11 @@ export class SolanaEngine extends CurrencyEngine<
       () => {}
     )
     await super.startEngine()
+  }
+
+  async killEngine(): Promise<void> {
+    await this.tools.disconnectClient()
+    await super.killEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
