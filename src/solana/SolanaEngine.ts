@@ -7,12 +7,16 @@ import {
   AccountInfo,
   BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
+  ConfirmedSignatureInfo,
   Keypair,
   PublicKey,
   RecentPrioritizationFees,
   SystemProgram,
+  TokenAmount,
+  TokenBalance,
   Transaction,
   TransactionInstruction,
+  TransactionResponse,
   TransactionSignature
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
@@ -44,22 +48,17 @@ import {
   AccountBalance,
   asAccountBalance,
   asBlocktime,
-  asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
   asSolanaPrivateKeys,
   asSolanaWalletOtherData,
   asTokenBalance,
-  asTransaction,
   Blocktime,
   ParsedTxAmount,
-  RpcGetTransaction,
   RpcRequest,
-  RpcSignatureForAddress,
   SafeSolanaWalletInfo,
   SolanaNetworkInfo,
-  SolanaWalletOtherData,
-  TokenBalance
+  SolanaWalletOtherData
 } from './solanaTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
@@ -177,7 +176,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balances: any = await this.fetchRpcBulk(requests)
 
-      const [mainnetBal, ...tokenBals]: [AccountBalance, TokenBalance[]] =
+      const [mainnetBal, ...tokenBals]: [AccountBalance, TokenAmount[]] =
         balances
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
@@ -266,7 +265,7 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   processSolanaTransaction(
-    tx: RpcGetTransaction['result'],
+    tx: TransactionResponse,
     amounts: ParsedTxAmount,
     timestamp: number
   ): void {
@@ -298,10 +297,10 @@ export class SolanaEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  parseTxAmounts(tx: RpcGetTransaction['result']): ParsedTxAmount[] {
+  parseTxAmounts(tx: TransactionResponse): ParsedTxAmount[] {
     const out: ParsedTxAmount[] = []
     const index = tx.transaction.message.accountKeys.findIndex(
-      account => account.pubkey === this.base58PublicKey
+      account => account.toString() === this.base58PublicKey
     )
     if (index < 0 || tx.meta == null) return out
 
@@ -309,9 +308,11 @@ export class SolanaEngine extends CurrencyEngine<
       fee,
       preBalances,
       postBalances,
-      preTokenBalances,
-      postTokenBalances
+      preTokenBalances: maybePreTokenBalances,
+      postTokenBalances: maybePostTokenBalancesRaw
     } = tx.meta
+    const preTokenBalances = maybePreTokenBalances ?? []
+    const postTokenBalances = maybePostTokenBalancesRaw ?? []
     const networkFee = fee.toString()
     const solAmount = (postBalances[index] - preBalances[index]).toString()
     if (solAmount !== '0') {
@@ -322,13 +323,9 @@ export class SolanaEngine extends CurrencyEngine<
       })
     }
 
-    const skip = (
-      balObj: RpcGetTransaction['result']['meta']['postTokenBalances'][number]
-    ): boolean => {
+    const skip = (balObj: TokenBalance): boolean => {
       return (
-        balObj == null || // don't recognize the object
         balObj.owner !== this.base58PublicKey || // isn't related to our wallet
-        balObj.programId !== this.networkInfo.tokenPublicKey || // isn't an spl token
         this.allTokensMap[balObj.mint] == null // never heard of it
       )
     }
@@ -363,27 +360,26 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    let before = null
+    let before: string | undefined
     const until =
-      this.otherData.newestTxid !== '' ? this.otherData.newestTxid : null
-    let txids: RpcSignatureForAddress[] = []
+      this.otherData.newestTxid !== '' ? this.otherData.newestTxid : undefined
+    let txids: ConfirmedSignatureInfo[] = []
     try {
       // Gather all transaction IDs since we last updated
       while (true) {
-        const params = [
-          this.base58PublicKey,
-          {
-            until,
-            before,
-            limit: this.networkInfo.txQueryLimit,
-            commitment: this.networkInfo.commitment
+        const funcs = this.tools.archiveConnections.map(
+          connection => async () => {
+            return await connection.getSignaturesForAddress(
+              new PublicKey(this.base58PublicKey),
+              {
+                until,
+                before,
+                limit: this.networkInfo.txQueryLimit
+              }
+            )
           }
-        ]
-        const raw: unknown = await this.fetchRpcBulk(
-          [{ method: 'getSignaturesForAddress', params }],
-          this.networkInfo.rpcNodesArchival
         )
-        const response = asRpcSignatureForAddressResponse(raw)[0].result
+        const response: ConfirmedSignatureInfo[] = await asyncWaterfall(funcs)
         txids = txids.concat(response)
         if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
         before = response[this.networkInfo.txQueryLimit - 1].signature
@@ -402,36 +398,21 @@ export class SolanaEngine extends CurrencyEngine<
     // Break apart the txids into chunks and query them from oldest to newest
     const CHUNK_SIZE = 50
     let numProcessedTx = 0
-    const transactionRequests = txids
-      .map(txid => ({
-        method: 'getTransaction',
-        params: [
-          txid.signature,
-          {
-            encoding: 'jsonParsed',
-            commitment: this.networkInfo.commitment,
-            maxSupportedTransactionVersion: 0
-          }
-        ]
-      }))
-      .reverse()
+    const transactionRequests = txids.map(txid => txid.signature).reverse()
 
     for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
-      const partialTransactionRequests = transactionRequests.slice(
-        i,
-        i + CHUNK_SIZE > transactionRequests.length - 1
-          ? undefined
-          : i + CHUNK_SIZE
+      const funcs = this.tools.archiveConnections.map(
+        connection => async () => {
+          return await connection.getTransactions(transactionRequests, {
+            commitment: this.networkInfo.commitment,
+            maxSupportedTransactionVersion: 0
+          })
+        }
       )
-
-      const txResponse: RpcGetTransaction[] = await this.fetchRpcBulk(
-        partialTransactionRequests,
-        this.networkInfo.rpcNodesArchival
-      )
-      const slots = txResponse.map(res => asTransaction(res).result.slot)
-      const blocktimeRequests: RpcRequest[] = slots.map(slot => ({
+      const txResponse: TransactionResponse[] = await asyncWaterfall(funcs)
+      const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
         method: 'getBlockTime',
-        params: [slot]
+        params: [res.slot]
       }))
       const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
         blocktimeRequests,
@@ -440,11 +421,11 @@ export class SolanaEngine extends CurrencyEngine<
 
       // Process the transactions from oldest to newest
       for (let i = 0; i < txResponse.length; i++) {
-        if (txResponse[i].result.meta?.err != null) continue // ignore these
-        const amounts = this.parseTxAmounts(txResponse[i].result)
+        if (txResponse[i].meta?.err != null) continue // ignore these
+        const amounts = this.parseTxAmounts(txResponse[i])
         amounts.forEach(amount => {
           this.processSolanaTransaction(
-            txResponse[i].result,
+            txResponse[i],
             amount,
             asBlocktime(blocktimeResponse[i]).result
           )

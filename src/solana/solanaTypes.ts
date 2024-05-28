@@ -6,8 +6,6 @@ import {
   asObject,
   asOptional,
   asString,
-  asTuple,
-  asUnknown,
   Cleaner
 } from 'cleaners'
 
@@ -38,14 +36,6 @@ export type SolanaWalletOtherData = ReturnType<typeof asSolanaWalletOtherData>
 export const asRpcBalance = asObject({
   value: asNumber
 })
-
-export const asRpcSignatureForAddress = asObject({
-  signature: asString,
-  blocktime: asOptional(asNumber),
-  err: asUnknown
-})
-
-export type RpcSignatureForAddress = ReturnType<typeof asRpcSignatureForAddress>
 
 export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
 export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
@@ -90,9 +80,6 @@ const asRpcResponse = <T>(cleaner: Cleaner<T>): Cleaner<{ result: T }> =>
     result: cleaner
     // id: 1
   })
-export const asRpcSignatureForAddressResponse = asTuple(
-  asRpcResponse(asArray(asRpcSignatureForAddress))
-)
 export const asAccountBalance = asRpcResponse(asRpcBalance)
 export type AccountBalance = ReturnType<typeof asAccountBalance>
 
@@ -106,48 +93,6 @@ const asRpcTokenBalance = asObject({
   })
 })
 export const asTokenBalance = asRpcResponse(asRpcTokenBalance)
-export type TokenBalance = ReturnType<typeof asTokenBalance>
-
-const asTxTokenBalance = asObject({
-  accountIndex: asNumber,
-  mint: asString,
-  owner: asString,
-  programId: asString,
-  uiTokenAmount: asObject({
-    amount: asString
-    // "decimals": asNumber,
-    // "uiAmount": 7150.402259,
-    // "uiAmountString": "7150.402259"
-  })
-})
-
-export const asRpcGetTransaction = asObject({
-  meta: asObject({
-    err: asOptional(asUnknown),
-    fee: asNumber,
-    innerInstructions: asArray(asUnknown),
-    postBalances: asArray(asNumber),
-    postTokenBalances: asArray(asMaybe(asTxTokenBalance)),
-    preBalances: asArray(asNumber),
-    preTokenBalances: asArray(asMaybe(asTxTokenBalance))
-  }),
-  slot: asNumber,
-  transaction: asObject({
-    message: asObject({
-      accountKeys: asArray(
-        asObject({
-          pubkey: asString
-        })
-      ),
-      instructions: asArray(asUnknown),
-      recentBlockhash: asString
-    }),
-    signatures: asArray(asString)
-  })
-})
-export const asTransaction = asRpcResponse(asRpcGetTransaction)
-
-export type RpcGetTransaction = ReturnType<typeof asTransaction>
 
 export const asBlocktime = asRpcResponse(asNumber)
 export type Blocktime = ReturnType<typeof asBlocktime>
