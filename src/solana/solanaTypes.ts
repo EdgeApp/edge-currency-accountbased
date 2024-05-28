@@ -1,9 +1,7 @@
 import {
   asArray,
   asCodec,
-  asEither,
   asMaybe,
-  asNull,
   asNumber,
   asObject,
   asOptional,
@@ -48,16 +46,6 @@ export const asRpcSignatureForAddress = asObject({
 })
 
 export type RpcSignatureForAddress = ReturnType<typeof asRpcSignatureForAddress>
-
-export const asLatestBlockhash = asObject({
-  value: asObject({
-    blockhash: asString
-  })
-})
-
-export const asGetRecentPrioritizationFees = asArray(
-  asObject({ prioritizationFee: asNumber, slot: asNumber })
-)
 
 export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
 export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
@@ -119,21 +107,6 @@ const asRpcTokenBalance = asObject({
 })
 export const asTokenBalance = asRpcResponse(asRpcTokenBalance)
 export type TokenBalance = ReturnType<typeof asTokenBalance>
-
-export const asAccountInfo = asObject({
-  // context: { apiVersion: '1.16.19', slot: 232816397 },
-  value: asEither(
-    asNull,
-    asObject({
-      // data: ['', 'base58'],
-      // executable: false,
-      // lamports: 254385770,
-      // owner: '11111111111111111111111111111111',
-      // rentEpoch: 0,
-      // space: 0
-    })
-  )
-})
 
 const asTxTokenBalance = asObject({
   accountIndex: asNumber,

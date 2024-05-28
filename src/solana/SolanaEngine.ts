@@ -4,15 +4,19 @@ import {
   getAssociatedTokenAddressSync
 } from '@solana/spl-token'
 import {
+  AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
   Keypair,
   PublicKey,
+  RecentPrioritizationFees,
   SystemProgram,
   Transaction,
-  TransactionInstruction
+  TransactionInstruction,
+  TransactionSignature
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
-import { asMaybe, asNumber, asString } from 'cleaners'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -39,10 +43,7 @@ import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
   asAccountBalance,
-  asAccountInfo,
   asBlocktime,
-  asGetRecentPrioritizationFees,
-  asLatestBlockhash,
   asRpcSignatureForAddressResponse,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
@@ -102,15 +103,6 @@ export class SolanaEngine extends CurrencyEngine<
 
   setOtherData(raw: any): void {
     this.otherData = asSolanaWalletOtherData(raw)
-  }
-
-  async fetchRpc(method: string, params: any = []): Promise<unknown> {
-    const req = {
-      method,
-      params
-    }
-    const res = await this.fetchRpcBulk([req])
-    return res[0].result
   }
 
   async fetchRpcBulk(
@@ -214,7 +206,10 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryBlockheight(): Promise<void> {
     try {
-      const blockheight = asNumber(await this.fetchRpc('getSlot'))
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.getSlot()
+      })
+      const blockheight: number = await asyncWaterfall(funcs)
       if (blockheight > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = blockheight
         this.walletLocalDataDirty = true
@@ -230,9 +225,10 @@ export class SolanaEngine extends CurrencyEngine<
   // https://solana.com/docs/core/rent
   async queryMinimumBalance(): Promise<void> {
     try {
-      const minimumBalance = asNumber(
-        await this.fetchRpc('getMinimumBalanceForRentExemption', [50])
-      )
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.getMinimumBalanceForRentExemption(50)
+      })
+      const minimumBalance: number = await asyncWaterfall(funcs)
       this.minimumAddressBalance = minimumBalance.toString()
     } catch (e: any) {
       this.error(`queryMinimumBalance Error `, e)
@@ -241,8 +237,11 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryFee(): Promise<void> {
     try {
-      const response = await this.fetchRpc('getRecentPrioritizationFees')
-      const recentPriorityFees = asGetRecentPrioritizationFees(response)
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.getRecentPrioritizationFees()
+      })
+      const recentPriorityFees: RecentPrioritizationFees[] =
+        await asyncWaterfall(funcs)
       // if the array is empty, or request otherwise fails, it's ok to just use the default
       const latestPriorityFee = recentPriorityFees.sort(
         (a, b) => a.slot - b.slot
@@ -255,8 +254,11 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryBlockhash(): Promise<void> {
     try {
-      const response = await this.fetchRpc('getLatestBlockhash')
-      const { blockhash } = asLatestBlockhash(response).value
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.getLatestBlockhash()
+      })
+      const { blockhash }: BlockhashWithExpiryBlockHeight =
+        await asyncWaterfall(funcs)
       this.recentBlockhash = blockhash
     } catch (e: any) {
       this.error(`queryBlockhash Error `, e)
@@ -587,8 +589,9 @@ export class SolanaEngine extends CurrencyEngine<
     )
 
     const txOpts = {
-      recentBlockhash: this.recentBlockhash,
-      feePayer: payer
+      feePayer: payer,
+      blockhash: this.recentBlockhash,
+      lastValidBlockHeight: this.walletLocalData.blockHeight + 10000
     }
     const solTx = new Transaction(txOpts)
 
@@ -633,17 +636,16 @@ export class SolanaEngine extends CurrencyEngine<
       // check if recipient exists
       let tokenAddressExists = this.addressCache.get(publicAddress)
       if (tokenAddressExists === undefined) {
-        const accountRes = asAccountInfo(
-          await this.fetchRpc('getAccountInfo', [
-            associatedDestinationTokenAddrPayee.toBase58(),
-            {
-              commitment: this.networkInfo.commitment,
-              encoding: 'jsonParsed'
-            }
-          ])
+        const funcs = this.tools.connections.map(connection => async () => {
+          return await connection.getAccountInfo(
+            associatedDestinationTokenAddrPayee,
+            this.networkInfo.commitment
+          )
+        })
+        const accountRes: AccountInfo<Buffer> | null = await asyncWaterfall(
+          funcs
         )
-
-        if (accountRes.value == null) {
+        if (accountRes == null) {
           tokenAddressExists = false
           this.addressCache.set(publicAddress, false)
         } else {
@@ -802,8 +804,10 @@ export class SolanaEngine extends CurrencyEngine<
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
     try {
-      const params = [edgeTransaction.signedTx, { encoding: 'base64' }]
-      const txid = asString(await this.fetchRpc('sendTransaction', params))
+      const funcs = this.tools.connections.map(connection => async () => {
+        return await connection.sendEncodedTransaction(edgeTransaction.signedTx)
+      })
+      const txid: TransactionSignature = await asyncWaterfall(funcs)
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
