@@ -36,7 +36,6 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -267,7 +266,8 @@ export class SolanaEngine extends CurrencyEngine<
   processSolanaTransaction(
     tx: TransactionResponse,
     amounts: ParsedTxAmount,
-    timestamp: number
+    timestamp: number,
+    memos: string[]
   ): void {
     const ourReceiveAddresses = []
 
@@ -284,7 +284,7 @@ export class SolanaEngine extends CurrencyEngine<
       currencyCode,
       date: timestamp,
       isSend: amount.startsWith('-'),
-      memos: [],
+      memos: memos.map(memo => ({ type: 'text', value: memo })),
       nativeAmount: amount,
       networkFee,
       ourReceiveAddresses,
@@ -422,12 +422,24 @@ export class SolanaEngine extends CurrencyEngine<
       // Process the transactions from oldest to newest
       for (let i = 0; i < txResponse.length; i++) {
         if (txResponse[i].meta?.err != null) continue // ignore these
+        const matchingTxid = txids.find(
+          t => t.signature === txResponse[i].transaction.signatures[0]
+        )
+        const memos: string[] = []
+        if (matchingTxid?.memo != null) {
+          const regex = /^\[\d+\]\s(.*)$/ // memo field includes a length prefix ie. "[17] " that needs to be ignored
+          const match = matchingTxid.memo.match(regex)
+          if (match != null) {
+            memos.push(match[1])
+          }
+        }
         const amounts = this.parseTxAmounts(txResponse[i])
         amounts.forEach(amount => {
           this.processSolanaTransaction(
             txResponse[i],
             amount,
-            asBlocktime(blocktimeResponse[i]).result
+            asBlocktime(blocktimeResponse[i]).result,
+            memos
           )
           numProcessedTx++
         })
@@ -713,7 +725,7 @@ export class SolanaEngine extends CurrencyEngine<
           }
         ],
         programId: new PublicKey(this.networkInfo.memoPublicKey),
-        data: Buffer.from(utf8.parse(memos[0].value))
+        data: Buffer.from(memos[0].value, 'utf-8')
       })
       solTx.add(memoOpts)
     }
