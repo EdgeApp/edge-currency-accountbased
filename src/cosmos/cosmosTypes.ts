@@ -77,7 +77,7 @@ export interface CosmosNetworkInfo {
   nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
-  archiveNode: HttpEndpoint
+  archiveNode?: HttpEndpoint // If no archive node, the rpc node will be used and only grab transaction in a limited range
 }
 const asHttpEndpoint = asObject({
   url: asString,
