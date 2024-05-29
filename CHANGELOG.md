@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Solana) Upgrade SDKs
+
 ## 4.5.3 (2024-05-28)
 
 - added: Added two alternative evmscan servers to zkSync
