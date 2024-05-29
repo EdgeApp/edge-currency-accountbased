@@ -297,10 +297,10 @@ export class SolanaEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  parseTxAmounts(tx: TransactionResponse): ParsedTxAmount[] {
+  parseTxAmounts(tx: TransactionResponse, pubkey: PublicKey): ParsedTxAmount[] {
     const out: ParsedTxAmount[] = []
-    const index = tx.transaction.message.accountKeys.findIndex(
-      account => account.toString() === this.base58PublicKey
+    const index = tx.transaction.message.accountKeys.findIndex(account =>
+      account.equals(pubkey)
     )
     if (index < 0 || tx.meta == null) return out
 
@@ -314,13 +314,15 @@ export class SolanaEngine extends CurrencyEngine<
     const preTokenBalances = maybePreTokenBalances ?? []
     const postTokenBalances = maybePostTokenBalancesRaw ?? []
     const networkFee = fee.toString()
-    const solAmount = (postBalances[index] - preBalances[index]).toString()
-    if (solAmount !== '0') {
-      const isSend = lt(solAmount, '0')
-      out.push({
-        amount: isSend ? sub(solAmount, networkFee) : solAmount,
-        networkFee: isSend ? networkFee : '0'
-      })
+    if (this.base58PublicKey === pubkey.toBase58()) {
+      const solAmount = (postBalances[index] - preBalances[index]).toString()
+      if (solAmount !== '0') {
+        const isSend = lt(solAmount, '0')
+        out.push({
+          amount: solAmount,
+          networkFee: isSend ? networkFee : '0'
+        })
+      }
     }
 
     const skip = (balObj: TokenBalance): boolean => {
@@ -360,23 +362,48 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
+    const mainPubkey = new PublicKey(this.base58PublicKey)
+    const codePubkeyPairs = new Set<[string, PublicKey]>([
+      [this.currencyInfo.currencyCode, mainPubkey]
+    ])
+    for (const tokenId of this.enabledTokenIds) {
+      const pk = getAssociatedTokenAddressSync(
+        new PublicKey(tokenId),
+        mainPubkey,
+        false,
+        new PublicKey(this.networkInfo.tokenPublicKey),
+        new PublicKey(this.networkInfo.associatedTokenPublicKey)
+      )
+      const cc = this.allTokensMap[tokenId].currencyCode
+      codePubkeyPairs.add([cc, pk])
+    }
+
+    for (const pair of codePubkeyPairs) {
+      const [currencyCode, pubkey] = pair
+      await this.queryTransactionsInner(currencyCode, pubkey)
+    }
+  }
+
+  async queryTransactionsInner(
+    currencyCode: string,
+    pubkey: PublicKey
+  ): Promise<void> {
     let before: string | undefined
     const until =
-      this.otherData.newestTxid !== '' ? this.otherData.newestTxid : undefined
+      this.otherData.newestTxid[currencyCode] !== ''
+        ? this.otherData.newestTxid[currencyCode]
+        : undefined
     let txids: ConfirmedSignatureInfo[] = []
     try {
       // Gather all transaction IDs since we last updated
       while (true) {
         const funcs = this.tools.archiveConnections.map(
           connection => async () => {
-            return await connection.getSignaturesForAddress(
-              new PublicKey(this.base58PublicKey),
-              {
-                until,
-                before,
-                limit: this.networkInfo.txQueryLimit
-              }
-            )
+            return await connection.getSignaturesForAddress(pubkey, {
+              until,
+              before,
+              limit: this.networkInfo.txQueryLimit
+            })
           }
         )
         const response: ConfirmedSignatureInfo[] = await asyncWaterfall(funcs)
@@ -390,8 +417,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (txids.length === 0) {
-      this.updateTxStatus(1)
-      this.updateOnAddressesChecked()
+      this.updateTxStatus(currencyCode, 1)
       return
     }
 
@@ -433,7 +459,7 @@ export class SolanaEngine extends CurrencyEngine<
             memos.push(match[1])
           }
         }
-        const amounts = this.parseTxAmounts(txResponse[i])
+        const amounts = this.parseTxAmounts(txResponse[i], pubkey)
         amounts.forEach(amount => {
           this.processSolanaTransaction(
             txResponse[i],
@@ -443,22 +469,21 @@ export class SolanaEngine extends CurrencyEngine<
           )
           numProcessedTx++
         })
-        this.otherData.newestTxid = txids[i].signature
+        this.otherData.newestTxid[currencyCode] = txids[i].signature
 
         // Update progress
         const percent = 1 - numProcessedTx / txids.length
         if (percent !== this.progressRatio) {
           if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
             this.progressRatio = percent
-            this.updateTxStatus(this.progressRatio)
-            this.updateOnAddressesChecked()
+            this.updateTxStatus(currencyCode, this.progressRatio)
           }
         }
       }
     }
 
     this.walletLocalDataDirty = true
-    this.updateTxStatus(1)
+    this.updateTxStatus(currencyCode, 1)
 
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -468,16 +493,8 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  updateTxStatus(progress: number): void {
-    const codeArray = [
-      this.chainCode,
-      ...this.enabledTokenIds.map(
-        tokenId => this.allTokensMap[tokenId].currencyCode
-      )
-    ]
-    codeArray.forEach(code => {
-      this.tokenCheckTransactionsStatus[code] = progress
-    })
+  updateTxStatus(currencyCode: string, progress: number): void {
+    this.tokenCheckTransactionsStatus[currencyCode] = progress
     this.updateOnAddressesChecked()
   }
 

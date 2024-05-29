@@ -28,7 +28,7 @@ export const asSolanaInfoPayload = asObject({
 })
 
 export const asSolanaWalletOtherData = asObject({
-  newestTxid: asMaybe(asString, '')
+  newestTxid: asMaybe(asObject(asString), () => ({}))
 })
 
 export type SolanaWalletOtherData = ReturnType<typeof asSolanaWalletOtherData>
