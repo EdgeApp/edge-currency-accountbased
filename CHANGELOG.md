@@ -4,6 +4,7 @@
 
 - changed: (Solana) Upgrade SDKs
 - removed: (ATOM) Archive transaction query
+- removed: (Thorchain) Remove synth assets
 
 ## 4.5.3 (2024-05-28)
 
