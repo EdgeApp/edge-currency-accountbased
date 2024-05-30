@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Zcash/Piratechain) Cache addresses on local data
+- added: (Ethereum Classic) Add evmscan provider for transaction history
 
 ## 4.6.0 (2024-05-30)
 
