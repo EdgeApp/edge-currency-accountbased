@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (Solana) Upgrade SDKs
+- removed: (ATOM) Archive transaction query
 
 ## 4.5.3 (2024-05-28)
 

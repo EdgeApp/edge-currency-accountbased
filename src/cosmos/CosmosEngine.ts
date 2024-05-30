@@ -496,6 +496,7 @@ export class CosmosEngine extends CurrencyEngine<
       )
     ]
     const clients =
+      this.networkInfo.archiveNode != null &&
       Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
         ? // Uses archive rpc for first sync and then only if it's been two weeks between syncs.
           await createCosmosClients(

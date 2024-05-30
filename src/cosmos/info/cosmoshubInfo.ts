@@ -16,11 +16,11 @@ const networkInfo: CosmosNetworkInfo = {
   rpcNode: {
     url: 'https://cosmos-rpc.publicnode.com:443',
     headers: {}
-  },
-  archiveNode: {
-    url: 'https://cosmosarchive-rpc.quickapi.com:443',
-    headers: {}
   }
+  // archiveNode: {
+  //   url: 'https://cosmosarchive-rpc.quickapi.com:443',
+  //   headers: {}
+  // }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
