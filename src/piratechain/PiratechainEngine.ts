@@ -463,10 +463,25 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
-    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-    const unifiedAddress = await this.synchronizer.deriveUnifiedAddress()
-    return {
-      publicAddress: unifiedAddress.saplingAddress
+    const getSynchronizerAddresses = async (): Promise<EdgeFreshAddress> => {
+      if (this.synchronizer == null) throw new Error('Synchronizer undefined')
+      const { saplingAddress } = await this.synchronizer.deriveUnifiedAddress()
+      this.otherData.cachedAddress = saplingAddress
+      this.walletLocalDataDirty = true
+      return {
+        publicAddress: saplingAddress
+      }
+    }
+
+    if (this.otherData.cachedAddress == null) {
+      return await getSynchronizerAddresses()
+    } else {
+      getSynchronizerAddresses().catch(e => {
+        throw e
+      })
+      return {
+        publicAddress: this.otherData.cachedAddress
+      }
     }
   }
 }
