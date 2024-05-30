@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Build On Bitcoin (BOB) EVM chain
 - added: (Zcash/Piratechain) Cache addresses on local data
 - added: (Ethereum Classic) Add evmscan provider for transaction history
 
