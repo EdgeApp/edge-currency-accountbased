@@ -1,77 +1,9 @@
-import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
+import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
 import { asCosmosInfoPayload, CosmosNetworkInfo } from '../cosmosTypes'
-import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
-
-// https://midgard.ninerealms.com/v2/pools
-const builtinTokens: EdgeTokenMap = {
-  avaxavax: {
-    currencyCode: 'AVAX',
-    displayName: 'Synth AVAX/AVAX',
-    denominations: [{ name: 'AVAX', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: 'avax/avax'
-    }
-  },
-  bchbch: {
-    currencyCode: 'BCH',
-    displayName: 'Synth BCH/BCH',
-    denominations: [{ name: 'BCH', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: 'bch/bch'
-    }
-  },
-  bscbnb: {
-    currencyCode: 'BNB',
-    displayName: 'Synth BSC/BNB',
-    denominations: [{ name: 'BNB', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: 'bsc/bnb'
-    }
-  },
-  btcbtc: {
-    currencyCode: 'BTC',
-    displayName: 'Synth BTC/BTC',
-    denominations: [{ name: 'BTC', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: 'btc/btc'
-    }
-  },
-  dogedoge: {
-    currencyCode: 'DOGE',
-    displayName: 'Synth DOGE/DOGE',
-    denominations: [{ name: 'DOGE', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: 'doge/doge'
-    }
-  },
-  etheth: {
-    currencyCode: 'ETH',
-    displayName: 'Synth ETH/ETH',
-    denominations: [{ name: 'ETH', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: 'eth/eth'
-    }
-  },
-  gaiaatom: {
-    currencyCode: 'ATOM',
-    displayName: 'Synth GAIA/ATOM',
-    denominations: [{ name: 'ATOM', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: 'gaia/atom'
-    }
-  },
-  ltcltc: {
-    currencyCode: 'LTC',
-    displayName: 'Synth LTC/LTC',
-    denominations: [{ name: 'LTC', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: 'ltc/ltc'
-    }
-  }
-}
+// import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
@@ -98,7 +30,7 @@ const networkInfo: CosmosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
-  customTokenTemplate: cosmosCustomTokenTemplate,
+  // customTokenTemplate: cosmosCustomTokenTemplate,
   displayName: 'THORChain',
   pluginId: 'thorchainrune',
   walletType: 'wallet:thorchainrune',
@@ -119,7 +51,6 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const thorchainrune = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
-  builtinTokens,
   currencyInfo,
   infoPayloadCleaner: asCosmosInfoPayload,
   networkInfo,
