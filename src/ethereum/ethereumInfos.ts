@@ -2,6 +2,7 @@ import { arbitrum } from './info/arbitrumInfo'
 import { avalanche } from './info/avalancheInfo'
 import { base } from './info/baseInfo'
 import { binancesmartchain } from './info/binancesmartchainInfo'
+import { bobevm } from './info/bobevmInfo'
 import { celo } from './info/celoInfo'
 import { ethDev } from './info/ethDevInfo'
 import { ethereumclassic } from './info/ethereumclassicInfo'
@@ -25,6 +26,7 @@ export const ethereumPlugins = {
   avalanche,
   base,
   binancesmartchain,
+  bobevm,
   celo,
   ethDev,
   ethereum,

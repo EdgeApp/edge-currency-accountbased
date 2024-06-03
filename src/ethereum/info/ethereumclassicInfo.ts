@@ -92,7 +92,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: [] // ['https://blockscout.com/etc/mainnet'],
+      servers: ['https://etc.blockscout.com']
     },
     {
       type: 'blockbook',
