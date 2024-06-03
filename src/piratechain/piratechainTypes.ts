@@ -116,7 +116,8 @@ export const asPiratechainWalletOtherData = asObject({
   blockRange: asMaybe(asPiratechainBlockRange, () => ({
     first: 0,
     last: 0
-  }))
+  })),
+  cachedAddress: asMaybe(asString)
 })
 
 export type PiratechainWalletOtherData = ReturnType<

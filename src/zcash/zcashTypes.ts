@@ -51,6 +51,7 @@ export const asZcashInfoPayload = asObject({
 })
 
 export const asZcashWalletOtherData = asObject({
+  cachedAddress: asMaybe(asString),
   missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })

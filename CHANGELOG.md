@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Zcash/Piratechain) Cache addresses on local data
+
 ## 4.6.0 (2024-05-30)
 
 - changed: (Solana) Upgrade SDKs
