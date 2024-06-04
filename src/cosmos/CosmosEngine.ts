@@ -5,6 +5,7 @@ import {
   makeSignDoc,
   Secp256k1HdWallet
 } from '@cosmjs/amino'
+import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32, toHex } from '@cosmjs/encoding'
 import {
   decodeTxRaw,
@@ -75,6 +76,7 @@ import {
   txQueryStrings
 } from './cosmosTypes'
 import {
+  checkAndValidateADR36AminoSignDoc,
   createCosmosClients,
   getIbcChannelAndPort,
   reduceCoinEventsForAddress,
@@ -273,9 +275,10 @@ export class CosmosEngine extends CurrencyEngine<
                 ...createIbcAminoConverters
               })
 
-              const messages = aminoDoc.msgs.map(msg =>
-                aminoTypes.fromAmino(msg)
-              )
+              const messages = aminoDoc.msgs
+                // ADR-036 messages are not yet included as an amino type in the sdk and don't have amounts to parse
+                .filter(msg => msg.type !== 'sign/MsgSignData')
+                .map(msg => aminoTypes.fromAmino(msg))
 
               const { nativeAmount, tokenId } =
                 this.getAmountAndTokenIdFromKnownMessageTypes(messages)
@@ -1067,8 +1070,13 @@ export class CosmosEngine extends CurrencyEngine<
             signDoc.account_number,
             signDoc.sequence
           )
+          checkAndValidateADR36AminoSignDoc(aminoDoc)
+
+          const { bech32AddressPrefix, bip39Path } = this.networkInfo
+          const path = stringToPath(bip39Path)
           const aminoSigner = await Secp256k1HdWallet.fromMnemonic(
-            signer.mnemonic
+            signer.mnemonic,
+            { prefix: bech32AddressPrefix, hdPaths: [path] }
           )
           const signResponse = await aminoSigner.signAmino(
             this.walletInfo.keys.bech32Address,
