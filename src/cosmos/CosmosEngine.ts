@@ -5,6 +5,7 @@ import {
   makeSignDoc,
   Secp256k1HdWallet
 } from '@cosmjs/amino'
+import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32, toHex } from '@cosmjs/encoding'
 import {
   decodeTxRaw,
@@ -1067,8 +1068,11 @@ export class CosmosEngine extends CurrencyEngine<
             signDoc.account_number,
             signDoc.sequence
           )
+          const { bech32AddressPrefix, bip39Path } = this.networkInfo
+          const path = stringToPath(bip39Path)
           const aminoSigner = await Secp256k1HdWallet.fromMnemonic(
-            signer.mnemonic
+            signer.mnemonic,
+            { prefix: bech32AddressPrefix, hdPaths: [path] }
           )
           const signResponse = await aminoSigner.signAmino(
             this.walletInfo.keys.bech32Address,
