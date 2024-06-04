@@ -1,5 +1,5 @@
 import { getIbcInfo, getTransferChannel } from '@chain-registry/utils'
-import { addCoins } from '@cosmjs/amino'
+import { addCoins, StdSignDoc } from '@cosmjs/amino'
 import { fromBech32 } from '@cosmjs/encoding'
 import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
 import {
@@ -284,4 +284,78 @@ export const getIbcChannelAndPort = (
       port: channel.chain_2.port_id
     }
   }
+}
+
+// Spec: https://github.com/cosmos/cosmos-sdk/blob/main/docs/architecture/adr-036-arbitrary-signature.md
+// Function adopted from @keplr-wallet/cosmos https://github.com/chainapsis/keplr-wallet/blob/master/packages/cosmos/src/adr-36/amino.ts
+export function checkAndValidateADR36AminoSignDoc(
+  signDoc: StdSignDoc
+): boolean {
+  const hasOnlyMsgSignData = (() => {
+    if (
+      signDoc?.msgs != null &&
+      Array.isArray(signDoc.msgs) &&
+      signDoc.msgs.length === 1
+    ) {
+      const msg = signDoc.msgs[0]
+      return msg.type === 'sign/MsgSignData'
+    } else {
+      return false
+    }
+  })()
+
+  if (!hasOnlyMsgSignData) {
+    return false
+  }
+
+  if (signDoc.chain_id !== '') {
+    throw new Error('Chain id should be empty string for ADR-36 signing')
+  }
+
+  if (signDoc.memo !== '') {
+    throw new Error('Memo should be empty string for ADR-36 signing')
+  }
+
+  if (signDoc.account_number !== '0') {
+    throw new Error('Account number should be "0" for ADR-36 signing')
+  }
+
+  if (signDoc.sequence !== '0') {
+    throw new Error('Sequence should be "0" for ADR-36 signing')
+  }
+
+  if (signDoc.fee.gas !== '0') {
+    throw new Error('Gas should be "0" for ADR-36 signing')
+  }
+
+  if (signDoc.fee.amount.length !== 0) {
+    throw new Error('Fee amount should be empty array for ADR-36 signing')
+  }
+
+  const msg = signDoc.msgs[0]
+  if (msg.type !== 'sign/MsgSignData') {
+    throw new Error(`Invalid type of ADR-36 sign msg: ${msg.type}`)
+  }
+  if (msg.value == null) {
+    throw new Error('Empty value in the msg')
+  }
+  const signer = msg.value.signer
+  if (signer == null) {
+    throw new Error('Empty signer in the ADR-36 msg')
+  }
+  fromBech32(signer)
+  const data = msg.value.data
+  if (data == null) {
+    throw new Error('Empty data in the ADR-36 msg')
+  }
+  const rawData = Buffer.from(data, 'base64')
+  // Validate the data is encoded as base64.
+  if (rawData.toString('base64') !== data) {
+    throw new Error('Data is not encoded by base64')
+  }
+  if (rawData.length === 0) {
+    throw new Error('Empty data in the ADR-36 msg')
+  }
+
+  return true
 }

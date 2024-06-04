@@ -5,6 +5,7 @@
 - added: Build On Bitcoin (BOB) EVM chain
 - added: (Zcash/Piratechain) Cache addresses on local data
 - added: (Ethereum Classic) Add evmscan provider for transaction history
+- added: (Cosmos) WalletConnect ADR36 message support
 - fixed: (Cosmos) cosmos_signAmino signer derivation
 
 ## 4.6.0 (2024-05-30)
