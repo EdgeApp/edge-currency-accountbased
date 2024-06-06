@@ -626,6 +626,13 @@ export class CosmosEngine extends CurrencyEngine<
           break
         }
       } catch (e) {
+        if (String(e).includes('page should be within')) {
+          // Some public nodes return an empty array when there are actually transactions to return.
+          // We can't determine the node is wrong if the very first request is empty,
+          // but we can once we start paging. These queries should be tried again.
+          continue
+        }
+
         this.log.warn('queryTransactions error:', e)
         throw e
       }
