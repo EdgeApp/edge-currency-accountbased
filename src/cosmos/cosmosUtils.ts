@@ -1,7 +1,11 @@
 import { getIbcInfo, getTransferChannel } from '@chain-registry/utils'
 import { addCoins, StdSignDoc } from '@cosmjs/amino'
 import { fromBech32 } from '@cosmjs/encoding'
-import { JsonRpcRequest, JsonRpcSuccessResponse } from '@cosmjs/json-rpc'
+import {
+  isJsonRpcErrorResponse,
+  JsonRpcRequest,
+  JsonRpcSuccessResponse
+} from '@cosmjs/json-rpc'
 import {
   Coin,
   Event,
@@ -70,6 +74,9 @@ const createRpcClient = (
       }
       const res = await fetch(url, opts)
       const json = await res.json()
+      if (isJsonRpcErrorResponse(json)) {
+        throw new Error(String(json.error.data ?? json.error.message))
+      }
       return json
     },
     disconnect: () => {}

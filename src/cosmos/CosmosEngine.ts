@@ -89,6 +89,7 @@ const ACCOUNT_POLL_MILLISECONDS = 5000
 const TRANSACTION_POLL_MILLISECONDS = 3000
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
+const TXS_PER_PAGE = 50
 
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
@@ -498,21 +499,33 @@ export class CosmosEngine extends CurrencyEngine<
         tokenId => this.allTokensMap[tokenId].currencyCode
       )
     ]
-    const clients =
-      this.networkInfo.archiveNode != null &&
-      Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
-        ? // Uses archive rpc for first sync and then only if it's been two weeks between syncs.
-          await createCosmosClients(
-            this.fetchCors,
-            rpcWithApiKey(this.networkInfo.archiveNode, this.tools.initOptions)
-          )
-        : // Otherwise, uses regular rpc
-          this.getClients()
 
     for (const query of txQueryStrings) {
-      const newestTxid = await this.queryTransactionsInner(query, clients)
-      if (newestTxid != null && this.otherData[query] !== newestTxid) {
-        this.otherData[query] = newestTxid
+      let startingPage = 1
+      let clients = this.getClients()
+
+      if (
+        this.networkInfo.archiveNode != null &&
+        Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
+      ) {
+        startingPage = this.otherData[query].lastPage
+        clients = await createCosmosClients(
+          this.fetchCors,
+          rpcWithApiKey(this.networkInfo.archiveNode, this.tools.initOptions)
+        )
+      }
+
+      const { newestTxid, lastPage } = await this.queryTransactionsInner(
+        query,
+        clients,
+        startingPage
+      )
+      if (
+        (newestTxid != null &&
+          this.otherData[query]?.newestTxid !== newestTxid) ||
+        lastPage !== this.otherData[query]?.lastPage
+      ) {
+        this.otherData[query] = { newestTxid, lastPage }
         this.walletLocalDataDirty = true
       }
       progress += 0.5
@@ -533,42 +546,37 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactionsInner(
     queryString: typeof txQueryStrings[number],
-    clients: CosmosClients
-  ): Promise<string | undefined> {
+    clients: CosmosClients,
+    startingPage: number
+  ): Promise<{ newestTxid: string | undefined; lastPage: number }> {
     const txSearchParams = {
       query: `${queryString}='${this.walletInfo.keys.bech32Address}'`,
-      per_page: 50, // sdk default 50
-      order_by: 'desc'
+      per_page: TXS_PER_PAGE, // sdk default 50
+      order_by: 'asc'
     }
     let newestTxid: string | undefined
-    let page = 0
-    let txCountTotal
-    let txCount = 0
-    let earlyExit = false
-    try {
-      do {
-        const txRes = await clients.cometClient.txSearch({
+    let page = startingPage
+    do {
+      try {
+        const { totalCount, txs } = await clients.cometClient.txSearch({
           ...txSearchParams,
-          page: ++page
+          page
         })
-        const { totalCount, txs } = txRes
-        if (txCountTotal == null) txCountTotal = totalCount
-        txCount = txCount + txs.length
 
-        for (const tx of txs) {
+        const newestTxidIndex = txs.findIndex(
+          tx =>
+            toHex(tx.hash).toUpperCase() ===
+            this.otherData[queryString]?.newestTxid
+        )
+
+        for (let i = newestTxidIndex + 1; i < txs.length; i++) {
+          const tx = txs[i]
+          if (tx == null) break
+
           const txidHex = toHex(tx.hash).toUpperCase()
 
           // update unconfirmed cache
           this.removeFromUnconfirmedCache(txidHex)
-
-          if (newestTxid == null) {
-            newestTxid = txidHex
-          }
-
-          if (txidHex === this.otherData[queryString]) {
-            earlyExit = true
-            break
-          }
 
           const events = tx.result.events.map(fromTendermintEvent)
           let netBalanceChanges: CosmosCoin[] = []
@@ -608,14 +616,33 @@ export class CosmosEngine extends CurrencyEngine<
               fee
             )
           })
-        }
-      } while (txCountTotal > txCount && !earlyExit)
-    } catch (e) {
-      this.log.warn('queryTransactions error:', e)
-      throw e
-    }
 
-    return newestTxid
+          newestTxid = txidHex
+          this.otherData[queryString] = { newestTxid: txidHex, lastPage: page }
+          this.walletLocalDataDirty = true
+        }
+
+        if (txs.length < TXS_PER_PAGE || totalCount === page * TXS_PER_PAGE) {
+          break
+        }
+      } catch (e) {
+        if (String(e).includes('page should be within')) {
+          // Some public nodes return an empty array when there are actually transactions to return.
+          // We can't determine the node is wrong if the very first request is empty,
+          // but we can once we start paging. These queries should be tried again.
+          continue
+        }
+
+        this.log.warn('queryTransactions error:', e)
+        throw e
+      }
+
+      page++
+      this.otherData[queryString] = { newestTxid, lastPage: page }
+      this.walletLocalDataDirty = true
+    } while (true)
+
+    return { newestTxid, lastPage: page }
   }
 
   processCosmosTransaction(

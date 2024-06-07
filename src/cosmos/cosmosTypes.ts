@@ -93,10 +93,21 @@ export const txQueryStrings = [
   `coin_received.receiver`
 ] as const
 
+const asLocalTxQueryParams = asObject({
+  newestTxid: asMaybe(asString),
+  lastPage: asMaybe(asNumber, 1)
+})
+
 export const asCosmosWalletOtherData = asObject({
   archivedTxLastCheckTime: asMaybe(asNumber, 0),
-  'coin_spent.spender': asMaybe(asString),
-  'coin_received.receiver': asMaybe(asString)
+  'coin_spent.spender': asMaybe(asLocalTxQueryParams, () => ({
+    newestTxid: undefined,
+    lastPage: 1
+  })),
+  'coin_received.receiver': asMaybe(asLocalTxQueryParams, () => ({
+    newestTxid: undefined,
+    lastPage: 1
+  }))
 })
 export type CosmosWalletOtherData = ReturnType<typeof asCosmosWalletOtherData>
 
