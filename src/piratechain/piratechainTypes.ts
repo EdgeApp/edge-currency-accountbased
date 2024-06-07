@@ -21,7 +21,6 @@ export interface PiratechainNetworkInfo {
     defaultPort: number
   }
   defaultNetworkFee: string
-  defaultBirthday: number
   transactionQueryLimit: number
 }
 
