@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.7.1 (2024-06-05)
+
+- fixed: (Cosmos) Rework `queryTransactions` to query oldest to newest
+
 ## 4.7.0 (2024-06-05)
 
 - added: Build On Bitcoin (BOB) EVM chain
