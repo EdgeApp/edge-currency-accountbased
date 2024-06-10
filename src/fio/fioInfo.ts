@@ -15,7 +15,7 @@ const networkInfo: FioNetworkInfo = {
     'https://fio.eosdac.io/v1/',
     'https://fio.eosrio.io/v1/',
     // 'https://fio.acherontrading.com/v1/', running v3.2.0
-    'https://fio.eos.barcelona/v1/',
+    // 'https://fio.eos.barcelona/v1/',
     'https://api.fio.alohaeos.com/v1/',
     // 'https://fio.greymass.com/v1/', // offline
     'https://fio.eosargentina.io/v1/',
