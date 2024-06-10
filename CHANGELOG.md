@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add 'mumbai' plugin (MATIC testnet)
+
 ## 4.7.1 (2024-06-05)
 
 - fixed: (Cosmos) Rework `queryTransactions` to query oldest to newest
