@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.8.0 (2024-06-10)
+
 - added: Add 'mumbai' plugin (MATIC testnet)
 
 ## 4.7.1 (2024-06-05)
