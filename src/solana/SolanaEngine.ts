@@ -32,7 +32,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { base16 } from 'rfc4648'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -747,10 +747,14 @@ export class SolanaEngine extends CurrencyEngine<
       solTx.add(memoOpts)
     }
 
-    const otherParams: JsonObject = {
-      unsignedSerializedSolTx: solTx.serialize({
+    const unsignedSerializedSolTx = base64.stringify(
+      solTx.serialize({
         requireAllSignatures: false
       })
+    )
+
+    const otherParams: JsonObject = {
+      unsignedSerializedSolTx
     }
 
     // **********************************
@@ -791,7 +795,7 @@ export class SolanaEngine extends CurrencyEngine<
       base16.parse(solanaPrivateKeys.privateKey)
     )
 
-    const solTx = Transaction.from(unsignedSerializedSolTx)
+    const solTx = Transaction.from(base64.parse(unsignedSerializedSolTx))
     await this.queryBlockhash()
     solTx.recentBlockhash = this.recentBlockhash
     solTx.sign({
