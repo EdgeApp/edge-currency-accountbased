@@ -133,14 +133,14 @@ export class TronTools implements EdgeCurrencyTools {
     const networks = { [this.currencyInfo.pluginId]: true, 'usdt-trc20': true }
     const { smartPayPublicAddress, smartPayUserId } = this.initOptions
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
       uri,
       networks,
-      this.builtinTokens,
-      currencyCode ?? this.currencyInfo.currencyCode,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
-    )
+    })
     if (parsedUri.protocol === 'usdt-trc20') {
       edgeParsedUri.currencyCode = 'USDT'
     }

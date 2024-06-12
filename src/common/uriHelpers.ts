@@ -13,14 +13,17 @@ import { getLegacyDenomination } from './utils'
 
 type ParsedUri = parse<Record<string, string | undefined>>
 
-export function parseUriCommon(
-  currencyInfo: EdgeCurrencyInfo,
-  uri: string,
-  networks: { [network: string]: boolean },
-  builtinTokens: EdgeTokenMap,
-  currencyCode?: string,
-  customTokens: EdgeMetaToken[] = []
-): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
+export function parseUriCommon(opts: {
+  currencyInfo: EdgeCurrencyInfo
+  uri: string
+  networks: { [network: string]: boolean }
+  builtinTokens: EdgeTokenMap
+  currencyCode?: string
+  customTokens?: EdgeMetaToken[]
+}): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
+  const { currencyInfo, uri, networks, builtinTokens, customTokens = [] } = opts
+  let { currencyCode } = opts
+
   const parsedUri = { ...parse(uri, {}, true) }
 
   // Add support for renproject Gateway URI type
