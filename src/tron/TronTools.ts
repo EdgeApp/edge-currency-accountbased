@@ -75,7 +75,7 @@ export class TronTools implements EdgeCurrencyTools {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
-      if (EthereumUtil.isValidPrivate(tronKeyBuffer) === true) {
+      if (EthereumUtil.isValidPrivate(tronKeyBuffer)) {
         throw new Error('Invalid private key')
       }
       const tronKey = tronKeyBuffer.toString('hex')

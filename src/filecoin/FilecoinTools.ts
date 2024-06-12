@@ -60,14 +60,12 @@ export class FilecoinTools implements EdgeCurrencyTools {
         // Verify checksum if it's present in the address
         if (
           /[A-F]/.test(addressString) &&
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           !EthereumUtil.isValidChecksumAddress(addressString)
         ) {
           return false
         }
 
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-        if (!EthereumUtil.isValidAddress(addressString.toLowerCase() || '')) {
+        if (!EthereumUtil.isValidAddress(addressString.toLowerCase() ?? '')) {
           return false
         }
       }

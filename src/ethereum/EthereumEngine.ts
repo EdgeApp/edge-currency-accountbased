@@ -991,7 +991,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+
     if (!EthereumUtil.isValidAddress(publicAddress)) {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
