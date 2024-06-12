@@ -670,6 +670,7 @@ export class XrpEngine extends CurrencyEngine<
           if (match == null) {
             const tokenId = getTokenIdFromCurrencyCode(
               tokenCurrencyCode,
+              this.currencyInfo.currencyCode,
               this.allTokensMap
             )
             if (tokenId != null) {
@@ -687,6 +688,7 @@ export class XrpEngine extends CurrencyEngine<
             // All tokens are not activated if this address is not activated
             const tokenId = getTokenIdFromCurrencyCode(
               tokenCurrencyCode,
+              this.currencyInfo.currencyCode,
               this.allTokensMap
             )
             if (tokenId != null) {
@@ -882,6 +884,7 @@ export class XrpEngine extends CurrencyEngine<
     } else {
       const tokenId = getTokenIdFromCurrencyCode(
         currencyCode,
+        this.currencyInfo.currencyCode,
         this.allTokensMap
       )
       if (tokenId == null) {
