@@ -100,7 +100,7 @@ export class BinanceTools implements EdgeCurrencyTools {
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri: uri,
       networks: networks,

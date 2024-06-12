@@ -161,7 +161,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = parseUriCommon({
+    } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri: uri,
       networks: networks,

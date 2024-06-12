@@ -151,7 +151,7 @@ export class RippleTools implements EdgeCurrencyTools {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri: uri,
       networks: networks,
