@@ -155,7 +155,7 @@ export class EosTools implements EdgeCurrencyTools {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = parseUriCommon({
+    const { edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks: {

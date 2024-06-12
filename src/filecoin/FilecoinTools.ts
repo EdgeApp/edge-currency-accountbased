@@ -169,7 +169,7 @@ export class FilecoinTools implements EdgeCurrencyTools {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = parseUriCommon({
+    } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,

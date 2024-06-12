@@ -168,7 +168,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,

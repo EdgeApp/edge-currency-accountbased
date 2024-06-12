@@ -176,14 +176,19 @@ export class EthereumTools implements EdgeCurrencyTools {
       networks[network] = true
     })
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
+      customTokens,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
+    }
 
     let address = ''
     if (edgeParsedUri.publicAddress != null) {

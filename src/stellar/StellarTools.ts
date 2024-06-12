@@ -139,7 +139,7 @@ export class StellarTools implements EdgeCurrencyTools {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,

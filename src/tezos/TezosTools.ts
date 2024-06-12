@@ -112,7 +112,7 @@ export class TezosTools implements EdgeCurrencyTools {
     const { currencyCode, pluginId } = this.currencyInfo
     const networks = { [pluginId]: true, 'web+tezos': true }
 
-    const { edgeParsedUri } = parseUriCommon({
+    const { edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,

@@ -4,7 +4,8 @@ import {
   EdgeEncodeUri,
   EdgeMetaToken,
   EdgeParsedUri,
-  EdgeTokenMap
+  EdgeTokenMap,
+  JsonObject
 } from 'edge-core-js/types'
 import { serialize } from 'uri-js'
 import parse from 'url-parse'
@@ -13,15 +14,23 @@ import { getLegacyDenomination } from './utils'
 
 type ParsedUri = parse<Record<string, string | undefined>>
 
-export function parseUriCommon(opts: {
+export async function parseUriCommon(opts: {
   currencyInfo: EdgeCurrencyInfo
   uri: string
   networks: { [network: string]: boolean }
   builtinTokens: EdgeTokenMap
   currencyCode?: string
   customTokens?: EdgeMetaToken[]
-}): { edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri } {
-  const { currencyInfo, uri, networks, builtinTokens, customTokens = [] } = opts
+  testPrivateKeys?: (input: string) => Promise<JsonObject>
+}): Promise<{ edgeParsedUri: EdgeParsedUri; parsedUri: ParsedUri }> {
+  const {
+    currencyInfo,
+    uri,
+    networks,
+    builtinTokens,
+    customTokens = [],
+    testPrivateKeys
+  } = opts
   let { currencyCode } = opts
 
   const parsedUri = { ...parse(uri, {}, true) }
@@ -91,6 +100,14 @@ export function parseUriCommon(opts: {
 
     edgeParsedUri.nativeAmount = nativeAmount
     edgeParsedUri.currencyCode = currencyCode
+  }
+
+  if (testPrivateKeys != null) {
+    try {
+      await testPrivateKeys(uri)
+      edgeParsedUri.privateKeys = [uri]
+      edgeParsedUri.publicAddress = undefined
+    } catch (e) {}
   }
 
   return { edgeParsedUri, parsedUri }

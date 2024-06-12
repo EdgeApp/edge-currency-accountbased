@@ -128,21 +128,26 @@ export class SolanaTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
+      customTokens,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
-    let address = ''
-    if (edgeParsedUri.publicAddress != null) {
-      address = edgeParsedUri.publicAddress
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
     }
 
-    if (!PublicKey.isOnCurve(new PublicKey(address).toBytes()))
+    if (
+      edgeParsedUri.publicAddress != null &&
+      !PublicKey.isOnCurve(new PublicKey(edgeParsedUri.publicAddress).toBytes())
+    ) {
       throw new Error('InvalidPublicAddressError')
+    }
 
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     return edgeParsedUri

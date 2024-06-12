@@ -146,7 +146,7 @@ export class CardanoTools implements EdgeCurrencyTools {
   ): Promise<EdgeParsedUri> {
     const networks = { cardano: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon({
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
       networks,
