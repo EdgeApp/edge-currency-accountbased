@@ -67,7 +67,6 @@ export class EthereumTools implements EdgeCurrencyTools {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const keyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!EthereumUtil.isValidPrivate(keyBuffer)) {
         throw new Error('Invalid private key')
       }
@@ -77,8 +76,7 @@ export class EthereumTools implements EdgeCurrencyTools {
       const keys = {
         [pluginRegularKeyName]: hexKey
       }
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.derivePublicKey({
+      await this.derivePublicKey({
         type: `wallet:${pluginId}`,
         id: 'fake',
         keys
@@ -143,13 +141,12 @@ export class EthereumTools implements EdgeCurrencyTools {
         walletInfo.keys[pluginRegularKeyName].replace(/^0x/, ''),
         'hex'
       )
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!EthereumUtil.isValidPrivate(keyBuffer)) {
         throw new Error('Invalid private key')
       }
       address = `0x${EthereumUtil.privateToAddress(keyBuffer).toString('hex')}`
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+
     if (!EthereumUtil.isValidAddress(address)) {
       throw new Error('Invalid address')
     }
@@ -186,16 +183,15 @@ export class EthereumTools implements EdgeCurrencyTools {
     )
 
     let address = ''
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (edgeParsedUri.publicAddress) {
+    if (edgeParsedUri.publicAddress != null) {
       address = edgeParsedUri.publicAddress
       edgeParsedUri.publicAddress = edgeParsedUri.publicAddress.toLowerCase()
     }
 
     let [prefix, contractAddress] = address.split('-') // Split the address to get the prefix according to EIP-681
     // If contractAddress is null or undefined it means there is no prefix
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!contractAddress) {
+
+    if (contractAddress == null) {
       contractAddress = prefix // Set the contractAddress to be the prefix when the prefix is missing.
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
     }
@@ -204,7 +200,6 @@ export class EthereumTools implements EdgeCurrencyTools {
     // Verify checksum if it's present in the address
     if (
       /[A-F]/.test(address) &&
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !EthereumUtil.isValidChecksumAddress(address)
     ) {
       throw new Error('InvalidPublicAddressError')
@@ -212,24 +207,20 @@ export class EthereumTools implements EdgeCurrencyTools {
 
     // Verify address is valid
     address = address.toLowerCase()
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (!EthereumUtil.isValidAddress(address || '')) {
+    if (!EthereumUtil.isValidAddress(address)) {
       throw new Error('InvalidPublicAddressError')
     }
 
     // Parse according to EIP-961
     if (prefix === 'token' || prefix === 'token_info') {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (!parsedUri.query) throw new Error('InvalidUriError')
+      if (parsedUri.query == null) throw new Error('InvalidUriError')
 
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const currencyCode = parsedUri.query.symbol ?? 'SYM'
       if (currencyCode.length < 2 || currencyCode.length > 5) {
         throw new Error('Wrong Token symbol')
       }
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+
       const currencyName = parsedUri.query.name ?? currencyCode
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       const decimalsInput = parsedUri.query.decimals ?? '18'
       let multiplier = '1000000000000000000'
       const decimals = parseInt(decimalsInput)
@@ -287,11 +278,9 @@ export class EthereumTools implements EdgeCurrencyTools {
           }
 
           // Validate addresses
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!EthereumUtil.isValidAddress(publicAddress)) {
             throw new Error('InvalidPublicAddressError')
           }
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
           if (!EthereumUtil.isValidAddress(contractAddress)) {
             throw new Error('InvalidContractAddressError')
           }
@@ -328,7 +317,6 @@ export class EthereumTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
     const valid = EthereumUtil.isValidAddress(publicAddress)
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -349,7 +337,6 @@ export class EthereumTools implements EdgeCurrencyTools {
     return encodedUri
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
     return Object.keys(ethereumPlugins).map(plugin => `wallet:${plugin}`)
   }
@@ -359,7 +346,6 @@ export class EthereumTools implements EdgeCurrencyTools {
     const cleanLocation = asMaybeContractLocation(token.networkLocation)
     if (
       cleanLocation == null ||
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       !EthereumUtil.isValidAddress(cleanLocation.contractAddress)
     ) {
       throw new Error('ErrorInvalidContractAddress')
