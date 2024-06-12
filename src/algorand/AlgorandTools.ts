@@ -91,14 +91,14 @@ export class AlgorandTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens,
-      currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
-    )
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens: customTokens
+    })
 
     let address = ''
 

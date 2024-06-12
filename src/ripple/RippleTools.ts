@@ -151,12 +151,12 @@ export class RippleTools implements EdgeCurrencyTools {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens
-    )
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens
+    })
     const valid = isValidAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')

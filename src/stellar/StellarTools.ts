@@ -138,12 +138,12 @@ export class StellarTools implements EdgeCurrencyTools {
       }
     }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens
-    )
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens
+    })
 
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
     const valid = this.checkAddress(edgeParsedUri.publicAddress || '')

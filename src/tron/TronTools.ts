@@ -132,14 +132,14 @@ export class TronTools implements EdgeCurrencyTools {
     const networks = { [this.currencyInfo.pluginId]: true }
     const { smartPayPublicAddress, smartPayUserId } = this.initOptions
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens,
-      currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
-    )
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens: customTokens
+    })
     const address = edgeParsedUri.publicAddress ?? ''
 
     if (isAddressValid(address)) {

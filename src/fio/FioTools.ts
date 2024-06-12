@@ -148,15 +148,13 @@ export class FioTools implements EdgeCurrencyTools {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const { edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      {
-        fio: true
-      },
-      this.builtinTokens,
-      FIO_CURRENCY_CODE
-    )
+    const { edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: { fio: true },
+      builtinTokens: this.builtinTokens,
+      currencyCode: FIO_CURRENCY_CODE
+    })
     const valid = checkAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')

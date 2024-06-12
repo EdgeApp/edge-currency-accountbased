@@ -161,14 +161,14 @@ export class ZcashTools implements EdgeCurrencyTools {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens,
-      currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
-    )
+    } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
+      customTokens: customTokens
+    })
 
     if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {
       throw new Error('InvalidPublicAddressError')

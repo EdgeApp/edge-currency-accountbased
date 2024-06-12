@@ -100,14 +100,14 @@ export class BinanceTools implements EdgeCurrencyTools {
   ): Promise<EdgeParsedUri> {
     const networks = { binance: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
-      uri,
-      networks,
-      this.builtinTokens,
-      currencyCode ?? 'BNB',
-      customTokens
-    )
+    const { parsedUri, edgeParsedUri } = parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri: uri,
+      networks: networks,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? 'BNB',
+      customTokens: customTokens
+    })
     const address = edgeParsedUri.publicAddress ?? ''
 
     const valid = checkAddress(address, 'bnb')
