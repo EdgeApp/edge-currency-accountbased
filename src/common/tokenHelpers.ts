@@ -1,6 +1,11 @@
 import { gt, lt } from 'biggystring'
 import { asMaybe, asObject, asString } from 'cleaners'
-import { EdgeMetaToken, EdgeToken, EdgeTokenMap } from 'edge-core-js/types'
+import {
+  EdgeMetaToken,
+  EdgeToken,
+  EdgeTokenId,
+  EdgeTokenMap
+} from 'edge-core-js/types'
 
 /**
  * The `networkLocation` field is untyped,
@@ -35,8 +40,10 @@ export function makeMetaTokens(tokens: EdgeTokenMap): EdgeMetaToken[] {
 
 export const getTokenIdFromCurrencyCode = (
   currencyCode: string,
+  mainnetCurrencyCode: string,
   allTokensMap: EdgeTokenMap
-): string | undefined => {
+): EdgeTokenId | undefined => {
+  if (currencyCode === mainnetCurrencyCode) return null
   for (const tokenId of Object.keys(allTokensMap)) {
     if (allTokensMap[tokenId].currencyCode === currencyCode) return tokenId
   }
