@@ -9,15 +9,17 @@ import {
   ComputeBudgetProgram,
   ConfirmedSignatureInfo,
   Keypair,
+  MessageV0,
   PublicKey,
   RecentPrioritizationFees,
   SystemProgram,
   TokenAmount,
   TokenBalance,
-  Transaction,
   TransactionInstruction,
   TransactionResponse,
-  TransactionSignature
+  TransactionSignature,
+  VersionedTransaction,
+  VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
@@ -264,7 +266,7 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   processSolanaTransaction(
-    tx: TransactionResponse,
+    tx: TransactionResponse | VersionedTransactionResponse,
     amounts: ParsedTxAmount,
     timestamp: number,
     memos: string[]
@@ -297,9 +299,12 @@ export class SolanaEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  parseTxAmounts(tx: TransactionResponse, pubkey: PublicKey): ParsedTxAmount[] {
+  parseTxAmounts(
+    tx: TransactionResponse | VersionedTransactionResponse,
+    pubkey: PublicKey
+  ): ParsedTxAmount[] {
     const out: ParsedTxAmount[] = []
-    const index = tx.transaction.message.accountKeys.findIndex(account =>
+    const index = tx.transaction.message.staticAccountKeys.findIndex(account =>
       account.equals(pubkey)
     )
     if (index < 0 || tx.meta == null) return out
@@ -435,7 +440,9 @@ export class SolanaEngine extends CurrencyEngine<
           })
         }
       )
-      const txResponse: TransactionResponse[] = await asyncWaterfall(funcs)
+      const txResponse: Array<
+        TransactionResponse | VersionedTransactionResponse
+      > = await asyncWaterfall(funcs)
       const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
         method: 'getBlockTime',
         params: [res.slot]
@@ -598,12 +605,7 @@ export class SolanaEngine extends CurrencyEngine<
       this.networkInfo.associatedTokenPublicKey
     )
 
-    const txOpts = {
-      feePayer: payer,
-      blockhash: this.recentBlockhash,
-      lastValidBlockHeight: this.walletLocalData.blockHeight + 10000
-    }
-    const solTx = new Transaction(txOpts)
+    const instructions: TransactionInstruction[] = []
 
     // calculate priority fee. Multipliers are arbitrary just to establish some ranges
     let microLamports = '0'
@@ -627,7 +629,7 @@ export class SolanaEngine extends CurrencyEngine<
       const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
         microLamports: parseInt(microLamports)
       })
-      solTx.add(priorityFeeInstruction)
+      instructions.push(priorityFeeInstruction)
       nativeNetworkFee = add(nativeNetworkFee, microLamports)
     }
 
@@ -666,7 +668,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       // Add token account creation instruction and bump fee
       if (!tokenAddressExists) {
-        solTx.add(
+        const tokenCreationInstruction =
           createAssociatedTokenAccountInstruction(
             payer,
             associatedDestinationTokenAddrPayee,
@@ -675,7 +677,7 @@ export class SolanaEngine extends CurrencyEngine<
             tokenProgramId,
             associatedTokenProgramId
           )
-        )
+        instructions.push(tokenCreationInstruction)
         nativeNetworkFee = add(nativeNetworkFee, this.feePerSignature)
       }
 
@@ -703,27 +705,23 @@ export class SolanaEngine extends CurrencyEngine<
         tokenProgramId,
         associatedTokenProgramId
       )
-
-      solTx.add(
-        createTransferInstruction(
-          associatedDestinationTokenAddrPayer,
-          associatedDestinationTokenAddrPayee,
-          payer,
-          BigInt(nativeAmount),
-          [],
-          tokenProgramId
-        )
+      const tokenTransferInstruction = createTransferInstruction(
+        associatedDestinationTokenAddrPayer,
+        associatedDestinationTokenAddrPayee,
+        payer,
+        BigInt(nativeAmount),
+        [],
+        tokenProgramId
       )
+      instructions.push(tokenTransferInstruction)
     } else {
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
-
-      solTx.add(
-        SystemProgram.transfer({
-          fromPubkey: payer,
-          toPubkey: payee,
-          lamports: parseInt(nativeAmount)
-        })
-      )
+      const transferInstruction = SystemProgram.transfer({
+        fromPubkey: payer,
+        toPubkey: payee,
+        lamports: parseInt(nativeAmount)
+      })
+      instructions.push(transferInstruction)
     }
 
     if (eq(totalTxAmount, balance)) {
@@ -733,7 +731,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (memos[0]?.type === 'text') {
-      const memoOpts = new TransactionInstruction({
+      const memoInstruction = new TransactionInstruction({
         keys: [
           {
             pubkey: payer,
@@ -744,17 +742,18 @@ export class SolanaEngine extends CurrencyEngine<
         programId: new PublicKey(this.networkInfo.memoPublicKey),
         data: Buffer.from(memos[0].value, 'utf-8')
       })
-      solTx.add(memoOpts)
+      instructions.push(memoInstruction)
     }
 
-    const unsignedSerializedSolTx = base64.stringify(
-      solTx.serialize({
-        requireAllSignatures: false
-      })
-    )
+    const versionedMessage = MessageV0.compile({
+      instructions,
+      payerKey: payer,
+      recentBlockhash: this.recentBlockhash
+    })
+    const versionedTx = new VersionedTransaction(versionedMessage)
 
     const otherParams: JsonObject = {
-      unsignedSerializedSolTx
+      unsignedSerializedSolTx: base64.stringify(versionedTx.serialize())
     }
 
     // **********************************
@@ -791,18 +790,22 @@ export class SolanaEngine extends CurrencyEngine<
     if (unsignedSerializedSolTx == null)
       throw new Error('Missing unsignedSerializedSolTx')
 
+    const solTx = VersionedTransaction.deserialize(
+      base64.parse(unsignedSerializedSolTx)
+    )
+    await this.queryBlockhash()
+    solTx.message.recentBlockhash = this.recentBlockhash
+
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)
     )
-
-    const solTx = Transaction.from(base64.parse(unsignedSerializedSolTx))
-    await this.queryBlockhash()
-    solTx.recentBlockhash = this.recentBlockhash
-    solTx.sign({
-      publicKey: keypair.publicKey,
-      secretKey: keypair.secretKey
-    })
-    edgeTransaction.signedTx = solTx.serialize().toString('base64')
+    solTx.sign([
+      {
+        publicKey: keypair.publicKey,
+        secretKey: keypair.secretKey
+      }
+    ])
+    edgeTransaction.signedTx = base64.stringify(solTx.serialize())
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
 
     // Remove all false values from addressCache
