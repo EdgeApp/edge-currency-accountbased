@@ -5,7 +5,6 @@ import {
 } from '@solana/spl-token'
 import {
   AccountInfo,
-  BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
   ConfirmedSignatureInfo,
   Keypair,
@@ -255,12 +254,33 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryBlockhash(): Promise<void> {
     try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getLatestBlockhash()
-      })
-      const { blockhash }: BlockhashWithExpiryBlockHeight =
-        await asyncWaterfall(funcs)
-      this.recentBlockhash = blockhash
+      const results = await Promise.allSettled(
+        this.tools.connections.map(async connection => {
+          return await connection.getLatestBlockhash({
+            commitment: 'finalized'
+          })
+        })
+      )
+
+      const sortedResults = results
+        .filter(
+          (
+            a
+          ): a is PromiseFulfilledResult<{
+            blockhash: string
+            lastValidBlockHeight: number
+          }> => a.status !== 'rejected'
+        )
+        .sort((a, b) => {
+          return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
+        })
+
+      const latest = sortedResults[0]
+      if (latest == null) {
+        throw new Error('No valid blockhash found')
+      }
+
+      this.recentBlockhash = latest.value.blockhash
     } catch (e: any) {
       this.error(`queryBlockhash Error `, e)
     }
@@ -520,9 +540,8 @@ export class SolanaEngine extends CurrencyEngine<
       () => {}
     )
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryBlockhash', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.queryBlockhash().catch(() => {})
+
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
@@ -746,6 +765,7 @@ export class SolanaEngine extends CurrencyEngine<
       instructions.push(memoInstruction)
     }
 
+    if (this.recentBlockhash === '') await this.queryBlockhash()
     const versionedMessage = MessageV0.compile({
       instructions,
       payerKey: payer,
