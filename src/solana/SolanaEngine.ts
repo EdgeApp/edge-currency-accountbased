@@ -42,7 +42,8 @@ import {
   asyncWaterfall,
   cleanTxLogs,
   getFetchCors,
-  getOtherParams
+  getOtherParams,
+  promiseAny
 } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -822,10 +823,10 @@ export class SolanaEngine extends CurrencyEngine<
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
     try {
-      const funcs = this.tools.connections.map(connection => async () => {
+      const promises = this.tools.connections.map(async connection => {
         return await connection.sendEncodedTransaction(edgeTransaction.signedTx)
       })
-      const txid: TransactionSignature = await asyncWaterfall(funcs)
+      const txid: TransactionSignature = await promiseAny(promises)
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
