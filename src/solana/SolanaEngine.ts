@@ -52,6 +52,8 @@ import {
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
   asSolanaPrivateKeys,
+  asSolanaSpendInfoOtherParams,
+  asSolanaTxOtherParams,
   asSolanaWalletOtherData,
   asTokenBalance,
   Blocktime,
@@ -59,7 +61,8 @@ import {
   RpcRequest,
   SafeSolanaWalletInfo,
   SolanaNetworkInfo,
-  SolanaWalletOtherData
+  SolanaWalletOtherData,
+  wasSolanaTxOtherParams
 } from './solanaTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
@@ -597,7 +600,8 @@ export class SolanaEngine extends CurrencyEngine<
       customNetworkFee,
       memos = [],
       networkFeeOption,
-      tokenId
+      tokenId,
+      otherParams: spendInfoOtherParams = {}
     } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -773,9 +777,11 @@ export class SolanaEngine extends CurrencyEngine<
     })
     const versionedTx = new VersionedTransaction(versionedMessage)
 
-    const otherParams: JsonObject = {
-      unsignedSerializedSolTx: base64.stringify(versionedTx.serialize())
-    }
+    const unsignedTx =
+      asSolanaSpendInfoOtherParams(spendInfoOtherParams)?.unsignedTx ??
+      versionedTx.serialize()
+
+    const otherParams = wasSolanaTxOtherParams({ unsignedTx })
 
     // **********************************
     // Create the unsigned EdgeTransaction
@@ -807,13 +813,11 @@ export class SolanaEngine extends CurrencyEngine<
     const solanaPrivateKeys = asSolanaPrivateKeys(this.currencyInfo.pluginId)(
       privateKeys
     )
-    const { unsignedSerializedSolTx } = getOtherParams(edgeTransaction)
-    if (unsignedSerializedSolTx == null)
-      throw new Error('Missing unsignedSerializedSolTx')
-
-    const solTx = VersionedTransaction.deserialize(
-      base64.parse(unsignedSerializedSolTx)
+    const { unsignedTx } = asSolanaTxOtherParams(
+      getOtherParams(edgeTransaction)
     )
+
+    const solTx = VersionedTransaction.deserialize(unsignedTx)
     await this.queryBlockhash()
     solTx.message.recentBlockhash = this.recentBlockhash
 

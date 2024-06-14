@@ -18,7 +18,7 @@ import {
   EdgeTransaction,
   EdgeTxSwap
 } from 'edge-core-js/types'
-import { base16 } from 'rfc4648'
+import { base16, base64 } from 'rfc4648'
 
 export type EdgeTokenId = string | null // to be replaced after edge-core-js upgrade
 
@@ -91,6 +91,14 @@ export const asSafeCommonWalletInfo = asWalletInfo(
 export const asBase16: Cleaner<Uint8Array> = asCodec(
   raw => base16.parse(asString(raw)),
   clean => base16.stringify(clean).toLowerCase()
+)
+
+/**
+ * A string of base64-encoded binary data.
+ */
+export const asBase64: Cleaner<Uint8Array> = asCodec(
+  raw => base64.parse(asString(raw)),
+  clean => base64.stringify(clean)
 )
 
 export function asIntegerString(raw: unknown): string {

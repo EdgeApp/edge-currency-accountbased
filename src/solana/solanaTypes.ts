@@ -6,10 +6,11 @@ import {
   asObject,
   asOptional,
   asString,
-  Cleaner
+  Cleaner,
+  uncleaner
 } from 'cleaners'
 
-import { asSafeCommonWalletInfo } from '../common/types'
+import { asBase64, asSafeCommonWalletInfo } from '../common/types'
 
 export interface SolanaNetworkInfo {
   rpcNodes: string[]
@@ -113,3 +114,13 @@ export type SolanaInitOptions = ReturnType<typeof asSolanaInitOptions>
 export const asSolanaCustomFee = asObject({
   microLamports: asString
 })
+
+export const asSolanaSpendInfoOtherParams = asObject({
+  unsignedTx: asOptional(asBase64)
+})
+
+export const asSolanaTxOtherParams = asObject({
+  unsignedTx: asBase64
+})
+
+export const wasSolanaTxOtherParams = uncleaner(asSolanaTxOtherParams)
