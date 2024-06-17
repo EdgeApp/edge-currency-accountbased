@@ -22,8 +22,7 @@ import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,
   asSafePiratechainWalletInfo,
-  PiratechainNetworkInfo,
-  UnifiedViewingKey
+  PiratechainNetworkInfo
 } from './piratechainTypes'
 
 export class PiratechainTools implements EdgeCurrencyTools {
@@ -141,11 +140,10 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const unifiedViewingKey: UnifiedViewingKey =
-      await this.nativeTools.deriveViewingKey(
-        mnemonic,
-        this.networkInfo.rpcNode.networkName
-      )
+    const unifiedViewingKey: string = await this.nativeTools.deriveViewingKey(
+      mnemonic,
+      this.networkInfo.rpcNode.networkName
+    )
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
       publicKey: unifiedViewingKey

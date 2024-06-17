@@ -61,11 +61,6 @@ export interface PiratechainWalletBalance {
   totalZatoshi: string
 }
 
-export interface UnifiedViewingKey {
-  extfvk: string
-  extpub: string
-}
-
 export interface PiratechainInitializerConfig {
   networkName: PiratechainNetworkName
   defaultHost: string
@@ -146,7 +141,7 @@ export type PiratechainMakeSynchronizer = () => (
 ) => Promise<PiratechainSynchronizer>
 
 export const asArrrPublicKey = asObject({
-  birthdayHeight: asNumber,
+  birthdayHeight: asOptional(asNumber),
   publicKey: asString
 })
 
