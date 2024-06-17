@@ -317,7 +317,17 @@ export class PiratechainEngine extends CurrencyEngine<
       ...rpcNode
     }
 
-    this.synchronizer = await this.makeSynchronizer(this.initializer)
+    try {
+      this.synchronizer = await this.makeSynchronizer(this.initializer)
+    } catch (e) {
+      // The synchronizer cannot start if it isn't present.
+      if (
+        String(e) ===
+        'Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.'
+      ) {
+        this.log.warn('SDK not present')
+      } else throw e
+    }
     this.initData()
     this.initSubscriptions()
 
