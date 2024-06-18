@@ -194,7 +194,7 @@ export class SolanaEngine extends CurrencyEngine<
         const balance = tokenBal?.result?.value?.amount ?? '0'
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
-        if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+        if (gt(balance, '0')) {
           detectedTokenIds.push(tokenId)
         }
       }
