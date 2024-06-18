@@ -22,8 +22,7 @@ import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,
   asSafePiratechainWalletInfo,
-  PiratechainNetworkInfo,
-  UnifiedViewingKey
+  PiratechainNetworkInfo
 } from './piratechainTypes'
 
 export class PiratechainTools implements EdgeCurrencyTools {
@@ -54,7 +53,7 @@ export class PiratechainTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asPiratechainPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
+    return `Seed Phrase:\n${keys.mnemonic}\n\nBirthday Height:\n${keys.birthdayHeight}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -63,14 +62,10 @@ export class PiratechainTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    try {
-      return await this.nativeTools.getBirthdayHeight(
-        this.networkInfo.rpcNode.defaultHost,
-        this.networkInfo.rpcNode.defaultPort
-      )
-    } catch (e: any) {
-      return this.networkInfo.defaultBirthday
-    }
+    return await this.nativeTools.getBirthdayHeight(
+      this.networkInfo.rpcNode.defaultHost,
+      this.networkInfo.rpcNode.defaultPort
+    )
   }
 
   async isValidAddress(address: string): Promise<boolean> {
@@ -145,11 +140,10 @@ export class PiratechainTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const unifiedViewingKey: UnifiedViewingKey =
-      await this.nativeTools.deriveViewingKey(
-        mnemonic,
-        this.networkInfo.rpcNode.networkName
-      )
+    const unifiedViewingKey: string = await this.nativeTools.deriveViewingKey(
+      mnemonic,
+      this.networkInfo.rpcNode.networkName
+    )
     return {
       birthdayHeight: piratechainPrivateKeys.birthdayHeight,
       publicKey: unifiedViewingKey

@@ -15,7 +15,6 @@ const networkInfo: PiratechainNetworkInfo = {
     defaultHost: 'lightd1.pirate.black',
     defaultPort: 443
   },
-  defaultBirthday: 2040000,
   defaultNetworkFee: '10000',
   transactionQueryLimit: 999
 }

@@ -21,7 +21,6 @@ export interface PiratechainNetworkInfo {
     defaultPort: number
   }
   defaultNetworkFee: string
-  defaultBirthday: number
   transactionQueryLimit: number
 }
 
@@ -60,11 +59,6 @@ export interface PiratechainPendingTransaction {
 export interface PiratechainWalletBalance {
   availableZatoshi: string
   totalZatoshi: string
-}
-
-export interface UnifiedViewingKey {
-  extfvk: string
-  extpub: string
 }
 
 export interface PiratechainInitializerConfig {
@@ -147,7 +141,7 @@ export type PiratechainMakeSynchronizer = () => (
 ) => Promise<PiratechainSynchronizer>
 
 export const asArrrPublicKey = asObject({
-  birthdayHeight: asNumber,
+  birthdayHeight: asOptional(asNumber),
   publicKey: asString
 })
 

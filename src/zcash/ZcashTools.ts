@@ -63,14 +63,10 @@ export class ZcashTools implements EdgeCurrencyTools {
   }
 
   async getNewWalletBirthdayBlockheight(): Promise<number> {
-    try {
-      return await this.nativeTools.getBirthdayHeight(
-        this.networkInfo.rpcNode.defaultHost,
-        this.networkInfo.rpcNode.defaultPort
-      )
-    } catch (e: any) {
-      return this.networkInfo.defaultBirthday
-    }
+    return await this.nativeTools.getBirthdayHeight(
+      this.networkInfo.rpcNode.defaultHost,
+      this.networkInfo.rpcNode.defaultPort
+    )
   }
 
   async isValidAddress(address: string): Promise<boolean> {

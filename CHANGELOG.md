@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Piratechain) Allow  `derivePublicKey` to fail in case native code isn't present
+- removed: (Zcash/Piratechain) Remove `defaultBirthdayHeight`
+
 ## 4.8.0 (2024-06-10)
 
 - added: Add 'mumbai' plugin (MATIC testnet)

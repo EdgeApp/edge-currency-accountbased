@@ -37,7 +37,6 @@ export interface ZcashNetworkInfo {
     defaultPort: number
   }
   defaultNetworkFee: string
-  defaultBirthday: number
 }
 
 export const asZcashInfoPayload = asObject({

@@ -10,7 +10,6 @@ const networkInfo: ZcashNetworkInfo = {
     defaultHost: 'zec.rocks',
     defaultPort: 443
   },
-  defaultBirthday: 1310000,
   defaultNetworkFee: '10000' // hardcoded default ZEC fee
 }
 
