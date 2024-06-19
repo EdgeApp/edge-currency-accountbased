@@ -1029,6 +1029,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x7Ddc52c4De30e94Be3A6A0A2b259b2850f421989'
     }
   },
+  a462bde22d98335e18a21555b6752db93a937cff: {
+    currencyCode: 'BOBBY',
+    displayName: 'Kennedy Memecoin',
+    denominations: [{ name: 'BOBBY', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xa462bdE22D98335E18A21555b6752dB93a937cFf'
+    }
+  },
   '3845badade8e6dff049820680d1f14bd3903a5d0': {
     currencyCode: 'SAND',
     displayName: 'SAND',

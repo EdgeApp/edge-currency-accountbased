@@ -31,6 +31,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x4B9eb6c0b6ea15176BBF62841C6B2A8a398cb656'
     }
   },
+  '5a7d6b2f92c77fad6ccabd7ee0624e64907eaf3e': {
+    currencyCode: 'ZK',
+    displayName: 'ZK',
+    denominations: [{ name: 'ZK', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x5A7d6b2F92C77FAD6CCaBd7EE0624E64907Eaf3E'
+    }
+  },
   '3355df6d4c9c3035724fd0e3914de96a5a83aaf4': {
     currencyCode: 'USDC',
     displayName: 'USD Coin',
