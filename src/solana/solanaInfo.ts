@@ -46,6 +46,14 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: 'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof'
     }
   },
+  '4geJykZY92d2mZk8zgWDrKoz4BDcSjp7DJdNvH8GoH5f': {
+    currencyCode: 'BOBBY',
+    displayName: 'Kennedy Memecoin',
+    denominations: [{ name: 'BOBBY', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '4geJykZY92d2mZk8zgWDrKoz4BDcSjp7DJdNvH8GoH5f'
+    }
+  },
   EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: {
     currencyCode: 'USDC',
     displayName: 'USD Coin',

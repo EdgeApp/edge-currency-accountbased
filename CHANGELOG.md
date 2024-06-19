@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Ethereum/Solana) Add BOBBY
+- added: (zkSync) Add ZK
 - changed: (Piratechain) Allow  `derivePublicKey` to fail in case native code isn't present
 - removed: (Zcash/Piratechain) Remove `defaultBirthdayHeight`
 
