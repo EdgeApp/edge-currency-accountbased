@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.9.0 (2024-06-19)
+
 - added: (Ethereum/Solana) Add BOBBY
 - added: (zkSync) Add ZK
 - changed: (Piratechain) Allow  `derivePublicKey` to fail in case native code isn't present
