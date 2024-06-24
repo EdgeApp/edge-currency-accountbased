@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Ethereum) Add Liberland Dollar and Merit tokens
+
 ## 4.9.0 (2024-06-19)
 
 - added: (Ethereum/Solana) Add BOBBY

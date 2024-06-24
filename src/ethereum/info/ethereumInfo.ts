@@ -1037,6 +1037,22 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xa462bdE22D98335E18A21555b6752dB93a937cFf'
     }
   },
+  '054c9d4c6f4ea4e14391addd1812106c97d05690': {
+    currencyCode: 'LLD',
+    displayName: 'Liberland Dollar',
+    denominations: [{ name: 'LLD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x054c9D4C6F4EA4E14391addD1812106c97D05690'
+    }
+  },
+  c66d4059e14180a2f66994e404c5a7c799b1e1b7: {
+    currencyCode: 'LLM',
+    displayName: 'Liberland Merit',
+    denominations: [{ name: 'LLM', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xc66D4059e14180A2f66994E404c5a7c799B1E1B7'
+    }
+  },
   '3845badade8e6dff049820680d1f14bd3903a5d0': {
     currencyCode: 'SAND',
     displayName: 'SAND',
