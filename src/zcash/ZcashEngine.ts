@@ -130,7 +130,7 @@ export class ZcashEngine extends CurrencyEngine<
         orchardTotalZatoshi
       } = payload
 
-      // Transparent funds will be autoshielded so the available balance should only reflect the chielded balances
+      // Transparent funds will be autoshielded so the available balance should only reflect the shielded balances
       this.availableZatoshi = add(
         saplingAvailableZatoshi,
         orchardAvailableZatoshi
@@ -448,6 +448,10 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
+    if (gt(nativeAmount, this.availableZatoshi)) {
+      throw new InsufficientFundsError({ tokenId })
+    }
+
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const proposal = await this.synchronizer.proposeTransfer({
       toAddress: publicAddress,
@@ -457,7 +461,7 @@ export class ZcashEngine extends CurrencyEngine<
     if (proposal.transactionCount > 1) {
       throw new Error('Unable to handle multiple transactions')
     }
-    this.log.warn('450. proposal\n', JSON.stringify(proposal))
+
     const networkFee = proposal.totalFee
 
     const totalTxAmount = add(nativeAmount, networkFee)

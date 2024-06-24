@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Zcash) Use additional insufficient funds check before sending amount to synchronizer
+
 ## 4.9.0 (2024-06-19)
 
 - added: (Ethereum/Solana) Add BOBBY
