@@ -5,19 +5,20 @@ import {
 } from '@solana/spl-token'
 import {
   AccountInfo,
-  BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
   ConfirmedSignatureInfo,
   Keypair,
+  MessageV0,
   PublicKey,
   RecentPrioritizationFees,
   SystemProgram,
   TokenAmount,
   TokenBalance,
-  Transaction,
   TransactionInstruction,
   TransactionResponse,
-  TransactionSignature
+  TransactionSignature,
+  VersionedTransaction,
+  VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
 import { asMaybe } from 'cleaners'
@@ -32,7 +33,7 @@ import {
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import { base16 } from 'rfc4648'
+import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -40,7 +41,8 @@ import {
   asyncWaterfall,
   cleanTxLogs,
   getFetchCors,
-  getOtherParams
+  getOtherParams,
+  promiseAny
 } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -50,6 +52,8 @@ import {
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
   asSolanaPrivateKeys,
+  asSolanaSpendInfoOtherParams,
+  asSolanaTxOtherParams,
   asSolanaWalletOtherData,
   asTokenBalance,
   Blocktime,
@@ -57,7 +61,8 @@ import {
   RpcRequest,
   SafeSolanaWalletInfo,
   SolanaNetworkInfo,
-  SolanaWalletOtherData
+  SolanaWalletOtherData,
+  wasSolanaTxOtherParams
 } from './solanaTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = 5000
@@ -252,19 +257,40 @@ export class SolanaEngine extends CurrencyEngine<
 
   async queryBlockhash(): Promise<void> {
     try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getLatestBlockhash()
-      })
-      const { blockhash }: BlockhashWithExpiryBlockHeight =
-        await asyncWaterfall(funcs)
-      this.recentBlockhash = blockhash
+      const results = await Promise.allSettled(
+        this.tools.connections.map(async connection => {
+          return await connection.getLatestBlockhash({
+            commitment: 'finalized'
+          })
+        })
+      )
+
+      const sortedResults = results
+        .filter(
+          (
+            a
+          ): a is PromiseFulfilledResult<{
+            blockhash: string
+            lastValidBlockHeight: number
+          }> => a.status !== 'rejected'
+        )
+        .sort((a, b) => {
+          return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
+        })
+
+      const latest = sortedResults[0]
+      if (latest == null) {
+        throw new Error('No valid blockhash found')
+      }
+
+      this.recentBlockhash = latest.value.blockhash
     } catch (e: any) {
       this.error(`queryBlockhash Error `, e)
     }
   }
 
   processSolanaTransaction(
-    tx: TransactionResponse,
+    tx: TransactionResponse | VersionedTransactionResponse,
     amounts: ParsedTxAmount,
     timestamp: number,
     memos: string[]
@@ -297,9 +323,12 @@ export class SolanaEngine extends CurrencyEngine<
     this.addTransaction(currencyCode, edgeTransaction)
   }
 
-  parseTxAmounts(tx: TransactionResponse, pubkey: PublicKey): ParsedTxAmount[] {
+  parseTxAmounts(
+    tx: TransactionResponse | VersionedTransactionResponse,
+    pubkey: PublicKey
+  ): ParsedTxAmount[] {
     const out: ParsedTxAmount[] = []
-    const index = tx.transaction.message.accountKeys.findIndex(account =>
+    const index = tx.transaction.message.staticAccountKeys.findIndex(account =>
       account.equals(pubkey)
     )
     if (index < 0 || tx.meta == null) return out
@@ -435,7 +464,9 @@ export class SolanaEngine extends CurrencyEngine<
           })
         }
       )
-      const txResponse: TransactionResponse[] = await asyncWaterfall(funcs)
+      const txResponse: Array<
+        TransactionResponse | VersionedTransactionResponse
+      > = await asyncWaterfall(funcs)
       const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
         method: 'getBlockTime',
         params: [res.slot]
@@ -512,9 +543,8 @@ export class SolanaEngine extends CurrencyEngine<
       () => {}
     )
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryBlockhash', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.queryBlockhash().catch(() => {})
+
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
@@ -570,7 +600,8 @@ export class SolanaEngine extends CurrencyEngine<
       customNetworkFee,
       memos = [],
       networkFeeOption,
-      tokenId
+      tokenId,
+      otherParams: spendInfoOtherParams = {}
     } = edgeSpendInfo
 
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -598,12 +629,7 @@ export class SolanaEngine extends CurrencyEngine<
       this.networkInfo.associatedTokenPublicKey
     )
 
-    const txOpts = {
-      feePayer: payer,
-      blockhash: this.recentBlockhash,
-      lastValidBlockHeight: this.walletLocalData.blockHeight + 10000
-    }
-    const solTx = new Transaction(txOpts)
+    const instructions: TransactionInstruction[] = []
 
     // calculate priority fee. Multipliers are arbitrary just to establish some ranges
     let microLamports = '0'
@@ -627,7 +653,7 @@ export class SolanaEngine extends CurrencyEngine<
       const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
         microLamports: parseInt(microLamports)
       })
-      solTx.add(priorityFeeInstruction)
+      instructions.push(priorityFeeInstruction)
       nativeNetworkFee = add(nativeNetworkFee, microLamports)
     }
 
@@ -666,7 +692,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       // Add token account creation instruction and bump fee
       if (!tokenAddressExists) {
-        solTx.add(
+        const tokenCreationInstruction =
           createAssociatedTokenAccountInstruction(
             payer,
             associatedDestinationTokenAddrPayee,
@@ -675,7 +701,7 @@ export class SolanaEngine extends CurrencyEngine<
             tokenProgramId,
             associatedTokenProgramId
           )
-        )
+        instructions.push(tokenCreationInstruction)
         nativeNetworkFee = add(nativeNetworkFee, this.feePerSignature)
       }
 
@@ -703,27 +729,23 @@ export class SolanaEngine extends CurrencyEngine<
         tokenProgramId,
         associatedTokenProgramId
       )
-
-      solTx.add(
-        createTransferInstruction(
-          associatedDestinationTokenAddrPayer,
-          associatedDestinationTokenAddrPayee,
-          payer,
-          BigInt(nativeAmount),
-          [],
-          tokenProgramId
-        )
+      const tokenTransferInstruction = createTransferInstruction(
+        associatedDestinationTokenAddrPayer,
+        associatedDestinationTokenAddrPayee,
+        payer,
+        BigInt(nativeAmount),
+        [],
+        tokenProgramId
       )
+      instructions.push(tokenTransferInstruction)
     } else {
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
-
-      solTx.add(
-        SystemProgram.transfer({
-          fromPubkey: payer,
-          toPubkey: payee,
-          lamports: parseInt(nativeAmount)
-        })
-      )
+      const transferInstruction = SystemProgram.transfer({
+        fromPubkey: payer,
+        toPubkey: payee,
+        lamports: parseInt(nativeAmount)
+      })
+      instructions.push(transferInstruction)
     }
 
     if (eq(totalTxAmount, balance)) {
@@ -733,7 +755,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (memos[0]?.type === 'text') {
-      const memoOpts = new TransactionInstruction({
+      const memoInstruction = new TransactionInstruction({
         keys: [
           {
             pubkey: payer,
@@ -744,14 +766,22 @@ export class SolanaEngine extends CurrencyEngine<
         programId: new PublicKey(this.networkInfo.memoPublicKey),
         data: Buffer.from(memos[0].value, 'utf-8')
       })
-      solTx.add(memoOpts)
+      instructions.push(memoInstruction)
     }
 
-    const otherParams: JsonObject = {
-      unsignedSerializedSolTx: solTx.serialize({
-        requireAllSignatures: false
-      })
-    }
+    if (this.recentBlockhash === '') await this.queryBlockhash()
+    const versionedMessage = MessageV0.compile({
+      instructions,
+      payerKey: payer,
+      recentBlockhash: this.recentBlockhash
+    })
+    const versionedTx = new VersionedTransaction(versionedMessage)
+
+    const unsignedTx =
+      asSolanaSpendInfoOtherParams(spendInfoOtherParams)?.unsignedTx ??
+      versionedTx.serialize()
+
+    const otherParams = wasSolanaTxOtherParams({ unsignedTx })
 
     // **********************************
     // Create the unsigned EdgeTransaction
@@ -783,22 +813,24 @@ export class SolanaEngine extends CurrencyEngine<
     const solanaPrivateKeys = asSolanaPrivateKeys(this.currencyInfo.pluginId)(
       privateKeys
     )
-    const { unsignedSerializedSolTx } = getOtherParams(edgeTransaction)
-    if (unsignedSerializedSolTx == null)
-      throw new Error('Missing unsignedSerializedSolTx')
+    const { unsignedTx } = asSolanaTxOtherParams(
+      getOtherParams(edgeTransaction)
+    )
+
+    const solTx = VersionedTransaction.deserialize(unsignedTx)
+    await this.queryBlockhash()
+    solTx.message.recentBlockhash = this.recentBlockhash
 
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)
     )
-
-    const solTx = Transaction.from(unsignedSerializedSolTx)
-    await this.queryBlockhash()
-    solTx.recentBlockhash = this.recentBlockhash
-    solTx.sign({
-      publicKey: keypair.publicKey,
-      secretKey: keypair.secretKey
-    })
-    edgeTransaction.signedTx = solTx.serialize().toString('base64')
+    solTx.sign([
+      {
+        publicKey: keypair.publicKey,
+        secretKey: keypair.secretKey
+      }
+    ])
+    edgeTransaction.signedTx = base64.stringify(solTx.serialize())
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
 
     // Remove all false values from addressCache
@@ -815,10 +847,10 @@ export class SolanaEngine extends CurrencyEngine<
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
     try {
-      const funcs = this.tools.connections.map(connection => async () => {
+      const promises = this.tools.connections.map(async connection => {
         return await connection.sendEncodedTransaction(edgeTransaction.signedTx)
       })
-      const txid: TransactionSignature = await asyncWaterfall(funcs)
+      const txid: TransactionSignature = await promiseAny(promises)
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)

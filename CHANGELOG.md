@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Ethereum) Add Liberland Dollar and Merit tokens
+- added: (Solana) Add unsignedTx passthrough to passthrough makeSpend
 
 ## 4.9.0 (2024-06-19)
 
