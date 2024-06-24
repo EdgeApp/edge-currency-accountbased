@@ -120,8 +120,8 @@ export class PiratechainTools implements EdgeCurrencyTools {
 
   async checkPublicKey(publicKey: JsonObject): Promise<boolean> {
     try {
-      asArrrPublicKey(publicKey)
-      return true
+      const keys = asArrrPublicKey(publicKey)
+      return keys.publicKey.length > 0 // return false if sdk wasn't present when public key was derived
     } catch (err) {
       return false
     }
