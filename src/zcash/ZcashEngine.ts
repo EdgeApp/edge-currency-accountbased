@@ -448,6 +448,10 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
+    if (gt(nativeAmount, this.availableZatoshi)) {
+      throw new InsufficientFundsError({ tokenId })
+    }
+
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const proposal = await this.synchronizer.proposeTransfer({
       toAddress: publicAddress,
