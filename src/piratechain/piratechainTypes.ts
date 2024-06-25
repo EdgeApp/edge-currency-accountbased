@@ -142,7 +142,7 @@ export type PiratechainMakeSynchronizer = () => (
 
 export const asArrrPublicKey = asObject({
   birthdayHeight: asOptional(asNumber),
-  publicKey: asString
+  publicKey: asOptional(asString, '') // In case sdk is not present for platform
 })
 
 export type SafePiratechainWalletInfo = ReturnType<
