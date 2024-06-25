@@ -1061,7 +1061,7 @@ export class XrpEngine extends CurrencyEngine<
         `Must specify activateTokenIds for ${this.currencyInfo.currencyCode}`
       )
     const { wallet, tokenId } = paymentInfo ?? { tokenId: null }
-    if (tokenId != null)
+    if (tokenId !== null)
       throw new Error(`Must activate with ${this.currencyInfo.currencyCode}`)
     if (wallet?.id !== this.walletId)
       throw new Error('Must pay with same wallet you are activating token with')
