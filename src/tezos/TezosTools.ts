@@ -11,6 +11,7 @@ import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { parseUriCommon } from '../common/uriHelpers'
 import {
   asSafeTezosWalletInfo,
   asTezosPrivateKeys,
@@ -106,6 +107,17 @@ export class TezosTools implements EdgeCurrencyTools {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
+    const { currencyCode, pluginId } = this.currencyInfo
+    const networks = { [pluginId]: true, 'web+tezos': true }
+
+    const { edgeParsedUri } = await parseUriCommon({
+      currencyInfo: this.currencyInfo,
+      uri,
+      networks,
+      builtinTokens: this.builtinTokens,
+      currencyCode
+    })
+
     let address
     let operation
     let content
@@ -125,13 +137,11 @@ export class TezosTools implements EdgeCurrencyTools {
     } else {
       throw new Error('InvalidUriError')
     }
-    const edgeParsedUri: EdgeParsedUri = {
-      publicAddress: address
-    }
+    edgeParsedUri.publicAddress = address
     edgeParsedUri.nativeAmount =
       // @ts-expect-error
       content != null && content.amount !== '0' ? content.amount : undefined
-    edgeParsedUri.currencyCode = 'XTZ'
+    edgeParsedUri.currencyCode = currencyCode
     return edgeParsedUri
   }
 

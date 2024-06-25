@@ -73,6 +73,7 @@ export class SolanaEngine extends CurrencyEngine<
   SolanaTools,
   SafeSolanaWalletInfo
 > {
+  lightMode: boolean
   networkInfo: SolanaNetworkInfo
   base58PublicKey: string
   feePerSignature: string
@@ -89,9 +90,10 @@ export class SolanaEngine extends CurrencyEngine<
     env: PluginEnvironment<SolanaNetworkInfo>,
     tools: SolanaTools,
     walletInfo: SafeSolanaWalletInfo,
-    opts: any // EdgeCurrencyEngineOptions
+    opts: EdgeCurrencyEngineOptions
   ) {
     super(env, tools, walletInfo, opts)
+    this.lightMode = opts.lightMode ?? false
     this.networkInfo = env.networkInfo
     this.chainCode = tools.currencyInfo.currencyCode
     this.fetchCors = getFetchCors(env.io)
@@ -193,7 +195,7 @@ export class SolanaEngine extends CurrencyEngine<
         const balance = tokenBal?.result?.value?.amount ?? '0'
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
-        if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
+        if (gt(balance, '0')) {
           detectedTokenIds.push(tokenId)
         }
       }
@@ -546,9 +548,16 @@ export class SolanaEngine extends CurrencyEngine<
     this.queryBlockhash().catch(() => {})
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    if (this.lightMode) {
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      for (const edgeToken of Object.values(this.allTokensMap)) {
+        this.tokenCheckTransactionsStatus[edgeToken.currencyCode] = 1
+      }
+    } else {
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+        () => {}
+      )
+    }
     await super.startEngine()
   }
 

@@ -25,7 +25,11 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
-import { makeMetaTokens, validateToken } from './tokenHelpers'
+import {
+  getTokenIdFromCurrencyCode,
+  makeMetaTokens,
+  validateToken
+} from './tokenHelpers'
 import {
   asWalletLocalData,
   DATA_STORE_FILE,
@@ -568,7 +572,13 @@ export class CurrencyEngine<
       this.walletLocalData.totalBalances[tk] = balance
       this.walletLocalDataDirty = true
       this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+      const tokenId = getTokenIdFromCurrencyCode(
+        tk,
+        this.currencyInfo.currencyCode,
+        this.allTokensMap
+      )
+      if (tokenId === undefined) return
+      this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
     this.tokenCheckBalanceStatus[tk] = 1
     this.updateOnAddressesChecked()
@@ -634,8 +644,14 @@ export class CurrencyEngine<
   protected doInitialBalanceCallback(): void {
     for (const currencyCode of this.enabledTokens) {
       try {
-        this.currencyEngineCallbacks.onBalanceChanged(
+        const tokenId = getTokenIdFromCurrencyCode(
           currencyCode,
+          this.currencyInfo.currencyCode,
+          this.allTokensMap
+        )
+        if (tokenId === undefined) continue
+        this.currencyEngineCallbacks.onTokenBalanceChanged(
+          tokenId,
           this.walletLocalData.totalBalances[currencyCode] ?? '0'
         )
       } catch (e: any) {
