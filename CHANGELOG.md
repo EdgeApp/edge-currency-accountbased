@@ -2,8 +2,11 @@
 
 ## Unreleased
 
+## 4.10.0 (2024-06-24)
+
 - added: (Ethereum) Add Liberland Dollar and Merit tokens
 - added: (Solana) Add unsignedTx passthrough to passthrough makeSpend
+- fixed: (Pirate Chain) Pirate: Use fallback public key for cases where sdk isn't present
 
 ## 4.9.0 (2024-06-19)
 
