@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- added: (Solana/Ethereum) Add optional `lightMode` support to disable transaction query
 - added: Add optional `testPrivateKeys` function to `parseUriCommon`
 - changed: (Zcash) Updated address explorer
 - changed: (Tron) Special case the `usdt-trc20` uri prefix
+- changed: Upgrade edge-core-js to v2.9.0
 - fixed: Prevent fatal error reporting for missing txlist json file
 - fixed: (Zcash) Use additional insufficient funds check before sending amount to synchronizer
 

@@ -95,6 +95,7 @@ export class EthereumEngine extends CurrencyEngine<
   SafeEthWalletInfo
 > {
   otherData!: EthereumWalletOtherData
+  lightMode: boolean
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
@@ -113,6 +114,7 @@ export class EthereumEngine extends CurrencyEngine<
     currencyInfo: EdgeCurrencyInfo
   ) {
     super(env, tools, walletInfo, opts)
+    this.lightMode = opts.lightMode ?? false
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
