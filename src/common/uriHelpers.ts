@@ -28,10 +28,10 @@ export async function parseUriCommon(opts: {
     uri,
     networks,
     builtinTokens,
-    currencyCode: currencyCodeArg,
     customTokens = [],
     testPrivateKeys
   } = opts
+  let { currencyCode } = opts
 
   const parsedUri = { ...parse(uri, {}, true) }
 
@@ -82,7 +82,6 @@ export async function parseUriCommon(opts: {
   }
 
   const amountStr = parsedUri.query.amount
-  let currencyCode = currencyCodeArg
   if (amountStr != null && typeof amountStr === 'string') {
     if (currencyCode == null) {
       currencyCode = currencyInfo.currencyCode
