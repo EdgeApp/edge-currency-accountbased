@@ -140,7 +140,7 @@ export class HederaTools implements EdgeCurrencyTools {
       edgeParsedUri: { publicAddress }
     } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
-      uri: uri,
+      uri,
       networks: { [`${pluginId}`]: true },
       builtinTokens: this.builtinTokens,
       currencyCode: this.currencyInfo.currencyCode

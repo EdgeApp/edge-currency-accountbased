@@ -163,11 +163,11 @@ export class ZcashTools implements EdgeCurrencyTools {
       edgeParsedUri: { publicAddress }
     } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
-      uri: uri,
-      networks: networks,
+      uri,
+      networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens: customTokens
+      customTokens
     })
 
     if (publicAddress == null || !(await this.isValidAddress(publicAddress))) {

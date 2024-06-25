@@ -129,11 +129,11 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
-      uri: uri,
-      networks: networks,
+      uri,
+      networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens: customTokens,
+      customTokens,
       testPrivateKeys: this.importPrivateKey.bind(this)
     })
 

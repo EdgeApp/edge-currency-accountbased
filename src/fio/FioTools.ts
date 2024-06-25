@@ -150,7 +150,7 @@ export class FioTools implements EdgeCurrencyTools {
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const { edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
-      uri: uri,
+      uri,
       networks: { fio: true },
       builtinTokens: this.builtinTokens,
       currencyCode: FIO_CURRENCY_CODE
