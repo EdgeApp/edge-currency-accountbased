@@ -68,8 +68,9 @@ import {
 import { fioApiErrorCodes, FioError } from './fioError'
 import {
   asFioHistoryNodeAction,
+  asGetFioAddress,
   asGetFioBalanceResponse,
-  asGetFioName,
+  asGetFioDomains,
   asHistoryResponse,
   FioHistoryNodeAction,
   FioTxName
@@ -958,18 +959,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Fio Addresses
+    let isChanged = false
     try {
-      // NOTE: 'getFioNames' is not universally supported among apiUrls.
-      // TODO: Split up the request
-      const result = asGetFioName(
-        await this.multicastServers('getFioNames', {
+      const result = asGetFioAddress(
+        await this.multicastServers('getFioAddresses', {
           fioPublicKey: this.walletInfo.keys.publicKey
         })
       )
-
-      let isChanged = false
       let areAddressesChanged = false
-      let areDomainsChanged = false
 
       // check addresses
       if (result.fio_addresses.length !== this.otherData.fioAddresses.length) {
@@ -1006,9 +1003,30 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             }
           }
         }
-      }
 
-      // check domains
+        if (areAddressesChanged) {
+          isChanged = true
+          this.otherData.fioAddresses = result.fio_addresses.map(
+            fioAddress => ({
+              name: fioAddress.fio_address,
+              bundledTxs: fioAddress.remaining_bundled_tx
+            })
+          )
+        }
+      }
+    } catch (e: any) {
+      this.warn('checkAccountInnerLoop getFioAddresses error: ', e)
+    }
+
+    try {
+      // Check domains
+      const result = asGetFioDomains(
+        await this.multicastServers('getFioDomains', {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        })
+      )
+      let areDomainsChanged = false
+
       if (result.fio_domains.length !== this.otherData.fioDomains.length) {
         areDomainsChanged = true
       } else {
@@ -1046,14 +1064,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
       }
 
-      if (areAddressesChanged) {
-        isChanged = true
-        this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
-          name: fioAddress.fio_address,
-          bundledTxs: fioAddress.remaining_bundled_tx
-        }))
-      }
-
       if (areDomainsChanged) {
         isChanged = true
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
@@ -1062,11 +1072,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           isPublic: fioDomain.is_public === 1
         }))
       }
-
-      if (isChanged) this.localDataDirty()
     } catch (e: any) {
       this.warn('checkAccountInnerLoop getFioNames error: ', e)
     }
+
+    if (isChanged) this.localDataDirty()
   }
 
   async fetchEncryptedFioRequests(
