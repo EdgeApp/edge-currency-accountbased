@@ -3,6 +3,7 @@ import type { FioNamesResponse } from '@fioprotocol/fiosdk/lib/entities/FioNames
 import {
   asArray,
   asBoolean,
+  asEither,
   asMaybe,
   asNumber,
   asObject,
@@ -177,7 +178,7 @@ export const asObtData = asObject({
   payee_fio_address: asString,
   payer_fio_public_key: asString,
   payee_fio_public_key: asString,
-  content: asString,
+  content: asEither(asString, asObject({ token_code: asString })),
   fio_request_id: asNumber,
   status: asString,
   time_stamp: asString
