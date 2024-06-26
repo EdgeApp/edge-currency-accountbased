@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: FIO SDK upgraded to v1.9.0
+
 ## 4.10.0 (2024-06-24)
 
 - added: (Ethereum) Add Liberland Dollar and Merit tokens
