@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: FIO SDK upgraded to v1.9.2
+- changed: `getFioNames` call changed to separate `getFioAddresses` and `getFioDomains` calls
+
 ## 4.11.0 (2024-07-03)
 
 - changed: Reduce and add variation to polling frequency
