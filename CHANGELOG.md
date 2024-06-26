@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Prevent fatal error reporting for missing txlist json file
+
 ## 4.10.0 (2024-06-24)
 
 - added: (Ethereum) Add Liberland Dollar and Merit tokens
