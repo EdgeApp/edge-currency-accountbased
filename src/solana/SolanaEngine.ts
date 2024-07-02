@@ -65,9 +65,9 @@ import {
   wasSolanaTxOtherParams
 } from './solanaTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 5000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = 999999
+const BLOCKCHAIN_POLL_MILLISECONDS = 999999
+const TRANSACTION_POLL_MILLISECONDS = 999999
 
 export class SolanaEngine extends CurrencyEngine<
   SolanaTools,

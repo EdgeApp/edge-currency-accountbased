@@ -39,6 +39,10 @@ import {
   SafeHederaWalletInfo
 } from './hederaTypes'
 
+const ACCOUNT_POLL_MILLISECONDS = 999999
+// const BLOCKCHAIN_POLL_MILLISECONDS = 999999
+const TRANSACTION_POLL_MILLISECONDS = 999999
+
 export class HederaEngine extends CurrencyEngine<
   HederaTools,
   SafeHederaWalletInfo
@@ -239,9 +243,14 @@ export class HederaEngine extends CurrencyEngine<
     this.engineOn = true
     this.accountNameChecked = this.otherData.hederaAccount != null
 
-    this.addToLoop('getNewTransactions', 1000).catch(() => {})
-    this.addToLoop('queryBalance', 5000).catch(() => {})
-    this.addToLoop('checkAccountCreationStatus', 5000).catch(() => {})
+    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop(
+      'checkAccountCreationStatus',
+      ACCOUNT_POLL_MILLISECONDS
+    ).catch(() => {})
 
     await super.startEngine()
   }

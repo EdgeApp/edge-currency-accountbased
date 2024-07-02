@@ -83,9 +83,9 @@ import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
-const ADDRESS_POLL_MILLISECONDS = 10000
-const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ADDRESS_POLL_MILLISECONDS = 999999
+const BLOCKHEIGHT_POLL_MILLISECONDS = 999999
+const TRANSACTION_POLL_MILLISECONDS = 999999
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 // How long to wait before a transaction is accepted into a ledge close (block)

@@ -67,8 +67,8 @@ import {
 
 const { Algodv2, Indexer } = algosdk
 
-const ACCOUNT_POLL_MILLISECONDS = 5000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = 999999
+const TRANSACTION_POLL_MILLISECONDS = 999999
 
 export class AlgorandEngine extends CurrencyEngine<
   AlgorandTools,

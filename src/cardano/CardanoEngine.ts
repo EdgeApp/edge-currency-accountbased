@@ -39,9 +39,9 @@ import {
   SafeCardanoWalletInfo
 } from './cardanoTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = 999999
+const BLOCKCHAIN_POLL_MILLISECONDS = 999999
+const TRANSACTION_POLL_MILLISECONDS = 999999
 
 export class CardanoEngine extends CurrencyEngine<
   CardanoTools,
