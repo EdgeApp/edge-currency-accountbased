@@ -18,6 +18,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
 import { CardanoTools } from './CardanoTools'
 import {
@@ -39,9 +40,9 @@ import {
   SafeCardanoWalletInfo
 } from './cardanoTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class CardanoEngine extends CurrencyEngine<
   CardanoTools,

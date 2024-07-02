@@ -20,6 +20,7 @@ import { base16 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
@@ -44,9 +45,9 @@ import {
   SubscanTx
 } from './polkadotTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 5000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const queryTxMutex = makeMutex()
 

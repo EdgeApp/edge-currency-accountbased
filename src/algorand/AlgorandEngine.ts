@@ -27,6 +27,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { EdgeTokenId } from '../common/types'
 import { utf8 } from '../common/utf8'
 import {
@@ -67,8 +68,8 @@ import {
 
 const { Algodv2, Indexer } = algosdk
 
-const ACCOUNT_POLL_MILLISECONDS = 5000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class AlgorandEngine extends CurrencyEngine<
   AlgorandTools,

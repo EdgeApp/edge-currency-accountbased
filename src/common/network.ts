@@ -89,3 +89,10 @@ export const makeQueryParams = (params: QueryParams): string => {
     })
     .join('&')
 }
+
+export const getRandomDelayMs = (
+  base: number,
+  variability: number = 5000
+): number => {
+  return base + Math.random() * variability * 2 - variability
+}

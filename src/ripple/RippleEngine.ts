@@ -54,6 +54,7 @@ import { validatePayment } from 'xrpl/dist/npm/models/transactions/payment'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { MakeTxParams } from '../common/types'
 import { utf8 } from '../common/utf8'
@@ -83,9 +84,9 @@ import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
-const ADDRESS_POLL_MILLISECONDS = 10000
-const BLOCKHEIGHT_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 30 * 60 // ~ one minute
 
 // How long to wait before a transaction is accepted into a ledge close (block)

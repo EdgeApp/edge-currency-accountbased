@@ -17,6 +17,7 @@ import TronWeb from 'tronweb'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
   getDenomination,
@@ -85,10 +86,10 @@ const {
 
 const queryTxMutex = makeMutex()
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
-const NETWORKFEES_POLL_MILLISECONDS = 60 * 10 * 1000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const NETWORKFEES_POLL_MILLISECONDS = getRandomDelayMs(60 * 60 * 1000) // 1 hour
 
 type TronFunction =
   | 'trx_blockNumber'
