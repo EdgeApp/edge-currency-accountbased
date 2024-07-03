@@ -124,7 +124,7 @@ export class EthereumEngine extends CurrencyEngine<
         blobBaseFeeScalar: '659851'
       }
     }
-    this.networkFees = this.networkInfo.defaultNetworkFees
+    this.networkFees = this.networkInfo.networkFees
     this.fetchCors = getFetchCors(env.io)
 
     // Update network fees from other providers
@@ -430,8 +430,7 @@ export class EthereumEngine extends CurrencyEngine<
       const tryEstimatingGasLimit = async (
         attempt: number = 0
       ): Promise<void> => {
-        const defaultGasLimit =
-          this.networkInfo.defaultNetworkFees.default.gasLimit
+        const defaultGasLimit = this.networkInfo.networkFees.default.gasLimit
         try {
           if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
             // Easy case of sending plain mainnet token with no memo/data
@@ -673,8 +672,7 @@ export class EthereumEngine extends CurrencyEngine<
       return
     }
 
-    const defaultNetworkFee: EthereumFee =
-      this.networkInfo.defaultNetworkFees.default
+    const defaultNetworkFee: EthereumFee = this.networkInfo.networkFees.default
 
     // The minimum priority fee for slow transactions
     const minPriorityFee =

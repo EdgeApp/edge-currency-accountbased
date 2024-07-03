@@ -57,7 +57,7 @@ export function calcMiningFees(
     if (gasPrice != null && gasPrice !== '') {
       const minGasPrice =
         networkFees.default?.gasPrice?.minGasPrice ??
-        networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
+        networkInfo.networkFees.default.gasPrice?.minGasPrice
       if (minGasPrice != null) {
         const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
         if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
@@ -75,7 +75,7 @@ export function calcMiningFees(
     if (gasLimit != null && gasLimit !== '') {
       const minGasLimit =
         networkFees.default?.gasLimit?.minGasLimit ??
-        networkInfo.defaultNetworkFees.default.gasLimit?.minGasLimit
+        networkInfo.networkFees.default.gasLimit?.minGasLimit
       if (
         (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
         /^\s*$/.test(gasLimit)

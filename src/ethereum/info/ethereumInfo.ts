@@ -1063,7 +1063,7 @@ export const builtinTokens: EdgeTokenMap = {
   }
 }
 
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: {
@@ -1175,7 +1175,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
   ethGasStationUrl: null,
-  defaultNetworkFees
+  networkFees
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {

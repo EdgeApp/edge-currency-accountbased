@@ -78,11 +78,10 @@ export interface EthereumNetworkInfo {
   arbitrumRollupParams?: {
     nodeInterfaceAddress: string
   }
-  // eslint-disable-next-line no-use-before-define
-  defaultNetworkFees: EthereumFees
   ercTokenStandard: string
   ethGasStationUrl: string | null
   hdPathCoinType: number
+  networkFees: EthereumFees
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]

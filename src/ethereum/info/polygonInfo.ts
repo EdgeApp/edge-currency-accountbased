@@ -155,7 +155,7 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 // Fees are in Wei
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: undefined,
@@ -209,7 +209,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   ethGasStationUrl: 'https://gasstation-mainnet.matic.network/',
-  defaultNetworkFees
+  networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

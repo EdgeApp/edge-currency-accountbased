@@ -147,7 +147,7 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 // Fees are in Wei
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: {
@@ -198,7 +198,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'optimismMnemonic',
   pluginRegularKeyName: 'optimismKey',
   ethGasStationUrl: null,
-  defaultNetworkFees
+  networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
