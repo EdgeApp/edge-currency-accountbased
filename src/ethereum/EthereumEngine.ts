@@ -809,12 +809,7 @@ export class EthereumEngine extends CurrencyEngine<
       spendInfo.spendTargets[0].nativeAmount = balance
 
       // Use our calcMiningFee function to calculate the fees:
-      const miningFees = calcMiningFees(
-        spendInfo,
-        this.networkInfo.networkFees,
-        null,
-        this.networkInfo
-      )
+      const miningFees = calcMiningFees(this.networkInfo, spendInfo, null)
 
       // If our results require a call to the RPC server to estimate the gas limit, then we
       // need to do that now:
@@ -991,10 +986,9 @@ export class EthereumEngine extends CurrencyEngine<
 
     const edgeToken = tokenId != null ? this.builtinTokens[tokenId] : null
     const miningFees = calcMiningFees(
+      this.networkInfo,
       edgeSpendInfo,
-      this.networkInfo.networkFees,
-      edgeToken,
-      this.networkInfo
+      edgeToken
     )
 
     // Translate legacy transaction types to EIP-1559 transaction type
