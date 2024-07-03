@@ -55,7 +55,7 @@ export const eosCurrencyInfo: EdgeCurrencyInfo = {
 
 export const eos = makeOuterPlugin<EosNetworkInfo, EosTools>({
   currencyInfo: eosCurrencyInfo,
-  infoPayloadCleaner: asEosInfoPayload,
+  asInfoPayload: asEosInfoPayload,
   networkInfo: eosNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 

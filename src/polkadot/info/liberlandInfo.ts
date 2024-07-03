@@ -54,7 +54,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const liberland = makeOuterPlugin<PolkadotNetworkInfo, PolkadotTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asPolkadotInfoPayload,
+  asInfoPayload: asPolkadotInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

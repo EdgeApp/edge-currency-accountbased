@@ -41,7 +41,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({
   currencyInfo,
-  infoPayloadCleaner: asZcashInfoPayload,
+  asInfoPayload: asZcashInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

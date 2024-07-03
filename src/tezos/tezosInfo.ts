@@ -63,7 +63,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const tezos = makeOuterPlugin<TezosNetworkInfo, TezosTools>({
   currencyInfo,
-  infoPayloadCleaner: asTezosInfoPayload,
+  asInfoPayload: asTezosInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

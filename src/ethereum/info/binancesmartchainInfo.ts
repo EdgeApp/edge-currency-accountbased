@@ -197,7 +197,7 @@ export const binancesmartchain = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

@@ -52,7 +52,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const thorchainrune = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {

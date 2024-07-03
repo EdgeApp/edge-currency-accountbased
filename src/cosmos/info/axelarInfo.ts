@@ -47,7 +47,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const axelar = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {

@@ -54,7 +54,7 @@ export const liberlandtestnet = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asPolkadotInfoPayload,
+  asInfoPayload: asPolkadotInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

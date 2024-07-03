@@ -147,7 +147,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asTronInfoPayload,
+  asInfoPayload: asTronInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

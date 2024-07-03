@@ -63,7 +63,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const osmosis = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
   builtinTokens,
 

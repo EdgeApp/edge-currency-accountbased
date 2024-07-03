@@ -117,7 +117,7 @@ export const builtinTokens: EdgeTokenMap = {
 export const ripple = makeOuterPlugin<XrpNetworkInfo, RippleTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asXrpInfoPayload,
+  asInfoPayload: asXrpInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

@@ -49,7 +49,7 @@ export const piratechain = makeOuterPlugin<
   PiratechainTools
 >({
   currencyInfo,
-  infoPayloadCleaner: asPiratechainInfoPayload,
+  asInfoPayload: asPiratechainInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

@@ -74,7 +74,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const filecoin = makeOuterPlugin<FilecoinNetworkInfo, FilecoinTools>({
   currencyInfo,
-  infoPayloadCleaner: asFilecoinInfoPayload,
+  asInfoPayload: asFilecoinInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

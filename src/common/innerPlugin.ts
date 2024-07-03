@@ -45,7 +45,7 @@ export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
 export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  infoPayloadCleaner: Cleaner<Partial<NetworkInfo>>
+  asInfoPayload: Cleaner<Partial<NetworkInfo>>
   networkInfo: NetworkInfo
   checkEnvironment?: () => void
   getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools>>
@@ -63,7 +63,7 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
       builtinTokens = {},
       currencyInfo,
       networkInfo: defaultNetworkInfo,
-      infoPayloadCleaner,
+      asInfoPayload,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
@@ -72,7 +72,7 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
     try {
       networkInfo = mergeDeeply(
         defaultNetworkInfo,
-        infoPayloadCleaner(env.infoPayload)
+        asInfoPayload(env.infoPayload)
       )
     } catch (e) {
       env.log.warn('infoPayload cleaner error:', e)

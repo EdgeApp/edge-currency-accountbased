@@ -39,7 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const binance = makeOuterPlugin<BinanceNetworkInfo, BinanceTools>({
   currencyInfo,
-  infoPayloadCleaner: asBinanceInfoPayload,
+  asInfoPayload: asBinanceInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

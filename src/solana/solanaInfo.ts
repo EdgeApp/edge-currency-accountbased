@@ -131,7 +131,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const solana = makeOuterPlugin<SolanaNetworkInfo, SolanaTools>({
   currencyInfo,
-  infoPayloadCleaner: asSolanaInfoPayload,
+  asInfoPayload: asSolanaInfoPayload,
   networkInfo,
   builtinTokens,
 

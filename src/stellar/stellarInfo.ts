@@ -39,7 +39,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({
   currencyInfo,
-  infoPayloadCleaner: asStellarInfoPayload,
+  asInfoPayload: asStellarInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

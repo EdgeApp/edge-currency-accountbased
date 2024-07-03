@@ -37,7 +37,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const polkadot = makeOuterPlugin<PolkadotNetworkInfo, PolkadotTools>({
   currencyInfo,
-  infoPayloadCleaner: asPolkadotInfoPayload,
+  asInfoPayload: asPolkadotInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

@@ -172,7 +172,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const coreum = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {

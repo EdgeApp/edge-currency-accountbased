@@ -80,7 +80,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({
   currencyInfo,
-  infoPayloadCleaner: asFioInfoPayload,
+  asInfoPayload: asFioInfoPayload,
   networkInfo,
   otherMethodNames: fioOtherMethodNames,
 

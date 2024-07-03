@@ -47,7 +47,7 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
 
 export const telos = makeOuterPlugin<EosNetworkInfo, EosTools>({
   currencyInfo: telosCurrencyInfo,
-  infoPayloadCleaner: asEosInfoPayload,
+  asInfoPayload: asEosInfoPayload,
   networkInfo: telosNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 

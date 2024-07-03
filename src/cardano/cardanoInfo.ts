@@ -31,7 +31,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const cardano = makeOuterPlugin<CardanoNetworkInfo, CardanoTools>({
   currencyInfo,
-  infoPayloadCleaner: asCardanoInfoPayload,
+  asInfoPayload: asCardanoInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

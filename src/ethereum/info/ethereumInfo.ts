@@ -1213,7 +1213,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 export const ethereum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
   otherMethodNames: ethOtherMethodNames,
 

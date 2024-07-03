@@ -140,7 +140,7 @@ export const filecoinfevmcalibration = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

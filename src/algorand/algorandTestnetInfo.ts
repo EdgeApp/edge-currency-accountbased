@@ -71,7 +71,7 @@ export const algorandtestnet = makeOuterPlugin<
 >({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asAlgorandInfoPayload,
+  asInfoPayload: asAlgorandInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

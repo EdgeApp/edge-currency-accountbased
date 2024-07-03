@@ -103,6 +103,7 @@ const asNetworkAdaptorConfig = asObject({
   servers: asArray(asString),
   ethBalCheckerContract: asOptional(asString)
 })
+
 export const asEthereumInfoPayload = asObject({
   networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
 })

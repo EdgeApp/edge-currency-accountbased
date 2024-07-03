@@ -38,7 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const hederatestnet = makeOuterPlugin<HederaNetworkInfo, HederaTools>({
   currencyInfo,
-  infoPayloadCleaner: asHederaInfoPayload,
+  asInfoPayload: asHederaInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

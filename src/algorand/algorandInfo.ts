@@ -75,7 +75,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 export const algorand = makeOuterPlugin<AlgorandNetworkInfo, AlgorandTools>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asAlgorandInfoPayload,
+  asInfoPayload: asAlgorandInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

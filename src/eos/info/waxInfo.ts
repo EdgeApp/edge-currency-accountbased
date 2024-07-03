@@ -43,7 +43,7 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({
   currencyInfo: waxCurrencyInfo,
-  infoPayloadCleaner: asEosInfoPayload,
+  asInfoPayload: asEosInfoPayload,
   networkInfo: waxNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 
