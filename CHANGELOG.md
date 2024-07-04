@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.11.0 (2024-07-03)
+
+- changed: Reduce and add variation to polling frequency
+
 ## 4.10.0 (2024-06-24)
 
 - added: (Ethereum) Add Liberland Dollar and Merit tokens
