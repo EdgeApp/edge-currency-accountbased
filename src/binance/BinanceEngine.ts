@@ -14,6 +14,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { asErrorMessage } from '../common/types'
 import {
   asyncWaterfall,
@@ -38,9 +39,9 @@ import {
   SafeBnbWalletInfo
 } from './binanceTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = 20000
-const BLOCKCHAIN_POLL_MILLISECONDS = 20000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const ADDRESS_QUERY_LOOKBACK_TIME = 1000 * 60 * 60 * 24 // ~ one day
 const TIMESTAMP_BEFORE_BNB_LAUNCH = 1555500000000 // 2019-04-17, BNB launched on 2019-04-18
 const TRANSACTION_QUERY_TIME_WINDOW = 1000 * 60 * 60 * 24 * 5 // 5 days

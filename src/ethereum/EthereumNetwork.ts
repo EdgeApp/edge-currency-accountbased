@@ -1,6 +1,7 @@
 import { add, div } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
+import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
@@ -19,10 +20,10 @@ import {
   NetworkAdapterUpdateMethod
 } from './networkAdapters/types'
 
-const BLOCKHEIGHT_POLL_MILLISECONDS = 20000
-const NONCE_POLL_MILLISECONDS = 20000
-const BAL_POLL_MILLISECONDS = 20000
-const TXS_POLL_MILLISECONDS = 20000
+const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const NONCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BAL_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TXS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
 const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes

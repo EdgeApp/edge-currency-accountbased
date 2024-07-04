@@ -27,6 +27,7 @@ import parse from 'url-parse'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -65,9 +66,9 @@ import {
   SafeEosWalletInfo
 } from './eosTypes'
 
-const ADDRESS_POLL_MILLISECONDS = 10000
-const BLOCKCHAIN_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 10000
+const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const CHECK_TXS_HYPERION = true
 const CHECK_TXS_FULL_NODES = true
 

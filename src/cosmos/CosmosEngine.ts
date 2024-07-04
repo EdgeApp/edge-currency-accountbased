@@ -50,6 +50,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { EdgeTokenId, MakeTxParams } from '../common/types'
 import { cleanTxLogs } from '../common/utils'
@@ -85,8 +86,8 @@ import {
   safeParse
 } from './cosmosUtils'
 
-const ACCOUNT_POLL_MILLISECONDS = 5000
-const TRANSACTION_POLL_MILLISECONDS = 3000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
 const TXS_PER_PAGE = 50

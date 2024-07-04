@@ -24,6 +24,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { FilecoinTools } from './FilecoinTools'
 import {
   asFilecoinInitOptions,
@@ -40,9 +41,9 @@ import { Filfox, FilfoxMessageDetails } from './Filfox'
 import { Filscan, FilscanMessage } from './Filscan'
 import { RpcExtra } from './RpcExtra'
 
-const CHECK_BALANCE_INTERVAL = 15000
-const CHECK_BLOCKHEIGHT_INTERVAL = 30000
-const CHECK_TRANSACTION_INTERVAL = 15000
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(30000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class FilecoinEngine extends CurrencyEngine<
   FilecoinTools,
@@ -107,13 +108,13 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   initSubscriptions(): void {
-    this.addToLoop('checkBalance', CHECK_BALANCE_INTERVAL).catch(error =>
+    this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS).catch(error =>
       this.log(error)
     )
-    this.addToLoop('checkBlockHeight', CHECK_BLOCKHEIGHT_INTERVAL).catch(
+    this.addToLoop('checkBlockHeight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       error => this.log(error)
     )
-    this.addToLoop('checkTransactions', CHECK_TRANSACTION_INTERVAL).catch(
+    this.addToLoop('checkTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       error => this.log(error)
     )
   }

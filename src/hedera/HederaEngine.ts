@@ -25,6 +25,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { getFetchCors } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
@@ -38,6 +39,10 @@ import {
   HederaWalletOtherData,
   SafeHederaWalletInfo
 } from './hederaTypes'
+
+const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BALANCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class HederaEngine extends CurrencyEngine<
   HederaTools,
@@ -239,9 +244,14 @@ export class HederaEngine extends CurrencyEngine<
     this.engineOn = true
     this.accountNameChecked = this.otherData.hederaAccount != null
 
-    this.addToLoop('getNewTransactions', 1000).catch(() => {})
-    this.addToLoop('queryBalance', 5000).catch(() => {})
-    this.addToLoop('checkAccountCreationStatus', 5000).catch(() => {})
+    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+    this.addToLoop('queryBalance', BALANCE_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop(
+      'checkAccountCreationStatus',
+      ACCOUNT_POLL_MILLISECONDS
+    ).catch(() => {})
 
     await super.startEngine()
   }

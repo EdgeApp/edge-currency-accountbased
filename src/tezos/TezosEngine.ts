@@ -14,6 +14,7 @@ import { eztz } from 'eztz.js'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -37,9 +38,9 @@ import {
   XtzGetTransaction
 } from './tezosTypes'
 
-const ADDRESS_POLL_MILLISECONDS = 15000
-const BLOCKCHAIN_POLL_MILLISECONDS = 30000
-const TRANSACTION_POLL_MILLISECONDS = 5000
+const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const makeSpendMutex = makeMutex()
 

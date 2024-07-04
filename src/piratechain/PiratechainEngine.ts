@@ -15,6 +15,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import { cleanTxLogs } from '../common/utils'
 import { PiratechainTools } from './PiratechainTools'
 import {
@@ -31,7 +32,7 @@ import {
   SafePiratechainWalletInfo
 } from './piratechainTypes'
 
-const THIRTY_SECONDS = 30000
+const BUMP_SYNCHRONIZER_POLL_MILLISECONDS = getRandomDelayMs(30000)
 
 export class PiratechainEngine extends CurrencyEngine<
   PiratechainTools,
@@ -179,7 +180,8 @@ export class PiratechainEngine extends CurrencyEngine<
     if (
       this.isSynced() ||
       this.lastUpdateFromSynchronizer == null ||
-      Date.now() < this.lastUpdateFromSynchronizer + THIRTY_SECONDS
+      Date.now() <
+        this.lastUpdateFromSynchronizer + BUMP_SYNCHRONIZER_POLL_MILLISECONDS
     ) {
       return
     }
@@ -199,7 +201,10 @@ export class PiratechainEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     this.started = true
-    this.addToLoop('bumpSynchronizer', THIRTY_SECONDS).catch(() => {})
+    this.addToLoop(
+      'bumpSynchronizer',
+      BUMP_SYNCHRONIZER_POLL_MILLISECONDS
+    ).catch(() => {})
     await super.startEngine()
   }
 

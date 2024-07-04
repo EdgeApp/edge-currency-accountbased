@@ -28,6 +28,7 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
   cleanTxLogs,
@@ -105,10 +106,10 @@ import {
   SafeFioWalletInfo
 } from './fioTypes'
 
-const ADDRESS_POLL_MILLISECONDS = 10000
-const BLOCKCHAIN_POLL_MILLISECONDS = 15000
-const TRANSACTION_POLL_MILLISECONDS = 10000
-const SYNC_NETWORK_INTERVAL = 10000
+const ADDRESS_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SYNC_NETWORK_INTERVAL = getRandomDelayMs(20000)
 
 interface PreparedTrx {
   signatures: string[]
