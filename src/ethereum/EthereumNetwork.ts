@@ -202,8 +202,8 @@ export class EthereumNetwork {
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
       return this.ethEngine.currencyInfo.currencyCode
     } else {
-      for (const tk of this.ethEngine.enabledTokens) {
-        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+      for (const currencyCode of this.ethEngine.enabledTokens) {
+        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
         if (tokenInfo != null) {
           const tokenContractAddress = tokenInfo.contractAddress
           if (
@@ -212,7 +212,7 @@ export class EthereumNetwork {
             tokenContractAddress.toLowerCase() ===
               txnContractAddress.toLowerCase()
           ) {
-            return tk
+            return currencyCode
           }
         }
       }
@@ -278,27 +278,31 @@ export class EthereumNetwork {
         )
       }
 
-      for (const tk of currencyCodes) {
+      for (const currencyCode of currencyCodes) {
         // Only check each code individually if this engine does not support
         // batch token balance queries.
         if (!isFetchTokenBalancesSupported) {
           await this.checkAndUpdate(
-            this.ethNeeds.tokenBalLastChecked[tk] ?? 0,
+            this.ethNeeds.tokenBalLastChecked[currencyCode] ?? 0,
             BAL_POLL_MILLISECONDS,
             preUpdateBlockHeight,
-            async () => await this.check('fetchTokenBalance', tk)
+            async () => await this.check('fetchTokenBalance', currencyCode)
           )
         }
 
         await this.checkAndUpdate(
-          this.ethNeeds.tokenTxsLastChecked[tk] ?? 0,
+          this.ethNeeds.tokenTxsLastChecked[currencyCode] ?? 0,
           TXS_POLL_MILLISECONDS,
           preUpdateBlockHeight,
           async (): Promise<EthereumNetworkUpdate> => {
             const lastTransactionQueryHeight =
-              this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] ?? 0
+              this.ethEngine.walletLocalData.lastTransactionQueryHeight[
+                currencyCode
+              ] ?? 0
             const lastTransactionDate =
-              this.ethEngine.walletLocalData.lastTransactionDate[tk] ?? 0
+              this.ethEngine.walletLocalData.lastTransactionDate[
+                currencyCode
+              ] ?? 0
             const params = {
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
               startBlock: Math.max(
@@ -310,7 +314,7 @@ export class EthereumNetwork {
                 lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
                 0
               ),
-              currencyCode: tk
+              currencyCode
             }
 
             // Send an empty tokenTxs network update if no network adapters
@@ -388,9 +392,9 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
-      for (const tk of Object.keys(tokenBal)) {
-        this.ethNeeds.tokenBalLastChecked[tk] = now
-        this.ethEngine.updateBalance(tk, tokenBal[tk])
+      for (const currencyCode of Object.keys(tokenBal)) {
+        this.ethNeeds.tokenBalLastChecked[currencyCode] = now
+        this.ethEngine.updateBalance(currencyCode, tokenBal[currencyCode])
       }
       this.ethEngine.currencyEngineCallbacks.onNewTokens(
         ethereumNetworkUpdate.detectedTokenIds ?? []
@@ -407,16 +411,17 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
-      for (const tk of Object.keys(tokenTxs)) {
-        this.ethNeeds.tokenTxsLastChecked[tk] = now
-        this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
-        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
+      for (const currencyCode of Object.keys(tokenTxs)) {
+        this.ethNeeds.tokenTxsLastChecked[currencyCode] = now
+        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 1
+        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
         for (const tx of tuple.edgeTransactions) {
-          this.ethEngine.addTransaction(tk, tx)
+          this.ethEngine.addTransaction(currencyCode, tx)
         }
-        this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
-          preUpdateBlockHeight
-        this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
+        this.ethEngine.walletLocalData.lastTransactionQueryHeight[
+          currencyCode
+        ] = preUpdateBlockHeight
+        this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] = now
       }
       this.ethEngine.updateOnAddressesChecked()
     }

@@ -193,7 +193,9 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     }
   }
 
-  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> => {
     const {
       chainParams: { chainId }
     } = this.ethEngine.networkInfo
@@ -204,7 +206,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
     let server
     const address = this.ethEngine.walletLocalData.publicKey
     try {
-      if (tk === this.ethEngine.currencyInfo.currencyCode) {
+      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
         response = await this.serialServers(async baseUrl => {
           const result = await this.fetchPostRPC(
             'eth_getBalance',
@@ -237,7 +239,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
         jsonObj = response.result
         server = response.server
       } else {
-        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
         if (
           tokenInfo != null &&
           typeof tokenInfo.contractAddress === 'string'
@@ -265,16 +267,20 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        `checkTokenBalRpc token ${tk} response ${String(response ?? '')} `,
+        `checkTokenBalRpc token ${currencyCode} response ${String(
+          response ?? ''
+        )} `,
         e
       )
       throw new Error(
-        `checkTokenBalRpc invalid ${tk} response ${JSON.stringify(jsonObj)}`
+        `checkTokenBalRpc invalid ${currencyCode} response ${JSON.stringify(
+          jsonObj
+        )}`
       )
     }
 
     return {
-      tokenBal: { [tk]: cleanedResponseObj.result },
+      tokenBal: { [currencyCode]: cleanedResponseObj.result },
       server
     }
   }

@@ -128,14 +128,16 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return { newNonce: clean.result, server }
   }
 
-  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (
+    currencyCode: string
+  ): Promise<EthereumNetworkUpdate> => {
     const address = this.ethEngine.walletLocalData.publicKey
     let response
     let jsonObj
     let server
     let cleanedResponseObj: RpcResultString
     try {
-      if (tk === this.ethEngine.currencyInfo.currencyCode) {
+      if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
         response = await this.serialServers(async server => {
           const result = await this.fetchGetEtherscan(server, url)
@@ -151,7 +153,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         jsonObj = response.result
         server = response.server
       } else {
-        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
         if (
           tokenInfo != null &&
           typeof tokenInfo.contractAddress === 'string'
@@ -176,18 +178,24 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       cleanedResponseObj = asRpcResultString(jsonObj)
     } catch (e: any) {
       this.ethEngine.error(
-        `checkTokenBalEthscan token ${tk} response ${String(response ?? '')} `,
+        `checkTokenBalEthscan token ${currencyCode} response ${String(
+          response ?? ''
+        )} `,
         e
       )
       throw new Error(
-        `checkTokenBalEthscan invalid ${tk} response ${JSON.stringify(jsonObj)}`
+        `checkTokenBalEthscan invalid ${currencyCode} response ${JSON.stringify(
+          jsonObj
+        )}`
       )
     }
     if (/^\d+$/.test(cleanedResponseObj.result)) {
       const balance = cleanedResponseObj.result
-      return { tokenBal: { [tk]: balance }, server }
+      return { tokenBal: { [currencyCode]: balance }, server }
     } else {
-      throw new Error(`checkTokenBalEthscan returned invalid JSON for ${tk}`)
+      throw new Error(
+        `checkTokenBalEthscan returned invalid JSON for ${currencyCode}`
+      )
     }
   }
 

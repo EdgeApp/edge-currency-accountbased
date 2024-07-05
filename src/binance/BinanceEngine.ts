@@ -122,22 +122,22 @@ export class BinanceEngine extends CurrencyEngine<
       if (jsonObj.balances.length === 0) {
         this.updateBalance('BNB', '0')
       }
-      for (const tk of this.enabledTokens) {
+      for (const currencyCode of this.enabledTokens) {
         for (const balance of jsonObj.balances) {
-          if (balance.symbol === tk) {
+          if (balance.symbol === currencyCode) {
             const denom = getDenomination(
-              tk,
+              currencyCode,
               this.currencyInfo,
               this.allTokensMap
             )
             if (denom == null) {
               this.error(
-                `checkAccountInnerLoop Received unsupported currencyCode: ${tk}`
+                `checkAccountInnerLoop Received unsupported currencyCode: ${currencyCode}`
               )
               break
             }
             const nativeAmount = mul(balance.free, denom.multiplier)
-            this.updateBalance(tk, nativeAmount)
+            this.updateBalance(currencyCode, nativeAmount)
           }
         }
       }

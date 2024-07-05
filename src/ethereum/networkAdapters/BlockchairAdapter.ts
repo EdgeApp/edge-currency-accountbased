@@ -38,7 +38,9 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
     }
   }
 
-  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (
+    _currencyCode: string
+  ): Promise<EthereumNetworkUpdate> => {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
     const path = `/${this.ethEngine.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`
