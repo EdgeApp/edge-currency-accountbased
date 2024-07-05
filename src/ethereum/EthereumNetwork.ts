@@ -222,13 +222,13 @@ export class EthereumNetwork {
   async checkAndUpdate(
     lastChecked: number,
     pollMillisec: number,
-    preUpdateBlockHeight: number,
     checkFunc: () => Promise<EthereumNetworkUpdate>
   ): Promise<void> {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
       try {
         const ethUpdate = await checkFunc()
+        const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
         this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
       } catch (e: any) {
         this.ethEngine.error('checkAndUpdate ', e)
@@ -238,18 +238,15 @@ export class EthereumNetwork {
 
   async needsLoop(): Promise<void> {
     while (this.ethEngine.engineOn) {
-      const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
       await this.checkAndUpdate(
         this.ethNeeds.blockHeightLastChecked,
         BLOCKHEIGHT_POLL_MILLISECONDS,
-        preUpdateBlockHeight,
         async () => await this.check('fetchBlockheight')
       )
 
       await this.checkAndUpdate(
         this.ethNeeds.nonceLastChecked,
         NONCE_POLL_MILLISECONDS,
-        preUpdateBlockHeight,
         async () => await this.check('fetchNonce')
       )
 
@@ -273,7 +270,6 @@ export class EthereumNetwork {
         await this.checkAndUpdate(
           this.ethNeeds.tokenBalsLastChecked,
           BAL_POLL_MILLISECONDS,
-          preUpdateBlockHeight,
           async () => await this.check('fetchTokenBalances')
         )
       }
@@ -285,7 +281,6 @@ export class EthereumNetwork {
           await this.checkAndUpdate(
             this.ethNeeds.tokenBalLastChecked[currencyCode] ?? 0,
             BAL_POLL_MILLISECONDS,
-            preUpdateBlockHeight,
             async () => await this.check('fetchTokenBalance', currencyCode)
           )
         }
@@ -293,7 +288,6 @@ export class EthereumNetwork {
         await this.checkAndUpdate(
           this.ethNeeds.tokenTxsLastChecked[currencyCode] ?? 0,
           TXS_POLL_MILLISECONDS,
-          preUpdateBlockHeight,
           async (): Promise<EthereumNetworkUpdate> => {
             const lastTransactionQueryHeight =
               this.ethEngine.walletLocalData.lastTransactionQueryHeight[
