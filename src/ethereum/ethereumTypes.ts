@@ -541,6 +541,7 @@ export const asMaybeEvmOverrideGasLimitLocation = asMaybe(
 //
 
 export const asEthereumInfoPayload = asObject({
-  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
+  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig)),
+  networkFees: asOptional(asEthereumFees)
 })
 export type EthereumInfoPayload = ReturnType<typeof asEthereumInfoPayload>
