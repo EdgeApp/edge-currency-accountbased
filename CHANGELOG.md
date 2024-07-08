@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+changed: Upgrade @polkadot/api to v12.1.1
+
 ## 4.11.0 (2024-07-03)
 
 - changed: Reduce and add variation to polling frequency
