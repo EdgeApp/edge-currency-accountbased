@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.12.0 (2024-07-09)
+
 - added: Implemented common `updateInfoPayload` method for all plugins
 - changed: (Ethereum) Include network fee info for core info payload
 
