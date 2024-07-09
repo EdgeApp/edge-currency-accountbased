@@ -103,7 +103,6 @@ export class EthereumEngine extends CurrencyEngine<
   infoFeeProvider: () => Promise<EthereumFees>
   externalFeeProviders: FeeProviderFunction[]
   optimismRollupParams?: OptimismRollupParams
-  networkFees: EthereumFees
   constructor(
     env: PluginEnvironment<EthereumNetworkInfo>,
     tools: EthereumTools,
@@ -124,7 +123,6 @@ export class EthereumEngine extends CurrencyEngine<
         blobBaseFeeScalar: '659851'
       }
     }
-    this.networkFees = this.networkInfo.defaultNetworkFees
     this.fetchCors = getFetchCors(env.io)
 
     // Update network fees from other providers
@@ -347,7 +345,8 @@ export class EthereumEngine extends CurrencyEngine<
                 }
 
                 let gasPriceNetworkFee =
-                  this.networkFees.default.gasPrice?.standardFeeHigh ?? '0'
+                  this.networkInfo.networkFees.default.gasPrice
+                    ?.standardFeeHigh ?? '0'
                 if (gasPrice == null) {
                   txParam.gasPrice = decimalToHex(gasPriceNetworkFee)
                 } else {
@@ -362,7 +361,10 @@ export class EthereumEngine extends CurrencyEngine<
               }
 
               // Get the gasLimit from currency info or from RPC node:
-              if (this.networkFees.default.gasLimit?.tokenTransaction == null) {
+              if (
+                this.networkInfo.networkFees.default.gasLimit
+                  ?.tokenTransaction == null
+              ) {
                 this.ethNetwork
                   .multicastRpc('eth_estimateGas', [txParam])
                   .then((estimateGasResult: any) => {
@@ -380,7 +382,8 @@ export class EthereumEngine extends CurrencyEngine<
                   })
               } else {
                 deriveNetworkFee(
-                  this.networkFees.default.gasLimit?.tokenTransaction
+                  this.networkInfo.networkFees.default.gasLimit
+                    ?.tokenTransaction
                 )
               }
               break
@@ -430,8 +433,7 @@ export class EthereumEngine extends CurrencyEngine<
       const tryEstimatingGasLimit = async (
         attempt: number = 0
       ): Promise<void> => {
-        const defaultGasLimit =
-          this.networkInfo.defaultNetworkFees.default.gasLimit
+        const defaultGasLimit = this.networkInfo.networkFees.default.gasLimit
         try {
           if (defaultGasLimit != null && !sendingToContract && !hasUserMemo) {
             // Easy case of sending plain mainnet token with no memo/data
@@ -484,7 +486,7 @@ export class EthereumEngine extends CurrencyEngine<
       if (
         lt(
           gasLimitReturn,
-          this.networkFees.default.gasLimit?.minGasLimit ?? '21000'
+          this.networkInfo.networkFees.default.gasLimit?.minGasLimit ?? '21000'
         )
       ) {
         // Revert gasLimit back to the value from calcMiningFee
@@ -518,9 +520,9 @@ export class EthereumEngine extends CurrencyEngine<
           const k = key as KeysOfEthereumBaseMultiplier
           ethereumFeeInts[k] = biggyRoundToNearestInt(ethereumFee[k])
         })
-        if (this.networkFees.default.gasPrice != null) {
-          this.networkFees.default.gasPrice = {
-            ...this.networkFees.default.gasPrice,
+        if (this.networkInfo.networkFees.default.gasPrice != null) {
+          this.networkInfo.networkFees.default.gasPrice = {
+            ...this.networkInfo.networkFees.default.gasPrice,
             ...ethereumFeeInts
           }
         }
@@ -539,7 +541,7 @@ export class EthereumEngine extends CurrencyEngine<
       try {
         const baseFee = await this.ethNetwork.getBaseFeePerGas()
         if (baseFee == null) return
-        this.networkFees.default.baseFee = baseFee
+        this.networkInfo.networkFees.default.baseFee = baseFee
       } catch (error: any) {
         this.error(`Error fetching base fee: ${JSON.stringify(error)}`)
       }
@@ -666,15 +668,14 @@ export class EthereumEngine extends CurrencyEngine<
     if (baseFeePerGas == null) return
     const baseFeePerGasDecimal = hexToDecimal(baseFeePerGas)
 
-    const networkFees: EthereumFees = this.networkFees
+    const networkFees: EthereumFees = this.networkInfo.networkFees
 
     // Make sure there is a default network fee entry and gasPrice entry
     if (networkFees.default == null || networkFees.default.gasPrice == null) {
       return
     }
 
-    const defaultNetworkFee: EthereumFee =
-      this.networkInfo.defaultNetworkFees.default
+    const defaultNetworkFee: EthereumFee = this.networkInfo.networkFees.default
 
     // The minimum priority fee for slow transactions
     const minPriorityFee =
@@ -731,14 +732,17 @@ export class EthereumEngine extends CurrencyEngine<
       .then(async info => {
         this.log.warn(`infoFeeProvider:`, JSON.stringify(info, null, 2))
 
-        this.networkFees = mergeDeeply(this.networkFees, info)
+        this.networkInfo.networkFees = mergeDeeply(
+          this.networkInfo.networkFees,
+          info
+        )
 
         // Update network baseFee:
         if (this.networkInfo.supportsEIP1559 === true) {
           try {
             const baseFee = await this.ethNetwork.getBaseFeePerGas()
             if (baseFee == null) return
-            this.networkFees.default.baseFee = baseFee
+            this.networkInfo.networkFees.default.baseFee = baseFee
           } catch (error) {
             this.error(`Error fetching base fee: ${JSON.stringify(error)}`)
           }
@@ -805,12 +809,7 @@ export class EthereumEngine extends CurrencyEngine<
       spendInfo.spendTargets[0].nativeAmount = balance
 
       // Use our calcMiningFee function to calculate the fees:
-      const miningFees = calcMiningFees(
-        spendInfo,
-        this.networkFees,
-        null,
-        this.networkInfo
-      )
+      const miningFees = calcMiningFees(this.networkInfo, spendInfo, null)
 
       // If our results require a call to the RPC server to estimate the gas limit, then we
       // need to do that now:
@@ -987,10 +986,9 @@ export class EthereumEngine extends CurrencyEngine<
 
     const edgeToken = tokenId != null ? this.builtinTokens[tokenId] : null
     const miningFees = calcMiningFees(
+      this.networkInfo,
       edgeSpendInfo,
-      this.networkFees,
-      edgeToken,
-      this.networkInfo
+      edgeToken
     )
 
     // Translate legacy transaction types to EIP-1559 transaction type
@@ -999,7 +997,7 @@ export class EthereumEngine extends CurrencyEngine<
     const feeParams = await getFeeParamsByTransactionType(
       txType,
       miningFees.gasPrice,
-      this.networkFees.default.baseFee ??
+      this.networkInfo.networkFees.default.baseFee ??
         (await this.ethNetwork.getBaseFeePerGas())
     )
 
@@ -1401,7 +1399,7 @@ export class EthereumEngine extends CurrencyEngine<
     const doubledFeeParams = await getFeeParamsByTransactionType(
       txType,
       mul(replacedTxOtherParams.gasPrice, '2'),
-      this.networkFees.default.baseFee ??
+      this.networkInfo.networkFees.default.baseFee ??
         (await this.ethNetwork.getBaseFeePerGas())
     )
     const gasLimit = replacedTxOtherParams.gas

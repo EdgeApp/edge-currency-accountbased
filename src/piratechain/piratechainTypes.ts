@@ -24,16 +24,6 @@ export interface PiratechainNetworkInfo {
   transactionQueryLimit: number
 }
 
-export const asPiratechainInfoPayload = asObject({
-  rpcNode: asOptional(
-    asObject({
-      networkName: asValue('mainnet', 'testnet'),
-      defaultHost: asString,
-      defaultPort: asNumber
-    })
-  )
-})
-
 export interface PiratechainSpendInfo {
   zatoshi: string
   toAddress: string
@@ -178,3 +168,18 @@ export const asPiratechainPrivateKeys = (
     }
   )
 }
+
+//
+// Info Payload
+//
+
+export const asPiratechainInfoPayload = asObject({
+  rpcNode: asOptional(
+    asObject({
+      networkName: asValue('mainnet', 'testnet'),
+      defaultHost: asString,
+      defaultPort: asNumber
+    })
+  )
+})
+export type PiratechainInfoPayload = ReturnType<typeof asPiratechainInfoPayload>

@@ -19,10 +19,6 @@ export interface HederaNetworkInfo {
   maxFee: number
 }
 
-export const asHederaInfoPayload = asObject({
-  mirrorNodes: asOptional(asTuple(asString))
-})
-
 export const asHederaWalletOtherData = asObject({
   hederaAccount: asMaybe(asString),
   latestTimestamp: asMaybe(asString, '1535068800') // genesis '2018-08-24T00:00:00.000Z'
@@ -98,3 +94,12 @@ export const asHederaPrivateKeys = (
     }
   )
 }
+
+//
+// Info Payload
+//
+
+export const asHederaInfoPayload = asObject({
+  mirrorNodes: asOptional(asTuple(asString))
+})
+export type HederaInfoPayload = ReturnType<typeof asHederaInfoPayload>

@@ -19,13 +19,6 @@ export interface EosNetworkInfo {
   uriProtocol: string
 }
 
-export const asEosInfoPayload = asObject({
-  eosDfuseServers: asOptional(asArray(asString)),
-  eosHyperionNodes: asOptional(asArray(asString)),
-  eosNodes: asOptional(asArray(asString)),
-  powerUpServers: asOptional(asArray(asString))
-})
-
 export const eosOtherMethodNames = [
   'getActivationCost',
   'getActivationSupportedCurrencies',
@@ -110,3 +103,15 @@ export const asEosPrivateKeys = asObject({
   eosOwnerKey: asOptional(asString),
   eosKey: asString
 })
+
+//
+// Info Payload
+//
+
+export const asEosInfoPayload = asObject({
+  eosDfuseServers: asOptional(asArray(asString)),
+  eosHyperionNodes: asOptional(asArray(asString)),
+  eosNodes: asOptional(asArray(asString)),
+  powerUpServers: asOptional(asArray(asString))
+})
+export type EosInfoPayload = ReturnType<typeof asEosInfoPayload>

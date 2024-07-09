@@ -24,10 +24,11 @@ import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asFilecoinPrivateKeys,
   asFilPublicKey,
+  FilecoinInfoPayload,
   FilecoinNetworkInfo
 } from './filecoinTypes'
 
@@ -219,6 +220,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<FilecoinNetworkInfo>
 ): Promise<FilecoinTools> {
   return new FilecoinTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<FilecoinNetworkInfo>,
+  infoPayload: FilecoinInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './FilecoinEngine'

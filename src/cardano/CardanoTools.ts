@@ -16,10 +16,11 @@ import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asCardanoPrivateKeys,
   asSafeCardanoWalletInfo,
+  CardanoInfoPayload,
   CardanoNetworkInfo,
   EpochParams,
   SafeCardanoWalletInfo
@@ -193,3 +194,14 @@ export async function makeCurrencyTools(
 }
 
 export { makeCurrencyEngine } from './CardanoEngine'
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<CardanoNetworkInfo>,
+  infoPayload: CardanoInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
+}

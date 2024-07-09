@@ -11,9 +11,11 @@ import { eztz } from 'eztz.js'
 import { decodeMainnet, encodeMainnet } from 'tezos-uri'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { mergeDeeply } from '../common/utils'
 import {
   asSafeTezosWalletInfo,
   asTezosPrivateKeys,
+  TezosInfoPayload,
   TezosNetworkInfo,
   UriTransaction
 } from './tezosTypes'
@@ -158,6 +160,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<TezosNetworkInfo>
 ): Promise<TezosTools> {
   return new TezosTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<TezosNetworkInfo>,
+  infoPayload: TezosInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './TezosEngine'

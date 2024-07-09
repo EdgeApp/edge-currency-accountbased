@@ -23,11 +23,6 @@ export interface TezosNetworkInfo {
   }
 }
 
-export const asTezosInfoPayload = asObject({
-  tezosRpcNodes: asOptional(asArray(asString)),
-  tezosApiServers: asOptional(asArray(asString))
-})
-
 export const asTezosWalletOtherData = asObject({
   numberTransactions: asMaybe(asNumber, 0)
 })
@@ -151,3 +146,13 @@ export const asTezosPrivateKeys = asObject({
   mnemonic: asString,
   privateKey: asString
 })
+
+//
+// Info Payload
+//
+
+export const asTezosInfoPayload = asObject({
+  tezosRpcNodes: asOptional(asArray(asString)),
+  tezosApiServers: asOptional(asArray(asString))
+})
+export type TezosInfoPayload = ReturnType<typeof asTezosInfoPayload>

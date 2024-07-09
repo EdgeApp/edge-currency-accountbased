@@ -6,6 +6,7 @@ import { makeOuterPlugin } from '../common/innerPlugin'
 import type { PiratechainTools } from './PiratechainTools'
 import {
   asPiratechainInfoPayload,
+  PiratechainInfoPayload,
   PiratechainNetworkInfo
 } from './piratechainTypes'
 
@@ -46,10 +47,11 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const piratechain = makeOuterPlugin<
   PiratechainNetworkInfo,
-  PiratechainTools
+  PiratechainTools,
+  PiratechainInfoPayload
 >({
   currencyInfo,
-  infoPayloadCleaner: asPiratechainInfoPayload,
+  asInfoPayload: asPiratechainInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

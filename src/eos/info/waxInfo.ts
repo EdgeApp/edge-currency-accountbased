@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import {
   asEosInfoPayload,
+  EosInfoPayload,
   EosNetworkInfo,
   eosOtherMethodNames
 } from '../eosTypes'
@@ -41,9 +42,9 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const wax = makeOuterPlugin<EosNetworkInfo, EosTools>({
+export const wax = makeOuterPlugin<EosNetworkInfo, EosTools, EosInfoPayload>({
   currencyInfo: waxCurrencyInfo,
-  infoPayloadCleaner: asEosInfoPayload,
+  asInfoPayload: asEosInfoPayload,
   networkInfo: waxNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 

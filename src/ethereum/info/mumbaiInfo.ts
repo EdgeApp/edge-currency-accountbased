@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import {
@@ -149,7 +150,7 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 // Fees are in Wei
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: undefined,
@@ -198,7 +199,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'mumbaiMnemonic',
   pluginRegularKeyName: 'mumbaiKey',
   ethGasStationUrl: '',
-  defaultNetworkFees
+  networkFees
 }
 
 export const currencyInfo: EdgeCurrencyInfo = {
@@ -233,10 +234,14 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const mumbai = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
+export const mumbai = makeOuterPlugin<
+  EthereumNetworkInfo,
+  EthereumTools,
+  EthereumInfoPayload
+>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

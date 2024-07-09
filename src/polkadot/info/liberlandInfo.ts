@@ -3,7 +3,11 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { PolkadotTools } from '../PolkadotTools'
-import { asPolkadotInfoPayload, PolkadotNetworkInfo } from '../polkadotTypes'
+import {
+  asPolkadotInfoPayload,
+  PolkadotInfoPayload,
+  PolkadotNetworkInfo
+} from '../polkadotTypes'
 
 const builtinTokens: EdgeTokenMap = {
   '1': {
@@ -51,10 +55,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const liberland = makeOuterPlugin<PolkadotNetworkInfo, PolkadotTools>({
+export const liberland = makeOuterPlugin<
+  PolkadotNetworkInfo,
+  PolkadotTools,
+  PolkadotInfoPayload
+>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asPolkadotInfoPayload,
+  asInfoPayload: asPolkadotInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

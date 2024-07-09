@@ -4,6 +4,7 @@ import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { EosTools } from '../EosTools'
 import {
   asEosInfoPayload,
+  EosInfoPayload,
   EosNetworkInfo,
   eosOtherMethodNames
 } from '../eosTypes'
@@ -45,9 +46,9 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const telos = makeOuterPlugin<EosNetworkInfo, EosTools>({
+export const telos = makeOuterPlugin<EosNetworkInfo, EosTools, EosInfoPayload>({
   currencyInfo: telosCurrencyInfo,
-  infoPayloadCleaner: asEosInfoPayload,
+  asInfoPayload: asEosInfoPayload,
   networkInfo: telosNetworkInfo,
   otherMethodNames: eosOtherMethodNames,
 

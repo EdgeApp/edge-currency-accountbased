@@ -78,11 +78,10 @@ export interface EthereumNetworkInfo {
   arbitrumRollupParams?: {
     nodeInterfaceAddress: string
   }
-  // eslint-disable-next-line no-use-before-define
-  defaultNetworkFees: EthereumFees
   ercTokenStandard: string
   ethGasStationUrl: string | null
   hdPathCoinType: number
+  networkFees: EthereumFees
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]
@@ -102,9 +101,6 @@ const asNetworkAdaptorConfig = asObject({
   type: asNetworkAdaptorConfigType,
   servers: asArray(asString),
   ethBalCheckerContract: asOptional(asString)
-})
-export const asEthereumInfoPayload = asObject({
-  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
 })
 
 /**
@@ -539,3 +535,13 @@ export const asMaybeEvmOverrideGasLimitLocation = asMaybe(
     overrideGasLimit: asIntegerString
   })
 )
+
+//
+// Info Payload
+//
+
+export const asEthereumInfoPayload = asObject({
+  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig)),
+  networkFees: asOptional(asEthereumFees)
+})
+export type EthereumInfoPayload = ReturnType<typeof asEthereumInfoPayload>

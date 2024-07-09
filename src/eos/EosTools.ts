@@ -33,7 +33,8 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
   getFetchCors,
-  getLegacyDenomination
+  getLegacyDenomination,
+  mergeDeeply
 } from '../common/utils'
 import {
   asGetActivationCost,
@@ -42,6 +43,7 @@ import {
 import {
   asEosPrivateKeys,
   asSafeEosWalletInfo,
+  EosInfoPayload,
   EosNetworkInfo
 } from './eosTypes'
 
@@ -309,6 +311,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<EosNetworkInfo>
 ): Promise<EosTools> {
   return new EosTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<EosNetworkInfo>,
+  infoPayload: EosInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './EosEngine'

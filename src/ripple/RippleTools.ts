@@ -26,12 +26,14 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   asyncWaterfall,
   getLegacyDenomination,
+  mergeDeeply,
   safeErrorMessage
 } from '../common/utils'
 import {
   asRipplePrivateKeys,
   asSafeRippleWalletInfo,
   asXrpNetworkLocation,
+  XrpInfoPayload,
   XrpNetworkInfo
 } from './rippleTypes'
 import { makeTokenId } from './rippleUtils'
@@ -211,6 +213,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<XrpNetworkInfo>
 ): Promise<RippleTools> {
   return new RippleTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<XrpNetworkInfo>,
+  infoPayload: XrpInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './RippleEngine'

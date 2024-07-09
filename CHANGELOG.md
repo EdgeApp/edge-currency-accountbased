@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Implemented common `updateInfoPayload` method for all plugins
+- changed: (Ethereum) Include network fee info for core info payload
+
 ## 4.11.1 (2024-07-08)
 
 changed: Upgrade @polkadot/api to v12.1.1
@@ -20,7 +23,7 @@ changed: Upgrade @polkadot/api to v12.1.1
 
 - added: (Ethereum/Solana) Add BOBBY
 - added: (zkSync) Add ZK
-- changed: (Piratechain) Allow  `derivePublicKey` to fail in case native code isn't present
+- changed: (Piratechain) Allow `derivePublicKey` to fail in case native code isn't present
 - removed: (Zcash/Piratechain) Remove `defaultBirthdayHeight`
 
 ## 4.8.0 (2024-06-10)

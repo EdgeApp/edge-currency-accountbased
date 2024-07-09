@@ -22,12 +22,14 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   biggyScience,
   getLegacyDenomination,
+  mergeDeeply,
   multicastEthProviders
 } from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
   asEthereumPrivateKeys,
   asSafeEthWalletInfo,
+  EthereumInfoPayload,
   EthereumInitOptions,
   EthereumNetworkInfo
 } from './ethereumTypes'
@@ -398,9 +400,9 @@ export class EthereumTools implements EdgeCurrencyTools {
       providers: ethProviders
     })
   }
-}
 
-// #endregion otherMethods
+  // #endregion otherMethods
+}
 
 export async function makeCurrencyTools(
   env: PluginEnvironment<EthereumNetworkInfo>
@@ -408,6 +410,17 @@ export async function makeCurrencyTools(
   const out = new EthereumTools(env)
 
   return out
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<EthereumNetworkInfo>,
+  infoPayload: EthereumInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './EthereumEngine'

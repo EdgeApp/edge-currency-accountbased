@@ -8,10 +8,9 @@ import {
   EdgeCurrencyTools,
   EdgeOtherMethods,
   EdgeTokenMap,
-  EdgeWalletInfo
+  EdgeWalletInfo,
+  JsonObject
 } from 'edge-core-js/types'
-
-import { mergeDeeply } from './utils'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -27,7 +26,11 @@ export interface PluginEnvironment<NetworkInfo> extends EdgeCorePluginOptions {
  * These methods involve expensive crypto libraries
  * that we don't want to load unless we actually have wallets in an account.
  */
-export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
+export interface InnerPlugin<
+  NetworkInfo,
+  Tools extends EdgeCurrencyTools,
+  InfoPayload
+> {
   makeCurrencyEngine: (
     env: PluginEnvironment<NetworkInfo>,
     tools: Tools,
@@ -36,60 +39,75 @@ export interface InnerPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
   ) => Promise<EdgeCurrencyEngine>
 
   makeCurrencyTools: (env: PluginEnvironment<NetworkInfo>) => Promise<Tools>
+
+  /**
+   * The plugin's `updateInfoPayload` implementation.
+   *
+   * Each plugin should define how the info payload updates the plugin
+   * environment. Although `InfoPayload` type may share some properties with
+   * the `NetworkInfo` type, it is not a one-to-one match.
+   *
+   * Be aware the `InfoPayload` type for each plugin is ossified by the fact
+   * that it is shared between the plugin and the info server.
+   */
+  updateInfoPayload: (
+    env: PluginEnvironment<NetworkInfo>,
+    infoPayload: InfoPayload
+  ) => Promise<void>
 }
 
 /**
  * These methods involve cheap, static information,
  * so we don't have to load any crypto libraries.
  */
-export interface OuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools> {
+export interface OuterPlugin<
+  NetworkInfo,
+  Tools extends EdgeCurrencyTools,
+  InfoPayload
+> {
+  asInfoPayload: Cleaner<InfoPayload>
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
-  infoPayloadCleaner: Cleaner<Partial<NetworkInfo>>
   networkInfo: NetworkInfo
-  checkEnvironment?: () => void
-  getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools>>
-
   otherMethodNames?: ReadonlyArray<string & keyof Tools>
+
+  checkEnvironment?: () => void
+  getInnerPlugin: () => Promise<InnerPlugin<NetworkInfo, Tools, InfoPayload>>
 }
 
 type EdgeCorePluginFactory = (env: EdgeCorePluginOptions) => EdgeCurrencyPlugin
 
-export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
-  template: OuterPlugin<NetworkInfo, Tools>
+export function makeOuterPlugin<
+  NetworkInfo,
+  Tools extends EdgeCurrencyTools,
+  InfoPayload
+>(
+  template: OuterPlugin<NetworkInfo, Tools, InfoPayload>
 ): EdgeCorePluginFactory {
   return (env: EdgeCorePluginOptions): EdgeCurrencyPlugin => {
     const {
       builtinTokens = {},
       currencyInfo,
       networkInfo: defaultNetworkInfo,
-      infoPayloadCleaner,
+      asInfoPayload,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
 
-    let networkInfo: NetworkInfo = defaultNetworkInfo
-    try {
-      networkInfo = mergeDeeply(
-        defaultNetworkInfo,
-        infoPayloadCleaner(env.infoPayload)
-      )
-    } catch (e) {
-      env.log.warn('infoPayload cleaner error:', e)
-    }
-
-    const innerEnv = {
+    const innerEnv: PluginEnvironment<NetworkInfo> = {
       ...env,
       builtinTokens,
       currencyInfo,
-      networkInfo
+      networkInfo: defaultNetworkInfo
     }
 
     // Logic to load the inner plugin:
-    let pluginPromise: Promise<InnerPlugin<NetworkInfo, Tools>> | undefined
+    let pluginPromise:
+      | Promise<InnerPlugin<NetworkInfo, Tools, InfoPayload>>
+      | undefined
     let toolsPromise: Promise<Tools> | undefined
     async function loadInnerPlugin(): Promise<{
-      plugin: InnerPlugin<NetworkInfo, Tools>
+      plugin: InnerPlugin<NetworkInfo, Tools, InfoPayload>
       tools: Tools
     }> {
       checkEnvironment()
@@ -101,6 +119,14 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
         toolsPromise = plugin.makeCurrencyTools(innerEnv)
       }
       const tools = await toolsPromise
+
+      // Attempt to update the plugin state given the initial infoPayload:
+      try {
+        await updateInfoPayload(env.infoPayload)
+      } catch (e) {
+        env.log.warn('infoPayload cleaner error:', e)
+      }
+
       return { plugin, tools }
     }
 
@@ -123,12 +149,23 @@ export function makeOuterPlugin<NetworkInfo, Tools extends EdgeCurrencyTools>(
 
     const otherMethods = makeOtherMethods(makeCurrencyTools, otherMethodNames)
 
+    async function updateInfoPayload(payload: JsonObject): Promise<void> {
+      const plugin = await pluginPromise
+
+      // If the plugin hasn't been loaded yet, this is a noop.
+      if (plugin == null) return
+
+      const infoPayload = asInfoPayload(payload)
+      await plugin.updateInfoPayload(innerEnv, infoPayload)
+    }
+
     return {
       currencyInfo,
       getBuiltinTokens,
       makeCurrencyTools,
       makeCurrencyEngine,
-      otherMethods
+      otherMethods,
+      updateInfoPayload
     }
   }
 }

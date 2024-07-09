@@ -3,7 +3,11 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import { makeMetaTokens } from '../../common/tokenHelpers'
 import type { CosmosTools } from '../CosmosTools'
-import { asCosmosInfoPayload, CosmosNetworkInfo } from '../cosmosTypes'
+import {
+  asCosmosInfoPayload,
+  CosmosInfoPayload,
+  CosmosNetworkInfo
+} from '../cosmosTypes'
 
 const builtinTokens: EdgeTokenMap = {
   'usara-core1r9gc0rnxnzpq33u82f44aufgdwvyxv4wyepyck98m9v2pxua6naqr8h03z': {
@@ -169,10 +173,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const coreum = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
+export const coreum = makeOuterPlugin<
+  CosmosNetworkInfo,
+  CosmosTools,
+  CosmosInfoPayload
+>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {

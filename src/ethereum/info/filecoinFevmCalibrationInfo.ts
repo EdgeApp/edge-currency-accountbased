@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
@@ -29,7 +30,7 @@ const builtinTokens: EdgeTokenMap = {
   }
 }
 
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: undefined,
@@ -75,7 +76,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'filecoinfevmcalibrationMnemonic',
   pluginRegularKeyName: 'filecoinfevmcalibrationKey',
   ethGasStationUrl: null,
-  defaultNetworkFees
+  networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -136,11 +137,12 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const filecoinfevmcalibration = makeOuterPlugin<
   EthereumNetworkInfo,
-  EthereumTools
+  EthereumTools,
+  EthereumInfoPayload
 >({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

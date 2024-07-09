@@ -18,10 +18,15 @@ import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getFetchCors, getLegacyDenomination } from '../common/utils'
+import {
+  getFetchCors,
+  getLegacyDenomination,
+  mergeDeeply
+} from '../common/utils'
 import {
   asHederaPrivateKeys,
   asSafeHederaWalletInfo,
+  HederaInfoPayload,
   HederaNetworkInfo
 } from './hederaTypes'
 import { createChecksum } from './hederaUtils'
@@ -194,6 +199,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<HederaNetworkInfo>
 ): Promise<HederaTools> {
   return new HederaTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<HederaNetworkInfo>,
+  infoPayload: HederaInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './HederaEngine'

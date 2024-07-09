@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { ZcashTools } from './ZcashTools'
-import { asZcashInfoPayload, ZcashNetworkInfo } from './zcashTypes'
+import {
+  asZcashInfoPayload,
+  ZcashInfoPayload,
+  ZcashNetworkInfo
+} from './zcashTypes'
 
 const networkInfo: ZcashNetworkInfo = {
   rpcNode: {
@@ -39,9 +43,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 512 }]
 }
 
-export const zcash = makeOuterPlugin<ZcashNetworkInfo, ZcashTools>({
+export const zcash = makeOuterPlugin<
+  ZcashNetworkInfo,
+  ZcashTools,
+  ZcashInfoPayload
+>({
   currencyInfo,
-  infoPayloadCleaner: asZcashInfoPayload,
+  asInfoPayload: asZcashInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

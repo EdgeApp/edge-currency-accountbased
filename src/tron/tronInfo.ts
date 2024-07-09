@@ -3,7 +3,11 @@ import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 import { makeOuterPlugin } from '../common/innerPlugin'
 import { makeMetaTokens } from '../common/tokenHelpers'
 import type { TronTools } from './TronTools'
-import { asTronInfoPayload, TronNetworkInfo } from './tronTypes'
+import {
+  asTronInfoPayload,
+  TronInfoPayload,
+  TronNetworkInfo
+} from './tronTypes'
 
 const builtinTokens: EdgeTokenMap = {
   TPYmHEhy5n8TCEfYGqW2rPxsghSfzghPDn: {
@@ -144,10 +148,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const tron = makeOuterPlugin<TronNetworkInfo, TronTools>({
+export const tron = makeOuterPlugin<
+  TronNetworkInfo,
+  TronTools,
+  TronInfoPayload
+>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asTronInfoPayload,
+  asInfoPayload: asTronInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

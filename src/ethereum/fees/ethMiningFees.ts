@@ -15,7 +15,6 @@ import {
   asMaybeEvmOverrideGasLimitLocation,
   CalcOptimismRollupFeeParams,
   EthereumFee,
-  EthereumFees,
   EthereumMiningFees,
   EthereumNetworkInfo
 } from '../ethereumTypes'
@@ -28,10 +27,9 @@ export const ES_FEE_CUSTOM = 'custom'
 const WEI_MULTIPLIER = '1000000000'
 
 export function calcMiningFees(
+  networkInfo: EthereumNetworkInfo,
   spendInfo: EdgeSpendInfo,
-  networkFees: EthereumFees,
-  edgeToken: EdgeToken | null,
-  networkInfo: EthereumNetworkInfo
+  edgeToken: EdgeToken | null
 ): EthereumMiningFees {
   let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
@@ -55,9 +53,7 @@ export function calcMiningFees(
     }
 
     if (gasPrice != null && gasPrice !== '') {
-      const minGasPrice =
-        networkFees.default?.gasPrice?.minGasPrice ??
-        networkInfo.defaultNetworkFees.default.gasPrice?.minGasPrice
+      const minGasPrice = networkInfo.networkFees.default.gasPrice?.minGasPrice
       if (minGasPrice != null) {
         const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
         if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
@@ -73,9 +69,7 @@ export function calcMiningFees(
     }
 
     if (gasLimit != null && gasLimit !== '') {
-      const minGasLimit =
-        networkFees.default?.gasLimit?.minGasLimit ??
-        networkInfo.defaultNetworkFees.default.gasLimit?.minGasLimit
+      const minGasLimit = networkInfo.networkFees.default.gasLimit?.minGasLimit
       if (
         (minGasLimit != null && lt(gasLimit, minGasLimit)) ||
         /^\s*$/.test(gasLimit)
@@ -101,16 +95,16 @@ export function calcMiningFees(
     }
   }
 
-  let networkFeeForGasPrice: EthereumFee = networkFees.default
-  let networkFeeForGasLimit: EthereumFee = networkFees.default
+  let networkFeeForGasPrice: EthereumFee = networkInfo.networkFees.default
+  let networkFeeForGasLimit: EthereumFee = networkInfo.networkFees.default
 
   if (typeof spendInfo.spendTargets[0]?.publicAddress === 'string') {
     // If we have incomplete fees from custom fees, calculate as normal
     const targetAddress = normalizeAddress(
       spendInfo.spendTargets[0].publicAddress
     )
-    if (typeof networkFees[targetAddress] !== 'undefined') {
-      networkFeeForGasLimit = networkFees[targetAddress]
+    if (typeof networkInfo.networkFees[targetAddress] !== 'undefined') {
+      networkFeeForGasLimit = networkInfo.networkFees[targetAddress]
       useGasLimitDefaults = false
       if (typeof networkFeeForGasLimit.gasPrice !== 'undefined') {
         networkFeeForGasPrice = networkFeeForGasLimit

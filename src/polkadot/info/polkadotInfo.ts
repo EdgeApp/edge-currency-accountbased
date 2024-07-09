@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { PolkadotTools } from '../PolkadotTools'
-import { asPolkadotInfoPayload, PolkadotNetworkInfo } from '../polkadotTypes'
+import {
+  asPolkadotInfoPayload,
+  PolkadotInfoPayload,
+  PolkadotNetworkInfo
+} from '../polkadotTypes'
 
 const networkInfo: PolkadotNetworkInfo = {
   rpcNodes: ['wss://rpc.polkadot.io'],
@@ -35,9 +39,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: []
 }
 
-export const polkadot = makeOuterPlugin<PolkadotNetworkInfo, PolkadotTools>({
+export const polkadot = makeOuterPlugin<
+  PolkadotNetworkInfo,
+  PolkadotTools,
+  PolkadotInfoPayload
+>({
   currencyInfo,
-  infoPayloadCleaner: asPolkadotInfoPayload,
+  asInfoPayload: asPolkadotInfoPayload,
   networkInfo,
 
   checkEnvironment: () => {

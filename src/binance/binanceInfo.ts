@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { BinanceTools } from './BinanceTools'
-import { asBinanceInfoPayload, BinanceNetworkInfo } from './binanceTypes'
+import {
+  asBinanceInfoPayload,
+  BinanceInfoPayload,
+  BinanceNetworkInfo
+} from './binanceTypes'
 
 const networkInfo: BinanceNetworkInfo = {
   binanceApiServers: [
@@ -37,9 +41,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 128 }]
 }
 
-export const binance = makeOuterPlugin<BinanceNetworkInfo, BinanceTools>({
+export const binance = makeOuterPlugin<
+  BinanceNetworkInfo,
+  BinanceTools,
+  BinanceInfoPayload
+>({
   currencyInfo,
-  infoPayloadCleaner: asBinanceInfoPayload,
+  asInfoPayload: asBinanceInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

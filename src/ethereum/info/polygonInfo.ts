@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import {
@@ -155,7 +156,7 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 // Fees are in Wei
-const defaultNetworkFees: EthereumFees = {
+const networkFees: EthereumFees = {
   default: {
     baseFee: undefined,
     baseFeeMultiplier: undefined,
@@ -209,7 +210,7 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
   ethGasStationUrl: 'https://gasstation-mainnet.matic.network/',
-  defaultNetworkFees
+  networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -244,10 +245,14 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const polygon = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
+export const polygon = makeOuterPlugin<
+  EthereumNetworkInfo,
+  EthereumTools,
+  EthereumInfoPayload
+>({
   builtinTokens,
   currencyInfo,
-  infoPayloadCleaner: asEthereumInfoPayload,
+  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
 
   async getInnerPlugin() {

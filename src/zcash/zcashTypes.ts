@@ -39,16 +39,6 @@ export interface ZcashNetworkInfo {
   defaultNetworkFee: string
 }
 
-export const asZcashInfoPayload = asObject({
-  rpcNode: asOptional(
-    asObject({
-      networkName: asValue('mainnet', 'testnet'),
-      defaultHost: asString,
-      defaultPort: asNumber
-    })
-  )
-})
-
 export const asZcashWalletOtherData = asObject({
   cachedAddress: asMaybe(asString),
   missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),
@@ -118,3 +108,18 @@ export const asZcashPrivateKeys = (
     }
   )
 }
+
+//
+// Info Payload
+//
+
+export const asZcashInfoPayload = asObject({
+  rpcNode: asOptional(
+    asObject({
+      networkName: asValue('mainnet', 'testnet'),
+      defaultHost: asString,
+      defaultPort: asNumber
+    })
+  )
+})
+export type ZcashInfoPayload = ReturnType<typeof asZcashInfoPayload>

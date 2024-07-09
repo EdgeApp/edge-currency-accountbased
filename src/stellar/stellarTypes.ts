@@ -14,10 +14,6 @@ export interface StellarNetworkInfo {
   stellarServers: string[]
 }
 
-export const asStellarInfoPayload = asObject({
-  stellarServers: asOptional(asArray(asString))
-})
-
 export interface StellarBalance {
   balance: string
   buying_liabilities: string
@@ -105,3 +101,12 @@ export const asStellarPrivateKeys = asObject({
   stellarKey: asString,
   stellarMnemonic: asMaybe(asString)
 })
+
+//
+// Info Payload
+//
+
+export const asStellarInfoPayload = asObject({
+  stellarServers: asOptional(asArray(asString))
+})
+export type StellarInfoPayload = ReturnType<typeof asStellarInfoPayload>

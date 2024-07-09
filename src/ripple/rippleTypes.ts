@@ -19,10 +19,6 @@ export interface XrpNetworkInfo {
   baseReservePerToken: string
 }
 
-export const asXrpInfoPayload = asObject({
-  rippledServers: asOptional(asArray(asString))
-})
-
 export interface XrpCustomToken {
   currencyCode: string
   currencyName: string
@@ -85,3 +81,12 @@ export const asFinalFieldsCanceledOffer = asObject({
   TakerGets: asAmount
   // Add other fields that might appear in `FinalFields` as needed
 })
+
+//
+// Info Payload
+//
+
+export const asXrpInfoPayload = asObject({
+  rippledServers: asOptional(asArray(asString))
+})
+export type XrpInfoPayload = ReturnType<typeof asXrpInfoPayload>

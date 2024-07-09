@@ -20,12 +20,6 @@ export interface CardanoNetworkInfo {
   maestroServer: string
 }
 
-export const asCardanoInfoPayload = asObject({
-  koiosServer: asOptional(asString),
-  blockfrostServer: asOptional(asString),
-  maestroServer: asOptional(asString)
-})
-
 export type SafeCardanoWalletInfo = ReturnType<typeof asSafeCardanoWalletInfo>
 export const asSafeCardanoWalletInfo = asWalletInfo(
   asObject({
@@ -266,3 +260,14 @@ export const asCardanoInitOptions = asObject({
   maestroApiKey: asOptional(asString)
 })
 export type CardanoInitOptions = ReturnType<typeof asCardanoInitOptions>
+
+//
+// Info Payload
+//
+
+export const asCardanoInfoPayload = asObject({
+  koiosServer: asOptional(asString),
+  blockfrostServer: asOptional(asString),
+  maestroServer: asOptional(asString)
+})
+export type CardanoInfoPayload = ReturnType<typeof asCardanoInfoPayload>

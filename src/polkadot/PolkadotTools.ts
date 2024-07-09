@@ -19,10 +19,11 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination, isHex } from '../common/utils'
+import { getLegacyDenomination, isHex, mergeDeeply } from '../common/utils'
 import {
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
+  PolkadotInfoPayload,
   PolkadotNetworkInfo
 } from './polkadotTypes'
 
@@ -186,6 +187,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<PolkadotNetworkInfo>
 ): Promise<PolkadotTools> {
   return new PolkadotTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<PolkadotNetworkInfo>,
+  infoPayload: PolkadotInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './PolkadotEngine'

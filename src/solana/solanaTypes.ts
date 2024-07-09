@@ -23,11 +23,6 @@ export interface SolanaNetworkInfo {
   associatedTokenPublicKey: string
 }
 
-export const asSolanaInfoPayload = asObject({
-  rpcNodes: asOptional(asArray(asString)),
-  rpcNodesArchival: asOptional(asArray(asString))
-})
-
 export const asSolanaWalletOtherData = asObject({
   newestTxid: asMaybe(asObject(asString), () => ({}))
 })
@@ -124,3 +119,13 @@ export const asSolanaTxOtherParams = asObject({
 })
 
 export const wasSolanaTxOtherParams = uncleaner(asSolanaTxOtherParams)
+
+//
+// Info Payload
+//
+
+export const asSolanaInfoPayload = asObject({
+  rpcNodes: asOptional(asArray(asString)),
+  rpcNodesArchival: asOptional(asArray(asString))
+})
+export type SolanaInfoPayload = ReturnType<typeof asSolanaInfoPayload>

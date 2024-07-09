@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
-import { asCosmosInfoPayload, CosmosNetworkInfo } from '../cosmosTypes'
+import {
+  asCosmosInfoPayload,
+  CosmosInfoPayload,
+  CosmosNetworkInfo
+} from '../cosmosTypes'
 
 const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'axelar',
@@ -45,9 +49,13 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }]
 }
 
-export const axelar = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
+export const axelar = makeOuterPlugin<
+  CosmosNetworkInfo,
+  CosmosTools,
+  CosmosInfoPayload
+>({
   currencyInfo,
-  infoPayloadCleaner: asCosmosInfoPayload,
+  asInfoPayload: asCosmosInfoPayload,
   networkInfo,
 
   checkEnvironment() {
