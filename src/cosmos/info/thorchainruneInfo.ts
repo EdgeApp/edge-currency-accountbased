@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
-import { asCosmosInfoPayload, CosmosNetworkInfo } from '../cosmosTypes'
+import {
+  asCosmosInfoPayload,
+  CosmosInfoPayload,
+  CosmosNetworkInfo
+} from '../cosmosTypes'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
 const networkInfo: CosmosNetworkInfo = {
@@ -50,7 +54,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }]
 }
 
-export const thorchainrune = makeOuterPlugin<CosmosNetworkInfo, CosmosTools>({
+export const thorchainrune = makeOuterPlugin<
+  CosmosNetworkInfo,
+  CosmosTools,
+  CosmosInfoPayload
+>({
   currencyInfo,
   asInfoPayload: asCosmosInfoPayload,
   networkInfo,

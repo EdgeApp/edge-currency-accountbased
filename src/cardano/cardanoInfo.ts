@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { CardanoTools } from './CardanoTools'
-import { asCardanoInfoPayload, CardanoNetworkInfo } from './cardanoTypes'
+import {
+  asCardanoInfoPayload,
+  CardanoInfoPayload,
+  CardanoNetworkInfo
+} from './cardanoTypes'
 
 const networkInfo: CardanoNetworkInfo = {
   networkId: 1,
@@ -29,7 +33,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const cardano = makeOuterPlugin<CardanoNetworkInfo, CardanoTools>({
+export const cardano = makeOuterPlugin<
+  CardanoNetworkInfo,
+  CardanoTools,
+  CardanoInfoPayload
+>({
   currencyInfo,
   asInfoPayload: asCardanoInfoPayload,
   networkInfo,

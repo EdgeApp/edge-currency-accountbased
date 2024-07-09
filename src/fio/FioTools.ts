@@ -21,6 +21,7 @@ import {
   asyncWaterfall,
   getFetchCors,
   getLegacyDenomination,
+  mergeDeeply,
   safeErrorMessage,
   shuffleArray
 } from '../common/utils'
@@ -29,6 +30,7 @@ import { fioApiErrorCodes, FioError } from './fioError'
 import {
   asFioPrivateKeys,
   asSafeFioWalletInfo,
+  FioInfoPayload,
   FioNetworkInfo
 } from './fioTypes'
 
@@ -564,6 +566,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<FioNetworkInfo>
 ): Promise<FioTools> {
   return new FioTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<FioNetworkInfo>,
+  infoPayload: FioInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './FioEngine'

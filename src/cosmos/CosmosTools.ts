@@ -23,12 +23,13 @@ import { base16 } from 'rfc4648'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
   CosmosClients,
+  CosmosInfoPayload,
   CosmosMethods,
   CosmosNetworkInfo
 } from './cosmosTypes'
@@ -260,6 +261,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<CosmosNetworkInfo>
 ): Promise<CosmosTools> {
   return new CosmosTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<CosmosNetworkInfo>,
+  infoPayload: CosmosInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './CosmosEngine'

@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo,
   ethOtherMethodNames
 } from '../ethereumTypes'
@@ -1210,10 +1211,14 @@ export const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const ethereum = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>({
+export const ethereum = makeOuterPlugin<
+  EthereumNetworkInfo,
+  EthereumTools,
+  EthereumInfoPayload
+>({
+  asInfoPayload: asEthereumInfoPayload,
   builtinTokens,
   currencyInfo,
-  asInfoPayload: asEthereumInfoPayload,
   networkInfo,
   otherMethodNames: ethOtherMethodNames,
 

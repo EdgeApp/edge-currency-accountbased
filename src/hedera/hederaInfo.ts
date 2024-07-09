@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { HederaTools } from './HederaTools'
-import { asHederaInfoPayload, HederaNetworkInfo } from './hederaTypes'
+import {
+  asHederaInfoPayload,
+  HederaInfoPayload,
+  HederaNetworkInfo
+} from './hederaTypes'
 
 const networkInfo: HederaNetworkInfo = {
   mirrorNodes: ['https://mainnet-public.mirrornode.hedera.com'],
@@ -39,7 +43,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 100 }]
 }
 
-export const hedera = makeOuterPlugin<HederaNetworkInfo, HederaTools>({
+export const hedera = makeOuterPlugin<
+  HederaNetworkInfo,
+  HederaTools,
+  HederaInfoPayload
+>({
   currencyInfo,
   asInfoPayload: asHederaInfoPayload,
   networkInfo,

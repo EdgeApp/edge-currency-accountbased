@@ -103,10 +103,6 @@ const asNetworkAdaptorConfig = asObject({
   ethBalCheckerContract: asOptional(asString)
 })
 
-export const asEthereumInfoPayload = asObject({
-  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
-})
-
 /**
  * Other Methods from EthereumTools
  */
@@ -539,3 +535,12 @@ export const asMaybeEvmOverrideGasLimitLocation = asMaybe(
     overrideGasLimit: asIntegerString
   })
 )
+
+//
+// Info Payload
+//
+
+export const asEthereumInfoPayload = asObject({
+  networkAdapterConfigs: asOptional(asArray(asNetworkAdaptorConfig))
+})
+export type EthereumInfoPayload = ReturnType<typeof asEthereumInfoPayload>

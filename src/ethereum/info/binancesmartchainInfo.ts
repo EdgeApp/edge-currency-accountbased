@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import {
@@ -193,7 +194,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const binancesmartchain = makeOuterPlugin<
   EthereumNetworkInfo,
-  EthereumTools
+  EthereumTools,
+  EthereumInfoPayload
 >({
   builtinTokens,
   currencyInfo,

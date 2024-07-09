@@ -17,11 +17,12 @@ import { Tools as ToolsType } from 'react-native-piratechain'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,
   asSafePiratechainWalletInfo,
+  PiratechainInfoPayload,
   PiratechainNetworkInfo
 } from './piratechainTypes'
 
@@ -210,6 +211,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<PiratechainNetworkInfo>
 ): Promise<PiratechainTools> {
   return new PiratechainTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<PiratechainNetworkInfo>,
+  infoPayload: PiratechainInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './PiratechainEngine'

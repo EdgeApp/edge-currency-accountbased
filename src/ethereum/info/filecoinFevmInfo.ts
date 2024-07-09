@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
@@ -134,15 +135,17 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const filecoinfevm = makeOuterPlugin<EthereumNetworkInfo, EthereumTools>(
-  {
-    builtinTokens,
-    currencyInfo,
-    asInfoPayload: asEthereumInfoPayload,
-    networkInfo,
+export const filecoinfevm = makeOuterPlugin<
+  EthereumNetworkInfo,
+  EthereumTools,
+  EthereumInfoPayload
+>({
+  builtinTokens,
+  currencyInfo,
+  asInfoPayload: asEthereumInfoPayload,
+  networkInfo,
 
-    async getInnerPlugin() {
-      return await import('../EthereumTools')
-    }
+  async getInnerPlugin() {
+    return await import('../EthereumTools')
   }
-)
+})

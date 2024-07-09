@@ -16,8 +16,9 @@ import {
 import { PluginEnvironment } from '../common/innerPlugin'
 import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
+  AlgorandInfoPayload,
   AlgorandNetworkInfo,
   asAlgorandPrivateKeys,
   asMaybeContractAddressLocation,
@@ -153,6 +154,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<AlgorandNetworkInfo>
 ): Promise<AlgorandTools> {
   return new AlgorandTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<AlgorandNetworkInfo>,
+  infoPayload: AlgorandInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './AlgorandEngine'

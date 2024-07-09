@@ -18,11 +18,12 @@ import { Tools as ToolsType } from 'react-native-zcash'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeZcashWalletInfo,
   asZcashPrivateKeys,
   asZecPublicKey,
+  ZcashInfoPayload,
   ZcashNetworkInfo
 } from './zcashTypes'
 
@@ -210,6 +211,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<ZcashNetworkInfo>
 ): Promise<ZcashTools> {
   return new ZcashTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<ZcashNetworkInfo>,
+  infoPayload: ZcashInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './ZcashEngine'

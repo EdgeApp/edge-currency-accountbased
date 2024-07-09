@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { StellarTools } from './StellarTools'
-import { asStellarInfoPayload, StellarNetworkInfo } from './stellarTypes'
+import {
+  asStellarInfoPayload,
+  StellarInfoPayload,
+  StellarNetworkInfo
+} from './stellarTypes'
 
 const networkInfo: StellarNetworkInfo = {
   baseReserve: '10000000',
@@ -37,7 +41,11 @@ const currencyInfo: EdgeCurrencyInfo = {
   multipleMemos: true
 }
 
-export const stellar = makeOuterPlugin<StellarNetworkInfo, StellarTools>({
+export const stellar = makeOuterPlugin<
+  StellarNetworkInfo,
+  StellarTools,
+  StellarInfoPayload
+>({
   currencyInfo,
   asInfoPayload: asStellarInfoPayload,
   networkInfo,

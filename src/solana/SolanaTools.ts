@@ -25,11 +25,12 @@ import { base16 } from 'rfc4648'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeSolanaWalletInfo,
   asSolanaInitOptions,
   asSolanaPrivateKeys,
+  SolanaInfoPayload,
   SolanaInitOptions,
   SolanaNetworkInfo
 } from './solanaTypes'
@@ -235,6 +236,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<SolanaNetworkInfo>
 ): Promise<SolanaTools> {
   return new SolanaTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<SolanaNetworkInfo>,
+  infoPayload: SolanaInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './SolanaEngine'

@@ -83,10 +83,6 @@ const asHttpEndpoint = asObject({
   url: asString,
   headers: asObject({ asString })
 })
-export const asCosmosInfoPayload = asObject({
-  rpcNode: asOptional(asHttpEndpoint),
-  archiveNode: asOptional(asHttpEndpoint)
-})
 
 export const txQueryStrings = [
   `coin_spent.spender`,
@@ -269,3 +265,13 @@ export interface IbcChannel {
   channel: string
   port: string
 }
+
+//
+// Info Payload
+//
+
+export const asCosmosInfoPayload = asObject({
+  rpcNode: asOptional(asHttpEndpoint),
+  archiveNode: asOptional(asHttpEndpoint)
+})
+export type CosmosInfoPayload = ReturnType<typeof asCosmosInfoPayload>

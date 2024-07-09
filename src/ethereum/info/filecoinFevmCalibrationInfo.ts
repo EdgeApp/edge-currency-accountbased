@@ -6,6 +6,7 @@ import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
   EthereumFees,
+  EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
 import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
@@ -136,7 +137,8 @@ const currencyInfo: EdgeCurrencyInfo = {
 
 export const filecoinfevmcalibration = makeOuterPlugin<
   EthereumNetworkInfo,
-  EthereumTools
+  EthereumTools,
+  EthereumInfoPayload
 >({
   builtinTokens,
   currencyInfo,

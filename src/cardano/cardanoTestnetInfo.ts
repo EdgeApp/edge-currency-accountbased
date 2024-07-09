@@ -2,7 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../common/innerPlugin'
 import type { CardanoTools } from './CardanoTools'
-import { asCardanoInfoPayload, CardanoNetworkInfo } from './cardanoTypes'
+import {
+  asCardanoInfoPayload,
+  CardanoInfoPayload,
+  CardanoNetworkInfo
+} from './cardanoTypes'
 
 const networkInfo: CardanoNetworkInfo = {
   networkId: 0,
@@ -29,20 +33,22 @@ const currencyInfo: EdgeCurrencyInfo = {
   ]
 }
 
-export const cardanotestnet = makeOuterPlugin<CardanoNetworkInfo, CardanoTools>(
-  {
-    currencyInfo,
-    asInfoPayload: asCardanoInfoPayload,
-    networkInfo,
+export const cardanotestnet = makeOuterPlugin<
+  CardanoNetworkInfo,
+  CardanoTools,
+  CardanoInfoPayload
+>({
+  currencyInfo,
+  asInfoPayload: asCardanoInfoPayload,
+  networkInfo,
 
-    checkEnvironment: () => {
-      if (global.BigInt == null) {
-        throw new Error('Cardano Testnet requires bigint support')
-      }
-    },
-
-    async getInnerPlugin() {
-      return await import('./CardanoTools')
+  checkEnvironment: () => {
+    if (global.BigInt == null) {
+      throw new Error('Cardano Testnet requires bigint support')
     }
+  },
+
+  async getInnerPlugin() {
+    return await import('./CardanoTools')
   }
-)
+})

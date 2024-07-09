@@ -15,10 +15,11 @@ import {
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asBnbPrivateKey,
   asSafeBnbWalletInfo,
+  BinanceInfoPayload,
   BinanceNetworkInfo
 } from './binanceTypes'
 
@@ -150,6 +151,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<BinanceNetworkInfo>
 ): Promise<BinanceTools> {
   return new BinanceTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<BinanceNetworkInfo>,
+  infoPayload: BinanceInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './BinanceEngine'

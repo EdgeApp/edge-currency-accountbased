@@ -5,6 +5,7 @@ import { fioRegApiErrorCodes } from './fioError'
 import type { FioTools } from './FioTools'
 import {
   asFioInfoPayload,
+  FioInfoPayload,
   FioNetworkInfo,
   fioOtherMethodNames
 } from './fioTypes'
@@ -78,7 +79,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   }
 }
 
-export const fio = makeOuterPlugin<FioNetworkInfo, FioTools>({
+export const fio = makeOuterPlugin<FioNetworkInfo, FioTools, FioInfoPayload>({
   currencyInfo,
   asInfoPayload: asFioInfoPayload,
   networkInfo,

@@ -20,11 +20,12 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { parsePixKey } from '../common/smartPay'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
-import { getLegacyDenomination } from '../common/utils'
+import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeTronWalletInfo,
   asTronInitOptions,
   asTronPrivateKeys,
+  TronInfoPayload,
   TronInitOptions,
   TronKeys,
   TronNetworkInfo
@@ -205,6 +206,17 @@ export async function makeCurrencyTools(
   env: PluginEnvironment<TronNetworkInfo>
 ): Promise<TronTools> {
   return new TronTools(env)
+}
+
+export async function updateInfoPayload(
+  env: PluginEnvironment<TronNetworkInfo>,
+  infoPayload: TronInfoPayload
+): Promise<void> {
+  // In the future, other fields might not be "network info" fields
+  const { ...networkInfo } = infoPayload
+
+  // Update plugin NetworkInfo:
+  env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
 export { makeCurrencyEngine } from './TronEngine'
