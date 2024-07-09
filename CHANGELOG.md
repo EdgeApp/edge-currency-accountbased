@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.11.1 (2024-07-08)
+
 changed: Upgrade @polkadot/api to v12.1.1
 
 ## 4.11.0 (2024-07-03)
