@@ -27,7 +27,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:zcash',
 
   // Explorers:
-  addressExplorer: 'https://zcashblockexplorer.com/ua/%s',
+  addressExplorer: 'https://blockchair.com/zcash/address/%s?from=edgeapp',
   transactionExplorer:
     'https://blockchair.com/zcash/transaction/%s?from=edgeapp',
 
