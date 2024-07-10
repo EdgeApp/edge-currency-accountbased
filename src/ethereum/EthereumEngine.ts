@@ -88,6 +88,7 @@ import {
   FeeProviders,
   printFees
 } from './fees/feeProviders'
+import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
@@ -865,7 +866,9 @@ export class EthereumEngine extends CurrencyEngine<
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
         const rpcServers = this.ethNetwork.networkAdapters
-          .filter(adapter => adapter.config.type === 'rpc')
+          .filter(
+            (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
+          )
           .map(adapter => adapter.config.servers)
           .flat()
         const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
@@ -1094,7 +1097,9 @@ export class EthereumEngine extends CurrencyEngine<
       l1Fee = calcOptimismRollupFees(txData)
     } else if (this.networkInfo.arbitrumRollupParams != null) {
       const rpcServers = this.ethNetwork.networkAdapters
-        .filter(adapter => adapter.config.type === 'rpc')
+        .filter(
+          (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
+        )
         .map(adapter => adapter.config.servers)
         .flat()
       const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
