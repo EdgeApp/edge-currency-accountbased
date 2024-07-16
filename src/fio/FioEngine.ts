@@ -1,6 +1,7 @@
 import { FIOSDK } from '@fioprotocol/fiosdk'
 import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
+import { GetEncryptKeyResponse } from '@fioprotocol/fiosdk/lib/entities/GetEncryptKeyResponse'
 import {
   GetObtData,
   PendingFioRequests,
@@ -8,6 +9,7 @@ import {
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
 import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
+import AbortController from 'abort-controller'
 import { add, div, gt, lt, lte, max, mul, sub } from 'biggystring'
 import { asMaybe, asString, asTuple } from 'cleaners'
 import {
@@ -66,8 +68,9 @@ import {
 import { fioApiErrorCodes, FioError } from './fioError'
 import {
   asFioHistoryNodeAction,
+  asGetFioAddress,
   asGetFioBalanceResponse,
-  asGetFioName,
+  asGetFioDomains,
   asHistoryResponse,
   FioHistoryNodeAction,
   FioTxName
@@ -630,13 +633,20 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         case 'getPendingFioRequests':
         case 'getSentFioRequests': {
           const { endpoint, body } = params
-          res = await fioSdk.transactions.executeCall(
-            endpoint,
-            JSON.stringify(body)
-          )
+          res = await fioSdk.transactions.executeCall({
+            baseUrl: apiUrl,
+            endPoint: endpoint,
+            body: JSON.stringify(body),
+            signal: new AbortController().signal
+          })
           break
         }
         case 'getCurrencyBalance': {
+          // This is a fallback query for this chain bug
+          // https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/852688908/2024-02-07+Token+Locking+Issue+on+Unstake
+          // Only the balance of the wallet will be returned and staked amounts
+          // will appear as zero until the account is corrected. This can be
+          // removed once all affected accounts are fixed.
           const currencyBalRes = await this.fetchCors(
             `${apiUrl}chain/get_currency_balance`,
             {
@@ -793,6 +803,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         res = { fio_domains: [], fio_addresses: [] }
       }
     } else if (actionName === 'getCurrencyBalance') {
+      // This is a fallback query for this chain bug
+      // https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/852688908/2024-02-07+Token+Locking+Issue+on+Unstake
+      // Only the balance of the wallet will be returned and staked amounts will
+      // appear as zero until the account is corrected. This can be removed once
+      // all affected accounts are fixed.
       res = await promiseNy(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
@@ -944,16 +959,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     // Fio Addresses
+    let isChanged = false
     try {
-      const result = asGetFioName(
-        await this.multicastServers('getFioNames', {
+      const result = asGetFioAddress(
+        await this.multicastServers('getFioAddresses', {
           fioPublicKey: this.walletInfo.keys.publicKey
         })
       )
-
-      let isChanged = false
       let areAddressesChanged = false
-      let areDomainsChanged = false
 
       // check addresses
       if (result.fio_addresses.length !== this.otherData.fioAddresses.length) {
@@ -990,9 +1003,30 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             }
           }
         }
-      }
 
-      // check domains
+        if (areAddressesChanged) {
+          isChanged = true
+          this.otherData.fioAddresses = result.fio_addresses.map(
+            fioAddress => ({
+              name: fioAddress.fio_address,
+              bundledTxs: fioAddress.remaining_bundled_tx
+            })
+          )
+        }
+      }
+    } catch (e: any) {
+      this.warn('checkAccountInnerLoop getFioAddresses error: ', e)
+    }
+
+    try {
+      // Check domains
+      const result = asGetFioDomains(
+        await this.multicastServers('getFioDomains', {
+          fioPublicKey: this.walletInfo.keys.publicKey
+        })
+      )
+      let areDomainsChanged = false
+
       if (result.fio_domains.length !== this.otherData.fioDomains.length) {
         areDomainsChanged = true
       } else {
@@ -1030,14 +1064,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         }
       }
 
-      if (areAddressesChanged) {
-        isChanged = true
-        this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
-          name: fioAddress.fio_address,
-          bundledTxs: fioAddress.remaining_bundled_tx
-        }))
-      }
-
       if (areDomainsChanged) {
         isChanged = true
         this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
@@ -1046,11 +1072,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           isPublic: fioDomain.is_public === 1
         }))
       }
-
-      if (isChanged) this.localDataDirty()
     } catch (e: any) {
       this.warn('checkAccountInnerLoop getFioNames error: ', e)
     }
+
+    if (isChanged) this.localDataDirty()
   }
 
   async fetchEncryptedFioRequests(
@@ -1180,6 +1206,19 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const fioPrivateKeys = asFioPrivateKeys(opts?.privateKeys)
     let isChanged = false
 
+    // TODO: v1.9 of the FIO sdk introduced a getEncyptKey prop to their
+    // checkFioRequests fn, though the SDK can still function without it.
+    // Whenever they require it or provide more information about what it even
+    // is, we should implement it.
+    const defaultGetEncryptKey = async (
+      fioAddress: string
+    ): Promise<GetEncryptKeyResponse> => {
+      // Provide a default response or handle the fallback logic here
+      return {
+        encrypt_public_key: this.walletInfo.keys.publicKey // Use the public key as a fallback
+      }
+    }
+
     const checkFioRequests = async (
       type: FioRequestTypes,
       decoder: Query<PendingFioRequests | SentFioRequests>
@@ -1187,33 +1226,43 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       const encryptedReqs = await this.fetchEncryptedFioRequests(type, decoder)
       decoder.privateKey = fioPrivateKeys.fioKey
       decoder.publicKey = this.walletInfo.keys.publicKey
-      const decryptedReqs: { requests: FioRequest[] } = decoder.decrypt({
-        requests: encryptedReqs
-      }) ?? { requests: [] }
+
+      const decryptedRequestRes: { requests: FioRequest[] } =
+        (await decoder.decrypt({
+          requests: encryptedReqs
+        })) ?? { requests: [] }
+      const { requests } = decryptedRequestRes
 
       if (
-        this.fioRequestsListChanged(
-          this.otherData.fioRequests[type],
-          decryptedReqs.requests
-        )
+        this.fioRequestsListChanged(this.otherData.fioRequests[type], requests)
       ) {
-        this.otherData.fioRequests[type] = [...decryptedReqs.requests]
+        this.otherData.fioRequests[type] = [...requests]
         isChanged = true
       }
     }
 
     await checkFioRequests(
       'PENDING',
-      new PendingFioRequests(this.walletInfo.keys.publicKey)
+      new PendingFioRequests({
+        fioPublicKey: this.walletInfo.keys.publicKey,
+        getEncryptKey: defaultGetEncryptKey
+      })
     )
     await checkFioRequests(
       'SENT',
-      new SentFioRequests(this.walletInfo.keys.publicKey)
+      new SentFioRequests({
+        fioPublicKey: this.walletInfo.keys.publicKey,
+        getEncryptKey: defaultGetEncryptKey
+      })
     )
 
     if (isChanged) this.localDataDirty()
 
-    const obtDecoder = new GetObtData(this.walletInfo.keys.publicKey)
+    const obtDecoder = new GetObtData({
+      fioPublicKey: this.walletInfo.keys.publicKey,
+      getEncryptKey: defaultGetEncryptKey,
+      includeEncrypted: false
+    })
     const encryptedObtData = await this.fetchEncryptedObtData(
       'getObtData',
       obtDecoder
@@ -1221,9 +1270,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     obtDecoder.privateKey = fioPrivateKeys.fioKey
     obtDecoder.publicKey = this.walletInfo.keys.publicKey
     const decryptedObtData: { obt_data_records: ObtData[] } =
-      obtDecoder.decrypt({
-        obt_data_records: encryptedObtData
-      }) ?? { obt_data_records: [] }
+      (await obtDecoder.decrypt({
+        obt_data_records: encryptedObtData,
+        more: 0
+      })) ?? { obt_data_records: [] }
 
     this.obtData = decryptedObtData.obt_data_records
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: FIO SDK upgraded to v1.9.2
+- changed: `getFioNames` call changed to separate `getFioAddresses` and `getFioDomains` calls
+
 ## 4.12.2 (2024-07-15)
 
 - fixed: FIO payment wallet connection error, using a temporary workaround while FIO resolves the issue with their network
