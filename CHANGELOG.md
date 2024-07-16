@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix incorrect QR code parsing for PIX addresses
+
 ## 4.11.1 (2024-07-08)
 
 changed: Upgrade @polkadot/api to v12.1.1

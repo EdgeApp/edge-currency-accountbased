@@ -4,6 +4,7 @@ import { EdgeIo, EdgeParsedUri, EdgeTokenMap } from 'edge-core-js/types'
 
 import { cleanMultiFetch, makeQueryParams, QueryParams } from './network'
 import { computeCRC, formatPixKey } from './pixkey'
+import { asNumberString } from './types'
 import { getFetchCors } from './utils'
 
 const MAX_TIMEOUT_S = 60 * 60 * 24 * 7
@@ -13,10 +14,10 @@ const asSmartPayQrDecode = asEither(
     status: asValue('ok'),
     msg: asString,
     data: asObject({
-      amount: asString,
+      amount: asNumberString,
       name: asString,
       key: asString,
-      timeout: asString
+      timeout: asNumberString
     })
   }),
   asObject({

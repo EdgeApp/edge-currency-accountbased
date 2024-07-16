@@ -35,6 +35,11 @@ export const asErrorMessage = asObject({
   message: asString
 })
 
+export const asNumberString = (raw: any): string => {
+  const n = asEither(asString, asNumber)(raw)
+  return n.toString()
+}
+
 export interface BooleanMap {
   readonly [key: string]: boolean
 }
