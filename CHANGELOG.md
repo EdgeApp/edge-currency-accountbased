@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.13.0 (2024-07-16)
+
 - changed: FIO SDK upgraded to v1.9.2
 - changed: `getFioNames` call changed to separate `getFioAddresses` and `getFioDomains` calls
 
