@@ -130,7 +130,7 @@ export class TronTools implements EdgeCurrencyTools {
     currencyCode?: string,
     customTokens?: EdgeMetaToken[]
   ): Promise<EdgeParsedUri> {
-    const networks = { [this.currencyInfo.pluginId]: true }
+    const networks = { [this.currencyInfo.pluginId]: true, 'usdt-trc20': true }
     const { smartPayPublicAddress, smartPayUserId } = this.initOptions
 
     const { parsedUri, edgeParsedUri } = parseUriCommon(
@@ -141,6 +141,9 @@ export class TronTools implements EdgeCurrencyTools {
       currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
     )
+    if (parsedUri.protocol === 'usdt-trc20') {
+      edgeParsedUri.currencyCode = 'USDT'
+    }
     const address = edgeParsedUri.publicAddress ?? ''
 
     if (isAddressValid(address)) {
