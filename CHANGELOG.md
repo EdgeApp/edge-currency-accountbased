@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix incorrect QR code parsing for PIX addresses
+
 ## 4.12.0 (2024-07-09)
 
 - added: Implemented common `updateInfoPayload` method for all plugins
