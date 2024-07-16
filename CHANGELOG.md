@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.12.2 (2024-07-15)
+
 - fixed: FIO payment wallet connection error, using a temporary workaround while FIO resolves the issue with their network
 
 ## 4.12.1 (2024-07-15)
