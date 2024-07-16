@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.12.1 (2024-07-15)
+
 - fixed: Fix incorrect QR code parsing for PIX addresses
 
 ## 4.12.0 (2024-07-09)
