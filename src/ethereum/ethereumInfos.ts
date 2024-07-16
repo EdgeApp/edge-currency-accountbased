@@ -12,6 +12,7 @@ import { fantom } from './info/fantomInfo'
 import { filecoinfevmcalibration } from './info/filecoinFevmCalibrationInfo'
 import { filecoinfevm } from './info/filecoinFevmInfo'
 import { goerli } from './info/goerliInfo'
+import { holesky } from './info/holeskyInfo'
 import { kovan } from './info/kovanInfo'
 import { mumbai } from './info/mumbaiInfo'
 import { optimism } from './info/optimismInfo'
@@ -37,6 +38,7 @@ export const ethereumPlugins = {
   filecoinfevm,
   filecoinfevmcalibration,
   goerli,
+  holesky,
   kovan,
   mumbai,
   optimism,
