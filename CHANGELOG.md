@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: FIO payment wallet connection error, using a temporary workaround while FIO resolves the issue with their network
+
 ## 4.12.1 (2024-07-15)
 
 - fixed: Fix incorrect QR code parsing for PIX addresses

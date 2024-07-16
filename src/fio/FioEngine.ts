@@ -8,7 +8,7 @@ import {
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
 import { Query } from '@fioprotocol/fiosdk/lib/transactions/queries/Query'
 import { Transactions } from '@fioprotocol/fiosdk/lib/transactions/Transactions'
-import { add, div, gt, lt, max, mul, sub } from 'biggystring'
+import { add, div, gt, lt, lte, max, mul, sub } from 'biggystring'
 import { asMaybe, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
@@ -1697,10 +1697,20 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
     }
 
+    // Remove tpid as a temporary fix for bundled tx's not working when the user
+    // has no FIO balance or txs, until FIO fixes their chain
+    // TODO: Remove once FIO fixes their chain
+    const balance = await this.getBalance({ tokenId: null })
+    const tpid =
+      lte(balance, '0') &&
+      !this.transactionList.FIO.some(tx => gt(tx.nativeAmount, '0'))
+        ? undefined
+        : this.tpid
+
     const rawTx = await transactions.createRawTransaction({
       action: txParams.action,
       account: txParams.account,
-      data: { ...txParams.data, tpid: this.tpid },
+      data: { ...txParams.data, tpid },
       publicKey: this.walletInfo.keys.publicKey,
       chainData: this.refBlock
     })
