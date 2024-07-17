@@ -23,27 +23,29 @@ import {
 import type { NetworkAdapterConfig } from './networkAdapters/types'
 
 export interface EthereumInitOptions {
+  alchemyApiKey?: string
+  amberdataApiKey?: string
+  blockchairApiKey?: string
   blockcypherApiKey?: string
   evmScanApiKey?: string | string[]
-  infuraProjectId?: string
-  blockchairApiKey?: string
-  amberdataApiKey?: string
   gasStationApiKey?: string
-  quiknodeApiKey?: string
-  alchemyApiKey?: string
+  infuraProjectId?: string
+  nowNodesApiKey?: string
   poktPortalApiKey?: string
+  quiknodeApiKey?: string
 }
 
 export const asEthereumInitOptions = asObject<EthereumInitOptions>({
-  evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
-  blockcypherApiKey: asOptional(asString),
-  infuraProjectId: asOptional(asString),
-  blockchairApiKey: asOptional(asString),
-  amberdataApiKey: asOptional(asString),
-  gasStationApiKey: asOptional(asString),
-  quiknodeApiKey: asOptional(asString),
   alchemyApiKey: asOptional(asString),
-  poktPortalApiKey: asOptional(asString)
+  amberdataApiKey: asOptional(asString),
+  blockchairApiKey: asOptional(asString),
+  blockcypherApiKey: asOptional(asString),
+  evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
+  gasStationApiKey: asOptional(asString),
+  infuraProjectId: asOptional(asString),
+  nowNodesApiKey: asOptional(asString),
+  poktPortalApiKey: asOptional(asString),
+  quiknodeApiKey: asOptional(asString)
 })
 
 function isKeyOfEthereumInitOptions(

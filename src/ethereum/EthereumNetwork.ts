@@ -2,12 +2,14 @@ import { add, div } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
+import { makePeriodicTask, PeriodicTask } from '../common/periodicTask'
+import { asyncWaterfall, normalizeAddress, promiseAny } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import { EthereumNetworkInfo } from './ethereumTypes'
 import { AmberdataAdapter } from './networkAdapters/AmberdataAdapter'
 import { BlockbookAdapter } from './networkAdapters/BlockbookAdapter'
+import { BlockbookWsAdapter } from './networkAdapters/BlockbookWsAdapter'
 import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
 import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
@@ -29,10 +31,25 @@ const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
 const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes
 
 interface EthereumNeeds {
+  /**
+   * Address network synchronization needs.
+   *
+   * This is only defined for engines with network adapters that support
+   * address synchronization through the `subscribeAddressSync` method. If this
+   * is not defined, then the engine will always pull for address data; it
+   * assume all needs are true.
+   */
+  addressSync?: {
+    needsTxids: string[]
+  }
+  // Block height
   blockHeightLastChecked: number
+  // Nonce
   nonceLastChecked: number
+  // Balances
   tokenBalsLastChecked: number
   tokenBalLastChecked: { [currencyCode: string]: number }
+  // Transactions
   tokenTxsLastChecked: { [currencyCode: string]: number }
 }
 
@@ -133,6 +150,7 @@ export class EthereumNetwork {
   ethNeeds: EthereumNeeds
   ethEngine: EthereumEngine
   walletId: string
+  needsLoopTask: PeriodicTask
   networkAdapters: NetworkAdapter[]
 
   constructor(ethEngine: EthereumEngine) {
@@ -144,8 +162,35 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
+    this.needsLoopTask = makePeriodicTask(this.needsLoop.bind(this), 1000, {
+      onError: error => {
+        this.ethEngine.log.warn('needsLoopTask error:', error)
+      }
+    })
     this.networkAdapters = this.buildNetworkAdapters(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
+  }
+
+  private setupAdapterSubscriptions(): void {
+    const handleSubscribeAddressSync = (txid?: string): void => {
+      if (this.ethNeeds.addressSync == null) {
+        this.ethNeeds.addressSync = {
+          needsTxids: []
+        }
+      } else {
+        if (txid != null) {
+          this.ethNeeds.addressSync = {
+            needsTxids: [...this.ethNeeds.addressSync.needsTxids, txid]
+          }
+        }
+      }
+    }
+    this.qualifyNetworkAdapters('subscribeAddressSync').forEach(adapter => {
+      adapter.subscribeAddressSync(
+        this.ethEngine.walletLocalData.publicKey,
+        handleSubscribeAddressSync
+      )
+    })
   }
 
   async broadcastTx(
@@ -202,8 +247,8 @@ export class EthereumNetwork {
     if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
       return this.ethEngine.currencyInfo.currencyCode
     } else {
-      for (const tk of this.ethEngine.enabledTokens) {
-        const tokenInfo = this.ethEngine.getTokenInfo(tk)
+      for (const currencyCode of this.ethEngine.enabledTokens) {
+        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
         if (tokenInfo != null) {
           const tokenContractAddress = tokenInfo.contractAddress
           if (
@@ -212,7 +257,7 @@ export class EthereumNetwork {
             tokenContractAddress.toLowerCase() ===
               txnContractAddress.toLowerCase()
           ) {
-            return tk
+            return currencyCode
           }
         }
       }
@@ -222,13 +267,13 @@ export class EthereumNetwork {
   async checkAndUpdate(
     lastChecked: number,
     pollMillisec: number,
-    preUpdateBlockHeight: number,
     checkFunc: () => Promise<EthereumNetworkUpdate>
   ): Promise<void> {
     const now = Date.now()
     if (now - lastChecked > pollMillisec) {
       try {
         const ethUpdate = await checkFunc()
+        const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
         this.processEthereumNetworkUpdate(now, ethUpdate, preUpdateBlockHeight)
       } catch (e: any) {
         this.ethEngine.error('checkAndUpdate ', e)
@@ -236,69 +281,86 @@ export class EthereumNetwork {
     }
   }
 
-  async needsLoop(): Promise<void> {
-    while (this.ethEngine.engineOn) {
-      const preUpdateBlockHeight = this.ethEngine.walletLocalData.blockHeight
-      await this.checkAndUpdate(
-        this.ethNeeds.blockHeightLastChecked,
-        BLOCKHEIGHT_POLL_MILLISECONDS,
-        preUpdateBlockHeight,
-        async () => await this.check('fetchBlockheight')
-      )
+  start(): void {
+    this.connectNetworkAdapters()
+    this.setupAdapterSubscriptions()
+    this.needsLoopTask.start()
+  }
 
-      await this.checkAndUpdate(
-        this.ethNeeds.nonceLastChecked,
-        NONCE_POLL_MILLISECONDS,
-        preUpdateBlockHeight,
-        async () => await this.check('fetchNonce')
-      )
+  stop(): void {
+    this.needsLoopTask.stop()
+    this.disconnectNetworkAdapters()
+  }
 
-      const { currencyCode } = this.ethEngine.currencyInfo
-      const currencyCodes = this.ethEngine.enabledTokens
+  needsLoop = async (): Promise<void> => {
+    await this.checkAndUpdate(
+      this.ethNeeds.blockHeightLastChecked,
+      BLOCKHEIGHT_POLL_MILLISECONDS,
+      async () => await this.check('fetchBlockheight')
+    )
 
-      if (!currencyCodes.includes(currencyCode)) {
-        currencyCodes.push(currencyCode)
-      }
+    await this.checkAndUpdate(
+      this.ethNeeds.nonceLastChecked,
+      NONCE_POLL_MILLISECONDS,
+      async () => await this.check('fetchNonce')
+    )
 
-      // The engine supports token balances batch queries if an adapter provides
-      // the functionality.
-      const isFetchTokenBalancesSupported =
-        this.networkAdapters.find(
-          adapter => adapter.fetchTokenBalances != null
-        ) != null
+    const { currencyCode } = this.ethEngine.currencyInfo
+    const currencyCodes = this.ethEngine.enabledTokens
 
+    if (!currencyCodes.includes(currencyCode)) {
+      currencyCodes.push(currencyCode)
+    }
+
+    // The engine supports token balances batch queries if an adapter provides
+    // the functionality.
+    const isFetchTokenBalancesSupported =
+      this.networkAdapters.find(
+        adapter => adapter.fetchTokenBalances != null
+      ) != null
+
+    if (
+      // Only check if the engine needs balances.
+      this.shouldCheckAndUpdateTxsOrBalances() &&
       // If this engine supports the batch token balance query, no need to check
       // each currencyCode individually.
-      if (isFetchTokenBalancesSupported) {
+      isFetchTokenBalancesSupported
+    ) {
+      await this.checkAndUpdate(
+        this.ethNeeds.tokenBalsLastChecked,
+        BAL_POLL_MILLISECONDS,
+        async () => await this.check('fetchTokenBalances')
+      )
+    }
+
+    for (const currencyCode of currencyCodes) {
+      if (
+        // Only check if the engine needs balances.
+        this.shouldCheckAndUpdateTxsOrBalances() &&
+        // Only check each code individually if this engine does not support
+        // batch token balance queries.
+        !isFetchTokenBalancesSupported
+      ) {
         await this.checkAndUpdate(
-          this.ethNeeds.tokenBalsLastChecked,
+          this.ethNeeds.tokenBalLastChecked[currencyCode] ?? 0,
           BAL_POLL_MILLISECONDS,
-          preUpdateBlockHeight,
-          async () => await this.check('fetchTokenBalances')
+          async () => await this.check('fetchTokenBalance', currencyCode)
         )
       }
 
-      for (const tk of currencyCodes) {
-        // Only check each code individually if this engine does not support
-        // batch token balance queries.
-        if (!isFetchTokenBalancesSupported) {
-          await this.checkAndUpdate(
-            this.ethNeeds.tokenBalLastChecked[tk] ?? 0,
-            BAL_POLL_MILLISECONDS,
-            preUpdateBlockHeight,
-            async () => await this.check('fetchTokenBalance', tk)
-          )
-        }
-
+      if (this.shouldCheckAndUpdateTxsOrBalances()) {
         await this.checkAndUpdate(
-          this.ethNeeds.tokenTxsLastChecked[tk] ?? 0,
+          this.ethNeeds.tokenTxsLastChecked[currencyCode] ?? 0,
           TXS_POLL_MILLISECONDS,
-          preUpdateBlockHeight,
           async (): Promise<EthereumNetworkUpdate> => {
             const lastTransactionQueryHeight =
-              this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] ?? 0
+              this.ethEngine.walletLocalData.lastTransactionQueryHeight[
+                currencyCode
+              ] ?? 0
             const lastTransactionDate =
-              this.ethEngine.walletLocalData.lastTransactionDate[tk] ?? 0
+              this.ethEngine.walletLocalData.lastTransactionDate[
+                currencyCode
+              ] ?? 0
             const params = {
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
               startBlock: Math.max(
@@ -310,7 +372,7 @@ export class EthereumNetwork {
                 lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
                 0
               ),
-              currencyCode: tk
+              currencyCode
             }
 
             // Send an empty tokenTxs network update if no network adapters
@@ -331,9 +393,19 @@ export class EthereumNetwork {
           }
         )
       }
-
-      await snooze(1000)
     }
+  }
+
+  protected shouldCheckAndUpdateTxsOrBalances(): boolean {
+    // We should check txs and balances if:
+    return (
+      // The wallet is still doing initial sync:
+      !this.ethEngine.addressesChecked ||
+      // The wallet has no push-based syndication state:
+      this.ethNeeds.addressSync == null ||
+      // The wallet has txs that need to be checked:
+      this.ethNeeds.addressSync.needsTxids.length > 0
+    )
   }
 
   processEthereumNetworkUpdate = (
@@ -388,9 +460,9 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
-      for (const tk of Object.keys(tokenBal)) {
-        this.ethNeeds.tokenBalLastChecked[tk] = now
-        this.ethEngine.updateBalance(tk, tokenBal[tk])
+      for (const currencyCode of Object.keys(tokenBal)) {
+        this.ethNeeds.tokenBalLastChecked[currencyCode] = now
+        this.ethEngine.updateBalance(currencyCode, tokenBal[currencyCode])
       }
       this.ethEngine.currencyEngineCallbacks.onNewTokens(
         ethereumNetworkUpdate.detectedTokenIds ?? []
@@ -407,18 +479,40 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
-      for (const tk of Object.keys(tokenTxs)) {
-        this.ethNeeds.tokenTxsLastChecked[tk] = now
-        this.ethEngine.tokenCheckTransactionsStatus[tk] = 1
-        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[tk]
+      for (const currencyCode of Object.keys(tokenTxs)) {
+        this.ethNeeds.tokenTxsLastChecked[currencyCode] = now
+        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 1
+        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
         for (const tx of tuple.edgeTransactions) {
-          this.ethEngine.addTransaction(tk, tx)
+          this.ethEngine.addTransaction(currencyCode, tx)
         }
-        this.ethEngine.walletLocalData.lastTransactionQueryHeight[tk] =
-          preUpdateBlockHeight
-        this.ethEngine.walletLocalData.lastTransactionDate[tk] = now
+        this.ethEngine.walletLocalData.lastTransactionQueryHeight[
+          currencyCode
+        ] = preUpdateBlockHeight
+        this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] = now
       }
       this.ethEngine.updateOnAddressesChecked()
+
+      // Update addressSync state:
+      if (
+        this.ethNeeds.addressSync != null &&
+        // Don't change address needs if address has not done it's initial sync
+        this.ethEngine.addressesChecked
+      ) {
+        // Filter the txids that have been processed:
+        const updatedNeedsTxIds = this.ethNeeds.addressSync.needsTxids.filter(
+          txid => {
+            const txidNormal = normalizeAddress(txid)
+            const hasTxidBeenProcessed = Object.keys(tokenTxs).some(
+              currencyCode => {
+                return this.ethEngine.txIdMap[currencyCode][txidNormal] !== null
+              }
+            )
+            return !hasTxidBeenProcessed
+          }
+        )
+        this.ethNeeds.addressSync.needsTxids = updatedNeedsTxIds
+      }
     }
 
     if (this.ethEngine.transactionsChangedArray.length > 0) {
@@ -436,6 +530,18 @@ export class EthereumNetwork {
     )
 
     return networkAdapters
+  }
+
+  connectNetworkAdapters(): void {
+    this.qualifyNetworkAdapters('connect').forEach(adapter => {
+      adapter.connect()
+    })
+  }
+
+  disconnectNetworkAdapters(): void {
+    this.qualifyNetworkAdapters('disconnect').forEach(adapter => {
+      adapter.disconnect()
+    })
   }
 
   /**
@@ -460,6 +566,8 @@ const makeNetworkAdapter = (
       return new AmberdataAdapter(ethEngine, config)
     case 'blockbook':
       return new BlockbookAdapter(ethEngine, config)
+    case 'blockbook-ws':
+      return new BlockbookWsAdapter(ethEngine, config)
     case 'blockchair':
       return new BlockchairAdapter(ethEngine, config)
     case 'blockcypher':

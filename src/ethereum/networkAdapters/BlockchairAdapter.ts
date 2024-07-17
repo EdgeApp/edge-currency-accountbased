@@ -15,11 +15,14 @@ export interface BlockchairAdapterConfig {
 
 export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
   broadcast = null
+  connect = null
+  disconnect = null
   fetchNonce = null
   fetchTokenBalances = null
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
@@ -38,7 +41,9 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
     }
   }
 
-  fetchTokenBalance = async (tk: string): Promise<EthereumNetworkUpdate> => {
+  fetchTokenBalance = async (
+    _currencyCode: string
+  ): Promise<EthereumNetworkUpdate> => {
     let cleanedResponseObj: CheckTokenBalBlockchair
     const address = this.ethEngine.walletLocalData.publicKey
     const path = `/${this.ethEngine.currencyInfo.pluginId}/dashboards/address/${address}?erc_20=true`

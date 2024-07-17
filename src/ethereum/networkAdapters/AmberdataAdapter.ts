@@ -12,11 +12,14 @@ export interface AmberdataAdapterConfig {
 
 export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
   broadcast = null
+  connect = null
+  disconnect = null
   fetchTokenBalance = null
   fetchTokenBalances = null
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {

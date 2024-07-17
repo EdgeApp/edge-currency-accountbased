@@ -88,6 +88,7 @@ import {
   FeeProviders,
   printFees
 } from './fees/feeProviders'
+import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
@@ -406,6 +407,11 @@ export class EthereumEngine extends CurrencyEngine<
         return this.utils.txRpcParamsToSpendInfo(params)
       }
     }
+  }
+
+  async loadEngine(): Promise<void> {
+    await super.loadEngine()
+    this.engineOn = true
   }
 
   /**
@@ -759,10 +765,14 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS).catch(
       () => {}
     )
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.ethNetwork.needsLoop()
+    this.ethNetwork.start()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
+  }
+
+  async killEngine(): Promise<void> {
+    await super.killEngine()
+    this.ethNetwork.stop()
   }
 
   async resyncBlockchain(): Promise<void> {
@@ -865,7 +875,9 @@ export class EthereumEngine extends CurrencyEngine<
         rollupFee = calcOptimismRollupFees(txData)
       } else if (this.networkInfo.arbitrumRollupParams != null) {
         const rpcServers = this.ethNetwork.networkAdapters
-          .filter(adapter => adapter.config.type === 'rpc')
+          .filter(
+            (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
+          )
           .map(adapter => adapter.config.servers)
           .flat()
         const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
@@ -1094,7 +1106,9 @@ export class EthereumEngine extends CurrencyEngine<
       l1Fee = calcOptimismRollupFees(txData)
     } else if (this.networkInfo.arbitrumRollupParams != null) {
       const rpcServers = this.ethNetwork.networkAdapters
-        .filter(adapter => adapter.config.type === 'rpc')
+        .filter(
+          (adapter): adapter is RpcAdapter => adapter.config.type === 'rpc'
+        )
         .map(adapter => adapter.config.servers)
         .flat()
       const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({

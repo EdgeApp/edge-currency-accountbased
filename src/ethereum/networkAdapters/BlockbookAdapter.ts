@@ -15,10 +15,13 @@ export interface BlockbookAdapterConfig {
 }
 
 export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
-  getBaseFeePerGas = null
-  multicastRpc = null
+  disconnect = null
+  connect = null
   fetchTokenBalances = null
   fetchTxs = null
+  getBaseFeePerGas = null
+  multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
@@ -65,7 +68,7 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
     return await this.checkAddressBlockbook()
   }
 
-  async checkAddressBlockbook(): Promise<EthereumNetworkUpdate> {
+  private async checkAddressBlockbook(): Promise<EthereumNetworkUpdate> {
     const address = this.ethEngine.walletLocalData.publicKey.toLowerCase()
     const out: EthereumNetworkUpdate = {
       newNonce: '0',

@@ -559,18 +559,18 @@ export class CurrencyEngine<
   }
 
   // Called by EthereumNetwork
-  updateBalance(tk: string, balance: string): void {
-    const currentBalance = this.walletLocalData.totalBalances[tk]
-    if (this.walletLocalData.totalBalances[tk] == null) {
-      this.walletLocalData.totalBalances[tk] = '0'
+  updateBalance(currencyCode: string, balance: string): void {
+    const currentBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (this.walletLocalData.totalBalances[currencyCode] == null) {
+      this.walletLocalData.totalBalances[currencyCode] = '0'
     }
     if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[tk] = balance
+      this.walletLocalData.totalBalances[currencyCode] = balance
       this.walletLocalDataDirty = true
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+      this.warn(`${currencyCode}: token Address balance: ${balance}`)
+      this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
-    this.tokenCheckBalanceStatus[tk] = 1
+    this.tokenCheckBalanceStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
   }
 
@@ -680,9 +680,9 @@ export class CurrencyEngine<
   }
 
   // Called by EthereumNetwork
-  getTokenInfo(token: string): EdgeMetaToken | undefined {
+  getTokenInfo(currencyCode: string): EdgeMetaToken | undefined {
     return this.allTokens.find(element => {
-      return element.currencyCode === token
+      return element.currencyCode === currencyCode
     })
   }
 

@@ -288,6 +288,10 @@ export function pickRandom<T>(list: T[], count: number): T[] {
   return out
 }
 
+export function pickRandomOne<T>(list: T[]): T {
+  return list[Math.floor(Math.random() * list.length)]
+}
+
 /**
  * Safely read `otherParams` from a transaction, throwing if it's missing.
  */

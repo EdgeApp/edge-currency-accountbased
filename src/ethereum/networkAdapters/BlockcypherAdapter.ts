@@ -10,6 +10,8 @@ export interface BlockcypherAdapterConfig {
 }
 
 export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig> {
+  connect = null
+  disconnect = null
   fetchNonce = null
   fetchBlockheight = null
   fetchTokenBalance = null
@@ -17,6 +19,7 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   broadcast = async (
     edgeTransaction: EdgeTransaction

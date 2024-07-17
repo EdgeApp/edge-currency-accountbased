@@ -1155,6 +1155,17 @@ const networkInfo: EthereumNetworkInfo = {
       ]
     },
     {
+      type: 'blockbook-ws',
+      connections: [
+        // {
+        //   url: 'wss://eth-blockbook.nownodes.io/wss',
+        //   keyType: 'nowNodesApiKey'
+        // },
+        { url: 'https://eth1.trezor.io/websocket' },
+        { url: 'https://eth2.trezor.io/websocket' }
+      ]
+    },
+    {
       type: 'blockchair',
       servers: ['https://api.blockchair.com']
     },

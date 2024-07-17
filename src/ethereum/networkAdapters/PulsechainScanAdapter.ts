@@ -20,13 +20,16 @@ export interface PulsechainScanAdapterConfig {
 }
 
 export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterConfig> {
-  fetchBlockheight = null
+  connect = null
+  disconnect = null
   broadcast = null
   getBaseFeePerGas = null
   multicastRpc = null
+  fetchBlockheight = null
   fetchNonce = null
   fetchTokenBalance = null
   fetchTokenBalances = null
+  subscribeAddressSync = null
 
   currentScan: Promise<EthereumNetworkUpdate> | undefined
 

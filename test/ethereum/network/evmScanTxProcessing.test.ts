@@ -25,7 +25,7 @@ export interface TestCase {
   output: EdgeTransaction
 }
 
-export const testCases = [
+export const testCases: TestCase[] = [
   {
     input: {
       context: {

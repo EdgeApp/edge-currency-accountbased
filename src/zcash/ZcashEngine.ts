@@ -216,16 +216,16 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   // super.updateBalance calls updateOnAddressesChecked() but we want to limit that method to onUpdateProgress
-  updateBalance(tk: string, balance: string): void {
-    const currentBalance = this.walletLocalData.totalBalances[tk]
-    if (this.walletLocalData.totalBalances[tk] == null) {
-      this.walletLocalData.totalBalances[tk] = '0'
+  updateBalance(currencyCode: string, balance: string): void {
+    const currentBalance = this.walletLocalData.totalBalances[currencyCode]
+    if (this.walletLocalData.totalBalances[currencyCode] == null) {
+      this.walletLocalData.totalBalances[currencyCode] = '0'
     }
     if (currentBalance == null || !eq(balance, currentBalance)) {
-      this.walletLocalData.totalBalances[tk] = balance
+      this.walletLocalData.totalBalances[currencyCode] = balance
       this.walletLocalDataDirty = true
-      this.warn(`${tk}: token Address balance: ${balance}`)
-      this.currencyEngineCallbacks.onBalanceChanged(tk, balance)
+      this.warn(`${currencyCode}: token Address balance: ${balance}`)
+      this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
   }
 

@@ -26,6 +26,8 @@ import {
   EthereumNetworkInfo,
   EvmScanGasResponse
 } from '../ethereumTypes'
+import { EvmScanAdapterConfig } from '../networkAdapters/EvmScanAdapter'
+import { RpcAdapterConfig } from '../networkAdapters/RpcAdapter'
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const printFees = (log: EdgeLog, fees: Object) => {
@@ -79,7 +81,9 @@ export const fetchFeesFromRpc = async (
   const { networkAdapterConfigs, supportsEIP1559 = false } = networkInfo
   if (supportsEIP1559) return
 
-  const rpcConfig = networkAdapterConfigs.find(config => config.type === 'rpc')
+  const rpcConfig = networkAdapterConfigs.find(
+    (config): config is RpcAdapterConfig => config.type === 'rpc'
+  )
   if (rpcConfig == null) return
   const rpcServers = rpcConfig.servers
 
@@ -137,7 +141,7 @@ export const fetchFeesFromEvmScan = async (
   const { networkAdapterConfigs } = networkInfo
 
   const evmScanConfig = networkAdapterConfigs.find(
-    config => config.type === 'evmscan'
+    (config): config is EvmScanAdapterConfig => config.type === 'evmscan'
   )
   if (evmScanConfig == null) return
 

@@ -12,6 +12,7 @@ import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'
 import { BlockbookAdapterConfig } from './BlockbookAdapter'
+import { BlockbookWsAdapterConfig } from './BlockbookWsAdapter'
 import { BlockchairAdapterConfig } from './BlockchairAdapter'
 import { BlockcypherAdapterConfig } from './BlockcypherAdapter'
 import { EvmScanAdapterConfig } from './EvmScanAdapter'
@@ -28,6 +29,7 @@ export interface GetTxsParams {
 export type NetworkAdapterConfig =
   | AmberdataAdapterConfig
   | BlockbookAdapterConfig
+  | BlockbookWsAdapterConfig
   | BlockchairAdapterConfig
   | BlockcypherAdapterConfig
   | EvmScanAdapterConfig
@@ -55,20 +57,16 @@ export abstract class NetworkAdapter<
     this.config = config
   }
 
-  abstract fetchBlockheight:
-    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
-    | null
-
   abstract broadcast:
     | ((tx: EdgeTransaction) => Promise<BroadcastResults>)
     | null
 
-  abstract getBaseFeePerGas: (() => Promise<string | undefined>) | null
-  abstract multicastRpc:
-    | ((
-        method: string,
-        params: any[]
-      ) => Promise<{ result: any; server: string }>)
+  abstract connect: (() => void) | null
+
+  abstract disconnect: (() => void) | null
+
+  abstract fetchBlockheight:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
     | null
 
   abstract fetchNonce:
@@ -80,7 +78,21 @@ export abstract class NetworkAdapter<
     | null
 
   abstract fetchTokenBalances: (() => Promise<EthereumNetworkUpdate>) | null
+
   abstract fetchTxs: ((...args: any[]) => Promise<EthereumNetworkUpdate>) | null
+
+  abstract getBaseFeePerGas: (() => Promise<string | undefined>) | null
+
+  abstract multicastRpc:
+    | ((
+        method: string,
+        params: any[]
+      ) => Promise<{ result: any; server: string }>)
+    | null
+
+  abstract subscribeAddressSync:
+    | ((address: string, callback: (txid?: string) => void) => void)
+    | null
 
   protected broadcastResponseHandler(
     res: JsonObject,
@@ -116,6 +128,8 @@ export abstract class NetworkAdapter<
   protected async serialServers<T>(
     fn: (server: string) => Promise<T>
   ): Promise<T> {
+    if (!('servers' in this.config))
+      throw new Error(`No servers for config type ${this.config.type}`)
     const funcs = (this.config.servers ?? []).map(
       server => async () => await fn(server)
     )
@@ -125,6 +139,8 @@ export abstract class NetworkAdapter<
   protected async parallelServers<T>(
     fn: (server: string) => Promise<T>
   ): Promise<T> {
+    if (!('servers' in this.config))
+      throw new Error(`No servers for config type ${this.config.type}`)
     const promises = (this.config.servers ?? []).map(
       async server => await fn(server)
     )

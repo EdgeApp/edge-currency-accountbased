@@ -33,6 +33,7 @@ import {
   EthereumInitOptions,
   EthereumNetworkInfo
 } from './ethereumTypes'
+import { RpcAdapterConfig } from './networkAdapters/RpcAdapter'
 
 export class EthereumTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -378,7 +379,8 @@ export class EthereumTools implements EdgeCurrencyTools {
     const { networkAdapterConfigs } = this.networkInfo
 
     const networkAdapterConfig = networkAdapterConfigs.find(
-      networkAdapterConfig => networkAdapterConfig.type === 'rpc'
+      (networkAdapterConfig): networkAdapterConfig is RpcAdapterConfig =>
+        networkAdapterConfig.type === 'rpc'
     )
 
     if (networkAdapterConfig == null)
