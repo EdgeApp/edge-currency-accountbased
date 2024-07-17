@@ -22,6 +22,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   fetchNonce = null
   fetchTokenBalance = null
   fetchTokenBalances = null
+  subscribeAddressSync = null
 
   currentScan: Promise<EthereumNetworkUpdate> | undefined
 

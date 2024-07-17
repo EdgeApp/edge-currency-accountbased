@@ -103,6 +103,7 @@
     "ethereumjs-wallet": "^0.6.5",
     "ethers": "^5.6.0",
     "eztz.js": "https://github.com/EdgeApp/eztz.git#edge-fixes",
+    "isomorphic-ws": "^5.0.0",
     "rfc4648": "^1.5.0",
     "stellar-sdk": "^0.11.0",
     "tezos-uri": "^1.0.3",
@@ -111,6 +112,7 @@
     "tweetnacl": "^1.0.3",
     "uri-js": "^3.0.2",
     "url-parse": "^1.4.1",
+    "ws": "^8.18.0",
     "xrpl": "^2.10.0",
     "yaob": "^0.3.6"
   },

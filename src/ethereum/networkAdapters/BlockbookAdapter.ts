@@ -21,6 +21,7 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {

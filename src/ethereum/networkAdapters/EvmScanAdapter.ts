@@ -56,6 +56,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   fetchTokenBalances = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     const { result: jsonObj, server } = await this.serialServers(

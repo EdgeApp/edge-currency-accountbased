@@ -29,6 +29,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
   fetchNonce = null
   fetchTokenBalance = null
   fetchTokenBalances = null
+  subscribeAddressSync = null
 
   currentScan: Promise<EthereumNetworkUpdate> | undefined
 

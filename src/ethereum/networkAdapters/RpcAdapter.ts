@@ -31,6 +31,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   connect = null
   disconnect = null
   fetchTxs = null
+  subscribeAddressSync = null
 
   constructor(ethEngine: EthereumEngine, config: RpcAdapterConfig) {
     super(ethEngine, config)

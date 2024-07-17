@@ -19,6 +19,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {

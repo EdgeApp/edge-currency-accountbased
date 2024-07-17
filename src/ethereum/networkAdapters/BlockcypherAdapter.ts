@@ -19,6 +19,7 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   broadcast = async (
     edgeTransaction: EdgeTransaction

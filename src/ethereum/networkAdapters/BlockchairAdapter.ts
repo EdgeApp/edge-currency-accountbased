@@ -22,6 +22,7 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
   fetchTxs = null
   getBaseFeePerGas = null
   multicastRpc = null
+  subscribeAddressSync = null
 
   fetchBlockheight = async (): Promise<EthereumNetworkUpdate> => {
     try {
