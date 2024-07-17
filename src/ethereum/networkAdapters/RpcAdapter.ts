@@ -28,6 +28,8 @@ export interface RpcAdapterConfig {
 }
 
 export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
+  connect = null
+  disconnect = null
   fetchTxs = null
 
   constructor(ethEngine: EthereumEngine, config: RpcAdapterConfig) {

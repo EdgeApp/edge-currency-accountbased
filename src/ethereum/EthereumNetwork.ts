@@ -2,7 +2,8 @@ import { add, div } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny, snooze } from '../common/utils'
+import { makePeriodicTask, PeriodicTask } from '../common/periodicTask'
+import { asyncWaterfall, promiseAny } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
 import { EthereumNetworkInfo } from './ethereumTypes'
@@ -133,6 +134,7 @@ export class EthereumNetwork {
   ethNeeds: EthereumNeeds
   ethEngine: EthereumEngine
   walletId: string
+  needsLoopTask: PeriodicTask
   networkAdapters: NetworkAdapter[]
 
   constructor(ethEngine: EthereumEngine) {
@@ -144,6 +146,11 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
+    this.needsLoopTask = makePeriodicTask(this.needsLoop.bind(this), 1000, {
+      onError: error => {
+        this.ethEngine.log.warn('needsLoopTask error:', error)
+      }
+    })
     this.networkAdapters = this.buildNetworkAdapters(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
@@ -236,101 +243,106 @@ export class EthereumNetwork {
     }
   }
 
-  async needsLoop(): Promise<void> {
-    while (this.ethEngine.engineOn) {
+  start(): void {
+    this.connectNetworkAdapters()
+    this.needsLoopTask.start()
+  }
+
+  stop(): void {
+    this.needsLoopTask.stop()
+    this.disconnectNetworkAdapters()
+  }
+
+  needsLoop = async (): Promise<void> => {
+    await this.checkAndUpdate(
+      this.ethNeeds.blockHeightLastChecked,
+      BLOCKHEIGHT_POLL_MILLISECONDS,
+      async () => await this.check('fetchBlockheight')
+    )
+
+    await this.checkAndUpdate(
+      this.ethNeeds.nonceLastChecked,
+      NONCE_POLL_MILLISECONDS,
+      async () => await this.check('fetchNonce')
+    )
+
+    const { currencyCode } = this.ethEngine.currencyInfo
+    const currencyCodes = this.ethEngine.enabledTokens
+
+    if (!currencyCodes.includes(currencyCode)) {
+      currencyCodes.push(currencyCode)
+    }
+
+    // The engine supports token balances batch queries if an adapter provides
+    // the functionality.
+    const isFetchTokenBalancesSupported =
+      this.networkAdapters.find(
+        adapter => adapter.fetchTokenBalances != null
+      ) != null
+
+    // If this engine supports the batch token balance query, no need to check
+    // each currencyCode individually.
+    if (isFetchTokenBalancesSupported) {
       await this.checkAndUpdate(
-        this.ethNeeds.blockHeightLastChecked,
-        BLOCKHEIGHT_POLL_MILLISECONDS,
-        async () => await this.check('fetchBlockheight')
+        this.ethNeeds.tokenBalsLastChecked,
+        BAL_POLL_MILLISECONDS,
+        async () => await this.check('fetchTokenBalances')
       )
+    }
 
-      await this.checkAndUpdate(
-        this.ethNeeds.nonceLastChecked,
-        NONCE_POLL_MILLISECONDS,
-        async () => await this.check('fetchNonce')
-      )
-
-      const { currencyCode } = this.ethEngine.currencyInfo
-      const currencyCodes = this.ethEngine.enabledTokens
-
-      if (!currencyCodes.includes(currencyCode)) {
-        currencyCodes.push(currencyCode)
-      }
-
-      // The engine supports token balances batch queries if an adapter provides
-      // the functionality.
-      const isFetchTokenBalancesSupported =
-        this.networkAdapters.find(
-          adapter => adapter.fetchTokenBalances != null
-        ) != null
-
-      // If this engine supports the batch token balance query, no need to check
-      // each currencyCode individually.
-      if (isFetchTokenBalancesSupported) {
+    for (const currencyCode of currencyCodes) {
+      // Only check each code individually if this engine does not support
+      // batch token balance queries.
+      if (!isFetchTokenBalancesSupported) {
         await this.checkAndUpdate(
-          this.ethNeeds.tokenBalsLastChecked,
+          this.ethNeeds.tokenBalLastChecked[currencyCode] ?? 0,
           BAL_POLL_MILLISECONDS,
-          async () => await this.check('fetchTokenBalances')
+          async () => await this.check('fetchTokenBalance', currencyCode)
         )
       }
 
-      for (const currencyCode of currencyCodes) {
-        // Only check each code individually if this engine does not support
-        // batch token balance queries.
-        if (!isFetchTokenBalancesSupported) {
-          await this.checkAndUpdate(
-            this.ethNeeds.tokenBalLastChecked[currencyCode] ?? 0,
-            BAL_POLL_MILLISECONDS,
-            async () => await this.check('fetchTokenBalance', currencyCode)
-          )
-        }
-
-        await this.checkAndUpdate(
-          this.ethNeeds.tokenTxsLastChecked[currencyCode] ?? 0,
-          TXS_POLL_MILLISECONDS,
-          async (): Promise<EthereumNetworkUpdate> => {
-            const lastTransactionQueryHeight =
-              this.ethEngine.walletLocalData.lastTransactionQueryHeight[
-                currencyCode
-              ] ?? 0
-            const lastTransactionDate =
-              this.ethEngine.walletLocalData.lastTransactionDate[
-                currencyCode
-              ] ?? 0
-            const params = {
-              // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-              startBlock: Math.max(
-                lastTransactionQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS,
-                0
-              ),
-              // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
-              startDate: Math.max(
-                lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
-                0
-              ),
+      await this.checkAndUpdate(
+        this.ethNeeds.tokenTxsLastChecked[currencyCode] ?? 0,
+        TXS_POLL_MILLISECONDS,
+        async (): Promise<EthereumNetworkUpdate> => {
+          const lastTransactionQueryHeight =
+            this.ethEngine.walletLocalData.lastTransactionQueryHeight[
               currencyCode
-            }
-
-            // Send an empty tokenTxs network update if no network adapters
-            // qualify for 'fetchTxs':
-            if (this.qualifyNetworkAdapters('fetchTxs').length === 0) {
-              return {
-                tokenTxs: {
-                  [this.ethEngine.currencyInfo.currencyCode]: {
-                    blockHeight: params.startBlock,
-                    edgeTransactions: []
-                  }
-                },
-                server: 'none'
-              }
-            }
-
-            return await this.check('fetchTxs', params)
+            ] ?? 0
+          const lastTransactionDate =
+            this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] ??
+            0
+          const params = {
+            // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+            startBlock: Math.max(
+              lastTransactionQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS,
+              0
+            ),
+            // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
+            startDate: Math.max(
+              lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
+              0
+            ),
+            currencyCode
           }
-        )
-      }
 
-      await snooze(1000)
+          // Send an empty tokenTxs network update if no network adapters
+          // qualify for 'fetchTxs':
+          if (this.qualifyNetworkAdapters('fetchTxs').length === 0) {
+            return {
+              tokenTxs: {
+                [this.ethEngine.currencyInfo.currencyCode]: {
+                  blockHeight: params.startBlock,
+                  edgeTransactions: []
+                }
+              },
+              server: 'none'
+            }
+          }
+
+          return await this.check('fetchTxs', params)
+        }
+      )
     }
   }
 
@@ -435,6 +447,18 @@ export class EthereumNetwork {
     )
 
     return networkAdapters
+  }
+
+  connectNetworkAdapters(): void {
+    this.qualifyNetworkAdapters('connect').forEach(adapter => {
+      adapter.connect()
+    })
+  }
+
+  disconnectNetworkAdapters(): void {
+    this.qualifyNetworkAdapters('disconnect').forEach(adapter => {
+      adapter.disconnect()
+    })
   }
 
   /**

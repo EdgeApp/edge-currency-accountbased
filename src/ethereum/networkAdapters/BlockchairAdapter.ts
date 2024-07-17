@@ -15,6 +15,8 @@ export interface BlockchairAdapterConfig {
 
 export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
   broadcast = null
+  connect = null
+  disconnect = null
   fetchNonce = null
   fetchTokenBalances = null
   fetchTxs = null

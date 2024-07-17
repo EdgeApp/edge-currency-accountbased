@@ -10,6 +10,8 @@ export interface BlockcypherAdapterConfig {
 }
 
 export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig> {
+  connect = null
+  disconnect = null
   fetchNonce = null
   fetchBlockheight = null
   fetchTokenBalance = null

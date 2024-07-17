@@ -409,6 +409,11 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
+  async loadEngine(): Promise<void> {
+    await super.loadEngine()
+    this.engineOn = true
+  }
+
   /**
    * Returns the gasLimit from eth_estimateGas RPC call.
    */
@@ -760,10 +765,14 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS).catch(
       () => {}
     )
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.ethNetwork.needsLoop()
+    this.ethNetwork.start()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     super.startEngine()
+  }
+
+  async killEngine(): Promise<void> {
+    await super.killEngine()
+    this.ethNetwork.stop()
   }
 
   async resyncBlockchain(): Promise<void> {

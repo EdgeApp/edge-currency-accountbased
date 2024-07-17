@@ -55,20 +55,16 @@ export abstract class NetworkAdapter<
     this.config = config
   }
 
-  abstract fetchBlockheight:
-    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
-    | null
-
   abstract broadcast:
     | ((tx: EdgeTransaction) => Promise<BroadcastResults>)
     | null
 
-  abstract getBaseFeePerGas: (() => Promise<string | undefined>) | null
-  abstract multicastRpc:
-    | ((
-        method: string,
-        params: any[]
-      ) => Promise<{ result: any; server: string }>)
+  abstract connect: (() => void) | null
+
+  abstract disconnect: (() => void) | null
+
+  abstract fetchBlockheight:
+    | ((...args: any[]) => Promise<EthereumNetworkUpdate>)
     | null
 
   abstract fetchNonce:
@@ -80,7 +76,17 @@ export abstract class NetworkAdapter<
     | null
 
   abstract fetchTokenBalances: (() => Promise<EthereumNetworkUpdate>) | null
+
   abstract fetchTxs: ((...args: any[]) => Promise<EthereumNetworkUpdate>) | null
+
+  abstract getBaseFeePerGas: (() => Promise<string | undefined>) | null
+
+  abstract multicastRpc:
+    | ((
+        method: string,
+        params: any[]
+      ) => Promise<{ result: any; server: string }>)
+    | null
 
   protected broadcastResponseHandler(
     res: JsonObject,
