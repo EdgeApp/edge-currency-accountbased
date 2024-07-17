@@ -11,14 +11,10 @@ import { ethereumpow } from './info/ethereumpowInfo'
 import { fantom } from './info/fantomInfo'
 import { filecoinfevmcalibration } from './info/filecoinFevmCalibrationInfo'
 import { filecoinfevm } from './info/filecoinFevmInfo'
-import { goerli } from './info/goerliInfo'
-import { kovan } from './info/kovanInfo'
 import { mumbai } from './info/mumbaiInfo'
 import { optimism } from './info/optimismInfo'
 import { polygon } from './info/polygonInfo'
 import { pulsechain } from './info/pulsechainInfo'
-import { rinkeby } from './info/rinkebyInfo'
-import { ropsten } from './info/ropstenInfo'
 import { rsk } from './info/rskInfo'
 import { sepolia } from './info/sepoliaInfo'
 import { zksync } from './info/zksyncInfo'
@@ -37,14 +33,10 @@ export const ethereumPlugins = {
   fantom,
   filecoinfevm,
   filecoinfevmcalibration,
-  goerli,
-  kovan,
   mumbai,
   optimism,
   polygon,
   pulsechain,
-  rinkeby,
-  ropsten,
   sepolia,
   rsk,
   zksync
