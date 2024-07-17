@@ -1,3 +1,4 @@
+import { amoy } from './info/amoyInfo'
 import { arbitrum } from './info/arbitrumInfo'
 import { avalanche } from './info/avalancheInfo'
 import { base } from './info/baseInfo'
@@ -20,6 +21,7 @@ import { sepolia } from './info/sepoliaInfo'
 import { zksync } from './info/zksyncInfo'
 
 export const ethereumPlugins = {
+  amoy,
   arbitrum,
   avalanche,
   base,

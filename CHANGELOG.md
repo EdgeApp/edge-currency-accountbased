@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Added Amoy Polygon testnet
 - added: Added Sepolia Ethereum testnet
 - added: Added support for WebSocket connections to Blockbook servers via `BlockbookWsAdapter`
 - remove: Remove deprecated Ethereum testnets: Goerli, Kovan, Rinkeby, and Ropsten.
