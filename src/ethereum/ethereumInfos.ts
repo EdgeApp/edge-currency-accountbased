@@ -12,7 +12,6 @@ import { ethereumpow } from './info/ethereumpowInfo'
 import { fantom } from './info/fantomInfo'
 import { filecoinfevmcalibration } from './info/filecoinFevmCalibrationInfo'
 import { filecoinfevm } from './info/filecoinFevmInfo'
-import { mumbai } from './info/mumbaiInfo'
 import { optimism } from './info/optimismInfo'
 import { polygon } from './info/polygonInfo'
 import { pulsechain } from './info/pulsechainInfo'
@@ -35,7 +34,6 @@ export const ethereumPlugins = {
   fantom,
   filecoinfevm,
   filecoinfevmcalibration,
-  mumbai,
   optimism,
   polygon,
   pulsechain,
