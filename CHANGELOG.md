@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Added Sepolia Ethereum testnet
 - added: Added support for WebSocket connections to Blockbook servers via `BlockbookWsAdapter`
 
 ## 4.13.0 (2024-07-16)

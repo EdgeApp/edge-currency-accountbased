@@ -20,6 +20,7 @@ import { pulsechain } from './info/pulsechainInfo'
 import { rinkeby } from './info/rinkebyInfo'
 import { ropsten } from './info/ropstenInfo'
 import { rsk } from './info/rskInfo'
+import { sepolia } from './info/sepoliaInfo'
 import { zksync } from './info/zksyncInfo'
 
 export const ethereumPlugins = {
@@ -44,6 +45,7 @@ export const ethereumPlugins = {
   pulsechain,
   rinkeby,
   ropsten,
+  sepolia,
   rsk,
   zksync
 }
