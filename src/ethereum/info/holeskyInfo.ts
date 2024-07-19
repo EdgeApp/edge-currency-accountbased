@@ -17,29 +17,12 @@ import {
 } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
-  '07865c6e87b9f70255377e024ace6630c1eaa37f': {
-    currencyCode: 'USDC',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+  '94373a4919b3240d86ea41593d5eba789fef3848': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped Ethereum',
+    denominations: [{ name: 'WETH', multiplier: '1000000000000000000' }],
     networkLocation: {
-      contractAddress: '0x07865c6E87B9F70255377e024ace6630C1Eaa37F'
-    }
-  },
-  '6ad196dbcd43996f17638b924d2fdedff6fdd677': {
-    currencyCode: 'USDT',
-    displayName: 'Tether USD',
-    denominations: [{ name: 'USDT', multiplier: '1000000' }],
-
-    networkLocation: {
-      contractAddress: '0x6AD196dBcd43996F17638B924d2fdEDFF6Fdd677'
-    }
-  },
-  c04b0d3107736c32e19f1c62b2af67be61d63a05: {
-    currencyCode: 'WBTC',
-    displayName: 'Wrapped Bitcoin',
-    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
-    networkLocation: {
-      contractAddress: '0xC04B0d3107736C32e19F1c62b2aF67BE61d63a05'
+      contractAddress: '0x94373a4919B3240D86eA41593D5eBa789FEF3848'
     }
   }
 }
@@ -68,36 +51,6 @@ const networkFees: EthereumFees = {
       minGasPrice: '1000000000'
     },
     minPriorityFee: '2000000000'
-  },
-  '1983987abc9837fbabc0982347ad828': {
-    baseFee: undefined,
-    baseFeeMultiplier: undefined,
-    // @ts-expect-error
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    // @ts-expect-error
-    gasPrice: {
-      lowFee: '1000000002',
-      standardFeeLow: '40000000002',
-      standardFeeHigh: '300000000002',
-      standardFeeLowAmount: '200000000000000000',
-      standardFeeHighAmount: '20000000000000000000',
-      highFee: '40000000002'
-    },
-    minPriorityFee: undefined
-  },
-  '2983987abc9837fbabc0982347ad828': {
-    baseFee: undefined,
-    baseFeeMultiplier: undefined,
-    // @ts-expect-error
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    gasPrice: undefined,
-    minPriorityFee: undefined
   }
 }
 
@@ -106,57 +59,63 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-goerli.rpc.grove.city/v1/{{poktPortalApiKey}}',
-        'https://eth-goerli.alchemyapi.io/v2/-{{alchemyApiKey}}',
-        'https://goerli.infura.io/v3/{{infuraProjectId}}'
+        'https://holesky-fullnode-testnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
+        'https://eth-holesky.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://holesky.infura.io/v3/{{infuraProjectId}}',
+        'https://1rpc.io/holesky',
+        'https://ethereum-holesky-rpc.publicnode.com',
+        'https://ethereum-holesky.blockpi.network/v1/rpc/public',
+        'https://holesky.drpc.org',
+        'https://rpc-holesky.rockx.com',
+        'https://endpoints.omniatech.io/v1/eth/holesky/public'
       ],
       ethBalCheckerContract: '0x9788C4E93f9002a7ad8e72633b11E8d1ecd51f9b'
     },
     {
       type: 'evmscan',
-      servers: ['https://api-goerli.etherscan.io']
+      servers: ['https://api-holesky.etherscan.io']
     }
   ],
 
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 5,
-    name: 'Goerli'
+    chainId: 170000,
+    name: 'Holesky'
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
   amberDataBlockchainId: '',
-  pluginMnemonicKeyName: 'goerliMnemonic',
-  pluginRegularKeyName: 'goerliKey',
+  pluginMnemonicKeyName: 'holeskyMnemonic',
+  pluginRegularKeyName: 'holeskyKey',
   ethGasStationUrl: null,
   networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
-  currencyCode: 'GOR',
+  currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Goerli Testnet',
+  displayName: 'Holesky Testnet',
   memoOptions: evmMemoOptions,
-  pluginId: 'goerli',
-  walletType: 'wallet:goerli',
+  pluginId: 'holesky',
+  walletType: 'wallet:holesky',
 
   // Explorers:
-  addressExplorer: 'https://etherscan.io/address/%s',
-  transactionExplorer: 'https://etherscan.io/tx/%s',
+  addressExplorer: 'https://holesky.etherscan.io/address/%s',
+  transactionExplorer: 'https://holesky.etherscan.io/tx/%s',
 
   denominations: [
     {
-      name: 'GOR',
+      name: 'ETH',
       multiplier: '1000000000000000000',
-      symbol: 'G'
+      symbol: 'Ξ'
     },
     {
-      name: 'mGOR',
+      name: 'mETH',
       multiplier: '1000000000000000',
-      symbol: 'mG'
+      symbol: 'mΞ'
     }
   ],
 
@@ -165,7 +124,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const goerli = makeOuterPlugin<
+export const holesky = makeOuterPlugin<
   EthereumNetworkInfo,
   EthereumTools,
   EthereumInfoPayload

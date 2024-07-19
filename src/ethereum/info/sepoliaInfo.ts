@@ -42,36 +42,6 @@ const networkFees: EthereumFees = {
       minGasPrice: '1000000000'
     },
     minPriorityFee: '2000000000'
-  },
-  '1983987abc9837fbabc0982347ad828': {
-    baseFee: undefined,
-    baseFeeMultiplier: undefined,
-    // @ts-expect-error
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    // @ts-expect-error
-    gasPrice: {
-      lowFee: '1000000002',
-      standardFeeLow: '40000000002',
-      standardFeeHigh: '300000000002',
-      standardFeeLowAmount: '200000000000000000',
-      standardFeeHighAmount: '20000000000000000000',
-      highFee: '40000000002'
-    },
-    minPriorityFee: undefined
-  },
-  '2983987abc9837fbabc0982347ad828': {
-    baseFee: undefined,
-    baseFeeMultiplier: undefined,
-    // @ts-expect-error
-    gasLimit: {
-      regularTransaction: '21002',
-      tokenTransaction: '37124'
-    },
-    gasPrice: undefined,
-    minPriorityFee: undefined
   }
 }
 
@@ -80,53 +50,68 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-rinkeby.alchemyapi.io/v2/-{{alchemyApiKey}}',
-        'https://rinkeby.infura.io/v3/{{infuraProjectId}}'
+        'https://ethereum-sepolia.blockpi.network/v1/rpc/public',
+        'https://1rpc.io/sepolia',
+        'https://eth-sepolia.api.onfinality.io/public',
+        'https://gateway.tenderly.co/public/sepolia',
+        'https://sepolia.gateway.tenderly.co',
+        'https://public.stackup.sh/api/v1/node/ethereum-sepolia',
+        'https://eth-sepolia-public.unifra.io',
+        'https://rpc-sepolia.rockx.com',
+        'https://ethereum-sepolia.rpc.subquery.network/public',
+        'https://eth-sepolia.public.blastapi.io',
+        'https://sepolia.drpc.org',
+        'https://ethereum-sepolia-rpc.publicnode.com',
+        'https://api.zan.top/node/v1/eth/sepolia/public',
+        'https://endpoints.omniatech.io/v1/eth/sepolia/public',
+        'https://rpc.sepolia.org',
+        'https://rpc2.sepolia.org'
       ],
-      ethBalCheckerContract: '0x3183B673f4816C94BeF53958BaF93C671B7F8Cf2'
+      ethBalCheckerContract: '0xBfbCed302deD369855fc5f7668356e123ca4B329'
     },
     {
       type: 'evmscan',
-      servers: ['https://api-rinkeby.etherscan.io']
+      servers: ['https://api-sepolia.etherscan.io']
     }
   ],
+
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 4,
-    name: 'Rinkeby'
+    chainId: 11155111,
+    name: 'Sepolia'
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
   amberDataBlockchainId: '',
-  pluginMnemonicKeyName: 'rinkebyMnemonic',
-  pluginRegularKeyName: 'rinkebyKey',
+  pluginMnemonicKeyName: 'sepoliaMnemonic',
+  pluginRegularKeyName: 'sepoliaKey',
   ethGasStationUrl: null,
   networkFees
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
-  currencyCode: 'RIN',
+  currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Rinkeby Testnet',
+  displayName: 'Sepolia Testnet',
   memoOptions: evmMemoOptions,
-  pluginId: 'rinkeby',
-  walletType: 'wallet:rinkeby',
+  pluginId: 'sepolia',
+  walletType: 'wallet:sepolia',
 
   // Explorers:
-  addressExplorer: 'https://etherscan.io/address/%s',
-  transactionExplorer: 'https://etherscan.io/tx/%s',
+  addressExplorer: 'https://sepolia.etherscan.io/address/%s',
+  transactionExplorer: 'https://sepolia.etherscan.io/tx/%s',
 
   denominations: [
     {
-      name: 'RIN',
+      name: 'ETH',
       multiplier: '1000000000000000000',
       symbol: 'Ξ'
     },
     {
-      name: 'mRIN',
+      name: 'mETH',
       multiplier: '1000000000000000',
       symbol: 'mΞ'
     }
@@ -137,7 +122,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const rinkeby = makeOuterPlugin<
+export const sepolia = makeOuterPlugin<
   EthereumNetworkInfo,
   EthereumTools,
   EthereumInfoPayload
