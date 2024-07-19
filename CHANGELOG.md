@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.14.0 (2024-07-19)
+
 - added: Added Amoy Polygon testnet
 - added: Added Sepolia and Holesky Ethereum testnet
 - added: Added support for WebSocket connections to Blockbook servers via `BlockbookWsAdapter`
