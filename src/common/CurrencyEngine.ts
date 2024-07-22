@@ -296,7 +296,7 @@ export class CurrencyEngine<
       const result = await disklet.getText(TRANSACTION_STORE_FILE)
       transactionList = JSON.parse(result)
     } catch (e: any) {
-      if (e.code === 'ENOENT') {
+      if (e.code === 'ENOENT' || e.message?.includes('No such file') === true) {
         this.log(
           'Could not load transactionList file. Failure is ok on new device'
         )
@@ -305,7 +305,7 @@ export class CurrencyEngine<
           JSON.stringify(this.transactionList)
         )
       } else {
-        this.log.crash(e, this.walletLocalData)
+        this.log.crash(e, { currencyPluginId: this.currencyInfo.pluginId })
       }
     }
 
