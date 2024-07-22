@@ -143,13 +143,13 @@ export class HederaTools implements EdgeCurrencyTools {
     const {
       edgeParsedUri,
       edgeParsedUri: { publicAddress }
-    } = parseUriCommon(
-      this.currencyInfo,
+    } = await parseUriCommon({
+      currencyInfo: this.currencyInfo,
       uri,
-      { [`${pluginId}`]: true },
-      this.builtinTokens,
-      this.currencyInfo.currencyCode
-    )
+      networks: { [`${pluginId}`]: true },
+      builtinTokens: this.builtinTokens,
+      currencyCode: this.currencyInfo.currencyCode
+    })
 
     if (publicAddress != null) {
       const { checksumNetworkID } = this.networkInfo

@@ -377,14 +377,26 @@ export class EthereumNetwork {
 
             // Send an empty tokenTxs network update if no network adapters
             // qualify for 'fetchTxs':
-            if (this.qualifyNetworkAdapters('fetchTxs').length === 0) {
+            if (
+              this.qualifyNetworkAdapters('fetchTxs').length === 0 ||
+              this.ethEngine.lightMode
+            ) {
+              const tokenTxs: {
+                [currencyCode: string]: EdgeTransactionsBlockHeightTuple
+              } = {
+                [this.ethEngine.currencyInfo.currencyCode]: {
+                  blockHeight: params.startBlock,
+                  edgeTransactions: []
+                }
+              }
+              for (const token of Object.values(this.ethEngine.allTokensMap)) {
+                tokenTxs[token.currencyCode] = {
+                  blockHeight: params.startBlock,
+                  edgeTransactions: []
+                }
+              }
               return {
-                tokenTxs: {
-                  [this.ethEngine.currencyInfo.currencyCode]: {
-                    blockHeight: params.startBlock,
-                    edgeTransactions: []
-                  }
-                },
+                tokenTxs,
                 server: 'none'
               }
             }

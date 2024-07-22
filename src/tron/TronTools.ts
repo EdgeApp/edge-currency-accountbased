@@ -75,7 +75,7 @@ export class TronTools implements EdgeCurrencyTools {
     if (/^(0x)?[0-9a-fA-F]{64}$/.test(userInput)) {
       // It looks like a private key, so validate the hex:
       const tronKeyBuffer = Buffer.from(userInput.replace(/^0x/, ''), 'hex')
-      if (EthereumUtil.isValidPrivate(tronKeyBuffer) === true) {
+      if (EthereumUtil.isValidPrivate(tronKeyBuffer)) {
         throw new Error('Invalid private key')
       }
       const tronKey = tronKeyBuffer.toString('hex')
@@ -133,14 +133,14 @@ export class TronTools implements EdgeCurrencyTools {
     const networks = { [this.currencyInfo.pluginId]: true, 'usdt-trc20': true }
     const { smartPayPublicAddress, smartPayUserId } = this.initOptions
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
+      currencyInfo: this.currencyInfo,
       uri,
       networks,
-      this.builtinTokens,
-      currencyCode ?? this.currencyInfo.currencyCode,
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
       customTokens
-    )
+    })
     if (parsedUri.protocol === 'usdt-trc20') {
       edgeParsedUri.currencyCode = 'USDT'
     }

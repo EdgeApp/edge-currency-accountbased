@@ -146,14 +146,14 @@ export class CardanoTools implements EdgeCurrencyTools {
   ): Promise<EdgeParsedUri> {
     const networks = { cardano: true }
 
-    const { parsedUri, edgeParsedUri } = parseUriCommon(
-      this.currencyInfo,
+    const { parsedUri, edgeParsedUri } = await parseUriCommon({
+      currencyInfo: this.currencyInfo,
       uri,
       networks,
-      this.builtinTokens,
-      currencyCode ?? 'ADA',
+      builtinTokens: this.builtinTokens,
+      currencyCode: currencyCode ?? 'ADA',
       customTokens
-    )
+    })
 
     Cardano.Address.from_bech32(edgeParsedUri.publicAddress ?? '')
 

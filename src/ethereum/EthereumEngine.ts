@@ -95,6 +95,7 @@ export class EthereumEngine extends CurrencyEngine<
   SafeEthWalletInfo
 > {
   otherData!: EthereumWalletOtherData
+  lightMode: boolean
   initOptions: EthereumInitOptions
   networkInfo: EthereumNetworkInfo
   ethNetwork: EthereumNetwork
@@ -113,6 +114,7 @@ export class EthereumEngine extends CurrencyEngine<
     currencyInfo: EdgeCurrencyInfo
   ) {
     super(env, tools, walletInfo, opts)
+    this.lightMode = opts.lightMode ?? false
     this.initOptions = initOptions
     this.networkInfo = env.networkInfo
     this.ethNetwork = new EthereumNetwork(this)
@@ -991,7 +993,7 @@ export class EthereumEngine extends CurrencyEngine<
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+
     if (!EthereumUtil.isValidAddress(publicAddress)) {
       throw new TypeError(`Invalid ${this.currencyInfo.pluginId} address`)
     }
