@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.15.0 (2024-07-22)
+
 - added: (Solana/Ethereum) Add optional `lightMode` support to disable transaction query
 - added: Add optional `testPrivateKeys` function to `parseUriCommon`
 - changed: (Zcash) Updated address explorer
