@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: (Zcash) Updated address explorer
 - fixed: Prevent fatal error reporting for missing txlist json file
 
 ## 4.14.0 (2024-07-19)
