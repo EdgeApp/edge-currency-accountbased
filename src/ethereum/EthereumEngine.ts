@@ -143,16 +143,6 @@ export class EthereumEngine extends CurrencyEngine<
     ]
 
     this.utils = {
-      signMessage: (message: string, privateKeys: EthereumPrivateKeys) => {
-        if (!isHex(message)) throw new Error('ErrorInvalidMessage')
-        const privKey = Buffer.from(privateKeys.privateKey, 'hex')
-        const messageBuffer = hexToBuf(message)
-        const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
-        const { v, r, s } = EthereumUtil.ecsign(messageHash, privKey)
-
-        return EthereumUtil.toRpcSig(v, r, s)
-      },
-
       signTypedData: (
         typedData: EIP712TypedDataParam,
         privateKeys: EthereumPrivateKeys
@@ -1213,7 +1203,29 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
 
-    return this.utils.signMessage(message, ethereumPrivateKeys)
+    if (!isHex(message))
+      throw new Error(
+        'EthereumEngine: signMessage() requires a hex message parameter'
+      )
+
+    const privKey = Buffer.from(ethereumPrivateKeys.privateKey, 'hex')
+    const messageBuffer = hexToBuf(message)
+    const messageHash = EthereumUtil.hashPersonalMessage(messageBuffer)
+    const { v, r, s } = EthereumUtil.ecsign(messageHash, privKey)
+
+    return EthereumUtil.toRpcSig(v, r, s)
+  }
+
+  async signBytes(bytes: Uint8Array, privateKeys: JsonObject): Promise<string> {
+    const ethereumPrivateKeys = asEthereumPrivateKeys(
+      this.currencyInfo.pluginId
+    )(privateKeys)
+
+    const privKey = Buffer.from(ethereumPrivateKeys.privateKey, 'hex')
+    const bufferHash = EthereumUtil.hashPersonalMessage(bytes)
+    const { v, r, s } = EthereumUtil.ecsign(bufferHash, privKey)
+
+    return EthereumUtil.toRpcSig(v, r, s)
   }
 
   async signTx(
