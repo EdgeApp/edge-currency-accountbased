@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: FIO SDK downgraded back to v1.8.0, pending stability fixes
+
 ## 4.15.0 (2024-07-22)
 
 - added: (Solana/Ethereum) Add optional `lightMode` support to disable transaction query

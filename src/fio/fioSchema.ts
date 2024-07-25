@@ -8,21 +8,18 @@ import {
   asValue
 } from 'cleaners'
 
-export const asGetFioAddress = asObject({
-  fio_addresses: asArray(
-    asObject({
-      fio_address: asString,
-      remaining_bundled_tx: asNumber
-    })
-  )
-})
-
-export const asGetFioDomains = asObject({
+export const asGetFioName = asObject({
   fio_domains: asArray(
     asObject({
       fio_domain: asString,
       expiration: asString,
       is_public: asNumber
+    })
+  ),
+  fio_addresses: asArray(
+    asObject({
+      fio_address: asString,
+      remaining_bundled_tx: asNumber
     })
   )
 })
