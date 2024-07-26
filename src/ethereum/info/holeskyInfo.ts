@@ -69,7 +69,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc-holesky.rockx.com',
         'https://endpoints.omniatech.io/v1/eth/holesky/public'
       ],
-      ethBalCheckerContract: '0x9788C4E93f9002a7ad8e72633b11E8d1ecd51f9b'
+      ethBalCheckerContract: '0xf4C055E8760C6e66301C2e2F12b85567a9A50841'
     },
     {
       type: 'evmscan',
@@ -80,7 +80,7 @@ const networkInfo: EthereumNetworkInfo = {
   uriNetworks: ['ethereum', 'ether'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 170000,
+    chainId: 17000,
     name: 'Holesky'
   },
   supportsEIP1559: true,

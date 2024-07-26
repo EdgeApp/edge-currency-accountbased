@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Holesky testnet params
+
 ## 4.15.1 (2024-07-25)
 
 - fixed: Fix case where FIO names wouldn't be updated
