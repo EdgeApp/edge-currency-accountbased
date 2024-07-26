@@ -74,3 +74,8 @@ declare module 'tronweb' {
     }
   }
 }
+
+declare module 'bs58' {
+  export const encode: (buffer: Buffer | number[] | Uint8Array) => string
+  export const decode: (string: string) => Buffer
+}

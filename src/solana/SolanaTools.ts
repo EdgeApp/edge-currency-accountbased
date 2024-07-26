@@ -6,6 +6,7 @@ import {
 } from '@solana/web3.js'
 import { div } from 'biggystring'
 import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
+import bs58 from 'bs58'
 import { Buffer } from 'buffer'
 import * as ed25519 from 'ed25519-hd-key'
 import {
@@ -62,7 +63,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asSolanaPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
+    return keys.mnemonic ?? keys.base58Key ?? keys.privateKey
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -70,22 +71,31 @@ export class SolanaTools implements EdgeCurrencyTools {
     return keys.publicKey
   }
 
-  async importPrivateKey(mnemonic: string): Promise<JsonObject> {
+  async importPrivateKey(input: string): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
-    const isValid = validateMnemonic(mnemonic)
-    if (!isValid) throw new Error('Invalid mnemonic')
 
-    const buffer = await mnemonicToSeed(mnemonic)
-    const deriveSeed = ed25519.derivePath(
-      this.networkInfo.derivationPath,
-      base16.stringify(buffer)
-    ).key
-    const keypair = Keypair.fromSeed(Uint8Array.from(deriveSeed))
+    if (validateMnemonic(input)) {
+      const buffer = await mnemonicToSeed(input)
+      const deriveSeed = ed25519.derivePath(
+        this.networkInfo.derivationPath,
+        base16.stringify(buffer)
+      ).key
+      const keypair = Keypair.fromSeed(Uint8Array.from(deriveSeed))
 
-    return {
-      [`${pluginId}Mnemonic`]: mnemonic,
-      [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
-      publicKey: keypair.publicKey.toBase58()
+      return {
+        [`${pluginId}Mnemonic`]: input,
+        [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+        publicKey: keypair.publicKey.toBase58()
+      }
+    } else {
+      const bytes = bs58.decode(input)
+      const keypair = await Keypair.fromSecretKey(bytes)
+
+      return {
+        [`${pluginId}Base58Key`]: input,
+        [`${pluginId}Key`]: Buffer.from(keypair.secretKey).toString('hex'),
+        publicKey: keypair.publicKey.toBase58()
+      }
     }
   }
 
@@ -104,11 +114,10 @@ export class SolanaTools implements EdgeCurrencyTools {
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
-    if (walletInfo.keys[`${pluginId}Mnemonic`] == null) {
-      throw new Error('Missing mnemonic')
-    }
+
     const keys = await this.importPrivateKey(
-      walletInfo.keys[`${pluginId}Mnemonic`]
+      walletInfo.keys[`${pluginId}Mnemonic`] ??
+        walletInfo.keys[`${pluginId}Base58Key`]
     )
     return { publicKey: keys.publicKey.toString() }
   }
