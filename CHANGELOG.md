@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.15.2 (2024-07-26)
+
 - fixed: Holesky testnet params
 
 ## 4.15.1 (2024-07-25)
