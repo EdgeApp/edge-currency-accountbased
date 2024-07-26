@@ -35,15 +35,6 @@ import {
   SolanaNetworkInfo
 } from './solanaTypes'
 
-const createKeyPair = async (
-  mnemonic: string,
-  path: string
-): Promise<Keypair> => {
-  const buffer = await mnemonicToSeed(mnemonic)
-  const deriveSeed = ed25519.derivePath(path, base16.stringify(buffer)).key
-  return Keypair.fromSeed(Uint8Array.from(deriveSeed))
-}
-
 export class SolanaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
@@ -84,10 +75,12 @@ export class SolanaTools implements EdgeCurrencyTools {
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
 
-    const keypair = await createKeyPair(
-      mnemonic,
-      this.networkInfo.derivationPath
-    )
+    const buffer = await mnemonicToSeed(mnemonic)
+    const deriveSeed = ed25519.derivePath(
+      this.networkInfo.derivationPath,
+      base16.stringify(buffer)
+    ).key
+    const keypair = Keypair.fromSeed(Uint8Array.from(deriveSeed))
 
     return {
       [`${pluginId}Mnemonic`]: mnemonic,
