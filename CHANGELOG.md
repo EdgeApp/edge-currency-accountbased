@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix case where FIO names wouldn't be updated
+
 ## 4.15.0 (2024-07-22)
 
 - added: (Solana/Ethereum) Add optional `lightMode` support to disable transaction query
