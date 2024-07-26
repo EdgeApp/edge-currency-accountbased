@@ -1003,16 +1003,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             }
           }
         }
+      }
 
-        if (areAddressesChanged) {
-          isChanged = true
-          this.otherData.fioAddresses = result.fio_addresses.map(
-            fioAddress => ({
-              name: fioAddress.fio_address,
-              bundledTxs: fioAddress.remaining_bundled_tx
-            })
-          )
-        }
+      if (areAddressesChanged) {
+        isChanged = true
+        this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
+          name: fioAddress.fio_address,
+          bundledTxs: fioAddress.remaining_bundled_tx
+        }))
       }
     } catch (e: any) {
       this.warn('checkAccountInnerLoop getFioAddresses error: ', e)
