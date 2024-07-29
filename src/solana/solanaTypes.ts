@@ -37,14 +37,16 @@ export type SafeSolanaWalletInfo = ReturnType<typeof asSafeSolanaWalletInfo>
 export const asSafeSolanaWalletInfo = asSafeCommonWalletInfo
 
 export interface SolanaPrivateKeys {
-  mnemonic: string
+  mnemonic?: string
+  base58Key?: string
   privateKey: string
 }
 export const asSolanaPrivateKeys = (
   pluginId: string
 ): Cleaner<SolanaPrivateKeys> => {
   const asKeys = asObject({
-    [`${pluginId}Mnemonic`]: asString,
+    [`${pluginId}Mnemonic`]: asOptional(asString),
+    [`${pluginId}Base58Key`]: asOptional(asString),
     [`${pluginId}Key`]: asString
   })
 
@@ -53,12 +55,14 @@ export const asSolanaPrivateKeys = (
       const clean = asKeys(raw)
       return {
         mnemonic: clean[`${pluginId}Mnemonic`],
-        privateKey: clean[`${pluginId}Key`]
+        base58Key: clean[`${pluginId}Base58Key`],
+        privateKey: clean[`${pluginId}Key`] as string
       }
     },
     clean => {
       return {
         [`${pluginId}Mnemonic`]: clean.mnemonic,
+        [`${pluginId}Base58Key`]: clean.base58Key,
         [`${pluginId}Key`]: clean.privateKey
       }
     }

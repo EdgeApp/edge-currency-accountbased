@@ -585,7 +585,10 @@ export class SolanaEngine extends CurrencyEngine<
 
     let spendableBalance: string
     if (tokenId == null) {
-      spendableBalance = sub(balance, edgeTx.networkFee)
+      spendableBalance = sub(
+        sub(balance, edgeTx.networkFee),
+        this.minimumAddressBalance
+      )
     } else {
       const solBalance = this.getBalance({
         tokenId: null
@@ -758,8 +761,8 @@ export class SolanaEngine extends CurrencyEngine<
       instructions.push(transferInstruction)
     }
 
-    if (eq(totalTxAmount, balance)) {
-      // This is a max send so we don't need to consider the minimumAddressBalance
+    if (tokenId != null && eq(totalTxAmount, balance)) {
+      // This is a max token send so we don't need to consider the minimumAddressBalance
     } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
       throw new InsufficientFundsError({ tokenId })
     }
