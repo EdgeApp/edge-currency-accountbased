@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 4.16.0 (2024-07-29)
+
+- added: (Solana) Add base58 private key import
+- changed: (Solana) Enforce the network address minimum on SOL spends
+
 ## 4.15.2 (2024-07-26)
 
 - fixed: Holesky testnet params
