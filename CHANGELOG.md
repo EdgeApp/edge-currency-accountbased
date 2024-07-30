@@ -1,6 +1,8 @@
 # edge-currency-accountbased
 
-## Unreleased
+## 4.17.0 (2024-07-30)
+
+- added: signBytes() method for EthereumEngine
 
 ## 4.16.0 (2024-07-29)
 
