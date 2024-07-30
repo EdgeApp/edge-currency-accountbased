@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.16.1 (2024-07-30)
+
 - fixed: (ETH) Fix incorrect protocol in blockbook-ws connection URLs
 
 ## 4.16.0 (2024-07-29)
