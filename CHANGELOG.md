@@ -1,5 +1,9 @@
 # edge-currency-accountbased
 
+## Unreleased
+
+- fixed: (ETH) Fix incorrect protocol in blockbook-ws connection URLs
+
 ## 4.17.0 (2024-07-30)
 
 - added: signBytes() method for EthereumEngine
