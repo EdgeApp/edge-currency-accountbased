@@ -1161,8 +1161,8 @@ const networkInfo: EthereumNetworkInfo = {
         //   url: 'wss://eth-blockbook.nownodes.io/wss',
         //   keyType: 'nowNodesApiKey'
         // },
-        { url: 'https://eth1.trezor.io/websocket' },
-        { url: 'https://eth2.trezor.io/websocket' }
+        { url: 'wss://eth1.trezor.io/websocket' },
+        { url: 'wss://eth2.trezor.io/websocket' }
       ]
     },
     {
