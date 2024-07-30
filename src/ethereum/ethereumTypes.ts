@@ -431,7 +431,6 @@ export interface EIP712TypedDataParam {
 }
 
 export interface EthereumUtils {
-  signMessage: (message: string, privateKeys: EthereumPrivateKeys) => string
   signTypedData: (
     typedData: EIP712TypedDataParam,
     privateKeys: EthereumPrivateKeys
