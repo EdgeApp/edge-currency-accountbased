@@ -929,7 +929,7 @@ export class CurrencyEngine<
     for (const [currencyCode, nativeAmount] of Object.entries(spendAmountMap)) {
       const nativeBalance =
         this.walletLocalData.totalBalances[currencyCode] ?? '0'
-      if (!skipChecks && lt(nativeBalance, nativeAmount)) {
+      if (!skipChecks && gt(nativeAmount, nativeBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
     }

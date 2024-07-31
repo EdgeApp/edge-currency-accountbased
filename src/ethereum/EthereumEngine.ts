@@ -792,6 +792,13 @@ export class EthereumEngine extends CurrencyEngine<
       tokenId
     })
 
+    // This trick allows us to use the balance as the max spendable amount.
+    // We add a noop `e0` exponent to the amount so that `makeSpend` knows
+    // to use the balance as a "spend all" amount.
+    if (this.networkInfo.useBalanceAsMaxSpendable === true) {
+      return `${balance}e0`
+    }
+
     const spendTarget = spendInfo.spendTargets[0]
     const publicAddress = spendTarget.publicAddress
     if (publicAddress == null) {
@@ -1120,10 +1127,17 @@ export class EthereumEngine extends CurrencyEngine<
 
     if (currencyCode === this.currencyInfo.currencyCode) {
       nativeNetworkFee = add(nativeNetworkFee, l1Fee)
-      totalTxAmount = add(nativeNetworkFee, nativeAmount)
+
+      if (nativeAmount === `${nativeBalance}e0`) {
+        totalTxAmount = sub(nativeBalance, nativeNetworkFee)
+      } else {
+        totalTxAmount = add(nativeNetworkFee, nativeAmount)
+      }
+
       if (!skipChecks && gt(totalTxAmount, nativeBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
+
       nativeAmount = mul(totalTxAmount, '-1')
     } else {
       parentNetworkFee = add(nativeNetworkFee, l1Fee)
@@ -1136,9 +1150,15 @@ export class EthereumEngine extends CurrencyEngine<
       }
       const balanceToken =
         this.walletLocalData.totalBalances[currencyCode] ?? '0'
+
+      if (nativeAmount === `${balanceToken}e0`) {
+        nativeAmount = balanceToken
+      }
+
       if (!skipChecks && gt(nativeAmount, balanceToken)) {
         throw new InsufficientFundsError({ tokenId })
       }
+
       nativeNetworkFee = '0' // Do not show a fee for token transactions.
       nativeAmount = mul(nativeAmount, '-1')
     }

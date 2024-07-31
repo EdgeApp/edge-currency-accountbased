@@ -71,9 +71,9 @@ export interface ChainParams {
 }
 
 export interface EthereumNetworkInfo {
+  amberDataBlockchainId: string
   networkAdapterConfigs: NetworkAdapterConfig[]
   feeUpdateFrequencyMs?: number
-  amberDataBlockchainId: string
   chainParams: ChainParams
   supportsEIP1559?: boolean
   optimismRollup?: boolean
@@ -87,6 +87,7 @@ export interface EthereumNetworkInfo {
   pluginMnemonicKeyName: string
   pluginRegularKeyName: string
   uriNetworks: string[]
+  useBalanceAsMaxSpendable?: boolean
 }
 
 const asNetworkAdaptorConfigType = asValue(

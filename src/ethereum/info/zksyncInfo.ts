@@ -75,6 +75,14 @@ const networkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
+  amberDataBlockchainId: '',
+  chainParams: {
+    chainId: 324,
+    name: 'zkSync'
+  },
+  ercTokenStandard: 'ERC20',
+  ethGasStationUrl: null,
+  hdPathCoinType: 60,
   networkAdapterConfigs: [
     {
       type: 'rpc',
@@ -89,18 +97,11 @@ const networkInfo: EthereumNetworkInfo = {
       ]
     }
   ],
-  uriNetworks: ['zksync'],
-  ercTokenStandard: 'ERC20',
-  chainParams: {
-    chainId: 324,
-    name: 'zkSync'
-  },
-  hdPathCoinType: 60,
-  amberDataBlockchainId: '',
+  networkFees,
   pluginMnemonicKeyName: 'zksyncMnemonic',
   pluginRegularKeyName: 'zksyncKey',
-  ethGasStationUrl: null,
-  networkFees
+  uriNetworks: ['zksync'],
+  useBalanceAsMaxSpendable: true
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
