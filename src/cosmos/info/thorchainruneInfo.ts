@@ -13,9 +13,11 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
-    chainId: 'thorchain-mainnet-v1',
+    chainName: 'thorchain',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
+  defaultChainId: 'thorchain-mainnet-v1',
+  chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
   defaultTransactionFeeUrl: {
     url: 'https://thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }

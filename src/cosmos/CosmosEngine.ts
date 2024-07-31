@@ -56,6 +56,7 @@ import { EdgeTokenId, MakeTxParams } from '../common/types'
 import { cleanTxLogs } from '../common/utils'
 import { CosmosTools } from './CosmosTools'
 import {
+  asChainIdUpdate,
   asCosmosPrivateKeys,
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
@@ -110,6 +111,7 @@ export class CosmosEngine extends CurrencyEngine<
   feeCache: Map<string, CosmosFee>
   stakedBalanceCache: string
   stakingSupported: boolean
+  chainId: string
 
   constructor(
     env: PluginEnvironment<CosmosNetworkInfo>,
@@ -129,6 +131,7 @@ export class CosmosEngine extends CurrencyEngine<
     this.feeCache = new Map()
     this.stakedBalanceCache = '0'
     this.stakingSupported = true
+    this.chainId = this.networkInfo.defaultChainId
     this.otherMethods = {
       getMaxTx: async (params: MakeTxParams) => {
         switch (params.type) {
@@ -490,6 +493,25 @@ export class CosmosEngine extends CurrencyEngine<
     } catch (e: any) {
       this.error(`queryBlockheight Error `, e)
     }
+  }
+
+  async queryChainId(): Promise<void> {
+    if (this.networkInfo.chainIdUpdateUrl != null) {
+      try {
+        const res = await this.fetchCors(this.networkInfo.chainIdUpdateUrl)
+        if (!res.ok) {
+          const message = await res.text()
+          throw new Error(message)
+        }
+        const raw = await res.json()
+        const clean = asChainIdUpdate(raw)
+        this.chainId = clean.result.node_info.network
+      } catch (e: any) {
+        this.error(`queryChainId Error `, e)
+        return
+      }
+    }
+    clearTimeout(this.timers.queryChainId)
   }
 
   async queryTransactions(): Promise<void> {
@@ -874,6 +896,9 @@ export class CosmosEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
+    this.addToLoop('queryChainId', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS).catch(
       () => {}
@@ -1166,7 +1191,7 @@ export class CosmosEngine extends CurrencyEngine<
       accountNumber: longify(this.accountNumber),
       authInfoBytes,
       bodyBytes,
-      chainId: this.tools.chainData.chain_id
+      chainId: this.chainId
     })
     const signer = await this.tools.createSigner(keys.mnemonic)
     const signResponse = await signer.signDirect(

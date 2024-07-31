@@ -133,9 +133,10 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'core',
   bip39Path: `m/44'/990'/0'/0/0`,
   chainInfo: {
-    chainId: 'coreum-mainnet-1',
+    chainName: 'coreum',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/coreum/chain.json'
   },
+  defaultChainId: 'coreum-mainnet-1',
   nativeDenom: 'ucore',
   pluginMnemonicKeyName: 'coreumMnemonic',
   rpcNode: {

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (zkSync) Add USDC
+- added: (Cosmos) Add chain ID updater
 - fixed: (zkSync) Fix USDC.e currency code
 
 ## 4.17.1 (2024-07-30)

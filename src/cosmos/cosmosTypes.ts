@@ -70,9 +70,11 @@ export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
   chainInfo: {
-    chainId: string
+    chainName: string
     url: string
   }
+  defaultChainId: string
+  chainIdUpdateUrl?: string
   defaultTransactionFeeUrl?: HttpEndpoint
   nativeDenom: string
   pluginMnemonicKeyName: string
@@ -275,3 +277,11 @@ export const asCosmosInfoPayload = asObject({
   archiveNode: asOptional(asHttpEndpoint)
 })
 export type CosmosInfoPayload = ReturnType<typeof asCosmosInfoPayload>
+
+export const asChainIdUpdate = asObject({
+  result: asObject({
+    node_info: asObject({
+      network: asString // 'thorchain-mainnet-v1',
+    })
+  })
+})

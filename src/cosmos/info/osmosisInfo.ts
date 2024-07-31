@@ -25,9 +25,10 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'osmo',
   bip39Path: `m/44'/118'/0'/0/0`,
   chainInfo: {
-    chainId: 'osmosis-1',
+    chainName: 'osmosis',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/chain.json'
   },
+  defaultChainId: 'osmosis-1',
   nativeDenom: 'uosmo',
   pluginMnemonicKeyName: 'osmosisMnemonic',
   rpcNode: {
