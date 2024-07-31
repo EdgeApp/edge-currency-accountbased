@@ -143,10 +143,17 @@ const networkInfo: CosmosNetworkInfo = {
     url: 'https://full-node.mainnet-1.coreum.dev:26657',
     headers: {}
   },
-  archiveNode: {
-    url: 'https://full-node.mainnet-1.coreum.dev:26657',
-    headers: {}
-  }
+  archiveNodes: [
+    {
+      blockTimeRangeSeconds: {
+        start: 0
+      },
+      endpoint: {
+        url: 'https://full-node.mainnet-1.coreum.dev:26657',
+        headers: {}
+      }
+    }
+  ]
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

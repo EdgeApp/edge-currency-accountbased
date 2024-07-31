@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Cosmos) Add chain ID updater
+- added: (Cosmos) Support multiple archive nodes
 
 ## 4.17.1 (2024-07-30)
 

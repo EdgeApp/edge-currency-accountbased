@@ -79,7 +79,14 @@ export interface CosmosNetworkInfo {
   nativeDenom: string
   pluginMnemonicKeyName: string
   rpcNode: HttpEndpoint
-  archiveNode?: HttpEndpoint // If no archive node, the rpc node will be used and only grab transaction in a limited range
+  // If no archive node, the rpc node will be used and only grab transaction in a limited range
+  archiveNodes?: Array<{
+    blockTimeRangeSeconds: {
+      start: number
+      end?: number
+    }
+    endpoint: HttpEndpoint
+  }>
 }
 const asHttpEndpoint = asObject({
   url: asString,
@@ -92,19 +99,16 @@ export const txQueryStrings = [
 ] as const
 
 const asLocalTxQueryParams = asObject({
-  newestTxid: asMaybe(asString),
-  lastPage: asMaybe(asNumber, 1)
+  newestTxid: asMaybe(asString)
 })
 
 export const asCosmosWalletOtherData = asObject({
   archivedTxLastCheckTime: asMaybe(asNumber, 0),
   'coin_spent.spender': asMaybe(asLocalTxQueryParams, () => ({
-    newestTxid: undefined,
-    lastPage: 1
+    newestTxid: undefined
   })),
   'coin_received.receiver': asMaybe(asLocalTxQueryParams, () => ({
-    newestTxid: undefined,
-    lastPage: 1
+    newestTxid: undefined
   }))
 })
 export type CosmosWalletOtherData = ReturnType<typeof asCosmosWalletOtherData>
@@ -274,7 +278,7 @@ export interface IbcChannel {
 
 export const asCosmosInfoPayload = asObject({
   rpcNode: asOptional(asHttpEndpoint),
-  archiveNode: asOptional(asHttpEndpoint)
+  archiveNodes: asOptional(asHttpEndpoint)
 })
 export type CosmosInfoPayload = ReturnType<typeof asCosmosInfoPayload>
 

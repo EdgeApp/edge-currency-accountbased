@@ -522,42 +522,59 @@ export class CosmosEngine extends CurrencyEngine<
         tokenId => this.allTokensMap[tokenId].currencyCode
       )
     ]
+    const clientsList: CosmosClients[] = []
+    if (
+      this.networkInfo.archiveNodes != null &&
+      Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
+    ) {
+      const sortedArchiveNodes = this.networkInfo.archiveNodes.sort(
+        (a, b) => a.blockTimeRangeSeconds.start - b.blockTimeRangeSeconds.start
+      )
+      for (const node of sortedArchiveNodes) {
+        if (
+          node.blockTimeRangeSeconds.end == null ||
+          node.blockTimeRangeSeconds.end >
+            this.otherData.archivedTxLastCheckTime
+        ) {
+          const archiveClients = await createCosmosClients(
+            this.fetchCors,
+            rpcWithApiKey(node.endpoint, this.tools.initOptions)
+          )
+          clientsList.push(archiveClients)
+        }
+      }
+    }
+    clientsList.push(this.getClients())
 
-    for (const query of txQueryStrings) {
-      let startingPage = 1
-      let clients = this.getClients()
-
-      if (
-        this.networkInfo.archiveNode != null &&
-        Date.now() - TWO_WEEKS > this.otherData.archivedTxLastCheckTime
-      ) {
-        startingPage = this.otherData[query].lastPage
-        clients = await createCosmosClients(
-          this.fetchCors,
-          rpcWithApiKey(this.networkInfo.archiveNode, this.tools.initOptions)
+    for (const clients of clientsList) {
+      let archivedTxLastCheckTime = 0
+      for (const query of txQueryStrings) {
+        const { newestTxid, lastTimestamp } = await this.queryTransactionsInner(
+          query,
+          clients
         )
+        if (
+          newestTxid != null &&
+          this.otherData[query]?.newestTxid !== newestTxid
+        ) {
+          this.otherData[query] = { newestTxid }
+          this.walletLocalDataDirty = true
+          archivedTxLastCheckTime = Math.max(
+            archivedTxLastCheckTime,
+            lastTimestamp
+          )
+        }
+        progress += 0.5 / clientsList.length
+        allCurrencyCodes.forEach(
+          code => (this.tokenCheckTransactionsStatus[code] = progress)
+        )
+        this.updateOnAddressesChecked()
       }
-
-      const { newestTxid, lastPage } = await this.queryTransactionsInner(
-        query,
-        clients,
-        startingPage
-      )
-      if (
-        (newestTxid != null &&
-          this.otherData[query]?.newestTxid !== newestTxid) ||
-        lastPage !== this.otherData[query]?.lastPage
-      ) {
-        this.otherData[query] = { newestTxid, lastPage }
-        this.walletLocalDataDirty = true
-      }
-      progress += 0.5
-      allCurrencyCodes.forEach(
-        code => (this.tokenCheckTransactionsStatus[code] = progress)
-      )
-      this.updateOnAddressesChecked()
+      this.otherData.archivedTxLastCheckTime = archivedTxLastCheckTime
+      this.walletLocalDataDirty = true
     }
     this.otherData.archivedTxLastCheckTime = Date.now()
+    this.walletLocalDataDirty = true
 
     if (this.transactionsChangedArray.length > 0) {
       this.currencyEngineCallbacks.onTransactionsChanged(
@@ -569,16 +586,16 @@ export class CosmosEngine extends CurrencyEngine<
 
   async queryTransactionsInner(
     queryString: typeof txQueryStrings[number],
-    clients: CosmosClients,
-    startingPage: number
-  ): Promise<{ newestTxid: string | undefined; lastPage: number }> {
+    clients: CosmosClients
+  ): Promise<{ newestTxid: string | undefined; lastTimestamp: number }> {
     const txSearchParams = {
       query: `${queryString}='${this.walletInfo.keys.bech32Address}'`,
       per_page: TXS_PER_PAGE, // sdk default 50
       order_by: 'asc'
     }
     let newestTxid: string | undefined
-    let page = startingPage
+    let lastTimestamp = 0
+    let page = 1
     do {
       try {
         const { totalCount, txs } = await clients.cometClient.txSearch({
@@ -641,7 +658,8 @@ export class CosmosEngine extends CurrencyEngine<
           })
 
           newestTxid = txidHex
-          this.otherData[queryString] = { newestTxid: txidHex, lastPage: page }
+          this.otherData[queryString] = { newestTxid: txidHex }
+          lastTimestamp = date * 1000
           this.walletLocalDataDirty = true
         }
 
@@ -661,11 +679,11 @@ export class CosmosEngine extends CurrencyEngine<
       }
 
       page++
-      this.otherData[queryString] = { newestTxid, lastPage: page }
+      this.otherData[queryString] = { newestTxid }
       this.walletLocalDataDirty = true
     } while (true)
 
-    return { newestTxid, lastPage: page }
+    return { newestTxid, lastTimestamp }
   }
 
   processCosmosTransaction(
