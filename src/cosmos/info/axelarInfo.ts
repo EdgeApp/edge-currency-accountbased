@@ -12,9 +12,10 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'axelar',
   bip39Path: `m/44'/118'/0'/0/0`,
   chainInfo: {
-    chainId: 'axelar-dojo-1',
+    chainName: 'axelar',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/axelar/chain.json'
   },
+  defaultChainId: 'axelar-dojo-1',
   nativeDenom: 'uaxl',
   pluginMnemonicKeyName: 'axelarMnemonic',
   rpcNode: {

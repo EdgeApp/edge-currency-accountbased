@@ -60,9 +60,10 @@ export class CosmosTools implements EdgeCurrencyTools {
     )
     this.methods = methods
     this.registry = registry
-    const { chainId, url } = this.networkInfo.chainInfo
+    const { chainName, url } = this.networkInfo.chainInfo
     const chainData = chains.find(
-      chain => chain.chain_id === chainId && chain.network_type === 'mainnet'
+      chain =>
+        chain.chain_name === chainName && chain.network_type === 'mainnet'
     )
     if (chainData == null) {
       throw new Error('Unknown chain')
