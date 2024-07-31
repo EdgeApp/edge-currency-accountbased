@@ -4,6 +4,7 @@
 
 - added: (zkSync) Add USDC
 - added: (Cosmos) Add chain ID updater
+- added: (Cosmos) Support multiple archive nodes
 - fixed: (zkSync) Fix USDC.e currency code
 
 ## 4.17.1 (2024-07-30)

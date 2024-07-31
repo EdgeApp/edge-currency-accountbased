@@ -22,10 +22,17 @@ const networkInfo: CosmosNetworkInfo = {
     url: 'https://axelar-rpc.publicnode.com:443',
     headers: {}
   },
-  archiveNode: {
-    url: 'https://axelararchive-rpc.quickapi.com:443',
-    headers: {}
-  }
+  archiveNodes: [
+    {
+      blockTimeRangeSeconds: {
+        start: 0
+      },
+      endpoint: {
+        url: 'https://axelararchive-rpc.quickapi.com:443',
+        headers: {}
+      }
+    }
+  ]
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

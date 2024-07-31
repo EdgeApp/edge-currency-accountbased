@@ -35,10 +35,17 @@ const networkInfo: CosmosNetworkInfo = {
     url: 'https://rpc.osmosis.zone:443',
     headers: {}
   },
-  archiveNode: {
-    url: 'https://osmosisarchive-rpc.quickapi.com:443',
-    headers: {}
-  }
+  archiveNodes: [
+    {
+      blockTimeRangeSeconds: {
+        start: 0
+      },
+      endpoint: {
+        url: 'https://osmosisarchive-rpc.quickapi.com:443',
+        headers: {}
+      }
+    }
+  ]
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
