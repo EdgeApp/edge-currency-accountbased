@@ -857,9 +857,9 @@
     randombytes "^2.1.0"
     text-encoding "0.7.0"
 
-"@fioprotocol/fiosdk@https://github.com/peachbits/fiosdk_typescript.git#458cc706fe2601caeaf5dc726a72bcdc12f41fc6":
+"@fioprotocol/fiosdk@https://github.com/jon-edge/fiosdk_typescript.git#92a0fb8":
   version "1.9.0"
-  resolved "https://github.com/peachbits/fiosdk_typescript.git#458cc706fe2601caeaf5dc726a72bcdc12f41fc6"
+  resolved "https://github.com/jon-edge/fiosdk_typescript.git#92a0fb895b2ce57e5955cd30cb4b7fa2bcc66bf2"
   dependencies:
     "@fioprotocol/fiojs" "1.0.1"
     "@types/text-encoding" "0.0.35"
