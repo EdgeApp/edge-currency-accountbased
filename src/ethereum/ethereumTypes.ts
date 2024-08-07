@@ -310,7 +310,10 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
 
 export const asEthereumWalletOtherData = asObject({
   nextNonce: asMaybe(asString, '0'),
-  unconfirmedNextNonce: asMaybe(asString, '0')
+  unconfirmedNextNonce: asMaybe(asString, '0'),
+
+  // hacks
+  zksyncForceResyncUSDC: asMaybe(asBoolean, false)
 })
 
 export type EthereumWalletOtherData = ReturnType<
