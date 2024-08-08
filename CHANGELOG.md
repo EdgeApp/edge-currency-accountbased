@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (FIO) Move OBT fetch into `otherMethodsPrivateKey.fetchObtData`
+
 ## 4.18.0 (2024-08-09)
 
 - added: (zkSync) Add USDC
