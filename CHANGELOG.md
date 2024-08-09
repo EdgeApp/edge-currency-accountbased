@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Cosmos) Add chain ID updater
+- added: (Cosmos) Support multiple archive nodes
+
 ## 4.17.1 (2024-07-30)
 
 - fixed: (ETH) Fix incorrect protocol in blockbook-ws connection URLs

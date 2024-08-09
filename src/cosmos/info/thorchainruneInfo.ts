@@ -13,9 +13,11 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
-    chainId: 'thorchain-mainnet-v1',
+    chainName: 'thorchain',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
+  defaultChainId: 'thorchain-mainnet-v1',
+  chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
   defaultTransactionFeeUrl: {
     url: 'https://thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
@@ -26,10 +28,27 @@ const networkInfo: CosmosNetworkInfo = {
     url: 'https://rpc.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
-  archiveNode: {
-    url: 'https://rpc-v1.ninerealms.com',
-    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
-  }
+  archiveNodes: [
+    {
+      blockTimeRangeSeconds: {
+        start: 1647912564649 // 2022-03-22T01:29:24.649Z
+        // end: TBD
+      },
+      endpoint: {
+        url: 'https://rpc-v1.ninerealms.com',
+        headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+      }
+    }
+    // {
+    //   blockTimeRangeSeconds: {
+    //     start: TBD
+    //   },
+    //   endpoint: {
+    //     url: 'https://rpc-v2.ninerealms.com',
+    //     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+    //   }
+    // }
+  ]
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
