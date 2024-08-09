@@ -12,9 +12,10 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'cosmos',
   bip39Path: `m/44'/118'/0'/0/0`,
   chainInfo: {
-    chainId: 'cosmoshub-4',
+    chainName: 'cosmoshub',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/chain.json'
   },
+  defaultChainId: 'cosmoshub-4',
   nativeDenom: 'uatom',
   pluginMnemonicKeyName: 'cosmoshubMnemonic',
   rpcNode: {

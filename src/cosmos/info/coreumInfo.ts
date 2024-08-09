@@ -133,19 +133,27 @@ const networkInfo: CosmosNetworkInfo = {
   bech32AddressPrefix: 'core',
   bip39Path: `m/44'/990'/0'/0/0`,
   chainInfo: {
-    chainId: 'coreum-mainnet-1',
+    chainName: 'coreum',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/coreum/chain.json'
   },
+  defaultChainId: 'coreum-mainnet-1',
   nativeDenom: 'ucore',
   pluginMnemonicKeyName: 'coreumMnemonic',
   rpcNode: {
     url: 'https://full-node.mainnet-1.coreum.dev:26657',
     headers: {}
   },
-  archiveNode: {
-    url: 'https://full-node.mainnet-1.coreum.dev:26657',
-    headers: {}
-  }
+  archiveNodes: [
+    {
+      blockTimeRangeSeconds: {
+        start: 0
+      },
+      endpoint: {
+        url: 'https://full-node.mainnet-1.coreum.dev:26657',
+        headers: {}
+      }
+    }
+  ]
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
