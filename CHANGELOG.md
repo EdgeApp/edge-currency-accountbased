@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.18.0 (2024-08-09)
+
 - added: (zkSync) Add USDC
 - added: (Cosmos) Add chain ID updater
 - added: (Cosmos) Support multiple archive nodes
