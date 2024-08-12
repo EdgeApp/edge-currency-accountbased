@@ -150,16 +150,29 @@ export type GetTransactionList = (currencyCode: string) => EdgeTransaction[]
 export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   fetchCors: EdgeFetchFunction
   otherMethods: Object
+  otherMethodsWithKeys: Object
   tpid: string
   otherData!: FioWalletOtherData
   networkInfo: FioNetworkInfo
   refBlock: FioRefBlock
   fees: FioActionFees
   actor: string
-  obtData: ObtData[]
 
   localDataDirty(): void {
     this.walletLocalDataDirty = true
+  }
+
+  // TODO: v1.9 of the FIO sdk introduced a getEncyptKey prop to their
+  // checkFioRequests fn, though the SDK can still function without it.
+  // Whenever they require it or provide more information about what it even
+  // is, we should implement it.
+  defaultGetEncryptKey = async (
+    fioAddress: string
+  ): Promise<GetEncryptKeyResponse> => {
+    // Provide a default response or handle the fallback logic here
+    return {
+      encrypt_public_key: this.walletInfo.keys.publicKey // Use the public key as a fallback
+    }
   }
 
   constructor(
@@ -180,7 +193,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
     this.fees = new Map()
     this.actor = FIOSDK.accountHash(this.walletInfo.keys.publicKey).accountnm
-    this.obtData = []
 
     this.otherMethods = {
       fioAction: async (actionName: string, params: any): Promise<any> => {
@@ -205,9 +217,32 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         return this.otherData.fioRequests[type]
           .sort((a, b) => (a.time_stamp < b.time_stamp ? 1 : -1))
           .slice(startIndex, endIndex)
-      },
-      getObtData: async (): Promise<ObtData[]> => {
-        return this.obtData
+      }
+    }
+
+    this.otherMethodsWithKeys = {
+      fetchObtData: async (
+        privateKeys: JsonObject,
+        ...rest: any[]
+      ): Promise<ObtData[]> => {
+        const obtDecoder = new GetObtData({
+          fioPublicKey: this.walletInfo.keys.publicKey,
+          getEncryptKey: this.defaultGetEncryptKey,
+          includeEncrypted: false
+        })
+        const encryptedObtData = await this.fetchEncryptedObtData(
+          'getObtData',
+          obtDecoder
+        )
+        obtDecoder.privateKey = privateKeys.fioKey
+        obtDecoder.publicKey = this.walletInfo.keys.publicKey
+        const decryptedObtData: { obt_data_records: ObtData[] } =
+          (await obtDecoder.decrypt({
+            obt_data_records: encryptedObtData,
+            more: 0
+          })) ?? { obt_data_records: [] }
+
+        return decryptedObtData.obt_data_records
       }
     }
   }
@@ -1204,19 +1239,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     const fioPrivateKeys = asFioPrivateKeys(opts?.privateKeys)
     let isChanged = false
 
-    // TODO: v1.9 of the FIO sdk introduced a getEncyptKey prop to their
-    // checkFioRequests fn, though the SDK can still function without it.
-    // Whenever they require it or provide more information about what it even
-    // is, we should implement it.
-    const defaultGetEncryptKey = async (
-      fioAddress: string
-    ): Promise<GetEncryptKeyResponse> => {
-      // Provide a default response or handle the fallback logic here
-      return {
-        encrypt_public_key: this.walletInfo.keys.publicKey // Use the public key as a fallback
-      }
-    }
-
     const checkFioRequests = async (
       type: FioRequestTypes,
       decoder: Query<PendingFioRequests | SentFioRequests>
@@ -1243,37 +1265,18 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       'PENDING',
       new PendingFioRequests({
         fioPublicKey: this.walletInfo.keys.publicKey,
-        getEncryptKey: defaultGetEncryptKey
+        getEncryptKey: this.defaultGetEncryptKey
       })
     )
     await checkFioRequests(
       'SENT',
       new SentFioRequests({
         fioPublicKey: this.walletInfo.keys.publicKey,
-        getEncryptKey: defaultGetEncryptKey
+        getEncryptKey: this.defaultGetEncryptKey
       })
     )
 
     if (isChanged) this.localDataDirty()
-
-    const obtDecoder = new GetObtData({
-      fioPublicKey: this.walletInfo.keys.publicKey,
-      getEncryptKey: defaultGetEncryptKey,
-      includeEncrypted: false
-    })
-    const encryptedObtData = await this.fetchEncryptedObtData(
-      'getObtData',
-      obtDecoder
-    )
-    obtDecoder.privateKey = fioPrivateKeys.fioKey
-    obtDecoder.publicKey = this.walletInfo.keys.publicKey
-    const decryptedObtData: { obt_data_records: ObtData[] } =
-      (await obtDecoder.decrypt({
-        obt_data_records: encryptedObtData,
-        more: 0
-      })) ?? { obt_data_records: [] }
-
-    this.obtData = decryptedObtData.obt_data_records
 
     return SYNC_NETWORK_INTERVAL
   }

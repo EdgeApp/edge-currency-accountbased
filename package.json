@@ -83,7 +83,7 @@
     "@emurgo/cardano-serialization-lib-nodejs": "^11.5.0",
     "@ethereumjs/common": "^4.0.0",
     "@ethereumjs/tx": "^5.0.0",
-    "@fioprotocol/fiosdk": "https://github.com/peachbits/fiosdk_typescript.git#458cc706fe2601caeaf5dc726a72bcdc12f41fc6",
+    "@fioprotocol/fiosdk": "https://github.com/jon-edge/fiosdk_typescript.git#92a0fb895b2ce57e5955cd30cb4b7fa2bcc66bf2",
     "@greymass/eosio": "^0.6.8",
     "@greymass/eosio-resources": "^0.7.0",
     "@hashgraph/sdk": "^2.44.0",
