@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.19.0 (2024-08-12)
+
 - changed: (FIO) Move OBT fetch into `otherMethodsPrivateKey.fetchObtData`
 
 ## 4.18.0 (2024-08-09)
