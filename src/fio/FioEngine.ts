@@ -2038,6 +2038,7 @@ export const parseAction = ({
   if (
     trxName === 'trnsfiopubky' ||
     trxName === 'unstakefio' ||
+    trxName === 'stakefio' ||
     trxName === 'regaddress'
   ) {
     nativeAmount = '0'
