@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Solana) Add new tokens: BSOL, DRIFT, HAWK, JITOSOL, JSOL, JTO, JUP, MIMO, MNGO, MSOL, SOL, USDC.e, WBTC, and WETH
+
 ## 4.19.0 (2024-08-12)
 
 - changed: (FIO) Move OBT fetch into `otherMethodsPrivateKey.fetchObtData`

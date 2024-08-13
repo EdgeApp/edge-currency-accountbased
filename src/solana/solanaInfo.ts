@@ -73,6 +73,110 @@ const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
     }
+  },
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': {
+    currencyCode: 'WETH',
+    displayName: 'Wrapped Ether (Wormhole)',
+    denominations: [{ name: 'WETH', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs'
+    }
+  },
+  '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh': {
+    currencyCode: 'WBTC',
+    displayName: 'Wrapped BTC (Wormhole)',
+    denominations: [{ name: 'WBTC', multiplier: '100000000' }],
+    networkLocation: {
+      contractAddress: '3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh'
+    }
+  },
+  So11111111111111111111111111111111111111112: {
+    currencyCode: 'SOL',
+    displayName: 'Wrapped SOL',
+    denominations: [{ name: 'SOL', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'So11111111111111111111111111111111111111112'
+    }
+  },
+  mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So: {
+    currencyCode: 'MSOL',
+    displayName: 'Marinade staked SOL',
+    denominations: [{ name: 'MSOL', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So'
+    }
+  },
+  DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7: {
+    currencyCode: 'DRIFT',
+    displayName: 'DRIFT',
+    denominations: [{ name: 'DRIFT', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7'
+    }
+  },
+  JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN: {
+    currencyCode: 'JUP',
+    displayName: 'Jupiter',
+    denominations: [{ name: 'JUP', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
+    }
+  },
+  jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL: {
+    currencyCode: 'JTO',
+    displayName: 'JITO',
+    denominations: [{ name: 'JTO', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL'
+    }
+  },
+  bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1: {
+    currencyCode: 'BSOL',
+    displayName: 'BlazeStake',
+    denominations: [{ name: 'BSOL', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1'
+    }
+  },
+  BKipkearSqAUdNKa1WDstvcMjoPsSKBuNyvKDQDDu9WE: {
+    currencyCode: 'HAWK',
+    displayName: 'Hawksight',
+    denominations: [{ name: 'HAWK', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'BKipkearSqAUdNKa1WDstvcMjoPsSKBuNyvKDQDDu9WE'
+    }
+  },
+  J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn: {
+    currencyCode: 'JITOSOL',
+    displayName: 'Jito Staked SOL',
+    denominations: [{ name: 'JITOSOL', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn'
+    }
+  },
+  '7Q2afV64in6N6SeZsAAB81TJzwDoD6zpqmHkzi9Dcavn': {
+    currencyCode: 'JSOL',
+    displayName: 'JPool Staked SOL',
+    denominations: [{ name: 'JSOL', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: '7Q2afV64in6N6SeZsAAB81TJzwDoD6zpqmHkzi9Dcavn'
+    }
+  },
+  MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac: {
+    currencyCode: 'MNGO',
+    displayName: 'Mango',
+    denominations: [{ name: 'MNGO', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: 'MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac'
+    }
+  },
+  '9TE7ebz1dsFo1uQ2T4oYAKSm39Y6fWuHrd6Uk6XaiD16': {
+    currencyCode: 'MIMO',
+    displayName: 'Million Monke',
+    denominations: [{ name: 'MIMO', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: '9TE7ebz1dsFo1uQ2T4oYAKSm39Y6fWuHrd6Uk6XaiD16'
+    }
   }
 }
 
