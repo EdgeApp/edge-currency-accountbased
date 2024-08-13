@@ -1,4 +1,5 @@
 import { add, max, mul, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeConfirmationState,
   EdgeCurrencyInfo,
@@ -367,11 +368,18 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     let l1RollupFee = '0'
     if (isSpend && this.ethEngine.networkInfo.optimismRollup === true) {
-      const response = await this.ethEngine.ethNetwork.multicastRpc(
+      const rpcResponse = await this.ethEngine.ethNetwork.multicastRpc(
         'eth_getTransactionReceipt',
         [txid]
       )
-      const json = asGetTransactionReceipt(response.result.result)
+      let json = asMaybe(asGetTransactionReceipt)(rpcResponse.result.result)
+      if (json == null) {
+        const path = `?module=proxy&action=eth_getTransactionReceipt&txhash=${txid}`
+        const evmScanResponse = await this.serialServers(
+          async server => await this.fetchGetEtherscan(server, path)
+        )
+        json = asGetTransactionReceipt(evmScanResponse.result)
+      }
       l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
     }
 
