@@ -145,7 +145,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://rpc.ankr.com/bsc',
         'https://bsc-dataseed.binance.org',
         'https://bsc-dataseed1.defibit.io',
-        'https://bsc-dataseed1.ninicoin.io'
+        'https://bsc-dataseed1.ninicoin.io',
+        'https://lb.drpc.org/ogrpc?network=bsc&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
     },

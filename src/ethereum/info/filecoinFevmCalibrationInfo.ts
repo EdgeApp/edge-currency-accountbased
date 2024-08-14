@@ -56,7 +56,10 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://api.calibration.node.glif.io/rpc/v0']
+      servers: [
+        'https://api.calibration.node.glif.io/rpc/v0',
+        'https://lb.drpc.org/ogrpc?network=filecoin-calibration&dkey={{drpcApiKey}}'
+      ]
     },
     {
       type: 'filfox',

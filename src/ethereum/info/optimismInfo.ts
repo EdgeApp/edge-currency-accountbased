@@ -179,7 +179,11 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://mainnet.optimism.io', 'https://rpc.ankr.com/optimism'],
+      servers: [
+        'https://mainnet.optimism.io',
+        'https://rpc.ankr.com/optimism',
+        'https://lb.drpc.org/ogrpc?network=optimism&dkey={{drpcApiKey}}'
+      ],
       ethBalCheckerContract: '0xb1c568e9c3e6bdaf755a60c7418c269eb11524fc'
     },
     {

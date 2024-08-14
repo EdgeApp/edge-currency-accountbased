@@ -50,7 +50,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://polygon-amoy-bor-rpc.publicnode.com',
         'https://rpc-amoy.polygon.technology',
         'https://polygon-amoy.drpc.org',
-        'https://api.tatum.io/v3/blockchain/node/polygon-amoy'
+        'https://api.tatum.io/v3/blockchain/node/polygon-amoy',
+        'https://lb.drpc.org/ogrpc?network=polygon-amoy&dkey={{drpcApiKey}}'
       ]
     },
     {

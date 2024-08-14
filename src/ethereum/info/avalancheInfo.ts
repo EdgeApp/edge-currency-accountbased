@@ -189,7 +189,8 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://api.avax.network/ext/bc/C/rpc',
-        'https://rpc.ankr.com/avalanche'
+        'https://rpc.ankr.com/avalanche',
+        'https://lb.drpc.org/ogrpc?network=avalanche&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0xd023d153a0dfa485130ecfde2faa7e612ef94818'
     },

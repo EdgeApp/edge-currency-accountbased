@@ -61,7 +61,8 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://base-mainnet.public.blastapi.io',
-        'https://rpc.ankr.com/base'
+        'https://rpc.ankr.com/base',
+        'https://lb.drpc.org/ogrpc?network=base&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x3ba5A41eA17fd4950a641a057dC0bEb8E8ff1521'
     },

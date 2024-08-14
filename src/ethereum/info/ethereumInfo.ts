@@ -1131,7 +1131,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
         'https://eth-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
-        'https://cloudflare-eth.com'
+        'https://cloudflare-eth.com',
+        'https://lb.drpc.org/ogrpc?network=ethereum&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0xb1f8e55c7f64d203c1400b9d8555d050f94adf39'
     },

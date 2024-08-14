@@ -53,7 +53,10 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://public-node.rsk.co']
+      servers: [
+        'https://public-node.rsk.co',
+        'https://lb.drpc.org/ogrpc?network=rootstock&dkey={{drpcApiKey}}'
+      ]
     },
     {
       type: 'evmscan',
