@@ -592,9 +592,6 @@ export class CosmosEngine extends CurrencyEngine<
 
           const txidHex = toHex(tx.hash).toUpperCase()
 
-          // update unconfirmed cache
-          this.removeFromUnconfirmedCache(txidHex)
-
           const events = tx.result.events.map(fromTendermintEvent)
           let netBalanceChanges: CosmosCoin[] = []
           try {
@@ -741,6 +738,12 @@ export class CosmosEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     this.addTransaction(currencyCode, edgeTransaction)
+  }
+
+  addTransaction(currencyCode: string, edgeTransaction: EdgeTransaction): void {
+    // update unconfirmed cache
+    this.removeFromUnconfirmedCache(edgeTransaction.txid)
+    super.addTransaction(currencyCode, edgeTransaction)
   }
 
   private createUnsignedTxHex(messages: EncodeObject[], memo?: string): string {
