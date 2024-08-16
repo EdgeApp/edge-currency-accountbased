@@ -91,9 +91,9 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   So11111111111111111111111111111111111111112: {
-    currencyCode: 'SOL',
+    currencyCode: 'WSOL',
     displayName: 'Wrapped SOL',
-    denominations: [{ name: 'SOL', multiplier: '1000000000' }],
+    denominations: [{ name: 'WSOL', multiplier: '1000000000' }],
     networkLocation: {
       contractAddress: 'So11111111111111111111111111111111111111112'
     }
