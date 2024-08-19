@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.20.0 (2024-08-19)
+
 - added: (Solana) Add new tokens: BSOL, DRIFT, HAWK, JITOSOL, JSOL, JTO, JUP, MIMO, MNGO, MSOL, SOL, USDC.e, WBTC, and WETH
 - added: (EVM) Add dRPC nodes
 - changed: Add evmscan fallback for `eth_getTransactionReceipt`in `getL1RollupFee`
