@@ -27,6 +27,7 @@ export interface EthereumInitOptions {
   amberdataApiKey?: string
   blockchairApiKey?: string
   blockcypherApiKey?: string
+  drpcApiKey?: string
   evmScanApiKey?: string | string[]
   gasStationApiKey?: string
   infuraProjectId?: string
@@ -40,6 +41,7 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   amberdataApiKey: asOptional(asString),
   blockchairApiKey: asOptional(asString),
   blockcypherApiKey: asOptional(asString),
+  drpcApiKey: asOptional(asString),
   evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
   gasStationApiKey: asOptional(asString),
   infuraProjectId: asOptional(asString),

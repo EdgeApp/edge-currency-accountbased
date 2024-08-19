@@ -56,7 +56,10 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://api.node.glif.io/']
+      servers: [
+        'https://api.node.glif.io/',
+        'https://lb.drpc.org/ogrpc?network=filecoin&dkey={{drpcApiKey}}'
+      ]
     },
     {
       type: 'filfox',

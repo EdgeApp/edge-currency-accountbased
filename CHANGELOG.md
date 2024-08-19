@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Solana) Add new tokens: BSOL, DRIFT, HAWK, JITOSOL, JSOL, JTO, JUP, MIMO, MNGO, MSOL, SOL, USDC.e, WBTC, and WETH
+- added: (EVM) Add dRPC nodes
 
 ## 4.19.0 (2024-08-12)
 

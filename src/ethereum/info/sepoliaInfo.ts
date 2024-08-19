@@ -65,7 +65,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://api.zan.top/node/v1/eth/sepolia/public',
         'https://endpoints.omniatech.io/v1/eth/sepolia/public',
         'https://rpc.sepolia.org',
-        'https://rpc2.sepolia.org'
+        'https://rpc2.sepolia.org',
+        'https://lb.drpc.org/ogrpc?network=sepolia&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0xBfbCed302deD369855fc5f7668356e123ca4B329'
     },

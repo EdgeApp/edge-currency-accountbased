@@ -290,7 +290,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://fantom-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
         'https://polished-empty-cloud.fantom.quiknode.pro/{{quiknodeApiKey}}/',
         'https://rpc.ankr.com/fantom',
-        'https://rpc.ftm.tools'
+        'https://rpc.ftm.tools',
+        'https://lb.drpc.org/ogrpc?network=fantom&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x07f697424abe762bb808c109860c04ea488ff92b'
     },

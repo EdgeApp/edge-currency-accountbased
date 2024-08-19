@@ -67,7 +67,8 @@ const networkInfo: EthereumNetworkInfo = {
         'https://ethereum-holesky.blockpi.network/v1/rpc/public',
         'https://holesky.drpc.org',
         'https://rpc-holesky.rockx.com',
-        'https://endpoints.omniatech.io/v1/eth/holesky/public'
+        'https://endpoints.omniatech.io/v1/eth/holesky/public',
+        'https://lb.drpc.org/ogrpc?network=holesky&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0xf4C055E8760C6e66301C2e2F12b85567a9A50841'
     },

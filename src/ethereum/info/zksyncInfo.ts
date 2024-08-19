@@ -86,7 +86,10 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: ['https://mainnet.era.zksync.io']
+      servers: [
+        'https://mainnet.era.zksync.io',
+        'https://lb.drpc.org/ogrpc?network=zksync&dkey={{drpcApiKey}}'
+      ]
     },
     {
       type: 'evmscan',
