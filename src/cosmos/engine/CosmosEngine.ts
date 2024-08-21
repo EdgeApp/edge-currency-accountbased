@@ -60,7 +60,6 @@ import {
   asCosmosWcGetAccountsRpcPayload,
   asCosmosWcSignAminoRpcPayload,
   asCosmosWcSignDirectRpcPayload,
-  asThornodeNetwork,
   CosmosClients,
   CosmosCoin,
   CosmosFee,
@@ -612,12 +611,8 @@ export class CosmosEngine extends CurrencyEngine<
           const signedTx = base16.stringify(txRaw)
           const {
             authInfo: { fee },
-            body: { memo, messages }
+            body: { memo }
           } = decodeTxRaw(txRaw)
-          const dynamicNetworkFee = await this.totalDynamicNetworkFee(
-            messages,
-            block.header.height
-          )
           netBalanceChanges.forEach(coin => {
             this.processCosmosTransaction(
               txidHex,
@@ -626,7 +621,6 @@ export class CosmosEngine extends CurrencyEngine<
               coin,
               memo,
               height,
-              dynamicNetworkFee,
               fee
             )
           })
@@ -667,7 +661,6 @@ export class CosmosEngine extends CurrencyEngine<
     cosmosCoin: CosmosCoin,
     memo: string,
     height: number,
-    dynamicNetworkFee: string,
     fee?: Fee
   ): void {
     const { amount, denom } = cosmosCoin
@@ -702,12 +695,10 @@ export class CosmosEngine extends CurrencyEngine<
     let parentNetworkFee: string | undefined
     if (isSend) {
       if (isMainnet) {
-        networkFee = add(networkFee, dynamicNetworkFee)
         nativeAmount = sub(nativeAmount, networkFee)
       } else {
         networkFee = '0'
-        parentNetworkFee =
-          dynamicNetworkFee !== '0' ? dynamicNetworkFee : undefined
+        parentNetworkFee = networkFee !== '0' ? networkFee : undefined
       }
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
@@ -795,95 +786,48 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
-  private async totalDynamicNetworkFee(
-    messages: EncodeObject[],
-    blockheight?: number
-  ): Promise<string> {
-    let networkFee = '0'
-    if (this.networkInfo.defaultTransactionFeeUrl == null) {
-      return networkFee
-    }
-
-    const { url, headers } = rpcWithApiKey(
-      this.networkInfo.defaultTransactionFeeUrl,
-      this.tools.initOptions
-    )
-    const heightQueryParam = blockheight == null ? '' : `?height=${blockheight}`
-    const res = await this.fetchCors(`${url}${heightQueryParam}`, {
-      method: 'GET',
-      headers
-    })
-    const raw = await res.json()
-    const clean = asThornodeNetwork(raw)
-    for (const msg of messages) {
-      switch (msg.typeUrl) {
-        case '/types.MsgDeposit':
-          networkFee = add(networkFee, clean.native_outbound_fee_rune)
-          break
-        case '/types.MsgSend':
-          networkFee = add(networkFee, clean.native_tx_fee_rune)
-      }
-    }
-    return networkFee
-  }
-
-  private async calculateFee(opts: {
+  async calculateFee(opts: {
     messages: EncodeObject[]
     memo?: string
     networkFeeOption?: EdgeSpendInfo['networkFeeOption']
   }): Promise<CosmosFee> {
-    const { messages, memo, networkFeeOption } = opts
-    let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
-    let gasLimit = '0'
-    let networkFee = '0'
-    if (this.networkInfo.defaultTransactionFeeUrl == null) {
-      const { queryClient } = this.getClients()
-      const { gasInfo } = await queryClient.tx.simulate(
-        messages,
-        memo,
-        encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
-        this.getSequence()
-      )
-      if (gasInfo?.gasUsed == null) {
-        throw new Error(`simulate didn't return gasUsed `)
-      }
-      // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
-      gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
-
-      const { low, average, high } = getGasPriceStep(this.tools.chainData)
-
-      let gasPrice = average
-      switch (networkFeeOption) {
-        case 'low': {
-          gasPrice = low
-          break
-        }
-        case 'high': {
-          gasPrice = high
-          break
-        }
-        case 'custom': {
-          throw new Error('Custom fee not supported')
-        }
-      }
-
-      const gasFee = ceil(mul(gasLimit, gasPrice.toString()), 0)
-      gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
-      networkFee = gasFeeCoin.amount
-    } else {
-      // Only Thorchain uses defaultTransactionFeeUrl
-      networkFee = await this.totalDynamicNetworkFee(messages)
-
-      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
-      // This would most commonly be an issue for max spends but we should overestimate
-      // the fee for all spends.
-      networkFee = mul(networkFee, '1.01')
+    const { queryClient } = this.getClients()
+    const { gasInfo } = await queryClient.tx.simulate(
+      opts.messages,
+      opts.memo,
+      encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
+      this.getSequence()
+    )
+    if (gasInfo?.gasUsed == null) {
+      throw new Error(`simulate didn't return gasUsed `)
     }
+    // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
+    const gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
+
+    const { low, average, high } = getGasPriceStep(this.tools.chainData)
+
+    let gasPrice = average
+    switch (opts.networkFeeOption) {
+      case 'low': {
+        gasPrice = low
+        break
+      }
+      case 'high': {
+        gasPrice = high
+        break
+      }
+      case 'custom': {
+        throw new Error('Custom fee not supported')
+      }
+    }
+
+    const gasFee = ceil(mul(gasLimit, gasPrice.toString()), 0)
+    const gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
 
     return {
       gasFeeCoin,
       gasLimit,
-      networkFee
+      networkFee: gasFeeCoin.amount
     }
   }
 

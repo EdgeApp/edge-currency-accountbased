@@ -1,5 +1,6 @@
-import { Event } from '@cosmjs/stargate'
-import { abs, div, max } from 'biggystring'
+import { EncodeObject } from '@cosmjs/proto-signing'
+import { coin, Event } from '@cosmjs/stargate'
+import { abs, add, div, max, mul } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
 
@@ -9,14 +10,16 @@ import { CosmosTools } from '../CosmosTools'
 import {
   asCosmosWalletOtherData,
   CosmosCoin,
+  CosmosFee,
   CosmosWalletOtherData,
   SafeCosmosWalletInfo
 } from '../cosmosTypes'
-import { reduceCoinEventsForAddress } from '../cosmosUtils'
+import { reduceCoinEventsForAddress, rpcWithApiKey } from '../cosmosUtils'
 import {
   asChainIdUpdate,
   asMidgardActionsResponse,
   asThorchainWalletOtherData,
+  asThornodeNetwork,
   MidgardAction,
   ThorchainNetworkInfo,
   ThorchainWalletOtherData
@@ -184,7 +187,6 @@ export class ThorchainEngine extends CosmosEngine {
               coin,
               memo,
               parseInt(action.height),
-              '0',
               fee
             )
           })
@@ -212,6 +214,40 @@ export class ThorchainEngine extends CosmosEngine {
         this.transactionsChangedArray
       )
       this.transactionsChangedArray = []
+    }
+  }
+
+  async calculateFee(opts: { messages: EncodeObject[] }): Promise<CosmosFee> {
+    const { url, headers } = rpcWithApiKey(
+      this.networkInfo.transactionFeeConnectionInfo,
+      this.tools.initOptions
+    )
+
+    const res = await this.fetchCors(url, {
+      method: 'GET',
+      headers
+    })
+    const raw = await res.json()
+    const clean = asThornodeNetwork(raw)
+
+    let networkFee = '0'
+    for (const msg of opts.messages) {
+      switch (msg.typeUrl) {
+        case '/types.MsgDeposit':
+          networkFee = add(networkFee, clean.native_outbound_fee_rune)
+          break
+        case '/types.MsgSend':
+          networkFee = add(networkFee, clean.native_tx_fee_rune)
+      }
+    }
+
+    return {
+      gasFeeCoin: coin('0', this.networkInfo.nativeDenom),
+      gasLimit: '0',
+      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
+      // This would most commonly be an issue for max spends but we should overestimate
+      // the fee for all spends.
+      networkFee: mul(networkFee, '1.01')
     }
   }
 

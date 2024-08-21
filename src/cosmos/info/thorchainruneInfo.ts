@@ -15,7 +15,7 @@ const networkInfo: ThorchainNetworkInfo = {
   },
   defaultChainId: 'thorchain-mainnet-v1',
   chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
-  defaultTransactionFeeUrl: {
+  transactionFeeConnectionInfo: {
     url: 'https://thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
