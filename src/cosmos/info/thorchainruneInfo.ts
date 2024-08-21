@@ -19,6 +19,10 @@ const networkInfo: ThorchainNetworkInfo = {
     url: 'https://thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
+  midgardConnctionInfo: {
+    url: 'https://midgard.ninerealms.com',
+    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+  },
   nativeDenom: 'rune',
   pluginMnemonicKeyName: 'thorchainruneMnemonic',
   rpcNode: {
