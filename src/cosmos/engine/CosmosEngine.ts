@@ -34,7 +34,6 @@ import {
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 import {
-  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -42,28 +41,25 @@ import {
   EdgeSpendInfo,
   EdgeStakingStatus,
   EdgeTransaction,
-  EdgeWalletInfo,
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
 
-import { CurrencyEngine } from '../common/CurrencyEngine'
-import { PluginEnvironment } from '../common/innerPlugin'
-import { getRandomDelayMs } from '../common/network'
-import { asMaybeContractLocation } from '../common/tokenHelpers'
-import { EdgeTokenId, MakeTxParams } from '../common/types'
-import { cleanTxLogs } from '../common/utils'
-import { CosmosTools } from './CosmosTools'
+import { CurrencyEngine } from '../../common/CurrencyEngine'
+import { PluginEnvironment } from '../../common/innerPlugin'
+import { getRandomDelayMs } from '../../common/network'
+import { asMaybeContractLocation } from '../../common/tokenHelpers'
+import { EdgeTokenId, MakeTxParams } from '../../common/types'
+import { cleanTxLogs } from '../../common/utils'
+import { CosmosTools } from '../CosmosTools'
 import {
-  asChainIdUpdate,
   asCosmosPrivateKeys,
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
   asCosmosWcGetAccountsRpcPayload,
   asCosmosWcSignAminoRpcPayload,
   asCosmosWcSignDirectRpcPayload,
-  asSafeCosmosWalletInfo,
   asThornodeNetwork,
   CosmosClients,
   CosmosCoin,
@@ -76,7 +72,7 @@ import {
   IbcChannel,
   SafeCosmosWalletInfo,
   txQueryStrings
-} from './cosmosTypes'
+} from '../cosmosTypes'
 import {
   checkAndValidateADR36AminoSignDoc,
   createCosmosClients,
@@ -85,7 +81,7 @@ import {
   rpcWithApiKey,
   safeAddCoins,
   safeParse
-} from './cosmosUtils'
+} from '../cosmosUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -495,25 +491,6 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
-  async queryChainId(): Promise<void> {
-    if (this.networkInfo.chainIdUpdateUrl != null) {
-      try {
-        const res = await this.fetchCors(this.networkInfo.chainIdUpdateUrl)
-        if (!res.ok) {
-          const message = await res.text()
-          throw new Error(message)
-        }
-        const raw = await res.json()
-        const clean = asChainIdUpdate(raw)
-        this.chainId = clean.result.node_info.network
-      } catch (e: any) {
-        this.error(`queryChainId Error `, e)
-        return
-      }
-    }
-    clearTimeout(this.timers.queryChainId)
-  }
-
   async queryTransactions(): Promise<void> {
     let progress = 0
     const allCurrencyCodes = [
@@ -914,9 +891,6 @@ export class CosmosEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryChainId', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS).catch(
       () => {}
@@ -1257,18 +1231,4 @@ export class CosmosEngine extends CurrencyEngine<
       publicAddress: bech32Address
     }
   }
-}
-
-export async function makeCurrencyEngine(
-  env: PluginEnvironment<CosmosNetworkInfo>,
-  tools: CosmosTools,
-  walletInfo: EdgeWalletInfo,
-  opts: EdgeCurrencyEngineOptions
-): Promise<EdgeCurrencyEngine> {
-  const safeWalletInfo = asSafeCosmosWalletInfo(walletInfo)
-  const engine = new CosmosEngine(env, tools, safeWalletInfo, opts)
-
-  await engine.loadEngine()
-
-  return engine
 }
