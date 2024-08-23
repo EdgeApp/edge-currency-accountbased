@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Display name COMBO (Ethereum) to Furucombo
+
 ## 4.20.0 (2024-08-19)
 
 - added: (Solana) Add new tokens: BSOL, DRIFT, HAWK, JITOSOL, JSOL, JTO, JUP, MIMO, MNGO, MSOL, SOL, USDC.e, WBTC, and WETH

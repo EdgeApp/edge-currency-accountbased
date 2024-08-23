@@ -286,7 +286,7 @@ export const builtinTokens: EdgeTokenMap = {
   },
   ffffffff2ba8f66d4e51811c5190992176930278: {
     currencyCode: 'COMBO',
-    displayName: 'COMBO',
+    displayName: 'Furucombo',
     denominations: [{ name: 'COMBO', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0xffffffff2ba8f66d4e51811c5190992176930278'
