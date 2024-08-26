@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Public FIO fetch fns to return non-cached addresses and domains
+
 ## 4.21.0 (2024-08-29)
 
 - added: POL token on Ethereum.

@@ -198,6 +198,14 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       fioAction: async (actionName: string, params: any): Promise<any> => {
         return await this.multicastServers(actionName, params)
       },
+      fetchFioAddresses: async (): Promise<FioAddress[]> => {
+        await this.refreshFioAddresses()
+        return this.otherData.fioAddresses
+      },
+      fetchFioDomains: async (): Promise<FioDomain[]> => {
+        await this.refreshFioDomains()
+        return this.otherData.fioDomains
+      },
       getFioAddresses: async (): Promise<FioAddress[]> => {
         return this.otherData.fioAddresses
       },
@@ -939,6 +947,119 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     return res
   }
 
+  async refreshFioAddresses(): Promise<boolean> {
+    const result = asGetFioAddress(
+      await this.multicastServers('getFioAddresses', {
+        fioPublicKey: this.walletInfo.keys.publicKey
+      })
+    )
+    let areAddressesChanged = false
+
+    // check addresses
+    if (result.fio_addresses.length !== this.otherData.fioAddresses.length) {
+      areAddressesChanged = true
+    } else {
+      for (const fioAddress of result.fio_addresses) {
+        const existedFioAddress = this.otherData.fioAddresses.find(
+          existedFioAddress => existedFioAddress.name === fioAddress.fio_address
+        )
+        if (existedFioAddress != null) {
+          if (
+            existedFioAddress.bundledTxs !== fioAddress.remaining_bundled_tx
+          ) {
+            areAddressesChanged = true
+            break
+          }
+        } else {
+          areAddressesChanged = true
+          break
+        }
+      }
+
+      // check for removed / transferred addresses
+      if (!areAddressesChanged) {
+        for (const fioAddress of this.otherData.fioAddresses) {
+          if (
+            result.fio_addresses.findIndex(
+              item => item.fio_address === fioAddress.name
+            ) < 0
+          ) {
+            areAddressesChanged = true
+            break
+          }
+        }
+      }
+    }
+
+    if (areAddressesChanged) {
+      this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
+        name: fioAddress.fio_address,
+        bundledTxs: fioAddress.remaining_bundled_tx
+      }))
+      return true
+    }
+
+    return false
+  }
+
+  async refreshFioDomains(): Promise<boolean> {
+    // Check domains
+    const result = asGetFioDomains(
+      await this.multicastServers('getFioDomains', {
+        fioPublicKey: this.walletInfo.keys.publicKey
+      })
+    )
+    let areDomainsChanged = false
+
+    if (result.fio_domains.length !== this.otherData.fioDomains.length) {
+      areDomainsChanged = true
+    } else {
+      for (const fioDomain of result.fio_domains) {
+        const existedFioDomain = this.otherData.fioDomains.find(
+          existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
+        )
+        if (existedFioDomain != null) {
+          if (existedFioDomain.expiration !== fioDomain.expiration) {
+            areDomainsChanged = true
+            break
+          }
+          if (existedFioDomain.isPublic !== (fioDomain.is_public === 1)) {
+            areDomainsChanged = true
+            break
+          }
+        } else {
+          areDomainsChanged = true
+          break
+        }
+      }
+
+      // check for removed / transferred domains
+      if (!areDomainsChanged) {
+        for (const fioDomain of this.otherData.fioDomains) {
+          if (
+            result.fio_domains.findIndex(
+              item => item.fio_domain === fioDomain.name
+            ) < 0
+          ) {
+            areDomainsChanged = true
+            break
+          }
+        }
+      }
+    }
+
+    if (areDomainsChanged) {
+      this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
+        name: fioDomain.fio_domain,
+        expiration: fioDomain.expiration,
+        isPublic: fioDomain.is_public === 1
+      }))
+      return true
+    }
+
+    return false
+  }
+
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
     const currencyCode = this.currencyInfo.currencyCode
@@ -960,8 +1081,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         )
       } catch (e: any) {
         if (e?.json?.message === MAINNET_LOCKS_ERROR) {
-          // This is a fallback query for this chain bug https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/852688908/2024-02-07+Token+Locking+Issue+on+Unstake
-          // Only the balance of the wallet will be returned and staked amounts will appear as zero until the account is corrected. This can be removed once all affected accounts are fixed.
+          // This is a fallback query for this chain bug
+          // https://fioprotocol.atlassian.net/wiki/spaces/DAO/pages/852688908/2024-02-07+Token+Locking+Issue+on+Unstake
+          // Only the balance of the wallet will be returned and staked amounts
+          // will appear as zero until the account is corrected. This can be
+          // removed once all affected accounts are fixed.
           balanceRes = asGetFioBalanceResponse(
             await this.multicastServers('getCurrencyBalance')
           )
@@ -980,7 +1104,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
       this.updateBalance(currencyCode, nativeAmount)
 
-      // Update staking status if locked balances changed
       if (
         balances.staked !== this.otherData.lockedBalances.staked ||
         balances.locked !== this.otherData.lockedBalances.locked
@@ -990,126 +1113,22 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         this.updateStakingStatus()
       }
     } catch (e: any) {
-      this.log.warn('checkAccountInnerLoop getFioBalance error: ', e)
+      this.log.warn('checkAccountInnerLoop getFioBalance error: ', String(e))
     }
 
-    // Fio Addresses
-    let isChanged = false
-    try {
-      const result = asGetFioAddress(
-        await this.multicastServers('getFioAddresses', {
-          fioPublicKey: this.walletInfo.keys.publicKey
-        })
+    // Fio Addresses and Domains
+    const isAddressChanged = await this.refreshFioAddresses().catch(error =>
+      console.warn(
+        'checkAccountInnerLoop getFioAddresses error:',
+        String(error)
       )
-      let areAddressesChanged = false
+    )
+    const isDomainChanged = await this.refreshFioDomains().catch(error =>
+      console.warn('checkAccountInnerLoop getFioDomains error:', String(error))
+    )
 
-      // check addresses
-      if (result.fio_addresses.length !== this.otherData.fioAddresses.length) {
-        areAddressesChanged = true
-      } else {
-        for (const fioAddress of result.fio_addresses) {
-          const existedFioAddress = this.otherData.fioAddresses.find(
-            existedFioAddress =>
-              existedFioAddress.name === fioAddress.fio_address
-          )
-          if (existedFioAddress != null) {
-            if (
-              existedFioAddress.bundledTxs !== fioAddress.remaining_bundled_tx
-            ) {
-              areAddressesChanged = true
-              break
-            }
-          } else {
-            areAddressesChanged = true
-            break
-          }
-        }
-
-        // check for removed / transferred addresses
-        if (!areAddressesChanged) {
-          for (const fioAddress of this.otherData.fioAddresses) {
-            if (
-              result.fio_addresses.findIndex(
-                item => item.fio_address === fioAddress.name
-              ) < 0
-            ) {
-              areAddressesChanged = true
-              break
-            }
-          }
-        }
-      }
-
-      if (areAddressesChanged) {
-        isChanged = true
-        this.otherData.fioAddresses = result.fio_addresses.map(fioAddress => ({
-          name: fioAddress.fio_address,
-          bundledTxs: fioAddress.remaining_bundled_tx
-        }))
-      }
-    } catch (e: any) {
-      this.warn('checkAccountInnerLoop getFioAddresses error: ', e)
-    }
-
-    try {
-      // Check domains
-      const result = asGetFioDomains(
-        await this.multicastServers('getFioDomains', {
-          fioPublicKey: this.walletInfo.keys.publicKey
-        })
-      )
-      let areDomainsChanged = false
-
-      if (result.fio_domains.length !== this.otherData.fioDomains.length) {
-        areDomainsChanged = true
-      } else {
-        for (const fioDomain of result.fio_domains) {
-          const existedFioDomain = this.otherData.fioDomains.find(
-            existedFioDomain => existedFioDomain.name === fioDomain.fio_domain
-          )
-          if (existedFioDomain != null) {
-            if (existedFioDomain.expiration !== fioDomain.expiration) {
-              areDomainsChanged = true
-              break
-            }
-            if (existedFioDomain.isPublic !== (fioDomain.is_public === 1)) {
-              areDomainsChanged = true
-              break
-            }
-          } else {
-            areDomainsChanged = true
-            break
-          }
-        }
-
-        // check for removed / transferred domains
-        if (!areDomainsChanged) {
-          for (const fioDomain of this.otherData.fioDomains) {
-            if (
-              result.fio_domains.findIndex(
-                item => item.fio_domain === fioDomain.name
-              ) < 0
-            ) {
-              areDomainsChanged = true
-              break
-            }
-          }
-        }
-      }
-
-      if (areDomainsChanged) {
-        isChanged = true
-        this.otherData.fioDomains = result.fio_domains.map(fioDomain => ({
-          name: fioDomain.fio_domain,
-          expiration: fioDomain.expiration,
-          isPublic: fioDomain.is_public === 1
-        }))
-      }
-    } catch (e: any) {
-      this.warn('checkAccountInnerLoop getFioNames error: ', e)
-    }
-
-    if (isChanged) this.localDataDirty()
+    if (isAddressChanged === true || isDomainChanged === true)
+      this.localDataDirty()
   }
 
   async fetchEncryptedFioRequests(
