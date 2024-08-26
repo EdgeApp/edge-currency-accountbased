@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Solana) Properly validate custom token addresses
+
 ## 4.22.0 (2024-08-30)
 
 - added: Public FIO fetch fns to return non-cached addresses and domains

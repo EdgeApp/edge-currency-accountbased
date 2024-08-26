@@ -36,6 +36,14 @@ import {
   SolanaNetworkInfo
 } from './solanaTypes'
 
+export const isValidAddress = (address: string): boolean => {
+  try {
+    PublicKey.isOnCurve(new PublicKey(address).toBytes())
+    return true
+  } catch (e) {}
+  return false
+}
+
 export class SolanaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
@@ -146,7 +154,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     if (
       edgeParsedUri.publicAddress != null &&
-      !PublicKey.isOnCurve(new PublicKey(edgeParsedUri.publicAddress).toBytes())
+      !isValidAddress(edgeParsedUri.publicAddress)
     ) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -162,7 +170,7 @@ export class SolanaTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!PublicKey.isOnCurve(new PublicKey(publicAddress).toBytes()))
+    if (!isValidAddress(publicAddress))
       throw new Error('InvalidPublicAddressError')
 
     let amount
@@ -232,7 +240,10 @@ export class SolanaTools implements EdgeCurrencyTools {
   async getTokenId(token: EdgeToken): Promise<string> {
     validateToken(token)
     const cleanLocation = asMaybeContractLocation(token.networkLocation)
-    if (cleanLocation == null) {
+    if (
+      cleanLocation == null ||
+      !isValidAddress(cleanLocation.contractAddress)
+    ) {
       throw new Error('ErrorInvalidContractAddress')
     }
     return cleanLocation.contractAddress
