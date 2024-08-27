@@ -499,10 +499,9 @@ export class CardanoEngine extends CurrencyEngine<
       edgeTransaction.otherParams
     )
 
-    const { mnemonic } = asCardanoPrivateKeys(this.currencyInfo.pluginId)(
-      privateKeys
-    )
-    const { accountKey } = this.tools.derivePrivateKeys(mnemonic)
+    const keys = asCardanoPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const { accountKey } = await this.tools.derivePrivateKeys(keys)
+
     const paymentKey = accountKey.derive(0).derive(0)
 
     const txBody = trial(
