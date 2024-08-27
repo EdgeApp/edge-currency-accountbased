@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: Display name COMBO (Ethereum) to Furucombo
+- fixed: Calculate Arbitrum fees more correctly.
 
 ## 4.20.0 (2024-08-19)
 
