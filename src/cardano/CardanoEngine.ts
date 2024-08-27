@@ -21,6 +21,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { trial } from '../common/trial'
 import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
+import { asStakingTxBody } from './asStakingTx'
 import { CardanoTools } from './CardanoTools'
 import {
   asCardanoInitOptions,
@@ -565,6 +566,77 @@ export class CardanoEngine extends CurrencyEngine<
     return {
       publicAddress: bech32Address
     }
+  }
+
+  getStakeAddress = async (): Promise<string> => {
+    const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
+
+    const paymentAddress = Cardano.Address.from_bech32(bech32Address)
+
+    // Get the stake credential
+    const baseAddr = Cardano.BaseAddress.from_address(paymentAddress)
+
+    if (baseAddr == null) {
+      throw new Error("This address doesn't have staking rights")
+    }
+
+    const stakeCredential = baseAddr.stake_cred()
+
+    // Create a stake address from the credential
+    const stakeAddress = Cardano.RewardAddress.new(
+      paymentAddress.network_id(),
+      stakeCredential
+    )
+
+    // Convert to bech32
+    const bech32StakeAddress = stakeAddress.to_address().to_bech32()
+
+    return bech32StakeAddress
+  }
+
+  decodeStakingTx = async (encodedTx: string): Promise<EdgeTransaction> => {
+    const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
+
+    const tx = Cardano.Transaction.from_hex(encodedTx)
+    const txHash = Cardano.hash_transaction(tx.body())
+
+    const txJson = tx.to_js_value()
+
+    // Validate the transaction is a staking transaction:
+    const validatedTxJson = asStakingTxBody(bech32Address)(txJson.body)
+
+    // We'll consider the transaction a send if no rewards are withdrawn
+    const isSend = validatedTxJson.withdrawals == null
+
+    const otherParams: CardanoTxOtherParams = {
+      isStakeTx: true,
+      unsignedTx: tx.to_hex()
+    }
+
+    const nativeNetworkFee = txJson.body.fee
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
+      isSend,
+      memos: [],
+      nativeAmount: '0',
+      networkFee: nativeNetworkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId: null,
+      txid: txHash.to_hex(),
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
+  }
+
+  otherMethods = {
+    decodeStakingTx: this.decodeStakingTx,
+    getStakeAddress: this.getStakeAddress
   }
 }
 
