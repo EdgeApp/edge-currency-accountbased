@@ -289,7 +289,7 @@ export class CardanoEngine extends CurrencyEngine<
       for (const tx of txs) {
         const edgeTx = processCardanoTransaction({
           currencyCode: this.currencyInfo.currencyCode,
-          publicKey: this.walletInfo.keys.bech32Address,
+          address: this.walletInfo.keys.bech32Address,
           tokenId: null,
           tx,
           walletId: this.walletId
@@ -664,13 +664,13 @@ export async function makeCurrencyEngine(
 }
 
 export const processCardanoTransaction = (opts: {
+  address: string
   currencyCode: string
-  publicKey: string
   tokenId: EdgeTokenId
   tx: KoiosNetworkTx
   walletId: string
 }): EdgeTransaction => {
-  const { currencyCode, publicKey, tokenId, tx, walletId } = opts
+  const { currencyCode, address, tokenId, tx, walletId } = opts
   const {
     tx_hash: txid,
     block_height: blockHeight,
@@ -683,14 +683,14 @@ export const processCardanoTransaction = (opts: {
   let netNativeAmount: string = '0'
   const ourReceiveAddressesSet = new Set<string>()
   for (const input of inputs) {
-    if (input.payment_addr.bech32 === publicKey) {
+    if (input.payment_addr.bech32 === address) {
       netNativeAmount = sub(netNativeAmount, input.value)
     }
   }
   for (const output of outputs) {
-    if (output.payment_addr.bech32 === publicKey) {
+    if (output.payment_addr.bech32 === address) {
       netNativeAmount = add(netNativeAmount, output.value)
-      ourReceiveAddressesSet.add(publicKey)
+      ourReceiveAddressesSet.add(address)
     }
   }
   const isSend = netNativeAmount.startsWith('-')

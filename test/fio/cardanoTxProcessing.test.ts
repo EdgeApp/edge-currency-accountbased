@@ -18,7 +18,7 @@ describe(`Cardano engine`, function () {
       const cleanTx = asKoiosTransaction(rawTx)
       const edgeTx = processCardanoTransaction({
         currencyCode: 'ADA',
-        publicKey: address,
+        address,
         tokenId: null,
         tx: cleanTx,
         walletId
