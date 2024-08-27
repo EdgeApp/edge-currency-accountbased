@@ -76,27 +76,19 @@ export class CardanoEngine extends CurrencyEngine<
     this.otherData = asCardanoWalletOtherData(_raw)
   }
 
-  async fetchGet(method: string): Promise<unknown> {
-    const res = await this.fetchCors(
-      `${this.networkInfo.koiosServer}/api/v1/${method}`
-    )
-    if (!res.ok) {
-      const message = await res.text()
-      throw new Error(`Koios error: ${message}`)
-    }
-    const json = await res.json()
-    return json
-  }
-
-  async fetchPost(method: string, body: JsonObject): Promise<unknown> {
-    const opts = {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body)
-    }
+  async fetchGet(
+    method: string,
+    authenticated: boolean = false
+  ): Promise<unknown> {
     const res = await this.fetchCors(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
-      opts
+      {
+        headers: {
+          ...(authenticated
+            ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
+            : {})
+        }
+      }
     )
     if (!res.ok) {
       const message = await res.text()
@@ -106,17 +98,20 @@ export class CardanoEngine extends CurrencyEngine<
     return json
   }
 
-  async fetchPostAuthenticated(
+  async fetchPost(
     method: string,
-    body: Uint8Array
+    body: JsonObject,
+    authenticated: boolean = false
   ): Promise<unknown> {
     const opts = {
       method: 'POST',
       headers: {
-        'content-type': 'application/cbor',
-        Authorization: `Bearer ${this.initOptions.koiosApiKey}`
+        'content-type': 'application/json',
+        ...(authenticated
+          ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
+          : {})
       },
-      body: body
+      body: JSON.stringify(body)
     }
     const res = await this.fetchCors(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
