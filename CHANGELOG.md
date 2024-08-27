@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (ADA) `isStakeTx` to `EdgeTransaction.otherParams` for staking transaction signing
 - fixed: (Solana) Properly validate custom token addresses
 
 ## 4.22.0 (2024-08-30)

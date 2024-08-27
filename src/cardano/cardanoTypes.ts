@@ -1,5 +1,6 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -180,10 +181,14 @@ export type KoiosNetworkTx = ReturnType<typeof asKoiosTransaction>
 
 export const asKoiosTransactionsRes = asArray(asKoiosTransaction)
 
-export const asCardanoTxOtherParams = asObject({
+export interface CardanoTxOtherParams {
+  isStakeTx?: boolean
+  unsignedTx: string
+}
+export const asCardanoTxOtherParams = asObject<CardanoTxOtherParams>({
+  isStakeTx: asOptional(asBoolean),
   unsignedTx: asString
 })
-export type CardanoTxOtherParams = ReturnType<typeof asCardanoTxOtherParams>
 
 export const asKoiosNetworkParameters = asObject({
   epoch_no: asNumber, // 472,

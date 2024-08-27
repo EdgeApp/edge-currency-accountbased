@@ -19,6 +19,7 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { trial } from '../common/trial'
 import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
 import { CardanoTools } from './CardanoTools'
 import {
@@ -493,7 +494,9 @@ export class CardanoEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    const { unsignedTx } = asCardanoTxOtherParams(edgeTransaction.otherParams)
+    const { unsignedTx, isStakeTx = false } = asCardanoTxOtherParams(
+      edgeTransaction.otherParams
+    )
 
     const { mnemonic } = asCardanoPrivateKeys(this.currencyInfo.pluginId)(
       privateKeys
@@ -501,15 +504,29 @@ export class CardanoEngine extends CurrencyEngine<
     const { accountKey } = this.tools.derivePrivateKeys(mnemonic)
     const paymentKey = accountKey.derive(0).derive(0)
 
-    const txBody = Cardano.TransactionBody.from_hex(unsignedTx)
+    const txBody = trial(
+      () => Cardano.TransactionBody.from_hex(unsignedTx),
+      () => Cardano.Transaction.from_hex(unsignedTx).body()
+    )
     const txHash = Cardano.hash_transaction(txBody)
     const witnesses = Cardano.TransactionWitnessSet.new()
     const vkeyWitnesses = Cardano.Vkeywitnesses.new()
+
     const vkeyWitness = Cardano.make_vkey_witness(
       txHash,
       paymentKey.to_raw_key()
     )
     vkeyWitnesses.add(vkeyWitness)
+
+    if (isStakeTx) {
+      const stakeKey = accountKey.derive(2).derive(0)
+      const vkeyWitnessStaking = Cardano.make_vkey_witness(
+        txHash,
+        stakeKey.to_raw_key()
+      )
+      vkeyWitnesses.add(vkeyWitnessStaking)
+    }
+
     witnesses.set_vkeys(vkeyWitnesses)
 
     const transaction = Cardano.Transaction.new(
