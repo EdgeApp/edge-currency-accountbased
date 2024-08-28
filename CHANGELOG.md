@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: POL token on Ethereum.
+- changed: Rename MATIC to POL on the Polygon chain.
 - fixed: Display name COMBO (Ethereum) to Furucombo
 - fixed: Calculate Arbitrum fees more correctly.
 
