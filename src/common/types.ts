@@ -14,13 +14,12 @@ import {
 import {
   EdgeMetadata,
   EdgeToken,
+  EdgeTokenId,
   EdgeTokenInfo,
   EdgeTransaction,
   EdgeTxSwap
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
-
-export type EdgeTokenId = string | null // to be replaced after edge-core-js upgrade
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
