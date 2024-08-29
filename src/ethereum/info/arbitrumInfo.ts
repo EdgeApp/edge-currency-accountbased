@@ -130,7 +130,7 @@ const networkFees: EthereumFees = {
       highFee: '40000000001',
       minGasPrice: '1000000000'
     },
-    minPriorityFee: '2000000000'
+    minPriorityFee: '100000000' // 0.1 Gwei
   }
 }
 
@@ -172,7 +172,8 @@ const networkInfo: EthereumNetworkInfo = {
   pluginMnemonicKeyName: 'arbitrumMnemonic',
   pluginRegularKeyName: 'arbitrumKey',
   ethGasStationUrl: null,
-  networkFees
+  networkFees,
+  supportsEIP1559: true
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

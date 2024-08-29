@@ -888,14 +888,14 @@ export class EthereumEngine extends CurrencyEngine<
           )
           .map(adapter => adapter.config.servers)
           .flat()
-        const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+        const arbitrumFee = await calcArbitrumRollupFees({
           destinationAddress: publicAddress,
           nodeInterfaceAddress:
             this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
           rpcServers,
           txData: data ?? '0x'
         })
-        rollupFee = mul(mul(l1Gas, l1GasPrice), '1.1')
+        rollupFee = mul(miningFees.gasPrice, arbitrumFee.l1Gas)
       }
 
       // Update total fee:
@@ -1097,7 +1097,8 @@ export class EthereumEngine extends CurrencyEngine<
     let parentNetworkFee = null
     let l1Fee = '0'
 
-    //  Optimism-style L1 fees are deducted automatically from the account. Arbitrum-style L1 gas must be included in the transaction object.
+    // Optimism-style L1 fees are deducted automatically from the account.
+    // Arbitrum-style L1 gas must be included in the transaction object.
     if (this.optimismRollupParams != null) {
       const txData: CalcOptimismRollupFeeParams = {
         baseFee: this.optimismRollupParams.baseFee,
@@ -1119,15 +1120,14 @@ export class EthereumEngine extends CurrencyEngine<
         )
         .map(adapter => adapter.config.servers)
         .flat()
-      const { l1Gas, l1GasPrice } = await calcArbitrumRollupFees({
+      const arbitrumFees = await calcArbitrumRollupFees({
         destinationAddress: publicAddress,
         nodeInterfaceAddress:
           this.networkInfo.arbitrumRollupParams.nodeInterfaceAddress,
         rpcServers,
         txData: data ?? '0x'
       })
-      l1Fee = mul(mul(l1Gas, l1GasPrice), '1.1')
-      otherParams.gas = add(otherParams.gas, l1Gas)
+      otherParams.gas = add(otherParams.gas, arbitrumFees.l1Gas)
     }
 
     //
