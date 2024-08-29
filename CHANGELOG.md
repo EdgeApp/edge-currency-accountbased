@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.21.0 (2024-08-29)
+
 - added: POL token on Ethereum.
 - changed: Rename MATIC to POL on the Polygon chain.
 - fixed: Display name COMBO (Ethereum) to Furucombo
