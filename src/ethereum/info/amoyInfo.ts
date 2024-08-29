@@ -76,7 +76,7 @@ const networkInfo: EthereumNetworkInfo = {
 
 export const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
-  currencyCode: 'MATIC',
+  currencyCode: 'POL',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   displayName: 'Amoy Testnet',
@@ -90,14 +90,14 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   denominations: [
     {
-      name: 'MATIC',
+      name: 'POL',
       multiplier: '1000000000000000000',
-      symbol: 'MATIC'
+      symbol: 'POL'
     },
     {
-      name: 'mMATIC',
+      name: 'mPOL',
       multiplier: '1000000000000000',
-      symbol: 'mMATIC'
+      symbol: 'mPOL'
     }
   ],
 

@@ -527,7 +527,7 @@ export const builtinTokens: EdgeTokenMap = {
   },
   '7d1afa7b718fb893db30a3abc0cfc608aacfebb0': {
     currencyCode: 'MATIC',
-    displayName: 'Polygon',
+    displayName: 'Polygon (old)',
     denominations: [{ name: 'MATIC', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0'
@@ -635,6 +635,14 @@ export const builtinTokens: EdgeTokenMap = {
     denominations: [{ name: 'PICKLE', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0x429881672B9AE42b8EbA0E26cD9C73711b891Ca5'
+    }
+  },
+  '455e53cbb86018ac2b8092fdcd39d8444affc3f6': {
+    currencyCode: 'POL',
+    displayName: 'Polygon',
+    denominations: [{ name: 'POL', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x455e53CBB86018Ac2B8092FdCd39d8444aFFC3F6'
     }
   },
   '9992ec3cf6a55b00978cddf2b27bc6882d88d1ec': {
