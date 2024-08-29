@@ -12,6 +12,7 @@ import {
   Cleaner
 } from 'cleaners'
 import {
+  EdgeDenomination,
   EdgeMetadata,
   EdgeToken,
   EdgeTokenId,
@@ -157,3 +158,31 @@ export interface EdgeTransactionHelperAmounts {
   networkFee: string
   parentNetworkFee?: string
 }
+
+/**
+ * A cleaner for something that must be an object,
+ * but we don't care about the keys inside:
+ */
+const asJsonObject: Cleaner<object> = raw => {
+  if (raw == null || typeof raw !== 'object') {
+    throw new TypeError('Expected a JSON object')
+  }
+  return raw
+}
+
+const asEdgeDenomination = asObject<EdgeDenomination>({
+  multiplier: asString,
+  name: asString,
+  symbol: asOptional(asString)
+})
+
+export const asEdgeToken = asObject({
+  currencyCode: asString,
+  denominations: asArray(asEdgeDenomination),
+  displayName: asString,
+  networkLocation: asOptional(asJsonObject)
+})
+
+export const asInfoServerTokens = asObject({
+  infoServerTokens: asMaybe(asArray(asUnknown))
+})
