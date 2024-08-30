@@ -13,6 +13,7 @@ import {
 import type {
   Addresses,
   BalanceEvent,
+  ErrorEvent as ZcashErrorEvent,
   InitializerConfig,
   ProposalSuccess,
   ShieldFundsInfo,
@@ -53,6 +54,7 @@ export interface ZcashSynchronizer {
     statusChanged: StatusEvent
     transactionsChanged: TransactionEvent
     update: UpdateEvent
+    error: ZcashErrorEvent
   }>
   start: () => Promise<void>
   stop: () => Promise<void>

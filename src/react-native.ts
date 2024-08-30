@@ -77,6 +77,9 @@ const makeZcashSynchronizer = async (
     },
     onUpdate(event): void {
       emit(out, 'update', event)
+    },
+    onError(event): void {
+      emit(out, 'error', event)
     }
   })
 
