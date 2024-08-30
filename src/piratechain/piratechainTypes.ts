@@ -8,6 +8,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
+import type { ErrorEvent as PiratechainErrorEvent } from 'react-native-piratechain'
 import type { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
@@ -112,6 +113,7 @@ export interface PiratechainSynchronizer {
   on: Subscriber<{
     statusChanged: PiratechainStatusEvent
     update: PiratechainUpdateEvent
+    error: PiratechainErrorEvent
   }>
   start: () => Promise<void>
   stop: () => Promise<void>

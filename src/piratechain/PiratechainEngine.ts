@@ -112,6 +112,14 @@ export class PiratechainEngine extends CurrencyEngine<
       this.synchronizerStatus = payload.name
       await this.queryAll()
     })
+    this.synchronizer.on('error', async payload => {
+      this.log.warn(`Synchronizer error: ${payload.message}`)
+      if (payload.level === 'critical') {
+        await this.killEngine()
+        this.lastUpdateFromSynchronizer = undefined
+        await this.startEngine()
+      }
+    })
   }
 
   async queryAll(): Promise<void> {
