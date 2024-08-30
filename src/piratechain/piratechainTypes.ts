@@ -8,7 +8,18 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import type { ErrorEvent as PiratechainErrorEvent } from 'react-native-piratechain'
+import type {
+  Addresses,
+  BlockRange,
+  ConfirmedTransaction,
+  ErrorEvent as PiratechainErrorEvent,
+  InitializerConfig,
+  SpendInfo,
+  SpendSuccess,
+  StatusEvent,
+  UpdateEvent,
+  WalletBalance
+} from 'react-native-piratechain'
 import type { Subscriber } from 'yaob'
 
 import { asWalletInfo } from '../common/types'
@@ -25,76 +36,10 @@ export interface PiratechainNetworkInfo {
   transactionQueryLimit: number
 }
 
-export interface PiratechainSpendInfo {
-  zatoshi: string
-  toAddress: string
-  memo: string
-  fromAccountIndex: number
-  mnemonicSeed: string
-}
-
-export interface PiratechainTransaction {
-  rawTransactionId: string
-  blockTimeInSeconds: number
-  minedHeight: number
-  value: string
-  toAddress?: string
-  memos: string[]
-}
-
-export interface PiratechainPendingTransaction {
-  txId: string
-  raw: string
-}
-
-export interface PiratechainWalletBalance {
-  availableZatoshi: string
-  totalZatoshi: string
-}
-
-export interface PiratechainInitializerConfig {
-  networkName: PiratechainNetworkName
-  defaultHost: string
-  defaultPort: number
-  mnemonicSeed: string
-  alias: string
-  birthdayHeight: number
-}
-
-export interface PiratechainAddresses {
-  // unifiedAddress: string
-  saplingAddress: string
-  // transparentAddress: string
-}
-
-export type PiratechainSynchronizerStatus =
-  | 'STOPPED'
-  | 'DISCONNECTED'
-  | 'SYNCING'
-  | 'SYNCED'
-
-export interface PiratechainStatusEvent {
-  alias: string
-  name: PiratechainSynchronizerStatus
-}
-
-export interface PiratechainUpdateEvent {
-  alias: string
-  isDownloading: boolean
-  isScanning: boolean
-  lastDownloadedHeight: number
-  lastScannedHeight: number
-  scanProgress: number // 0 - 100
-  networkBlockHeight: number
-}
-
-// Block range is inclusive
-export const asPiratechainBlockRange = asObject({
+const asPiratechainBlockRange = asObject<BlockRange>({
   first: asNumber,
   last: asNumber
 })
-
-export type PiratechainBlockRange = ReturnType<typeof asPiratechainBlockRange>
 
 export const asPiratechainWalletOtherData = asObject({
   alias: asMaybe(asString),
@@ -111,25 +56,21 @@ export type PiratechainWalletOtherData = ReturnType<
 
 export interface PiratechainSynchronizer {
   on: Subscriber<{
-    statusChanged: PiratechainStatusEvent
-    update: PiratechainUpdateEvent
+    statusChanged: StatusEvent
+    update: UpdateEvent
     error: PiratechainErrorEvent
   }>
   start: () => Promise<void>
   stop: () => Promise<void>
-  deriveUnifiedAddress: () => Promise<PiratechainAddresses>
-  getTransactions: (
-    arg: PiratechainBlockRange
-  ) => Promise<PiratechainTransaction[]>
+  deriveUnifiedAddress: () => Promise<Addresses>
+  getTransactions: (arg: BlockRange) => Promise<ConfirmedTransaction[]>
   rescan: () => Promise<string>
-  sendToAddress: (
-    arg: PiratechainSpendInfo
-  ) => Promise<PiratechainPendingTransaction>
-  getBalance: () => Promise<PiratechainWalletBalance>
+  sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
+  getBalance: () => Promise<WalletBalance>
 }
 
 export type PiratechainMakeSynchronizer = () => (
-  config: PiratechainInitializerConfig
+  config: InitializerConfig
 ) => Promise<PiratechainSynchronizer>
 
 export const asArrrPublicKey = asObject({
