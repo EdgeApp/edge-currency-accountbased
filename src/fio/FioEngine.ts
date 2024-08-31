@@ -1997,15 +1997,6 @@ const getUnlockDate = (txDate: Date): Date => {
   return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
 }
 
-/** A separate tx following an unstake tx that pays the additional reward based
- * on the original stake */
-const isUnstakeRewardTx = (otherParams: TxOtherParams): boolean => {
-  return (
-    otherParams.name === 'unstakefio' ||
-    (otherParams.data != null && otherParams.data.memo === STAKING_REWARD_MEMO)
-  )
-}
-
 export const parseAction = ({
   action,
   actor,
@@ -2037,7 +2028,6 @@ export const parseAction = ({
   const fioAmount = mul(exchangeAmount, denom.multiplier)
   let networkFee = '0'
 
-  let updateStakingStatus: UpdateStakingStatus | undefined
   let otherParams: TxOtherParams = {
     account,
     name: actName,
@@ -2045,6 +2035,20 @@ export const parseAction = ({
     data,
     meta: {}
   }
+
+  // Check if this is an unstake, and update the staking/locked status later
+  // with this info.
+  const isUnstakeRewardTx =
+    otherParams.data != null && otherParams.data.memo === STAKING_REWARD_MEMO
+  const updateStakingStatus: UpdateStakingStatus | undefined =
+    isUnstakeRewardTx || actName === 'unstakefio'
+      ? {
+          nativeAmount: fioAmount,
+          blockTime: action.block_time,
+          txId: action.action_trace.trx_id,
+          txName: actName
+        }
+      : undefined
 
   const handleExistingTransaction = (existingTrx: EdgeTransaction): boolean => {
     otherParams = {
@@ -2064,10 +2068,14 @@ export const parseAction = ({
       return true
     }
 
-    if (otherParams.meta.isFeeProcessed != null) {
+    if (otherParams.meta.isFeeProcessed !== null) {
       if (actName === 'trnsfiopubky') {
         nativeAmount = sub(nativeAmount, existingTrx.networkFee)
         networkFee = existingTrx.networkFee
+      } else if (actName === 'unstakefio') {
+        nativeAmount = add(existingTrx.nativeAmount, nativeAmount)
+        networkFee = '0'
+        return false
       } else {
         nativeAmount = existingTrx.nativeAmount
         networkFee = '0'
@@ -2081,15 +2089,11 @@ export const parseAction = ({
   }
 
   const processTransaction = (): ParseActionResult => {
-    // Check if this is an unstake reward, and update the staking/locked status later
-    // with this info.
-    if (isUnstakeRewardTx(otherParams)) {
-      updateStakingStatus = {
-        nativeAmount: fioAmount,
-        blockTime: action.block_time,
-        txId: action.action_trace.trx_id,
-        txName: actName
-      }
+    // Make sure the reward 'transfer' tx is saved as an 'unstakefio' tx instead
+    // of a 'transfer'
+    otherParams = {
+      ...otherParams,
+      name: isUnstakeRewardTx ? 'unstakefio' : actName
     }
 
     const transaction: EdgeTransaction = {
@@ -2148,7 +2152,11 @@ export const parseAction = ({
 
   if (actName === 'transfer' && data.quantity != null) {
     nativeAmount = data.to === actor ? fioAmount : `-${fioAmount}`
-    networkFee = data.to === actor ? `-${fioAmount}` : fioAmount
+    networkFee = isUnstakeRewardTx
+      ? '0'
+      : data.to === actor
+      ? `-${fioAmount}`
+      : fioAmount
 
     const index = findTransaction(currencyCode, action.action_trace.trx_id)
     if (index > -1) {
