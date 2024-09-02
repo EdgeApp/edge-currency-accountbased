@@ -1,5 +1,6 @@
 import {
   asArray,
+  asBoolean,
   asCodec,
   asMaybe,
   asNumber,
@@ -8,10 +9,11 @@ import {
   asString,
   asTuple,
   asUnknown,
-  Cleaner
+  Cleaner,
+  uncleaner
 } from 'cleaners'
 
-import { asWalletInfo } from '../common/types'
+import { asAny, asWalletInfo } from '../common/types'
 
 export interface CardanoNetworkInfo {
   networkId: number
@@ -30,24 +32,38 @@ export const asSafeCardanoWalletInfo = asWalletInfo(
 
 export interface CardanoPrivateKeys {
   mnemonic: string
+  // Backwards-compatible, bech32-formatted derived key on path m/1852'/1815'/0'
+  accountKey?: string
+  // Backwards-compatible, bech32-formatted root key from mnemonic
+  privateKey?: string
 }
 export const asCardanoPrivateKeys = (
   pluginId: string
 ): Cleaner<CardanoPrivateKeys> => {
-  const asKeys = asObject({
-    [`${pluginId}Mnemonic`]: asString
-  })
-
   return asCodec(
     raw => {
-      const clean = asKeys(raw)
-      return { mnemonic: clean[`${pluginId}Mnemonic`] }
+      const keysObject = asObject(asAny)(raw)
+      return asObject({
+        mnemonic: asString,
+        accountKey: asOptional(asString),
+        privateKey: asOptional(asString)
+      })({
+        ...keysObject,
+        mnemonic: keysObject[`${pluginId}Mnemonic`]
+      })
     },
     clean => {
-      return { [`${pluginId}Mnemonic`]: clean.mnemonic }
+      return {
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        accountKey: clean.accountKey,
+        privateKey: clean.privateKey
+      }
     }
   )
 }
+export const wasCardanoPrivateKeys = (
+  pluginId: string
+): Cleaner<CardanoPrivateKeys> => uncleaner(asCardanoPrivateKeys(pluginId))
 
 export const asKoiosBlockheight = asTuple(
   asObject({
@@ -180,10 +196,14 @@ export type KoiosNetworkTx = ReturnType<typeof asKoiosTransaction>
 
 export const asKoiosTransactionsRes = asArray(asKoiosTransaction)
 
-export const asCardanoTxOtherParams = asObject({
+export interface CardanoTxOtherParams {
+  isStakeTx?: boolean
+  unsignedTx: string
+}
+export const asCardanoTxOtherParams = asObject<CardanoTxOtherParams>({
+  isStakeTx: asOptional(asBoolean),
   unsignedTx: asString
 })
-export type CardanoTxOtherParams = ReturnType<typeof asCardanoTxOtherParams>
 
 export const asKoiosNetworkParameters = asObject({
   epoch_no: asNumber, // 472,

@@ -22,8 +22,10 @@ import {
   asSafeCardanoWalletInfo,
   CardanoInfoPayload,
   CardanoNetworkInfo,
+  CardanoPrivateKeys,
   EpochParams,
-  SafeCardanoWalletInfo
+  SafeCardanoWalletInfo,
+  wasCardanoPrivateKeys
 } from './cardanoTypes'
 
 export class CardanoTools implements EdgeCurrencyTools {
@@ -41,11 +43,32 @@ export class CardanoTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
   }
 
-  derivePrivateKeys(mnemonic: string): {
+  /**
+   * This function derives the account key and private key
+   * Cardano.Bip32PrivateKey objects from the CardanoPrivateKeys object.
+   *
+   * All wallets should have the mnemonic, whereas only newer wallets would
+   * also have the account key in bech32 format as an performance optimization.
+   * This function will derive the `accountKey` from the mnemonic for older
+   * wallets to maintain full backwards compatibility.
+   *
+   * @param keys CardanoPrivateKeys cleaned from the WalletInfo
+   * @returns the `privateKey` and `accountKey` Cardano.Bip32PrivateKey objects
+   */
+  derivePrivateKeys(keys: CardanoPrivateKeys): {
     accountKey: Cardano.Bip32PrivateKey
     privateKey: Cardano.Bip32PrivateKey
   } {
-    const mnemonicEntropy = mnemonicToEntropy(mnemonic)
+    // Skip derivation on newer wallets which have the all the private keys.
+    // These keys are optional for backwards compatibility.
+    if (keys.accountKey != null && keys.privateKey != null) {
+      return {
+        accountKey: Cardano.Bip32PrivateKey.from_bech32(keys.accountKey),
+        privateKey: Cardano.Bip32PrivateKey.from_bech32(keys.privateKey)
+      }
+    }
+
+    const mnemonicEntropy = mnemonicToEntropy(keys.mnemonic)
     const privateKey = Cardano.Bip32PrivateKey.from_bip39_entropy(
       base16.parse(mnemonicEntropy),
       new Uint8Array()
@@ -79,7 +102,7 @@ export class CardanoTools implements EdgeCurrencyTools {
     return keys.publicKey
   }
 
-  async importPrivateKey(mnemonic: string): Promise<Object> {
+  async importPrivateKey(mnemonic: string): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
     const isValid = validateMnemonic(mnemonic)
     if (!isValid) throw new Error('Invalid mnemonic')
@@ -91,7 +114,21 @@ export class CardanoTools implements EdgeCurrencyTools {
       new Uint8Array()
     )
 
-    return { [`${pluginId}Mnemonic`]: mnemonic }
+    // This is an upgrade to the private keys format for Cardano.
+    // Older version of the plugin only stored the mnemonic in the keys object.
+    // This addition stores the accountKey derivation path in the returned
+    // private key object.
+    const { accountKey, privateKey } = await this.derivePrivateKeys({
+      mnemonic
+    })
+
+    // Use the cleaner codec to ensure that the format of the private key object
+    // is strictly to specification by the types file.
+    return wasCardanoPrivateKeys(pluginId)({
+      mnemonic,
+      accountKey: accountKey.to_bech32(),
+      privateKey: privateKey.to_bech32()
+    })
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
@@ -113,11 +150,10 @@ export class CardanoTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
     const keys = asCardanoPrivateKeys(pluginId)(walletInfo.keys)
-
-    const { accountKey, privateKey } = this.derivePrivateKeys(keys.mnemonic)
+    const { accountKey, privateKey } = this.derivePrivateKeys(keys)
 
     // pub key derivation from https://github.com/Emurgo/cardano-serialization-lib/blob/master/doc/getting-started/generating-keys.md
-    const utxoPubKey = accountKey
+    const addressKey = accountKey
       .derive(0) // external
       .derive(0)
       .to_public()
@@ -129,7 +165,7 @@ export class CardanoTools implements EdgeCurrencyTools {
 
     const address = Cardano.BaseAddress.new(
       this.networkInfo.networkId,
-      Cardano.StakeCredential.from_keyhash(utxoPubKey.to_raw_key().hash()),
+      Cardano.StakeCredential.from_keyhash(addressKey.to_raw_key().hash()),
       Cardano.StakeCredential.from_keyhash(stakeKey.to_raw_key().hash())
     )
 

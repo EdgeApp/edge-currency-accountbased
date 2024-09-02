@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (ADA) `isStakeTx` to `EdgeTransaction.otherParams` for staking transaction signing
+- added: (ADA) staking related methods to `EdgeCurrencyEngine.otherMethods`
+- changed: (ADA) Include `accountKey` and `privateKey` in Cardano wallet's private key data as an optimization for new wallets going forward.
 - fixed: (Solana) Properly validate custom token addresses
 
 ## 4.22.0 (2024-08-30)

@@ -19,7 +19,9 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { trial } from '../common/trial'
 import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
+import { asStakingTxBody } from './asStakingTx'
 import { CardanoTools } from './CardanoTools'
 import {
   asCardanoInitOptions,
@@ -76,27 +78,19 @@ export class CardanoEngine extends CurrencyEngine<
     this.otherData = asCardanoWalletOtherData(_raw)
   }
 
-  async fetchGet(method: string): Promise<unknown> {
-    const res = await this.fetchCors(
-      `${this.networkInfo.koiosServer}/api/v1/${method}`
-    )
-    if (!res.ok) {
-      const message = await res.text()
-      throw new Error(`Koios error: ${message}`)
-    }
-    const json = await res.json()
-    return json
-  }
-
-  async fetchPost(method: string, body: JsonObject): Promise<unknown> {
-    const opts = {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body)
-    }
+  async fetchGet(
+    method: string,
+    authenticated: boolean = false
+  ): Promise<unknown> {
     const res = await this.fetchCors(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
-      opts
+      {
+        headers: {
+          ...(authenticated
+            ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
+            : {})
+        }
+      }
     )
     if (!res.ok) {
       const message = await res.text()
@@ -106,17 +100,20 @@ export class CardanoEngine extends CurrencyEngine<
     return json
   }
 
-  async fetchPostAuthenticated(
+  async fetchPost(
     method: string,
-    body: Uint8Array
+    body: JsonObject,
+    authenticated: boolean = false
   ): Promise<unknown> {
     const opts = {
       method: 'POST',
       headers: {
-        'content-type': 'application/cbor',
-        Authorization: `Bearer ${this.initOptions.koiosApiKey}`
+        'content-type': 'application/json',
+        ...(authenticated
+          ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
+          : {})
       },
-      body: body
+      body: JSON.stringify(body)
     }
     const res = await this.fetchCors(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
@@ -292,7 +289,7 @@ export class CardanoEngine extends CurrencyEngine<
       for (const tx of txs) {
         const edgeTx = processCardanoTransaction({
           currencyCode: this.currencyInfo.currencyCode,
-          publicKey: this.walletInfo.keys.bech32Address,
+          address: this.walletInfo.keys.bech32Address,
           tokenId: null,
           tx,
           walletId: this.walletId
@@ -498,23 +495,38 @@ export class CardanoEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    const { unsignedTx } = asCardanoTxOtherParams(edgeTransaction.otherParams)
-
-    const { mnemonic } = asCardanoPrivateKeys(this.currencyInfo.pluginId)(
-      privateKeys
+    const { unsignedTx, isStakeTx = false } = asCardanoTxOtherParams(
+      edgeTransaction.otherParams
     )
-    const { accountKey } = this.tools.derivePrivateKeys(mnemonic)
+
+    const keys = asCardanoPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const { accountKey } = await this.tools.derivePrivateKeys(keys)
+
     const paymentKey = accountKey.derive(0).derive(0)
 
-    const txBody = Cardano.TransactionBody.from_hex(unsignedTx)
+    const txBody = trial(
+      () => Cardano.TransactionBody.from_hex(unsignedTx),
+      () => Cardano.Transaction.from_hex(unsignedTx).body()
+    )
     const txHash = Cardano.hash_transaction(txBody)
     const witnesses = Cardano.TransactionWitnessSet.new()
     const vkeyWitnesses = Cardano.Vkeywitnesses.new()
+
     const vkeyWitness = Cardano.make_vkey_witness(
       txHash,
       paymentKey.to_raw_key()
     )
     vkeyWitnesses.add(vkeyWitness)
+
+    if (isStakeTx) {
+      const stakeKey = accountKey.derive(2).derive(0)
+      const vkeyWitnessStaking = Cardano.make_vkey_witness(
+        txHash,
+        stakeKey.to_raw_key()
+      )
+      vkeyWitnesses.add(vkeyWitnessStaking)
+    }
+
     witnesses.set_vkeys(vkeyWitnesses)
 
     const transaction = Cardano.Transaction.new(
@@ -554,6 +566,77 @@ export class CardanoEngine extends CurrencyEngine<
       publicAddress: bech32Address
     }
   }
+
+  getStakeAddress = async (): Promise<string> => {
+    const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
+
+    const paymentAddress = Cardano.Address.from_bech32(bech32Address)
+
+    // Get the stake credential
+    const baseAddr = Cardano.BaseAddress.from_address(paymentAddress)
+
+    if (baseAddr == null) {
+      throw new Error("This address doesn't have staking rights")
+    }
+
+    const stakeCredential = baseAddr.stake_cred()
+
+    // Create a stake address from the credential
+    const stakeAddress = Cardano.RewardAddress.new(
+      paymentAddress.network_id(),
+      stakeCredential
+    )
+
+    // Convert to bech32
+    const bech32StakeAddress = stakeAddress.to_address().to_bech32()
+
+    return bech32StakeAddress
+  }
+
+  decodeStakingTx = async (encodedTx: string): Promise<EdgeTransaction> => {
+    const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
+
+    const tx = Cardano.Transaction.from_hex(encodedTx)
+    const txHash = Cardano.hash_transaction(tx.body())
+
+    const txJson = tx.to_js_value()
+
+    // Validate the transaction is a staking transaction:
+    const validatedTxJson = asStakingTxBody(bech32Address)(txJson.body)
+
+    // We'll consider the transaction a send if no rewards are withdrawn
+    const isSend = validatedTxJson.withdrawals == null
+
+    const otherParams: CardanoTxOtherParams = {
+      isStakeTx: true,
+      unsignedTx: tx.to_hex()
+    }
+
+    const nativeNetworkFee = txJson.body.fee
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode: this.currencyInfo.currencyCode,
+      date: 0,
+      isSend,
+      memos: [],
+      nativeAmount: '0',
+      networkFee: nativeNetworkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId: null,
+      txid: txHash.to_hex(),
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
+  }
+
+  otherMethods = {
+    decodeStakingTx: this.decodeStakingTx,
+    getStakeAddress: this.getStakeAddress
+  }
 }
 
 export async function makeCurrencyEngine(
@@ -580,13 +663,13 @@ export async function makeCurrencyEngine(
 }
 
 export const processCardanoTransaction = (opts: {
+  address: string
   currencyCode: string
-  publicKey: string
   tokenId: EdgeTokenId
   tx: KoiosNetworkTx
   walletId: string
 }): EdgeTransaction => {
-  const { currencyCode, publicKey, tokenId, tx, walletId } = opts
+  const { currencyCode, address, tokenId, tx, walletId } = opts
   const {
     tx_hash: txid,
     block_height: blockHeight,
@@ -599,14 +682,14 @@ export const processCardanoTransaction = (opts: {
   let netNativeAmount: string = '0'
   const ourReceiveAddressesSet = new Set<string>()
   for (const input of inputs) {
-    if (input.payment_addr.bech32 === publicKey) {
+    if (input.payment_addr.bech32 === address) {
       netNativeAmount = sub(netNativeAmount, input.value)
     }
   }
   for (const output of outputs) {
-    if (output.payment_addr.bech32 === publicKey) {
+    if (output.payment_addr.bech32 === address) {
       netNativeAmount = add(netNativeAmount, output.value)
-      ourReceiveAddressesSet.add(publicKey)
+      ourReceiveAddressesSet.add(address)
     }
   }
   const isSend = netNativeAmount.startsWith('-')
