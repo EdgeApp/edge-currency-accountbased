@@ -7,6 +7,8 @@ import {
   EdgeTokenMap
 } from 'edge-core-js/types'
 
+import { normalizeAddress } from './utils'
+
 /**
  * The `networkLocation` field is untyped,
  * but many currency plugins will put a contract address in there.
@@ -90,4 +92,8 @@ export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
     throw new Error('ErrorInvalidContractAddress')
   }
   return cleanLocation.contractAddress
+}
+
+export const createEvmTokenId = (token: EdgeToken): string => {
+  return normalizeAddress(createTokenIdFromContractAddress(token))
 }
