@@ -83,3 +83,11 @@ export const validateToken = (token: EdgeToken): void => {
 export const isCurrencyCode = (code: string): boolean => {
   return /^[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)?$/.test(code)
 }
+
+export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
+  const cleanLocation = asMaybeContractLocation(token.networkLocation)
+  if (cleanLocation == null) {
+    throw new Error('ErrorInvalidContractAddress')
+  }
+  return cleanLocation.contractAddress
+}
