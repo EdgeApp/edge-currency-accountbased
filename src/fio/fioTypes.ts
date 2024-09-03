@@ -242,3 +242,15 @@ export const asFioInfoPayload = asObject({
   fioStakingApyUrl: asOptional(asString)
 })
 export type FioInfoPayload = ReturnType<typeof asFioInfoPayload>
+
+//
+// FIO Error Types
+//
+
+export const asFioError = asObject({
+  code: asNumber,
+  json: asObject({
+    message: asString
+  }),
+  message: asString
+})

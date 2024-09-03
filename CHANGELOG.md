@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: (FIO) Silence background errors when calling FIO `otherMethods`
+- fixed: (FIO) Handle 404 errors from getFioAddresses FIO API calls
 
 ## 4.23.0 (2024-09-03)
 

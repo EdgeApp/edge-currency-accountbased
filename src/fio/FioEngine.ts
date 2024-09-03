@@ -85,6 +85,7 @@ import {
   asFioConnectAddressesParams,
   asFioDomainParam,
   asFioEmptyResponse,
+  asFioError,
   asFioFee,
   asFioNothingResponse,
   asFioPrivateKeys,
@@ -953,11 +954,27 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
   }
 
   async refreshFioAddresses(): Promise<boolean> {
-    const result = asGetFioAddress(
-      await this.multicastServers('getFioAddresses', {
-        fioPublicKey: this.walletInfo.keys.publicKey
-      })
-    )
+    const [response, error] = await this.multicastServers('getFioAddresses', {
+      fioPublicKey: this.walletInfo.keys.publicKey
+    })
+      .then(response => [response])
+      .catch(error => [undefined, error])
+
+    if (response == null) {
+      if (error == null)
+        throw new Error(`Undefined response for 'getFioAddresses'`)
+
+      const fioError = asMaybe(asFioError)(error)
+      if (
+        fioError?.code === 404 &&
+        fioError?.json?.message === 'No FIO Addresses'
+      ) {
+        return false
+      }
+      throw error
+    }
+
+    const result = asGetFioAddress(response)
     let areAddressesChanged = false
 
     // check addresses
