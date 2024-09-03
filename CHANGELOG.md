@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (FIO) Silence background errors when calling FIO `otherMethods`
+
 ## 4.23.0 (2024-09-03)
 
 - added: (ADA) `isStakeTx` to `EdgeTransaction.otherParams` for staking transaction signing

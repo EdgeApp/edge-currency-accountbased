@@ -199,11 +199,16 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         return await this.multicastServers(actionName, params)
       },
       fetchFioAddresses: async (): Promise<FioAddress[]> => {
-        await this.refreshFioAddresses()
+        await this.refreshFioAddresses().catch(err => {
+          this.warn('refreshFioAddresses failed in getFioAddresses: ', err)
+        })
         return this.otherData.fioAddresses
       },
       fetchFioDomains: async (): Promise<FioDomain[]> => {
-        await this.refreshFioDomains()
+        await this.refreshFioDomains().catch(err => {
+          this.warn('refreshFioDomains failed in fetchFioDomains: ', err)
+        })
+
         return this.otherData.fioDomains
       },
       getFioAddresses: async (): Promise<FioAddress[]> => {
