@@ -1,3 +1,5 @@
+import { errorCause } from './error-cause'
+
 /**
  * A functional pattern for try..catch statements. Accepts one or more functions
  * and returns the first function which doesn't throw. Exceptions thrown are
@@ -6,10 +8,12 @@
  * trial(tryFunc, catchFunc, catchFunc, ...)
  *
  * All functions must return the same type.
+ *
+ * All Error objects thrown will be wrapped in an error cause chain.
  */
-export const trial = <T>(...funcs: Array<(err?: any) => T>): T => {
+export const trial = <T>(...funcs: Array<(err?: unknown) => T>): T => {
   let i = 0
-  let error: any
+  let error: unknown
 
   if (funcs.length === 0)
     throw new Error('Expected one or more function argument')
@@ -21,7 +25,8 @@ export const trial = <T>(...funcs: Array<(err?: any) => T>): T => {
       return current(error)
     } catch (err) {
       // Track error
-      error = err
+      error =
+        err instanceof Error && error != null ? errorCause(err, error) : err
     }
   }
 
