@@ -2081,6 +2081,12 @@ export const parseAction = ({
       otherParams.meta.isTransferProcessed = true
       break
 
+    case 'stakefio': {
+      nativeAmount = `-${dataAmount}`
+      otherParams.meta.isTransferProcessed = true
+      break
+    }
+
     case 'unstakefio':
       updateStakingStatus = {
         nativeAmount,
