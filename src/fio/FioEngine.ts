@@ -1997,13 +1997,6 @@ const getUnlockDate = (txDate: Date): Date => {
   return new Date(blockTimeBeginingOfGmtDay + STAKING_LOCK_PERIOD)
 }
 
-const checkUnStakeTx = (otherParams: TxOtherParams): boolean => {
-  return (
-    otherParams.name === 'unstakefio' ||
-    (otherParams.data != null && otherParams.data.memo === STAKING_REWARD_MEMO)
-  )
-}
-
 export const parseAction = ({
   action,
   actor,
@@ -2016,33 +2009,103 @@ export const parseAction = ({
   getTransactionList
 }: ParseActionParams): ParseActionResult => {
   const {
-    act: { name: trxName, data, account, authorization }
+    act: { name: actName, data, account, authorization }
   } = action.action_trace
-  let nativeAmount
-  let actorSender
-  let networkFee = '0'
+
+  // Throw away the action in some cases:
+  if (actName == null)
+    throw new Error(
+      'FIO parseAction found with null actName at txId: ' +
+        action.action_trace.trx_id
+    )
+  if (action.block_num <= highestTxHeight) {
+    return { blockNum: action.block_num }
+  }
+
   let otherParams: TxOtherParams = {
     account,
-    name: trxName,
+    name: actName,
     authorization,
     data,
     meta: {}
   }
-  const ourReceiveAddresses = []
-  if (action.block_num <= highestTxHeight) {
-    return { blockNum: action.block_num }
+  const index = findTransaction(currencyCode, action.action_trace.trx_id)
+  let existingTx: EdgeTransaction | undefined
+  if (index > -1) {
+    existingTx = getTransactionList(currencyCode)[index]
+    // Change this part to match the original logic
+    if (existingTx.otherParams?.meta?.isTransferProcessed != null) {
+      return { blockNum: action.block_num }
+    }
   }
+
+  // Process a new action
+  const dataMaxFee = data.max_fee?.toString() ?? '0'
+  const dataAmount = data.amount?.toString() ?? '0'
+  const exchangeAmount = data.quantity?.split(' ')[0] ?? '0'
+  const fioAmount = mul(exchangeAmount, denom.multiplier)
+
+  const ourReceiveAddresses = []
+  let networkFee = '0'
+  let nativeAmount = '0'
   let updateStakingStatus: UpdateStakingStatus | undefined
 
-  // Transfer funds transaction
-  if (
-    trxName === 'trnsfiopubky' ||
-    trxName === 'unstakefio' ||
-    trxName === 'regaddress'
-  ) {
-    nativeAmount = '0'
+  switch (actName) {
+    case 'trnsfiopubky':
+      if (data.payee_public_key === publicKey) {
+        ourReceiveAddresses.push(publicKey)
+        if (data.actor === actor) {
+          nativeAmount = '0' // Self-transfer should not affect balance
+          networkFee = dataMaxFee
+        } else {
+          nativeAmount = dataAmount // Receiving funds
+          networkFee = '0'
+        }
+      } else if (data.actor === actor) {
+        nativeAmount = `-${add(dataAmount, dataMaxFee)}` // Sending funds
+        networkFee = dataMaxFee
+      } else {
+        // This action doesn't involve our account, so we should ignore it
+        return { blockNum: action.block_num }
+      }
 
-    if (trxName === 'regaddress') {
+      if (existingTx != null) {
+        // If we've already processed this transaction, we should ignore this action
+        if (existingTx.otherParams?.meta?.isTransferProcessed != null) {
+          return { blockNum: action.block_num }
+        }
+        // If this is a new action for an existing transaction, we should update the existing transaction
+        nativeAmount = add(existingTx.nativeAmount, nativeAmount)
+      }
+
+      otherParams.meta.isTransferProcessed = true
+      break
+
+    case 'unstakefio':
+      updateStakingStatus = {
+        nativeAmount,
+        blockTime: action.block_time,
+        txId: action.action_trace.trx_id,
+        txName: actName
+      }
+      if (existingTx != null) {
+        otherParams = {
+          ...existingTx.otherParams,
+          ...otherParams,
+          data: {
+            ...existingTx.otherParams?.data,
+            ...data
+          },
+          meta: {
+            ...existingTx.otherParams?.meta,
+            ...otherParams.meta
+          }
+        }
+      }
+      otherParams.meta.isTransferProcessed = true
+      break
+
+    case 'regaddress':
       // The action must have been authorized by the engine's actor in order
       // for use to consider this a spend transaction.
       // Otherwise, we should ignore regaddress actions which are received
@@ -2050,160 +2113,88 @@ export const parseAction = ({
       if (
         action.action_trace.act.authorization.some(auth => auth.actor === actor)
       ) {
-        networkFee = String(action.action_trace.act.data.max_fee ?? 0)
+        networkFee = dataMaxFee
         nativeAmount = `-${networkFee}`
       }
-    }
+      otherParams.meta.isTransferProcessed = true
+      break
 
-    if (trxName === 'trnsfiopubky' && data.amount != null) {
-      nativeAmount = data.amount.toString()
-      actorSender = data.actor
-      if (data.payee_public_key === publicKey) {
-        ourReceiveAddresses.push(publicKey)
-        if (actorSender === actor) {
-          nativeAmount = '0'
-        }
-      } else {
-        nativeAmount = `-${nativeAmount}`
-      }
-    }
+    // Fee or (unstake) reward transaction
+    case 'transfer':
+      {
+        const isRecipient = data.to === actor
+        nativeAmount = isRecipient ? `${fioAmount}` : `-${fioAmount}`
 
-    const index = findTransaction(currencyCode, action.action_trace.trx_id)
-    // Check if fee transaction have already added
-    if (index > -1) {
-      const existingTrx = getTransactionList(currencyCode)[index]
-      otherParams = {
-        ...existingTrx.otherParams,
-        ...otherParams,
-        data: {
-          ...(existingTrx.otherParams?.data ?? {}),
-          ...otherParams.data
-        },
-        meta: {
-          ...(existingTrx.otherParams?.meta ?? {}),
-          ...otherParams.meta
-        }
-      }
-
-      if (otherParams.meta.isTransferProcessed != null) {
-        return { blockNum: action.block_num }
-      }
-      if (otherParams.meta.isFeeProcessed != null) {
-        if (trxName === ACTIONS_TO_TX_ACTION_NAME[ACTIONS.transferTokens]) {
-          nativeAmount = sub(nativeAmount, existingTrx.networkFee)
-          networkFee = existingTrx.networkFee
-        } else {
-          nativeAmount = existingTrx.nativeAmount
+        // Some transfers might be rewards/yield from unstaking
+        const isUnstakeRewardTx =
+          otherParams.data != null &&
+          otherParams.data.memo === STAKING_REWARD_MEMO
+        if (isUnstakeRewardTx) {
+          updateStakingStatus = {
+            nativeAmount: fioAmount,
+            blockTime: action.block_time,
+            txId: action.action_trace.trx_id,
+            txName: actName
+          }
           networkFee = '0'
+        } else {
+          networkFee = isRecipient ? `-${fioAmount}` : fioAmount
         }
-      } else {
-        throw new Error(
-          'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
-        )
+
+        if (existingTx != null) {
+          otherParams = {
+            ...otherParams,
+            ...existingTx.otherParams,
+            data: {
+              ...otherParams.data,
+              ...(existingTx.otherParams?.data ?? {})
+            },
+            meta: {
+              ...otherParams.meta,
+              ...(existingTx.otherParams?.meta ?? {})
+            }
+          }
+
+          if (otherParams.meta.isFeeProcessed != null) {
+            return { blockNum: action.block_num }
+          }
+          if (otherParams.meta.isTransferProcessed != null) {
+            if (data.to !== actor) {
+              nativeAmount = sub(existingTx.nativeAmount, networkFee)
+            } else {
+              networkFee = '0'
+            }
+          } else {
+            throw new Error(
+              'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
+            )
+          }
+        }
+
+        otherParams.meta.isFeeProcessed = true
       }
-    }
+      break
 
-    if (checkUnStakeTx(otherParams)) {
-      updateStakingStatus = {
-        nativeAmount: data.amount != null ? data.amount.toString() : '0',
-        blockTime: action.block_time,
-        txId: action.action_trace.trx_id,
-        txName: trxName
-      }
-    }
-
-    otherParams.meta.isTransferProcessed = true
-
-    const transaction: EdgeTransaction = {
-      blockHeight: action.block_num > 0 ? action.block_num : 0,
-      currencyCode,
-      date: getUTCDate(action.block_time) / 1000,
-      isSend: nativeAmount.startsWith('-'),
-      memos: [],
-      nativeAmount,
-      networkFee,
-      otherParams,
-      ourReceiveAddresses,
-      signedTx: '',
-      tokenId: null,
-      txid: action.action_trace.trx_id,
-      walletId
-    }
-    return { blockNum: action.block_num, transaction, updateStakingStatus }
+    default:
+      // Unhandled action, don't create a tx
+      return { blockNum: action.block_num }
   }
 
-  // Fee / Reward transaction
-  if (trxName === 'transfer' && data.quantity != null) {
-    const [amount] = data.quantity.split(' ')
-    const exchangeAmount = amount.toString()
-    const fioAmount = mul(exchangeAmount, denom.multiplier)
-    if (data.to === actor) {
-      nativeAmount = `${fioAmount}`
-      networkFee = `-${fioAmount}`
-    } else {
-      nativeAmount = `-${fioAmount}`
-      networkFee = fioAmount
-    }
-
-    const index = findTransaction(currencyCode, action.action_trace.trx_id)
-    // Check if transfer transaction have already added
-    if (index > -1) {
-      const existingTrx = getTransactionList(currencyCode)[index]
-      otherParams = {
-        ...otherParams,
-        ...existingTrx.otherParams,
-        data: {
-          ...otherParams.data,
-          ...(existingTrx.otherParams?.data ?? {})
-        },
-        meta: {
-          ...otherParams.meta,
-          ...(existingTrx.otherParams?.meta ?? {})
-        }
-      }
-      if (otherParams.meta.isFeeProcessed != null) {
-        return { blockNum: action.block_num }
-      }
-      if (otherParams.meta.isTransferProcessed != null) {
-        if (data.to !== actor) {
-          nativeAmount = sub(existingTrx.nativeAmount, networkFee)
-        } else {
-          networkFee = '0'
-        }
-      } else {
-        throw new Error(
-          'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
-        )
-      }
-    }
-
-    if (checkUnStakeTx(otherParams)) {
-      updateStakingStatus = {
-        nativeAmount: fioAmount,
-        blockTime: action.block_time,
-        txId: action.action_trace.trx_id,
-        txName: trxName
-      }
-    }
-
-    otherParams.meta.isFeeProcessed = true
-    const transaction: EdgeTransaction = {
-      blockHeight: action.block_num > 0 ? action.block_num : 0,
-      currencyCode,
-      date: getUTCDate(action.block_time) / 1000,
-      isSend: nativeAmount.startsWith('-'),
-      memos: [],
-      nativeAmount,
-      networkFee,
-      otherParams,
-      ourReceiveAddresses: [],
-      signedTx: '',
-      tokenId: null,
-      txid: action.action_trace.trx_id,
-      walletId
-    }
-    return { blockNum: action.block_num, transaction, updateStakingStatus }
+  const transaction: EdgeTransaction = {
+    blockHeight: action.block_num > 0 ? action.block_num : 0,
+    currencyCode,
+    date: getUTCDate(action.block_time) / 1000,
+    isSend: nativeAmount.startsWith('-'),
+    memos: [],
+    nativeAmount,
+    networkFee,
+    otherParams,
+    ourReceiveAddresses,
+    signedTx: '',
+    tokenId: null,
+    txid: action.action_trace.trx_id,
+    walletId
   }
 
-  return { blockNum: action.block_num }
+  return { blockNum: action.block_num, transaction, updateStakingStatus }
 }

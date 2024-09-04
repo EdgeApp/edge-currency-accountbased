@@ -1142,40 +1142,6 @@
         "date": 1704397003,
         "isSend": true,
         "memos": [],
-        "nativeAmount": "-165000000000000",
-        "networkFee": "0",
-        "otherParams": {
-          "account": "fio.token",
-          "name": "trnsfiopubky",
-          "authorization": [
-            {
-              "actor": "wpvee4fsdbvu",
-              "permission": "active"
-            }
-          ],
-          "data": {
-            "payee_public_key": "FIO5EFeSfki1LZDPDnbNSbP2zfBCRzTbz3yaMZ6kgLP6ePY8Gk5YT",
-            "amount": 165000000000000,
-            "max_fee": 3643673507,
-            "actor": "wpvee4fsdbvu",
-            "tpid": "finance@edge"
-          },
-          "meta": {
-            "isTransferProcessed": true
-          }
-        },
-        "ourReceiveAddresses": [],
-        "signedTx": "",
-        "tokenId": null,
-        "txid": "d3eb44c524b1125d3ceb838753a153e4a01a1429efaf0a92e03cb652ae31a6f4",
-        "walletId": "FIO_fake_walletId"
-      },
-      {
-        "blockHeight": 238343305,
-        "currencyCode": "FIO",
-        "date": 1704397003,
-        "isSend": true,
-        "memos": [],
         "nativeAmount": "-165003643673507",
         "networkFee": "3643673507",
         "otherParams": {
@@ -1195,8 +1161,7 @@
             "tpid": "finance@edge"
           },
           "meta": {
-            "isTransferProcessed": true,
-            "isFeeProcessed": true
+            "isTransferProcessed": true
           }
         },
         "ourReceiveAddresses": [],
@@ -1247,40 +1212,6 @@
         "date": 1707514135,
         "isSend": true,
         "memos": [],
-        "nativeAmount": "-152990522000000",
-        "networkFee": "0",
-        "otherParams": {
-          "account": "fio.token",
-          "name": "trnsfiopubky",
-          "authorization": [
-            {
-              "actor": "wpvee4fsdbvu",
-              "permission": "active"
-            }
-          ],
-          "data": {
-            "payee_public_key": "FIO595q7m3Fwk7FtBjFFe2LEZR9vuMknkQgmKNxmosypuTokg1PfL",
-            "amount": 152990522000000,
-            "max_fee": 2032923604,
-            "actor": "wpvee4fsdbvu",
-            "tpid": "finance@edge"
-          },
-          "meta": {
-            "isTransferProcessed": true
-          }
-        },
-        "ourReceiveAddresses": [],
-        "signedTx": "",
-        "tokenId": null,
-        "txid": "a6db8b4ef360b6e6db7c71f37f37d1c91666b0755db592d1c5132f966f0ddc17",
-        "walletId": "FIO_fake_walletId"
-      },
-      {
-        "blockHeight": 244545276,
-        "currencyCode": "FIO",
-        "date": 1707514135,
-        "isSend": true,
-        "memos": [],
         "nativeAmount": "-152992554923604",
         "networkFee": "2032923604",
         "otherParams": {
@@ -1300,48 +1231,13 @@
             "tpid": "finance@edge"
           },
           "meta": {
-            "isTransferProcessed": true,
-            "isFeeProcessed": true
-          }
-        },
-        "ourReceiveAddresses": [],
-        "signedTx": "",
-        "tokenId": null,
-        "txid": "a6db8b4ef360b6e6db7c71f37f37d1c91666b0755db592d1c5132f966f0ddc17",
-        "walletId": "FIO_fake_walletId"
-      },
-      {
-        "blockHeight": 246788448,
-        "currencyCode": "FIO",
-        "date": 1708636160,
-        "isSend": true,
-        "memos": [],
-        "nativeAmount": "-110000000000000",
-        "networkFee": "0",
-        "otherParams": {
-          "account": "fio.token",
-          "name": "trnsfiopubky",
-          "authorization": [
-            {
-              "actor": "wpvee4fsdbvu",
-              "permission": "active"
-            }
-          ],
-          "data": {
-            "payee_public_key": "FIO5EFeSfki1LZDPDnbNSbP2zfBCRzTbz3yaMZ6kgLP6ePY8Gk5YT",
-            "amount": 110000000000000,
-            "max_fee": 2750237207,
-            "actor": "wpvee4fsdbvu",
-            "tpid": "finance@edge"
-          },
-          "meta": {
             "isTransferProcessed": true
           }
         },
         "ourReceiveAddresses": [],
         "signedTx": "",
         "tokenId": null,
-        "txid": "7199d9500821ae6a1e46393f6e2e2980f0134f64d233aa04cc1198ebf0b2aa8b",
+        "txid": "a6db8b4ef360b6e6db7c71f37f37d1c91666b0755db592d1c5132f966f0ddc17",
         "walletId": "FIO_fake_walletId"
       },
       {
@@ -1369,8 +1265,7 @@
             "tpid": "finance@edge"
           },
           "meta": {
-            "isTransferProcessed": true,
-            "isFeeProcessed": true
+            "isTransferProcessed": true
           }
         },
         "ourReceiveAddresses": [],
