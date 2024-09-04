@@ -2088,6 +2088,10 @@ export const parseAction = ({
         txId: action.action_trace.trx_id,
         txName: actName
       }
+
+      // Unstake actions should have a corresponding reward 'transfer' action
+      // that was parsed right before this action, which only reports the reward
+      // portion of the unstake.
       if (existingTx != null) {
         otherParams = {
           ...existingTx.otherParams,
@@ -2102,6 +2106,10 @@ export const parseAction = ({
           }
         }
       }
+      // Add the additional unstake amount that was requested by these actions
+      // to the already saved reward amount, if any.
+      nativeAmount = add(dataAmount, existingTx?.nativeAmount ?? '0')
+
       otherParams.meta.isTransferProcessed = true
       break
 
@@ -2152,7 +2160,8 @@ export const parseAction = ({
             meta: {
               ...otherParams.meta,
               ...(existingTx.otherParams?.meta ?? {})
-            }
+            },
+            name: isUnstakeRewardTx ? 'unstakefio' : otherParams.name
           }
 
           if (otherParams.meta.isFeeProcessed != null) {
