@@ -11,6 +11,12 @@ import {
   InsufficientFundsError,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import type {
+  ConfirmedTransaction,
+  InitializerConfig,
+  SpendInfo,
+  StatusEvent
+} from 'react-native-piratechain'
 import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
@@ -22,12 +28,8 @@ import {
   asPiratechainPrivateKeys,
   asPiratechainWalletOtherData,
   asSafePiratechainWalletInfo,
-  PiratechainInitializerConfig,
   PiratechainNetworkInfo,
-  PiratechainSpendInfo,
   PiratechainSynchronizer,
-  PiratechainSynchronizerStatus,
-  PiratechainTransaction,
   PiratechainWalletOtherData,
   SafePiratechainWalletInfo
 } from './piratechainTypes'
@@ -41,14 +43,14 @@ export class PiratechainEngine extends CurrencyEngine<
   pluginId: string
   networkInfo: PiratechainNetworkInfo
   otherData!: PiratechainWalletOtherData
-  synchronizerStatus!: PiratechainSynchronizerStatus
+  synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
   initialNumBlocksToDownload!: number
-  initializer!: PiratechainInitializerConfig
+  initializer!: InitializerConfig
   progressRatio!: number
   queryMutex: boolean
   makeSynchronizer: (
-    config: PiratechainInitializerConfig
+    config: InitializerConfig
   ) => Promise<PiratechainSynchronizer>
 
   // Synchronizer management
@@ -111,6 +113,14 @@ export class PiratechainEngine extends CurrencyEngine<
     this.synchronizer.on('statusChanged', async payload => {
       this.synchronizerStatus = payload.name
       await this.queryAll()
+    })
+    this.synchronizer.on('error', async payload => {
+      this.log.warn(`Synchronizer error: ${payload.message}`)
+      if (payload.level === 'critical') {
+        await this.killEngine()
+        this.lastUpdateFromSynchronizer = undefined
+        await this.startEngine()
+      }
     })
   }
 
@@ -268,7 +278,7 @@ export class PiratechainEngine extends CurrencyEngine<
     }
   }
 
-  processTransaction(tx: PiratechainTransaction): void {
+  processTransaction(tx: ConfirmedTransaction): void {
     let netNativeAmount = tx.value
     const ourReceiveAddresses = []
     if (tx.toAddress != null) {
@@ -453,14 +463,13 @@ export class PiratechainEngine extends CurrencyEngine<
 
     const memo = memos[0]?.type === 'text' ? memos[0].value : ''
     const spendTarget = edgeTransaction.spendTargets[0]
-    const txParams: PiratechainSpendInfo = {
+    const txParams: SpendInfo = {
       zatoshi: sub(
         abs(edgeTransaction.nativeAmount),
         edgeTransaction.networkFee
       ),
       toAddress: spendTarget.publicAddress,
       memo,
-      fromAccountIndex: 0,
       mnemonicSeed: piratechainPrivateKeys.mnemonic
     }
 

@@ -168,6 +168,13 @@ export class ZcashEngine extends CurrencyEngine<
       })
       this.onUpdateTransactions()
     })
+    this.synchronizer.on('error', async payload => {
+      this.log.warn(`Synchronizer error: ${payload.message}`)
+      if (payload.level === 'critical') {
+        await this.killEngine()
+        await this.startEngine()
+      }
+    })
   }
 
   onUpdateBlockHeight(networkBlockHeight: number): void {

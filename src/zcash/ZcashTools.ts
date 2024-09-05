@@ -12,7 +12,6 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
-import type { UnifiedViewingKey } from 'react-native-zcash'
 import { Tools as ToolsType } from 'react-native-zcash'
 
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -140,11 +139,10 @@ export class ZcashTools implements EdgeCurrencyTools {
     if (typeof mnemonic !== 'string') {
       throw new Error('InvalidMnemonic')
     }
-    const unifiedViewingKey: UnifiedViewingKey =
-      await this.nativeTools.deriveViewingKey(
-        mnemonic,
-        this.networkInfo.rpcNode.networkName
-      )
+    const unifiedViewingKey = await this.nativeTools.deriveViewingKey(
+      mnemonic,
+      this.networkInfo.rpcNode.networkName
+    )
     return {
       birthdayHeight: zcashPrivateKeys.birthdayHeight,
       publicKey: unifiedViewingKey
