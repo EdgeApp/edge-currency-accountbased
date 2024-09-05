@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.24.0 (2024-09-05)
+
 - added: (Ethereum/Solana) Support additional tokens provided by info server
 - added: (Thorchain) Add Midgard API for transaction queries
 - changed: (Thorchain) Move most Thorchain-specific functionality out of CosmosEngine and into to ThorchainEngine subclass
