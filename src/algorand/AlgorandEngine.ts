@@ -17,6 +17,7 @@ import {
   EdgeMemo,
   EdgeSpendInfo,
   EdgeToken,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -28,7 +29,6 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { EdgeTokenId } from '../common/types'
 import { utf8 } from '../common/utf8'
 import {
   asyncWaterfall,

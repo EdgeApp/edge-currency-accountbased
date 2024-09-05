@@ -40,6 +40,7 @@ import {
   EdgeMemo,
   EdgeSpendInfo,
   EdgeStakingStatus,
+  EdgeTokenId,
   EdgeTransaction,
   JsonObject,
   NoAmountSpecifiedError
@@ -50,7 +51,7 @@ import { CurrencyEngine } from '../../common/CurrencyEngine'
 import { PluginEnvironment } from '../../common/innerPlugin'
 import { getRandomDelayMs } from '../../common/network'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
-import { EdgeTokenId, MakeTxParams } from '../../common/types'
+import { MakeTxParams } from '../../common/types'
 import { cleanTxLogs } from '../../common/utils'
 import { CosmosTools } from '../CosmosTools'
 import {

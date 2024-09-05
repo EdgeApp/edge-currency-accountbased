@@ -12,15 +12,15 @@ import {
   Cleaner
 } from 'cleaners'
 import {
+  EdgeDenomination,
   EdgeMetadata,
   EdgeToken,
+  EdgeTokenId,
   EdgeTokenInfo,
   EdgeTransaction,
   EdgeTxSwap
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
-
-export type EdgeTokenId = string | null // to be replaced after edge-core-js upgrade
 
 export const DATA_STORE_FILE = 'txEngineFolder/walletLocalData.json'
 export const TXID_MAP_FILE = 'txEngineFolder/txidMap.json'
@@ -158,3 +158,31 @@ export interface EdgeTransactionHelperAmounts {
   networkFee: string
   parentNetworkFee?: string
 }
+
+/**
+ * A cleaner for something that must be an object,
+ * but we don't care about the keys inside:
+ */
+const asJsonObject: Cleaner<object> = raw => {
+  if (raw == null || typeof raw !== 'object') {
+    throw new TypeError('Expected a JSON object')
+  }
+  return raw
+}
+
+const asEdgeDenomination = asObject<EdgeDenomination>({
+  multiplier: asString,
+  name: asString,
+  symbol: asOptional(asString)
+})
+
+export const asEdgeToken = asObject({
+  currencyCode: asString,
+  denominations: asArray(asEdgeDenomination),
+  displayName: asString,
+  networkLocation: asOptional(asJsonObject)
+})
+
+export const asInfoServerTokens = asObject({
+  infoServerTokens: asMaybe(asArray(asUnknown))
+})

@@ -1,7 +1,7 @@
 import { EdgeCurrencyInfo, EdgeTokenMap } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
-import { makeMetaTokens } from '../../common/tokenHelpers'
+import { createEvmTokenId, makeMetaTokens } from '../../common/tokenHelpers'
 import type { EthereumTools } from '../EthereumTools'
 import {
   asEthereumInfoPayload,
@@ -156,6 +156,7 @@ export const zksync = makeOuterPlugin<
   builtinTokens,
   currencyInfo,
   asInfoPayload: asEthereumInfoPayload,
+  createTokenId: createEvmTokenId,
   networkInfo,
 
   async getInnerPlugin() {

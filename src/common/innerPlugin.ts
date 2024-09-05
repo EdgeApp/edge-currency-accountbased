@@ -7,10 +7,13 @@ import {
   EdgeCurrencyPlugin,
   EdgeCurrencyTools,
   EdgeOtherMethods,
+  EdgeToken,
   EdgeTokenMap,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+
+import { asEdgeToken, asInfoServerTokens } from './types'
 
 /**
  * We pass a more complete plugin environment to the inner plugin,
@@ -66,6 +69,7 @@ export interface OuterPlugin<
   InfoPayload
 > {
   asInfoPayload: Cleaner<InfoPayload>
+  createTokenId?: (token: EdgeToken) => string
   builtinTokens?: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: NetworkInfo
@@ -90,6 +94,7 @@ export function makeOuterPlugin<
       currencyInfo,
       networkInfo: defaultNetworkInfo,
       asInfoPayload,
+      createTokenId,
       otherMethodNames = [],
       checkEnvironment = () => {}
     } = template
@@ -131,6 +136,30 @@ export function makeOuterPlugin<
     }
 
     async function getBuiltinTokens(): Promise<EdgeTokenMap> {
+      if (createTokenId != null) {
+        const { infoServerTokens: rawInfoServerTokens = [] } =
+          asInfoServerTokens(env.infoPayload)
+
+        for (const rawToken of rawInfoServerTokens) {
+          try {
+            const edgeToken = asEdgeToken(rawToken)
+            const tokenId = createTokenId(edgeToken)
+
+            // Check if there are any conflicts
+            if (builtinTokens[tokenId] != null) continue
+
+            // TODO: Remove after migrating away from currencyCode keyed objects
+            if (currencyInfo.currencyCode === edgeToken.currencyCode) continue
+            const matchingToken = Object.values(builtinTokens).find(
+              token => token.currencyCode === edgeToken.currencyCode
+            )
+            if (matchingToken != null) continue
+
+            builtinTokens[tokenId] = edgeToken
+          } catch (e) {}
+        }
+      }
+
       return builtinTokens
     }
 
