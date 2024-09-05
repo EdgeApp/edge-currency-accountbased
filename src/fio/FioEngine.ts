@@ -2170,9 +2170,6 @@ export const parseAction = ({
             name: isUnstakeRewardTx ? 'unstakefio' : otherParams.name
           }
 
-          if (otherParams.meta.isFeeProcessed != null) {
-            return { blockNum: action.block_num }
-          }
           if (otherParams.meta.isTransferProcessed != null) {
             if (data.to !== actor) {
               nativeAmount = sub(existingTx.nativeAmount, networkFee)
@@ -2181,12 +2178,10 @@ export const parseAction = ({
             }
           } else {
             throw new Error(
-              'processTransaction error - existing spend transaction should have isTransferProcessed or isFeeProcessed set'
+              'processTransaction error - existing spend transaction should have isTransferProcessed set'
             )
           }
         }
-
-        otherParams.meta.isFeeProcessed = true
       }
       break
 
