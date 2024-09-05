@@ -275,4 +275,4 @@ export async function updateInfoPayload(
   env.networkInfo = mergeDeeply(env.networkInfo, networkInfo)
 }
 
-export { makeCurrencyEngine } from './CosmosEngine'
+export { makeCurrencyEngine } from './cosmosEngines'

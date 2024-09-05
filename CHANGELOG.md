@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Thorchain) Add Midgard API for transaction queries
+- changed: (Thorchain) Move most Thorchain-specific functionality out of CosmosEngine and into to ThorchainEngine subclass
+
 ## 4.23.0 (2024-09-03)
 
 - added: (ADA) `isStakeTx` to `EdgeTransaction.otherParams` for staking transaction signing

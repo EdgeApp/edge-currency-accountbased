@@ -34,7 +34,6 @@ import {
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 import {
-  EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -42,29 +41,25 @@ import {
   EdgeSpendInfo,
   EdgeStakingStatus,
   EdgeTransaction,
-  EdgeWalletInfo,
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
 
-import { CurrencyEngine } from '../common/CurrencyEngine'
-import { PluginEnvironment } from '../common/innerPlugin'
-import { getRandomDelayMs } from '../common/network'
-import { asMaybeContractLocation } from '../common/tokenHelpers'
-import { EdgeTokenId, MakeTxParams } from '../common/types'
-import { cleanTxLogs } from '../common/utils'
-import { CosmosTools } from './CosmosTools'
+import { CurrencyEngine } from '../../common/CurrencyEngine'
+import { PluginEnvironment } from '../../common/innerPlugin'
+import { getRandomDelayMs } from '../../common/network'
+import { asMaybeContractLocation } from '../../common/tokenHelpers'
+import { EdgeTokenId, MakeTxParams } from '../../common/types'
+import { cleanTxLogs } from '../../common/utils'
+import { CosmosTools } from '../CosmosTools'
 import {
-  asChainIdUpdate,
   asCosmosPrivateKeys,
   asCosmosTxOtherParams,
   asCosmosWalletOtherData,
   asCosmosWcGetAccountsRpcPayload,
   asCosmosWcSignAminoRpcPayload,
   asCosmosWcSignDirectRpcPayload,
-  asSafeCosmosWalletInfo,
-  asThornodeNetwork,
   CosmosClients,
   CosmosCoin,
   CosmosFee,
@@ -76,7 +71,7 @@ import {
   IbcChannel,
   SafeCosmosWalletInfo,
   txQueryStrings
-} from './cosmosTypes'
+} from '../cosmosTypes'
 import {
   checkAndValidateADR36AminoSignDoc,
   createCosmosClients,
@@ -85,7 +80,7 @@ import {
   rpcWithApiKey,
   safeAddCoins,
   safeParse
-} from './cosmosUtils'
+} from '../cosmosUtils'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -495,25 +490,6 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
-  async queryChainId(): Promise<void> {
-    if (this.networkInfo.chainIdUpdateUrl != null) {
-      try {
-        const res = await this.fetchCors(this.networkInfo.chainIdUpdateUrl)
-        if (!res.ok) {
-          const message = await res.text()
-          throw new Error(message)
-        }
-        const raw = await res.json()
-        const clean = asChainIdUpdate(raw)
-        this.chainId = clean.result.node_info.network
-      } catch (e: any) {
-        this.error(`queryChainId Error `, e)
-        return
-      }
-    }
-    clearTimeout(this.timers.queryChainId)
-  }
-
   async queryTransactions(): Promise<void> {
     let progress = 0
     const allCurrencyCodes = [
@@ -615,9 +591,6 @@ export class CosmosEngine extends CurrencyEngine<
 
           const txidHex = toHex(tx.hash).toUpperCase()
 
-          // update unconfirmed cache
-          this.removeFromUnconfirmedCache(txidHex)
-
           const events = tx.result.events.map(fromTendermintEvent)
           let netBalanceChanges: CosmosCoin[] = []
           try {
@@ -638,12 +611,8 @@ export class CosmosEngine extends CurrencyEngine<
           const signedTx = base16.stringify(txRaw)
           const {
             authInfo: { fee },
-            body: { memo, messages }
+            body: { memo }
           } = decodeTxRaw(txRaw)
-          const dynamicNetworkFee = await this.totalDynamicNetworkFee(
-            messages,
-            block.header.height
-          )
           netBalanceChanges.forEach(coin => {
             this.processCosmosTransaction(
               txidHex,
@@ -652,7 +621,6 @@ export class CosmosEngine extends CurrencyEngine<
               coin,
               memo,
               height,
-              dynamicNetworkFee,
               fee
             )
           })
@@ -693,7 +661,6 @@ export class CosmosEngine extends CurrencyEngine<
     cosmosCoin: CosmosCoin,
     memo: string,
     height: number,
-    dynamicNetworkFee: string,
     fee?: Fee
   ): void {
     const { amount, denom } = cosmosCoin
@@ -728,12 +695,10 @@ export class CosmosEngine extends CurrencyEngine<
     let parentNetworkFee: string | undefined
     if (isSend) {
       if (isMainnet) {
-        networkFee = add(networkFee, dynamicNetworkFee)
         nativeAmount = sub(nativeAmount, networkFee)
       } else {
         networkFee = '0'
-        parentNetworkFee =
-          dynamicNetworkFee !== '0' ? dynamicNetworkFee : undefined
+        parentNetworkFee = networkFee !== '0' ? networkFee : undefined
       }
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
@@ -764,6 +729,12 @@ export class CosmosEngine extends CurrencyEngine<
       walletId: this.walletId
     }
     this.addTransaction(currencyCode, edgeTransaction)
+  }
+
+  addTransaction(currencyCode: string, edgeTransaction: EdgeTransaction): void {
+    // update unconfirmed cache
+    this.removeFromUnconfirmedCache(edgeTransaction.txid)
+    super.addTransaction(currencyCode, edgeTransaction)
   }
 
   private createUnsignedTxHex(messages: EncodeObject[], memo?: string): string {
@@ -815,95 +786,48 @@ export class CosmosEngine extends CurrencyEngine<
     }
   }
 
-  private async totalDynamicNetworkFee(
-    messages: EncodeObject[],
-    blockheight?: number
-  ): Promise<string> {
-    let networkFee = '0'
-    if (this.networkInfo.defaultTransactionFeeUrl == null) {
-      return networkFee
-    }
-
-    const { url, headers } = rpcWithApiKey(
-      this.networkInfo.defaultTransactionFeeUrl,
-      this.tools.initOptions
-    )
-    const heightQueryParam = blockheight == null ? '' : `?height=${blockheight}`
-    const res = await this.fetchCors(`${url}${heightQueryParam}`, {
-      method: 'GET',
-      headers
-    })
-    const raw = await res.json()
-    const clean = asThornodeNetwork(raw)
-    for (const msg of messages) {
-      switch (msg.typeUrl) {
-        case '/types.MsgDeposit':
-          networkFee = add(networkFee, clean.native_outbound_fee_rune)
-          break
-        case '/types.MsgSend':
-          networkFee = add(networkFee, clean.native_tx_fee_rune)
-      }
-    }
-    return networkFee
-  }
-
-  private async calculateFee(opts: {
+  async calculateFee(opts: {
     messages: EncodeObject[]
     memo?: string
     networkFeeOption?: EdgeSpendInfo['networkFeeOption']
   }): Promise<CosmosFee> {
-    const { messages, memo, networkFeeOption } = opts
-    let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
-    let gasLimit = '0'
-    let networkFee = '0'
-    if (this.networkInfo.defaultTransactionFeeUrl == null) {
-      const { queryClient } = this.getClients()
-      const { gasInfo } = await queryClient.tx.simulate(
-        messages,
-        memo,
-        encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
-        this.getSequence()
-      )
-      if (gasInfo?.gasUsed == null) {
-        throw new Error(`simulate didn't return gasUsed `)
-      }
-      // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
-      gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
-
-      const { low, average, high } = getGasPriceStep(this.tools.chainData)
-
-      let gasPrice = average
-      switch (networkFeeOption) {
-        case 'low': {
-          gasPrice = low
-          break
-        }
-        case 'high': {
-          gasPrice = high
-          break
-        }
-        case 'custom': {
-          throw new Error('Custom fee not supported')
-        }
-      }
-
-      const gasFee = ceil(mul(gasLimit, gasPrice.toString()), 0)
-      gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
-      networkFee = gasFeeCoin.amount
-    } else {
-      // Only Thorchain uses defaultTransactionFeeUrl
-      networkFee = await this.totalDynamicNetworkFee(messages)
-
-      // For Thorchain, the exact fee isn't known until the transaction is confirmed.
-      // This would most commonly be an issue for max spends but we should overestimate
-      // the fee for all spends.
-      networkFee = mul(networkFee, '1.01')
+    const { queryClient } = this.getClients()
+    const { gasInfo } = await queryClient.tx.simulate(
+      opts.messages,
+      opts.memo,
+      encodeSecp256k1Pubkey(base16.parse(this.walletInfo.keys.publicKey)),
+      this.getSequence()
+    )
+    if (gasInfo?.gasUsed == null) {
+      throw new Error(`simulate didn't return gasUsed `)
     }
+    // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
+    const gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
+
+    const { low, average, high } = getGasPriceStep(this.tools.chainData)
+
+    let gasPrice = average
+    switch (opts.networkFeeOption) {
+      case 'low': {
+        gasPrice = low
+        break
+      }
+      case 'high': {
+        gasPrice = high
+        break
+      }
+      case 'custom': {
+        throw new Error('Custom fee not supported')
+      }
+    }
+
+    const gasFee = ceil(mul(gasLimit, gasPrice.toString()), 0)
+    const gasFeeCoin = coin(gasFee, this.networkInfo.nativeDenom)
 
     return {
       gasFeeCoin,
       gasLimit,
-      networkFee
+      networkFee: gasFeeCoin.amount
     }
   }
 
@@ -914,9 +838,6 @@ export class CosmosEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryChainId', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS).catch(
       () => {}
@@ -1257,18 +1178,4 @@ export class CosmosEngine extends CurrencyEngine<
       publicAddress: bech32Address
     }
   }
-}
-
-export async function makeCurrencyEngine(
-  env: PluginEnvironment<CosmosNetworkInfo>,
-  tools: CosmosTools,
-  walletInfo: EdgeWalletInfo,
-  opts: EdgeCurrencyEngineOptions
-): Promise<EdgeCurrencyEngine> {
-  const safeWalletInfo = asSafeCosmosWalletInfo(walletInfo)
-  const engine = new CosmosEngine(env, tools, safeWalletInfo, opts)
-
-  await engine.loadEngine()
-
-  return engine
 }

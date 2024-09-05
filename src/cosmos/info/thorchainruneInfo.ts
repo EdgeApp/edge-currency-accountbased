@@ -2,14 +2,11 @@ import { EdgeCurrencyInfo } from 'edge-core-js/types'
 
 import { makeOuterPlugin } from '../../common/innerPlugin'
 import type { CosmosTools } from '../CosmosTools'
-import {
-  asCosmosInfoPayload,
-  CosmosInfoPayload,
-  CosmosNetworkInfo
-} from '../cosmosTypes'
+import { asCosmosInfoPayload, CosmosInfoPayload } from '../cosmosTypes'
+import { ThorchainNetworkInfo } from '../thorchainTypes'
 // import { cosmosCustomTokenTemplate } from './cosmosCommonInfo'
 
-const networkInfo: CosmosNetworkInfo = {
+const networkInfo: ThorchainNetworkInfo = {
   bech32AddressPrefix: 'thor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
@@ -18,8 +15,12 @@ const networkInfo: CosmosNetworkInfo = {
   },
   defaultChainId: 'thorchain-mainnet-v1',
   chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
-  defaultTransactionFeeUrl: {
+  transactionFeeConnectionInfo: {
     url: 'https://thornode.ninerealms.com/thorchain/network',
+    headers: { 'x-client-id': '{{ninerealmsClientId}}' }
+  },
+  midgardConnctionInfo: {
+    url: 'https://midgard.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   nativeDenom: 'rune',
@@ -74,7 +75,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const thorchainrune = makeOuterPlugin<
-  CosmosNetworkInfo,
+  ThorchainNetworkInfo,
   CosmosTools,
   CosmosInfoPayload
 >({
