@@ -27,8 +27,8 @@ export const asGetFioDomains = asObject({
   )
 })
 
-export const asFioTxName = asMaybe(
-  asValue('unstakefio', 'transfer', 'regaddress', 'trnsfiopubky'),
+export const asSupportedFioTxName = asMaybe(
+  asValue('unstakefio', 'stakefio', 'transfer', 'regaddress', 'trnsfiopubky'),
   null
 )
 
@@ -40,7 +40,7 @@ export const asFioHistoryNodeAction = asObject({
     receiver: asString,
     act: asObject({
       account: asString,
-      name: asFioTxName,
+      name: asSupportedFioTxName,
       authorization: asArray(
         asObject({
           actor: asString,
@@ -79,5 +79,5 @@ export const asGetFioBalanceResponse = asObject({
   roe: asString
 })
 
-export type FioTxName = ReturnType<typeof asFioTxName>
+export type FioTxName = ReturnType<typeof asSupportedFioTxName>
 export type FioHistoryNodeAction = ReturnType<typeof asFioHistoryNodeAction>
