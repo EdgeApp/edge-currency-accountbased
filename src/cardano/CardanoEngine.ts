@@ -282,6 +282,7 @@ export class CardanoEngine extends CurrencyEngine<
         break
       }
       const rawTxInfos = await this.fetchPost(`tx_info`, {
+        _inputs: true,
         _tx_hashes: txids
       })
       const txs = asKoiosTransactionsRes(rawTxInfos)

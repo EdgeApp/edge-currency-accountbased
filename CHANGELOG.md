@@ -5,6 +5,7 @@
 - added: (Ethereum/Solana) Support additional tokens provided by info server
 - added: (Thorchain) Add Midgard API for transaction queries
 - changed: (Thorchain) Move most Thorchain-specific functionality out of CosmosEngine and into to ThorchainEngine subclass
+- fixed: (ADA) Update tx_info request to include inputs in order to fix all transactions show as receive bug
 
 ## 4.23.0 (2024-09-03)
 
