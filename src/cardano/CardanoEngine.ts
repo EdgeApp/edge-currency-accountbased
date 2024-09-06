@@ -605,8 +605,8 @@ export class CardanoEngine extends CurrencyEngine<
     // Validate the transaction is a staking transaction:
     const validatedTxJson = asStakingTxBody(bech32Address)(txJson.body)
 
-    // We'll consider the transaction a send if no rewards are withdrawn
-    const isSend = validatedTxJson.withdrawals == null
+    // We'll consider the transaction a deposit (stake) if no rewards are withdrawn
+    const isDeposit = validatedTxJson.withdrawals == null
 
     const otherParams: CardanoTxOtherParams = {
       isStakeTx: true,
@@ -615,20 +615,39 @@ export class CardanoEngine extends CurrencyEngine<
 
     const nativeNetworkFee = txJson.body.fee
 
+    // Staking locks 2 ADA.
+    const nativeAmount = isDeposit
+      ? '-2000000'
+      : // Because of Edge's policy not to show network fees in a receive tx
+        sub('2000000', nativeNetworkFee)
+
     const edgeTransaction: EdgeTransaction = {
       blockHeight: 0,
       currencyCode: this.currencyInfo.currencyCode,
       date: 0,
-      isSend,
+      isSend: isDeposit,
       memos: [],
-      nativeAmount: '0',
+      nativeAmount,
       networkFee: nativeNetworkFee,
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
       tokenId: null,
       txid: txHash.to_hex(),
-      walletId: this.walletId
+      walletId: this.walletId,
+      assetAction: {
+        assetActionType: isDeposit ? 'stake' : 'unstake'
+      },
+      savedAction: {
+        actionType: 'stake',
+        pluginId: this.currencyInfo.pluginId,
+        stakeAssets: [
+          {
+            pluginId: this.currencyInfo.pluginId,
+            tokenId: null
+          }
+        ]
+      }
     }
 
     return edgeTransaction
