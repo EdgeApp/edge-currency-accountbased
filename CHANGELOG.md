@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (ADA) Correctly parse txid after broadcasting a transaction
+
 ## 4.24.0 (2024-09-05)
 
 - added: (Ethereum/Solana) Support additional tokens provided by info server

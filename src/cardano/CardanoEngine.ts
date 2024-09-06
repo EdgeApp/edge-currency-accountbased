@@ -1,6 +1,6 @@
 import * as Cardano from '@emurgo/cardano-serialization-lib-nodejs'
 import { add, mul, sub } from 'biggystring'
-import { asString, asTuple } from 'cleaners'
+import { asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -148,7 +148,7 @@ export class CardanoEngine extends CurrencyEngine<
         const message = await res.text()
         throw new Error(`${name} error: ${message}`)
       }
-      const txid = asString(await res.text())
+      const txid = await res.json()
       this.log.warn(`${name} broadcast success`)
       return txid
     }
