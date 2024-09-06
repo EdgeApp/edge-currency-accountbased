@@ -94,7 +94,7 @@ export class CardanoEngine extends CurrencyEngine<
     )
     if (!res.ok) {
       const message = await res.text()
-      throw new Error(`Koios error: ${message}`)
+      throw new Error(`Koios error: ${res.status} ${message}`)
     }
     const json = await res.json()
     return json
