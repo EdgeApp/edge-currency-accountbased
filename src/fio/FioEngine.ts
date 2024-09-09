@@ -2008,12 +2008,6 @@ export const parseAction = ({
     act: { name: actName, data, account, authorization }
   } = action.action_trace
 
-  // Throw away the action in some cases:
-  if (actName == null)
-    throw new Error(
-      'FIO parseAction found with null actName at txId: ' +
-        action.action_trace.trx_id
-    )
   if (action.block_num <= highestTxHeight) {
     return { blockNum: action.block_num }
   }
