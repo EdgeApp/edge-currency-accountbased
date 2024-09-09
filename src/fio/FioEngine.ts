@@ -893,16 +893,10 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
         ),
         (result: any) => {
-          const errorResponse =
-            asFioNothingResponse(PUBLIC_KEY_NOT_FOUND)(result)
-          if (errorResponse != null) return errorResponse.data.json.message
           return comparisonFioBalanceString(result)
         },
         2
       )
-      if (res?.data?.json?.message === PUBLIC_KEY_NOT_FOUND) {
-        res = { balance: 0, available: 0, staked: 0, srps: 0, roe: '' }
-      }
     } else if (actionName === 'getFees') {
       res = await asyncWaterfall(
         shuffleArray(
@@ -1090,6 +1084,8 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             await this.multicastServers('getCurrencyBalance')
           )
           this.log.warn('Returning FIO balance only due to chain bug')
+        } else if (e?.json?.message === PUBLIC_KEY_NOT_FOUND) {
+          balanceRes = { balance: 0, available: 0, staked: 0, srps: 0, roe: '' }
         } else {
           throw e
         }
@@ -2012,12 +2008,6 @@ export const parseAction = ({
     act: { name: actName, data, account, authorization }
   } = action.action_trace
 
-  // Throw away the action in some cases:
-  if (actName == null)
-    throw new Error(
-      'FIO parseAction found with null actName at txId: ' +
-        action.action_trace.trx_id
-    )
   if (action.block_num <= highestTxHeight) {
     return { blockNum: action.block_num }
   }
