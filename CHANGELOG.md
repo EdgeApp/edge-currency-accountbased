@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.24.1 (2024-09-10)
+
 - fixed: (ADA) Correctly parse txid after broadcasting a transaction
 - fixed: (ADA) Fixed metadata for staking transactions
 
