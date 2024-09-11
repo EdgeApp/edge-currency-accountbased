@@ -287,7 +287,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const address = this.ethEngine.walletLocalData.publicKey
     let page = 1
 
-    const allTransactions: EdgeTransaction[] = []
+    let allTransactions: EdgeTransaction[] = []
     let server: string | undefined
     while (true) {
       const offset = NUM_TRANSACTIONS_TO_QUERY
@@ -339,7 +339,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
             cleanedTx,
             l1RollupFee
           )
-          allTransactions.push(tx)
+          allTransactions = mergeEdgeTransactions([...allTransactions, tx])
         } catch (e: any) {
           this.ethEngine.error(
             `getAllTxsEthscan ${cleanerFunc.name}\n${safeErrorMessage(
@@ -533,7 +533,11 @@ export function mergeEdgeTransactions(
     }
 
     // Parent network is expected to always match for token transactions:
-    if (existingTransaction.parentNetworkFee !== transaction.parentNetworkFee) {
+    if (
+      existingTransaction.parentNetworkFee != null &&
+      transaction.parentNetworkFee != null &&
+      existingTransaction.parentNetworkFee !== transaction.parentNetworkFee
+    ) {
       throw new Error(
         `Failed to merge transaction '${uniqueKey}': Mismatch parentNetworkFee`
       )
@@ -547,12 +551,19 @@ export function mergeEdgeTransactions(
       transaction.networkFee
     )
 
+    // We can safely assume that the parentNetworkFees for each transaction
+    // are either the same or one or both are undefined. So, we can take the
+    // first non-undefined parentNetworkFee to get the merged parentNetworkFee:
+    const mergedParentNetworkFee =
+      existingTransaction.parentNetworkFee ?? transaction.parentNetworkFee
+
     // Update the existing transaction:
     const nativeAmount = add(
       existingTransaction.nativeAmount,
       transaction.nativeAmount
     )
-    txidToTransaction.set(uniqueKey, {
+
+    const mergedTx = {
       ...existingTransaction,
       isSend: nativeAmount.startsWith('-'),
       nativeAmount,
@@ -561,7 +572,12 @@ export function mergeEdgeTransactions(
         ...existingTransaction.ourReceiveAddresses,
         ...transaction.ourReceiveAddresses
       ]
-    })
+    }
+    if (mergedParentNetworkFee != null) {
+      mergedTx.parentNetworkFee = mergedParentNetworkFee
+    }
+
+    txidToTransaction.set(uniqueKey, mergedTx)
   }
 
   return Array.from(txidToTransaction.values())
