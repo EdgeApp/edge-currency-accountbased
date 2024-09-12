@@ -1391,6 +1391,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
     const { name, params } = asFioAction(otherParams.action)
 
+    let nativeAmount = quantity
     let fee: string
     let txParams: FioTxParams | undefined
     switch (name) {
@@ -1409,6 +1410,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
       case ACTIONS.stakeFioTokens: {
         const { fioAddress } = asFioAddressParam(params)
+        nativeAmount = '0'
         fee = await this.getFee(EndPoint.stakeFioTokens, fioAddress)
         txParams = {
           account: 'fio.staking',
@@ -1424,6 +1426,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
       case ACTIONS.unStakeFioTokens: {
         const { fioAddress } = asFioAddressParam(params)
+        nativeAmount = '0'
         fee = await this.getFee(EndPoint.unStakeFioTokens, fioAddress)
         txParams = {
           account: 'fio.staking',
@@ -1641,7 +1644,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       date: 0,
       isSend: true,
       memos,
-      nativeAmount: sub(`-${quantity}`, `${fee}`),
+      nativeAmount: `-${add(nativeAmount, fee)}`,
       networkFee: `${fee}`,
       otherParams: {
         ...otherParams,
