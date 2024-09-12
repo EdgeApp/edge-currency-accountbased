@@ -2042,6 +2042,7 @@ export const parseAction = ({
   let networkFee = '0'
   let nativeAmount = '0'
   let updateStakingStatus: UpdateStakingStatus | undefined
+  let assetAction: EdgeTransaction['assetAction'] | undefined
 
   switch (actName) {
     case 'trnsfiopubky':
@@ -2069,6 +2070,9 @@ export const parseAction = ({
       networkFee = dataMaxFee
       nativeAmount = `-${networkFee}`
       otherParams.meta.isTransferProcessed = true
+      assetAction = {
+        assetActionType: 'stake'
+      }
       break
     }
 
@@ -2102,6 +2106,9 @@ export const parseAction = ({
       }
 
       otherParams.meta.isTransferProcessed = true
+      assetAction = {
+        assetActionType: 'unstakeOrder'
+      }
       break
 
     case 'regaddress':
@@ -2134,6 +2141,9 @@ export const parseAction = ({
           }
           networkFee = '0'
           nativeAmount = fioAmount
+          assetAction = {
+            assetActionType: 'unstake'
+          }
         } else {
           const isRecipient = data.to === actor
           networkFee = isRecipient ? `0` : fioAmount
@@ -2177,6 +2187,7 @@ export const parseAction = ({
   }
 
   const transaction: EdgeTransaction = {
+    assetAction,
     blockHeight: action.block_num > 0 ? action.block_num : 0,
     currencyCode,
     date: getUTCDate(action.block_time) / 1000,
