@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Merge duplicate token transaction data from evmscan fixing incorrect transaction native amounts
+
 ## 4.24.1 (2024-09-10)
 
 - fixed: (ADA) Correctly parse txid after broadcasting a transaction
