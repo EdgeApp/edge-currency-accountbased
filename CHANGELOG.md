@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Fixed ETH requires a resync or log back in to see new transaction
+
 ## 4.24.2 (2024-09-12)
 
 - fixed: (EVM) Merge duplicate token transaction data from evmscan fixing incorrect transaction native amounts
