@@ -1391,6 +1391,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
     const { name, params } = asFioAction(otherParams.action)
 
+    let nativeAmount = quantity
     let fee: string
     let txParams: FioTxParams | undefined
     switch (name) {
@@ -1409,6 +1410,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
       case ACTIONS.stakeFioTokens: {
         const { fioAddress } = asFioAddressParam(params)
+        nativeAmount = '0'
         fee = await this.getFee(EndPoint.stakeFioTokens, fioAddress)
         txParams = {
           account: 'fio.staking',
@@ -1424,6 +1426,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       }
       case ACTIONS.unStakeFioTokens: {
         const { fioAddress } = asFioAddressParam(params)
+        nativeAmount = '0'
         fee = await this.getFee(EndPoint.unStakeFioTokens, fioAddress)
         txParams = {
           account: 'fio.staking',
@@ -1641,7 +1644,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       date: 0,
       isSend: true,
       memos,
-      nativeAmount: sub(`-${quantity}`, `${fee}`),
+      nativeAmount: `-${add(nativeAmount, fee)}`,
       networkFee: `${fee}`,
       otherParams: {
         ...otherParams,
@@ -2039,41 +2042,37 @@ export const parseAction = ({
   let networkFee = '0'
   let nativeAmount = '0'
   let updateStakingStatus: UpdateStakingStatus | undefined
+  let assetAction: EdgeTransaction['assetAction'] | undefined
 
   switch (actName) {
     case 'trnsfiopubky':
       if (data.payee_public_key === publicKey) {
         ourReceiveAddresses.push(publicKey)
         if (data.actor === actor) {
-          nativeAmount = '0' // Self-transfer should not affect balance
           networkFee = dataMaxFee
+          nativeAmount = `-${networkFee}`
         } else {
           nativeAmount = dataAmount // Receiving funds
           networkFee = '0'
         }
       } else if (data.actor === actor) {
-        nativeAmount = `-${add(dataAmount, dataMaxFee)}` // Sending funds
         networkFee = dataMaxFee
+        nativeAmount = `-${add(dataAmount, networkFee)}` // Sending funds
       } else {
         // This action doesn't involve our account, so we should ignore it
         return { blockNum: action.block_num }
-      }
-
-      if (existingTx != null) {
-        // If we've already processed this transaction, we should ignore this action
-        if (existingTx.otherParams?.meta?.isTransferProcessed != null) {
-          return { blockNum: action.block_num }
-        }
-        // If this is a new action for an existing transaction, we should update the existing transaction
-        nativeAmount = add(existingTx.nativeAmount, nativeAmount)
       }
 
       otherParams.meta.isTransferProcessed = true
       break
 
     case 'stakefio': {
-      nativeAmount = `-${dataAmount}`
+      networkFee = dataMaxFee
+      nativeAmount = `-${networkFee}`
       otherParams.meta.isTransferProcessed = true
+      assetAction = {
+        assetActionType: 'stake'
+      }
       break
     }
 
@@ -2084,11 +2083,11 @@ export const parseAction = ({
         txId: action.action_trace.trx_id,
         txName: actName
       }
-
-      // Unstake actions should have a corresponding reward 'transfer' action
-      // that was parsed right before this action, which only reports the reward
-      // portion of the unstake.
+      networkFee = dataMaxFee
       if (existingTx != null) {
+        // Unstake actions should have a corresponding reward 'transfer' action
+        // that was parsed right before this action, which only reports the reward
+        // portion of the unstake.
         otherParams = {
           ...existingTx.otherParams,
           ...otherParams,
@@ -2101,12 +2100,15 @@ export const parseAction = ({
             ...otherParams.meta
           }
         }
+        nativeAmount = sub(existingTx.nativeAmount, networkFee)
+      } else {
+        nativeAmount = `-${networkFee}`
       }
-      // Add the additional unstake amount that was requested by these actions
-      // to the already saved reward amount, if any.
-      nativeAmount = add(dataAmount, existingTx?.nativeAmount ?? '0')
 
       otherParams.meta.isTransferProcessed = true
+      assetAction = {
+        assetActionType: 'unstakeOrder'
+      }
       break
 
     case 'regaddress':
@@ -2126,9 +2128,6 @@ export const parseAction = ({
     // Fee or (unstake) reward transaction
     case 'transfer':
       {
-        const isRecipient = data.to === actor
-        nativeAmount = isRecipient ? `${fioAmount}` : `-${fioAmount}`
-
         // Some transfers might be rewards/yield from unstaking
         const isUnstakeRewardTx =
           otherParams.data != null &&
@@ -2141,8 +2140,14 @@ export const parseAction = ({
             txName: actName
           }
           networkFee = '0'
+          nativeAmount = fioAmount
+          assetAction = {
+            assetActionType: 'unstake'
+          }
         } else {
-          networkFee = isRecipient ? `-${fioAmount}` : fioAmount
+          const isRecipient = data.to === actor
+          networkFee = isRecipient ? `0` : fioAmount
+          nativeAmount = isRecipient ? '0' : `-${networkFee}`
         }
 
         if (existingTx != null) {
@@ -2162,6 +2167,7 @@ export const parseAction = ({
 
           if (otherParams.meta.isTransferProcessed != null) {
             if (data.to !== actor) {
+              networkFee = dataMaxFee
               nativeAmount = sub(existingTx.nativeAmount, networkFee)
             } else {
               networkFee = '0'
@@ -2181,6 +2187,7 @@ export const parseAction = ({
   }
 
   const transaction: EdgeTransaction = {
+    assetAction,
     blockHeight: action.block_num > 0 ? action.block_num : 0,
     currencyCode,
     date: getUTCDate(action.block_time) / 1000,
