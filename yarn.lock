@@ -269,10 +269,10 @@
   dependencies:
     "@babel/runtime" "^7.21.0"
 
-"@chain-registry/types@^0.45.40":
-  version "0.45.40"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-0.45.40.tgz#c04d426c5ac001d3cbd8b6b664244448bc919b5e"
-  integrity sha512-WV7ZaubZyDJD+x6Rbw8m6Iv7Vn2k4+VK4tJ59RaSUtfyPzF8ZI080g53+McmrRilxbvUt+BhgNva0zhLB5sXKQ==
+"@chain-registry/types@^0.45.73":
+  version "0.45.73"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-0.45.73.tgz#affdccc8c79070afd2d7e5ccebffc08bda11ae06"
+  integrity sha512-DXp7vUuAGdL0HgzmQ6GaSgGoI7Ey0ODoBCi+IawDf6uAsB9KkJiEfV4Yb5dW4pj4frJoI+yZExMMGmilFgMWIQ==
 
 "@chain-registry/utils@^1.14.0":
   version "1.14.0"
@@ -3248,12 +3248,12 @@ chai@^4.2.0:
     pathval "^1.1.1"
     type-detect "^4.0.5"
 
-chain-registry@^1.63.50:
-  version "1.63.50"
-  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-1.63.50.tgz#c818a589b2728f37b8fecdca01617217c1885230"
-  integrity sha512-o7PWswcjVwZgU3Wdx6ogBNNvChawpV9S+HMl6L+yzOhBNfRqUlrDBwSfPW+XHhfVbwsnGrBpMn71Jic0yMvImA==
+chain-registry@^1.63.92:
+  version "1.63.92"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-1.63.92.tgz#8b049aef4913fcd3e848f608f97025215688aad2"
+  integrity sha512-IXa/cOGoTYEUDuCByuDNVKsHMYD+krR5scD2XNyLxBHvqCexMkdxZ3XyeZGe/Vr3JKiM6cHyinDNvRQr4j2kpQ==
   dependencies:
-    "@chain-registry/types" "^0.45.40"
+    "@chain-registry/types" "^0.45.73"
 
 chalk@^2.4.1, chalk@^2.4.2:
   version "2.4.2"
