@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.24.3 (2024-09-16)
+
 - fixed: (EVM) Fixed ETH requires a resync or log back in to see new transaction
 - fixed: (FIO) Fix amount handling in parseActions
   
