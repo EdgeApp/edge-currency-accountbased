@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Fixed ETH requires a resync or log back in to see new transaction
+
 ## 4.24.1 (2024-09-10)
 
 - fixed: (ADA) Correctly parse txid after broadcasting a transaction
