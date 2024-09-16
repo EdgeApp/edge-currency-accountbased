@@ -517,7 +517,11 @@ export class EthereumNetwork {
             const txidNormal = normalizeAddress(txid)
             const hasTxidBeenProcessed = Object.keys(tokenTxs).some(
               currencyCode => {
-                return this.ethEngine.txIdMap[currencyCode][txidNormal] !== null
+                const txIndex =
+                  this.ethEngine.txIdMap[currencyCode][txidNormal] ?? -1
+                const edgeTx =
+                  this.ethEngine.transactionList[currencyCode][txIndex]
+                return edgeTx?.blockHeight > 0
               }
             )
             return !hasTxidBeenProcessed
