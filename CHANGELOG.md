@@ -2,11 +2,15 @@
 
 ## Unreleased
 
+## 4.24.1-2 (2024-09-17)
+
+- removed: Ethereum WebSocket server connections, which were preventing incoming transactions appearing.
+
 ## 4.24.1-1 (2024-09-16)
 
 - fixed: (EVM) Fixed ETH requires a resync or log back in to see new transaction
 - fixed: (FIO) Fix amount handling in parseActions
-  
+
 ## 4.24.1 (2024-09-10)
 
 - fixed: (ADA) Correctly parse txid after broadcasting a transaction
