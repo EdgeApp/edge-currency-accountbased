@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: Ethereum WebSocket server connections, which were preventing incoming transactions appearing.
+
 ## 4.24.4 (2024-09-16)
 
 - changed: Upgrade chain-registry package.
