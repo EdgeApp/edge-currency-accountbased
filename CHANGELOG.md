@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.24.5 (2024-09-17)
+
 - removed: Ethereum WebSocket server connections, which were preventing incoming transactions appearing.
 
 ## 4.24.4 (2024-09-16)
@@ -16,6 +18,10 @@
 ## 4.24.2 (2024-09-12)
 
 - fixed: (EVM) Merge duplicate token transaction data from evmscan fixing incorrect transaction native amounts
+
+## 4.24.1-2 (2024-09-17)
+
+- removed: Ethereum WebSocket server connections, which were preventing incoming transactions appearing.
 
 ## 4.24.1-1 (2024-09-16)
 
