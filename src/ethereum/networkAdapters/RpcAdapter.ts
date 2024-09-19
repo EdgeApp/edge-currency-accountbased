@@ -305,7 +305,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
           const ethBalCheckerContract = this.config.ethBalCheckerContract
           if (ethBalCheckerContract == null) return tokenBal
 
-          // Address for querying ETH balance on ETH network, MATIC on MATIC, etc.
+          // Address for querying ETH balance on ETH network, POL on POL, etc.
           const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
           const balanceQueryAddrs = [mainnetAssetAddr]
           for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {

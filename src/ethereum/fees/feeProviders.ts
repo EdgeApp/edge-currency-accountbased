@@ -211,8 +211,8 @@ export const fetchFeesFromEvmGasStation = async (
   const jsonObj = await result.json()
 
   const fees = asEthGasStation(jsonObj)
-  // Special case for MATIC fast and fastest being equivalent from gas station
-  if (currencyInfo.currencyCode === 'MATIC') {
+  // Special case for POL fast and fastest being equivalent from gas station
+  if (currencyInfo.currencyCode === 'POL') {
     // Since the later code assumes EthGasStation's
     // greater-by-a-factor-of-ten gas prices, we need to multiply the GWEI
     // from Polygon Gas Station by 10 so they conform.
@@ -311,7 +311,7 @@ export const getEvmScanApiKey = (
     )
     return bscscanApiKey
   }
-  if (currencyCode === 'MATIC' && polygonscanApiKey != null) {
+  if (currencyCode === 'POL' && polygonscanApiKey != null) {
     log.warn(
       "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
     )
