@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.24.6 (2024-09-20)
+
+- fixed: Update some MATIC special cases to POL
+
 ## 4.24.5 (2024-09-17)
 
 - removed: Ethereum WebSocket server connections, which were preventing incoming transactions appearing.
