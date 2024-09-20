@@ -13,16 +13,15 @@ import {
 import type {
   Addresses,
   BalanceEvent,
+  CreateTransferOpts,
   ErrorEvent as ZcashErrorEvent,
   InitializerConfig,
   ProposalSuccess,
+  ProposeTransferOpts,
   ShieldFundsInfo,
-  SpendInfo,
-  SpendSuccess,
   StatusEvent,
   Transaction,
   TransactionEvent,
-  TransferSpendInfo,
   UpdateEvent
 } from 'react-native-zcash'
 import type { Subscriber } from 'yaob'
@@ -60,8 +59,8 @@ export interface ZcashSynchronizer {
   stop: () => Promise<void>
   deriveUnifiedAddress: () => Promise<Addresses>
   rescan: () => Promise<void>
-  proposeTransfer: (arg: TransferSpendInfo) => Promise<ProposalSuccess>
-  sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
+  proposeTransfer: (arg: ProposeTransferOpts) => Promise<ProposalSuccess>
+  createTransfer: (arg: CreateTransferOpts) => Promise<string>
   shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
 }
 

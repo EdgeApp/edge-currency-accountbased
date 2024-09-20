@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Zcash) Replace `sendToAddress` with `createTransfer`
+- changed: Upgrade react-native-zcash to v0.9.0
+
 ## 4.24.6 (2024-09-20)
 
 - fixed: Update some MATIC special cases to POL

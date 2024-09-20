@@ -1,4 +1,4 @@
-import { abs, add, eq, gt, mul, sub } from 'biggystring'
+import { add, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -12,8 +12,8 @@ import {
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import type {
+  CreateTransferOpts,
   InitializerConfig,
-  SpendInfo,
   StatusEvent,
   Transaction
 } from 'react-native-zcash'
@@ -21,7 +21,7 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { cleanTxLogs } from '../common/utils'
+import { cleanTxLogs, getOtherParams } from '../common/utils'
 import { ZcashTools } from './ZcashTools'
 import {
   asSafeZcashWalletInfo,
@@ -465,9 +465,6 @@ export class ZcashEngine extends CurrencyEngine<
       zatoshi: nativeAmount,
       memo: memos[0]?.value ?? ''
     })
-    if (proposal.transactionCount > 1) {
-      throw new Error('Unable to handle multiple transactions')
-    }
 
     const networkFee = proposal.totalFee
 
@@ -500,6 +497,9 @@ export class ZcashEngine extends CurrencyEngine<
       memos,
       nativeAmount: txNativeAmount,
       networkFee,
+      otherParams: {
+        proposalBase64: proposal.proposalBase64
+      },
       ourReceiveAddresses: [],
       signedTx: '',
       tokenId,
@@ -520,32 +520,22 @@ export class ZcashEngine extends CurrencyEngine<
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
     if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-    const { memos } = edgeTransaction
+    const { proposalBase64 } = getOtherParams(edgeTransaction)
+    if (proposalBase64 == null) {
+      throw new Error('Missing proposalBase64 from makeSpend')
+    }
     const zcashPrivateKeys = asZcashPrivateKeys(this.pluginId)(
       opts?.privateKeys
     )
-    if (
-      edgeTransaction.spendTargets == null ||
-      edgeTransaction.spendTargets.length !== 1
-    )
-      throw new Error('Invalid spend targets')
 
-    const memo = memos[0]?.type === 'text' ? memos[0].value : ''
-    const spendTarget = edgeTransaction.spendTargets[0]
-    const txParams: SpendInfo = {
-      zatoshi: sub(
-        abs(edgeTransaction.nativeAmount),
-        edgeTransaction.networkFee
-      ),
-      toAddress: spendTarget.publicAddress,
-      memo,
+    const txParams: CreateTransferOpts = {
+      proposalBase64,
       mnemonicSeed: zcashPrivateKeys.mnemonic
     }
 
     try {
-      const signedTx = await this.synchronizer.sendToAddress(txParams)
-      edgeTransaction.txid = signedTx.txId
-      edgeTransaction.signedTx = signedTx.raw
+      const txid = await this.synchronizer.createTransfer(txParams)
+      edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
     } catch (e: any) {
