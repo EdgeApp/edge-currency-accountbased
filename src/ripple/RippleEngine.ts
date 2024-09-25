@@ -252,6 +252,16 @@ export class XrpEngine extends CurrencyEngine<
     return add(this.networkInfo.baseReserve, tokenReserve)
   }
 
+  async changeEnabledTokenIds(tokens: string[]): Promise<void> {
+    await super.changeEnabledTokenIds(tokens)
+
+    // Make sure to immediately do the checkAccountInnerLoop routine because
+    // it contains the routine to check for unactivated tokens. This solves
+    // a majority of race conditions when adding a new token and immediately
+    // checking the unactivatedTokenIds on a wallet.
+    await this.checkAccountInnerLoop()
+  }
+
   // Poll on the blockheight
   async checkServerInfoInnerLoop(): Promise<void> {
     try {
