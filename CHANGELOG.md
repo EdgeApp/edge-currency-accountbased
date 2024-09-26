@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.25.0 (2024-09-25)
+
 - changed: (Zcash) Replace `sendToAddress` with `createTransfer`
 - changed: Upgrade react-native-zcash to v0.9.0
 
