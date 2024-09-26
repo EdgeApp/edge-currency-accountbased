@@ -94,11 +94,11 @@ const makeZcashSynchronizer = async (
     rescan: async () => {
       return await realSynchronizer.rescan()
     },
-    proposeTransfer: async spendInfo => {
-      return await realSynchronizer.proposeTransfer(spendInfo)
+    proposeTransfer: async proposeTransferOpts => {
+      return await realSynchronizer.proposeTransfer(proposeTransferOpts)
     },
-    sendToAddress: async spendInfo => {
-      return await realSynchronizer.sendToAddress(spendInfo)
+    createTransfer: async transferOpts => {
+      return await realSynchronizer.createTransfer(transferOpts)
     },
     shieldFunds: async shieldFundsInfo => {
       return await realSynchronizer.shieldFunds(shieldFundsInfo)
