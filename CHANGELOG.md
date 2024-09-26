@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: (Piratechain) Removed `bumpSynchronizer` loop. Engine will now rely on critical errors reported from react-native-piratechain for synchronizer management.
+
 ## 4.25.0 (2024-09-25)
 
 - changed: (Zcash) Replace `sendToAddress` with `createTransfer`

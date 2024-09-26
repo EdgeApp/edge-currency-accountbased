@@ -21,7 +21,6 @@ import { base16, base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { getRandomDelayMs } from '../common/network'
 import { cleanTxLogs } from '../common/utils'
 import { PiratechainTools } from './PiratechainTools'
 import {
@@ -33,8 +32,6 @@ import {
   PiratechainWalletOtherData,
   SafePiratechainWalletInfo
 } from './piratechainTypes'
-
-const BUMP_SYNCHRONIZER_POLL_MILLISECONDS = getRandomDelayMs(30000)
 
 export class PiratechainEngine extends CurrencyEngine<
   PiratechainTools,
@@ -183,38 +180,9 @@ export class PiratechainEngine extends CurrencyEngine<
     }
   }
 
-  // Sometimes the synchronizer block downloader just kind of stops. If we
-  // haven't heard from it in a while we can give a bump to encourage it to
-  // continue.
-  async bumpSynchronizer(): Promise<void> {
-    if (
-      this.isSynced() ||
-      this.lastUpdateFromSynchronizer == null ||
-      Date.now() <
-        this.lastUpdateFromSynchronizer + BUMP_SYNCHRONIZER_POLL_MILLISECONDS
-    ) {
-      return
-    }
-
-    this.log.warn(
-      `Haven't heard from the synchronizer in a while. Applying the Fonzie Method...`
-    )
-    await this.synchronizer?.stop()
-    if (this.stopSyncing != null) {
-      await this.stopSyncing(5000)
-      this.stopSyncing = undefined
-    }
-    this.log.warn('👍 Ayyy 👍')
-    this.lastUpdateFromSynchronizer = undefined
-  }
-
   async startEngine(): Promise<void> {
     this.engineOn = true
     this.started = true
-    this.addToLoop(
-      'bumpSynchronizer',
-      BUMP_SYNCHRONIZER_POLL_MILLISECONDS
-    ).catch(() => {})
     await super.startEngine()
   }
 
