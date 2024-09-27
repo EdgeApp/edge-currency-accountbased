@@ -244,12 +244,12 @@ export class CardanoEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    const countPerPage = 1000 // default
-    const latestQueryTransactionsBlockHeight =
+    let latestQueryTransactionsBlockHeight =
       this.otherData.latestQueryTransactionsBlockHeight
-    const latestQueryTransactionsTxid =
-      this.otherData.latestQueryTransactionsTxid
+    let latestQueryTransactionsTxid = this.otherData.latestQueryTransactionsTxid
+    const infoNeededTxids: string[] = []
     while (true) {
+      // Will return up to 1000 results
       const rawTxidList = await this.fetchPostKoios('address_txs', {
         _addresses: [this.walletInfo.keys.bech32Address],
         _after_block_height: latestQueryTransactionsBlockHeight // return value includes block height
@@ -267,18 +267,29 @@ export class CardanoEngine extends CurrencyEngine<
       const txids = cleanTxidList
         .filter(tx => tx.block_height >= latestQueryTransactionsBlockHeight)
         .reverse()
-        .map(tx => tx.tx_hash)
-
+        .map(tx => {
+          latestQueryTransactionsBlockHeight = tx.block_height
+          latestQueryTransactionsTxid = tx.tx_hash
+          return tx.tx_hash
+        })
+      infoNeededTxids.push(...txids)
       if (txids.length === 0) {
         break
       }
+    }
+
+    const progressTotal = infoNeededTxids.length
+    let progressCurrent = 0
+    const countPerPage = 25
+    while (infoNeededTxids.length > 0) {
       const rawTxInfos = await this.fetchPostKoios(`tx_info`, {
         _inputs: true,
-        _tx_hashes: txids
+        _tx_hashes: infoNeededTxids.splice(0, countPerPage)
       })
       const txs = asKoiosTransactionsRes(rawTxInfos)
 
-      for (const tx of txs) {
+      for (let i = 0; i < txs.length; i++) {
+        const tx = txs[i]
         const edgeTx = processCardanoTransaction({
           currencyCode: this.currencyInfo.currencyCode,
           address: this.walletInfo.keys.bech32Address,
@@ -289,8 +300,13 @@ export class CardanoEngine extends CurrencyEngine<
         this.addTransaction(this.currencyInfo.currencyCode, edgeTx)
         this.otherData.latestQueryTransactionsBlockHeight = tx.block_height
         this.otherData.latestQueryTransactionsTxid = tx.tx_hash
+        progressCurrent++
       }
-      if (cleanTxidList.length < countPerPage) break
+
+      this.walletLocalDataDirty = true
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        progressCurrent / progressTotal
+      this.updateOnAddressesChecked()
     }
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
