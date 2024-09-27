@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Add redundancy to Cardano queries
+
 ## 4.25.2 (2024-09-30)
 
 - fixed: (ALGO) Process unactivatedTokenIds routine immediately after activating a token to tighten race conditions

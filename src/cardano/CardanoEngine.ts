@@ -5,6 +5,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
+  EdgeFetchOptions,
   EdgeFreshAddress,
   EdgeSpendInfo,
   EdgeTokenId,
@@ -78,52 +79,42 @@ export class CardanoEngine extends CurrencyEngine<
     this.otherData = asCardanoWalletOtherData(_raw)
   }
 
-  async fetchGet(
+  async fetchKoios(
     method: string,
+    opts: EdgeFetchOptions = {},
     authenticated: boolean = false
   ): Promise<unknown> {
     const res = await this.fetchCors(
       `${this.networkInfo.koiosServer}/api/v1/${method}`,
       {
+        ...opts,
         headers: {
+          ...opts.headers,
           ...(authenticated
             ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
             : {})
         }
       }
     )
-    if (!res.ok) {
-      const message = await res.text()
-      throw new Error(`Koios error: ${res.status} ${message}`)
+    if (res.status === 429 && !authenticated) {
+      return await this.fetchKoios(method, opts, true)
     }
-    const json = await res.json()
-    return json
-  }
-
-  async fetchPost(
-    method: string,
-    body: JsonObject,
-    authenticated: boolean = false
-  ): Promise<unknown> {
-    const opts = {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(authenticated
-          ? { Authorization: `Bearer ${this.initOptions.koiosApiKey}` }
-          : {})
-      },
-      body: JSON.stringify(body)
-    }
-    const res = await this.fetchCors(
-      `${this.networkInfo.koiosServer}/api/v1/${method}`,
-      opts
-    )
     if (!res.ok) {
       const message = await res.text()
       throw new Error(`Koios error: ${message}`)
     }
-    const json = await res.json()
+    return await res.json()
+  }
+
+  async fetchPostKoios(method: string, body: JsonObject): Promise<unknown> {
+    const opts = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+    const json = await this.fetchKoios(method, opts)
     return json
   }
 
@@ -198,7 +189,7 @@ export class CardanoEngine extends CurrencyEngine<
 
   async queryBlockheight(): Promise<void> {
     try {
-      const raw = await this.fetchGet('tip')
+      const raw = await this.fetchKoios('tip')
       const clean = asKoiosBlockheight(raw)[0]
       const {
         abs_slot: absSlot,
@@ -217,7 +208,7 @@ export class CardanoEngine extends CurrencyEngine<
       this.slot = absSlot
 
       if (this.tools.epochParams?.epoch_no !== this.epochNumber) {
-        const rawNetworkParams = await this.fetchGet(
+        const rawNetworkParams = await this.fetchKoios(
           `epoch_params?_epoch_no=${this.epochNumber}`
         )
         const cleanNetworkParams = asTuple(asKoiosNetworkParameters)(
@@ -232,7 +223,7 @@ export class CardanoEngine extends CurrencyEngine<
 
   async queryBalance(): Promise<void> {
     try {
-      const raw = await this.fetchPost('address_info', {
+      const raw = await this.fetchPostKoios('address_info', {
         _addresses: [this.walletInfo.keys.bech32Address]
       })
       const clean = asKoiosBalance(raw)
@@ -259,7 +250,7 @@ export class CardanoEngine extends CurrencyEngine<
     const latestQueryTransactionsTxid =
       this.otherData.latestQueryTransactionsTxid
     while (true) {
-      const rawTxidList = await this.fetchPost('address_txs', {
+      const rawTxidList = await this.fetchPostKoios('address_txs', {
         _addresses: [this.walletInfo.keys.bech32Address],
         _after_block_height: latestQueryTransactionsBlockHeight // return value includes block height
       })
@@ -281,7 +272,7 @@ export class CardanoEngine extends CurrencyEngine<
       if (txids.length === 0) {
         break
       }
-      const rawTxInfos = await this.fetchPost(`tx_info`, {
+      const rawTxInfos = await this.fetchPostKoios(`tx_info`, {
         _inputs: true,
         _tx_hashes: txids
       })
