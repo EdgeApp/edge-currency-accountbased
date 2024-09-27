@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.25.1 (2024-09-27)
+
 - removed: (Piratechain) Removed `bumpSynchronizer` loop. Engine will now rely on critical errors reported from react-native-piratechain for synchronizer management.
 
 ## 4.25.0 (2024-09-25)
