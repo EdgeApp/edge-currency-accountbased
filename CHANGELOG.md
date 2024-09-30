@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (ALGO) Process unactivatedTokenIds routine immediately after activating a token to tighten race conditions
+- fixed: (XRP) Process unactivatedTokenIds routine immediately after activating a token to tighten race conditions
+
 ## 4.25.1 (2024-09-27)
 
 - removed: (Piratechain) Removed `bumpSynchronizer` loop. Engine will now rely on critical errors reported from react-native-piratechain for synchronizer management.

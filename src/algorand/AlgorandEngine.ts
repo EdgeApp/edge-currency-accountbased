@@ -137,6 +137,16 @@ export class AlgorandEngine extends CurrencyEngine<
     }
   }
 
+  async changeEnabledTokenIds(tokens: string[]): Promise<void> {
+    await super.changeEnabledTokenIds(tokens)
+
+    // Make sure to immediately do the queryBalance routine because
+    // it contains the routine to check for unactivated tokens. This solves
+    // a majority of race conditions when adding a new token and immediately
+    // checking the unactivatedTokenIds on a wallet.
+    await this.queryBalance()
+  }
+
   setOtherData(raw: any): void {
     this.otherData = asAlgorandWalletOtherData(raw)
   }
