@@ -73,6 +73,7 @@ export interface ChainParams {
 }
 
 export interface EthereumNetworkInfo {
+  addressQueryLookbackBlocks: number
   networkAdapterConfigs: NetworkAdapterConfig[]
   feeUpdateFrequencyMs?: number
   amberDataBlockchainId: string

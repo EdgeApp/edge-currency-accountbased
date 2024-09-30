@@ -136,6 +136,7 @@ const networkFees: EthereumFees = {
 
 // Exported for fee provider test
 const networkInfo: EthereumNetworkInfo = {
+  addressQueryLookbackBlocks: 480, // 2 minutes
   networkAdapterConfigs: [
     {
       type: 'rpc',

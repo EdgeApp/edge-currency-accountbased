@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Correctly implement address query lookback times based on network block times.
+- fixed: (AVAX) Increased query lookback for transaction history to 5 minutes to fix missing transaction confirmations.
 - changed: Add redundancy to Cardano queries
 - changed: Increase `MAX_TRANSACTIONS` to 2500.
 
