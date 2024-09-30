@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.25.2 (2024-09-30)
+
 - fixed: (ALGO) Process unactivatedTokenIds routine immediately after activating a token to tighten race conditions
 - fixed: (XRP) Process unactivatedTokenIds routine immediately after activating a token to tighten race conditions
 
