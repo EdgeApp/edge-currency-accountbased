@@ -43,6 +43,7 @@ import {
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BALANCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SIXTY_DAYS = 5184000 // seconds
 
 export class HederaEngine extends CurrencyEngine<
   HederaTools,
@@ -128,15 +129,23 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async getNewTransactions(): Promise<void> {
+    let timestamp = this.otherData.latestTimestamp
     try {
       for (;;) {
-        const txs = await this.getTransactionsMirrorNode(
-          this.otherData.latestTimestamp
+        const { txs, nextTimestamp } = await this.getTransactionsMirrorNode(
+          timestamp
         )
+        this.processTxs(txs)
 
-        if (txs.length > 0) {
-          this.processTxs(txs)
+        if (nextTimestamp != null) {
+          timestamp = nextTimestamp
+          this.otherData.latestTimestamp = nextTimestamp
+          this.walletLocalDataDirty = true
         } else {
+          if (this.otherData.latestTimestamp !== timestamp) {
+            this.otherData.latestTimestamp = timestamp
+            this.walletLocalDataDirty = true
+          }
           break
         }
       }
@@ -166,33 +175,45 @@ export class HederaEngine extends CurrencyEngine<
     }
   }
 
+  // The public mirror node will return up to 100 transactions in a 60 day range.
   async getTransactionsMirrorNode(
-    timestamp: string
-  ): Promise<EdgeTransaction[]> {
+    startTimestampSeconds: string
+  ): Promise<{ txs: EdgeTransaction[]; nextTimestamp: string | undefined }> {
     if (this.otherData.hederaAccount == null) {
       throw new Error('no Hedera account ID')
     }
 
     const accountIdStr = this.otherData.hederaAccount
 
+    const startTimestamp = new Timestamp(parseInt(startTimestampSeconds), 0)
+    const endTimestampSeconds = Math.min(
+      parseInt(startTimestampSeconds) + SIXTY_DAYS,
+      Date.now() / 1000
+    )
+    const endTimestamp = new Timestamp(endTimestampSeconds, 0)
+
     // we request transactions in ascending order by consensus timestamp
-    const url = `${this.mirrorNodes[0]}/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${timestamp}`
+    const url = `${
+      this.mirrorNodes[0]
+    }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
 
     const response = await this.fetchCors(url)
 
     if (!response.ok) {
-      this.warn(
-        `getTransactionsMirrorNode error fetching MirrorNode transactions: ${url}`
-      )
-
-      return []
+      const text = await response.text()
+      this.warn(`getTransactionsMirrorNode error: ${text} ${url}`)
+      return { txs: [], nextTimestamp: startTimestampSeconds }
     }
 
     const json = asMirrorNodeTransactionResponse(await response.json())
 
     const txs: EdgeTransaction[] = []
 
+    let latestTimestampFromTransaction = startTimestampSeconds
     for (const tx of json.transactions) {
+      const date = parseInt(tx.valid_start_timestamp)
+      latestTimestampFromTransaction = date.toString()
+
       const ourTransfer = tx.transfers.find(
         transfer => transfer.account === accountIdStr
       )
@@ -209,7 +230,7 @@ export class HederaEngine extends CurrencyEngine<
       txs.push({
         blockHeight: 1, // blockHeight
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
-        date: parseInt(tx.valid_start_timestamp),
+        date,
         isSend: nativeAmount.startsWith('-'),
         memos: [],
         nativeAmount,
@@ -225,7 +246,16 @@ export class HederaEngine extends CurrencyEngine<
       })
     }
 
-    return txs
+    // If there are 100 transactions in the response, start the next query with the timestamp from the latest transaction
+    // Otherwise, use the calculated end timestamp
+    const nextTimestamp =
+      json.transactions.length === 100
+        ? latestTimestampFromTransaction
+        : endTimestampSeconds - parseInt(startTimestampSeconds) === SIXTY_DAYS
+        ? endTimestamp.toString()
+        : undefined
+
+    return { txs, nextTimestamp }
   }
 
   startActiveAccountLoops(): void {
