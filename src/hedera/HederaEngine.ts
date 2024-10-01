@@ -130,6 +130,8 @@ export class HederaEngine extends CurrencyEngine<
 
   async getNewTransactions(): Promise<void> {
     let timestamp = this.otherData.latestTimestamp
+    const startingTimestamp = Math.floor(Date.now() / 1000)
+    const startingProgressDiff = startingTimestamp - parseInt(timestamp)
     try {
       for (;;) {
         const { txs, nextTimestamp } = await this.getTransactionsMirrorNode(
@@ -141,6 +143,18 @@ export class HederaEngine extends CurrencyEngine<
           timestamp = nextTimestamp
           this.otherData.latestTimestamp = nextTimestamp
           this.walletLocalDataDirty = true
+
+          // Report progress in 10% increments
+          const currentProgress =
+            this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] ??
+            0
+          const newProgress =
+            1 - (startingTimestamp - parseInt(timestamp)) / startingProgressDiff
+          if (newProgress - currentProgress > 0.1) {
+            this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+              newProgress
+            this.updateOnAddressesChecked()
+          }
         } else {
           if (this.otherData.latestTimestamp !== timestamp) {
             this.otherData.latestTimestamp = timestamp
