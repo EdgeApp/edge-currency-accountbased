@@ -50,7 +50,6 @@ export class HederaEngine extends CurrencyEngine<
 > {
   client: Client
   fetchCors: EdgeFetchFunction
-  accountNameChecked: boolean
   mirrorNodes: [string]
   maxFee: number
   otherData!: HederaWalletOtherData
@@ -66,14 +65,11 @@ export class HederaEngine extends CurrencyEngine<
     const { client, mirrorNodes, maxFee } = env.networkInfo
     this.client = Client.forName(client)
     this.fetchCors = getFetchCors(env.io)
-    this.accountNameChecked = false
     this.mirrorNodes = mirrorNodes
     this.maxFee = maxFee
   }
 
   async checkAccountCreationStatus(): Promise<void> {
-    if (this.accountNameChecked || this.otherData.hederaAccount != null) return
-
     // Use mirror node to see if there's an account associated with the public key
     try {
       const response = await this.fetchCors(
@@ -83,10 +79,17 @@ export class HederaEngine extends CurrencyEngine<
       for (const account of accounts) {
         if (this.walletInfo.keys.publicKey.includes(account.key.key)) {
           this.otherData.hederaAccount = account.account
-          this.walletLocalDataDirty = true
-          this.currencyEngineCallbacks.onAddressChanged()
-          this.accountNameChecked = true
         }
+      }
+      if (this.otherData.hederaAccount != null) {
+        this.walletLocalDataDirty = true
+        this.currencyEngineCallbacks.onAddressChanged()
+        this.startActiveAccountLoops()
+      } else {
+        this.updateBalance(this.currencyInfo.currencyCode, '0')
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
+        this.updateOnAddressesChecked()
       }
     } catch (e: any) {
       this.warn(`checkAccountCreationStatus ${this.mirrorNodes[0]} error`, e)
@@ -99,12 +102,6 @@ export class HederaEngine extends CurrencyEngine<
 
   async queryBalance(): Promise<void> {
     const accountId = this.otherData.hederaAccount
-
-    if (accountId == null) {
-      this.updateBalance(this.currencyInfo.currencyCode, '0')
-      this.updateOnAddressesChecked()
-      return
-    }
 
     const url = `${this.mirrorNodes[0]}/api/v1/balances?account.id=${accountId}`
 
@@ -131,11 +128,6 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   async getNewTransactions(): Promise<void> {
-    if (this.otherData.hederaAccount == null) {
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-      this.updateOnAddressesChecked()
-      return
-    }
     try {
       for (;;) {
         const txs = await this.getTransactionsMirrorNode(
@@ -181,7 +173,7 @@ export class HederaEngine extends CurrencyEngine<
       throw new Error('no Hedera account ID')
     }
 
-    const accountIdStr = this.otherData.hederaAccount ?? ''
+    const accountIdStr = this.otherData.hederaAccount
 
     // we request transactions in ascending order by consensus timestamp
     const url = `${this.mirrorNodes[0]}/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${timestamp}`
@@ -236,28 +228,34 @@ export class HederaEngine extends CurrencyEngine<
     return txs
   }
 
+  startActiveAccountLoops(): void {
+    clearTimeout(this.timers.checkAccountCreationStatus)
+    this.addToLoop('queryBalance', BALANCE_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+      () => {}
+    )
+  }
+
   // ****************************************************************************
   // Public methods
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
     this.engineOn = true
-    this.accountNameChecked = this.otherData.hederaAccount != null
 
-    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryBalance', BALANCE_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop(
-      'checkAccountCreationStatus',
-      ACCOUNT_POLL_MILLISECONDS
-    ).catch(() => {})
+    if (this.otherData.hederaAccount == null) {
+      this.addToLoop(
+        'checkAccountCreationStatus',
+        ACCOUNT_POLL_MILLISECONDS
+      ).catch(() => {})
+    } else {
+      this.startActiveAccountLoops()
+    }
 
     await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {
-    this.accountNameChecked = false
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
