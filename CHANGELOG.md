@@ -2,11 +2,11 @@
 
 ## Unreleased
 
-- fixed: Correctly implement address query lookback times based on network block times.
-- fixed: (AVAX) Increased query lookback for transaction history to 5 minutes to fix missing transaction confirmations.
 - changed: Add redundancy to Cardano queries
 - changed: Increase `MAX_TRANSACTIONS` to 2500.
 - changed: (Hedera) Updated transaction query loop to account for mirror node limitations
+- fixed: Correctly implement address query lookback times based on network block times.
+- fixed: (AVAX) Increased query lookback for transaction history to 5 minutes to fix missing transaction confirmations.
 - fixed: (Hedera) Initial sync ratio inaccuracy
 
 ## 4.25.2 (2024-09-30)
