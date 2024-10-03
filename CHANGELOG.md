@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.26.0 (2024-10-03)
+
 - changed: Add redundancy to Cardano queries
 - changed: Increase `MAX_TRANSACTIONS` to 2500.
 - changed: (Hedera) Updated transaction query loop to account for mirror node limitations
