@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: Add redundancy to Cardano queries
+- changed: Increase `MAX_TRANSACTIONS` to 2500.
 
 ## 4.25.2 (2024-09-30)
 
