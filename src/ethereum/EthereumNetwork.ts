@@ -27,7 +27,6 @@ const NONCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BAL_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TXS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
-const ADDRESS_QUERY_LOOKBACK_BLOCKS = 4 * 2 // ~ 2 minutes
 const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes
 
 interface EthereumNeeds {
@@ -361,10 +360,12 @@ export class EthereumNetwork {
               this.ethEngine.walletLocalData.lastTransactionDate[
                 currencyCode
               ] ?? 0
+            const addressQueryLookbackBlocks =
+              this.ethEngine.networkInfo.addressQueryLookbackBlocks
             const params = {
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
               startBlock: Math.max(
-                lastTransactionQueryHeight - ADDRESS_QUERY_LOOKBACK_BLOCKS,
+                lastTransactionQueryHeight - addressQueryLookbackBlocks,
                 0
               ),
               // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions

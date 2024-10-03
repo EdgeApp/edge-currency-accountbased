@@ -47,6 +47,7 @@ const networkFees: EthereumFees = {
 }
 
 const networkInfo: EthereumNetworkInfo = {
+  addressQueryLookbackBlocks: 60, // 2 minutes
   networkAdapterConfigs: [
     {
       type: 'rpc',
