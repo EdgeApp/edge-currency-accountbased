@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Zcash/Piratechain) Await synchronizer initialization in public methods instead of throwing `synchronizer undefined`error
+- fixed: (Zcash/Piratechain) Don't save sensitive initializer object to engine
+
 ## 4.26.0 (2024-10-03)
 
 - changed: Add redundancy to Cardano queries
