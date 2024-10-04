@@ -54,6 +54,8 @@ export class PiratechainEngine extends CurrencyEngine<
   started: boolean
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: PiratechainSynchronizer
+  synchronizerPromise: Promise<PiratechainSynchronizer>
+  synchronizerResolver!: (synchronizer: PiratechainSynchronizer) => void
   lastUpdateFromSynchronizer?: number
 
   constructor(
@@ -69,6 +71,9 @@ export class PiratechainEngine extends CurrencyEngine<
     this.networkInfo = networkInfo
     this.birthdayHeight = 0
     this.makeSynchronizer = makeSynchronizer
+    this.synchronizerPromise = new Promise<PiratechainSynchronizer>(resolve => {
+      this.synchronizerResolver = resolve
+    })
     this.queryMutex = false
 
     this.started = false
@@ -295,12 +300,16 @@ export class PiratechainEngine extends CurrencyEngine<
     this.birthdayHeight = piratechainPrivateKeys.birthdayHeight
 
     try {
-      this.synchronizer = await this.makeSynchronizer({
+      // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
+      this.synchronizerPromise = this.makeSynchronizer({
         mnemonicSeed: piratechainPrivateKeys.mnemonic,
         birthdayHeight: piratechainPrivateKeys.birthdayHeight,
         alias: base16.stringify(base64.parse(this.walletId)),
         ...rpcNode
       })
+      this.synchronizer = await this.synchronizerPromise
+      // People might be waiting on the old promise, so resolve that
+      this.synchronizerResolver(this.synchronizer)
     } catch (e) {
       // The synchronizer cannot start if it isn't present.
       if (
@@ -319,6 +328,9 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
+    this.synchronizerPromise = new Promise<PiratechainSynchronizer>(resolve => {
+      this.synchronizerResolver = resolve
+    })
     this.started = false
     if (this.stopSyncing != null) {
       await this.stopSyncing(1000)
@@ -417,7 +429,6 @@ export class PiratechainEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
-    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const { memos } = edgeTransaction
     const piratechainPrivateKeys = asPiratechainPrivateKeys(this.pluginId)(
       opts?.privateKeys
@@ -441,7 +452,8 @@ export class PiratechainEngine extends CurrencyEngine<
     }
 
     try {
-      const signedTx = await this.synchronizer.sendToAddress(txParams)
+      const synchronizer = await this.synchronizerPromise
+      const signedTx = await synchronizer.sendToAddress(txParams)
       edgeTransaction.txid = signedTx.txId
       edgeTransaction.signedTx = signedTx.raw
       edgeTransaction.date = Date.now() / 1000
@@ -455,8 +467,8 @@ export class PiratechainEngine extends CurrencyEngine<
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     const getSynchronizerAddresses = async (): Promise<EdgeFreshAddress> => {
-      if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-      const { saplingAddress } = await this.synchronizer.deriveUnifiedAddress()
+      const synchronizer = await this.synchronizerPromise
+      const { saplingAddress } = await synchronizer.deriveUnifiedAddress()
       this.otherData.cachedAddress = saplingAddress
       this.walletLocalDataDirty = true
       return {
