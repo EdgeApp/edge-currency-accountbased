@@ -43,7 +43,7 @@ export class PiratechainEngine extends CurrencyEngine<
   synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
   initialNumBlocksToDownload!: number
-  initializer!: InitializerConfig
+  birthdayHeight: number
   progressRatio!: number
   queryMutex: boolean
   makeSynchronizer: (
@@ -67,6 +67,7 @@ export class PiratechainEngine extends CurrencyEngine<
     const { networkInfo } = env
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
+    this.birthdayHeight = 0
     this.makeSynchronizer = makeSynchronizer
     this.queryMutex = false
 
@@ -79,13 +80,11 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    const { birthdayHeight } = this.initializer
-
     // walletLocalData
     if (this.otherData.blockRange.first === 0) {
       this.otherData.blockRange = {
-        first: birthdayHeight,
-        last: birthdayHeight
+        first: this.birthdayHeight,
+        last: this.birthdayHeight
       }
     }
 
@@ -293,15 +292,15 @@ export class PiratechainEngine extends CurrencyEngine<
     )(opts?.privateKeys)
 
     const { rpcNode } = this.networkInfo
-    this.initializer = {
-      mnemonicSeed: piratechainPrivateKeys.mnemonic,
-      birthdayHeight: piratechainPrivateKeys.birthdayHeight,
-      alias: base16.stringify(base64.parse(this.walletId)),
-      ...rpcNode
-    }
+    this.birthdayHeight = piratechainPrivateKeys.birthdayHeight
 
     try {
-      this.synchronizer = await this.makeSynchronizer(this.initializer)
+      this.synchronizer = await this.makeSynchronizer({
+        mnemonicSeed: piratechainPrivateKeys.mnemonic,
+        birthdayHeight: piratechainPrivateKeys.birthdayHeight,
+        alias: base16.stringify(base64.parse(this.walletId)),
+        ...rpcNode
+      })
     } catch (e) {
       // The synchronizer cannot start if it isn't present.
       if (

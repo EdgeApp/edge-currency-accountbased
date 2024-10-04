@@ -46,7 +46,6 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
   balances: ZcashBalances
-  initializer!: InitializerConfig
   progressRatio!: {
     seenFirstUpdate: boolean
     percent: number
@@ -340,15 +339,14 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (this.synchronizer == null) {
       const { rpcNode } = this.networkInfo
-      this.initializer = {
+
+      this.synchronizer = await this.makeSynchronizer({
         mnemonicSeed: zcashPrivateKeys.mnemonic,
         birthdayHeight: zcashPrivateKeys.birthdayHeight,
         alias: base16.stringify(base64.parse(this.walletId)),
         newWallet: !this.otherData.isSdkInitializedOnDisk,
         ...rpcNode
-      }
-
-      this.synchronizer = await this.makeSynchronizer(this.initializer)
+      })
       this.initData()
       this.initSubscriptions()
     }
