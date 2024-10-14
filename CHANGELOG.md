@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.26.1 (2024-10-14)
+
 - changed: (Zcash/Piratechain) Await synchronizer initialization in public methods instead of throwing `synchronizer undefined`error
 - fixed: (Zcash/Piratechain) Don't save sensitive initializer object to engine
 
