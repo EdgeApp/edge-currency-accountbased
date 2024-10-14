@@ -46,7 +46,6 @@ export class ZcashEngine extends CurrencyEngine<
   synchronizerStatus!: StatusEvent['name']
   availableZatoshi!: string
   balances: ZcashBalances
-  initializer!: InitializerConfig
   progressRatio!: {
     seenFirstUpdate: boolean
     percent: number
@@ -58,6 +57,8 @@ export class ZcashEngine extends CurrencyEngine<
   // Synchronizer management
   stopSyncing?: (value: number | PromiseLike<number>) => void
   synchronizer?: ZcashSynchronizer
+  synchronizerPromise: Promise<ZcashSynchronizer>
+  synchronizerResolver!: (synchronizer: ZcashSynchronizer) => void
   autoshielding: {
     createAutoshieldTx: boolean
     threshold: string
@@ -76,6 +77,9 @@ export class ZcashEngine extends CurrencyEngine<
     this.pluginId = this.currencyInfo.pluginId
     this.networkInfo = networkInfo
     this.makeSynchronizer = makeSynchronizer
+    this.synchronizerPromise = new Promise<ZcashSynchronizer>(resolve => {
+      this.synchronizerResolver = resolve
+    })
     this.balances = {
       transparentAvailableZatoshi: '0',
       transparentTotalZatoshi: '0',
@@ -340,15 +344,18 @@ export class ZcashEngine extends CurrencyEngine<
 
     if (this.synchronizer == null) {
       const { rpcNode } = this.networkInfo
-      this.initializer = {
+
+      // Replace this.synchronizerPromise with a fresh promise. The old promise might have already been resolved
+      this.synchronizerPromise = this.makeSynchronizer({
         mnemonicSeed: zcashPrivateKeys.mnemonic,
         birthdayHeight: zcashPrivateKeys.birthdayHeight,
         alias: base16.stringify(base64.parse(this.walletId)),
         newWallet: !this.otherData.isSdkInitializedOnDisk,
         ...rpcNode
-      }
-
-      this.synchronizer = await this.makeSynchronizer(this.initializer)
+      })
+      this.synchronizer = await this.synchronizerPromise
+      // People might be waiting on the old promise, so resolve that
+      this.synchronizerResolver(this.synchronizer)
       this.initData()
       this.initSubscriptions()
     }
@@ -392,6 +399,9 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   async killEngine(): Promise<void> {
+    this.synchronizerPromise = new Promise<ZcashSynchronizer>(resolve => {
+      this.synchronizerResolver = resolve
+    })
     await super.killEngine()
     await this.restartSyncNetwork()
     await this.synchronizer?.stop()
@@ -428,10 +438,10 @@ export class ZcashEngine extends CurrencyEngine<
     if (publicAddress == null) {
       throw new Error('makeSpend Missing publicAddress')
     }
-    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
+    const synchronizer = await this.synchronizerPromise
     try {
       // We anticipate this to fail and return an error message we cna parse the spendable amount from
-      await this.synchronizer.proposeTransfer({
+      await synchronizer.proposeTransfer({
         toAddress: publicAddress,
         zatoshi: this.availableZatoshi,
         memo: memos[0]?.value ?? ''
@@ -459,8 +469,8 @@ export class ZcashEngine extends CurrencyEngine<
       throw new InsufficientFundsError({ tokenId })
     }
 
-    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-    const proposal = await this.synchronizer.proposeTransfer({
+    const synchronizer = await this.synchronizerPromise
+    const proposal = await synchronizer.proposeTransfer({
       toAddress: publicAddress,
       zatoshi: nativeAmount,
       memo: memos[0]?.value ?? ''
@@ -519,7 +529,6 @@ export class ZcashEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     opts?: EdgeEnginePrivateKeyOptions
   ): Promise<EdgeTransaction> {
-    if (this.synchronizer == null) throw new Error('Synchronizer undefined')
     const { proposalBase64 } = getOtherParams(edgeTransaction)
     if (proposalBase64 == null) {
       throw new Error('Missing proposalBase64 from makeSpend')
@@ -534,7 +543,8 @@ export class ZcashEngine extends CurrencyEngine<
     }
 
     try {
-      const txid = await this.synchronizer.createTransfer(txParams)
+      const synchronizer = await this.synchronizerPromise
+      const txid = await synchronizer.createTransfer(txParams)
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -547,8 +557,8 @@ export class ZcashEngine extends CurrencyEngine<
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
     const getSynchronizerAddresses = async (): Promise<EdgeFreshAddress> => {
-      if (this.synchronizer == null) throw new Error('Synchronizer undefined')
-      const { unifiedAddress } = await this.synchronizer.deriveUnifiedAddress()
+      const synchronizer = await this.synchronizerPromise
+      const { unifiedAddress } = await synchronizer.deriveUnifiedAddress()
       this.otherData.cachedAddress = unifiedAddress
       this.walletLocalDataDirty = true
 
