@@ -117,7 +117,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
     })
     const address = edgeParsedUri.publicAddress ?? ''
 
-    if (!isAddress(address)) {
+    if (!isAddress(address) || address.toLowerCase().startsWith('0x')) {
       throw new Error('InvalidPublicAddressError')
     }
 

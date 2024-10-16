@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Possible to send polkadot currencies to `0x` addresses
+
 ## 4.26.1 (2024-10-14)
 
 - changed: (Zcash/Piratechain) Await synchronizer initialization in public methods instead of throwing `synchronizer undefined`error
