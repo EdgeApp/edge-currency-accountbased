@@ -1,14 +1,25 @@
-import { asCodec, asObject, asString, Cleaner } from 'cleaners'
+import {
+  asArray,
+  asCodec,
+  asObject,
+  asOptional,
+  asString,
+  Cleaner
+} from 'cleaners'
 
 export interface TonNetworkInfo {
   pluginMnemonicKeyName: string
+  tonCenterUrl: string
+  tonOrbsServers: string[]
 }
 
 //
 // Info Payload
 //
 
-export const asTonInfoPayload = asObject(() => {})
+export const asTonInfoPayload = asObject({
+  tonOrbsServers: asOptional(asArray(asString))
+})
 export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 
 export const asTonWalletOtherData = asObject(() => {})
