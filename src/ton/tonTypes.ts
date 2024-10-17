@@ -1,7 +1,10 @@
-import { asCodec, asObject, asString, Cleaner } from 'cleaners'
+import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
 
 export interface TonNetworkInfo {
+  defaultOrbUrls: string[]
+  orbsNetworkUrl: string
   pluginMnemonicKeyName: string
+  tonCenterUrl: string
 }
 
 //
