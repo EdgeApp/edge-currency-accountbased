@@ -1,4 +1,12 @@
-import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
+import {
+  asArray,
+  asCodec,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  Cleaner
+} from 'cleaners'
 
 export interface TonNetworkInfo {
   defaultOrbUrls: string[]
@@ -14,7 +22,10 @@ export interface TonNetworkInfo {
 export const asTonInfoPayload = asObject(() => {})
 export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 
-export const asTonWalletOtherData = asObject(() => {})
+export const asTonWalletOtherData = asObject({
+  mostRecentLogicalTime: asOptional(asString),
+  mostRecentHash: asOptional(asString)
+})
 export type TonWalletOtherData = ReturnType<typeof asTonWalletOtherData>
 
 //
@@ -43,3 +54,31 @@ export const asTonPrivateKeys = (pluginId: string): Cleaner<TonPrivateKeys> => {
     }
   )
 }
+
+const asBigInt = (val: any): BigInt => {
+  if (typeof val !== 'bigint') {
+    throw new Error('Expected a BigInt')
+  }
+  return val
+}
+
+const asMessage = asObject({
+  message: asOptional(asString),
+  recipient: asString,
+  sender: asOptional(asString),
+  value: asOptional(asBigInt)
+})
+
+export const asParsedTx = asObject({
+  hash: asString,
+  inMessage: asMessage,
+  lt: asBigInt,
+  now: asNumber,
+  originalTx: asObject({
+    totalFees: asObject({
+      coins: asBigInt
+    })
+  }),
+  outMessages: asArray(asMessage)
+})
+export type ParsedTx = ReturnType<typeof asParsedTx>
