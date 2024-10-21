@@ -1,4 +1,19 @@
-import { Address, TonClient, WalletContractV5R1 } from '@ton/ton'
+import { mnemonicToPrivateKey } from '@ton/crypto'
+import {
+  Address,
+  beginCell,
+  Cell,
+  external,
+  fromNano,
+  internal,
+  loadMessageRelaxed,
+  MessageRelaxed,
+  SendMode,
+  storeMessage,
+  storeMessageRelaxed,
+  TonClient,
+  WalletContractV5R1
+} from '@ton/ton'
 import { add, lt, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
@@ -9,7 +24,8 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16, base64 } from 'rfc4648'
 import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
@@ -17,11 +33,13 @@ import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall } from '../common/promiseUtils'
+import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { TonTools } from './TonTools'
 import {
   asParsedTx,
+  asTonPrivateKeys,
+  asTonTxOtherParams,
   asTonWalletOtherData,
   ParsedTx,
   TonNetworkInfo,
@@ -73,6 +91,11 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
         this.currencyInfo.currencyCode,
         contractState.balance.toString()
       )
+
+      if (contractState.state !== this.otherData.contractState) {
+        this.otherData.contractState = contractState.state
+        this.walletLocalDataDirty = true
+      }
     } catch (e) {
       this.log.warn('queryBalance error:', e)
     }
@@ -222,25 +245,159 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [], tokenId } = edgeSpendInfo
+    const memo: string | undefined = memos[0]?.value
+
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+    const { nativeAmount, publicAddress } = edgeSpendInfo.spendTargets[0]
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+    if (publicAddress == null) {
+      throw new Error('makeSpend Missing publicAddress')
+    }
+
+    let memoCell: Cell | undefined
+    if (memo != null) {
+      memoCell = beginCell().storeUint(0, 32).storeStringTail(memo).endCell()
+    }
+
+    const needsInit = this.otherData.contractState === 'uninitialized'
+
+    const transferMessage: MessageRelaxed = internal({
+      value: fromNano(nativeAmount),
+      to: Address.parse(publicAddress),
+      body: memoCell,
+      init: needsInit ? this.wallet.init : null,
+      bounce: false
+    })
+
+    const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
+      sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+      messages: [transferMessage],
+
+      // Fake data that doesn't impact fee calc
+      seqno: 0,
+      secretKey: Buffer.alloc(64)
+    }
+    const transfer = this.wallet.createTransfer(transferArgs)
+
+    const clients = this.tools.getClients()
+    const feeFuncs = clients.map(client => async () => {
+      return await client.estimateExternalMessageFee(this.wallet.address, {
+        body: transfer,
+        initCode: needsInit ? this.wallet.init.code : null,
+        initData: needsInit ? this.wallet.init.data : null,
+        ignoreSignature: false
+      })
+    })
+    const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
+      await asyncWaterfall(feeFuncs)
+
+    const totalFee =
+      fees.source_fees.fwd_fee +
+      fees.source_fees.gas_fee +
+      fees.source_fees.in_fwd_fee +
+      fees.source_fees.storage_fee
+    const networkFee = totalFee.toString()
+
+    // Serialize transferMessage
+    const builder = beginCell()
+    storeMessageRelaxed(transferMessage)(builder)
+    const messageSlice = builder.asSlice()
+    const otherParams = {
+      unsignedTxBase64: base64.stringify(messageSlice.asCell().toBoc())
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: `-${add(nativeAmount, networkFee)}`,
+      networkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId,
+      txid: '',
+      walletId: this.walletId
+    }
+    return edgeTransaction
   }
 
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    const { unsignedTxBase64 } = asTonTxOtherParams(edgeTransaction.otherParams)
+    const keys = asTonPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const keyPair = await mnemonicToPrivateKey(keys.mnemonic.split(' '))
+
+    const messageSlice = Cell.fromBoc(
+      Buffer.from(base64.parse(unsignedTxBase64))
+    )[0].asSlice()
+    const transferMessage = loadMessageRelaxed(messageSlice)
+
+    const clients = this.tools.getClients()
+    const seqnoFuncs = clients.map(client => async () => {
+      const contract = client.open(this.wallet)
+      return await contract.getSeqno()
+    })
+    const seqno: Awaited<ReturnType<typeof this.wallet['getSeqno']>> =
+      await asyncWaterfall(seqnoFuncs)
+
+    const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
+      sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
+      messages: [transferMessage],
+      seqno,
+      secretKey: keyPair.secretKey
+    }
+    const transfer = this.wallet.createTransfer(transferArgs)
+    const signedTx = base64.stringify(transfer.toBoc())
+
+    edgeTransaction.signedTx = signedTx
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    try {
+      const txBoc = base64.parse(edgeTransaction.signedTx)
+      const txCell = Cell.fromBoc(Buffer.from(txBoc))[0]
+
+      const clients = this.tools.getClients()
+      const broadcastFuncs = clients.map(async client => {
+        const contract = client.open(this.wallet)
+        return await contract.send(txCell)
+      })
+      await promiseAny(broadcastFuncs)
+
+      // Calculate txid
+      const externalMessage = external({
+        to: this.wallet.address,
+        body: txCell
+      })
+      const externalBoc = beginCell()
+        .store(storeMessage(externalMessage))
+        .endCell()
+      const txid = base16.stringify(externalBoc.hash()).toLowerCase()
+
+      edgeTransaction.txid = txid
+      edgeTransaction.date = Date.now() / 1000
+      return edgeTransaction
+    } catch (e) {
+      this.log.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {
-    // TODO: uQ address format
-    throw new Error('Method not implemented.')
+    const publicAddress = this.wallet.address.toString({ bounceable: false })
+    return { publicAddress }
   }
 }
 

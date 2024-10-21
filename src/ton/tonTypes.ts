@@ -24,6 +24,7 @@ export const asTonInfoPayload = asObject({
 export type TonInfoPayload = ReturnType<typeof asTonInfoPayload>
 
 export const asTonWalletOtherData = asObject({
+  contractState: asOptional(asString, 'uninitialized'), //  "active" | "uninitialized" | "frozen";
   mostRecentLogicalTime: asOptional(asString),
   mostRecentHash: asOptional(asString)
 })
@@ -83,3 +84,7 @@ export const asParsedTx = asObject({
   outMessages: asArray(asMessage)
 })
 export type ParsedTx = ReturnType<typeof asParsedTx>
+
+export const asTonTxOtherParams = asObject({
+  unsignedTxBase64: asString
+})
