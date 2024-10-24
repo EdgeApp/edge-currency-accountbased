@@ -10,6 +10,7 @@ import {
 
 export interface TonNetworkInfo {
   defaultOrbUrls: string[]
+  minimumAddressBalance: string
   orbsNetworkUrl: string
   pluginMnemonicKeyName: string
   tonCenterUrl: string

@@ -13,6 +13,7 @@ const networkInfo: TonNetworkInfo = {
     'https://ton.access.orbs.network/55023c0ff5Bd3F8B62C092Ab4D238bEE463E5502/1/mainnet/toncenter-api-v2',
     'https://ton.access.orbs.network/55033c0ff5Bd3F8B62C092Ab4D238bEE463E5503/1/mainnet/toncenter-api-v2'
   ],
+  minimumAddressBalance: '50000000', // 0.5 TON There isn't a hardcoded minimum but the user needs to keep something left
   orbsNetworkUrl: 'https://ton.access.orbs.network/mngr/nodes',
   pluginMnemonicKeyName: 'tonMnemonic',
   tonCenterUrl: 'https://toncenter.com/api/v2'
