@@ -36,6 +36,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
+import { snooze } from '../common/utils'
 import { TonTools } from './TonTools'
 import {
   asParsedTx,
@@ -403,19 +404,48 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       })
       await promiseAny(broadcastFuncs)
 
-      // Calculate txid
-      const externalMessage = external({
-        to: this.wallet.address,
-        body: txCell
-      })
-      const externalBoc = beginCell()
-        .store(storeMessage(externalMessage))
-        .endCell()
-      const txid = base16.stringify(externalBoc.hash()).toLowerCase()
+      if (this.otherData.contractState === 'uninitialized') {
+        // It's not possible to calculate the txid for a wallet's first send so we need to look for it once it's confirmed
+        let attempts = 0
+        do {
+          attempts++
+          await snooze(1000)
+          const txidFuncs = clients.map(client => async () => {
+            return await client.getTransactions(this.wallet.address, {
+              limit: 50
+            })
+          })
+          const transactions: Awaited<
+            ReturnType<TonClient['getTransactions']>
+          > = await asyncWaterfall(txidFuncs)
 
-      edgeTransaction.txid = txid
-      edgeTransaction.date = Date.now() / 1000
-      return edgeTransaction
+          const tx = transactions.find(tx => {
+            return tx.oldStatus === 'uninitialized' && tx.endStatus === 'active'
+          })
+          if (tx != null) {
+            const txid = base16.stringify(tx.hash()).toLowerCase()
+            edgeTransaction.txid = txid
+            edgeTransaction.date = Date.now() / 1000
+            this.otherData.contractState = 'active'
+            this.walletLocalDataDirty = true
+            return edgeTransaction
+          }
+        } while (attempts <= 30) // In testing, the tx was found after ~10 seconds
+        throw new Error('Transaction broadcast but unable to find txid')
+      } else {
+        // We can calculate the txid from the signedTx
+        const externalMessage = external({
+          to: this.wallet.address,
+          body: txCell
+        })
+        const externalBoc = beginCell()
+          .store(storeMessage(externalMessage))
+          .endCell()
+        const txid = base16.stringify(externalBoc.hash()).toLowerCase()
+        edgeTransaction.txid = txid
+        edgeTransaction.date = Date.now() / 1000
+        return edgeTransaction
+      }
     } catch (e) {
       this.log.warn('FAILURE broadcastTx failed: ', e)
       throw e
