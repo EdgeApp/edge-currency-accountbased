@@ -5,11 +5,13 @@ import {
   asObject,
   asOptional,
   asString,
-  Cleaner
+  Cleaner,
+  uncleaner
 } from 'cleaners'
 
 export interface TonNetworkInfo {
   defaultOrbUrls: string[]
+  defaultWalletContract: string
   minimumAddressBalance: string
   orbsNetworkUrl: string
   pluginMnemonicKeyName: string
@@ -36,26 +38,32 @@ export type TonWalletOtherData = ReturnType<typeof asTonWalletOtherData>
 
 export interface TonPrivateKeys {
   mnemonic: string
+  walletContract: string
 }
 export const asTonPrivateKeys = (pluginId: string): Cleaner<TonPrivateKeys> => {
   const asKeys = asObject({
-    [`${pluginId}Mnemonic`]: asString
+    [`${pluginId}Mnemonic`]: asString,
+    walletContract: asString
   })
 
   return asCodec(
     raw => {
       const from = asKeys(raw)
       return {
-        mnemonic: from[`${pluginId}Mnemonic`]
+        mnemonic: from[`${pluginId}Mnemonic`],
+        walletContract: from.walletContract
       }
     },
     clean => {
       return {
-        [`${pluginId}Mnemonic`]: clean.mnemonic
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        walletContract: clean.walletContract
       }
     }
   )
 }
+export const wasTonPrivateKeys = (pluginId: string): Cleaner<TonPrivateKeys> =>
+  uncleaner(asTonPrivateKeys(pluginId))
 
 const asBigInt = (val: any): BigInt => {
   if (typeof val !== 'bigint') {

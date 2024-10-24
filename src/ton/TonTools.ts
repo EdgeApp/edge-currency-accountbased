@@ -29,7 +29,12 @@ import {
   mergeDeeply,
   shuffleArray
 } from '../common/utils'
-import { asTonPrivateKeys, TonInfoPayload, TonNetworkInfo } from './tonTypes'
+import {
+  asTonPrivateKeys,
+  TonInfoPayload,
+  TonNetworkInfo,
+  wasTonPrivateKeys
+} from './tonTypes'
 
 const ONE_HOUR = 1000 * 60 * 60
 let clientsLastUpdate = 0
@@ -134,7 +139,7 @@ export class TonTools implements EdgeCurrencyTools {
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
     const keys = asTonPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
+    return `${keys.mnemonic}\n\nVersion: ${keys.walletContract}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -146,7 +151,10 @@ export class TonTools implements EdgeCurrencyTools {
     const isValid = validateMnemonic(input)
     if (!isValid) throw new Error('Invalid mnemonic')
 
-    return { [this.networkInfo.pluginMnemonicKeyName]: input }
+    return wasTonPrivateKeys(this.currencyInfo.pluginId)({
+      mnemonic: input,
+      walletContract: this.networkInfo.defaultWalletContract
+    })
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
