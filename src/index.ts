@@ -21,6 +21,7 @@ import { ripple } from './ripple/rippleInfo'
 import { solana } from './solana/solanaInfo'
 import { stellar } from './stellar/stellarInfo'
 import { tezos } from './tezos/tezosInfo'
+import { ton } from './ton/tonInfo'
 import { tron } from './tron/tronInfo'
 import { zcash } from './zcash/zcashInfo'
 
@@ -44,6 +45,7 @@ const plugins = {
   solana,
   stellar,
   tezos,
+  ton,
   tron,
   zcash
 }
