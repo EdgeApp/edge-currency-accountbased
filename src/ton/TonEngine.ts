@@ -14,7 +14,7 @@ import {
   TonClient,
   WalletContractV5R1
 } from '@ton/ton'
-import { add, lt, sub } from 'biggystring'
+import { add, gt, lt, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -24,6 +24,7 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
+  InsufficientFundsError,
   JsonObject,
   NoAmountSpecifiedError
 } from 'edge-core-js/types'
@@ -244,6 +245,21 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     await this.startEngine()
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    // TON allows sending the entire balance but we need to be able to craft the entire transaction here instead of just an amount
+    const spendInfoCopy = { ...spendInfo }
+
+    const balance = this.getBalance({ tokenId: spendInfoCopy.tokenId })
+    spendInfoCopy.spendTargets[0].nativeAmount = balance
+    spendInfoCopy.skipChecks = true
+
+    const edgeTransaction = await this.makeSpend(spendInfoCopy)
+    return sub(
+      sub(balance, this.networkInfo.minimumAddressBalance),
+      edgeTransaction.networkFee
+    )
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
@@ -301,6 +317,17 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       fees.source_fees.in_fwd_fee +
       fees.source_fees.storage_fee
     const networkFee = totalFee.toString()
+
+    const total = add(nativeAmount, networkFee)
+    const balance = this.getBalance({ tokenId })
+    if (
+      edgeSpendInfoIn.skipChecks !== true &&
+      gt(add(total, this.networkInfo.minimumAddressBalance), balance)
+    ) {
+      throw new InsufficientFundsError({
+        tokenId: null
+      })
+    }
 
     // Serialize transferMessage
     const builder = beginCell()

@@ -9,6 +9,7 @@ import {
 } from 'cleaners'
 
 export interface TonNetworkInfo {
+  minimumAddressBalance: string
   pluginMnemonicKeyName: string
   tonCenterUrl: string
   tonOrbsServers: string[]

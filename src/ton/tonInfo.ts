@@ -5,6 +5,7 @@ import type { TonTools } from './TonTools'
 import { asTonInfoPayload, TonInfoPayload, TonNetworkInfo } from './tonTypes'
 
 const networkInfo: TonNetworkInfo = {
+  minimumAddressBalance: '50000000', // 0.5 TON There isn't a hardcoded minimum but the user needs to keep something left
   pluginMnemonicKeyName: 'tonMnemonic',
   tonCenterUrl: 'https://toncenter.com/api/v2/jsonRPC',
   tonOrbsServers: [
