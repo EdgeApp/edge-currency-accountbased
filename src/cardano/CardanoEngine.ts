@@ -1,6 +1,6 @@
 import * as Cardano from '@emurgo/cardano-serialization-lib-nodejs'
 import { add, mul, sub } from 'biggystring'
-import { asTuple } from 'cleaners'
+import { asJSON, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -135,13 +135,12 @@ export class CardanoEngine extends CurrencyEngine<
         ...opts,
         headers: { ...opts.headers, ...headers }
       })
+      const response = await res.text()
       if (!res.ok) {
-        const message = await res.text()
-        throw new Error(`${name} error: ${message}`)
+        throw new Error(`${name} error: ${response}`)
       }
-      const txid = await res.json()
       this.log.warn(`${name} broadcast success`)
-      return txid
+      return response
     }
 
     const koios = async (): Promise<string> => {
@@ -151,10 +150,12 @@ export class CardanoEngine extends CurrencyEngine<
       const headers = {
         Authorization: `Bearer ${this.initOptions.koiosApiKey}`
       }
-      return await broadcast(
-        'Koios',
-        `${this.networkInfo.koiosServer}/api/v1/submittx`,
-        headers
+      return asJSON(asString)(
+        await broadcast(
+          'Koios',
+          `${this.networkInfo.koiosServer}/api/v1/submittx`,
+          headers
+        )
       )
     }
     const blockfrost = async (): Promise<string> => {
@@ -164,10 +165,12 @@ export class CardanoEngine extends CurrencyEngine<
       const headers = {
         project_id: `${this.initOptions.blockfrostProjectId}`
       }
-      return await broadcast(
-        'Blockfrost',
-        `${this.networkInfo.blockfrostServer}/api/v0/tx/submit`,
-        headers
+      return asJSON(asString)(
+        await broadcast(
+          'Blockfrost',
+          `${this.networkInfo.blockfrostServer}/api/v0/tx/submit`,
+          headers
+        )
       )
     }
     const maestro = async (): Promise<string> => {
