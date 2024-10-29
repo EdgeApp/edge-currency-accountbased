@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe } from 'mocha'
 
-import { promiseCast } from '../../src/common/utils'
+import { promiseCast } from '../../src/common/promiseUtils'
 
 describe(`promiseCast`, function () {
   async function success(n: number): Promise<string> {

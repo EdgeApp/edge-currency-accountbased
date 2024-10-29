@@ -33,15 +33,17 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
+  promiseAny,
+  promiseNy,
+  timeout
+} from '../common/promiseUtils'
+import {
   cleanTxLogs,
   getDenomination,
   getFetchCors,
   getOtherParams,
-  promiseAny,
-  promiseNy,
   safeErrorMessage,
-  shuffleArray,
-  timeout
+  shuffleArray
 } from '../common/utils'
 import {
   ACTIONS,

@@ -15,13 +15,12 @@ import stellarApi, { Transaction } from 'stellar-sdk'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
 import {
-  asyncWaterfall,
   cleanTxLogs,
   getDenomination,
   getFetchCors,
-  getOtherParams,
-  promiseAny
+  getOtherParams
 } from '../common/utils'
 import { StellarTools } from './StellarTools'
 import {

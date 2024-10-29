@@ -28,8 +28,8 @@ import parse from 'url-parse'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall } from '../common/promiseUtils'
 import {
-  asyncWaterfall,
   cleanTxLogs,
   getDenomination,
   getFetchCors,

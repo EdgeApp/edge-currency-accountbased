@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe } from 'mocha'
 
-import { promiseAny } from '../../src/common/utils'
+import { promiseAny } from '../../src/common/promiseUtils'
 
 describe(`promiseAny`, function () {
   async function success(): Promise<string> {

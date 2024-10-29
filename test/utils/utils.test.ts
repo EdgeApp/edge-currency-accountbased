@@ -1,7 +1,8 @@
 import { assert } from 'chai'
 import { before, describe, it } from 'mocha'
 
-import { asyncWaterfall, snooze, snoozeReject } from '../../src/common/utils'
+import { asyncWaterfall } from '../../src/common/promiseUtils'
+import { snooze, snoozeReject } from '../../src/common/utils'
 
 describe(`Utils testing`, function () {
   before('', function (done) {

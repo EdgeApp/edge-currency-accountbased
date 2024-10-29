@@ -24,6 +24,7 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asyncWaterfall } from '../common/promiseUtils'
 import {
   asMaybeContractLocation,
   makeMetaTokens,
@@ -31,7 +32,6 @@ import {
 } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
-  asyncWaterfall,
   getFetchCors,
   getLegacyDenomination,
   mergeDeeply

@@ -5,11 +5,8 @@ import { EdgeSpendInfo, EdgeToken } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
-import {
-  asyncWaterfall,
-  decimalToHex,
-  normalizeAddress
-} from '../../common/utils'
+import { asyncWaterfall } from '../../common/promiseUtils'
+import { decimalToHex, normalizeAddress } from '../../common/utils'
 import NODE_INTERFACE_ABI from '../abi/NODE_INTERFACE_ABI.json'
 import {
   asMaybeEvmOverrideGasLimitLocation,
