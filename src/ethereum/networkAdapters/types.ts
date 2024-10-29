@@ -1,13 +1,8 @@
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
-import {
-  asyncWaterfall,
-  cleanTxLogs,
-  promiseAny,
-  safeErrorMessage,
-  shuffleArray
-} from '../../common/utils'
+import { asyncWaterfall, promiseAny } from '../../common/promiseUtils'
+import { cleanTxLogs, safeErrorMessage, shuffleArray } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'

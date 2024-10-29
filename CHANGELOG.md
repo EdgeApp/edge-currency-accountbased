@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (ADA) Fixed a bug in Blockfrost response handling that caused an error when processing successful non-JSON responses.
+- fixed: (ADA) Re-spending UTXO race condition.
 - fixed: Possible to send polkadot currencies to `0x` addresses
 
 ## 4.26.1 (2024-10-14)

@@ -38,13 +38,8 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import {
-  asyncWaterfall,
-  cleanTxLogs,
-  getFetchCors,
-  getOtherParams,
-  promiseAny
-} from '../common/utils'
+import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import { cleanTxLogs, getFetchCors, getOtherParams } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,

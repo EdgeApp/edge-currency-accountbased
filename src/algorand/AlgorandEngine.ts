@@ -29,9 +29,9 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall } from '../common/promiseUtils'
 import { utf8 } from '../common/utf8'
 import {
-  asyncWaterfall,
   cleanTxLogs,
   getOtherParams,
   makeMutex,

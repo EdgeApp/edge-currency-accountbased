@@ -14,6 +14,8 @@ import {
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
+import { asyncWaterfall } from './promiseUtils'
+
 export function normalizeAddress(address: string): string {
   return address.toLowerCase().replace('0x', '')
 }
@@ -142,139 +144,6 @@ export const snoozeReject: Function = async (ms: number) =>
   )
 export const snooze: Function = async (ms: number) =>
   await new Promise((resolve: Function) => setTimeout(resolve, ms))
-
-export async function promiseAny<T>(promises: Array<Promise<T>>): Promise<T> {
-  return await new Promise((resolve: Function, reject: Function) => {
-    let pending = promises.length
-    for (const promise of promises) {
-      promise.then(
-        value => {
-          resolve(value)
-        },
-        error => {
-          if (--pending === 0) reject(error)
-        }
-      )
-    }
-  })
-}
-
-/**
- * Waits for the promises to resolve and uses a provided checkResult function
- * to return a key to identify the result. The returned promise resolves when
- * n number of promises resolve to identical keys.
- */
-export async function promiseNy<T>(
-  promises: Array<Promise<T>>,
-  checkResult: (arg: T) => string | undefined,
-  n: number = promises.length
-): Promise<T> {
-  const map: { [key: string]: number } = {}
-  return await new Promise((resolve, reject) => {
-    let resolved = 0
-    let failed = 0
-    let done = false
-    for (const promise of promises) {
-      promise.then(
-        result => {
-          const key = checkResult(result)
-          if (key !== undefined) {
-            resolved++
-            if (map[key] !== undefined) {
-              map[key]++
-            } else {
-              map[key] = 1
-            }
-            if (!done && map[key] >= n) {
-              done = true
-              resolve(result)
-            }
-          } else if (++failed + resolved === promises.length) {
-            reject(Error(`Could not resolve ${n} promises`))
-          }
-        },
-        error => {
-          if (++failed + resolved === promises.length) {
-            reject(error)
-          }
-        }
-      )
-    }
-  })
-}
-
-/**
- * If the promise doesn't resolve in the given time,
- * reject it with the provided error, or a generic error if none is provided.
- */
-export async function timeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  error: Error = new Error(`Timeout of ${ms}ms exceeded`)
-): Promise<T> {
-  return await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(error), ms)
-    promise.then(
-      ok => {
-        resolve(ok)
-        clearTimeout(timer)
-      },
-      error => {
-        reject(error)
-        clearTimeout(timer)
-      }
-    )
-  })
-}
-
-type AsyncFunction = () => Promise<any>
-
-export async function asyncWaterfall(
-  asyncFuncs: AsyncFunction[],
-  timeoutMs: number = 5000
-): Promise<any> {
-  let pending = asyncFuncs.length
-  const promises: Array<Promise<any>> = []
-  for (const func of asyncFuncs) {
-    const index = promises.length
-    promises.push(
-      func().catch(e => {
-        e.index = index
-        throw e
-      })
-    )
-    if (pending > 1) {
-      promises.push(
-        new Promise(resolve => {
-          snooze(timeoutMs).then(() => {
-            resolve('async_waterfall_timed_out')
-          })
-        })
-      )
-    }
-    try {
-      const result = await Promise.race(promises)
-      if (result === 'async_waterfall_timed_out') {
-        const p = promises.pop()
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        p?.then().catch()
-        --pending
-      } else {
-        return result
-      }
-    } catch (e: any) {
-      const i = e.index
-      promises.splice(i, 1)
-      const p = promises.pop()
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      p?.then().catch()
-      --pending
-      if (pending === 0) {
-        throw e
-      }
-    }
-  }
-}
 
 export function pickRandom<T>(list: T[], count: number): T[] {
   if (list.length <= count) return list

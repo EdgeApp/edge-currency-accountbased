@@ -15,14 +15,13 @@ import {
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
 import { asErrorMessage } from '../common/types'
 import {
-  asyncWaterfall,
   cleanTxLogs,
   getDenomination,
   getFetchCors,
   getOtherParams,
-  promiseAny,
   shuffleArray
 } from '../common/utils'
 import { BinanceTools } from './BinanceTools'

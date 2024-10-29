@@ -21,10 +21,10 @@ import {
 import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
+import { asyncWaterfall } from '../common/promiseUtils'
 import { makeMetaTokens, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
-  asyncWaterfall,
   getLegacyDenomination,
   mergeDeeply,
   safeErrorMessage

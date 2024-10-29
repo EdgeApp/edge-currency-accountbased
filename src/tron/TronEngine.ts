@@ -18,8 +18,8 @@ import TronWeb from 'tronweb'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall } from '../common/promiseUtils'
 import {
-  asyncWaterfall,
   getDenomination,
   getFetchCors,
   getOtherParams,

@@ -1,6 +1,6 @@
 import * as Cardano from '@emurgo/cardano-serialization-lib-nodejs'
 import { add, mul, sub } from 'biggystring'
-import { asTuple } from 'cleaners'
+import { asJSON, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -20,8 +20,9 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { promiseCast } from '../common/promiseUtils'
 import { trial } from '../common/trial'
-import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
+import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
 import { CardanoTools } from './CardanoTools'
 import {
@@ -135,13 +136,12 @@ export class CardanoEngine extends CurrencyEngine<
         ...opts,
         headers: { ...opts.headers, ...headers }
       })
+      const response = await res.text()
       if (!res.ok) {
-        const message = await res.text()
-        throw new Error(`${name} error: ${message}`)
+        throw new Error(`${name} error: ${response}`)
       }
-      const txid = await res.json()
       this.log.warn(`${name} broadcast success`)
-      return txid
+      return response
     }
 
     const koios = async (): Promise<string> => {
@@ -151,10 +151,12 @@ export class CardanoEngine extends CurrencyEngine<
       const headers = {
         Authorization: `Bearer ${this.initOptions.koiosApiKey}`
       }
-      return await broadcast(
-        'Koios',
-        `${this.networkInfo.koiosServer}/api/v1/submittx`,
-        headers
+      return asJSON(asString)(
+        await broadcast(
+          'Koios',
+          `${this.networkInfo.koiosServer}/api/v1/submittx`,
+          headers
+        )
       )
     }
     const blockfrost = async (): Promise<string> => {
@@ -164,10 +166,12 @@ export class CardanoEngine extends CurrencyEngine<
       const headers = {
         project_id: `${this.initOptions.blockfrostProjectId}`
       }
-      return await broadcast(
-        'Blockfrost',
-        `${this.networkInfo.blockfrostServer}/api/v0/tx/submit`,
-        headers
+      return asJSON(asString)(
+        await broadcast(
+          'Blockfrost',
+          `${this.networkInfo.blockfrostServer}/api/v0/tx/submit`,
+          headers
+        )
       )
     }
     const maestro = async (): Promise<string> => {
@@ -184,7 +188,10 @@ export class CardanoEngine extends CurrencyEngine<
       )
     }
 
-    return await promiseAny([blockfrost(), koios(), maestro()])
+    const { values } = await promiseCast([blockfrost(), koios(), maestro()])
+
+    // All results should be the same (the txid):
+    return values[0]
   }
 
   async queryBlockheight(): Promise<void> {
@@ -497,6 +504,38 @@ export class CardanoEngine extends CurrencyEngine<
     }
 
     return edgeTransaction
+  }
+
+  async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
+    await super.saveTx(edgeTransaction)
+
+    const tx = Cardano.Transaction.from_hex(edgeTransaction.signedTx)
+    const txHash = Cardano.hash_transaction(tx.body()).to_hex()
+    const txJson = tx.to_js_value()
+
+    // Filter out spent utxos:
+    const vouts = new Set(
+      txJson.body.inputs.map(input => `${input.transaction_id}_${input.index}`)
+    )
+    this.utxos = this.utxos.filter(utxo => {
+      return !vouts.has(`${utxo.tx_hash}_${utxo.tx_index}`)
+    })
+
+    // Add new utxos that our own:
+    const ownAddress = this.walletInfo.keys.bech32Address
+    txJson.body.outputs.forEach((output, index) => {
+      if (output.address === ownAddress) {
+        // Skip over multiasset outputs (we don't support spending from them):
+        if (output.amount.multiasset != null) return
+
+        this.utxos.push({
+          asset_list: [],
+          tx_hash: txHash,
+          tx_index: index,
+          value: output.amount.coin
+        })
+      }
+    })
   }
 
   async signTx(

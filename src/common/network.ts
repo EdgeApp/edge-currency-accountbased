@@ -5,7 +5,9 @@ import {
   EdgeFetchResponse
 } from 'edge-core-js/types'
 
-import { asyncWaterfall, shuffleArray } from './utils'
+import { asyncWaterfall } from './promiseUtils'
+import { shuffleArray } from './utils'
+
 const INFO_SERVERS = ['https://info1.edge.app', 'https://info2.edge.app']
 
 export async function fetchWaterfall(

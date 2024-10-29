@@ -15,13 +15,12 @@ import { eztz } from 'eztz.js'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
 import {
-  asyncWaterfall,
   cleanTxLogs,
   getFetchCors,
   getOtherParams,
-  makeMutex,
-  promiseAny
+  makeMutex
 } from '../common/utils'
 import { TezosTools } from './TezosTools'
 import {
