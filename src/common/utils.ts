@@ -11,6 +11,7 @@ import {
   EdgeTransaction,
   JsonObject
 } from 'edge-core-js/types'
+import AggregateError from 'es-aggregate-error'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
 
@@ -157,6 +158,38 @@ export async function promiseAny<T>(promises: Array<Promise<T>>): Promise<T> {
       )
     }
   })
+}
+
+/**
+ * This will await all promises concurrently and return an array of results and
+ * errors. This is an alternative to promiseAny, but all promises are dispatched
+ * concurrently and results and errors are always returned. Only when no
+ * promise get fulfilled, is an `AggregateError` is thrown.
+ *
+ * @param promise array of promises
+ * @returns a promise of an object containing an of array of results `values`
+ * from fulfilled promises and array of `errors` from rejected promises.
+ */
+export async function promiseCast<T>(promise: Array<Promise<T>>): Promise<{
+  values: T[]
+  errors: unknown[]
+}> {
+  const results = await Promise.allSettled(promise)
+  const values = results
+    .map(result => (result.status === 'fulfilled' ? result.value : undefined))
+    .filter((value): value is Awaited<T> => value !== undefined)
+  const errors = results
+    .map(result => (result.status === 'rejected' ? result.reason : undefined))
+    .filter((value): value is unknown => value !== undefined)
+  // Throw errors if no fulfilled promises:
+  if (values.length === 0) {
+    const errorMessages = errors.map(error => String(error)).join(';\n  ')
+    throw new AggregateError(
+      errors,
+      `Promise Cast Rejected:\n  ${errorMessages}`
+    )
+  }
+  return { values, errors }
 }
 
 /**

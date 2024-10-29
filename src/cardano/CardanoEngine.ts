@@ -21,7 +21,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { trial } from '../common/trial'
-import { cleanTxLogs, getFetchCors, promiseAny } from '../common/utils'
+import { cleanTxLogs, getFetchCors, promiseCast } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
 import { CardanoTools } from './CardanoTools'
 import {
@@ -184,7 +184,10 @@ export class CardanoEngine extends CurrencyEngine<
       )
     }
 
-    return await promiseAny([blockfrost(), koios(), maestro()])
+    const { values } = await promiseCast([blockfrost(), koios(), maestro()])
+
+    // All results should be the same (the txid):
+    return values[0]
   }
 
   async queryBlockheight(): Promise<void> {

@@ -1878,6 +1878,13 @@
   dependencies:
     "@types/bn.js" "*"
 
+"@types/es-aggregate-error@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@types/es-aggregate-error/-/es-aggregate-error-1.0.6.tgz#1472dfb0fb1cb4c3f2bd3b2a7b7e19f60a1d66c0"
+  integrity sha512-qJ7LIFp06h1QE1aVxbVd+zJP2wdaugYXYfd6JxsyRMrYHaxb6itXPogW2tz+ylUJ1n1b+JF1PHyYCfYHm0dvUg==
+  dependencies:
+    "@types/node" "*"
+
 "@types/eslint-scope@^3.7.3":
   version "3.7.4"
   resolved "https://registry.yarnpkg.com/@types/eslint-scope/-/eslint-scope-3.7.4.tgz#37fc1223f0786c39627068a12e94d6e6fc61de16"
@@ -2020,11 +2027,6 @@
   version "10.12.18"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.12.18.tgz#1d3ca764718915584fcd9f6344621b7672665c67"
   integrity sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==
-
-"@types/node@11.11.6":
-  version "11.11.6"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-11.11.6.tgz#df929d1bb2eee5afdda598a41930fe50b43eaa6a"
-  integrity sha512-Exw4yUWMBXM3X+8oqzJNRqZSwUAaS4+7NdvHqQuFi/d+synz++xmX3QIf+BFqneW8N31R8Ky+sikfZUXq07ggQ==
 
 "@types/node@^12.12.54":
   version "12.20.42"
@@ -4137,6 +4139,20 @@ es-abstract@^1.19.1, es-abstract@^1.22.1, es-abstract@^1.22.3, es-abstract@^1.23
     typed-array-length "^1.0.6"
     unbox-primitive "^1.0.2"
     which-typed-array "^1.1.15"
+
+es-aggregate-error@^1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/es-aggregate-error/-/es-aggregate-error-1.0.13.tgz#7f28b77c9d8d09bbcd3a466e4be9fe02fa985201"
+  integrity sha512-KkzhUUuD2CUMqEc8JEqsXEMDHzDPE8RCjZeUBitsnB1eNcAJWQPiciKsMXe3Yytj4Flw1XLl46Qcf9OxvZha7A==
+  dependencies:
+    define-data-property "^1.1.4"
+    define-properties "^1.2.1"
+    es-abstract "^1.23.2"
+    es-errors "^1.3.0"
+    function-bind "^1.1.2"
+    globalthis "^1.0.3"
+    has-property-descriptors "^1.0.2"
+    set-function-name "^2.0.2"
 
 es-define-property@^1.0.0:
   version "1.0.0"
@@ -7052,7 +7068,7 @@ pathval@^1.1.1:
   resolved "https://registry.yarnpkg.com/pathval/-/pathval-1.1.1.tgz#8534e77a77ce7ac5a2512ea21e0fdb8fcf6c3d8d"
   integrity sha512-Dp6zGqpTdETdR63lehJYPeIOqpiNBNtc7BpWSLrOje7UaIsE5aY92r/AunQA7rsXvet3lrJ3JnZX29UPTKXyKQ==
 
-pbkdf2@^3.0.14, pbkdf2@^3.0.17, pbkdf2@^3.0.3, pbkdf2@^3.0.9:
+pbkdf2@^3.0.14, pbkdf2@^3.0.17, pbkdf2@^3.0.3:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/pbkdf2/-/pbkdf2-3.1.2.tgz#dd822aa0887580e52f1a039dc3eda108efae3075"
   integrity sha512-iuh7L6jA7JEGu2WxDwtQP1ddOpaJNC4KlDEFfdQajSGgGPNi4OyDc2R7QnbY2bR9QjBVGwgvTdNJZoE7RaxUMA==
@@ -7896,7 +7912,7 @@ set-function-length@^1.2.1:
     gopd "^1.0.1"
     has-property-descriptors "^1.0.2"
 
-set-function-name@^2.0.1:
+set-function-name@^2.0.1, set-function-name@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/set-function-name/-/set-function-name-2.0.2.tgz#16a705c5a0dc2f5e638ca96d8a8cd4e1c2b90985"
   integrity sha512-7PGFlmtwsEADb0WYyvCMa1t+yke6daIG4Wirafur5kcf+MhUnPms1UeR0CKQdTZD81yESwMHbtn+TR+dMviakQ==
