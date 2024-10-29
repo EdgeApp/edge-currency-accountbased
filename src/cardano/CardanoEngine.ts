@@ -505,6 +505,38 @@ export class CardanoEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
+    await super.saveTx(edgeTransaction)
+
+    const tx = Cardano.Transaction.from_hex(edgeTransaction.signedTx)
+    const txHash = Cardano.hash_transaction(tx.body()).to_hex()
+    const txJson = tx.to_js_value()
+
+    // Filter out spent utxos:
+    const vouts = new Set(
+      txJson.body.inputs.map(input => `${input.transaction_id}_${input.index}`)
+    )
+    this.utxos = this.utxos.filter(utxo => {
+      return !vouts.has(`${utxo.tx_hash}_${utxo.tx_index}`)
+    })
+
+    // Add new utxos that our own:
+    const ownAddress = this.walletInfo.keys.bech32Address
+    txJson.body.outputs.forEach((output, index) => {
+      if (output.address === ownAddress) {
+        // Skip over multiasset outputs (we don't support spending from them):
+        if (output.amount.multiasset != null) return
+
+        this.utxos.push({
+          asset_list: [],
+          tx_hash: txHash,
+          tx_index: index,
+          value: output.amount.coin
+        })
+      }
+    })
+  }
+
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
