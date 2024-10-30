@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.26.3 (2024-10-30)
+
 - fixed: (ADA) Improved balance calculation by deriving from UTXO state.
 - fixed: (ADA) Race condition between network queries and local transaction processing causing incorrect UTXO state.
 
