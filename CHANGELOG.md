@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: (ADA) Improved balance calculation by deriving from UTXO state.
+- fixed: (ADA) Race condition between network queries and local transaction processing causing incorrect UTXO state.
+
 ## 4.26.2 (2024-10-29)
 
 - fixed: (ADA) Fixed a bug in Blockfrost response handling that caused an error when processing successful non-JSON responses.

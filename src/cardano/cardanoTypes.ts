@@ -76,43 +76,45 @@ export const asKoiosBlockheight = asTuple(
   })
 )
 
+export const asKoiosUtxo = asObject({
+  // asset_name: '444f4e545350414d',
+  asset_list: asArray(asUnknown),
+  // block_height: 42325043,
+  // block_time: 1506635091,
+  // fingerprint: 'asset1ua6pz3yd5mdka946z8jw2fld3f8d0mmxt75gv9',
+  // datum_hash:
+  //   '5a595ce795815e81d22a1a522cf3987d546dc5bb016de61b002edd63a5413ec4',
+  // decimals: 0,
+  // inline_datum: {
+  //   bytes: '19029a',
+  //   value: {
+  //     int: 666
+  //   }
+  // },
+  // policy_id:
+  //   'd3501d9531fcc25e3ca4b6429318c2cc374dbdbcf5e99c1c1e5da1ff',
+  // quantity: 1
+  // reference_script: {
+  //   hash: '67f33146617a5e61936081db3b2117cbf59bd2123748f58ac9678656',
+  //   size: 14,
+  //   type: 'plutusV1',
+  //   bytes: '4e4d01000033222220051200120011',
+  //   value: 'null'
+  // },
+  tx_hash: asString, // 'f144a8264acf4bdfe2e1241170969c930d64ab6b0996a4a45237b623f1dd670e',
+  tx_index: asNumber, // 0,
+  value: asString // 157832856,
+})
+
+export type KoiosUtxo = ReturnType<typeof asKoiosUtxo>
+
 export const asKoiosBalance = asArray(
   asObject({
     // address: 'addr1qxkfe8s6m8qt5436lec3f0320hrmpppwqgs2gah4360krvyssntpwjcz303mx3h4avg7p29l3zd8u3jyglmewds9ezrqdc3cxp',
     balance: asString, // 10723473983,
     // stake_address: null,
     // script_address: true,
-    utxo_set: asArray(
-      asObject({
-        tx_hash: asString, // 'f144a8264acf4bdfe2e1241170969c930d64ab6b0996a4a45237b623f1dd670e',
-        tx_index: asNumber, // 0,
-        // block_height: 42325043,
-        // block_time: 1506635091,
-        value: asString, // 157832856,
-        // datum_hash:
-        //   '5a595ce795815e81d22a1a522cf3987d546dc5bb016de61b002edd63a5413ec4',
-        // inline_datum: {
-        //   bytes: '19029a',
-        //   value: {
-        //     int: 666
-        //   }
-        // },
-        // reference_script: {
-        //   hash: '67f33146617a5e61936081db3b2117cbf59bd2123748f58ac9678656',
-        //   size: 14,
-        //   type: 'plutusV1',
-        //   bytes: '4e4d01000033222220051200120011',
-        //   value: 'null'
-        // },
-        asset_list: asArray(asUnknown)
-        // policy_id:
-        //   'd3501d9531fcc25e3ca4b6429318c2cc374dbdbcf5e99c1c1e5da1ff',
-        // asset_name: '444f4e545350414d',
-        // fingerprint: 'asset1ua6pz3yd5mdka946z8jw2fld3f8d0mmxt75gv9',
-        // decimals: 0,
-        // quantity: 1
-      })
-    )
+    utxo_set: asArray(asKoiosUtxo)
   })
 )
 

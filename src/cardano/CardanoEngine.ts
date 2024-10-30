@@ -41,6 +41,7 @@ import {
   CardanoTxOtherParams,
   CardanoWalletOtherData,
   KoiosNetworkTx,
+  KoiosUtxo,
   SafeCardanoWalletInfo
 } from './cardanoTypes'
 
@@ -58,7 +59,10 @@ export class CardanoEngine extends CurrencyEngine<
   initOptions: CardanoInitOptions
   epochNumber: number
   slot: number
-  utxos: ReturnType<typeof asKoiosBalance>[number]['utxo_set']
+  // All tx output seen:
+  seenVouts: Set<string> = new Set()
+  // Only unspent:
+  utxos: KoiosUtxo[] = []
 
   constructor(
     env: PluginEnvironment<CardanoNetworkInfo>,
@@ -73,7 +77,6 @@ export class CardanoEngine extends CurrencyEngine<
     this.networkInfo = env.networkInfo
     this.epochNumber = -1
     this.slot = -1
-    this.utxos = []
   }
 
   setOtherData(_raw: any): void {
@@ -234,17 +237,15 @@ export class CardanoEngine extends CurrencyEngine<
         _addresses: [this.walletInfo.keys.bech32Address]
       })
       const clean = asKoiosBalance(raw)
-      const mainnetBal = clean[0]?.balance ?? '0'
 
-      this.updateBalance(this.currencyInfo.currencyCode, mainnetBal)
+      // Merge unseen utxos into wallet state:
+      const networkUtxos = clean[0]?.utxo_set ?? []
+      for (const utxo of networkUtxos) {
+        this.addUnseenUtxo(utxo)
+      }
 
-      this.utxos =
-        clean[0]?.utxo_set.map(utxo => ({
-          asset_list: utxo.asset_list,
-          tx_hash: utxo.tx_hash,
-          tx_index: utxo.tx_index,
-          value: utxo.value
-        })) ?? []
+      // Network balance may be out of date, so we'll calculate it from utxos:
+      this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
     } catch (e) {
       this.log.warn('queryBalance error: ', e)
     }
@@ -513,13 +514,10 @@ export class CardanoEngine extends CurrencyEngine<
     const txHash = Cardano.hash_transaction(tx.body()).to_hex()
     const txJson = tx.to_js_value()
 
-    // Filter out spent utxos:
-    const vouts = new Set(
+    // Remove any spent utxos:
+    this.removeUtxosByVouts(
       txJson.body.inputs.map(input => `${input.transaction_id}_${input.index}`)
     )
-    this.utxos = this.utxos.filter(utxo => {
-      return !vouts.has(`${utxo.tx_hash}_${utxo.tx_index}`)
-    })
 
     // Add new utxos that our own:
     const ownAddress = this.walletInfo.keys.bech32Address
@@ -528,7 +526,7 @@ export class CardanoEngine extends CurrencyEngine<
         // Skip over multiasset outputs (we don't support spending from them):
         if (output.amount.multiasset != null) return
 
-        this.utxos.push({
+        this.addUnseenUtxo({
           asset_list: [],
           tx_hash: txHash,
           tx_index: index,
@@ -536,6 +534,9 @@ export class CardanoEngine extends CurrencyEngine<
         })
       }
     })
+
+    // Update balance incase the UTXO set changed:
+    this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
   }
 
   async signTx(
@@ -612,6 +613,34 @@ export class CardanoEngine extends CurrencyEngine<
     return {
       publicAddress: bech32Address
     }
+  }
+
+  /**
+   * This is a helper function to add utxos to the wallet state that we haven't
+   * seen before. This avoids duplication and merges utxos into the wallet
+   * state. Also, we don't want to add utxos that we've already seen because the
+   * wallet may know that they're spent when the network doesn't.
+   *
+   * @param utxo the utxo to add
+   */
+  private addUnseenUtxo(utxo: KoiosUtxo): void {
+    const vout = `${utxo.tx_hash}_${utxo.tx_index}`
+    if (!this.seenVouts.has(vout)) {
+      this.seenVouts.add(vout)
+      this.utxos.push(utxo)
+    }
+  }
+
+  private removeUtxosByVouts(vouts: string[] | Set<string>): void {
+    const voutsSet = new Set(vouts)
+    this.utxos = this.utxos.filter(
+      utxo => !voutsSet.has(`${utxo.tx_hash}_${utxo.tx_index}`)
+    )
+  }
+
+  private updateBalanceFromUtxos(currencyCode: string): void {
+    const balance = this.utxos.reduce((acc, utxo) => add(acc, utxo.value), '0')
+    this.updateBalance(currencyCode, balance)
   }
 
   getStakeAddress = async (): Promise<string> => {
