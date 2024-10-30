@@ -238,14 +238,14 @@ export class CardanoEngine extends CurrencyEngine<
       })
       const clean = asKoiosBalance(raw)
 
-      const mainnetBal = clean[0]?.balance ?? '0'
-      this.updateBalance(this.currencyInfo.currencyCode, mainnetBal)
-
       // Merge unseen utxos into wallet state:
       const networkUtxos = clean[0]?.utxo_set ?? []
       for (const utxo of networkUtxos) {
         this.addUnseenUtxo(utxo)
       }
+
+      // Network balance may be out of date, so we'll calculate it from utxos:
+      this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
     } catch (e) {
       this.log.warn('queryBalance error: ', e)
     }
@@ -534,6 +534,9 @@ export class CardanoEngine extends CurrencyEngine<
         })
       }
     })
+
+    // Update balance incase the UTXO set changed:
+    this.updateBalanceFromUtxos(this.currencyInfo.currencyCode)
   }
 
   async signTx(
@@ -633,6 +636,11 @@ export class CardanoEngine extends CurrencyEngine<
     this.utxos = this.utxos.filter(
       utxo => !voutsSet.has(`${utxo.tx_hash}_${utxo.tx_index}`)
     )
+  }
+
+  private updateBalanceFromUtxos(currencyCode: string): void {
+    const balance = this.utxos.reduce((acc, utxo) => add(acc, utxo.value), '0')
+    this.updateBalance(currencyCode, balance)
   }
 
   getStakeAddress = async (): Promise<string> => {
