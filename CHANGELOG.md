@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.27.0 (2024-10-31)
+
+- added: Add Toncoin (TON)
+
 ## 4.26.3 (2024-10-30)
 
 - fixed: (ADA) Improved balance calculation by deriving from UTXO state.
