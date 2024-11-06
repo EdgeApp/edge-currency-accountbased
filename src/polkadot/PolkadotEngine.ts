@@ -7,9 +7,12 @@ import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyInfo,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
+  EdgeTokenId,
+  EdgeTokenMap,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -32,12 +35,15 @@ import {
 } from '../common/utils'
 import { PolkadotTools } from './PolkadotTools'
 import {
+  asLiberlandMeritsResponse,
+  asLiberlandTransfersResponse,
   asPolkadotWalletOtherData,
   asPolkapolkadotPrivateKeys,
   asSafePolkadotWalletInfo,
   asSubscanResponse,
   asTransactions,
   asTransfer,
+  LiberlandTransfer,
   PolkadotNetworkInfo,
   PolkadotWalletOtherData,
   SafePolkadotWalletInfo,
@@ -86,6 +92,35 @@ export class PolkadotEngine extends CurrencyEngine<
       // API returns valid response for empty accounts. For other errors just assume the recipient's account is sufficient.
       return this.minimumAddressBalance
     }
+  }
+
+  async fetchLiberlandScan(
+    endpoint: string,
+    operationName: string,
+    query: string,
+    variables: JsonObject
+  ): Promise<any> {
+    const body = {
+      operationName,
+      variables,
+      query
+    }
+
+    const options = {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+
+    const response = await this.fetchCors(endpoint, options)
+    if (!response.ok) {
+      throw new Error(`Liberland API failed with status ${response.status}`)
+    }
+    const out = await response.json()
+    return out
   }
 
   async fetchSubscan(
@@ -210,6 +245,238 @@ export class PolkadotEngine extends CurrencyEngine<
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  async queryLiberlandTransactions(): Promise<void> {
+    let hasNextPage = true
+    let endCursor = null
+    let processedCount = 0
+
+    const endpoint = this.networkInfo.liberlandScanUrl
+    if (endpoint == null) {
+      this.warn('`liberlandBaseUrl` not defined')
+      return
+    }
+
+    const userId = this.walletInfo.keys.publicKey
+
+    // LLD Transfers
+    while (hasNextPage) {
+      const transfersOperationName = 'Transfers'
+      const transfersQuery = `query Transfers($userId: String, $cursor: Cursor) {
+        transfers(
+          filter: {
+            or: [
+              { fromId: { equalTo: $userId } },
+              { toId: { equalTo: $userId } }
+            ]
+          },
+          after: $cursor,
+          first: 50,
+          orderBy: BLOCK_NUMBER_DESC
+        ) {
+          nodes {
+            id
+            fromId
+            toId
+            value
+            eventIndex
+            block {
+              number
+              timestamp
+              extrinsics {
+                nodes {
+                  hash
+                  id
+                  blockId
+                  signerId
+                  events {
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }`
+
+      try {
+        const transfersResponse = await this.fetchLiberlandScan(
+          endpoint,
+          transfersOperationName,
+          transfersQuery,
+          {
+            userId,
+            cursor: endCursor
+          }
+        )
+        const cleanTransfersResponse =
+          asLiberlandTransfersResponse(transfersResponse)
+
+        const transfers = cleanTransfersResponse.data.transfers.nodes
+        hasNextPage = cleanTransfersResponse.data.transfers.pageInfo.hasNextPage
+        endCursor = cleanTransfersResponse.data.transfers.pageInfo.endCursor
+
+        for (const tx of transfers) {
+          const edgeTransaction = processLiberlandTransaction(
+            {
+              walletId: this.walletId,
+              walletInfo: this.walletInfo,
+              currencyInfo: this.currencyInfo,
+              allTokensMap: this.allTokensMap,
+              tokenId: null
+            },
+            tx
+          )
+          if (edgeTransaction != null) {
+            if (
+              this.otherData.newestTxid[this.currencyInfo.currencyCode] ===
+              edgeTransaction.txid
+            ) {
+              hasNextPage = false
+              break
+            }
+
+            this.otherData.newestTxid[this.currencyInfo.currencyCode] =
+              edgeTransaction.txid
+            this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
+          }
+        }
+
+        // Update progress
+        const totalCount = cleanTransfersResponse.data.transfers.totalCount
+        processedCount += transfers.length
+
+        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+          totalCount === 0 ? 1 : processedCount / totalCount
+        this.updateOnAddressesChecked()
+      } catch (e: any) {
+        this.warn(`Error fetching Liberland transactions: ${e.message}`)
+        throw e
+      }
+    }
+
+    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.updateOnAddressesChecked()
+
+    // LLM Transfers. Endpoint only handles specifically the LLM token
+    hasNextPage = true
+    endCursor = null
+    const tokenId = '1'
+    const currencyCode = this.allTokensMap[tokenId].currencyCode
+
+    while (hasNextPage) {
+      const meritsOperationName = 'Merits'
+      const meritsQuery = `query Merits($userId: String, $cursor: Cursor) {  
+        merits(
+        filter: {or: [{fromId: {equalTo: $userId}}, {toId: {equalTo: $userId}}]}
+        after: $cursor
+        first: 50
+        orderBy: BLOCK_NUMBER_DESC
+        ) {
+          nodes {
+            id
+            fromId
+            toId
+            value
+            eventIndex
+            blockId
+            block {
+              number
+              timestamp
+              extrinsics {
+                nodes {
+                  hash
+                  id
+                  blockId
+                  signerId
+                  events {
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }`
+
+      try {
+        const meritsResponses = await this.fetchLiberlandScan(
+          endpoint,
+          meritsOperationName,
+          meritsQuery,
+          {
+            userId,
+            cursor: endCursor
+          }
+        )
+        const cleanMeritsResponse = asLiberlandMeritsResponse(meritsResponses)
+
+        const totalCount = cleanMeritsResponse.data.merits.totalCount
+        const meritTransfers = cleanMeritsResponse.data.merits.nodes
+        hasNextPage = cleanMeritsResponse.data.merits.pageInfo.hasNextPage
+        endCursor = cleanMeritsResponse.data.merits.pageInfo.endCursor
+
+        for (const tx of meritTransfers) {
+          const edgeTransaction = processLiberlandTransaction(
+            {
+              walletId: this.walletId,
+              walletInfo: this.walletInfo,
+              currencyInfo: this.currencyInfo,
+              allTokensMap: this.allTokensMap,
+              tokenId
+            },
+            tx
+          )
+          if (edgeTransaction != null) {
+            if (
+              this.otherData.newestTxid[currencyCode] === edgeTransaction.txid
+            ) {
+              hasNextPage = false
+              break
+            }
+
+            this.otherData.newestTxid[currencyCode] = edgeTransaction.txid
+            this.addTransaction(currencyCode, edgeTransaction)
+          }
+        }
+
+        // Update progress
+        processedCount += meritTransfers.length
+
+        this.tokenCheckTransactionsStatus[currencyCode] =
+          totalCount === 0 ? 1 : processedCount / totalCount
+        this.updateOnAddressesChecked()
+      } catch (e: any) {
+        this.warn(`Error fetching Liberland transactions: ${e.message}`)
+        throw e
+      }
+    }
+
+    this.tokenCheckTransactionsStatus[currencyCode] = 1
+    this.updateOnAddressesChecked()
+
+    if (this.transactionsChangedArray.length > 0) {
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onTransactionsChanged(
+        this.transactionsChangedArray
+      )
+      this.transactionsChangedArray = []
+    }
+  }
+
   async queryTransactions(): Promise<void> {
     /*
     HACK: We cannot query transactions if a currency doesn't have a subscanBaseUrl
@@ -309,9 +576,16 @@ export class PolkadotEngine extends CurrencyEngine<
       () => {}
     )
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    if (this.networkInfo.liberlandScanUrl != null) {
+      this.addToLoop(
+        'queryLiberlandTransactions',
+        TRANSACTION_POLL_MILLISECONDS
+      ).catch(() => {})
+    }
+    if (this.networkInfo.subscanBaseUrl != null)
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
+        () => {}
+      )
     await super.startEngine()
   }
 
@@ -636,4 +910,81 @@ export async function makeCurrencyEngine(
   await engine.loadEngine()
 
   return engine
+}
+
+export interface LiberlandTxProcessingContext {
+  walletId: string
+  walletInfo: SafePolkadotWalletInfo
+  currencyInfo: EdgeCurrencyInfo
+  allTokensMap: EdgeTokenMap
+  tokenId: EdgeTokenId
+}
+
+// Not quite collision-proof but good enough for now
+const getHash = (tx: LiberlandTransfer): string => {
+  const id = tx.id
+  for (const node of tx.block.extrinsics.nodes) {
+    for (const event of node.events.nodes) {
+      if (event.id === id) {
+        return node.hash
+      }
+    }
+  }
+  throw new Error('No matching hash found')
+}
+
+export function processLiberlandTransaction(
+  context: LiberlandTxProcessingContext,
+  tx: LiberlandTransfer
+): EdgeTransaction | undefined {
+  const { fromId, value, block, id: extrinsicId } = tx
+  const { tokenId } = context
+
+  const blockHeight = parseInt(block.number)
+  const date = new Date(block.timestamp + 'Z').getTime() / 1000 // Convert timestamp to epoch seconds
+
+  const ourReceiveAddresses = []
+
+  let nativeAmount = value
+  const denom =
+    tokenId == null
+      ? getDenomination(
+          context.currencyInfo.currencyCode,
+          context.currencyInfo,
+          context.allTokensMap
+        )
+      : context.allTokensMap[tokenId].denominations[0]
+
+  if (denom == null) return
+
+  if (fromId === context.walletInfo.keys.publicKey) {
+    nativeAmount = `-${nativeAmount}`
+  } else {
+    ourReceiveAddresses.push(context.walletInfo.keys.publicKey)
+  }
+
+  const { currencyCode } =
+    tokenId == null ? context.currencyInfo : context.allTokensMap[tokenId]
+
+  const edgeTransaction: EdgeTransaction = {
+    blockHeight,
+    confirmations: 'confirmed',
+    currencyCode,
+    date,
+    isSend: nativeAmount.startsWith('-'),
+    memos: [],
+    nativeAmount,
+    networkFee: '0', // Fee data not provided by current `liberlandScanUrl`
+    ourReceiveAddresses,
+    signedTx: '',
+    tokenId,
+    txid: getHash(tx),
+    walletId: context.walletId,
+    otherParams: {
+      // HACK: Liberland explorer can't search by hashed txid, so use the extrinsicId
+      explorerPath:
+        tokenId == null ? `transfer/${extrinsicId}` : `merit/${extrinsicId}`
+    }
+  }
+  return edgeTransaction
 }

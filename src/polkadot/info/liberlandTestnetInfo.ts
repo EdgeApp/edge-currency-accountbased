@@ -26,7 +26,8 @@ const networkInfo: PolkadotNetworkInfo = {
   subscanBaseUrl: undefined,
   subscanQueryLimit: 100,
   partialFeeOffsetMultiplier: '2',
-  lengthFeePerByte: '76800000'
+  lengthFeePerByte: '76800000',
+  liberlandScanUrl: 'https://archive.testchain.liberland.org/graphql/'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -37,8 +38,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Explorers:
   addressExplorer: '',
-  transactionExplorer:
-    'https://polkadot.js.org/apps/?rpc=wss%%3A%%2F%%2Ftestchain.liberland.org%%2F#/explorer/query/%s',
+  transactionExplorer: '',
 
   denominations: [
     {
