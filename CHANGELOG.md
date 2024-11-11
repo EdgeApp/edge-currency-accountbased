@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.27.1 (2024-11-11)
+
 - fixed: (EVM) Fix performance regression caused by thrashing on network queries.
 
 ## 4.27.0 (2024-10-31)
