@@ -2080,7 +2080,7 @@ export const parseAction = ({
 
     case 'unstakefio':
       updateStakingStatus = {
-        nativeAmount,
+        nativeAmount: dataAmount,
         blockTime: action.block_time,
         txId: action.action_trace.trx_id,
         txName: actName
