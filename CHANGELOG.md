@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Fix performance regression caused by thrashing on network queries.
+
 ## 4.27.0 (2024-10-31)
 
 - added: Add Toncoin (TON)

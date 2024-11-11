@@ -24,6 +24,7 @@ import {
 } from './networkAdapters/types'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const NEEDS_LOOP_INTERVAL = 15000
 const NONCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BAL_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TXS_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -162,11 +163,15 @@ export class EthereumNetwork {
       tokenBalLastChecked: {},
       tokenTxsLastChecked: {}
     }
-    this.needsLoopTask = makePeriodicTask(this.needsLoop.bind(this), 1000, {
-      onError: error => {
-        this.ethEngine.log.warn('needsLoopTask error:', error)
+    this.needsLoopTask = makePeriodicTask(
+      this.needsLoop.bind(this),
+      NEEDS_LOOP_INTERVAL,
+      {
+        onError: error => {
+          this.ethEngine.log.warn('needsLoopTask error:', error)
+        }
       }
-    })
+    )
     this.networkAdapters = this.buildNetworkAdapters(this.ethEngine.networkInfo)
     this.walletId = ethEngine.walletInfo.id
   }
