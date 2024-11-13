@@ -40,7 +40,11 @@ interface EthereumNeeds {
    * is not defined, then the engine will always pull for address data; it
    * assume all needs are true.
    */
-  addressSync?: {
+  addressSync: {
+    // This should be true immediately after connecting to a network adapter.
+    needsInitialSync: boolean
+    // These are the txids that need to be checked from the
+    // subscribeAddressSync handler.
     needsTxids: string[]
   }
 }
@@ -145,9 +149,20 @@ export class EthereumNetwork {
   needsLoopTask: PeriodicTask
   networkAdapters: NetworkAdapter[]
 
+  // Add properties to manage websocket connections and retries
+  private readonly adapterConnections: Map<
+    NetworkAdapter,
+    'connected' | 'disconnected'
+  > = new Map()
+
   constructor(ethEngine: EthereumEngine) {
     this.ethEngine = ethEngine
-    this.ethNeeds = {}
+    this.ethNeeds = {
+      addressSync: {
+        needsInitialSync: true,
+        needsTxids: []
+      }
+    }
     this.needsLoopTask = makePeriodicTask(
       this.needsLoop.bind(this),
       NEEDS_LOOP_INTERVAL,
@@ -163,19 +178,12 @@ export class EthereumNetwork {
 
   private setupAdapterSubscriptions(): void {
     const handleSubscribeAddressSync = (txid?: string): void => {
-      if (this.ethNeeds.addressSync == null) {
-        this.ethNeeds.addressSync = {
-          needsTxids: []
-        }
-      } else {
-        if (txid != null) {
-          this.ethNeeds.addressSync = {
-            needsTxids: [...this.ethNeeds.addressSync.needsTxids, txid]
-          }
-        }
+      if (txid != null) {
+        this.ethNeeds.addressSync.needsTxids.push(txid)
       }
     }
-    this.qualifyNetworkAdapters('subscribeAddressSync').forEach(adapter => {
+    const adapters = this.qualifyNetworkAdapters('subscribeAddressSync')
+    adapters.forEach(adapter => {
       adapter.subscribeAddressSync(
         this.ethEngine.walletLocalData.publicKey,
         handleSubscribeAddressSync
@@ -414,16 +422,37 @@ export class EthereumNetwork {
     }
   }
 
-  protected shouldCheckAndUpdateTxsOrBalances(): boolean {
-    // We should check txs and balances if:
-    return (
-      // The wallet is still doing initial sync:
-      !this.ethEngine.addressesChecked ||
-      // The wallet has no push-based syndication state:
-      this.ethNeeds.addressSync == null ||
-      // The wallet has txs that need to be checked:
-      this.ethNeeds.addressSync.needsTxids.length > 0
+  private isAnAdapterConnected(): boolean {
+    return [...this.adapterConnections.values()].some(
+      status => status === 'connected'
     )
+  }
+
+  protected shouldCheckAndUpdateTxsOrBalances(): boolean {
+    if (!this.ethEngine.addressesChecked) {
+      // The wallet is still doing initial sync
+      return true
+    }
+
+    if (this.isAnAdapterConnected()) {
+      // Conditions only while the wallet is connected to a network adapter
+
+      if (this.ethNeeds.addressSync.needsInitialSync) {
+        // The wallet has no push-based syndication state:
+        return true
+      }
+
+      if (this.ethNeeds.addressSync.needsTxids.length > 0) {
+        // The wallet has txs that need to be checked:
+        return true
+      }
+
+      // The wallet has no checks needed:
+      return false
+    }
+
+    // The default is always to check
+    return true
   }
 
   processEthereumNetworkUpdate = (
@@ -509,8 +538,8 @@ export class EthereumNetwork {
 
       // Update addressSync state:
       if (
-        this.ethNeeds.addressSync != null &&
-        // Don't change address needs if address has not done it's initial sync
+        // Don't update address needs if the engine has not finished it's
+        // initial sync.
         this.ethEngine.addressesChecked
       ) {
         // Filter the txids that have been processed:
@@ -530,6 +559,10 @@ export class EthereumNetwork {
           }
         )
         this.ethNeeds.addressSync.needsTxids = updatedNeedsTxIds
+        // Since we've processed all the txids, we can set needsSync to false
+        // because we've done a sync. However, the engine will still poll for
+        // address data if there remains txids in the `needsTxIds`.
+        this.ethNeeds.addressSync.needsInitialSync = false
       }
     }
 
@@ -552,7 +585,18 @@ export class EthereumNetwork {
 
   connectNetworkAdapters(): void {
     this.qualifyNetworkAdapters('connect').forEach(adapter => {
-      adapter.connect()
+      adapter.connect(isConnected => {
+        if (isConnected) {
+          this.ethEngine.log('Adapter connected')
+          this.adapterConnections.set(adapter, 'connected')
+        } else {
+          this.ethEngine.log('Adapter disconnected')
+          this.adapterConnections.set(adapter, 'disconnected')
+          // This allows for the engine to poll from addresses once again when an
+          // adapter reconnects.
+          this.ethNeeds.addressSync.needsInitialSync = true
+        }
+      })
     })
   }
 

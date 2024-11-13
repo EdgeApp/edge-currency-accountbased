@@ -41,6 +41,8 @@ export type NetworkAdapterUpdateMethod = keyof Pick<
   | 'fetchTxs'
 >
 
+export type ConnectionChangeHandler = (isConnected: boolean) => void
+
 export abstract class NetworkAdapter<
   Config extends NetworkAdapterConfig = NetworkAdapterConfig
 > {
@@ -56,7 +58,7 @@ export abstract class NetworkAdapter<
     | ((tx: EdgeTransaction) => Promise<BroadcastResults>)
     | null
 
-  abstract connect: (() => void) | null
+  abstract connect: ((cb?: ConnectionChangeHandler) => void) | null
 
   abstract disconnect: (() => void) | null
 

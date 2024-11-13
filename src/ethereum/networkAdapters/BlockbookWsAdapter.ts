@@ -5,7 +5,7 @@ import { makePeriodicTask, PeriodicTask } from '../../common/periodicTask'
 import { pickRandomOne } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { EthereumInitOptions } from '../ethereumTypes'
-import { NetworkAdapter } from './types'
+import { ConnectionChangeHandler, NetworkAdapter } from './types'
 
 export interface BlockbookWsAdapterConfig {
   type: 'blockbook-ws'
@@ -80,6 +80,7 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
   private isConnected: Promise<boolean> = Promise.resolve(false)
   private readonly pingTask: PeriodicTask
   private reconnectTries: number = 0
+  private handleConnection?: ConnectionChangeHandler
   pingIntervalId: NodeJS.Timer | undefined
 
   constructor(engine: EthereumEngine, config: BlockbookWsAdapterConfig) {
@@ -91,13 +92,14 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
     this.pingTask = makePeriodicTask(this.ping, KEEP_ALIVE_MS)
   }
 
-  connect = (): void => {
+  connect = (handleConnection?: ConnectionChangeHandler): void => {
     const wsUrl = this.getWsUrl()
     // @ts-expect-error
     const ws: StandardWebSocket = new WebSocket(wsUrl)
 
     // Set the WebSocket instance
     this.ws = ws
+    this.handleConnection = handleConnection ?? this.handleConnection
 
     this.isConnected = new Promise(resolve => {
       const connectionFailure = (): void => {
@@ -117,15 +119,20 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
       ws.addEventListener('open', () => {
         this.reconnectTries = 0
         this.pingTask.start()
+        if (this.handleConnection != null) this.handleConnection(true)
       })
 
       // Connection failure:
-      ws.addEventListener('error', () => {
+      ws.addEventListener('close', () => {
         const delay = this.backoffInterval()
-        console.warn(
-          `WebSocket connection closed do to error. Retrying in ${delay}ms`
-        )
+        console.warn(`WebSocket connection closed. Retrying in ${delay}ms`)
         setTimeout(() => this.reconnect(), delay)
+        if (this.handleConnection != null) this.handleConnection(false)
+      })
+
+      // Connection error:
+      ws.addEventListener('error', error => {
+        console.warn(`WebSocket error`, error)
       })
 
       // Connection message:
@@ -161,6 +168,7 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
     this.isConnected = Promise.resolve(false)
     this.pingTask.stop()
     this.subscriptions.clear()
+    if (this.handleConnection != null) this.handleConnection(false)
   }
 
   subscribeAddressSync = async (
