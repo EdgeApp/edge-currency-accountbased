@@ -57,7 +57,7 @@ const asBlockbookAddressUpdateMessage = asJSON(
 //
 
 const KEEP_ALIVE_MS = 50000 // interval at which we keep the connection alive
-const BACKOFF_MIN_MS = 60000 // 1000
+const BACKOFF_MIN_MS = 1000
 const BACKOFF_MAX_MS = 60000
 
 //
