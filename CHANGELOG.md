@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fixed: (ETH) Improved and re-enabled BlockbookWsAdapter integration
 - fixed: (FIO) Fix unstakefio amount saved to `stakedAmounts`
 
 ## 4.27.1 (2024-11-11)
