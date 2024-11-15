@@ -1,9 +1,9 @@
 import { add, eq, gt, mul, sub } from 'biggystring'
 import {
+  EdgeAddress,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
-  EdgeFreshAddress,
   EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -557,27 +557,39 @@ export class ZcashEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
-  async getFreshAddress(): Promise<EdgeFreshAddress> {
-    const getSynchronizerAddresses = async (): Promise<EdgeFreshAddress> => {
+  async getAddresses(): Promise<EdgeAddress[]> {
+    const getSynchronizerAddresses = async (): Promise<EdgeAddress[]> => {
       const synchronizer = await this.synchronizerPromise
-      const { unifiedAddress } = await synchronizer.deriveUnifiedAddress()
-      this.otherData.cachedAddress = unifiedAddress
+      const { saplingAddress, transparentAddress, unifiedAddress } =
+        await synchronizer.deriveUnifiedAddress()
+      const addresses: EdgeAddress[] = [
+        {
+          addressType: 'unifiedAddress',
+          publicAddress: unifiedAddress
+        },
+        {
+          addressType: 'saplingAddress',
+          publicAddress: saplingAddress
+        },
+        {
+          addressType: 'transparentAddress',
+          publicAddress: transparentAddress
+        }
+      ]
+
+      this.otherData.cachedAddresses = addresses
       this.walletLocalDataDirty = true
 
-      return {
-        publicAddress: unifiedAddress
-      }
+      return addresses
     }
 
-    if (this.otherData.cachedAddress == null) {
+    if (this.otherData.cachedAddresses == null) {
       return await getSynchronizerAddresses()
     } else {
       getSynchronizerAddresses().catch(e => {
         throw e
       })
-      return {
-        publicAddress: this.otherData.cachedAddress
-      }
+      return this.otherData.cachedAddresses
     }
   }
 }

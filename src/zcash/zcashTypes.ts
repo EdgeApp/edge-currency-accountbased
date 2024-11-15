@@ -7,9 +7,11 @@ import {
   asObject,
   asOptional,
   asString,
+  asTuple,
   asValue,
   Cleaner
 } from 'cleaners'
+import { EdgeAddress } from 'edge-core-js/types'
 import type {
   Addresses,
   BalanceEvent,
@@ -39,8 +41,24 @@ export interface ZcashNetworkInfo {
   defaultNetworkFee: string
 }
 
+const asCachedEdgeAddresses = asTuple<EdgeAddress[]>(
+  asObject({
+    addressType: asValue('unifiedAddress'),
+    publicAddress: asString
+  }),
+  asObject({
+    addressType: asValue('saplingAddress'),
+    publicAddress: asString
+  }),
+  asObject({
+    addressType: asValue('transparentAddress'),
+    publicAddress: asString
+  })
+)
+export type CachedEdgeAddresses = ReturnType<typeof asCachedEdgeAddresses>
+
 export const asZcashWalletOtherData = asObject({
-  cachedAddress: asMaybe(asString),
+  cachedAddresses: asMaybe(asCachedEdgeAddresses),
   missingAndroidShieldedMemosHack: asMaybe(asArray(asString), () => []),
   isSdkInitializedOnDisk: asMaybe(asBoolean, false)
 })
