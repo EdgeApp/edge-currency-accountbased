@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.28.0 (2024-11-21)
+
 - added: (LLD/LLM) Tx history support
 - fixed: (FIO) Fix unstakefio amount saved to `stakedAmounts`
 
