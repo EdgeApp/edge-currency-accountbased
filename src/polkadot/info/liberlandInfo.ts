@@ -29,7 +29,8 @@ const networkInfo: PolkadotNetworkInfo = {
   subscanBaseUrl: undefined,
   subscanQueryLimit: 100,
   partialFeeOffsetMultiplier: '2',
-  lengthFeePerByte: '76800000'
+  lengthFeePerByte: '76800000',
+  liberlandScanUrl: 'https://archive.mainnet.liberland.org/'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -39,9 +40,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:liberland',
 
   // Explorers:
-  addressExplorer: '',
-  transactionExplorer:
-    'https://polkadot.js.org/apps/?rpc=wss%%3A%%2F%%2Fmainnet.liberland.org%%2F#/explorer/query/%s',
+  addressExplorer: 'https://chainscan.mainnet.liberland.org/account/%s',
+  transactionExplorer: 'https://chainscan.mainnet.liberland.org/%s',
 
   denominations: [
     {

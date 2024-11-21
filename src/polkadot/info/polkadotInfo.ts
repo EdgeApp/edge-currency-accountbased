@@ -14,7 +14,8 @@ const networkInfo: PolkadotNetworkInfo = {
   subscanBaseUrl: 'https://polkadot.api.subscan.io/api',
   subscanQueryLimit: 100,
   partialFeeOffsetMultiplier: '1',
-  lengthFeePerByte: '1000000'
+  lengthFeePerByte: '1000000',
+  liberlandScanUrl: undefined
 }
 
 const currencyInfo: EdgeCurrencyInfo = {

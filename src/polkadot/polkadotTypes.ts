@@ -19,11 +19,13 @@ export interface PolkadotNetworkInfo {
   subscanBaseUrl: string | undefined
   subscanQueryLimit: number
   lengthFeePerByte: string
+  liberlandScanUrl: string | undefined
   partialFeeOffsetMultiplier: string
 }
 
 export const asPolkadotWalletOtherData = asObject({
-  txCount: asMaybe(asNumber, 0)
+  txCount: asMaybe(asNumber, 0),
+  newestTxid: asMaybe(asObject(asString), () => ({}))
 })
 
 export type PolkadotWalletOtherData = ReturnType<
@@ -89,6 +91,61 @@ export const asPolkapolkadotPrivateKeys = (
     }
   )
 }
+
+export const asLiberlandTransfer = asObject({
+  id: asString,
+  fromId: asString,
+  toId: asString,
+  value: asString,
+  eventIndex: asNumber,
+  block: asObject({
+    number: asString,
+    timestamp: asString,
+    extrinsics: asObject({
+      nodes: asArray(
+        asObject({
+          hash: asString,
+          // id
+          // blockId
+          // signerId
+          events: asObject({
+            nodes: asArray(
+              asObject({
+                id: asString
+              })
+            )
+          })
+        })
+      )
+    })
+  })
+})
+export type LiberlandTransfer = ReturnType<typeof asLiberlandTransfer>
+
+export const asLiberlandPageInfo = asObject({
+  hasNextPage: asBoolean,
+  endCursor: asOptional(asString)
+})
+
+export const asLiberlandTransfersResponse = asObject({
+  data: asObject({
+    transfers: asObject({
+      nodes: asArray(asLiberlandTransfer),
+      pageInfo: asLiberlandPageInfo,
+      totalCount: asNumber
+    })
+  })
+})
+
+export const asLiberlandMeritsResponse = asObject({
+  data: asObject({
+    merits: asObject({
+      nodes: asArray(asLiberlandTransfer),
+      pageInfo: asLiberlandPageInfo,
+      totalCount: asNumber
+    })
+  })
+})
 
 //
 // Info Payload
