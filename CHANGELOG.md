@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (XRP) Add destination tag to processed transactions
 - changed: (XRP) Check recipient trust lines before sending token
 - fixed: `parseUri` case sensitivity when looking for matching builtin token contract addresses
 
