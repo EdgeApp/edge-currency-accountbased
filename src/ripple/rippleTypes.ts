@@ -44,6 +44,7 @@ export type XrpWalletOtherData = ReturnType<typeof asXrpWalletOtherData>
 
 export const asXrpTransaction = asObject({
   date: asNumber,
+  DestinationTag: asOptional(asNumber),
   hash: asString,
   Fee: asOptional(asString),
   ledger_index: asNumber

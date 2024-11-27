@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (XRP) Add destination tag to processed transactions
+
 ## 4.28.0 (2024-11-21)
 
 - added: (LLD/LLM) Tx history support
