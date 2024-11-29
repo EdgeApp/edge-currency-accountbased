@@ -125,16 +125,14 @@ export class StellarTools implements EdgeCurrencyTools {
   }
 
   async parseUri(uri: string): Promise<EdgeParsedUri> {
-    const networks = {}
-    // @ts-expect-error
+    const networks: Record<string, boolean> = {}
     networks[URI_PREFIX] = true
     const STELLAR_SEP007_PREFIX = `${URI_PREFIX}:pay`
 
     if (uri.includes(STELLAR_SEP007_PREFIX)) {
       const parsedUri = parse(uri, {}, true)
       const addr = parsedUri.query.destination
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-      if (addr) {
+      if (addr != null) {
         uri = uri.replace(STELLAR_SEP007_PREFIX, `${URI_PREFIX}:${addr}`)
       }
     }
@@ -146,32 +144,27 @@ export class StellarTools implements EdgeCurrencyTools {
       builtinTokens: this.builtinTokens
     })
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing
-    const valid = this.checkAddress(edgeParsedUri.publicAddress || '')
+    const valid = this.checkAddress(edgeParsedUri.publicAddress ?? '')
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.msg) {
+    if (parsedUri.query.msg != null) {
       edgeParsedUri.metadata = {
         notes: parsedUri.query.msg
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.asset_code) {
+    if (parsedUri.query.asset_code != null) {
       if (parsedUri.query.asset_code.toUpperCase() !== 'XLM') {
         throw new Error('ErrorInvalidCurrencyCode')
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.memo_type) {
+    if (parsedUri.query.memo_type != null) {
       if (parsedUri.query.memo_type !== 'MEMO_ID') {
         throw new Error('ErrorInvalidMemoType')
       }
     }
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (parsedUri.query.memo) {
+    if (parsedUri.query.memo != null) {
       const m = add(parsedUri.query.memo, '0')
       // Check if the memo is an integer
       if (m !== parsedUri.query.memo) {
