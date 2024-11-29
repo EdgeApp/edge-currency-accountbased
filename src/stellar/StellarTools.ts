@@ -164,14 +164,18 @@ export class StellarTools implements EdgeCurrencyTools {
         throw new Error('ErrorInvalidMemoType')
       }
     }
-    if (parsedUri.query.memo != null) {
-      const m = add(parsedUri.query.memo, '0')
+
+    // Pick either the memo or the destination tag as uniqueIdentifier
+    const uniqueIdentifier = parsedUri.query.memo ?? parsedUri.query.dt
+    if (uniqueIdentifier != null) {
+      const m = add(uniqueIdentifier, '0')
       // Check if the memo is an integer
-      if (m !== parsedUri.query.memo) {
+      if (m !== uniqueIdentifier) {
         throw new Error('ErrorInvalidMemoId')
       }
-      edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
+      edgeParsedUri.uniqueIdentifier = uniqueIdentifier
     }
+
     return edgeParsedUri
   }
 
