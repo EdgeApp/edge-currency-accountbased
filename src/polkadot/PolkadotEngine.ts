@@ -236,6 +236,7 @@ export class PolkadotEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee: fee,
+      networkFees: [],
       ourReceiveAddresses,
       signedTx: '',
       tokenId: null,
@@ -773,6 +774,7 @@ export class PolkadotEngine extends CurrencyEngine<
       memos,
       nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
+      networkFees: [],
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
@@ -975,6 +977,7 @@ export function processLiberlandTransaction(
     memos: [],
     nativeAmount,
     networkFee: '0', // Fee data not provided by current `liberlandScanUrl`
+    networkFees: [],
     ourReceiveAddresses,
     signedTx: '',
     tokenId,

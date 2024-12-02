@@ -256,6 +256,7 @@ export class StellarEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {
         fromAddress,
         toAddress
@@ -569,6 +570,7 @@ export class StellarEngine extends CurrencyEngine<
       memos,
       nativeAmount, // nativeAmount
       networkFee, // networkFee
+      networkFees: [],
       otherParams: {
         idInternal,
         fromAddress: this.walletLocalData.publicKey,

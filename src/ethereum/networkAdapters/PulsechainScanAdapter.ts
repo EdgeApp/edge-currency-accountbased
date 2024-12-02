@@ -168,6 +168,7 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams,
       ourReceiveAddresses,
       parentNetworkFee,

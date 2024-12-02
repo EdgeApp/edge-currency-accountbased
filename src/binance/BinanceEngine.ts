@@ -193,6 +193,7 @@ export class BinanceEngine extends CurrencyEngine<
       },
       nativeAmount: netNativeAmount,
       networkFee: nativeNetworkFee,
+      networkFees: [],
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
       tokenId: null,
@@ -439,6 +440,7 @@ export class BinanceEngine extends CurrencyEngine<
       memos,
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
+      networkFees: [],
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx

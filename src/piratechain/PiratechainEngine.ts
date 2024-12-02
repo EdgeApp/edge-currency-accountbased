@@ -279,6 +279,7 @@ export class PiratechainEngine extends CurrencyEngine<
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
@@ -410,6 +411,7 @@ export class PiratechainEngine extends CurrencyEngine<
       memos,
       nativeAmount: txNativeAmount,
       networkFee: this.networkInfo.defaultNetworkFee,
+      networkFees: [],
       ourReceiveAddresses: [],
       signedTx: '',
       tokenId,

@@ -1177,6 +1177,7 @@ export class EthereumEngine extends CurrencyEngine<
       memos,
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee
+      networkFees: [],
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx

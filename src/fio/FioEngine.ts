@@ -1648,6 +1648,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       memos,
       nativeAmount: `-${add(nativeAmount, fee)}`,
       networkFee: `${fee}`,
+      networkFees: [],
       otherParams: {
         ...otherParams,
         txParams
@@ -2197,6 +2198,7 @@ export const parseAction = ({
     memos: [],
     nativeAmount,
     networkFee,
+    networkFees: [],
     otherParams,
     ourReceiveAddresses,
     signedTx: '',

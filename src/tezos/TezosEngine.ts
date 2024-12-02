@@ -278,6 +278,7 @@ export class TezosEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses,
       signedTx: '',
@@ -473,6 +474,7 @@ export class TezosEngine extends CurrencyEngine<
       memos,
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {
         idInternal: 0,
         fromAddress: this.walletLocalData.publicKey,

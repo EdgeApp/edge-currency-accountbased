@@ -186,6 +186,7 @@ export class XrpEngine extends CurrencyEngine<
             metadata,
             nativeAmount: `-${add(fromNativeAmount, networkFee)}`,
             networkFee,
+            networkFees: [],
             otherParams: {
               xrpTransaction
             },
@@ -509,6 +510,7 @@ export class XrpEngine extends CurrencyEngine<
             memos: [],
             nativeAmount,
             networkFee,
+            networkFees: [],
             otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
@@ -547,6 +549,7 @@ export class XrpEngine extends CurrencyEngine<
             memos: [],
             nativeAmount,
             networkFee: '0',
+            networkFees: [],
             otherParams: {},
             ourReceiveAddresses,
             signedTx: '',
@@ -827,6 +830,7 @@ export class XrpEngine extends CurrencyEngine<
         metadata: edgeSpendInfo.metadata,
         nativeAmount: `-${networkFee}`,
         networkFee,
+        networkFees: [],
         otherParams: {
           xrpTransaction
         },
@@ -948,6 +952,7 @@ export class XrpEngine extends CurrencyEngine<
       memos: [],
       nativeAmount, // nativeAmount
       networkFee,
+      networkFees: [],
       otherParams,
       ourReceiveAddresses: [], // ourReceiveAddresses
       parentNetworkFee,

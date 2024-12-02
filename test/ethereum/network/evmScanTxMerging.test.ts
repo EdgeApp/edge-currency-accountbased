@@ -22,6 +22,7 @@ describe(`mergeEdgeTransactions for native currency transactions`, function () {
     memos: [],
     nativeAmount: '0',
     networkFee: '0',
+    networkFees: [],
     otherParams: {
       from: [abeAddress],
       to: [bobAddress],
@@ -178,6 +179,7 @@ describe(`mergeEdgeTransactions for token transactions`, function () {
     memos: [],
     nativeAmount: '0',
     networkFee: '0',
+    networkFees: [],
     parentNetworkFee: '0',
     otherParams: {
       from: [abeAddress],

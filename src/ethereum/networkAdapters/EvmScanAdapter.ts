@@ -493,6 +493,7 @@ export function processEvmScanTransaction(
     memos: [],
     nativeAmount,
     networkFee,
+    networkFees: [],
     otherParams,
     ourReceiveAddresses,
     parentNetworkFee,

@@ -274,6 +274,7 @@ export class FilecoinEngine extends CurrencyEngine<
       memos,
       nativeAmount: txNativeAmount,
       networkFee,
+      networkFees: [],
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
@@ -624,6 +625,7 @@ export class FilecoinEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',
@@ -662,6 +664,7 @@ export class FilecoinEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',

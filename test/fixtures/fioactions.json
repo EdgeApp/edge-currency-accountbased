@@ -1108,6 +1108,7 @@
         "memos": [],
         "nativeAmount": "166446025000000",
         "networkFee": "0",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",
@@ -1144,6 +1145,7 @@
         "memos": [],
         "nativeAmount": "-165003643673507",
         "networkFee": "3643673507",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",
@@ -1178,6 +1180,7 @@
         "memos": [],
         "nativeAmount": "152990522000000",
         "networkFee": "0",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",
@@ -1214,6 +1217,7 @@
         "memos": [],
         "nativeAmount": "-152992554923604",
         "networkFee": "2032923604",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",
@@ -1248,6 +1252,7 @@
         "memos": [],
         "nativeAmount": "-110002750237207",
         "networkFee": "2750237207",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",
@@ -1282,6 +1287,7 @@
         "memos": [],
         "nativeAmount": "114519653000000",
         "networkFee": "0",
+        "networkFees": [],
         "otherParams": {
           "account": "fio.token",
           "name": "trnsfiopubky",

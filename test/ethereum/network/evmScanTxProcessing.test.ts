@@ -74,6 +74,7 @@ export const testCases: TestCase[] = [
       memos: [],
       nativeAmount: '-247658803965488',
       networkFee: '247658803965488',
+      networkFees: [],
       otherParams: {
         from: ['0x036639f209f2ebcde65a3f7896d05a4941d20373'],
         to: ['0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'],
@@ -137,6 +138,7 @@ export const testCases: TestCase[] = [
       memos: [],
       nativeAmount: '-247658803965488',
       networkFee: '247658803965488',
+      networkFees: [],
       otherParams: {
         from: ['0x036639f209f2ebcde65a3f7896d05a4941d20373'],
         to: ['0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'],
@@ -200,6 +202,7 @@ export const testCases: TestCase[] = [
       memos: [],
       nativeAmount: '-247658803965488',
       networkFee: '247658803965488',
+      networkFees: [],
       otherParams: {
         from: ['0x036639f209f2ebcde65a3f7896d05a4941d20373'],
         to: ['0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'],
@@ -263,6 +266,7 @@ export const testCases: TestCase[] = [
       memos: [],
       nativeAmount: '-247658803965488',
       networkFee: '247658803965488',
+      networkFees: [],
       otherParams: {
         from: ['0x036639f209f2ebcde65a3f7896d05a4941d20373'],
         to: ['0x2260fac5e5542a773aa44fbcfedf7c193bc2c599'],

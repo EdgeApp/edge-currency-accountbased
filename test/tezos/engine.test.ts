@@ -160,6 +160,7 @@ describe(`Tezos engine`, function () {
       memos: [],
       nativeAmount: '-3002650',
       networkFee: '2650',
+      networkFees: [],
       otherParams: {
         idInternal: 0,
         fromAddress: 'tz1TC6ETpRC1awG3Sq226TgMx4wHbJRTzod6',

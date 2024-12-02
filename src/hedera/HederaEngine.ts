@@ -249,6 +249,7 @@ export class HederaEngine extends CurrencyEngine<
         memos: [],
         nativeAmount,
         networkFee: tx.charged_tx_fee.toString(), // networkFee
+        networkFees: [],
         otherParams: {
           consensusAt: tx.consensus_timestamp
         },
@@ -365,6 +366,7 @@ export class HederaEngine extends CurrencyEngine<
       nativeAmount: `-${nativeAmount}`,
       // UI shows the fee subtracted from the sent amount which doesn't make sense here
       networkFee, // networkFee
+      networkFees: [],
       otherParams: {
         fromAddress: this.walletLocalData.publicKey,
         toAddress: publicAddress,

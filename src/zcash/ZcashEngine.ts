@@ -311,6 +311,7 @@ export class ZcashEngine extends CurrencyEngine<
       memos: edgeMemos,
       nativeAmount: netNativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses: [], // Not accessible from SDK and unified addresses are deterministic
       signedTx: raw ?? '',
@@ -507,6 +508,7 @@ export class ZcashEngine extends CurrencyEngine<
       memos,
       nativeAmount: txNativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {
         proposalBase64: proposal.proposalBase64
       },

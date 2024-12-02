@@ -578,6 +578,7 @@
         "memos": [],
         "nativeAmount": "2000000000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -594,6 +595,7 @@
         "memos": [],
         "nativeAmount": "100000000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -610,6 +612,7 @@
         "memos": [],
         "nativeAmount": "100000000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -626,6 +629,7 @@
         "memos": [],
         "nativeAmount": "101000000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -642,6 +646,7 @@
         "memos": [],
         "nativeAmount": "15995000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -658,6 +663,7 @@
         "memos": [],
         "nativeAmount": "13460000",
         "networkFee": "0",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],
@@ -674,6 +680,7 @@
         "memos": [],
         "nativeAmount": "-132899317",
         "networkFee": "168317",
+        "networkFees": [],
         "ourReceiveAddresses": [
           "addr_test1qzn854grsysvrgwynsnve629589nkdp0k5a2l2k0jhur090fzuaa62z9yp3w5nyhl03rzvpa3zdpgqaqjgmvyhx46j3snvc7tr"
         ],

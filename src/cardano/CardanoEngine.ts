@@ -496,6 +496,7 @@ export class CardanoEngine extends CurrencyEngine<
       memos,
       nativeAmount, // nativeAmount
       networkFee: nativeNetworkFee, // networkFee, supposedly fixed
+      networkFees: [],
       otherParams, // otherParams
       ourReceiveAddresses: [], // ourReceiveAddresses
       signedTx: '', // signedTx
@@ -704,6 +705,7 @@ export class CardanoEngine extends CurrencyEngine<
       memos: [],
       nativeAmount,
       networkFee: nativeNetworkFee,
+      networkFees: [],
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
@@ -797,6 +799,7 @@ export const processCardanoTransaction = (opts: {
     memos: [],
     nativeAmount: netNativeAmount,
     networkFee: isSend ? fee : '0',
+    networkFees: [],
     ourReceiveAddresses: [...ourReceiveAddressesSet.values()], // blank if you sent money otherwise array of addresses that are yours in this transaction
     signedTx: '',
     tokenId,

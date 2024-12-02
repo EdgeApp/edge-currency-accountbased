@@ -310,6 +310,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       memos: [],
       nativeAmount,
       networkFee,
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses, // blank if you sent money otherwise array of addresses that are yours in this transaction
       signedTx: '',

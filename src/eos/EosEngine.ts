@@ -280,6 +280,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       },
       nativeAmount,
       networkFee: '0',
+      networkFees: [],
       otherParams: {},
       ourReceiveAddresses,
       parentNetworkFee: '0',
@@ -372,6 +373,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         },
         nativeAmount,
         networkFee: '0',
+        networkFees: [],
         otherParams: { fromAddress: from, toAddress: to },
         ourReceiveAddresses,
         parentNetworkFee: '0',
@@ -902,6 +904,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         memos: [],
         nativeAmount: '-3',
         networkFee: '0',
+        networkFees: [],
         otherParams: {
           actions: transferActions,
           signatures: []
@@ -1070,6 +1073,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       memos,
       nativeAmount, // nativeAmount
       networkFee, // networkFee
+      networkFees: [],
       otherParams: {
         actions: transferActions,
         signatures: []
