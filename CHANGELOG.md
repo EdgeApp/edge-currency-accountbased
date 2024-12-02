@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (ETH) Improved and re-enabled BlockbookWsAdapter integration
+
 ## 4.28.0 (2024-11-21)
 
 - added: (LLD/LLM) Tx history support
