@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 4.29.0 (2024-12-02)
+
+- added: Added `getAddresses` to ZCash engine.
 - fixed: (ETH) Improved and re-enabled BlockbookWsAdapter integration
 
 ## 4.28.0 (2024-11-21)
