@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.30.0 (2024-12-03)
+
 - added: (XLM) Support uri's containing `dt=` in `parseUri()`
 
 ## 4.29.0 (2024-12-02)
