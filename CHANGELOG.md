@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Solana) Use stake-weighted RPC for broadcasting transactions
+
 ## 4.30.0 (2024-12-03)
 
 - added: (XLM) Support uri's containing `dt=` in `parseUri()`

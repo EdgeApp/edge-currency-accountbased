@@ -856,8 +856,13 @@ export class SolanaEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
+    const stakedConnections = this.tools.makeConnections(
+      this.networkInfo.stakedConnectionRpcNodes
+    )
+    const connections = [...this.tools.connections, ...stakedConnections]
+
     try {
-      const promises = this.tools.connections.map(async connection => {
+      const promises = connections.map(async connection => {
         return await connection.sendEncodedTransaction(edgeTransaction.signedTx)
       })
       const txid: TransactionSignature = await promiseAny(promises)

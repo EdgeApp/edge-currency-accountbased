@@ -15,6 +15,7 @@ import { asBase64, asSafeCommonWalletInfo } from '../common/types'
 export interface SolanaNetworkInfo {
   rpcNodes: string[]
   rpcNodesArchival: string[]
+  stakedConnectionRpcNodes: string[]
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number
   derivationPath: string
@@ -106,6 +107,7 @@ export interface ParsedTxAmount {
 
 export const asSolanaInitOptions = asObject({
   alchemyApiKey: asOptional(asString),
+  heliusApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString)
 })
 export type SolanaInitOptions = ReturnType<typeof asSolanaInitOptions>
