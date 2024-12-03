@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (XLM) Support uri's containing `dt=` in `parseUri()`
+
 ## 4.29.0 (2024-12-02)
 
 - added: Added `getAddresses` to ZCash engine.
