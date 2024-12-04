@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Solana) Use stake-weighted RPC for broadcasting transactions
+- changed: (Ripple) Set base reserve 1 XRP and token reserve to 0.2 XRP
 
 ## 4.30.0 (2024-12-03)
 

@@ -10,8 +10,8 @@ export const EST_BLOCK_TIME_MS = 3500
 const networkInfo: XrpNetworkInfo = {
   rippledServers: ['wss://s2.ripple.com', 'wss://xrplcluster.com'],
   defaultFee: '10', // in drops
-  baseReserve: '10000000',
-  baseReservePerToken: '2000000'
+  baseReserve: '1000000',
+  baseReservePerToken: '200000'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
