@@ -14,6 +14,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
+  EdgeLog,
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeToken,
@@ -48,6 +49,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   io: EdgeIo
+  log: EdgeLog
   networkInfo: SolanaNetworkInfo
   initOptions: SolanaInitOptions
   connections: Connection[]
@@ -55,10 +57,11 @@ export class SolanaTools implements EdgeCurrencyTools {
   clientCount: number
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, networkInfo } = env
+    const { builtinTokens, currencyInfo, io, log, networkInfo } = env
     this.builtinTokens = builtinTokens
     this.currencyInfo = currencyInfo
     this.io = io
+    this.log = log
     this.networkInfo = networkInfo
     this.initOptions = asSolanaInitOptions(env.initOptions)
     this.connections = []
@@ -191,7 +194,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   }
 
   rpcWithApiKey(serverUrl: string): string {
-    const apiKeys = asSolanaInitOptions(this.initOptions) as {
+    const apiKeys = this.initOptions as {
       [key: string]: string
     }
     const regex = /{{(.*)}}/g
@@ -212,18 +215,33 @@ export class SolanaTools implements EdgeCurrencyTools {
     return serverUrl
   }
 
+  makeConnections(rpcUrls: string[]): Connection[] {
+    const connectionConfig: ConnectionConfig = {
+      commitment: this.networkInfo.commitment,
+      // @ts-expect-error our fetch is close enough to the fetch api
+      fetch: this.io.fetchCors
+    }
+
+    const out: Connection[] = []
+    for (const url of rpcUrls) {
+      try {
+        const connection = new Connection(
+          this.rpcWithApiKey(url),
+          connectionConfig
+        )
+        out.push(connection)
+      } catch (e) {
+        this.log.warn('Error creating connection', e)
+      }
+    }
+    return out
+  }
+
   async connectClient(): Promise<void> {
     if (this.clientCount === 0) {
-      const connectionConfig: ConnectionConfig = {
-        commitment: this.networkInfo.commitment,
-        // @ts-expect-error our fetch is close enough to the fetch api
-        fetch: this.io.fetchCors
-      }
-      this.connections = this.networkInfo.rpcNodes.map(
-        url => new Connection(this.rpcWithApiKey(url), connectionConfig)
-      )
-      this.archiveConnections = this.networkInfo.rpcNodesArchival.map(
-        url => new Connection(this.rpcWithApiKey(url), connectionConfig)
+      this.connections = this.makeConnections(this.networkInfo.rpcNodes)
+      this.archiveConnections = this.makeConnections(
+        this.networkInfo.rpcNodesArchival
       )
     }
     ++this.clientCount
