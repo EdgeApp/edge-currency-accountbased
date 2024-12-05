@@ -84,7 +84,7 @@ const builtinTokens: EdgeTokenMap = {
   bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c: {
     currencyCode: 'WBNB',
     displayName: 'Wrapped BNB',
-    denominations: [{ name: 'BNB', multiplier: '1000000000000000000' }],
+    denominations: [{ name: 'WBNB', multiplier: '1000000000000000000' }],
     networkLocation: {
       contractAddress: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
     }
