@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fix WBNB denomination name
+
 ## 4.31.0 (2024-12-04)
 
 - added: (Solana) Use stake-weighted RPC for broadcasting transactions
