@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- removed: Deprecate Binance Beacon Chain
+
 ## 4.31.0 (2024-12-04)
 
 - added: (Solana) Use stake-weighted RPC for broadcasting transactions

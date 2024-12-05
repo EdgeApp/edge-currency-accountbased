@@ -75,7 +75,7 @@ module.exports = {
       path: require.resolve('path-browserify'),
       stream: require.resolve('stream-browserify'),
       string_decoder: require.resolve('string_decoder'),
-      // url: require.resolve('url'),
+      url: require.resolve('url'),
       vm: require.resolve('vm-browserify')
     }
   },

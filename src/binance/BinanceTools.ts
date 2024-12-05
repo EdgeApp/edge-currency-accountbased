@@ -1,6 +1,9 @@
-import { crypto } from '@binance-chain/javascript-sdk'
+import { stringToPath } from '@cosmjs/crypto'
+import { fromBech32 } from '@cosmjs/encoding'
+import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import { div } from 'biggystring'
-import { entropyToMnemonic } from 'bip39'
+import * as bip32 from 'bip32'
+import { entropyToMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39'
 import { Buffer } from 'buffer'
 import {
   EdgeCurrencyInfo,
@@ -12,6 +15,7 @@ import {
   EdgeTokenMap,
   EdgeWalletInfo
 } from 'edge-core-js/types'
+import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -22,13 +26,6 @@ import {
   BinanceInfoPayload,
   BinanceNetworkInfo
 } from './binanceTypes'
-
-const {
-  checkAddress,
-  getAddressFromPrivateKey,
-  getPrivateKeyFromMnemonic,
-  validateMnemonic
-} = crypto
 
 export class BinanceTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -57,26 +54,29 @@ export class BinanceTools implements EdgeCurrencyTools {
   }
 
   // will actually use MNEMONIC version of private key
-  async importPrivateKey(mnemonic: string): Promise<Object> {
-    const isValid = validateMnemonic(mnemonic)
+  async importPrivateKey(binanceMnemonic: string): Promise<Object> {
+    const isValid = validateMnemonic(binanceMnemonic)
     if (!isValid) throw new Error('Invalid BNB mnemonic')
-    const binanceKey = getPrivateKeyFromMnemonic(mnemonic)
 
-    return { binanceMnemonic: mnemonic, binanceKey }
+    const binanceKeyBytes = mnemonicToSeedSync(binanceMnemonic)
+    const master = bip32.fromSeed(binanceKeyBytes)
+    const child = master.derivePath(`44'/714'/0'/0/0`)
+    if (child.privateKey == null) {
+      throw new Error('child does not have a privateKey')
+    }
+
+    const binanceKey = child.privateKey.toString('hex')
+    return { binanceMnemonic, binanceKey }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
     const type = walletType.replace('wallet:', '')
+    if (type !== 'binance') throw new Error('InvalidWalletType')
 
-    if (type === 'binance') {
-      const entropy = Buffer.from(this.io.random(32)).toString('hex')
-      const binanceMnemonic = entropyToMnemonic(entropy)
-      const binanceKey = getPrivateKeyFromMnemonic(binanceMnemonic)
+    const entropy = Buffer.from(this.io.random(32))
+    const binanceMnemonic = entropyToMnemonic(entropy)
 
-      return { binanceMnemonic, binanceKey }
-    } else {
-      throw new Error('InvalidWalletType')
-    }
+    return await this.importPrivateKey(binanceMnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
@@ -85,13 +85,37 @@ export class BinanceTools implements EdgeCurrencyTools {
       let publicKey = ''
       let privateKey = walletInfo.keys.binanceKey
       if (typeof privateKey !== 'string') {
-        privateKey = getPrivateKeyFromMnemonic(walletInfo.keys.binanceMnemonic)
+        privateKey = base16.stringify(
+          mnemonicToSeedSync(walletInfo.keys.binanceMnemonic)
+        )
       }
-      publicKey = getAddressFromPrivateKey(privateKey, 'bnb')
+      const path = stringToPath(`m/44'/714'/0'/0/0`)
+      const signer = await DirectSecp256k1HdWallet.fromMnemonic(
+        walletInfo.keys.binanceMnemonic,
+        {
+          hdPaths: [path],
+          prefix: 'bnb'
+        }
+      )
+      const accountInfos = await signer.getAccounts()
+      const { address } = accountInfos[0]
+      publicKey = address
       return { publicKey }
     } else {
       throw new Error('InvalidWalletType')
     }
+  }
+
+  checkAddress(address: string): boolean {
+    try {
+      const bech32Address = fromBech32(address)
+      if (bech32Address.prefix !== 'bnb') {
+        return false
+      }
+    } catch (e) {
+      return false
+    }
+    return true
   }
 
   async parseUri(
@@ -111,7 +135,7 @@ export class BinanceTools implements EdgeCurrencyTools {
     })
     const address = edgeParsedUri.publicAddress ?? ''
 
-    const valid = checkAddress(address, 'bnb')
+    const valid = this.checkAddress(address)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -125,7 +149,7 @@ export class BinanceTools implements EdgeCurrencyTools {
     customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { publicAddress, nativeAmount, currencyCode } = obj
-    const valid = checkAddress(publicAddress, 'bnb')
+    const valid = this.checkAddress(publicAddress)
     if (!valid) {
       throw new Error('InvalidPublicAddressError')
     }
