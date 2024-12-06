@@ -292,7 +292,7 @@ export class EthereumNetwork {
   acquireTokenBalance = makeKeyBasedThrottledFunction(
     BAL_POLL_MILLISECONDS,
     async (currencyCode: string): Promise<void> => {
-      const update = await this.check('fetchTokenBalances', currencyCode)
+      const update = await this.check('fetchTokenBalance', currencyCode)
       return this.processEthereumNetworkUpdate(update)
     }
   )

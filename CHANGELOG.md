@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fixed: Fixed broken balance query method in `aquireTokenBalance` causing stalled syncing.
 - fixed: Fix WBNB denomination name
 
 ## 4.31.0 (2024-12-04)
