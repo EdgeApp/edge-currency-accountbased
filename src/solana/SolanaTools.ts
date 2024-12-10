@@ -1,6 +1,7 @@
 import {
   Connection,
   ConnectionConfig,
+  FetchFn,
   Keypair,
   PublicKey
 } from '@solana/web3.js'
@@ -13,6 +14,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeFetchFunction,
   EdgeIo,
   EdgeLog,
   EdgeMetaToken,
@@ -216,10 +218,14 @@ export class SolanaTools implements EdgeCurrencyTools {
   }
 
   makeConnections(rpcUrls: string[]): Connection[] {
+    const fetchCorsBypassed: EdgeFetchFunction = async (uri, opts) =>
+      await this.io.fetch(uri, {
+        ...opts,
+        corsBypass: 'always'
+      })
     const connectionConfig: ConnectionConfig = {
       commitment: this.networkInfo.commitment,
-      // @ts-expect-error our fetch is close enough to the fetch api
-      fetch: this.io.fetchCors
+      fetch: fetchCorsBypassed as FetchFn
     }
 
     const out: Connection[] = []
