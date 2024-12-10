@@ -219,7 +219,7 @@ export class SolanaTools implements EdgeCurrencyTools {
     const connectionConfig: ConnectionConfig = {
       commitment: this.networkInfo.commitment,
       // @ts-expect-error our fetch is close enough to the fetch api
-      fetch: this.io.fetchCors
+      fetch: this.io.fetchCorsForced
     }
 
     const out: Connection[] = []
