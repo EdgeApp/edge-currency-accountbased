@@ -39,7 +39,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
-import { cleanTxLogs, getFetchCors, getOtherParams } from '../common/utils'
+import { cleanTxLogs, getOtherParams } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
@@ -77,7 +77,7 @@ export class SolanaEngine extends CurrencyEngine<
   recentBlockhash: string
   chainCode: string
   otherData!: SolanaWalletOtherData
-  fetchCors: EdgeFetchFunction
+  fetch: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
   minimumAddressBalance: string
@@ -92,7 +92,8 @@ export class SolanaEngine extends CurrencyEngine<
     this.lightMode = opts.lightMode ?? false
     this.networkInfo = env.networkInfo
     this.chainCode = tools.currencyInfo.currencyCode
-    this.fetchCors = getFetchCors(env.io)
+    this.fetch = async (uri, opts) =>
+      await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
     this.priorityFee = '0'
     this.recentBlockhash = '' // must be < ~2min old to send tx
@@ -124,7 +125,7 @@ export class SolanaEngine extends CurrencyEngine<
     const rpcNodes = overrideRpcNodes ?? this.networkInfo.rpcNodes
     const funcs = rpcNodes.map(serverUrl => async () => {
       serverUrl = this.tools.rpcWithApiKey(serverUrl)
-      const res = await this.fetchCors(serverUrl, options)
+      const res = await this.fetch(serverUrl, options)
       if (!res.ok) {
         throw new Error(
           `fetchRpc ${options.method} failed error: ${res.status}`

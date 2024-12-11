@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Use `corsBypass: 'always'` for Solana RPC nodes to fix issues with syncing transaction data.
+
 ## 4.31.1 (2024-12-06)
 
 - fixed: Fixed broken balance query method in `aquireTokenBalance` causing stalled syncing.
