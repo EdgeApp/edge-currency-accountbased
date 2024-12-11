@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.31.2 (2024-12-11)
+
 - fixed: Use `corsBypass: 'always'` for Solana RPC nodes to fix issues with syncing transaction data.
 
 ## 4.31.1 (2024-12-06)
