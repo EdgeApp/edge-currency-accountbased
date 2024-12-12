@@ -43,8 +43,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:algorand',
 
   // Explorers:
-  addressExplorer: 'https://explorer.bitquery.io/algorand/address/%s',
-  transactionExplorer: 'https://explorer.bitquery.io/algorand/tx/%s',
+  addressExplorer: 'https://allo.info/account/%s',
+  transactionExplorer: 'https://allo.info/tx/%s',
 
   customFeeTemplate: [
     {
