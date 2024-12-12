@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.31.3 (2024-12-11)
+
 - fixed: Updated Algorand explorer to use Allo.
 
 ## 4.31.2 (2024-12-11)
