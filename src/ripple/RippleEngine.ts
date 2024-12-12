@@ -11,6 +11,7 @@ import {
   sub,
   toFixed
 } from 'biggystring'
+import { asMaybe, asObject, asValue } from 'cleaners'
 import {
   EdgeActivationApproveOptions,
   EdgeActivationQuote,
@@ -966,6 +967,39 @@ export class XrpEngine extends CurrencyEngine<
     return edgeTransaction
   }
 
+  async checkTrustLines(publicAddress: string, tokenId: string): Promise<void> {
+    const accountCache =
+      this.tools.accountTrustLineCache.get(publicAddress) ?? new Set()
+    if (accountCache.has(tokenId)) return
+
+    try {
+      const trustLines = await this.tools.rippleApi.request({
+        command: 'account_lines',
+        account: publicAddress
+      })
+
+      for (const line of trustLines.result.lines) {
+        const tlTokenId = makeTokenId({
+          issuer: line.account,
+          currency: line.currency
+        })
+        accountCache.add(tlTokenId)
+      }
+      this.tools.accountTrustLineCache.set(publicAddress, accountCache)
+    } catch (error: unknown) {
+      const asMaybeNotFound = asMaybe(
+        asObject({
+          data: asObject({ error: asValue('actNotFound') })
+        })
+      )
+      if (asMaybeNotFound(error) == null) throw error
+    }
+
+    if (!accountCache.has(tokenId)) {
+      throw new Error(`Recipient has not set up trust line`)
+    }
+  }
+
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
@@ -1008,6 +1042,9 @@ export class XrpEngine extends CurrencyEngine<
         nativeAmount,
         publicAddress
       )
+    }
+    if (edgeTransaction.tokenId !== null) {
+      await this.checkTrustLines(publicAddress, edgeTransaction.tokenId)
     }
 
     // Do signing
