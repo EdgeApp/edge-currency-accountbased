@@ -1,4 +1,4 @@
-import { add, eq, gt, mul, sub } from 'biggystring'
+import { add, eq, gt, gte, max, mul, sub } from 'biggystring'
 import {
   EdgeAddress,
   EdgeCurrencyEngine,
@@ -449,7 +449,7 @@ export class ZcashEngine extends CurrencyEngine<
       })
     } catch (e) {
       const networkFee = extractFeeFromProposeTransferErrorString(String(e))
-      return sub(this.availableZatoshi, networkFee)
+      return max(sub(this.availableZatoshi, networkFee), '0')
     }
     return this.availableZatoshi
   }
@@ -464,11 +464,11 @@ export class ZcashEngine extends CurrencyEngine<
       throw new Error('makeSpend Missing publicAddress')
     if (nativeAmount == null) throw new NoAmountSpecifiedError()
 
-    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
-
-    if (gt(nativeAmount, this.availableZatoshi)) {
+    if (gte(nativeAmount, this.availableZatoshi)) {
       throw new InsufficientFundsError({ tokenId })
     }
+
+    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
 
     const synchronizer = await this.synchronizerPromise
     const proposal = await synchronizer.proposeTransfer({
