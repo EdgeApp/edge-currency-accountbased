@@ -44,8 +44,7 @@ import {
   Payment as PaymentJson,
   rippleTimeToUnixTime,
   TrustSet,
-  unixTimeToRippleTime,
-  Wallet
+  unixTimeToRippleTime
 } from 'xrpl'
 import { Amount } from 'xrpl/dist/npm/models/common'
 import {
@@ -1016,13 +1015,12 @@ export class XrpEngine extends CurrencyEngine<
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
     const ripplePrivateKeys = asRipplePrivateKeys(privateKeys)
+    const wallet = this.tools.makeWallet(ripplePrivateKeys)
     const otherParams = getOtherParams(edgeTransaction)
 
     // Activation Transaction:
     if (otherParams.xrpTransaction != null) {
       const xrpTransaction: TrustSet = otherParams.xrpTransaction
-      const privateKey = privateKeys.rippleKey
-      const wallet = Wallet.fromSeed(privateKey)
       const { tx_blob: signedTransaction, hash: id } =
         wallet.sign(xrpTransaction)
       this.warn('Activation transaction signed...')
@@ -1059,8 +1057,6 @@ export class XrpEngine extends CurrencyEngine<
     }
 
     // Do signing
-    const privateKey = ripplePrivateKeys.rippleKey
-    const wallet = Wallet.fromSeed(privateKey)
     const { tx_blob: signedTransaction, hash: id } = wallet.sign(completeTxJson)
 
     this.warn('Payment transaction signed...')
