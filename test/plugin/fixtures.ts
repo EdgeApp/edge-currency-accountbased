@@ -274,7 +274,9 @@ export default [
       39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150,
       52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238
     ],
-    xpub: 'rHjiXf39KxewZrUy2NK5UuW96dMiEjQVcT',
+    mnemonic:
+      'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot',
+    xpub: 'rM4832TJYm61rUee1aRbFXbvMPwsUF2EMz',
     key_length: 31,
     'invalid key name': {
       type: 'wallet:ripple',

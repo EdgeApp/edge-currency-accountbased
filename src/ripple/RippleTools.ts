@@ -1,5 +1,5 @@
 import { div } from 'biggystring'
-import { validateMnemonic } from 'bip39'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -20,7 +20,6 @@ import {
   Wallet,
   xAddressToClassicAddress
 } from 'xrpl'
-import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
@@ -130,17 +129,13 @@ export class RippleTools implements EdgeCurrencyTools {
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === 'ripple' || type === 'ripple-secp256k1') {
-      const algorithm =
-        type === 'ripple-secp256k1' ? ECDSA.secp256k1 : ECDSA.ed25519
-      const entropy = Array.from(this.io.random(32))
-      const keys = Wallet.fromEntropy(entropy, { algorithm })
-      return { rippleKey: keys.seed }
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {

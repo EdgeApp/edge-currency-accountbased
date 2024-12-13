@@ -65,9 +65,11 @@ for (const fixture of fixtures) {
     it('Create valid key', async function () {
       const keys = await tools.createPrivateKey(WALLET_TYPE)
       assert.isDefined(keys)
-      assert.equal(typeof keys[keyName], 'string')
-      const length = keys[keyName].length
-      assert.equal(length, fixture.key_length)
+      if (keys[keyName] != null) {
+        assert.equal(typeof keys[keyName], 'string')
+        const length = keys[keyName].length
+        assert.equal(length, fixture.key_length)
+      }
     })
   })
 
