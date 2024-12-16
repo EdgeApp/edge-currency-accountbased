@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.32.0 (2024-12-16)
+
 - added: (XRP) Add mnemonic import support
 - added: (XRP) Add destination tag to processed transactions
 - changed: (XRP/XLM) Create mnemonics by default
