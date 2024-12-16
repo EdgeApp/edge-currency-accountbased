@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (XRP) Check recipient trust lines before sending token
+- fixed: `parseUri` case sensitivity when looking for matching builtin token contract addresses
 
 ## 4.31.3 (2024-12-11)
 
