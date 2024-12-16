@@ -61,9 +61,14 @@ export type SafeRippleWalletInfo = ReturnType<typeof asSafeRippleWalletInfo>
 export const asSafeRippleWalletInfo = asSafeCommonWalletInfo
 
 export type RipplePrivateKeys = ReturnType<typeof asRipplePrivateKeys>
-export const asRipplePrivateKeys = asObject({
-  rippleKey: asString
-})
+export const asRipplePrivateKeys = asEither(
+  asObject({
+    rippleKey: asString
+  }),
+  asObject({
+    rippleMnemonic: asString
+  })
+)
 
 export interface RippleOtherMethods {
   makeTx: (makeTxParams: MakeTxParams) => Promise<EdgeTransaction>

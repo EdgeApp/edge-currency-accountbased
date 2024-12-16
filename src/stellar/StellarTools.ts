@@ -1,5 +1,5 @@
 import { add, div } from 'biggystring'
-import { mnemonicToSeed, validateMnemonic } from 'bip39'
+import { entropyToMnemonic, mnemonicToSeed, validateMnemonic } from 'bip39'
 import * as ed25519 from 'ed25519-hd-key'
 import {
   EdgeCurrencyInfo,
@@ -58,7 +58,9 @@ export class StellarTools implements EdgeCurrencyTools {
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
     const keys = asStellarPrivateKeys(privateWalletInfo.keys)
-    return keys.stellarKey
+    const mnemonicString =
+      keys.stellarMnemonic != null ? `Mnemonic:\n${keys.stellarMnemonic}\n` : ''
+    return `${mnemonicString}Secret key:\n${keys.stellarKey}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -81,15 +83,12 @@ export class StellarTools implements EdgeCurrencyTools {
       throw new Error('InvalidWalletType')
     }
 
-    const entropy = Array.from(this.io.random(32))
-    const keypair = stellarApi.Keypair.fromRawEd25519Seed(entropy)
-    return { stellarKey: keypair.secret() }
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async importPrivateKey(userInput: string): Promise<StellarPrivateKeys> {
-    let stellarKey
-    let stellarMnemonic
-
     if (validateMnemonic(userInput)) {
       const seed = await mnemonicToSeed(userInput)
       const derivedSeed = ed25519.derivePath(
@@ -100,19 +99,20 @@ export class StellarTools implements EdgeCurrencyTools {
         Uint8Array.from(derivedSeed) as unknown as number[]
       )
 
-      stellarKey = keypair.secret()
-      stellarMnemonic = userInput
+      return {
+        stellarKey: keypair.secret(),
+        stellarMnemonic: userInput
+      }
     } else {
-      userInput.replace(/ /g, '')
+      userInput = userInput.replace(/ /g, '')
       stellarApi.Keypair.fromSecret(userInput)
       if (userInput.length !== 56) throw new Error('Private key wrong length')
-      stellarKey = userInput
-    }
 
-    return await Promise.resolve({
-      stellarKey,
-      stellarMnemonic
-    })
+      return {
+        stellarKey: userInput,
+        stellarMnemonic: undefined
+      }
+    }
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {

@@ -1,4 +1,5 @@
 import { div } from 'biggystring'
+import { entropyToMnemonic, validateMnemonic } from 'bip39'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -8,7 +9,8 @@ import {
   EdgeParsedUri,
   EdgeToken,
   EdgeTokenMap,
-  EdgeWalletInfo
+  EdgeWalletInfo,
+  JsonObject
 } from 'edge-core-js/types'
 import parse from 'url-parse'
 import {
@@ -18,7 +20,6 @@ import {
   Wallet,
   xAddressToClassicAddress
 } from 'xrpl'
-import ECDSA from 'xrpl/dist/npm/ECDSA'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { asyncWaterfall } from '../common/promiseUtils'
@@ -33,6 +34,7 @@ import {
   asRipplePrivateKeys,
   asSafeRippleWalletInfo,
   asXrpNetworkLocation,
+  RipplePrivateKeys,
   XrpInfoPayload,
   XrpNetworkInfo
 } from './rippleTypes'
@@ -47,6 +49,7 @@ export class RippleTools implements EdgeCurrencyTools {
   rippleApi!: Client
   rippleApiSubscribers: { [walletId: string]: boolean }
   accountTrustLineCache: Map<string, Set<string>>
+  makeWallet: (keys: RipplePrivateKeys) => Wallet
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -57,13 +60,24 @@ export class RippleTools implements EdgeCurrencyTools {
 
     this.rippleApiSubscribers = {}
     this.accountTrustLineCache = new Map()
+    this.makeWallet = (privateKeys: RipplePrivateKeys) => {
+      if ('rippleMnemonic' in privateKeys) {
+        return Wallet.fromMnemonic(privateKeys.rippleMnemonic)
+      } else {
+        return Wallet.fromSeed(privateKeys.rippleKey)
+      }
+    }
   }
 
   async getDisplayPrivateKey(
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
     const keys = asRipplePrivateKeys(privateWalletInfo.keys)
-    return keys.rippleKey
+    if ('rippleMnemonic' in keys) {
+      return keys.rippleMnemonic
+    } else {
+      return keys.rippleKey
+    }
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -93,37 +107,42 @@ export class RippleTools implements EdgeCurrencyTools {
     }
   }
 
-  async importPrivateKey(privateKey: string): Promise<{ rippleKey: string }> {
-    privateKey = privateKey.replace(/\s/g, '')
+  async importPrivateKey(input: string): Promise<JsonObject> {
     try {
-      // Try decoding seed
-      decodeSeed(privateKey)
-
-      // If that worked, return the key:
-      return { rippleKey: privateKey }
+      if (validateMnemonic(input)) {
+        // Try creating wallet
+        Wallet.fromMnemonic(input, { mnemonicEncoding: 'bip39' })
+        return {
+          rippleMnemonic: input
+        }
+      } else {
+        const privateKey = input.replace(/\s/g, '')
+        // Try decoding seed
+        decodeSeed(privateKey)
+        return {
+          rippleKey: privateKey
+        }
+      }
     } catch (e: any) {
       throw new Error(`Invalid private key: ${safeErrorMessage(e)}`)
     }
   }
 
   async createPrivateKey(walletType: string): Promise<Object> {
-    const type = walletType.replace('wallet:', '')
-
-    if (type === 'ripple' || type === 'ripple-secp256k1') {
-      const algorithm =
-        type === 'ripple-secp256k1' ? ECDSA.secp256k1 : ECDSA.ed25519
-      const entropy = Array.from(this.io.random(32))
-      const keys = Wallet.fromEntropy(entropy, { algorithm })
-      return { rippleKey: keys.seed }
-    } else {
+    if (walletType !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
+
+    const entropy = Buffer.from(this.io.random(32))
+    const mnemonic = entropyToMnemonic(entropy)
+    return await this.importPrivateKey(mnemonic)
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<Object> {
     const type = walletInfo.type.replace('wallet:', '')
     if (type === 'ripple' || type === 'ripple-secp256k1') {
-      const wallet = Wallet.fromSeed(walletInfo.keys.rippleKey)
+      const ripplePrivateKeys = asRipplePrivateKeys(walletInfo.keys)
+      const wallet = this.makeWallet(ripplePrivateKeys)
       return { publicKey: wallet.classicAddress }
     } else {
       throw new Error('InvalidWalletType')
