@@ -5,6 +5,7 @@
 ## 4.31.3 (2024-12-11)
 
 - fixed: Updated Algorand explorer to use Allo.
+- fixed: (Zcash) Don't show negative values when attempting to max send small amounts
 
 ## 4.31.2 (2024-12-11)
 
