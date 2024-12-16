@@ -7,6 +7,8 @@ export default [
       39, 190, 34, 129, 208, 32, 145, 88, 191, 217, 226, 98, 183, 16, 52, 150,
       52, 53, 31, 137, 164, 40, 236, 146, 128, 107, 129, 59, 192, 240, 40, 238
     ],
+    mnemonic:
+      'chicken valve parrot park animal proof youth detail glance review artwork cluster drive more charge lunar uncle neglect brain act rose job photo spot',
     xpub: 'bnb1ytwkmhg4k3zqzqwfuyeqr7cxs2xzlrgx695luv',
     key_length: 64,
     'invalid key name': {

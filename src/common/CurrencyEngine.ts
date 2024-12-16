@@ -264,9 +264,7 @@ export class CurrencyEngine<
     return out
   }
 
-  protected setOtherData(raw: any): void {
-    throw new Error(`Unimplemented setOtherData for ${this.walletInfo.type}`)
-  }
+  protected setOtherData(raw: any): void {}
 
   protected async loadTransactions(): Promise<void> {
     if (this.transactionsLoaded) {
