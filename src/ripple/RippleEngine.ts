@@ -24,6 +24,7 @@ import {
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
   EdgeGetActivationAssetsResults,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -468,7 +469,17 @@ export class XrpEngine extends CurrencyEngine<
 
     const balances = getBalanceChanges(meta)
 
-    const { date, hash, Fee } = xrpTx
+    const { date, DestinationTag, hash, Fee } = xrpTx
+
+    const memos: EdgeMemo[] = []
+    if (DestinationTag != null) {
+      memos.push({
+        type: 'number',
+        value: DestinationTag.toString(),
+        memoName: 'destination tag'
+      })
+    }
+
     for (const balance of balances) {
       const { account } = balance
       if (account !== publicAddress) {
@@ -508,7 +519,7 @@ export class XrpEngine extends CurrencyEngine<
             currencyCode: currency,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
-            memos: [],
+            memos,
             nativeAmount,
             networkFee,
             networkFees: [],
@@ -547,7 +558,7 @@ export class XrpEngine extends CurrencyEngine<
             currencyCode,
             date: rippleTimeToUnixTime(date) / 1000, // Returned date is in "ripple time" which is unix time if it had started on Jan 1 2000
             isSend,
-            memos: [],
+            memos,
             nativeAmount,
             networkFee: '0',
             networkFees: [],
