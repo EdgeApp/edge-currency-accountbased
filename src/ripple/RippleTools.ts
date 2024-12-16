@@ -46,6 +46,7 @@ export class RippleTools implements EdgeCurrencyTools {
 
   rippleApi!: Client
   rippleApiSubscribers: { [walletId: string]: boolean }
+  accountTrustLineCache: Map<string, Set<string>>
 
   constructor(env: PluginEnvironment<XrpNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, networkInfo } = env
@@ -55,6 +56,7 @@ export class RippleTools implements EdgeCurrencyTools {
     this.networkInfo = networkInfo
 
     this.rippleApiSubscribers = {}
+    this.accountTrustLineCache = new Map()
   }
 
   async getDisplayPrivateKey(

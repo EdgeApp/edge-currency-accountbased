@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (XRP) Check recipient trust lines before sending token
+
 ## 4.31.3 (2024-12-11)
 
 - fixed: Updated Algorand explorer to use Allo.
