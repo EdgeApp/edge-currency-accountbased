@@ -972,6 +972,26 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return out.result
   }
 
+  private async getDynamicEnergyFactor(
+    contractAddress: string
+  ): Promise<number> {
+    const body = { value: base58ToHexAddress(contractAddress) }
+    const res = await this.multicastServers(
+      'trx_getBalance',
+      '/wallet/getcontractinfo',
+      body
+    )
+    if (res.contract_state?.energy_factor != null) {
+      // energy_factor is returned as a number representing factor * 10000 by default
+      // e.g., 10000 = factor of 1.0, 15000 = factor of 1.5
+      const factor =
+        parseFloat(res.contract_state.energy_factor.toString()) / 10000
+      return factor
+    }
+    // If not found or no factor, return 1.0 (no penalty)
+    return 1.0
+  }
+
   // Determines how much TRX the tx will cost after accounting for bandwidth and energy
   // TRX transfers to new accounts will consume TRX and bandwidth (or equivalent TRX)
   // TRX transfers to existing accounts will bandwidth or TRX
@@ -994,6 +1014,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     // Energy is only needed for smart contract calls
 
     let energyNeeded = 0
+    let energyFactor = 1.0
 
     if (tokenOpts != null && receiverAddress != null) {
       const { contractAddress, data } = tokenOpts
@@ -1031,13 +1052,22 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         }
       }
 
+      // Get dynamic factor for the contract if available
+      energyFactor = await this.getDynamicEnergyFactor(contractAddress)
+
       energyNeeded = Math.max(
-        (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
-          100000) - this.accountResources.ENERGY,
+        Math.floor(
+          (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
+            100000) *
+            energyFactor -
+            this.accountResources.ENERGY
+        ),
         0
       )
     }
+
     this.log('Account energy: ', this.accountResources.ENERGY)
+    this.log('Energy factor: ', energyFactor)
     this.log('Energy needed: ', energyNeeded)
 
     /// ////////////
