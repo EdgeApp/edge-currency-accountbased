@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Solana) Alchemy archival node failing to sync wallets
+
 ## 4.32.0 (2024-12-16)
 
 - added: (XRP) Add mnemonic import support
