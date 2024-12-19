@@ -4,6 +4,10 @@
 
 - fixed: Use Helius archival nodes for Solana exclusively to fix transaction syncing issues.
 
+## 4.31.4 (2024-12-19)
+
+- fixed: Use Helius archival nodes for Solana exclusively to fix transaction syncing issues.
+
 ## 4.32.0 (2024-12-16)
 
 - added: (XRP) Add mnemonic import support
