@@ -209,9 +209,16 @@ export class SolanaEngine extends CurrencyEngine<
   async queryBlockheight(): Promise<void> {
     try {
       const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getSlot()
+        try {
+          return await connection.getSlot()
+        } catch (e: any) {
+          return null
+        }
       })
-      const blockheight: number = await asyncWaterfall(funcs)
+      const res = await asyncWaterfall(funcs)
+      if (res == null) return
+
+      const blockheight: number = res
       if (blockheight > this.walletLocalData.blockHeight) {
         this.walletLocalData.blockHeight = blockheight
         this.walletLocalDataDirty = true
@@ -228,9 +235,18 @@ export class SolanaEngine extends CurrencyEngine<
   async queryMinimumBalance(): Promise<void> {
     try {
       const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getMinimumBalanceForRentExemption(50)
+        try {
+          return await connection.getMinimumBalanceForRentExemption(50)
+        } catch (e: any) {
+          return null
+        }
       })
-      const minimumBalance: number = await asyncWaterfall(funcs)
+      const res = await asyncWaterfall(funcs)
+      if (res == null) {
+        this.warn('skipping queryMinimumBalance')
+        return
+      }
+      const minimumBalance = res
       this.minimumAddressBalance = minimumBalance.toString()
     } catch (e: any) {
       this.error(`queryMinimumBalance Error `, e)
@@ -240,10 +256,20 @@ export class SolanaEngine extends CurrencyEngine<
   async queryFee(): Promise<void> {
     try {
       const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getRecentPrioritizationFees()
+        try {
+          return await connection.getRecentPrioritizationFees()
+        } catch (e: any) {
+          return null
+        }
       })
-      const recentPriorityFees: RecentPrioritizationFees[] =
-        await asyncWaterfall(funcs)
+      const raw = await asyncWaterfall(funcs)
+      if (raw == null) {
+        this.warn('skipping queryFee')
+        return
+      }
+
+      const recentPriorityFees: RecentPrioritizationFees[] = raw
+
       // if the array is empty, or request otherwise fails, it's ok to just use the default
       const latestPriorityFee = recentPriorityFees.sort(
         (a, b) => a.slot - b.slot
@@ -417,110 +443,157 @@ export class SolanaEngine extends CurrencyEngine<
     currencyCode: string,
     pubkey: PublicKey
   ): Promise<void> {
-    let before: string | undefined
-    const until =
-      this.otherData.newestTxid[currencyCode] !== ''
-        ? this.otherData.newestTxid[currencyCode]
-        : undefined
-    let txids: ConfirmedSignatureInfo[] = []
+    let raw: any
     try {
-      // Gather all transaction IDs since we last updated
-      while (true) {
+      let before: string | undefined
+      const until =
+        this.otherData.newestTxid[currencyCode] !== ''
+          ? this.otherData.newestTxid[currencyCode]
+          : undefined
+      let txids: ConfirmedSignatureInfo[] = []
+      try {
+        // Gather all transaction IDs since we last updated
+        while (true) {
+          const funcs = this.tools.archiveConnections.map(
+            connection => async () => {
+              try {
+                return await connection.getSignaturesForAddress(pubkey, {
+                  until,
+                  before,
+                  limit: this.networkInfo.txQueryLimit
+                })
+              } catch (e) {
+                return null
+              }
+            }
+          )
+          raw = await asyncWaterfall(funcs)
+          if (raw == null) {
+            this.warn('skipping queryTransactionsInner')
+            return
+          } else {
+            this.warn('queryTransactionsInner Success')
+          }
+          const response: ConfirmedSignatureInfo[] = raw
+          txids = txids.concat(response)
+          if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
+          before = response[this.networkInfo.txQueryLimit - 1].signature
+        }
+      } catch (e: any) {
+        this.error('getTransactionSignatures failed with error: ', e)
+        this.error(JSON.stringify(raw, null, 2))
+        return
+      }
+
+      if (txids.length === 0) {
+        this.updateTxStatus(currencyCode, 1)
+        return
+      }
+
+      // Break apart the txids into chunks and query them from oldest to newest
+      const CHUNK_SIZE = 50
+      let numProcessedTx = 0
+      const transactionRequests = txids.map(txid => txid.signature).reverse()
+
+      for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
         const funcs = this.tools.archiveConnections.map(
           connection => async () => {
-            return await connection.getSignaturesForAddress(pubkey, {
-              until,
-              before,
-              limit: this.networkInfo.txQueryLimit
-            })
+            try {
+              return await connection.getTransactions(transactionRequests, {
+                commitment: this.networkInfo.commitment,
+                maxSupportedTransactionVersion: 0
+              })
+            } catch (e: any) {
+              this.warn('getTransactions failed with error: ', e.toString())
+              return null
+            }
           }
         )
-        const response: ConfirmedSignatureInfo[] = await asyncWaterfall(funcs)
-        txids = txids.concat(response)
-        if (response.length < this.networkInfo.txQueryLimit) break // RPC limit
-        before = response[this.networkInfo.txQueryLimit - 1].signature
-      }
-    } catch (e: any) {
-      this.error('getTransactionSignatures failed with error: ', e)
-      return
-    }
-
-    if (txids.length === 0) {
-      this.updateTxStatus(currencyCode, 1)
-      return
-    }
-
-    // Break apart the txids into chunks and query them from oldest to newest
-    const CHUNK_SIZE = 50
-    let numProcessedTx = 0
-    const transactionRequests = txids.map(txid => txid.signature).reverse()
-
-    for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
-      const funcs = this.tools.archiveConnections.map(
-        connection => async () => {
-          return await connection.getTransactions(transactionRequests, {
-            commitment: this.networkInfo.commitment,
-            maxSupportedTransactionVersion: 0
-          })
+        const raw = await asyncWaterfall(funcs)
+        if (raw == null) {
+          this.warn('skipping queryTransactionsInner')
+          return
         }
-      )
-      const txResponse: Array<
-        TransactionResponse | VersionedTransactionResponse
-      > = await asyncWaterfall(funcs)
-      const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
-        method: 'getBlockTime',
-        params: [res.slot]
-      }))
-      const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
-        blocktimeRequests,
-        this.networkInfo.rpcNodesArchival
-      )
+        this.warn('queryTransactionsInner Success')
+        const txResponse: Array<
+          TransactionResponse | VersionedTransactionResponse
+        > = raw
+        // this.warn('2')
+        const blocktimeRequests: RpcRequest[] = txResponse
+          .filter(res => res != null)
+          .map(res => ({
+            method: 'getBlockTime',
+            params: [res.slot]
+          }))
 
-      // Process the transactions from oldest to newest
-      for (let i = 0; i < txResponse.length; i++) {
-        if (txResponse[i].meta?.err != null) continue // ignore these
-        const matchingTxid = txids.find(
-          t => t.signature === txResponse[i].transaction.signatures[0]
-        )
-        const memos: string[] = []
-        if (matchingTxid?.memo != null) {
-          const regex = /^\[\d+\]\s(.*)$/ // memo field includes a length prefix ie. "[17] " that needs to be ignored
-          const match = matchingTxid.memo.match(regex)
-          if (match != null) {
-            memos.push(match[1])
-          }
-        }
-        const amounts = this.parseTxAmounts(txResponse[i], pubkey)
-        amounts.forEach(amount => {
-          this.processSolanaTransaction(
-            txResponse[i],
-            amount,
-            asBlocktime(blocktimeResponse[i]).result,
-            memos
+        // this.warn('3')
+        let blocktimeResponse: Blocktime[]
+        try {
+          blocktimeResponse = await this.fetchRpcBulk(
+            blocktimeRequests,
+            this.networkInfo.rpcNodesArchival
           )
-          numProcessedTx++
-        })
-        this.otherData.newestTxid[currencyCode] = txids[i].signature
+        } catch (e) {
+          this.error('getBlockTime failed with error: ', e)
+        }
 
-        // Update progress
-        const percent = 1 - numProcessedTx / txids.length
-        if (percent !== this.progressRatio) {
-          if (Math.abs(percent - this.progressRatio) > 0.25 || percent === 1) {
-            this.progressRatio = percent
-            this.updateTxStatus(currencyCode, this.progressRatio)
+        // this.warn('4')
+
+        // Process the transactions from oldest to newest
+
+        for (let i = 0; i < txResponse.length; i++) {
+          if (txResponse[i] == null || txResponse[i].meta?.err != null) continue // ignore these
+          // this.warn('5')
+          const matchingTxid = txids.find(
+            t => t.signature === txResponse[i].transaction.signatures[0]
+          )
+          const memos: string[] = []
+          if (matchingTxid?.memo != null) {
+            const regex = /^\[\d+\]\s(.*)$/ // memo field includes a length prefix ie. "[17] " that needs to be ignored
+            const match = matchingTxid.memo.match(regex)
+            if (match != null) {
+              memos.push(match[1])
+            }
+          }
+          const amounts = this.parseTxAmounts(txResponse[i], pubkey)
+          amounts.forEach(amount => {
+            this.log('blocktimeResponse[i]', blocktimeResponse[i])
+            this.processSolanaTransaction(
+              txResponse[i],
+              amount,
+              asBlocktime(blocktimeResponse[i]).result,
+              memos
+            )
+            numProcessedTx++
+          })
+          // this.warn('6')
+          this.otherData.newestTxid[currencyCode] = txids[i].signature
+
+          // Update progress
+          const percent = 1 - numProcessedTx / txids.length
+          if (percent !== this.progressRatio) {
+            if (
+              Math.abs(percent - this.progressRatio) > 0.25 ||
+              percent === 1
+            ) {
+              this.progressRatio = percent
+              this.updateTxStatus(currencyCode, this.progressRatio)
+            }
           }
         }
       }
-    }
 
-    this.walletLocalDataDirty = true
-    this.updateTxStatus(currencyCode, 1)
+      this.walletLocalDataDirty = true
+      this.updateTxStatus(currencyCode, 1)
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      if (this.transactionsChangedArray.length > 0) {
+        this.currencyEngineCallbacks.onTransactionsChanged(
+          this.transactionsChangedArray
+        )
+        this.transactionsChangedArray = []
+      }
+    } catch (e) {
+      console.error('Error in queryTransactionsInner', e)
     }
   }
 
@@ -683,10 +756,14 @@ export class SolanaEngine extends CurrencyEngine<
       let tokenAddressExists = this.addressCache.get(publicAddress)
       if (tokenAddressExists === undefined) {
         const funcs = this.tools.connections.map(connection => async () => {
-          return await connection.getAccountInfo(
-            associatedDestinationTokenAddrPayee,
-            this.networkInfo.commitment
-          )
+          try {
+            return await connection.getAccountInfo(
+              associatedDestinationTokenAddrPayee,
+              this.networkInfo.commitment
+            )
+          } catch (e) {
+            return null
+          }
         })
         const accountRes: AccountInfo<Buffer> | null = await asyncWaterfall(
           funcs
@@ -835,12 +912,16 @@ export class SolanaEngine extends CurrencyEngine<
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)
     )
-    solTx.sign([
-      {
-        publicKey: keypair.publicKey,
-        secretKey: keypair.secretKey
-      }
-    ])
+    try {
+      solTx.sign([
+        {
+          publicKey: keypair.publicKey,
+          secretKey: keypair.secretKey
+        }
+      ])
+    } catch (e: any) {
+      this.error('FAILURE signTx failed: ', e)
+    }
     edgeTransaction.signedTx = base64.stringify(solTx.serialize())
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
 
