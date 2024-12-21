@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Tron) Fix incorrect TRX fee estimations
+
 ## 4.32.1 (2024-12-19)
 
 - fixed: Use Helius archival nodes for Solana exclusively to fix transaction syncing issues.
