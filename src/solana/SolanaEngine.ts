@@ -126,9 +126,11 @@ export class SolanaEngine extends CurrencyEngine<
     const funcs = rpcNodes.map(serverUrl => async () => {
       serverUrl = this.tools.rpcWithApiKey(serverUrl)
       const res = await this.fetch(serverUrl, options)
-      if (!res.ok) {
+      const json = await res.json()
+      if (!res.ok || json.error != null) {
+        this.log.warn('fetchRpc json', json)
         throw new Error(
-          `fetchRpc ${options.method} failed error: ${res.status}`
+          `fetchRpc ${options.method} failed error: ${json.error ?? res.status}`
         )
       }
       const out = await res.json()
@@ -464,6 +466,7 @@ export class SolanaEngine extends CurrencyEngine<
           })
         }
       )
+      try {
       const txResponse: Array<
         TransactionResponse | VersionedTransactionResponse
       > = await asyncWaterfall(funcs)
@@ -511,6 +514,9 @@ export class SolanaEngine extends CurrencyEngine<
           }
         }
       }
+    } catch (e: any) {
+      this.error('getTransactions failed with error: ', e)
+    }
     }
 
     this.walletLocalDataDirty = true

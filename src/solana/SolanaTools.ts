@@ -218,11 +218,19 @@ export class SolanaTools implements EdgeCurrencyTools {
   }
 
   makeConnections(rpcUrls: string[]): Connection[] {
-    const fetchCorsBypassed: EdgeFetchFunction = async (uri, opts) =>
-      await this.io.fetch(uri, {
+    const fetchCorsBypassed: EdgeFetchFunction = async (uri, opts) => {
+      const res = await this.io.fetch(uri, {
         ...opts,
         corsBypass: 'always'
       })
+      // Alchemy returns status 200 (ok) for failed requests
+      const json = await res.json()
+      if (json.error != null) {
+        throw new Error(`fetchCorsBypassed: ${json.error}`)
+      }
+
+      return res
+    }
     const connectionConfig: ConnectionConfig = {
       commitment: this.networkInfo.commitment,
       fetch: fetchCorsBypassed as FetchFn
