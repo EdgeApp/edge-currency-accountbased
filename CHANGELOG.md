@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.32.2 (2024-12-23)
+
 - fixed: (Tron) Fix incorrect TRX fee estimations
 
 ## 4.32.1 (2024-12-19)
