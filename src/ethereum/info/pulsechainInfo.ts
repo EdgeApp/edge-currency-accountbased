@@ -96,8 +96,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:pulsechain',
 
   // Explorers:
-  addressExplorer: 'https://beacon.pulsechain.com/address/%s',
-  transactionExplorer: 'https://beacon.pulsechain.com/tx/%s',
+  addressExplorer: 'https://scan.pulsechainfoundation.org/#/address/%s',
+  transactionExplorer: 'https://scan.pulsechainfoundation.org/#/tx/%s',
 
   denominations: [
     {
