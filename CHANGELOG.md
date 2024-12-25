@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.32.3 (2024-12-25)
+
 - fixed: (Pulsechain) Fix broken address and transaction explorer links
 
 ## 4.32.2 (2024-12-23)
