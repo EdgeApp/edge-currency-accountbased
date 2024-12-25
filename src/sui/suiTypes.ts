@@ -1,6 +1,7 @@
 import { asCodec, asObject, asString, Cleaner } from 'cleaners'
 
 export interface SuiNetworkInfo {
+  network: 'mainnet' | 'testnet'
   pluginMnemonicKeyName: string
 }
 

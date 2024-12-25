@@ -18,6 +18,7 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 const networkInfo: SuiNetworkInfo = {
+  network: 'testnet',
   pluginMnemonicKeyName: 'suitestnetMnemonic'
 }
 

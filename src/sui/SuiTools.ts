@@ -1,3 +1,4 @@
+import { getFullnodeUrl, SuiClient, SuiHTTPTransport } from '@mysten/sui/client'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { isValidSuiAddress, parseStructTag } from '@mysten/sui/utils'
 import { div } from 'biggystring'
@@ -31,6 +32,8 @@ export class SuiTools implements EdgeCurrencyTools {
   networkInfo: SuiNetworkInfo
   initOptions: JsonObject
 
+  suiClient: SuiClient
+
   constructor(env: PluginEnvironment<SuiNetworkInfo>) {
     const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
     this.io = io
@@ -38,6 +41,14 @@ export class SuiTools implements EdgeCurrencyTools {
     this.builtinTokens = builtinTokens
     this.networkInfo = networkInfo
     this.initOptions = initOptions
+
+    const suiTransport = new SuiHTTPTransport({
+      url: getFullnodeUrl(networkInfo.network),
+      fetch: io.fetch as typeof fetch
+    })
+    this.suiClient = new SuiClient({
+      transport: suiTransport
+    })
   }
 
   async getDisplayPrivateKey(
