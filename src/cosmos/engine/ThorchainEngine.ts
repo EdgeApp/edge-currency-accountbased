@@ -2,7 +2,10 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { coin, Event } from '@cosmjs/stargate'
 import { abs, add, div, max, mul } from 'biggystring'
 import { Fee } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
-import { EdgeCurrencyEngineOptions } from 'edge-core-js/types'
+import {
+  EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions
+} from 'edge-core-js/types'
 
 import { PluginEnvironment } from '../../common/innerPlugin'
 import { getRandomDelayMs } from '../../common/network'
@@ -209,11 +212,9 @@ export class ThorchainEngine extends CosmosEngine {
     )
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -251,8 +252,8 @@ export class ThorchainEngine extends CosmosEngine {
     }
   }
 
-  async startEngine(): Promise<void> {
-    await super.startEngine()
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
+    await super.startEngine(opts)
     this.addToLoop('queryChainId', QUERY_POLL_MILLISECONDS).catch(() => {})
   }
 }

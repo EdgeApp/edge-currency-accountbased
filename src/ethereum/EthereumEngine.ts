@@ -5,6 +5,7 @@ import { asMaybe, asObject, asOptional, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeCurrencyInfo,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -737,7 +738,7 @@ export class EthereumEngine extends CurrencyEngine<
   // ****************************************************************************
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions) {
     this.engineOn = true
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
@@ -775,7 +776,7 @@ export class EthereumEngine extends CurrencyEngine<
     )
     this.ethNetwork.start()
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -786,7 +787,7 @@ export class EthereumEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {

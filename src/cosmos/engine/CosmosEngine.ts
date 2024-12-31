@@ -35,6 +35,7 @@ import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 import {
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeMemo,
@@ -554,11 +555,9 @@ export class CosmosEngine extends CurrencyEngine<
     this.otherData.archivedTxLastCheckTime = Date.now()
     this.walletLocalDataDirty = true
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -838,7 +837,7 @@ export class CosmosEngine extends CurrencyEngine<
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
@@ -848,7 +847,7 @@ export class CosmosEngine extends CurrencyEngine<
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -859,7 +858,7 @@ export class CosmosEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   /**

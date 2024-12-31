@@ -12,6 +12,7 @@ import { add, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeFreshAddress,
   EdgeSpendInfo,
@@ -130,19 +131,17 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   onUpdateTransactions(): void {
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.initData()
     this.initSubscriptions()
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -166,7 +165,7 @@ export class FilecoinEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {

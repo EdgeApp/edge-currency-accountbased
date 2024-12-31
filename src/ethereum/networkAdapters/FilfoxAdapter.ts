@@ -136,11 +136,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   }
 
   private onUpdateTransactions(): void {
-    if (this.ethEngine.transactionsChangedArray.length > 0) {
-      this.ethEngine.currencyEngineCallbacks.onTransactionsChanged(
-        this.ethEngine.transactionsChangedArray
+    if (this.ethEngine.transactionEvents.length > 0) {
+      this.ethEngine.currencyEngineCallbacks.onTransactions(
+        this.ethEngine.transactionEvents
       )
-      this.ethEngine.transactionsChangedArray = []
+      this.ethEngine.transactionEvents = []
     }
   }
 

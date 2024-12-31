@@ -4,6 +4,7 @@ import { asJSON, asString, asTuple } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeFetchOptions,
   EdgeFreshAddress,
@@ -320,20 +321,17 @@ export class CardanoEngine extends CurrencyEngine<
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
-
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
@@ -342,13 +340,13 @@ export class CardanoEngine extends CurrencyEngine<
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
-    await super.startEngine()
+    await super.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   composeTransaction(

@@ -2,6 +2,7 @@ import { abs, add, eq, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeFreshAddress,
   EdgeMemo,
@@ -120,7 +121,7 @@ export class PiratechainEngine extends CurrencyEngine<
       if (payload.level === 'critical') {
         await this.killEngine()
         this.lastUpdateFromSynchronizer = undefined
-        await this.startEngine()
+        await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
       }
     })
   }
@@ -148,11 +149,9 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   onUpdateTransactions(): void {
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -184,10 +183,10 @@ export class PiratechainEngine extends CurrencyEngine<
     }
   }
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.started = true
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   isSynced(): boolean {
@@ -349,7 +348,7 @@ export class PiratechainEngine extends CurrencyEngine<
     // Don't bother stopping and restarting the synchronizer for a resync
     await super.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
     this.synchronizer
       ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))
