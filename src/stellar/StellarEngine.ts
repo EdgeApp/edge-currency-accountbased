@@ -2,6 +2,7 @@ import { abs, add, div, eq, gt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -339,11 +340,9 @@ export class StellarEngine extends CurrencyEngine<
         return
       }
     }
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
@@ -448,7 +447,7 @@ export class StellarEngine extends CurrencyEngine<
   // ****************************************************************************
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions) {
     this.engineOn = true
     this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop(
@@ -462,13 +461,13 @@ export class StellarEngine extends CurrencyEngine<
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     ).catch(() => {})
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {

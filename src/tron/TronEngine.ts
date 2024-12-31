@@ -3,6 +3,7 @@ import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeStakingStatus,
@@ -399,11 +400,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw e
     }
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
 
     for (const token of this.enabledTokens) {
@@ -1422,7 +1421,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.addToLoop(
       'checkBlockchainInnerLoop',
@@ -1441,7 +1440,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async getStakingStatus(): Promise<EdgeStakingStatus> {
@@ -1451,7 +1450,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {

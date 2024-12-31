@@ -7,6 +7,7 @@ import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeCurrencyInfo,
   EdgeFetchFunction,
   EdgeFreshAddress,
@@ -469,12 +470,10 @@ export class PolkadotEngine extends CurrencyEngine<
     this.tokenCheckTransactionsStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -554,12 +553,10 @@ export class PolkadotEngine extends CurrencyEngine<
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -567,7 +564,7 @@ export class PolkadotEngine extends CurrencyEngine<
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
@@ -587,7 +584,7 @@ export class PolkadotEngine extends CurrencyEngine<
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
         () => {}
       )
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -598,7 +595,7 @@ export class PolkadotEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {

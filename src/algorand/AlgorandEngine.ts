@@ -11,6 +11,7 @@ import {
   EdgeActivationResult,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
   EdgeGetActivationAssetsResults,
@@ -462,12 +463,10 @@ export class AlgorandEngine extends CurrencyEngine<
     }
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -475,7 +474,7 @@ export class AlgorandEngine extends CurrencyEngine<
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS).catch(
@@ -484,13 +483,13 @@ export class AlgorandEngine extends CurrencyEngine<
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
       () => {}
     )
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   calcFee(rawTx: Transaction): string {

@@ -25,6 +25,7 @@ import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -516,11 +517,9 @@ export class SolanaEngine extends CurrencyEngine<
     this.walletLocalDataDirty = true
     this.updateTxStatus(currencyCode, 1)
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -533,7 +532,7 @@ export class SolanaEngine extends CurrencyEngine<
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
@@ -556,7 +555,7 @@ export class SolanaEngine extends CurrencyEngine<
         () => {}
       )
     }
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -567,7 +566,7 @@ export class SolanaEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {

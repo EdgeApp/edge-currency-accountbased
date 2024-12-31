@@ -21,6 +21,7 @@ import {
   EdgeAssetAmount,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeEngineActivationOptions,
   EdgeEngineGetActivationAssetsOptions,
   EdgeGetActivationAssetsResults,
@@ -611,11 +612,9 @@ export class XrpEngine extends CurrencyEngine<
         if (transaction.tx == null) continue
         this.processRippleTransaction(transaction)
       }
-      if (this.transactionsChangedArray.length > 0) {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
-        )
-        this.transactionsChangedArray = []
+      if (this.transactionEvents.length > 0) {
+        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+        this.transactionEvents = []
       }
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
@@ -746,7 +745,7 @@ export class XrpEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     try {
       await this.tools.connectApi(this.walletId)
@@ -754,7 +753,7 @@ export class XrpEngine extends CurrencyEngine<
       this.error(`Error connecting to server `, e)
       setTimeout(() => {
         if (this.engineOn) {
-          this.startEngine().catch(e => console.log(e.message))
+          this.startEngine(opts).catch(e => console.log(e.message))
         }
       }, 10000)
       return
@@ -770,7 +769,7 @@ export class XrpEngine extends CurrencyEngine<
       'checkTransactionsInnerLoop',
       TRANSACTION_POLL_MILLISECONDS
     ).catch(e => console.log(e.message))
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async killEngine(): Promise<void> {
@@ -781,7 +780,7 @@ export class XrpEngine extends CurrencyEngine<
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await super.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {

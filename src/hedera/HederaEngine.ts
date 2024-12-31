@@ -12,6 +12,7 @@ import { add, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSpendInfo,
@@ -185,7 +186,14 @@ export class HederaEngine extends CurrencyEngine<
 
       txs.forEach(tx => this.addTransaction(this.currencyInfo.currencyCode, tx))
 
-      this.currencyEngineCallbacks.onTransactionsChanged(txs)
+      this.currencyEngineCallbacks.onTransactions(
+        txs.map(tx => ({
+          // Not new because `addTransaction` would have already dispatched
+          // event with `isNew: true`
+          isNew: false,
+          transaction: tx
+        }))
+      )
     }
   }
 
@@ -285,7 +293,7 @@ export class HederaEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
 
     if (this.otherData.hederaAccount == null) {
@@ -297,13 +305,13 @@ export class HederaEngine extends CurrencyEngine<
       this.startActiveAccountLoops()
     }
 
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
