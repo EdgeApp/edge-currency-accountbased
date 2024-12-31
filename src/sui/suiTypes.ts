@@ -1,3 +1,4 @@
+import type { SignatureWithBytes } from '@mysten/sui/cryptography'
 import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
 
 export interface SuiNetworkInfo {
@@ -44,3 +45,12 @@ export const asSuiPrivateKeys = (pluginId: string): Cleaner<SuiPrivateKeys> => {
     }
   )
 }
+
+export const asSuiUnsignedTx = asObject({
+  unsignedBase64: asString
+})
+
+export const asSuiSignedTx = asObject<SignatureWithBytes>({
+  bytes: asString,
+  signature: asString
+})

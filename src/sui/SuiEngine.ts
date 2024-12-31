@@ -1,7 +1,13 @@
-import { GasCostSummary, SuiTransactionBlockResponse } from '@mysten/sui/client'
-import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
+import {
+  CoinStruct,
+  GasCostSummary,
+  SuiTransactionBlockResponse
+} from '@mysten/sui/client'
+import { SignatureWithBytes } from '@mysten/sui/cryptography'
+import { Ed25519Keypair, Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519'
+import { Transaction } from '@mysten/sui/transactions'
 import { SUI_TYPE_ARG } from '@mysten/sui/utils'
-import { add, sub } from 'biggystring'
+import { add, eq, gt, lt, sub } from 'biggystring'
 import {
   EdgeAddress,
   EdgeCurrencyEngine,
@@ -9,15 +15,23 @@ import {
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
-  JsonObject
+  InsufficientFundsError,
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
+import { base64 } from 'rfc4648'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { asMaybeContractLocation } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
+import { cleanTxLogs, getOtherParams } from '../common/utils'
 import { SuiTools } from './SuiTools'
 import {
+  asSuiPrivateKeys,
+  asSuiSignedTx,
+  asSuiUnsignedTx,
   asSuiWalletOtherData,
   SuiNetworkInfo,
   SuiWalletOtherData
@@ -250,20 +264,177 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [], tokenId } = edgeSpendInfo
+
+    if (edgeSpendInfo.spendTargets.length !== 1) {
+      throw new Error('Error: only one output allowed')
+    }
+
+    const { nativeAmount: amount, publicAddress } =
+      edgeSpendInfo.spendTargets[0]
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (amount == null) throw new NoAmountSpecifiedError()
+
+    const tx = new Transaction()
+
+    if (tokenId == null) {
+      const coins = tx.splitCoins(tx.gas, [amount])
+      tx.transferObjects([coins], publicAddress)
+    } else {
+      const networkLocation = asMaybeContractLocation(
+        this.allTokensMap[tokenId].networkLocation
+      )
+      if (networkLocation == null) {
+        throw new Error('Unknown token')
+      }
+
+      const setGasBudget = (coinCount: number): void => {
+        // These are safe overestimates
+        const base = 1000000
+        const gasPerCoin = 1500000
+        tx.setGasBudgetIfNotSet(base + coinCount * gasPerCoin)
+      }
+
+      const transferCoins: CoinStruct[] = []
+      let transferCoinsBalance = '0'
+      let keepSearching = true
+      do {
+        const { data: coins, hasNextPage } =
+          await this.tools.suiClient.getCoins({
+            owner: this.suiAddress,
+            coinType: networkLocation.contractAddress
+          })
+
+        for (const coin of coins) {
+          transferCoins.push(coin)
+          transferCoinsBalance = add(transferCoinsBalance, coin.balance)
+
+          if (gt(transferCoinsBalance, amount)) {
+            const overage = sub(transferCoinsBalance, amount)
+            const amountNeeded = sub(coin.balance, overage)
+
+            // Remove coin from transfer array, We'll create a new coin for the exact amount needed
+            transferCoins.pop()
+            const [newCoin] = tx.splitCoins(coin.coinObjectId, [amountNeeded])
+
+            tx.transferObjects(
+              [newCoin, ...transferCoins.map(c => tx.object(c.coinObjectId))],
+              publicAddress
+            )
+            setGasBudget(transferCoins.length + 1)
+
+            keepSearching = false
+            break
+          } else if (eq(transferCoinsBalance, amount)) {
+            // This coin gives us the exact amount needed, no need to split
+            tx.transferObjects(
+              [...transferCoins.map(c => tx.object(c.coinObjectId))],
+              publicAddress
+            )
+            setGasBudget(transferCoins.length)
+
+            keepSearching = false
+            break
+          }
+        }
+
+        if (keepSearching && !hasNextPage && lt(transferCoinsBalance, amount)) {
+          throw new InsufficientFundsError({ tokenId })
+        }
+      } while (keepSearching)
+    }
+
+    tx.setSender(this.suiAddress)
+    const serialized = await tx.build({ client: this.tools.suiClient })
+    const dryRun = await this.tools.suiClient.dryRunTransactionBlock({
+      transactionBlock: serialized
+    })
+    let networkFee = this.feeSum(dryRun.effects.gasUsed)
+
+    const mainnetBalance = this.getBalance({ tokenId: null })
+    let nativeAmount = amount
+    let parentNetworkFee: string | undefined
+    if (tokenId == null) {
+      nativeAmount = add(amount, networkFee)
+      if (gt(nativeAmount, mainnetBalance)) {
+        throw new InsufficientFundsError({ tokenId: null, networkFee })
+      }
+    } else {
+      const tokenBalance = this.getBalance({ tokenId })
+      if (gt(nativeAmount, tokenBalance)) {
+        throw new InsufficientFundsError({ tokenId })
+      }
+      if (gt(networkFee, mainnetBalance)) {
+        throw new InsufficientFundsError({ tokenId: null, networkFee })
+      }
+      parentNetworkFee = networkFee
+      networkFee = '0'
+    }
+
+    const edgeTx: EdgeTransaction = {
+      blockHeight: 0,
+      date: 0,
+      currencyCode,
+      isSend: true,
+      memos,
+      nativeAmount: `-${nativeAmount}`,
+      networkFee,
+      networkFees: [
+        { tokenId: null, nativeAmount: parentNetworkFee ?? networkFee }
+      ],
+      parentNetworkFee,
+      ourReceiveAddresses: [this.suiAddress],
+      otherParams: {
+        unsignedBase64: base64.stringify(serialized)
+      },
+      tokenId,
+      txid: '',
+      signedTx: '',
+      walletId: this.walletId
+    }
+    return edgeTx
   }
 
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    const { unsignedBase64 } = asSuiUnsignedTx(getOtherParams(edgeTransaction))
+    const tx = Transaction.from(unsignedBase64)
+
+    const keys = asSuiPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
+    const pair = Ed25519Keypair.deriveKeypair(keys.mnemonic)
+    const res = await tx.sign({ signer: pair })
+    edgeTransaction.signedTx = JSON.stringify(res)
+    edgeTransaction.txid = await tx.getDigest()
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('Method not implemented.')
+    try {
+      const signedTxObj: SignatureWithBytes = asSuiSignedTx(
+        JSON.parse(edgeTransaction.signedTx)
+      )
+
+      const broadcastResult =
+        await this.tools.suiClient.executeTransactionBlock({
+          transactionBlock: signedTxObj.bytes,
+          signature: signedTxObj.signature
+        })
+
+      edgeTransaction.txid = broadcastResult.digest
+      edgeTransaction.date = Date.now() / 1000
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      return edgeTransaction
+    } catch (e: any) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
   }
 
   async getAddresses(): Promise<EdgeAddress[]> {
