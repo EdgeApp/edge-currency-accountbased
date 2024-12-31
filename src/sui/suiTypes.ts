@@ -1,4 +1,4 @@
-import { asCodec, asObject, asString, Cleaner } from 'cleaners'
+import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
 
 export interface SuiNetworkInfo {
   network: 'mainnet' | 'testnet'
@@ -12,7 +12,10 @@ export interface SuiNetworkInfo {
 export const asSuiInfoPayload = asObject(() => {})
 export type SuiInfoPayload = ReturnType<typeof asSuiInfoPayload>
 
-export const asSuiWalletOtherData = asObject(() => {})
+export const asSuiWalletOtherData = asObject({
+  latestTxidFrom: asOptional(asString),
+  latestTxidTo: asOptional(asString)
+})
 export type SuiWalletOtherData = ReturnType<typeof asSuiWalletOtherData>
 
 //
