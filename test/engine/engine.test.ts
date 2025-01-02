@@ -66,10 +66,16 @@ for (const fixture of fixtures) {
       // console.log('onBlockHeightChange:', height)
       emitter.emit('onBlockHeightChange', height)
     },
+    onSeenTxCheckpoint(checkpoint) {
+      emitter.emit('onSeenTxCheckpoint', checkpoint)
+    },
     onStakingStatusChanged() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)
+    },
+    onTransactions(transactionEvents) {
+      emitter.emit('onTransactions', transactionEvents)
     },
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)
@@ -254,10 +260,16 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
     // console.log('onBlockHeightChange:', height)
     emitter.emit('onBlockHeightChange', height)
   },
+  onSeenTxCheckpoint(checkpoint) {
+    emitter.emit('onSeenTxCheckpoint', checkpoint)
+  },
   onStakingStatusChanged() {},
   onNewTokens() {},
   onTokenBalanceChanged(tokenId, balance) {
     emitter.emit('onTokenBalanceChanged', tokenId, balance)
+  },
+  onTransactions(transactionEvents) {
+    emitter.emit('onTransactions', transactionEvents)
   },
   onTransactionsChanged(transactionList) {
     // console.log('onTransactionsChanged:', transactionList)
