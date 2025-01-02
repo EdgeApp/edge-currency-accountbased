@@ -3,6 +3,7 @@ import {
   EdgeAddress,
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeEnginePrivateKeyOptions,
   EdgeMemo,
   EdgeSpendInfo,
@@ -176,7 +177,7 @@ export class ZcashEngine extends CurrencyEngine<
       this.log.warn(`Synchronizer error: ${payload.message}`)
       if (payload.level === 'critical') {
         await this.killEngine()
-        await this.startEngine()
+        await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
       }
     })
   }
@@ -192,11 +193,9 @@ export class ZcashEngine extends CurrencyEngine<
   }
 
   onUpdateTransactions(): void {
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -240,9 +239,9 @@ export class ZcashEngine extends CurrencyEngine<
     }
   }
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   isSynced(): boolean {
@@ -424,7 +423,7 @@ export class ZcashEngine extends CurrencyEngine<
     // Don't bother stopping and restarting the synchronizer for a resync
     await super.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
     await this.synchronizer
       ?.rescan()
       .catch((e: any) => this.warn('resyncBlockchain failed: ', e))

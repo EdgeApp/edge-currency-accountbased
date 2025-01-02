@@ -2,6 +2,7 @@ import { add, div, eq, gt } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
   EdgeTransaction,
@@ -315,11 +316,9 @@ export class TezosEngine extends CurrencyEngine<
       for (const tx of txs) {
         this.processTezosTransaction(tx)
       }
-      if (this.transactionsChangedArray.length > 0) {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
-        )
-        this.transactionsChangedArray = []
+      if (this.transactionEvents.length > 0) {
+        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+        this.transactionEvents = []
       }
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
@@ -379,7 +378,7 @@ export class TezosEngine extends CurrencyEngine<
   // ****************************************************************************
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions) {
     this.engineOn = true
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
@@ -388,13 +387,13 @@ export class TezosEngine extends CurrencyEngine<
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    super.startEngine(opts)
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {

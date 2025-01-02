@@ -18,6 +18,7 @@ import { add, gt, lt, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeCurrencyEngineStartOptions,
   EdgeFreshAddress,
   EdgeLog,
   EdgeMemo,
@@ -162,12 +163,10 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.otherData.mostRecentLogicalTime = mostRecentLogicalTime
     this.otherData.mostRecentHash = mostRecentHash
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
@@ -232,19 +231,19 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
+  async startEngine(opts?: EdgeCurrencyEngineStartOptions): Promise<void> {
     this.engineOn = true
     this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS).catch(() => {})
     this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS).catch(
       () => {}
     )
-    await super.startEngine()
+    await super.startEngine(opts)
   }
 
   async resyncBlockchain(): Promise<void> {
     await this.killEngine()
     await this.clearBlockchainCache()
-    await this.startEngine()
+    await this.startEngine({ seenTxCheckpoint: this.seenTxCheckpoint })
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {

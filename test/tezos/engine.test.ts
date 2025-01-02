@@ -51,10 +51,16 @@ describe(`Tezos engine`, function () {
     onBlockHeightChanged(height) {
       emitter.emit('onBlockHeightChange', height)
     },
+    onSeenTxCheckpoint(checkpoint) {
+      emitter.emit('onSeenTxCheckpoint', checkpoint)
+    },
     onStakingStatusChanged() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)
+    },
+    onTransactions(transactionEvents) {
+      emitter.emit('onTransactions', transactionEvents)
     },
     onTransactionsChanged(transactionList) {
       emitter.emit('onTransactionsChanged', transactionList)
