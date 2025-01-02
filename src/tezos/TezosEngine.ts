@@ -315,11 +315,9 @@ export class TezosEngine extends CurrencyEngine<
       for (const tx of txs) {
         this.processTezosTransaction(tx)
       }
-      if (this.transactionsChangedArray.length > 0) {
-        this.currencyEngineCallbacks.onTransactionsChanged(
-          this.transactionsChangedArray
-        )
-        this.transactionsChangedArray = []
+      if (this.transactionEvents.length > 0) {
+        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+        this.transactionEvents = []
       }
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
@@ -387,8 +385,7 @@ export class TezosEngine extends CurrencyEngine<
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    await super.startEngine()
   }
 
   async resyncBlockchain(): Promise<void> {

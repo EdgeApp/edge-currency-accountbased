@@ -462,12 +462,10 @@ export class AlgorandEngine extends CurrencyEngine<
     }
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 

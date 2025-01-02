@@ -399,11 +399,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw e
     }
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
 
     for (const token of this.enabledTokens) {
