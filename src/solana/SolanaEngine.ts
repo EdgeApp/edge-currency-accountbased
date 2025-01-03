@@ -126,9 +126,11 @@ export class SolanaEngine extends CurrencyEngine<
     const funcs = rpcNodes.map(serverUrl => async () => {
       serverUrl = this.tools.rpcWithApiKey(serverUrl)
       const res = await this.fetch(serverUrl, options)
-      if (!res.ok) {
+      const json = await res.json()
+      if (!res.ok || json.error != null) {
+        this.log.warn('fetchRpc error', json)
         throw new Error(
-          `fetchRpc ${options.method} failed error: ${res.status}`
+          `fetchRpc ${options.method} failed error: ${json.error ?? res.status}`
         )
       }
       const out = await res.json()
@@ -177,7 +179,9 @@ export class SolanaEngine extends CurrencyEngine<
         })
       }
 
-      const balances: any = await this.fetchRpcBulk(requests)
+      const res = await this.fetchRpcBulk(requests)
+      this.log.warn('queryBalance res', res)
+      const balances: any = res
 
       const [mainnetBal, ...tokenBals]: [AccountBalance, TokenAmount[]] =
         balances
