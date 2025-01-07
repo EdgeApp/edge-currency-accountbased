@@ -263,6 +263,33 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
     await this.startEngine()
   }
 
+  async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
+    const { tokenId } = spendInfo
+    const balance = this.getBalance({
+      tokenId
+    })
+    const publicAddress = spendInfo.spendTargets[0]?.publicAddress
+    if (publicAddress == null) {
+      throw new Error('Missing publicAddress')
+    }
+
+    let maxAmount = '0'
+    if (tokenId == null) {
+      // We can actually send the whole balance but it requires a small change
+      // to the transaction creation which cannot be nicely special-cased. We
+      // can actually empty the wallet with upcoming makeMaxSpend API. For now
+      // we leave 0.1 SUI behind.
+      maxAmount = sub(balance, '100000000')
+    } else {
+      maxAmount = balance
+    }
+
+    spendInfo.spendTargets[0].nativeAmount = maxAmount
+    // Use makeSpend to test for insufficient funds
+    await this.makeSpend(spendInfo)
+    return maxAmount
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
