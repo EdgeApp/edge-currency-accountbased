@@ -242,8 +242,8 @@ export class ThorchainEngine extends CosmosEngine {
     }
 
     return {
-      gasFeeCoin: coin('0', this.networkInfo.nativeDenom),
-      gasLimit: '0',
+      gasFeeCoin: coin('1', this.networkInfo.nativeDenom),
+      gasLimit: '60000000',
       // For Thorchain, the exact fee isn't known until the transaction is confirmed.
       // This would most commonly be an issue for max spends but we should overestimate
       // the fee for all spends.
