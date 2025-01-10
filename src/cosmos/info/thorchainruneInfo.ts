@@ -55,7 +55,8 @@ const networkInfo: ThorchainNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  displayName: 'THORChain',
+  assetDisplayName: 'THORChain',
+  chainDisplayName: 'THORChain',
   pluginId: 'thorchainrune',
   walletType: 'wallet:thorchainrune',
 
@@ -71,7 +72,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', maxLength: 250 }]
+  memoOptions: [{ type: 'text', maxLength: 250 }],
+
+  // Deprecated:
+  displayName: 'THORChain'
 }
 
 export const thorchainrune = makeOuterPlugin<

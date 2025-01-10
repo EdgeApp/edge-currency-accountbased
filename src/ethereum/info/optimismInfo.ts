@@ -212,7 +212,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Optimism',
+  chainDisplayName: 'Optimism',
+  assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'optimism',
   walletType: 'wallet:optimism',
@@ -231,6 +232,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Optimism',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

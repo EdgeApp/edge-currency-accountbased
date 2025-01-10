@@ -222,7 +222,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'AVAX',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Avalanche',
+  assetDisplayName: 'Avalanche',
+  chainDisplayName: 'Avalanche',
   memoOptions: evmMemoOptions,
   pluginId: 'avalanche', // matching mnemonic here
   walletType: 'wallet:avalanche',
@@ -241,6 +242,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Avalanche',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

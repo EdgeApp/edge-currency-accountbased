@@ -28,7 +28,8 @@ export const telosNetworkInfo: EosNetworkInfo = {
 export const telosCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TLOS',
   customTokenTemplate: eosCustomTokenTemplate,
-  displayName: 'Telos',
+  assetDisplayName: 'Telos',
+  chainDisplayName: 'Telos',
   memoOptions: eosMemoOptions,
   pluginId: 'telos',
   walletType: 'wallet:telos',
@@ -43,7 +44,10 @@ export const telosCurrencyInfo: EdgeCurrencyInfo = {
       multiplier: '10000',
       symbol: 'T'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Telos'
 }
 
 export const telos = makeOuterPlugin<EosNetworkInfo, EosTools, EosInfoPayload>({

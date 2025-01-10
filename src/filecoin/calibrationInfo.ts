@@ -21,7 +21,8 @@ const networkInfo: FilecoinNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
-  displayName: 'Filecoin Testnet (Calibration)',
+  assetDisplayName: 'Filecoin Testnet (Calibration)',
+  chainDisplayName: 'Filecoin Testnet (Calibration)',
   pluginId: 'calibration',
   requiredConfirmations: 900,
   unsafeBroadcastTx: true,
@@ -67,7 +68,10 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1',
       symbol: 'a⨎'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Filecoin Testnet (Calibration)'
 }
 
 export const calibration = makeOuterPlugin<

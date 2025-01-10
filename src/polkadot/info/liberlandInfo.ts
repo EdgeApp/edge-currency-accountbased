@@ -35,7 +35,8 @@ const networkInfo: PolkadotNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'LLD',
-  displayName: 'Liberland',
+  assetDisplayName: 'Liberland Dollar',
+  chainDisplayName: 'Liberland',
   pluginId: 'liberland',
   walletType: 'wallet:liberland',
 
@@ -52,6 +53,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
+  displayName: 'Liberland',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

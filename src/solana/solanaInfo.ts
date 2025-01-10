@@ -207,7 +207,8 @@ const networkInfo: SolanaNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SOL',
-  displayName: 'Solana',
+  assetDisplayName: 'Solana',
+  chainDisplayName: 'Solana',
   pluginId: 'solana',
   walletType: 'wallet:solana',
 
@@ -242,6 +243,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['microLamports'] },
+  displayName: 'Solana',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

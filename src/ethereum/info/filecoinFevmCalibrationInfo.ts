@@ -87,7 +87,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'tFIL',
   customFeeTemplate: evmCustomFeeTemplate,
   // customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Filecoin FEVM (Calibration Testnet)',
+  assetDisplayName: 'Filecoin FEVM (Calibration Testnet)',
+  chainDisplayName: 'Filecoin FEVM (Calibration Testnet)',
   memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevmcalibration',
   requiredConfirmations: 900,
@@ -136,6 +137,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
+  displayName: 'Filecoin FEVM (Calibration Testnet)',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

@@ -17,7 +17,8 @@ const networkInfo: HederaNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'HBAR',
-  displayName: 'Hedera',
+  assetDisplayName: 'Hedera',
+  chainDisplayName: 'Hedera',
   pluginId: 'hedera',
   walletType: 'wallet:hedera',
 
@@ -40,7 +41,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // https://docs.hedera.com/hedera/sdks-and-apis/sdks/transactions/modify-transaction-fields
-  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 100 }]
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 100 }],
+
+  // Deprecated:
+  displayName: 'Hedera'
 }
 
 export const hedera = makeOuterPlugin<

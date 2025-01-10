@@ -220,7 +220,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'POL',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Polygon',
+  assetDisplayName: 'Polygon',
+  chainDisplayName: 'Polygon',
   memoOptions: evmMemoOptions,
   pluginId: 'polygon', // matching mnemonic here
   walletType: 'wallet:polygon',
@@ -244,6 +245,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Polygon',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

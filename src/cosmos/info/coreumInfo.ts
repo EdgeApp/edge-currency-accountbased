@@ -159,7 +159,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'COREUM',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  displayName: 'Coreum',
+  assetDisplayName: 'Coreum',
+  chainDisplayName: 'Coreum',
   pluginId: 'coreum',
   walletType: 'wallet:coreum',
 
@@ -178,6 +179,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  displayName: 'Coreum',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

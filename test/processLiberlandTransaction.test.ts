@@ -11,7 +11,8 @@ import { LiberlandTransfer } from '../src/polkadot/polkadotTypes'
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'LLD',
-  displayName: 'Liberland',
+  assetDisplayName: 'Liberland',
+  chainDisplayName: 'Liberland',
   memoOptions: [],
   pluginId: 'liberland',
   walletType: 'wallet:liberland',
@@ -23,7 +24,10 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1000000000000000000',
       symbol: 'LLD'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Liberland'
 }
 
 const allTokensMap: EdgeTokenMap = {

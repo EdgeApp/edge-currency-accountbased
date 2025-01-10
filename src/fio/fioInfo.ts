@@ -39,7 +39,8 @@ const networkInfo: FioNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIO',
-  displayName: 'FIO',
+  assetDisplayName: 'FIO',
+  chainDisplayName: 'FIO',
   pluginId: 'fio',
   unsafeSyncNetwork: true,
   walletType: 'wallet:fio',
@@ -66,7 +67,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     fallbackRef: networkInfo.fallbackRef,
     fioAddressRegUrl: networkInfo.fioAddressRegUrl,
     freeAddressRef: networkInfo.freeAddressRef
-  }
+  },
+  displayName: 'FIO'
 }
 
 export const fio = makeOuterPlugin<FioNetworkInfo, FioTools, FioInfoPayload>({

@@ -21,7 +21,8 @@ const networkInfo: FilecoinNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
-  displayName: 'Filecoin',
+  assetDisplayName: 'Filecoin',
+  chainDisplayName: 'Filecoin',
   pluginId: 'filecoin',
   requiredConfirmations: 900,
   walletType: 'wallet:filecoin',
@@ -73,7 +74,10 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1',
       symbol: 'a⨎'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Filecoin'
 }
 
 export const filecoin = makeOuterPlugin<

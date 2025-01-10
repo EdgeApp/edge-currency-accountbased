@@ -17,7 +17,8 @@ const networkInfo: HederaNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'THBAR',
-  displayName: 'Hedera Testnet',
+  assetDisplayName: 'Hedera Testnet',
+  chainDisplayName: 'Hedera Testnet',
   pluginId: 'hederatestnet',
   walletType: 'wallet:hederatestnet',
 
@@ -37,7 +38,10 @@ const currencyInfo: EdgeCurrencyInfo = {
       multiplier: '1',
       symbol: 'tℏ'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Hedera Testnet'
 }
 
 export const hederatestnet = makeOuterPlugin<

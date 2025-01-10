@@ -120,7 +120,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'zkSync',
+  chainDisplayName: 'zkSync',
+  assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'zksync',
   walletType: 'wallet:zksync',
@@ -146,6 +147,7 @@ const currencyInfo: EdgeCurrencyInfo = {
       // Skip networkAdapterConfigs
     }
   },
+  displayName: 'zkSync',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

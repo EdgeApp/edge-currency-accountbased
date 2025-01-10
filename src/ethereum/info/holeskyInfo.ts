@@ -99,7 +99,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Holesky Testnet',
+  chainDisplayName: 'Holesky Testnet',
+  assetDisplayName: 'Holesky Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'holesky',
   walletType: 'wallet:holesky',
@@ -123,6 +124,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Holesky Testnet',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

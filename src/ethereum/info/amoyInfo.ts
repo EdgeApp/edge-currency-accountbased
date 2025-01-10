@@ -80,7 +80,8 @@ export const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'POL',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Amoy Testnet',
+  chainDisplayName: 'Amoy Testnet',
+  assetDisplayName: 'Amoy Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'amoy',
   walletType: 'wallet:amoy',
@@ -104,6 +105,7 @@ export const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Amoy Testnet',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

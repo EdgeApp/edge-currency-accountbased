@@ -21,7 +21,8 @@ const networkInfo: TonNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TON',
-  displayName: 'Toncoin',
+  assetDisplayName: 'Toncoin',
+  chainDisplayName: 'Toncoin',
   pluginId: 'ton',
   walletType: 'wallet:ton',
 
@@ -37,7 +38,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 127 }]
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 127 }],
+
+  // Deprecated:
+  displayName: 'Toncoin'
 }
 
 export const ton = makeOuterPlugin<TonNetworkInfo, TonTools, TonInfoPayload>({

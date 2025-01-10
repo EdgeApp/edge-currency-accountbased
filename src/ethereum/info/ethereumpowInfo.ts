@@ -89,7 +89,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETHW',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'EthereumPoW',
+  assetDisplayName: 'EthereumPoW',
+  chainDisplayName: 'EthereumPoW',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereumpow',
   walletType: 'wallet:ethereumpow',
@@ -113,6 +114,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'EthereumPoW',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

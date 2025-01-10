@@ -38,7 +38,8 @@ const networkInfo: AlgorandNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ALGO',
-  displayName: 'Algorand',
+  assetDisplayName: 'Algorand',
+  chainDisplayName: 'Algorand',
   pluginId: 'algorand',
   walletType: 'wallet:algorand',
 
@@ -73,6 +74,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
+  displayName: 'Algorand',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
