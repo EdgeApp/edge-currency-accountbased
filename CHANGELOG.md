@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.32.4 (2024-12-25)
+
 - fixed: Set correct Thorchain fee parameters when sending.
 
 ## 4.32.3 (2024-12-25)
