@@ -4,6 +4,7 @@
 
 - added: Add SUI
 - fixed: Ignore incorrect fees sent by the Midgard server, and instead just use 0.02 RUNE for Thorchain native transactions.
+- fixed: Fix EVM Alchemy urls
 
 ## 4.32.4 (2024-12-25)
 

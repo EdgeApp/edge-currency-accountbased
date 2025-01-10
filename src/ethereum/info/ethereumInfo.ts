@@ -1136,7 +1136,7 @@ const networkInfo: EthereumNetworkInfo = {
     {
       type: 'rpc',
       servers: [
-        'https://eth-mainnet.alchemyapi.io/v2/-{{alchemyApiKey}}',
+        'https://eth-mainnet.alchemyapi.io/v2/{{alchemyApiKey}}',
         'https://mainnet.infura.io/v3/{{infuraProjectId}}',
         'https://rpc.ankr.com/eth',
         'https://eth-mainnet.rpc.grove.city/v1/{{poktPortalApiKey}}',
