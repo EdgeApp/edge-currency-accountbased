@@ -23,7 +23,7 @@ import {
 } from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { add, ceil, gt, lt, mul, sub } from 'biggystring'
+import { ceil, gt, lt, mul, sub } from 'biggystring'
 import {
   AuthInfo,
   Fee,
@@ -687,7 +687,7 @@ export class CosmosEngine extends CurrencyEngine<
         coin('0', this.networkInfo.nativeDenom),
         ...feeCoin
       ])
-      networkFee = add(networkFee, networkFeeCoin.amount)
+      networkFee = networkFeeCoin.amount
     }
 
     const isSend = lt(amount, '0')
@@ -699,8 +699,8 @@ export class CosmosEngine extends CurrencyEngine<
       if (isMainnet) {
         nativeAmount = sub(nativeAmount, networkFee)
       } else {
-        networkFee = '0'
         parentNetworkFee = networkFee !== '0' ? networkFee : undefined
+        networkFee = '0'
       }
     } else {
       ourReceiveAddresses.push(this.walletInfo.keys.bech32Address)
