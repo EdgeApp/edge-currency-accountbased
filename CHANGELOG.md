@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Ignore incorrect fees sent by the Midgard server, and instead just use 0.02 RUNE for Thorchain native transactions.
+
 ## 4.32.4 (2024-12-25)
 
 - fixed: Set correct Thorchain fee parameters when sending.

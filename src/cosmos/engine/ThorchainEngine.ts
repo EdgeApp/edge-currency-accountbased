@@ -111,7 +111,7 @@ export class ThorchainEngine extends CosmosEngine {
         for (const action of response.actions) {
           inLoopHeight = max(inLoopHeight, action.height)
           const date = parseInt(div(action.date, '1000000000'))
-          const { memo, networkFees } = Object.values(action.metadata)[0]
+          const { memo } = Object.values(action.metadata)[0]
           let txidHex = ''
           // Convert actions to Events
           const events: Event[] = []
@@ -165,18 +165,19 @@ export class ThorchainEngine extends CosmosEngine {
           }
           if (netBalanceChanges.length === 0) continue
 
+          // Midgard fees are 10x off from where they should be.
+          // However, we can just ignore Midgard and guess 0.02 RUNE here:
+          // See https://dev.thorchain.org/concepts/fees.html#thorchain-native-rune
           const fee: Fee = {
-            amount: [],
+            amount: [
+              {
+                denom: 'rune',
+                amount: '2000000'
+              }
+            ],
             gasLimit: BigInt(0),
             payer: '',
             granter: ''
-          }
-          for (const networkFee of networkFees) {
-            if (networkFee.asset !== 'THOR.RUNE') continue
-            fee.amount.push({
-              denom: 'rune',
-              amount: networkFee.amount
-            })
           }
 
           netBalanceChanges.forEach(coin => {
