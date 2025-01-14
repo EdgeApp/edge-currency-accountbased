@@ -118,7 +118,8 @@ const networkInfo: TronNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'TRX',
-  displayName: 'Tron',
+  assetDisplayName: 'Tron',
+  chainDisplayName: 'Tron',
   pluginId: 'tron',
   walletType: 'wallet:tron',
 
@@ -145,6 +146,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', memoName: 'note' }],
 
   // Deprecated:
+  displayName: 'Tron',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

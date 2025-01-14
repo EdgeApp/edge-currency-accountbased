@@ -96,7 +96,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'CELO',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Celo',
+  assetDisplayName: 'Celo',
+  chainDisplayName: 'Celo',
   memoOptions: evmMemoOptions,
   pluginId: 'celo',
   walletType: 'wallet:celo',
@@ -115,6 +116,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Celo',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

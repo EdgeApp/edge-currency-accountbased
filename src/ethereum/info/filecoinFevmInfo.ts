@@ -87,7 +87,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FIL',
   customFeeTemplate: evmCustomFeeTemplate,
   // customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Filecoin FEVM',
+  assetDisplayName: 'Filecoin FEVM',
+  chainDisplayName: 'Filecoin FEVM',
   memoOptions: evmMemoOptions,
   pluginId: 'filecoinfevm',
   requiredConfirmations: 900,
@@ -136,6 +137,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
+  displayName: 'Filecoin FEVM',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

@@ -17,7 +17,8 @@ const networkInfo: CardanoNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ADA',
-  displayName: 'Cardano PreProd Testnet',
+  assetDisplayName: 'Cardano PreProd Testnet',
+  chainDisplayName: 'Cardano PreProd Testnet',
   pluginId: 'cardanotestnet',
   walletType: 'wallet:cardanotestnet',
 
@@ -30,7 +31,10 @@ const currencyInfo: EdgeCurrencyInfo = {
       name: 'ADA',
       multiplier: '1000000'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Cardano PreProd Testnet'
 }
 
 export const cardanotestnet = makeOuterPlugin<

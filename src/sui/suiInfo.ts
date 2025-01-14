@@ -24,7 +24,8 @@ const networkInfo: SuiNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'SUI',
-  displayName: 'Sui',
+  assetDisplayName: 'Sui',
+  chainDisplayName: 'Sui',
   pluginId: 'sui',
   walletType: 'wallet:sui',
 
@@ -40,7 +41,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 127 }]
+  memoOptions: [{ type: 'text', memoName: 'memo', maxLength: 127 }],
+
+  // Deprecated:
+  displayName: 'Sui'
 }
 
 export const sui = makeOuterPlugin<SuiNetworkInfo, SuiTools, SuiInfoPayload>({

@@ -24,7 +24,8 @@ export const waxNetworkInfo: EosNetworkInfo = {
 export const waxCurrencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'WAX',
   customTokenTemplate: eosCustomTokenTemplate,
-  displayName: 'Wax',
+  assetDisplayName: 'Wax',
+  chainDisplayName: 'Wax',
   memoOptions: eosMemoOptions,
   pluginId: 'wax',
   walletType: 'wallet:wax',
@@ -39,7 +40,10 @@ export const waxCurrencyInfo: EdgeCurrencyInfo = {
       multiplier: '100000000',
       symbol: 'W'
     }
-  ]
+  ],
+
+  // Deprecated:
+  displayName: 'Wax'
 }
 
 export const wax = makeOuterPlugin<EosNetworkInfo, EosTools, EosInfoPayload>({

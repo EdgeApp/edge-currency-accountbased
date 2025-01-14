@@ -6,7 +6,8 @@ import { allTokensMapFixture } from './allTokensMapFixture'
 export const currencyInfoFixture: EdgeCurrencyInfo = {
   canReplaceByFee: true,
   currencyCode: 'ETH',
-  displayName: 'Ethereum',
+  assetDisplayName: 'Ethereum',
+  chainDisplayName: 'Ethereum',
   memoOptions: [
     {
       type: 'hex',
@@ -71,5 +72,8 @@ export const currencyInfoFixture: EdgeCurrencyInfo = {
       ]
     }
   },
-  metaTokens: makeMetaTokens(allTokensMapFixture)
+  metaTokens: makeMetaTokens(allTokensMapFixture),
+
+  // Deprecated
+  displayName: 'Ethereum'
 }

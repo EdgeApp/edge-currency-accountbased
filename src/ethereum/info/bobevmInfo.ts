@@ -79,7 +79,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'BOB',
+  assetDisplayName: 'BOB',
+  chainDisplayName: 'BOB',
   memoOptions: evmMemoOptions,
   pluginId: 'bobevm',
   walletType: 'wallet:bobevm',
@@ -98,6 +99,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'BOB',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

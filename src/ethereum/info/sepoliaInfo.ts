@@ -97,7 +97,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Sepolia Testnet',
+  chainDisplayName: 'Sepolia Testnet',
+  assetDisplayName: 'Sepolia Testnet',
   memoOptions: evmMemoOptions,
   pluginId: 'sepolia',
   walletType: 'wallet:sepolia',
@@ -121,6 +122,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Sepolia Testnet',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

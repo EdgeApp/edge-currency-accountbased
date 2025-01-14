@@ -120,7 +120,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETC',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Ethereum Classic',
+  assetDisplayName: 'Ethereum Classic',
+  chainDisplayName: 'Ethereum Classic',
   memoOptions: evmMemoOptions,
   pluginId: 'ethereumclassic',
   walletType: 'wallet:ethereumclassic',
@@ -144,6 +145,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Ethereum Classic',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

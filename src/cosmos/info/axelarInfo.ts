@@ -38,7 +38,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'AXL',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  displayName: 'Axelar',
+  assetDisplayName: 'Axelar',
+  chainDisplayName: 'Axelar',
   pluginId: 'axelar',
   walletType: 'wallet:axelar',
 
@@ -54,7 +55,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', maxLength: 250 }]
+  memoOptions: [{ type: 'text', maxLength: 250 }],
+
+  // Deprecated:
+  displayName: 'Axelar'
 }
 
 export const axelar = makeOuterPlugin<

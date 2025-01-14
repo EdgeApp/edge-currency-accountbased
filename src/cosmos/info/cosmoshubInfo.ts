@@ -31,7 +31,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ATOM',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  displayName: 'Cosmos Hub',
+  assetDisplayName: 'Cosmos Hub',
+  chainDisplayName: 'Cosmos Hub',
   pluginId: 'cosmoshub',
   walletType: 'wallet:cosmoshub',
 
@@ -47,7 +48,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
-  memoOptions: [{ type: 'text', maxLength: 250 }]
+  memoOptions: [{ type: 'text', maxLength: 250 }],
+
+  // Deprecated:
+  displayName: 'Cosmos Hub'
 }
 
 export const cosmoshub = makeOuterPlugin<

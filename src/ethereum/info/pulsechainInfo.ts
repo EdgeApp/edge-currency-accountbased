@@ -90,7 +90,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'PLS',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'PulseChain',
+  assetDisplayName: 'PulseChain',
+  chainDisplayName: 'PulseChain',
   memoOptions: evmMemoOptions,
   pluginId: 'pulsechain',
   walletType: 'wallet:pulsechain',
@@ -114,6 +115,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'PulseChain',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

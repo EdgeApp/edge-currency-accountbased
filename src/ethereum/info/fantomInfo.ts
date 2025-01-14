@@ -322,7 +322,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'FTM',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Fantom',
+  assetDisplayName: 'Fantom',
+  chainDisplayName: 'Fantom',
   memoOptions: evmMemoOptions,
   pluginId: 'fantom',
   walletType: 'wallet:fantom',
@@ -341,6 +342,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Fantom',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

@@ -20,7 +20,8 @@ const networkInfo: PolkadotNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'DOT',
-  displayName: 'Polkadot',
+  assetDisplayName: 'Polkadot',
+  chainDisplayName: 'Polkadot',
   pluginId: 'polkadot',
   walletType: 'wallet:polkadot',
 
@@ -37,7 +38,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // No memo support:
-  memoOptions: []
+  memoOptions: [],
+
+  // Deprecated:
+  displayName: 'Polkadot'
 }
 
 export const polkadot = makeOuterPlugin<

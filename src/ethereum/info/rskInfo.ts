@@ -83,7 +83,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RBTC',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Rootstock',
+  assetDisplayName: 'Rootstock',
+  chainDisplayName: 'Rootstock',
   memoOptions: evmMemoOptions,
   pluginId: 'rsk',
   walletType: 'wallet:rsk',
@@ -102,6 +103,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Rootstock',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

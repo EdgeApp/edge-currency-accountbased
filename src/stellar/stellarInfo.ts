@@ -15,7 +15,8 @@ const networkInfo: StellarNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XLM',
-  displayName: 'Stellar',
+  assetDisplayName: 'Stellar',
+  chainDisplayName: 'Stellar',
   pluginId: 'stellar',
   walletType: 'wallet:stellar',
 
@@ -38,7 +39,10 @@ const currencyInfo: EdgeCurrencyInfo = {
     { type: 'hex', maxBytes: 32, minBytes: 32 }
     // We also support a transaction ID for returned funds
   ],
-  multipleMemos: true
+  multipleMemos: true,
+
+  // Deprecated:
+  displayName: 'Stellar'
 }
 
 export const stellar = makeOuterPlugin<

@@ -19,6 +19,8 @@ describe('validateMemos', function () {
         addressExplorer: '',
         currencyCode: 'MTC',
         denominations: [],
+        assetDisplayName: 'Memo Test Coin',
+        chainDisplayName: 'Memo Test Coin',
         displayName: 'Memo Test Coin',
         pluginId: 'memoTest',
         transactionExplorer: '',

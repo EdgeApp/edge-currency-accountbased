@@ -182,7 +182,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Arbitrum One',
+  chainDisplayName: 'Arbitrum One',
+  assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'arbitrum',
   walletType: 'wallet:arbitrum',
@@ -201,6 +202,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Arbitrum One',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

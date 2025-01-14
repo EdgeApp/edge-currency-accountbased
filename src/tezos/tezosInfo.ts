@@ -45,7 +45,8 @@ const networkInfo: TezosNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XTZ',
-  displayName: 'Tezos',
+  assetDisplayName: 'Tezos',
+  chainDisplayName: 'Tezos',
   pluginId: 'tezos',
   walletType: 'wallet:tezos',
 
@@ -62,7 +63,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // No memo support:
-  memoOptions: []
+  memoOptions: [],
+
+  // Deprecated:
+  displayName: 'Tezos'
 }
 
 export const tezos = makeOuterPlugin<

@@ -172,7 +172,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'BNB',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'BNB Smart Chain',
+  assetDisplayName: 'BNB Smart Chain',
+  chainDisplayName: 'BNB Smart Chain',
   memoOptions: evmMemoOptions,
   pluginId: 'binancesmartchain',
   walletType: 'wallet:binancesmartchain',
@@ -191,6 +192,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'BNB Smart Chain',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

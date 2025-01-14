@@ -129,7 +129,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  displayName: 'Dev Ethereum',
+  assetDisplayName: 'Dev Ethereum',
+  chainDisplayName: 'Dev Ethereum',
   memoOptions: evmMemoOptions,
   pluginId: 'ethDev',
   walletType: 'wallet:ethDev',
@@ -153,6 +154,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
+  displayName: 'Dev Ethereum',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

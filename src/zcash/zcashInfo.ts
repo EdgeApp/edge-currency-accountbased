@@ -19,7 +19,8 @@ const networkInfo: ZcashNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ZEC',
-  displayName: 'Zcash',
+  assetDisplayName: 'Zcash',
+  chainDisplayName: 'Zcash',
   pluginId: 'zcash',
   requiredConfirmations: 10,
   unsafeBroadcastTx: true,
@@ -40,7 +41,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // https://zips.z.cash/zip-0302
-  memoOptions: [{ type: 'text', maxLength: 512 }]
+  memoOptions: [{ type: 'text', maxLength: 512 }],
+
+  // Deprecated:
+  displayName: 'Zcash'
 }
 
 export const zcash = makeOuterPlugin<

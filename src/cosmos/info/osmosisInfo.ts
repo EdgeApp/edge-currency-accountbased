@@ -51,7 +51,8 @@ const networkInfo: CosmosNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'OSMO',
   customTokenTemplate: cosmosCustomTokenTemplate,
-  displayName: 'Osmosis',
+  assetDisplayName: 'Osmosis',
+  chainDisplayName: 'Osmosis',
   pluginId: 'osmosis',
   walletType: 'wallet:osmosis',
 
@@ -70,6 +71,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
+  displayName: 'Osmosis',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 

@@ -22,7 +22,8 @@ const networkInfo: PiratechainNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ARRR',
-  displayName: 'Pirate Chain',
+  assetDisplayName: 'Pirate Chain',
+  chainDisplayName: 'Pirate Chain',
   pluginId: 'piratechain',
   requiredConfirmations: 10,
   unsafeBroadcastTx: true,
@@ -42,7 +43,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Copied from Zcash:
-  memoOptions: [{ type: 'text', maxLength: 512 }]
+  memoOptions: [{ type: 'text', maxLength: 512 }],
+
+  // Deprecated:
+  displayName: 'Pirate Chain'
 }
 
 export const piratechain = makeOuterPlugin<
