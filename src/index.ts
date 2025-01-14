@@ -20,6 +20,8 @@ import { polkadot } from './polkadot/info/polkadotInfo'
 import { ripple } from './ripple/rippleInfo'
 import { solana } from './solana/solanaInfo'
 import { stellar } from './stellar/stellarInfo'
+import { sui } from './sui/suiInfo'
+import { suitestnet } from './sui/suitestnetInfo'
 import { tezos } from './tezos/tezosInfo'
 import { ton } from './ton/tonInfo'
 import { tron } from './tron/tronInfo'
@@ -44,6 +46,8 @@ const plugins = {
   ripple,
   solana,
   stellar,
+  sui,
+  suitestnet,
   tezos,
   ton,
   tron,
