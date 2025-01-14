@@ -9,6 +9,7 @@
 ## 4.32.4 (2024-12-25)
 
 - fixed: Set correct Thorchain fee parameters when sending.
+- fixed: (FIO) OBT data encryption/decryption
 
 ## 4.32.3 (2024-12-25)
 

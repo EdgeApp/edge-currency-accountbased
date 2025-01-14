@@ -2,8 +2,8 @@ import { FIOSDK } from '@fioprotocol/fiosdk'
 import { BalanceResponse } from '@fioprotocol/fiosdk/lib/entities/BalanceResponse'
 import { EndPoint } from '@fioprotocol/fiosdk/lib/entities/EndPoint'
 import { GetEncryptKeyResponse } from '@fioprotocol/fiosdk/lib/entities/GetEncryptKeyResponse'
+import { GetObtDataResponse } from '@fioprotocol/fiosdk/lib/entities/GetObtDataResponse'
 import {
-  GetObtData,
   PendingFioRequests,
   SentFioRequests
 } from '@fioprotocol/fiosdk/lib/transactions/queries'
@@ -235,24 +235,44 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         privateKeys: JsonObject,
         ...rest: any[]
       ): Promise<ObtData[]> => {
-        const obtDecoder = new GetObtData({
-          fioPublicKey: this.walletInfo.keys.publicKey,
-          getEncryptKey: this.defaultGetEncryptKey,
-          includeEncrypted: false
-        })
-        const encryptedObtData = await this.fetchEncryptedObtData(
-          'getObtData',
-          obtDecoder
+        const fioSdk = new FIOSDK(
+          privateKeys.fioKey,
+          this.walletInfo.keys.publicKey,
+          this.networkInfo.historyNodeUrls,
+          this.fetchCors
         )
-        obtDecoder.privateKey = privateKeys.fioKey
-        obtDecoder.publicKey = this.walletInfo.keys.publicKey
-        const decryptedObtData: { obt_data_records: ObtData[] } =
-          (await obtDecoder.decrypt({
-            obt_data_records: encryptedObtData,
-            more: 0
-          })) ?? { obt_data_records: [] }
+        const ITEMS_PER_PAGE = 100
 
-        return decryptedObtData.obt_data_records
+        let lastPageAmount = ITEMS_PER_PAGE
+        let requestsLastPage = 1
+        const decryptedObtDataRecords: ObtData[] = []
+        while (lastPageAmount === ITEMS_PER_PAGE) {
+          let response: GetObtDataResponse
+          try {
+            response = await fioSdk.getObtData({
+              limit: ITEMS_PER_PAGE,
+              offset: (requestsLastPage - 1) * ITEMS_PER_PAGE,
+              includeEncrypted: true
+            })
+
+            const cleanResponse = asGetObtDataResponse(response)
+
+            const { obt_data_records: obtDataRecords, more } = cleanResponse
+            decryptedObtDataRecords.push(...obtDataRecords)
+            if (more === 0) break
+
+            requestsLastPage++
+            lastPageAmount = obtDataRecords.length
+          } catch (e: any) {
+            const errorJson = asMaybe(asFioEmptyResponse)(e.json)
+            if (errorJson?.message !== 'No FIO Requests') {
+              this.error('fetchDecryptedObtData error: ', e)
+            }
+            break
+          }
+        }
+
+        return decryptedObtDataRecords
       }
     }
   }
@@ -1170,46 +1190,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     return encryptedFioRequests
   }
 
-  async fetchEncryptedObtData(
-    type: string,
-    decoder: Query<GetObtData>
-  ): Promise<ObtData[]> {
-    const ITEMS_PER_PAGE = 100
-
-    let lastPageAmount = ITEMS_PER_PAGE
-    let requestsLastPage = 1
-    const encryptedObtDataRecords: ObtData[] = []
-    while (lastPageAmount === ITEMS_PER_PAGE) {
-      let response
-      try {
-        response = await this.multicastServers(type, {
-          endpoint: decoder.getEndPoint(),
-          body: {
-            fio_public_key: this.walletInfo.keys.publicKey,
-            limit: ITEMS_PER_PAGE,
-            offset: (requestsLastPage - 1) * ITEMS_PER_PAGE
-          }
-        })
-        const cleanResponse = asGetObtDataResponse(response)
-
-        const { obt_data_records: obtDataRecords, more } = cleanResponse
-        encryptedObtDataRecords.push(...obtDataRecords)
-        if (more === 0) break
-
-        requestsLastPage++
-        lastPageAmount = obtDataRecords.length
-      } catch (e: any) {
-        const errorJson = asMaybe(asFioEmptyResponse)(e.json)
-        if (errorJson?.message !== 'No FIO Requests') {
-          this.error('fetchEncryptedObtData error: ', e)
-        }
-        break
-      }
-    }
-
-    return encryptedObtDataRecords
-  }
-
   fioRequestsListChanged = (
     existingList: FioRequest[],
     newList: FioRequest[]
@@ -1704,12 +1684,24 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
             hash: undefined,
             offline_url: undefined
           }
+
+          const fioSdk = new FIOSDK(
+            privateKeys.fioKey,
+            this.walletInfo.keys.publicKey,
+            this.networkInfo.historyNodeUrls,
+            this.fetchCors
+          )
+
+          const { encrypt_public_key: encryptPublicKey } =
+            await fioSdk.getEncryptKey(payeeFioAddress)
+
           const cipherContent = transactions.getCipherContent(
             'record_obt_data_content',
             content,
             fioPrivateKeys.fioKey,
-            payerPublicAddress
+            encryptPublicKey
           )
+
           txParams = {
             account: 'fio.reqobt',
             action: 'recordobt',

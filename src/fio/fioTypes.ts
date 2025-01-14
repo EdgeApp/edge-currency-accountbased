@@ -169,7 +169,21 @@ export const asObtData = asObject({
   payee_fio_address: asString,
   payer_fio_public_key: asString,
   payee_fio_public_key: asString,
-  content: asEither(asString, asObject({ token_code: asString })),
+  content: asEither(
+    asString,
+    asObject({
+      amount: asString,
+      chain_code: asString,
+      hash: asOptional(asString),
+      memo: asString,
+      obt_id: asString,
+      offline_url: asOptional(asString),
+      payee_public_address: asString,
+      payer_public_address: asString,
+      status: asString,
+      token_code: asString
+    })
+  ),
   fio_request_id: asNumber,
   status: asString,
   time_stamp: asString
