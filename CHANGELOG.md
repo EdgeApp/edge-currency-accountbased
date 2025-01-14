@@ -2,14 +2,16 @@
 
 ## Unreleased
 
+## 4.33.0 (2025-01-13)
+
 - added: Add SUI
 - fixed: Ignore incorrect fees sent by the Midgard server, and instead just use 0.02 RUNE for Thorchain native transactions.
 - fixed: Fix EVM Alchemy urls
+- fixed: (FIO) OBT data encryption/decryption
 
 ## 4.32.4 (2024-12-25)
 
 - fixed: Set correct Thorchain fee parameters when sending.
-- fixed: (FIO) OBT data encryption/decryption
 
 ## 4.32.3 (2024-12-25)
 
