@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.34.0 (2025-01-14)
+
+- changed: Upgrade edge-core-js to v2.23.0
+
 ## 4.33.0 (2025-01-13)
 
 - added: Add SUI
