@@ -616,6 +616,27 @@ export default [
           nativeAmount: '123'
         }
       },
+      'uri eip681 payment address with chainId': {
+        args: ['ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
+        }
+      },
+      'uri eip681 payment address with pay prefix and chainId': {
+        args: ['ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
+        }
+      },
+      'uri eip681 payment address with pay prefix, chainId, and amount': {
+        args: [
+          'ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1?value=123'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '123'
+        }
+      },
       'uri eip681 payment address using scientific notation': {
         args: [
           'ethereum:0xf5d81254c269a1e984044e4d542adc07bf18c541?value=2.014e18'
@@ -744,6 +765,27 @@ export default [
         '12345678900000000000000',
         'RBTC'
       ],
+      'uri eip681 payment address with chainId': {
+        args: ['rsk:0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1E'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
+        }
+      },
+      'uri eip681 payment address with pay prefix and chainId': {
+        args: ['ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1E'],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541'
+        }
+      },
+      'uri eip681 payment address with pay prefix, chainId, and amount': {
+        args: [
+          'ethereum:pay-0xf5d81254c269a1e984044e4d542adc07bf18c541@0x1E?value=123'
+        ],
+        output: {
+          publicAddress: '0xf5d81254c269a1e984044e4d542adc07bf18c541',
+          nativeAmount: '123'
+        }
+      },
       'uri address with unique identifier': [
         'rsk:0x04b6b3bcbc16a5fb6a20301d650f8def513122a8?dt=123456789',
         '0x04b6b3bcbc16a5fb6a20301d650f8def513122a8',

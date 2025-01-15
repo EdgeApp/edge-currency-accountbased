@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add eip681 chainId detection
+
 ## 4.35.3 (2025-01-28)
 
 - changed: (Solana) Implement transaction broadcast retry logic

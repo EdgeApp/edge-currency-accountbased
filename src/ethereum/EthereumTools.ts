@@ -22,6 +22,7 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import {
   biggyScience,
   getLegacyDenomination,
+  hexToDecimal,
   mergeDeeply,
   multicastEthProviders
 } from '../common/utils'
@@ -176,6 +177,13 @@ export class EthereumTools implements EdgeCurrencyTools {
       networks[network] = true
     })
 
+    // Non-ethereum networks can use ethereum: but must include a chainId
+    let mustValidateChainId = false
+    if (networks.ethereum == null) {
+      networks.ethereum = true
+      mustValidateChainId = true
+    }
+
     const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
@@ -204,6 +212,28 @@ export class EthereumTools implements EdgeCurrencyTools {
       prefix = 'pay' // The default prefix according to EIP-681 is "pay"
     }
     address = contractAddress
+
+    if (
+      parsedUri.protocol === 'ethereum' &&
+      mustValidateChainId &&
+      !address.includes('@')
+    ) {
+      throw new Error(
+        'chainId must be present when using ethereum: prefix on a non-ethereum network'
+      )
+    }
+
+    // Split the address to get the chainId according to EIP-681
+    const [address2, chainId] = address.split('@')
+    if (
+      chainId != null &&
+      hexToDecimal(chainId) !== this.networkInfo.chainParams.chainId.toString()
+    ) {
+      throw new Error(
+        `chainId '${chainId}' mismatch with pluginId ${this.currencyInfo.pluginId}.`
+      )
+    }
+    address = address2
 
     // Verify checksum if it's present in the address
     if (
