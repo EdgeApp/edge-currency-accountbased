@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Add eip681 chainId detection
+
 ## 4.34.0 (2025-01-14)
 
 - changed: Upgrade edge-core-js to v2.23.0
