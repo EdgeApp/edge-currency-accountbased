@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.35.0 (2025-01-15)
+
 - changed: Implement new Seen Tx Checkpoint API for all currencies.
 
 ## 4.34.0 (2025-01-14)
