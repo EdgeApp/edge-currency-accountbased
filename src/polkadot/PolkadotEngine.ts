@@ -14,6 +14,7 @@ import {
   EdgeTokenId,
   EdgeTokenMap,
   EdgeTransaction,
+  EdgeTxAmount,
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
@@ -683,6 +684,8 @@ export class PolkadotEngine extends CurrencyEngine<
 
     let totalTxAmount
     let nativeNetworkFee
+    let parentNetworkFee
+    const networkFees: EdgeTxAmount[] = []
 
     if (edgeSpendInfo.tokenId == null) {
       const spendableBalance = sub(
@@ -711,6 +714,10 @@ export class PolkadotEngine extends CurrencyEngine<
           this.networkInfo.partialFeeOffsetMultiplier
         )
       )
+      networkFees.push({
+        nativeAmount: nativeNetworkFee,
+        tokenId: null
+      })
 
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
 
@@ -733,13 +740,18 @@ export class PolkadotEngine extends CurrencyEngine<
       )
 
       // The fee returned from partial fee is always off by some length fee, because reasons
-      nativeNetworkFee = sub(
+      parentNetworkFee = sub(
         paymentInfo.partialFee.toString(),
         mul(
           this.networkInfo.lengthFeePerByte,
           this.networkInfo.partialFeeOffsetMultiplier
         )
       )
+      nativeNetworkFee = '0'
+      networkFees.push({
+        nativeAmount: parentNetworkFee,
+        tokenId: null
+      })
 
       const feeBalance = this.getBalance({
         tokenId: null
@@ -748,9 +760,9 @@ export class PolkadotEngine extends CurrencyEngine<
         feeBalance,
         this.api.consts.balances.existentialDeposit.toString()
       )
-      if (gt(nativeNetworkFee, spendableFeeBalance)) {
+      if (gt(parentNetworkFee, spendableFeeBalance)) {
         throw new InsufficientFundsError({
-          networkFee: nativeNetworkFee,
+          networkFee: parentNetworkFee,
           tokenId: null
         })
       }
@@ -770,7 +782,8 @@ export class PolkadotEngine extends CurrencyEngine<
       memos,
       nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
-      networkFees: [],
+      networkFees,
+      parentNetworkFee,
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',
