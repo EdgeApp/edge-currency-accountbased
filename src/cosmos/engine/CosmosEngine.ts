@@ -554,11 +554,9 @@ export class CosmosEngine extends CurrencyEngine<
     this.otherData.archivedTxLastCheckTime = Date.now()
     this.walletLocalDataDirty = true
 
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 

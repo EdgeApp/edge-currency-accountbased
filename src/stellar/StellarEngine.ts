@@ -339,11 +339,9 @@ export class StellarEngine extends CurrencyEngine<
         return
       }
     }
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {

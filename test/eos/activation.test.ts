@@ -54,10 +54,16 @@ describe(`EOS activation`, function () {
       // console.log('onBlockHeightChange:', height)
       emitter.emit('onBlockHeightChange', height)
     },
+    onSeenTxCheckpoint(checkpoint) {
+      emitter.emit('onSeenTxCheckpoint', checkpoint)
+    },
     onStakingStatusChanged() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChange', tokenId, balance)
+    },
+    onTransactions(transactionEvents) {
+      emitter.emit('onTransactions', transactionEvents)
     },
     onTransactionsChanged(transactionList) {
       // console.log('onTransactionsChanged:', transactionList)

@@ -469,12 +469,10 @@ export class PolkadotEngine extends CurrencyEngine<
     this.tokenCheckTransactionsStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
@@ -554,12 +552,10 @@ export class PolkadotEngine extends CurrencyEngine<
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
 
-    if (this.transactionsChangedArray.length > 0) {
+    if (this.transactionEvents.length > 0) {
       this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 

@@ -774,8 +774,7 @@ export class EthereumEngine extends CurrencyEngine<
       () => {}
     )
     this.ethNetwork.start()
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.startEngine()
+    await super.startEngine()
   }
 
   async killEngine(): Promise<void> {
@@ -1549,8 +1548,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    super.saveTx(edgeTransaction)
+    await super.saveTx(edgeTransaction)
   }
 }
 

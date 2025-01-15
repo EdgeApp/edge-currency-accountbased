@@ -148,11 +148,9 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   onUpdateTransactions(): void {
-    if (this.transactionsChangedArray.length > 0) {
-      this.currencyEngineCallbacks.onTransactionsChanged(
-        this.transactionsChangedArray
-      )
-      this.transactionsChangedArray = []
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
     }
   }
 
