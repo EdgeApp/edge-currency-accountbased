@@ -39,7 +39,7 @@ import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
-import { cleanTxLogs, getOtherParams } from '../common/utils'
+import { cache, cleanTxLogs, getOtherParams } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
@@ -73,7 +73,7 @@ export class SolanaEngine extends CurrencyEngine<
   networkInfo: SolanaNetworkInfo
   base58PublicKey: string
   feePerSignature: string
-  priorityFee: string
+  getPriorityFee: () => Promise<string>
   recentBlockhash: string
   chainCode: string
   otherData!: SolanaWalletOtherData
@@ -95,7 +95,7 @@ export class SolanaEngine extends CurrencyEngine<
     this.fetch = async (uri, opts) =>
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
-    this.priorityFee = '0'
+    this.getPriorityFee = cache(this.queryFee.bind(this), 30000)
     this.recentBlockhash = '' // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
@@ -219,21 +219,19 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  async queryFee(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getRecentPrioritizationFees()
-      })
-      const recentPriorityFees: RecentPrioritizationFees[] =
-        await asyncWaterfall(funcs)
-      // if the array is empty, or request otherwise fails, it's ok to just use the default
-      const latestPriorityFee = recentPriorityFees.sort(
-        (a, b) => a.slot - b.slot
-      )[0]
-      this.priorityFee = latestPriorityFee.prioritizationFee.toString()
-    } catch (e: any) {
-      this.error(`queryFee Error `, e)
-    }
+  async queryFee(): Promise<string> {
+    const funcs = this.tools.connections.map(connection => async () => {
+      return await connection.getRecentPrioritizationFees()
+    })
+    const recentPriorityFees: RecentPrioritizationFees[] = await asyncWaterfall(
+      funcs
+    )
+    // if the array is empty, or request otherwise fails, it's ok to just use the default
+    const latestPriorityFee = recentPriorityFees.sort(
+      (a, b) => a.slot - b.slot
+    )[0]
+    const priorityFee = latestPriorityFee.prioritizationFee.toString()
+    return priorityFee
   }
 
   async queryBlockhash(): Promise<void> {
@@ -520,7 +518,6 @@ export class SolanaEngine extends CurrencyEngine<
     this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
-    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
     this.queryBlockhash().catch(() => {})
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
@@ -620,16 +617,17 @@ export class SolanaEngine extends CurrencyEngine<
     const instructions: TransactionInstruction[] = []
 
     // calculate priority fee. Multipliers are arbitrary just to establish some ranges
+    const priorityFee = await this.getPriorityFee()
     let microLamports = '0'
     switch (networkFeeOption) {
       case 'low':
-        microLamports = max('0', mul(this.priorityFee, '0.75'))
+        microLamports = max('0', mul(priorityFee, '0.75'))
         break
       case 'standard':
-        microLamports = this.priorityFee
+        microLamports = priorityFee
         break
       case 'high':
-        microLamports = max('1', mul(this.priorityFee, '1.25'))
+        microLamports = max('1', mul(priorityFee, '1.25'))
         break
       case 'custom': {
         microLamports = asSolanaCustomFee(customNetworkFee).microLamports

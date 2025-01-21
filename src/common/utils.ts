@@ -371,3 +371,22 @@ export const multicastEthProviders = async <
   )
   return await asyncWaterfall(shuffleArray(funcs))
 }
+
+/**
+ * Cache expensive function results
+ */
+export function cache<T>(
+  func: () => Promise<T>,
+  validMs: number
+): () => Promise<T> {
+  let dateUpdated: number | undefined
+  let cachedValue: T
+
+  return async () => {
+    if (dateUpdated == null || Date.now() - dateUpdated > validMs) {
+      cachedValue = await func()
+      dateUpdated = Date.now()
+    }
+    return cachedValue
+  }
+}
