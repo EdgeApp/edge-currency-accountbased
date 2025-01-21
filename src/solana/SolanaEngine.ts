@@ -62,7 +62,6 @@ import {
 } from './solanaTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
-const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class SolanaEngine extends CurrencyEngine<
@@ -80,7 +79,7 @@ export class SolanaEngine extends CurrencyEngine<
   fetch: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
-  minimumAddressBalance: string
+  getMinimumAddressBalance: () => Promise<string>
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -100,7 +99,10 @@ export class SolanaEngine extends CurrencyEngine<
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
-    this.minimumAddressBalance = '0'
+    this.getMinimumAddressBalance = cache(
+      this.queryMinimumBalance.bind(this),
+      30000
+    )
   }
 
   setOtherData(raw: any): void {
@@ -207,16 +209,13 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   // https://solana.com/docs/core/rent
-  async queryMinimumBalance(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getMinimumBalanceForRentExemption(50)
-      })
-      const minimumBalance: number = await asyncWaterfall(funcs)
-      this.minimumAddressBalance = minimumBalance.toString()
-    } catch (e: any) {
-      this.error(`queryMinimumBalance Error `, e)
-    }
+  async queryMinimumBalance(): Promise<string> {
+    const funcs = this.tools.connections.map(connection => async () => {
+      return await connection.getMinimumBalanceForRentExemption(50)
+    })
+    const minimumBalance: number = await asyncWaterfall(funcs)
+    this.minimumAddressBalance = minimumBalance.toString()
+    return this.minimumAddressBalance
   }
 
   async queryFee(): Promise<string> {
@@ -515,9 +514,6 @@ export class SolanaEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
     this.queryBlockhash().catch(() => {})
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
@@ -554,19 +550,20 @@ export class SolanaEngine extends CurrencyEngine<
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
+    const minimumAddressBalance = await this.getMinimumAddressBalance()
 
     let spendableBalance: string
     if (tokenId == null) {
       spendableBalance = sub(
         sub(balance, edgeTx.networkFee),
-        this.minimumAddressBalance
+        minimumAddressBalance
       )
     } else {
       const solBalance = this.getBalance({
         tokenId: null
       })
       const solRequired = sub(solBalance, edgeTx.networkFee)
-      if (lt(sub(solRequired, this.minimumAddressBalance), '0')) {
+      if (lt(sub(solRequired, minimumAddressBalance), '0')) {
         throw new InsufficientFundsError({
           networkFee: this.feePerSignature,
           tokenId: null
@@ -635,6 +632,8 @@ export class SolanaEngine extends CurrencyEngine<
       }
     }
 
+    const minimumAddressBalance = await this.getMinimumAddressBalance()
+
     if (gt(microLamports, '0')) {
       const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
         microLamports: parseInt(microLamports)
@@ -700,7 +699,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balanceSol =
         this.walletLocalData.totalBalances[this.chainCode] ?? '0'
-      if (gt(add(parentNetworkFee, this.minimumAddressBalance), balanceSol)) {
+      if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           networkFee: parentNetworkFee,
           tokenId: null
@@ -736,7 +735,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     if (tokenId != null && eq(totalTxAmount, balance)) {
       // This is a max token send so we don't need to consider the minimumAddressBalance
-    } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
+    } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
       throw new InsufficientFundsError({ tokenId })
     }
 
