@@ -206,24 +206,6 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  async queryBlockheight(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getSlot()
-      })
-      const blockheight: number = await asyncWaterfall(funcs)
-      if (blockheight > this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = blockheight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
-    } catch (e: any) {
-      this.error(`queryBlockheight Error `, e)
-    }
-  }
-
   // https://solana.com/docs/core/rent
   async queryMinimumBalance(): Promise<void> {
     try {
@@ -306,6 +288,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.slot,
+      confirmations: 'confirmed',
       currencyCode,
       date: timestamp,
       isSend: amount.startsWith('-'),
@@ -534,9 +517,6 @@ export class SolanaEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
     this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
       () => {}
     )
