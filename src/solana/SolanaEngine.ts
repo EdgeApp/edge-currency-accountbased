@@ -718,12 +718,12 @@ export class SolanaEngine extends CurrencyEngine<
         lamports: parseInt(nativeAmount)
       })
       instructions.push(transferInstruction)
-    }
 
-    if (tokenId != null && eq(totalTxAmount, balance)) {
-      // This is a max token send so we don't need to consider the minimumAddressBalance
-    } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
-      throw new InsufficientFundsError({ tokenId })
+      if (eq(totalTxAmount, balance)) {
+        // This is a max token send so we don't need to consider the minimumAddressBalance
+      } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
+        throw new InsufficientFundsError({ tokenId })
+      }
     }
 
     if (memos[0]?.type === 'text') {
