@@ -57,6 +57,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   connections: Connection[]
   archiveConnections: Connection[]
   clientCount: number
+  tokenProgramPublicKey: PublicKey
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
@@ -69,6 +70,7 @@ export class SolanaTools implements EdgeCurrencyTools {
     this.connections = []
     this.archiveConnections = []
     this.clientCount = 0
+    this.tokenProgramPublicKey = new PublicKey(networkInfo.tokenPublicKey)
   }
 
   async getDisplayPrivateKey(

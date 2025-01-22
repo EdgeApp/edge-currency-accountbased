@@ -21,6 +21,7 @@ import {
   VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
+import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -51,7 +52,6 @@ import {
   asSolanaTxOtherParams,
   asSolanaWalletOtherData,
   asTokenBalances,
-  Blocktime,
   ParsedTxAmount,
   RpcRequest,
   SafeSolanaWalletInfo,
@@ -295,11 +295,10 @@ export class SolanaEngine extends CurrencyEngine<
     tx: TransactionResponse | VersionedTransactionResponse,
     pubkey: PublicKey
   ): ParsedTxAmount[] {
-    const out: ParsedTxAmount[] = []
     const index = tx.transaction.message.staticAccountKeys.findIndex(account =>
       account.equals(pubkey)
     )
-    if (index < 0 || tx.meta == null) return out
+    if (index < 0 || tx.meta == null) return []
 
     const {
       fee,
@@ -310,16 +309,21 @@ export class SolanaEngine extends CurrencyEngine<
     } = tx.meta
     const preTokenBalances = maybePreTokenBalances ?? []
     const postTokenBalances = maybePostTokenBalancesRaw ?? []
+    const isTokenTransaction =
+      tx.transaction.message.staticAccountKeys.find(pk =>
+        pk.equals(this.tools.tokenProgramPublicKey)
+      ) != null
     const networkFee = fee.toString()
-    if (this.base58PublicKey === pubkey.toBase58()) {
+
+    if (!isTokenTransaction) {
       const solAmount = (postBalances[index] - preBalances[index]).toString()
-      if (solAmount !== '0') {
-        const isSend = lt(solAmount, '0')
-        out.push({
+      const isSend = lt(solAmount, '0')
+      return [
+        {
           amount: solAmount,
           networkFee: isSend ? networkFee : '0'
-        })
-      }
+        }
+      ]
     }
 
     const skip = (balObj: TokenBalance): boolean => {
@@ -346,6 +350,7 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
+    const out: ParsedTxAmount[] = []
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
       out.push({
         amount: balanceChange,
@@ -368,7 +373,7 @@ export class SolanaEngine extends CurrencyEngine<
         new PublicKey(tokenId),
         mainPubkey,
         false,
-        new PublicKey(this.networkInfo.tokenPublicKey),
+        this.tools.tokenProgramPublicKey,
         new PublicKey(this.networkInfo.associatedTokenPublicKey)
       )
       const cc = this.allTokensMap[tokenId].currencyCode
@@ -424,9 +429,10 @@ export class SolanaEngine extends CurrencyEngine<
     const transactionRequests = txids.map(txid => txid.signature).reverse()
 
     for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
+      const transactionRequest = transactionRequests.slice(i, i + CHUNK_SIZE)
       const funcs = this.tools.archiveConnections.map(
         connection => async () => {
-          return await connection.getTransactions(transactionRequests, {
+          return await connection.getTransactions(transactionRequest, {
             commitment: this.networkInfo.commitment,
             maxSupportedTransactionVersion: 0
           })
@@ -435,23 +441,33 @@ export class SolanaEngine extends CurrencyEngine<
       const txResponse: Array<
         TransactionResponse | VersionedTransactionResponse
       > = await asyncWaterfall(funcs)
-      const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
-        method: 'getBlockTime',
-        params: [res.slot]
-      }))
-      const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
-        blocktimeRequests,
-        this.networkInfo.rpcNodesArchival
-      )
 
       // Process the transactions from oldest to newest
       for (let i = 0; i < txResponse.length; i++) {
+        numProcessedTx++
         if (txResponse[i].meta?.err != null) continue // ignore these
         const matchingTxid = txids.find(
           t => t.signature === txResponse[i].transaction.signatures[0]
         )
+        if (matchingTxid == null) continue
+
+        let blocktime = matchingTxid.blockTime ?? txResponse[i].blockTime
+        if (blocktime == null) {
+          const funcs = this.tools.archiveConnections.map(
+            connection => async () => {
+              return await connection.getBlockTime(txResponse[i].slot)
+            }
+          )
+          const blocktimeRaw = await asyncWaterfall(funcs)
+          const blocktimeClean = asMaybe(asBlocktime)(blocktimeRaw)
+          if (blocktimeClean == null) continue
+
+          blocktime = blocktimeClean.result
+        }
+        const timestamp = blocktime
+
         const memos: string[] = []
-        if (matchingTxid?.memo != null) {
+        if (matchingTxid.memo != null) {
           const regex = /^\[\d+\]\s(.*)$/ // memo field includes a length prefix ie. "[17] " that needs to be ignored
           const match = matchingTxid.memo.match(regex)
           if (match != null) {
@@ -460,15 +476,10 @@ export class SolanaEngine extends CurrencyEngine<
         }
         const amounts = this.parseTxAmounts(txResponse[i], pubkey)
         amounts.forEach(amount => {
-          this.processSolanaTransaction(
-            txResponse[i],
-            amount,
-            asBlocktime(blocktimeResponse[i]).result,
-            memos
-          )
-          numProcessedTx++
+          this.processSolanaTransaction(txResponse[i], amount, timestamp, memos)
         })
-        this.otherData.newestTxid[currencyCode] = txids[i].signature
+        this.otherData.newestTxid[currencyCode] =
+          txResponse[i].transaction.signatures[0]
 
         // Update progress
         const percent = 1 - numProcessedTx / txids.length
@@ -593,7 +604,7 @@ export class SolanaEngine extends CurrencyEngine<
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
     const payee = new PublicKey(publicAddress)
-    const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
+    const tokenProgramId = this.tools.tokenProgramPublicKey
     const associatedTokenProgramId = new PublicKey(
       this.networkInfo.associatedTokenPublicKey
     )
