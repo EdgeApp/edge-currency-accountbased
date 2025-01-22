@@ -38,8 +38,8 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
-import { cleanTxLogs, getOtherParams } from '../common/utils'
+import { asyncWaterfall, promiseAny, timeout } from '../common/promiseUtils'
+import { cache, cleanTxLogs, getOtherParams } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
@@ -51,8 +51,7 @@ import {
   asSolanaSpendInfoOtherParams,
   asSolanaTxOtherParams,
   asSolanaWalletOtherData,
-  asTokenBalance,
-  Blocktime,
+  asTokenBalances,
   ParsedTxAmount,
   RpcRequest,
   SafeSolanaWalletInfo,
@@ -62,7 +61,6 @@ import {
 } from './solanaTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
-const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 export class SolanaEngine extends CurrencyEngine<
@@ -73,14 +71,14 @@ export class SolanaEngine extends CurrencyEngine<
   networkInfo: SolanaNetworkInfo
   base58PublicKey: string
   feePerSignature: string
-  priorityFee: string
-  recentBlockhash: string
+  getPriorityFee: () => Promise<string>
+  getRecentBlockhash: () => Promise<string>
   chainCode: string
   otherData!: SolanaWalletOtherData
   fetch: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
-  minimumAddressBalance: string
+  getMinimumAddressBalance: () => Promise<string>
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -95,12 +93,15 @@ export class SolanaEngine extends CurrencyEngine<
     this.fetch = async (uri, opts) =>
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
-    this.priorityFee = '0'
-    this.recentBlockhash = '' // must be < ~2min old to send tx
+    this.getPriorityFee = cache(this.queryFee.bind(this), 30000)
+    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000) // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
-    this.minimumAddressBalance = '0'
+    this.getMinimumAddressBalance = cache(
+      this.queryMinimumBalance.bind(this),
+      30000
+    )
   }
 
   setOtherData(raw: any): void {
@@ -148,48 +149,38 @@ export class SolanaEngine extends CurrencyEngine<
             this.base58PublicKey,
             { commitment: this.networkInfo.commitment }
           ]
+        },
+        {
+          method: 'getTokenAccountsByOwner',
+          params: [
+            this.base58PublicKey,
+            { programId: this.networkInfo.tokenPublicKey },
+            { encoding: 'jsonParsed' }
+          ]
         }
       ]
 
-      const allTokenIds = [...Object.keys(this.allTokensMap)]
-      const pubkey = new PublicKey(this.base58PublicKey)
-      const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
-      const associatedTokenProgramId = new PublicKey(
-        this.networkInfo.associatedTokenPublicKey
-      )
-      for (const tokenId of allTokenIds) {
-        const associatedTokenPubkey = getAssociatedTokenAddressSync(
-          new PublicKey(tokenId),
-          pubkey,
-          false,
-          tokenProgramId,
-          associatedTokenProgramId
-        )
-        requests.push({
-          method: 'getTokenAccountBalance',
-          params: [
-            associatedTokenPubkey.toBase58(),
-            {
-              commitment: this.networkInfo.commitment,
-              encoding: 'jsonParsed'
-            }
-          ]
-        })
-      }
-
       const balances: any = await this.fetchRpcBulk(requests)
 
-      const [mainnetBal, ...tokenBals]: [AccountBalance, TokenAmount[]] =
+      const [mainnetBal, tokenBalsRaw]: [AccountBalance, TokenAmount[]] =
         balances
+
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
 
+      const tokenBalances = asTokenBalances(tokenBalsRaw).result.value
+      const tokenBalMap = tokenBalances.reduce(
+        (acc: { [key: string]: string }, tokenBal) => {
+          acc[tokenBal.account.data.parsed.info.mint] =
+            tokenBal.account.data.parsed.info.tokenAmount.amount
+          return acc
+        },
+        {}
+      )
+
       const detectedTokenIds: string[] = []
-      for (const [i, tokenId] of allTokenIds.entries()) {
-        const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
-        // empty token addresses return an error "Invalid param: could not find account".
-        // If there was an actual error with the request it would have thrown already
-        const balance = tokenBal?.result?.value?.amount ?? '0'
+      for (const tokenId of Object.keys(this.allTokensMap)) {
+        const balance = tokenBalMap[tokenId] ?? '0'
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
         if (gt(balance, '0')) {
@@ -206,86 +197,62 @@ export class SolanaEngine extends CurrencyEngine<
     }
   }
 
-  async queryBlockheight(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getSlot()
-      })
-      const blockheight: number = await asyncWaterfall(funcs)
-      if (blockheight > this.walletLocalData.blockHeight) {
-        this.walletLocalData.blockHeight = blockheight
-        this.walletLocalDataDirty = true
-        this.currencyEngineCallbacks.onBlockHeightChanged(
-          this.walletLocalData.blockHeight
-        )
-      }
-    } catch (e: any) {
-      this.error(`queryBlockheight Error `, e)
-    }
-  }
-
   // https://solana.com/docs/core/rent
-  async queryMinimumBalance(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getMinimumBalanceForRentExemption(50)
-      })
-      const minimumBalance: number = await asyncWaterfall(funcs)
-      this.minimumAddressBalance = minimumBalance.toString()
-    } catch (e: any) {
-      this.error(`queryMinimumBalance Error `, e)
-    }
+  async queryMinimumBalance(): Promise<string> {
+    const funcs = this.tools.connections.map(connection => async () => {
+      return await connection.getMinimumBalanceForRentExemption(50)
+    })
+    const minimumBalance: number = await asyncWaterfall(funcs)
+    this.minimumAddressBalance = minimumBalance.toString()
+    return this.minimumAddressBalance
   }
 
-  async queryFee(): Promise<void> {
-    try {
-      const funcs = this.tools.connections.map(connection => async () => {
-        return await connection.getRecentPrioritizationFees()
-      })
-      const recentPriorityFees: RecentPrioritizationFees[] =
-        await asyncWaterfall(funcs)
-      // if the array is empty, or request otherwise fails, it's ok to just use the default
-      const latestPriorityFee = recentPriorityFees.sort(
-        (a, b) => a.slot - b.slot
-      )[0]
-      this.priorityFee = latestPriorityFee.prioritizationFee.toString()
-    } catch (e: any) {
-      this.error(`queryFee Error `, e)
-    }
+  async queryFee(): Promise<string> {
+    const funcs = this.tools.connections.map(connection => async () => {
+      return await connection.getRecentPrioritizationFees()
+    })
+    const recentPriorityFees: RecentPrioritizationFees[] = await asyncWaterfall(
+      funcs
+    )
+    // if the array is empty, or request otherwise fails, it's ok to just use the default
+    const latestPriorityFee = recentPriorityFees.sort(
+      (a, b) => a.slot - b.slot
+    )[0]
+    const priorityFee = latestPriorityFee.prioritizationFee.toString()
+    return priorityFee
   }
 
-  async queryBlockhash(): Promise<void> {
-    try {
-      const results = await Promise.allSettled(
-        this.tools.connections.map(async connection => {
-          return await connection.getLatestBlockhash({
+  async queryBlockhash(): Promise<string> {
+    const results = await Promise.allSettled(
+      this.tools.connections.map(async connection => {
+        return await timeout(
+          connection.getLatestBlockhash({
             commitment: 'finalized'
-          })
-        })
-      )
-
-      const sortedResults = results
-        .filter(
-          (
-            a
-          ): a is PromiseFulfilledResult<{
-            blockhash: string
-            lastValidBlockHeight: number
-          }> => a.status !== 'rejected'
+          }),
+          2000
         )
-        .sort((a, b) => {
-          return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
-        })
+      })
+    )
 
-      const latest = sortedResults[0]
-      if (latest == null) {
-        throw new Error('No valid blockhash found')
-      }
+    const sortedResults = results
+      .filter(
+        (
+          a
+        ): a is PromiseFulfilledResult<{
+          blockhash: string
+          lastValidBlockHeight: number
+        }> => a.status !== 'rejected'
+      )
+      .sort((a, b) => {
+        return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
+      })
 
-      this.recentBlockhash = latest.value.blockhash
-    } catch (e: any) {
-      this.error(`queryBlockhash Error `, e)
+    const latest = sortedResults[0]
+    if (latest == null) {
+      throw new Error('No valid blockhash found')
     }
+
+    return latest.value.blockhash
   }
 
   processSolanaTransaction(
@@ -306,6 +273,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     const edgeTransaction: EdgeTransaction = {
       blockHeight: tx.slot,
+      confirmations: 'confirmed',
       currencyCode,
       date: timestamp,
       isSend: amount.startsWith('-'),
@@ -327,11 +295,10 @@ export class SolanaEngine extends CurrencyEngine<
     tx: TransactionResponse | VersionedTransactionResponse,
     pubkey: PublicKey
   ): ParsedTxAmount[] {
-    const out: ParsedTxAmount[] = []
     const index = tx.transaction.message.staticAccountKeys.findIndex(account =>
       account.equals(pubkey)
     )
-    if (index < 0 || tx.meta == null) return out
+    if (index < 0 || tx.meta == null) return []
 
     const {
       fee,
@@ -342,16 +309,21 @@ export class SolanaEngine extends CurrencyEngine<
     } = tx.meta
     const preTokenBalances = maybePreTokenBalances ?? []
     const postTokenBalances = maybePostTokenBalancesRaw ?? []
+    const isTokenTransaction =
+      tx.transaction.message.staticAccountKeys.find(pk =>
+        pk.equals(this.tools.tokenProgramPublicKey)
+      ) != null
     const networkFee = fee.toString()
-    if (this.base58PublicKey === pubkey.toBase58()) {
+
+    if (!isTokenTransaction) {
       const solAmount = (postBalances[index] - preBalances[index]).toString()
-      if (solAmount !== '0') {
-        const isSend = lt(solAmount, '0')
-        out.push({
+      const isSend = lt(solAmount, '0')
+      return [
+        {
           amount: solAmount,
           networkFee: isSend ? networkFee : '0'
-        })
-      }
+        }
+      ]
     }
 
     const skip = (balObj: TokenBalance): boolean => {
@@ -378,6 +350,7 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
+    const out: ParsedTxAmount[] = []
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
       out.push({
         amount: balanceChange,
@@ -400,7 +373,7 @@ export class SolanaEngine extends CurrencyEngine<
         new PublicKey(tokenId),
         mainPubkey,
         false,
-        new PublicKey(this.networkInfo.tokenPublicKey),
+        this.tools.tokenProgramPublicKey,
         new PublicKey(this.networkInfo.associatedTokenPublicKey)
       )
       const cc = this.allTokensMap[tokenId].currencyCode
@@ -456,9 +429,10 @@ export class SolanaEngine extends CurrencyEngine<
     const transactionRequests = txids.map(txid => txid.signature).reverse()
 
     for (let i = 0; i < transactionRequests.length; i += CHUNK_SIZE) {
+      const transactionRequest = transactionRequests.slice(i, i + CHUNK_SIZE)
       const funcs = this.tools.archiveConnections.map(
         connection => async () => {
-          return await connection.getTransactions(transactionRequests, {
+          return await connection.getTransactions(transactionRequest, {
             commitment: this.networkInfo.commitment,
             maxSupportedTransactionVersion: 0
           })
@@ -467,23 +441,33 @@ export class SolanaEngine extends CurrencyEngine<
       const txResponse: Array<
         TransactionResponse | VersionedTransactionResponse
       > = await asyncWaterfall(funcs)
-      const blocktimeRequests: RpcRequest[] = txResponse.map(res => ({
-        method: 'getBlockTime',
-        params: [res.slot]
-      }))
-      const blocktimeResponse: Blocktime[] = await this.fetchRpcBulk(
-        blocktimeRequests,
-        this.networkInfo.rpcNodesArchival
-      )
 
       // Process the transactions from oldest to newest
       for (let i = 0; i < txResponse.length; i++) {
+        numProcessedTx++
         if (txResponse[i].meta?.err != null) continue // ignore these
         const matchingTxid = txids.find(
           t => t.signature === txResponse[i].transaction.signatures[0]
         )
+        if (matchingTxid == null) continue
+
+        let blocktime = matchingTxid.blockTime ?? txResponse[i].blockTime
+        if (blocktime == null) {
+          const funcs = this.tools.archiveConnections.map(
+            connection => async () => {
+              return await connection.getBlockTime(txResponse[i].slot)
+            }
+          )
+          const blocktimeRaw = await asyncWaterfall(funcs)
+          const blocktimeClean = asMaybe(asBlocktime)(blocktimeRaw)
+          if (blocktimeClean == null) continue
+
+          blocktime = blocktimeClean.result
+        }
+        const timestamp = blocktime
+
         const memos: string[] = []
-        if (matchingTxid?.memo != null) {
+        if (matchingTxid.memo != null) {
           const regex = /^\[\d+\]\s(.*)$/ // memo field includes a length prefix ie. "[17] " that needs to be ignored
           const match = matchingTxid.memo.match(regex)
           if (match != null) {
@@ -492,15 +476,10 @@ export class SolanaEngine extends CurrencyEngine<
         }
         const amounts = this.parseTxAmounts(txResponse[i], pubkey)
         amounts.forEach(amount => {
-          this.processSolanaTransaction(
-            txResponse[i],
-            amount,
-            asBlocktime(blocktimeResponse[i]).result,
-            memos
-          )
-          numProcessedTx++
+          this.processSolanaTransaction(txResponse[i], amount, timestamp, memos)
         })
-        this.otherData.newestTxid[currencyCode] = txids[i].signature
+        this.otherData.newestTxid[currencyCode] =
+          txResponse[i].transaction.signatures[0]
 
         // Update progress
         const percent = 1 - numProcessedTx / txids.length
@@ -534,14 +513,6 @@ export class SolanaEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryMinimumBalance', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
-    this.queryBlockhash().catch(() => {})
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     if (this.lightMode) {
@@ -577,19 +548,20 @@ export class SolanaEngine extends CurrencyEngine<
 
     spendInfo.spendTargets[0].nativeAmount = '1'
     const edgeTx = await this.makeSpend(spendInfo)
+    const minimumAddressBalance = await this.getMinimumAddressBalance()
 
     let spendableBalance: string
     if (tokenId == null) {
       spendableBalance = sub(
         sub(balance, edgeTx.networkFee),
-        this.minimumAddressBalance
+        minimumAddressBalance
       )
     } else {
       const solBalance = this.getBalance({
         tokenId: null
       })
       const solRequired = sub(solBalance, edgeTx.networkFee)
-      if (lt(sub(solRequired, this.minimumAddressBalance), '0')) {
+      if (lt(sub(solRequired, minimumAddressBalance), '0')) {
         throw new InsufficientFundsError({
           networkFee: this.feePerSignature,
           tokenId: null
@@ -632,7 +604,7 @@ export class SolanaEngine extends CurrencyEngine<
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
     const payee = new PublicKey(publicAddress)
-    const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
+    const tokenProgramId = this.tools.tokenProgramPublicKey
     const associatedTokenProgramId = new PublicKey(
       this.networkInfo.associatedTokenPublicKey
     )
@@ -640,22 +612,25 @@ export class SolanaEngine extends CurrencyEngine<
     const instructions: TransactionInstruction[] = []
 
     // calculate priority fee. Multipliers are arbitrary just to establish some ranges
+    const priorityFee = await this.getPriorityFee()
     let microLamports = '0'
     switch (networkFeeOption) {
       case 'low':
-        microLamports = max('0', mul(this.priorityFee, '0.75'))
+        microLamports = max('0', mul(priorityFee, '0.75'))
         break
       case 'standard':
-        microLamports = this.priorityFee
+        microLamports = priorityFee
         break
       case 'high':
-        microLamports = max('1', mul(this.priorityFee, '1.25'))
+        microLamports = max('1', mul(priorityFee, '1.25'))
         break
       case 'custom': {
         microLamports = asSolanaCustomFee(customNetworkFee).microLamports
         break
       }
     }
+
+    const minimumAddressBalance = await this.getMinimumAddressBalance()
 
     if (gt(microLamports, '0')) {
       const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
@@ -722,7 +697,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balanceSol =
         this.walletLocalData.totalBalances[this.chainCode] ?? '0'
-      if (gt(add(parentNetworkFee, this.minimumAddressBalance), balanceSol)) {
+      if (gt(add(parentNetworkFee, minimumAddressBalance), balanceSol)) {
         throw new InsufficientFundsError({
           networkFee: parentNetworkFee,
           tokenId: null
@@ -754,12 +729,12 @@ export class SolanaEngine extends CurrencyEngine<
         lamports: parseInt(nativeAmount)
       })
       instructions.push(transferInstruction)
-    }
 
-    if (tokenId != null && eq(totalTxAmount, balance)) {
-      // This is a max token send so we don't need to consider the minimumAddressBalance
-    } else if (gt(add(totalTxAmount, this.minimumAddressBalance), balance)) {
-      throw new InsufficientFundsError({ tokenId })
+      if (eq(totalTxAmount, balance)) {
+        // This is a max token send so we don't need to consider the minimumAddressBalance
+      } else if (gt(add(totalTxAmount, minimumAddressBalance), balance)) {
+        throw new InsufficientFundsError({ tokenId })
+      }
     }
 
     if (memos[0]?.type === 'text') {
@@ -777,11 +752,11 @@ export class SolanaEngine extends CurrencyEngine<
       instructions.push(memoInstruction)
     }
 
-    if (this.recentBlockhash === '') await this.queryBlockhash()
+    const recentBlockhash = await this.getRecentBlockhash()
     const versionedMessage = MessageV0.compile({
       instructions,
       payerKey: payer,
-      recentBlockhash: this.recentBlockhash
+      recentBlockhash
     })
     const versionedTx = new VersionedTransaction(versionedMessage)
 
@@ -827,8 +802,7 @@ export class SolanaEngine extends CurrencyEngine<
     )
 
     const solTx = VersionedTransaction.deserialize(unsignedTx)
-    await this.queryBlockhash()
-    solTx.message.recentBlockhash = this.recentBlockhash
+    solTx.message.recentBlockhash = await this.queryBlockhash()
 
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)

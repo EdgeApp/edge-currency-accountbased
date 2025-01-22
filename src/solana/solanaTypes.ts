@@ -84,16 +84,25 @@ const asRpcResponse = <T>(cleaner: Cleaner<T>): Cleaner<{ result: T }> =>
 export const asAccountBalance = asRpcResponse(asRpcBalance)
 export type AccountBalance = ReturnType<typeof asAccountBalance>
 
-const asRpcTokenBalance = asObject({
-  // "context": { "apiVersion": "1.16.18", "slot": 232646289 },
-  value: asObject({
-    amount: asString
-    // decimals: 6,
-    // uiAmount: 2.301,
-    // uiAmountString: '2.301'
-  })
+const asBulkTokenBalances = asObject({
+  value: asArray(
+    asObject({
+      account: asObject({
+        data: asObject({
+          parsed: asObject({
+            info: asObject({
+              mint: asString,
+              tokenAmount: asObject({
+                amount: asString
+              })
+            })
+          })
+        })
+      })
+    })
+  )
 })
-export const asTokenBalance = asRpcResponse(asRpcTokenBalance)
+export const asTokenBalances = asRpcResponse(asBulkTokenBalances)
 
 export const asBlocktime = asRpcResponse(asNumber)
 export type Blocktime = ReturnType<typeof asBlocktime>
