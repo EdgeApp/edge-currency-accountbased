@@ -21,7 +21,6 @@ import {
   VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -51,7 +50,7 @@ import {
   asSolanaSpendInfoOtherParams,
   asSolanaTxOtherParams,
   asSolanaWalletOtherData,
-  asTokenBalance,
+  asTokenBalances,
   Blocktime,
   ParsedTxAmount,
   RpcRequest,
@@ -150,48 +149,38 @@ export class SolanaEngine extends CurrencyEngine<
             this.base58PublicKey,
             { commitment: this.networkInfo.commitment }
           ]
+        },
+        {
+          method: 'getTokenAccountsByOwner',
+          params: [
+            this.base58PublicKey,
+            { programId: this.networkInfo.tokenPublicKey },
+            { encoding: 'jsonParsed' }
+          ]
         }
       ]
 
-      const allTokenIds = [...Object.keys(this.allTokensMap)]
-      const pubkey = new PublicKey(this.base58PublicKey)
-      const tokenProgramId = new PublicKey(this.networkInfo.tokenPublicKey)
-      const associatedTokenProgramId = new PublicKey(
-        this.networkInfo.associatedTokenPublicKey
-      )
-      for (const tokenId of allTokenIds) {
-        const associatedTokenPubkey = getAssociatedTokenAddressSync(
-          new PublicKey(tokenId),
-          pubkey,
-          false,
-          tokenProgramId,
-          associatedTokenProgramId
-        )
-        requests.push({
-          method: 'getTokenAccountBalance',
-          params: [
-            associatedTokenPubkey.toBase58(),
-            {
-              commitment: this.networkInfo.commitment,
-              encoding: 'jsonParsed'
-            }
-          ]
-        })
-      }
-
       const balances: any = await this.fetchRpcBulk(requests)
 
-      const [mainnetBal, ...tokenBals]: [AccountBalance, TokenAmount[]] =
+      const [mainnetBal, tokenBalsRaw]: [AccountBalance, TokenAmount[]] =
         balances
+
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
 
+      const tokenBalances = asTokenBalances(tokenBalsRaw).result.value
+      const tokenBalMap = tokenBalances.reduce(
+        (acc: { [key: string]: string }, tokenBal) => {
+          acc[tokenBal.account.data.parsed.info.mint] =
+            tokenBal.account.data.parsed.info.tokenAmount.amount
+          return acc
+        },
+        {}
+      )
+
       const detectedTokenIds: string[] = []
-      for (const [i, tokenId] of allTokenIds.entries()) {
-        const tokenBal = asMaybe(asTokenBalance)(tokenBals[i])
-        // empty token addresses return an error "Invalid param: could not find account".
-        // If there was an actual error with the request it would have thrown already
-        const balance = tokenBal?.result?.value?.amount ?? '0'
+      for (const tokenId of Object.keys(this.allTokensMap)) {
+        const balance = tokenBalMap[tokenId] ?? '0'
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
         if (gt(balance, '0')) {
