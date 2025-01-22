@@ -38,7 +38,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import { asyncWaterfall, promiseAny, timeout } from '../common/promiseUtils'
 import { cache, cleanTxLogs, getOtherParams } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -73,7 +73,7 @@ export class SolanaEngine extends CurrencyEngine<
   base58PublicKey: string
   feePerSignature: string
   getPriorityFee: () => Promise<string>
-  recentBlockhash: string
+  getRecentBlockhash: () => Promise<string>
   chainCode: string
   otherData!: SolanaWalletOtherData
   fetch: EdgeFetchFunction
@@ -95,7 +95,7 @@ export class SolanaEngine extends CurrencyEngine<
       await env.io.fetch(uri, { ...opts, corsBypass: 'always' })
     this.feePerSignature = '5000'
     this.getPriorityFee = cache(this.queryFee.bind(this), 30000)
-    this.recentBlockhash = '' // must be < ~2min old to send tx
+    this.getRecentBlockhash = cache(this.queryBlockhash.bind(this), 30000) // must be < ~2min old to send tx
     this.base58PublicKey = walletInfo.keys.publicKey
     this.progressRatio = 0
     this.addressCache = new Map()
@@ -233,38 +233,37 @@ export class SolanaEngine extends CurrencyEngine<
     return priorityFee
   }
 
-  async queryBlockhash(): Promise<void> {
-    try {
-      const results = await Promise.allSettled(
-        this.tools.connections.map(async connection => {
-          return await connection.getLatestBlockhash({
+  async queryBlockhash(): Promise<string> {
+    const results = await Promise.allSettled(
+      this.tools.connections.map(async connection => {
+        return await timeout(
+          connection.getLatestBlockhash({
             commitment: 'finalized'
-          })
-        })
-      )
-
-      const sortedResults = results
-        .filter(
-          (
-            a
-          ): a is PromiseFulfilledResult<{
-            blockhash: string
-            lastValidBlockHeight: number
-          }> => a.status !== 'rejected'
+          }),
+          2000
         )
-        .sort((a, b) => {
-          return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
-        })
+      })
+    )
 
-      const latest = sortedResults[0]
-      if (latest == null) {
-        throw new Error('No valid blockhash found')
-      }
+    const sortedResults = results
+      .filter(
+        (
+          a
+        ): a is PromiseFulfilledResult<{
+          blockhash: string
+          lastValidBlockHeight: number
+        }> => a.status !== 'rejected'
+      )
+      .sort((a, b) => {
+        return b.value.lastValidBlockHeight - a.value.lastValidBlockHeight
+      })
 
-      this.recentBlockhash = latest.value.blockhash
-    } catch (e: any) {
-      this.error(`queryBlockhash Error `, e)
+    const latest = sortedResults[0]
+    if (latest == null) {
+      throw new Error('No valid blockhash found')
     }
+
+    return latest.value.blockhash
   }
 
   processSolanaTransaction(
@@ -514,7 +513,6 @@ export class SolanaEngine extends CurrencyEngine<
   async startEngine(): Promise<void> {
     this.engineOn = true
     await this.tools.connectClient()
-    this.queryBlockhash().catch(() => {})
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
     if (this.lightMode) {
@@ -754,11 +752,11 @@ export class SolanaEngine extends CurrencyEngine<
       instructions.push(memoInstruction)
     }
 
-    if (this.recentBlockhash === '') await this.queryBlockhash()
+    const recentBlockhash = await this.getRecentBlockhash()
     const versionedMessage = MessageV0.compile({
       instructions,
       payerKey: payer,
-      recentBlockhash: this.recentBlockhash
+      recentBlockhash
     })
     const versionedTx = new VersionedTransaction(versionedMessage)
 
@@ -804,8 +802,7 @@ export class SolanaEngine extends CurrencyEngine<
     )
 
     const solTx = VersionedTransaction.deserialize(unsignedTx)
-    await this.queryBlockhash()
-    solTx.message.recentBlockhash = this.recentBlockhash
+    solTx.message.recentBlockhash = await this.queryBlockhash()
 
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)
