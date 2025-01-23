@@ -202,7 +202,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       }
     }
 
-    for (const [coinType, bal] of Object.entries(coinTypeMap)) {
+    for (const [coinType, bal] of coinTypeMap) {
       let tokenId = null
       let currencyCode = this.currencyInfo.currencyCode
       let nativeAmount = bal

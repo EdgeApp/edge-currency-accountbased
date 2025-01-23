@@ -6,6 +6,7 @@
 - changed: (Solana) Only query transaction blocktime if it isn't already present
 - fixed: (Solana) Fix checking token send amount against rent threshold
 - fixed: (Solana) Fix recent txid stored for efficient tx query
+- fixed: (Sui) Fix Map handling in `processTransaction`
 - removed: (Solana) Remove blockheight loop
 
 ## 4.35.0 (2025-01-15)
