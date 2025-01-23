@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.35.1 (2025-01-22)
+
 - changed: (Solana) Replace fee, rent, and recentblockhash loops with cached queries where they are needed
 - changed: (Solana) Only query transaction blocktime if it isn't already present
 - fixed: (Solana) Fix checking token send amount against rent threshold
