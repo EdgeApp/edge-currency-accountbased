@@ -16,6 +16,7 @@ export interface SolanaNetworkInfo {
   rpcNodes: string[]
   rpcNodesArchival: string[]
   stakedConnectionRpcNodes: string[]
+  basePriorityFee: number
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number
   derivationPath: string

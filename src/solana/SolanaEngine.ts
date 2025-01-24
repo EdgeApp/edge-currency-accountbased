@@ -211,15 +211,24 @@ export class SolanaEngine extends CurrencyEngine<
     const funcs = this.tools.connections.map(connection => async () => {
       return await connection.getRecentPrioritizationFees()
     })
-    const recentPriorityFees: RecentPrioritizationFees[] = await asyncWaterfall(
-      funcs
+    const recentPriorityFeesRes: RecentPrioritizationFees[] =
+      await asyncWaterfall(funcs)
+
+    if (recentPriorityFeesRes.length === 0) {
+      return this.networkInfo.basePriorityFee.toString()
+    }
+
+    const recentPriorityFees = recentPriorityFeesRes.map(
+      fee => fee.prioritizationFee
     )
-    // if the array is empty, or request otherwise fails, it's ok to just use the default
-    const latestPriorityFee = recentPriorityFees.sort(
-      (a, b) => a.slot - b.slot
-    )[0]
-    const priorityFee = latestPriorityFee.prioritizationFee.toString()
-    return priorityFee
+    const averagePriorityFee =
+      recentPriorityFees.reduce((acc, num) => acc + num, 0) /
+      recentPriorityFees.length
+
+    return Math.max(
+      Math.ceil(averagePriorityFee),
+      this.networkInfo.basePriorityFee
+    ).toString()
   }
 
   async queryBlockhash(): Promise<string> {
