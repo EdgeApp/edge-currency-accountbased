@@ -228,6 +228,10 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  getTxCheckpoint(edgeTransaction: EdgeTransaction): string {
+    return edgeTransaction.date.toString()
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
