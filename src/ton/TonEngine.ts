@@ -82,7 +82,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   async queryBalance(): Promise<void> {
     try {
-      const clients = this.tools.getClients()
+      const clients = this.tools.getOrbsClients()
       const funcs = clients.map(client => async () => {
         return await client.getContractState(this.wallet.address)
       })
@@ -105,7 +105,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   async queryTransactions(): Promise<void> {
     // Transactions can only be queried newest to oldest.
-    const clients = this.tools.getClients()
+    const clients = this.tools.getTonCenterClients()
 
     // Both of these params must be included to filter results. They should be undefined to start at the most recent.
     let inLoopLogicalTime: string | undefined
@@ -121,7 +121,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
           lt: inLoopLogicalTime,
           hash: inLoopHash,
           inclusive: false,
-          archival: this.archiveTransactions
+          archival: true // must always be true, because ton center reasons
         })
       })
       try {
@@ -299,7 +299,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
-    const clients = this.tools.getClients()
+    const clients = this.tools.getOrbsClients()
     const feeFuncs = clients.map(client => async () => {
       return await client.estimateExternalMessageFee(this.wallet.address, {
         body: transfer,
@@ -369,7 +369,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     )[0].asSlice()
     const transferMessage = loadMessageRelaxed(messageSlice)
 
-    const clients = this.tools.getClients()
+    const clients = this.tools.getOrbsClients()
     const seqnoFuncs = clients.map(client => async () => {
       const contract = client.open(this.wallet)
       return await contract.getSeqno()
@@ -397,7 +397,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       const txBoc = base64.parse(edgeTransaction.signedTx)
       const txCell = Cell.fromBoc(Buffer.from(txBoc))[0]
 
-      const clients = this.tools.getClients()
+      const clients = this.tools.getOrbsClients()
       const broadcastFuncs = clients.map(async client => {
         const contract = client.open(this.wallet)
         return await contract.send(txCell)

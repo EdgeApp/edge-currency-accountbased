@@ -97,3 +97,8 @@ export type ParsedTx = ReturnType<typeof asParsedTx>
 export const asTonTxOtherParams = asObject({
   unsignedTxBase64: asString
 })
+
+export const asTonInitOptions = asObject({
+  tonCenterApiKeys: asOptional(asArray(asString), () => [])
+})
+export type TonInitOptions = ReturnType<typeof asTonInitOptions>
