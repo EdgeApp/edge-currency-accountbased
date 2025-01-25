@@ -202,9 +202,11 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       }
     }
 
+    let isSend = false
     const networkFee = tx.originalTx.totalFees.coins.toString()
     if (lt(nativeAmount, '0')) {
       nativeAmount = sub(nativeAmount, networkFee)
+      isSend = true
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -212,7 +214,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       confirmations: 'confirmed',
       currencyCode: this.currencyInfo.currencyCode,
       date: tx.now,
-      isSend: false,
+      isSend,
       nativeAmount: nativeAmount,
       networkFee,
       networkFees: [],
