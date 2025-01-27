@@ -1069,6 +1069,14 @@ export const builtinTokens: EdgeTokenMap = {
     networkLocation: {
       contractAddress: '0x3845badAde8e6dFF049820680d1F14bD3903a5d0'
     }
+  },
+  B58E61C3098d85632Df34EecfB899A1Ed80921cB: {
+    currencyCode: 'ZCHF',
+    displayName: 'Frankencoin',
+    denominations: [{ name: 'ZCHF', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0xB58E61C3098d85632Df34EecfB899A1Ed80921cB'
+    }
   }
 }
 
