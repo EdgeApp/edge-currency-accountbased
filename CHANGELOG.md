@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Add eip681 chainId detection
+- fixed: Correctly handle token transaction fees in PolkadotEngine
 
 ## 4.35.3 (2025-01-28)
 
