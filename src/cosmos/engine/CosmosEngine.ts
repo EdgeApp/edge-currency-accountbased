@@ -1,4 +1,4 @@
-import { getGasPriceStep } from '@chain-registry/utils'
+import { getGasPriceRangesFromChain } from '@chain-registry/utils'
 import {
   decodeSignature,
   encodeSecp256k1Pubkey,
@@ -805,7 +805,9 @@ export class CosmosEngine extends CurrencyEngine<
     // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
     const gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
 
-    const { low, average, high } = getGasPriceStep(this.tools.chainData)
+    const { low, average, high } = getGasPriceRangesFromChain(
+      this.tools.chainData
+    )
 
     let gasPrice = average
     switch (opts.networkFeeOption) {
