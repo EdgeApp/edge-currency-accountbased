@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Correctly issue notifications for new incoming transactions.
+
 ## 4.35.3 (2025-01-28)
 
 - changed: (Solana) Implement transaction broadcast retry logic
