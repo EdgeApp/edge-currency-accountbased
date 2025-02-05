@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Correctly issue notifications for new incoming transactions.
+
 ## 4.36.0 (2025-01-30)
 
 - added: Add eip681 chainId detection
