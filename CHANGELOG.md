@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.36.1 (2025-02-04)
+
+- fixed: Correctly issue notifications for new incoming transactions.
+
 ## 4.35.4 (2025-02-04)
 
 - fixed: Correctly issue notifications for new incoming transactions.
