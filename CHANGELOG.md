@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Solana) Fix priority fee for undefined `networkFeeOption`
+
 ## 4.36.1 (2025-02-04)
 
 - fixed: Correctly issue notifications for new incoming transactions.

@@ -630,6 +630,7 @@ export class SolanaEngine extends CurrencyEngine<
       case 'low':
         microLamports = max('0', mul(priorityFee, '0.75'))
         break
+      case undefined:
       case 'standard':
         microLamports = priorityFee
         break
