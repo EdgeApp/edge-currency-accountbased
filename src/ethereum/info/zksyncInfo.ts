@@ -12,7 +12,8 @@ import {
 import {
   evmCustomFeeTemplate,
   evmCustomTokenTemplate,
-  evmMemoOptions
+  evmMemoOptions,
+  makeEvmDefaultSettings
 } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
@@ -139,14 +140,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
-  defaultSettings: {
-    customFeeSettings: ['gasLimit', 'gasPrice'],
-    otherSettings: {
-      chainParams: networkInfo.chainParams,
-      ercTokenStandard: networkInfo.ercTokenStandard
-      // Skip networkAdapterConfigs
-    }
-  },
+  defaultSettings: makeEvmDefaultSettings(networkInfo),
   displayName: 'zkSync',
   metaTokens: makeMetaTokens(builtinTokens)
 }
