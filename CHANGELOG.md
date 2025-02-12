@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.36.2 (2025-02-12)
+
 - fixed: (Solana) Fix priority fee for undefined `networkFeeOption`
 
 ## 4.36.1 (2025-02-04)
