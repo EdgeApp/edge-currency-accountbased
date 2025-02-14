@@ -104,7 +104,7 @@ export async function promiseCast<T>(promise: Array<Promise<T>>): Promise<{
  * to return a key to identify the result. The returned promise resolves when
  * n number of promises resolve to identical keys.
  */
-export async function promiseNy<T>(
+export async function promisesAgree<T>(
   promises: Array<Promise<T>>,
   checkResult: (arg: T) => string | undefined,
   n: number = promises.length
