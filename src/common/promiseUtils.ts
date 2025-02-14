@@ -51,7 +51,14 @@ export async function asyncWaterfall(
   }
 }
 
+/**
+ * A ponyfill for `Promise.any`.
+ * Once we upgrade our browser environment,
+ * we can just use the built-in one instead.
+ */
 export async function promiseAny<T>(promises: Array<Promise<T>>): Promise<T> {
+  const errors: unknown[] = []
+
   return await new Promise((resolve: Function, reject: Function) => {
     let pending = promises.length
     for (const promise of promises) {
@@ -60,7 +67,11 @@ export async function promiseAny<T>(promises: Array<Promise<T>>): Promise<T> {
           resolve(value)
         },
         error => {
-          if (--pending === 0) reject(error)
+          errors.push(error)
+          if (--pending === 0) {
+            // Match what the Node.js Promise.any does:
+            reject(new AggregateError(errors, 'All promises were rejected'))
+          }
         }
       )
     }
@@ -164,5 +175,42 @@ export async function timeout<T>(
         clearTimeout(timer)
       }
     )
+  })
+}
+
+/**
+ * Catch AggregateError objects, and format them more nicely.
+ * Instead of the built-in `Promise.any` error message, we can have:
+ *
+ * ```
+ * Could not broadcast:
+ * • Error: Request timed out
+ * • TypeError: Expected a string at .txid
+ * ```
+ */
+export async function formatAggregateError<T>(
+  promise: Promise<T>,
+  title?: string
+): Promise<T> {
+  return await promise.catch(error => {
+    // Skip things that don't duck-type as `AggregateError`:
+    const errors = error?.errors
+    if (!(error instanceof Error)) throw error
+    if (!Array.isArray(errors)) throw error
+
+    // eslint-disable-next-line @typescript-eslint/require-array-sort-compare
+    const messages = errors.map(error => String(error)).sort()
+
+    // Filter duplicate messages:
+    let lastMessage = ''
+    const uniqueMessages: string[] = [title ?? error.message]
+    for (const message of messages) {
+      if (message === lastMessage) continue
+      uniqueMessages.push(message)
+      lastMessage = message
+    }
+
+    const message = uniqueMessages.join('\n• ')
+    throw new AggregateError(errors, message)
   })
 }

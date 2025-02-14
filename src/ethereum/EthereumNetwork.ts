@@ -3,7 +3,11 @@ import { EdgeTransaction } from 'edge-core-js/types'
 
 import { getRandomDelayMs } from '../common/network'
 import { makePeriodicTask, PeriodicTask } from '../common/periodicTask'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
@@ -198,7 +202,10 @@ export class EthereumNetwork {
       async adapter => await adapter.broadcast(edgeTransaction)
     )
 
-    const broadcastResults = await promiseAny(promises)
+    const broadcastResults = await formatAggregateError(
+      promiseAny(promises),
+      'Broadcast failed:'
+    )
     this.ethEngine.log(
       `${this.ethEngine.currencyInfo.currencyCode} broadcastTx ${broadcastResults.server} won`
     )

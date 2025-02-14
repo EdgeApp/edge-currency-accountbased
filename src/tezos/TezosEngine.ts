@@ -15,7 +15,11 @@ import { eztz } from 'eztz.js'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import {
   cleanTxLogs,
   getFetchCors,
@@ -206,14 +210,17 @@ export class TezosEngine extends CurrencyEngine<
       case 'silentInjection': {
         const index = this.tools.tezosRpcNodes.indexOf(params[0])
         const remainingRpcNodes = this.tools.tezosRpcNodes.slice(index + 1)
-        out = await promiseAny(
-          remainingRpcNodes.map(async server => {
-            eztz.node.setProvider(server)
-            const result = await eztz.rpc.silentInject(params[1])
-            // eslint-disable-next-line @typescript-eslint/no-base-to-string
-            this.warn(`Injected silently to: ${server}`)
-            return { server, result }
-          })
+        out = await formatAggregateError(
+          promiseAny(
+            remainingRpcNodes.map(async server => {
+              eztz.node.setProvider(server)
+              const result = await eztz.rpc.silentInject(params[1])
+              // eslint-disable-next-line @typescript-eslint/no-base-to-string
+              this.warn(`Injected silently to: ${server}`)
+              return { server, result }
+            })
+          ),
+          'Broadcast failed:'
         )
         break
       }

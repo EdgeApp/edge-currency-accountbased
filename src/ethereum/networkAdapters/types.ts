@@ -1,7 +1,11 @@
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
-import { asyncWaterfall, promiseAny } from '../../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../../common/promiseUtils'
 import { cleanTxLogs, safeErrorMessage, shuffleArray } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
@@ -134,14 +138,15 @@ export abstract class NetworkAdapter<
   }
 
   protected async parallelServers<T>(
-    fn: (server: string) => Promise<T>
+    fn: (server: string) => Promise<T>,
+    title: string
   ): Promise<T> {
     if (!('servers' in this.config))
       throw new Error(`No servers for config type ${this.config.type}`)
     const promises = (this.config.servers ?? []).map(
       async server => await fn(server)
     )
-    return await promiseAny(promises)
+    return await formatAggregateError(promiseAny(promises), title)
   }
 
   // TODO: Convert to error types

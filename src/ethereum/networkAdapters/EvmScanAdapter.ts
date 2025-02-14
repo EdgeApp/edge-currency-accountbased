@@ -103,7 +103,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         ),
         server: 'etherscan'
       }
-    })
+    }, 'Broadcast failed:')
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {

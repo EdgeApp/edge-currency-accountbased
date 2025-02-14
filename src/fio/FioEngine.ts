@@ -33,6 +33,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
+  formatAggregateError,
   promiseAny,
   promisesAgree,
   timeout
@@ -826,20 +827,23 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           preparedTrx
         )}`
       )
-      res = await promiseAny(
-        shuffleArray(
-          this.networkInfo.apiUrls.map(
-            async apiUrl =>
-              await timeout(
-                this.executePreparedTrx(
-                  apiUrl,
-                  EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                  preparedTrx
-                ),
-                10000
-              )
+      res = formatAggregateError(
+        await promiseAny(
+          shuffleArray(
+            this.networkInfo.apiUrls.map(
+              async apiUrl =>
+                await timeout(
+                  this.executePreparedTrx(
+                    apiUrl,
+                    EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+                    preparedTrx
+                  ),
+                  10000
+                )
+            )
           )
-        )
+        ),
+        'Broadcast failed:'
       )
       this.warn(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
