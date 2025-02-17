@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.36.3 (2025-02-17)
+
 - changed: If broadcasting fails, return an error with a better summary.
 
 ## 4.36.2 (2025-02-12)
