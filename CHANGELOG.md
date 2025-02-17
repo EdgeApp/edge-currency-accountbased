@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Optimize Solana transaction query
+
 ## 4.36.2 (2025-02-12)
 
 - fixed: (Solana) Fix priority fee for undefined `networkFeeOption`

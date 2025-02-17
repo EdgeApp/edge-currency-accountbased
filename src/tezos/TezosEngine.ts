@@ -315,10 +315,7 @@ export class TezosEngine extends CurrencyEngine<
       for (const tx of txs) {
         this.processTezosTransaction(tx)
       }
-      if (this.transactionEvents.length > 0) {
-        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-        this.transactionEvents = []
-      }
+      this.updateTransactionEvents()
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }
