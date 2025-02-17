@@ -20,7 +20,7 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { promiseCast } from '../common/promiseUtils'
+import { formatAggregateError, promiseAny } from '../common/promiseUtils'
 import { trial } from '../common/trial'
 import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
@@ -191,10 +191,10 @@ export class CardanoEngine extends CurrencyEngine<
       )
     }
 
-    const { values } = await promiseCast([blockfrost(), koios(), maestro()])
-
-    // All results should be the same (the txid):
-    return values[0]
+    return await formatAggregateError(
+      promiseAny([blockfrost(), koios(), maestro()]),
+      'Broadcast failed:'
+    )
   }
 
   async queryBlockheight(): Promise<void> {

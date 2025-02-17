@@ -101,7 +101,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
         ),
         server: parsedUrl.hostname
       }
-    })
+    }, 'Broadcast failed:')
   }
 
   getBaseFeePerGas =

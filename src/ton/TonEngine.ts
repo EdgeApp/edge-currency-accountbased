@@ -34,7 +34,11 @@ import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
 import { TonTools } from './TonTools'
@@ -408,7 +412,10 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
         const contract = client.open(this.wallet)
         return await contract.send(txCell)
       })
-      await promiseAny(broadcastFuncs)
+      await formatAggregateError(
+        promiseAny(broadcastFuncs),
+        'Broadcast failed:'
+      )
 
       if (this.otherData.contractState === 'uninitialized') {
         // It's not possible to calculate the txid for a wallet's first send so we need to look for it once it's confirmed

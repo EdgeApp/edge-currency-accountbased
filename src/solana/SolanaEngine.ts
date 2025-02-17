@@ -38,7 +38,12 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny, timeout } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny,
+  timeout
+} from '../common/promiseUtils'
 import { cache, cleanTxLogs, getOtherParams, snooze } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
@@ -872,7 +877,10 @@ export class SolanaEngine extends CurrencyEngine<
         )
         return txid
       })
-      const txid = await promiseAny(broadcastPromises)
+      const txid = await formatAggregateError(
+        promiseAny(broadcastPromises),
+        'Broadcast failed:'
+      )
       return txid
     }
 

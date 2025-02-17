@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { describe } from 'mocha'
 
-import { promiseAny } from '../../src/common/promiseUtils'
+import { formatAggregateError, promiseAny } from '../../src/common/promiseUtils'
 
 describe(`promiseAny`, function () {
   async function success(): Promise<string> {
@@ -27,6 +27,7 @@ describe(`promiseAny`, function () {
       'success'
     )
   })
+
   it(`promiseAny failure`, async function () {
     await promiseAny([failure(), failure()])
       .then(() => {
@@ -34,7 +35,22 @@ describe(`promiseAny`, function () {
       })
       .catch(err => {
         expect(err).to.be.instanceOf(Error)
-        expect(err).to.have.property('message', 'failure')
+        expect(err).to.have.property('message', 'All promises were rejected')
+        expect(err).to.have.property('errors')
+      })
+  })
+
+  it('Formats aggregate errors', async function () {
+    await formatAggregateError(
+      promiseAny([failure(), failure()]),
+      'Pretty bad:'
+    )
+      .then(() => {
+        throw new Error('Should have thrown')
+      })
+      .catch(err => {
+        expect(err).to.be.instanceOf(Error)
+        expect(err).to.have.property('message', 'Pretty bad:\n• Error: failure')
       })
   })
 })

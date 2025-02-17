@@ -40,7 +40,7 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
         ),
         server: 'blockcypher'
       }
-    })
+    }, 'Broadcast failed:')
   }
 
   // TODO: Clean return type

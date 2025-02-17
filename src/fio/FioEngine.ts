@@ -33,8 +33,9 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
+  formatAggregateError,
   promiseAny,
-  promiseNy,
+  promisesAgree,
   timeout
 } from '../common/promiseUtils'
 import {
@@ -826,20 +827,23 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           preparedTrx
         )}`
       )
-      res = await promiseAny(
-        shuffleArray(
-          this.networkInfo.apiUrls.map(
-            async apiUrl =>
-              await timeout(
-                this.executePreparedTrx(
-                  apiUrl,
-                  EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                  preparedTrx
-                ),
-                10000
-              )
+      res = formatAggregateError(
+        await promiseAny(
+          shuffleArray(
+            this.networkInfo.apiUrls.map(
+              async apiUrl =>
+                await timeout(
+                  this.executePreparedTrx(
+                    apiUrl,
+                    EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+                    preparedTrx
+                  ),
+                  10000
+                )
+            )
           )
-        )
+        ),
+        'Broadcast failed:'
       )
       this.warn(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
@@ -850,7 +854,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         throw new Error('Service is unavailable')
       }
     } else if (actionName === 'getFioNames') {
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
@@ -871,7 +875,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       // Only the balance of the wallet will be returned and staked amounts will
       // appear as zero until the account is corrected. This can be removed once
       // all affected accounts are fixed.
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(
@@ -907,7 +911,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         roe: '0'
       }
     } else if (actionName === 'getFioBalance') {
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)

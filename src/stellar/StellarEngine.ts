@@ -15,7 +15,11 @@ import stellarApi, { Transaction } from 'stellar-sdk'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import {
   cleanTxLogs,
   getDenomination,
@@ -177,12 +181,15 @@ export class StellarEngine extends CurrencyEngine<
 
       // Functions that should multicast to all servers
       case 'submitTransaction':
-        out = await promiseAny(
-          this.tools.stellarApiServers.map(async serverApi => {
-            // @ts-expect-error
-            const result = await serverApi[func](...params)
-            return { server: serverApi.serverName, result }
-          })
+        out = await formatAggregateError(
+          promiseAny(
+            this.tools.stellarApiServers.map(async serverApi => {
+              // @ts-expect-error
+              const result = await serverApi[func](...params)
+              return { server: serverApi.serverName, result }
+            })
+          ),
+          'Broadcast failed:'
         )
         break
     }
