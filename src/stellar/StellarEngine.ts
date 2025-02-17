@@ -346,10 +346,7 @@ export class StellarEngine extends CurrencyEngine<
         return
       }
     }
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
       this.otherData.lastPagingToken = pagingToken

@@ -511,11 +511,7 @@ export class SolanaEngine extends CurrencyEngine<
 
     this.walletLocalDataDirty = true
     this.updateTxStatus(currencyCode, 1)
-
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   updateTxStatus(currencyCode: string, progress: number): void {

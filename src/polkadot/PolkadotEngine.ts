@@ -469,12 +469,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   async queryTransactions(): Promise<void> {
@@ -552,12 +547,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   // // ****************************************************************************
