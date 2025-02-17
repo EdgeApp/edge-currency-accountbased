@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (ETH) Added new USDS token contract and renamed "classic" to USDSC.
+
 ## 4.36.3 (2025-02-17)
 
 - changed: If broadcasting fails, return an error with a better summary.
