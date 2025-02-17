@@ -1,3 +1,4 @@
+import { abstract } from './info/abstractInfo'
 import { amoy } from './info/amoyInfo'
 import { arbitrum } from './info/arbitrumInfo'
 import { avalanche } from './info/avalancheInfo'
@@ -21,6 +22,7 @@ import { sepolia } from './info/sepoliaInfo'
 import { zksync } from './info/zksyncInfo'
 
 export const ethereumPlugins = {
+  abstract,
   amoy,
   arbitrum,
   avalanche,

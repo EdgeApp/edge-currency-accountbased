@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Added `abstract` EVM-based plugin
 - fixed: (ETH) Added new USDS token contract and renamed "classic" to USDSC.
 
 ## 4.36.3 (2025-02-17)
