@@ -132,7 +132,7 @@ export class PiratechainEngine extends CurrencyEngine<
     try {
       await this.queryBalance()
       await this.queryTransactions()
-      this.onUpdateTransactions()
+      this.updateTransactionEvents()
     } catch (e: any) {}
     this.queryMutex = false
   }
@@ -144,13 +144,6 @@ export class PiratechainEngine extends CurrencyEngine<
       this.currencyEngineCallbacks.onBlockHeightChanged(
         this.walletLocalData.blockHeight
       )
-    }
-  }
-
-  onUpdateTransactions(): void {
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
     }
   }
 

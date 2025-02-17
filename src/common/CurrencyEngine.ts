@@ -796,6 +796,14 @@ export class CurrencyEngine<
     return checkpointB
   }
 
+  updateTransactionEvents(): void {
+    if (this.transactionEvents.length > 0) {
+      this.walletLocalDataDirty = true
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
+    }
+  }
+
   // Called by EthereumNetwork
   updateOnAddressesChecked(): void {
     if (this.addressesChecked) {
