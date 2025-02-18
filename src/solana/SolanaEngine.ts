@@ -665,7 +665,7 @@ export class SolanaEngine extends CurrencyEngine<
       const associatedDestinationTokenAddrPayee = getAssociatedTokenAddressSync(
         TOKEN,
         payee,
-        false,
+        true, // payee may be a Program Derived Address
         tokenProgramId,
         associatedTokenProgramId
       )
