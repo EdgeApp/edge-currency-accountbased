@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Solana) Allow sending to Program Derived Address
+
 ## 4.37.0 (2025-02-17)
 
 - added: Added `abstract` EVM-based plugin
