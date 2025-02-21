@@ -183,7 +183,6 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     this.started = true
     await super.startEngine()
   }

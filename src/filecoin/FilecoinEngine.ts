@@ -107,18 +107,6 @@ export class FilecoinEngine extends CurrencyEngine<
     this.availableAttoFil = '0'
   }
 
-  initSubscriptions(): void {
-    this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS).catch(error =>
-      this.log(error)
-    )
-    this.addToLoop('checkBlockHeight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      error => this.log(error)
-    )
-    this.addToLoop('checkTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      error => this.log(error)
-    )
-  }
-
   onUpdateBlockHeight(networkBlockHeight: number): void {
     if (this.walletLocalData.blockHeight !== networkBlockHeight) {
       this.walletLocalData.blockHeight = networkBlockHeight
@@ -137,9 +125,10 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     this.initData()
-    this.initSubscriptions()
+    this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkBlockHeight', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -344,11 +333,6 @@ export class FilecoinEngine extends CurrencyEngine<
 
   getDisplayPublicSeed(): string {
     return this.walletInfo.keys.publicKey
-  }
-
-  async loadEngine(): Promise<void> {
-    await super.loadEngine()
-    this.engineOn = true
   }
 
   //

@@ -26,6 +26,7 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
+import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import {
   getTokenIdFromCurrencyCode,
   makeMetaTokens,
@@ -100,7 +101,7 @@ export class CurrencyEngine<
   transactionEvents: EdgeTransactionEvent[] // Transaction events when new transactions are added or have changed
   currencyInfo: EdgeCurrencyInfo
   currentSettings: any
-  timers: any
+  private readonly tasks = new Map<string, PeriodicTask>()
   walletId: string
   log: EdgeLog
   warn: (message: string, e?: Error) => void
@@ -162,7 +163,6 @@ export class CurrencyEngine<
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
-    this.timers = {}
     this.otherData = undefined
     this.minimumAddressBalance = '0'
 
@@ -732,21 +732,33 @@ export class CurrencyEngine<
     }
   }
 
-  protected async addToLoop(func: string, timer: number): Promise<boolean> {
-    try {
+  /**
+   * Schedule a periodic task.
+   * Names are unique. If we already have a task with the same name,
+   * scheduling another one won't do anything.
+   * If the callback is missing, it will default to calling `this[name]`.
+   */
+  protected addToLoop(
+    name: string,
+    msGap: number,
+    callback: () => Promise<void> | undefined = async () => {
       // @ts-expect-error
-      await this[func]()
-    } catch (e: any) {
-      this.error(`Error in Loop: ${func} `, e)
+      await this[name]()
     }
-    if (this.engineOn) {
-      this.timers[func] = setTimeout(() => {
-        if (this.engineOn) {
-          this.addToLoop(func, timer).catch(e => this.log(e.message))
-        }
-      }, timer)
+  ): void {
+    if (this.tasks.get(name) != null) return
+
+    const onError = (error: unknown): void => {
+      this.log(name + ': ' + String(error))
     }
-    return true
+    const task = makePeriodicTask(callback, msGap, { onError })
+    this.tasks.set(name, task)
+    if (this.engineOn) task.start()
+  }
+
+  protected removeFromLoop(name: string): void {
+    this.tasks.get(name)?.stop()
+    this.tasks.delete(name)
   }
 
   // Called by EthereumNetwork
@@ -862,19 +874,20 @@ export class CurrencyEngine<
   // *************************************
 
   async startEngine(): Promise<void> {
-    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
+
+    this.engineOn = true
+    for (const [, task] of this.tasks) {
+      task.start()
+    }
   }
 
   async killEngine(): Promise<void> {
-    // Set status flag to false
     this.engineOn = false
-    // Clear Inner loops timers
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
+
+    for (const [, task] of this.tasks) {
+      task.stop()
     }
-    this.timers = {}
   }
 
   async changeUserSettings(userSettings: Object): Promise<void> {

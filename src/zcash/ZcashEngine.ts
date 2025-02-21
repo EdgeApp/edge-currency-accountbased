@@ -238,11 +238,6 @@ export class ZcashEngine extends CurrencyEngine<
     }
   }
 
-  async startEngine(): Promise<void> {
-    this.engineOn = true
-    await super.startEngine()
-  }
-
   isSynced(): boolean {
     // Synchronizer status is updated regularly and should be checked before accessing the db to avoid errors
     return this.synchronizerStatus === 'SYNCED'

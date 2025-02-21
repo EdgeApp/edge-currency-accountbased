@@ -401,11 +401,6 @@ export class EthereumEngine extends CurrencyEngine<
     }
   }
 
-  async loadEngine(): Promise<void> {
-    await super.loadEngine()
-    this.engineOn = true
-  }
-
   /**
    * Returns the gasLimit from eth_estimateGas RPC call.
    */
@@ -736,9 +731,7 @@ export class EthereumEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
-    this.engineOn = true
+  async startEngine(): Promise<void> {
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
@@ -764,15 +757,9 @@ export class EthereumEngine extends CurrencyEngine<
       })
       .catch(() => this.warn('Error fetching fees from Info Server'))
       .finally(() => {
-        this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs).catch(err =>
-          this.warn(
-            `Error setting up updateNetworkFees addToLoop: ${String(err)}`
-          )
-        )
+        this.addToLoop('updateNetworkFees', feeUpdateFrequencyMs)
       })
-    this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS).catch(
-      () => {}
-    )
+    this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
     await super.startEngine()
   }
