@@ -454,19 +454,10 @@ export class StellarEngine extends CurrencyEngine<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
-    this.engineOn = true
-    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop(
-      'checkBlockchainInnerLoop',
-      BLOCKCHAIN_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop(
-      'checkTransactionsInnerLoop',
-      TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
+    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
