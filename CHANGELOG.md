@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.37.2 (2025-02-24)
+
 - fixed: Regression in FioEngine causing failed broadcasts.
 
 ## 4.37.1 (2025-02-17)
