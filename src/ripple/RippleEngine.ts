@@ -81,7 +81,7 @@ import {
   XrpTransaction,
   XrpWalletOtherData
 } from './rippleTypes'
-import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
+import { makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
@@ -214,7 +214,7 @@ export class XrpEngine extends CurrencyEngine<
       const { currency, issuer } = asXrpNetworkLocation(networkLocation)
       return {
         value: div(nativeAmount, denominations[0].multiplier, DIVIDE_PRECISION),
-        currency: convertCurrencyCodeToHex(currency),
+        currency: currency,
         issuer
       }
     }
