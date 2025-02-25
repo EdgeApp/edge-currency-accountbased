@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Regression in FioEngine causing failed broadcasts.
+
 ## 4.37.1 (2025-02-17)
 
 - fixed: (Solana) Allow sending to Program Derived Address

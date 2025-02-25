@@ -827,8 +827,8 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           preparedTrx
         )}`
       )
-      res = formatAggregateError(
-        await promiseAny(
+      res = await formatAggregateError(
+        promiseAny(
           shuffleArray(
             this.networkInfo.apiUrls.map(
               async apiUrl =>
@@ -1809,9 +1809,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     const signedTx = asFioSignedTx(otherParams.signedTx)
-    const trx = asFioBroadcastResult(
-      await this.multicastServers(otherParams.action.name, signedTx)
+    const result = await this.multicastServers(
+      otherParams.action.name,
+      signedTx
     )
+    const trx = asFioBroadcastResult(result)
 
     edgeTransaction.metadata = {
       notes: trx.transaction_id
