@@ -93,7 +93,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'abstract',
+  displayName: 'Abstract',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
