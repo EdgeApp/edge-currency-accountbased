@@ -46,6 +46,21 @@ const currencyInfo: EdgeCurrencyInfo = {
 }
 
 export const builtinTokens: EdgeTokenMap = {
+  '524C555344000000000000000000000000000000-rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De':
+    {
+      currencyCode: 'RLUSD',
+      displayName: 'Ripple USD',
+      denominations: [
+        {
+          name: 'RLUSD',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      networkLocation: {
+        currency: '524C555344000000000000000000000000000000',
+        issuer: 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De'
+      }
+    },
   'USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq': {
     currencyCode: 'USD.gh',
     displayName: 'Gatehub USD',
