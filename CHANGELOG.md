@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: RLUSD on Ethereum and Ripple networks
+
 ## 4.37.2 (2025-02-24)
 
 - fixed: Regression in FioEngine causing failed broadcasts.

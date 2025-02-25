@@ -701,6 +701,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x221657776846890989a759BA2973e427DfF5C9bB'
     }
   },
+  '8292bb45bf1ee4d140127049757c2e0ff06317ed': {
+    currencyCode: 'RLUSD',
+    displayName: 'Ripple USD',
+    denominations: [{ name: 'RLUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD'
+    }
+  },
   fa5047c9c78b8877af97bdcb85db743fd7313d4a: {
     currencyCode: 'ROOK',
     displayName: 'Keeper DAO',
