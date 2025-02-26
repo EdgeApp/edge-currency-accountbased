@@ -61,6 +61,21 @@ export const builtinTokens: EdgeTokenMap = {
         issuer: 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De'
       }
     },
+  '534F4C4F00000000000000000000000000000000-rsoLo2S1kiGeCcn6hCUXVrCpGMWLrRrLZz':
+    {
+      currencyCode: 'SOLO',
+      displayName: 'Sologenic',
+      denominations: [
+        {
+          name: 'SOLO',
+          multiplier: '1000000000000000000'
+        }
+      ],
+      networkLocation: {
+        currency: '534F4C4F00000000000000000000000000000000',
+        issuer: 'rsoLo2S1kiGeCcn6hCUXVrCpGMWLrRrLZz'
+      }
+    },
   'USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq': {
     currencyCode: 'USD.gh',
     displayName: 'Gatehub USD',
