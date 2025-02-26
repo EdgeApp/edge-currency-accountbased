@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: RLUSD on Ethereum and Ripple networks
+- added: SOLO on Ripple network
 
 ## 4.37.2 (2025-02-24)
 
