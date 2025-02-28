@@ -60,6 +60,7 @@ const networkInfo: EthereumNetworkInfo = {
     chainId: 2741,
     name: 'abstract'
   },
+  disableEvmScanInternal: true,
   hdPathCoinType: 60,
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'abstractMnemonic',

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Abstract) Ignore internal transactions
+
 ## 4.37.2 (2025-02-24)
 
 - fixed: Regression in FioEngine causing failed broadcasts.
