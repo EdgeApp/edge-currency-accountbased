@@ -83,6 +83,7 @@ export interface EthereumNetworkInfo {
   arbitrumRollupParams?: {
     nodeInterfaceAddress: string
   }
+  disableEvmScanInternal?: boolean
   ercTokenStandard: string
   ethGasStationUrl: string | null
   hdPathCoinType: number
