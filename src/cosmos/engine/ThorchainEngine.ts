@@ -58,7 +58,7 @@ export class ThorchainEngine extends CosmosEngine {
       const raw = await res.json()
       const clean = asChainIdUpdate(raw)
       this.chainId = clean.result.node_info.network
-      clearTimeout(this.timers.queryChainId)
+      this.removeFromLoop('queryChainId')
     } catch (e: any) {
       this.error(`queryChainId Error `, e)
     }
@@ -251,7 +251,7 @@ export class ThorchainEngine extends CosmosEngine {
   }
 
   async startEngine(): Promise<void> {
+    this.addToLoop('queryChainId', QUERY_POLL_MILLISECONDS)
     await super.startEngine()
-    this.addToLoop('queryChainId', QUERY_POLL_MILLISECONDS).catch(() => {})
   }
 }

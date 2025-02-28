@@ -281,11 +281,9 @@ export class HederaEngine extends CurrencyEngine<
   }
 
   startActiveAccountLoops(): void {
-    clearTimeout(this.timers.checkAccountCreationStatus)
-    this.addToLoop('queryBalance', BALANCE_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.removeFromLoop('checkAccountCreationStatus')
+    this.addToLoop('queryBalance', BALANCE_POLL_MILLISECONDS)
+    this.addToLoop('getNewTransactions', TRANSACTION_POLL_MILLISECONDS)
   }
 
   // ****************************************************************************
@@ -293,13 +291,8 @@ export class HederaEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-
     if (this.otherData.hederaAccount == null) {
-      this.addToLoop(
-        'checkAccountCreationStatus',
-        ACCOUNT_POLL_MILLISECONDS
-      ).catch(() => {})
+      this.addToLoop('checkAccountCreationStatus', ACCOUNT_POLL_MILLISECONDS)
     } else {
       this.startActiveAccountLoops()
     }
