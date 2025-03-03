@@ -117,13 +117,6 @@ export class FilecoinEngine extends CurrencyEngine<
     }
   }
 
-  onUpdateTransactions(): void {
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
-  }
-
   async startEngine(): Promise<void> {
     this.initData()
     this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS)
@@ -392,7 +385,7 @@ export class FilecoinEngine extends CurrencyEngine<
       }): void => {
         if (tx != null) {
           this.addTransaction(this.currencyInfo.currencyCode, tx)
-          this.onUpdateTransactions()
+          this.updateTransactionEvents()
 
           // Progress the block-height if the message's height is greater than
           // last poll for block-height.

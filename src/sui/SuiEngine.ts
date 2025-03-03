@@ -130,10 +130,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       this.log.warn('queryTransactions to error:', e)
     }
 
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
 
     for (const token of this.enabledTokens) {
       this.tokenCheckTransactionsStatus[token] = 1

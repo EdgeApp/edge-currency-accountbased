@@ -27,6 +27,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -84,6 +85,7 @@ export class SolanaEngine extends CurrencyEngine<
   progressRatio: number
   addressCache: Map<string, boolean>
   getMinimumAddressBalance: () => Promise<string>
+  usedTokenIdSet: Set<EdgeTokenId> = new Set()
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -107,6 +109,7 @@ export class SolanaEngine extends CurrencyEngine<
       this.queryMinimumBalance.bind(this),
       30000
     )
+    this.usedTokenIdSet = new Set()
   }
 
   setOtherData(raw: any): void {
@@ -172,6 +175,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
+      this.usedTokenIdSet.add(null)
 
       const tokenBalances = asTokenBalances(tokenBalsRaw).result.value
       const tokenBalMap = tokenBalances.reduce(
@@ -185,7 +189,11 @@ export class SolanaEngine extends CurrencyEngine<
 
       const detectedTokenIds: string[] = []
       for (const tokenId of Object.keys(this.allTokensMap)) {
-        const balance = tokenBalMap[tokenId] ?? '0'
+        let balance = '0'
+        if (tokenBalMap[tokenId] != null) {
+          this.usedTokenIdSet.add(tokenId)
+          balance = tokenBalMap[tokenId] ?? '0'
+        }
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
         if (gt(balance, '0')) {
@@ -381,25 +389,33 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    const mainPubkey = new PublicKey(this.base58PublicKey)
-    const codePubkeyPairs = new Set<[string, PublicKey]>([
-      [this.currencyInfo.currencyCode, mainPubkey]
-    ])
-    for (const tokenId of this.enabledTokenIds) {
-      const pk = getAssociatedTokenAddressSync(
-        new PublicKey(tokenId),
-        mainPubkey,
-        false,
-        this.tools.tokenProgramPublicKey,
-        new PublicKey(this.networkInfo.associatedTokenPublicKey)
-      )
-      const cc = this.allTokensMap[tokenId].currencyCode
-      codePubkeyPairs.add([cc, pk])
+    if (this.usedTokenIdSet.size === 0) {
+      // queryBalance needs to run once before we lookup transactions
+      await this.queryBalance()
     }
 
-    for (const pair of codePubkeyPairs) {
-      const [currencyCode, pubkey] = pair
-      await this.queryTransactionsInner(currencyCode, pubkey)
+    const mainPubkey = new PublicKey(this.base58PublicKey)
+    await this.queryTransactionsInner(
+      this.currencyInfo.currencyCode,
+      mainPubkey
+    )
+    this.updateTransactionEvents()
+    this.updateTxStatus(this.currencyInfo.currencyCode, 1)
+
+    for (const tokenId of this.enabledTokenIds) {
+      const cc = this.allTokensMap[tokenId].currencyCode
+      if (this.usedTokenIdSet.has(tokenId)) {
+        const pk = getAssociatedTokenAddressSync(
+          new PublicKey(tokenId),
+          mainPubkey,
+          false,
+          this.tools.tokenProgramPublicKey,
+          new PublicKey(this.networkInfo.associatedTokenPublicKey)
+        )
+        await this.queryTransactionsInner(cc, pk)
+        this.updateTransactionEvents()
+      }
+      this.updateTxStatus(cc, 1)
     }
   }
 
@@ -510,12 +526,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     this.walletLocalDataDirty = true
-    this.updateTxStatus(currencyCode, 1)
-
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   updateTxStatus(currencyCode: string, progress: number): void {

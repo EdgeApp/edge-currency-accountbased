@@ -4,6 +4,7 @@
 
 - added: RLUSD on Ethereum and Ripple networks
 - added: SOLO on Ripple network
+- changed: Optimize Solana transaction query
 
 ## 4.37.3 (2025-02-28)
 

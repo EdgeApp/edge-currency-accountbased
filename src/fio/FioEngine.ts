@@ -634,10 +634,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.tokenCheckTransactionsStatus.FIO = 1
       this.updateOnAddressesChecked()
     }
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   async requestHistory(

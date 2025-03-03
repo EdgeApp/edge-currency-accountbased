@@ -170,7 +170,7 @@ export class ZcashEngine extends CurrencyEngine<
 
         this.processTransaction(tx)
       })
-      this.onUpdateTransactions()
+      this.updateTransactionEvents()
     })
     this.synchronizer.on('error', async payload => {
       this.log.warn(`Synchronizer error: ${payload.message}`)
@@ -188,13 +188,6 @@ export class ZcashEngine extends CurrencyEngine<
       this.currencyEngineCallbacks.onBlockHeightChanged(
         this.walletLocalData.blockHeight
       )
-    }
-  }
-
-  onUpdateTransactions(): void {
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
     }
   }
 
@@ -375,7 +368,7 @@ export class ZcashEngine extends CurrencyEngine<
             this.walletLocalDataDirty = true
 
             this.processTransaction(tx)
-            this.onUpdateTransactions()
+            this.updateTransactionEvents()
           })
           .catch(e => {
             this.autoshielding.createAutoshieldTx = false
