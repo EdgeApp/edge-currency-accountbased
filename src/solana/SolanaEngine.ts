@@ -528,19 +528,16 @@ export class SolanaEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     await this.tools.connectClient()
 
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.lightMode) {
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       for (const edgeToken of Object.values(this.allTokensMap)) {
         this.tokenCheckTransactionsStatus[edgeToken.currencyCode] = 1
       }
     } else {
-      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-        () => {}
-      )
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     }
     await super.startEngine()
   }

@@ -1451,24 +1451,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop(
-      'checkBlockchainInnerLoop',
-      BLOCKCHAIN_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop(
-      'checkUpdateNetworkFees',
-      NETWORKFEES_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 

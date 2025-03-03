@@ -374,7 +374,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     while (hasNextPage) {
       const meritsOperationName = 'Merits'
-      const meritsQuery = `query Merits($userId: String, $cursor: Cursor) {  
+      const meritsQuery = `query Merits($userId: String, $cursor: Cursor) {
         merits(
         filter: {or: [{fromId: {equalTo: $userId}}, {toId: {equalTo: $userId}}]}
         after: $cursor
@@ -565,25 +565,20 @@ export class PolkadotEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
     this.minimumAddressBalance =
       this.api.consts.balances.existentialDeposit.toString()
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.networkInfo.liberlandScanUrl != null) {
       this.addToLoop(
         'queryLiberlandTransactions',
         TRANSACTION_POLL_MILLISECONDS
-      ).catch(() => {})
+      )
     }
     if (this.networkInfo.subscanBaseUrl != null)
-      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-        () => {}
-      )
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 

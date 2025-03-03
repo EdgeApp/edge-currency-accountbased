@@ -474,14 +474,9 @@ export class AlgorandEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
