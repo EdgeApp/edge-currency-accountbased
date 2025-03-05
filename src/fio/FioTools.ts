@@ -382,6 +382,8 @@ export class FioTools implements EdgeCurrencyTools {
     }
     if (isFree) {
       options.apiToken = this.fioRegApiToken
+    } else {
+      options.apiToken = '0O3h1E2eE8lqZNkew3JZNWU1se3JsztPNcmq9s8zEUYY'
     }
     try {
       const result = await this.fetchCors(
