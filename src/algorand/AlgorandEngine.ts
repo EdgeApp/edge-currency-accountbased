@@ -729,6 +729,11 @@ export class AlgorandEngine extends CurrencyEngine<
       edgeTransaction.txid = txId
       edgeTransaction.date = Date.now() / 1000
     } catch (e: any) {
+      // Recipient did not activate what we're trying to send
+      if (e.message?.includes('receiver error: must optin') === true) {
+        e.name = 'ErrorAlgoRecipientNotActivated'
+      }
+
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (ALGO) Handle broadcast errors to recipients with unactivated assets
+
 ## 4.38.0 (2025-03-03)
 
 - added: RLUSD on Ethereum and Ripple networks
