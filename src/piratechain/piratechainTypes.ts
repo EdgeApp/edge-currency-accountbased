@@ -8,19 +8,7 @@ import {
   asValue,
   Cleaner
 } from 'cleaners'
-import type {
-  Addresses,
-  BlockRange,
-  ConfirmedTransaction,
-  ErrorEvent as PiratechainErrorEvent,
-  InitializerConfig,
-  SpendInfo,
-  SpendSuccess,
-  StatusEvent,
-  UpdateEvent,
-  WalletBalance
-} from 'react-native-piratechain'
-import type { Subscriber } from 'yaob'
+import type { BlockRange } from 'react-native-piratechain'
 
 import { asWalletInfo } from '../common/types'
 
@@ -53,25 +41,6 @@ export const asPiratechainWalletOtherData = asObject({
 export type PiratechainWalletOtherData = ReturnType<
   typeof asPiratechainWalletOtherData
 >
-
-export interface PiratechainSynchronizer {
-  on: Subscriber<{
-    statusChanged: StatusEvent
-    update: UpdateEvent
-    error: PiratechainErrorEvent
-  }>
-  start: () => Promise<void>
-  stop: () => Promise<void>
-  deriveUnifiedAddress: () => Promise<Addresses>
-  getTransactions: (arg: BlockRange) => Promise<ConfirmedTransaction[]>
-  rescan: () => Promise<string>
-  sendToAddress: (arg: SpendInfo) => Promise<SpendSuccess>
-  getBalance: () => Promise<WalletBalance>
-}
-
-export type PiratechainMakeSynchronizer = () => (
-  config: InitializerConfig
-) => Promise<PiratechainSynchronizer>
 
 export const asArrrPublicKey = asObject({
   birthdayHeight: asOptional(asNumber),
