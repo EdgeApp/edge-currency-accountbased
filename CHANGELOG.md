@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (ALGO) Throw if recipient did not activate the token being sent in `signTx` 
+
 ## 4.38.0 (2025-03-03)
 
 - added: RLUSD on Ethereum and Ripple networks
