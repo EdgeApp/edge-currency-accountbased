@@ -18,6 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import type { ZcashIo } from './zcashIo'
 import {
   asSafeZcashWalletInfo,
   asZcashPrivateKeys,
@@ -40,13 +41,13 @@ export class ZcashTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
-    const RNAccountbased = env.nativeIo['edge-currency-accountbased']
-    if (RNAccountbased == null) {
-      throw new Error('Need opts')
+    const zcashIo =
+      (env.nativeIo.zcash as ZcashIo) ??
+      env.nativeIo['edge-currency-accountbased']?.zcash
+    if (zcashIo == null) {
+      throw new Error('Need zcash native IO')
     }
-    const { Tools } = RNAccountbased.zcash
-
-    this.nativeTools = Tools
+    this.nativeTools = zcashIo.Tools
   }
 
   async getDisplayPrivateKey(

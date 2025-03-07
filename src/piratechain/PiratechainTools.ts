@@ -18,6 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import type { PiratechainIo } from './piratechainIo'
 import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,
@@ -40,13 +41,14 @@ export class PiratechainTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
-    const RNAccountbased = env.nativeIo['edge-currency-accountbased']
-    if (RNAccountbased == null) {
-      throw new Error('Need opts')
+    const piratechainIo =
+      (env.nativeIo.piratechain as PiratechainIo) ??
+      env.nativeIo['edge-currency-accountbased']?.piratechain
+    if (piratechainIo == null) {
+      throw new Error('Need piratechain native IO')
     }
-    const { Tools } = RNAccountbased.piratechain
 
-    this.nativeTools = Tools
+    this.nativeTools = piratechainIo.Tools
   }
 
   async getDisplayPrivateKey(

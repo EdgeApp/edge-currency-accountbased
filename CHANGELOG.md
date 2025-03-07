@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Make Piratechain and Zcash optional.
+
 ## 4.38.0 (2025-03-03)
 
 - added: RLUSD on Ethereum and Ripple networks
