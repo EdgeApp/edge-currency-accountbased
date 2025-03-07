@@ -21,7 +21,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
-import { ZcashIo, ZcashSynchronizer } from './zcashIo'
+import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
 import { ZcashTools } from './ZcashTools'
 import {
   asSafeZcashWalletInfo,

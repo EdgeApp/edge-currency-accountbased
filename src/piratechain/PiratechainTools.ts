@@ -18,7 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
-import { PiratechainIo } from './piratechainIo'
+import type { PiratechainIo } from './piratechainIo'
 import {
   asArrrPublicKey,
   asPiratechainPrivateKeys,

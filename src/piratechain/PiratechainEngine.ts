@@ -21,7 +21,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
-import { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
+import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
 import { PiratechainTools } from './PiratechainTools'
 import {
   asPiratechainPrivateKeys,

@@ -18,7 +18,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asIntegerString } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
-import { ZcashIo } from './zcashIo'
+import type { ZcashIo } from './zcashIo'
 import {
   asSafeZcashWalletInfo,
   asZcashPrivateKeys,
