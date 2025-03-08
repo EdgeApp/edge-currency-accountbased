@@ -701,6 +701,22 @@ export class AlgorandEngine extends CurrencyEngine<
         rawTx.amount.toString(),
         recipient
       )
+
+      // Check if the recipient has activated/opted-in the asset
+      if (edgeTransaction.tokenId != null) {
+        const { assets } = await this.fetchAccountInfo(recipient)
+        if (
+          assets.find(
+            asset => asset['asset-id'].toString() === edgeTransaction.tokenId
+          ) == null
+        ) {
+          const err = new Error(
+            `Algorand: recipient must optin asset: ${edgeTransaction.tokenId}`
+          )
+          err.name = 'ErrorAlgoRecipientNotActivated'
+          throw err
+        }
+      }
     }
 
     const keys = asAlgorandPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
@@ -729,11 +745,6 @@ export class AlgorandEngine extends CurrencyEngine<
       edgeTransaction.txid = txId
       edgeTransaction.date = Date.now() / 1000
     } catch (e: any) {
-      // Recipient did not activate what we're trying to send
-      if (e.message?.includes('receiver error: must optin') === true) {
-        e.name = 'ErrorAlgoRecipientNotActivated'
-      }
-
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
     }
