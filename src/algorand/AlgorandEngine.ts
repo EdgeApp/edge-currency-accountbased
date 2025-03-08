@@ -701,6 +701,22 @@ export class AlgorandEngine extends CurrencyEngine<
         rawTx.amount.toString(),
         recipient
       )
+
+      // Check if the recipient has activated/opted-in the asset
+      if (edgeTransaction.tokenId != null) {
+        const { assets } = await this.fetchAccountInfo(recipient)
+        if (
+          assets.find(
+            asset => asset['asset-id'].toString() === edgeTransaction.tokenId
+          ) == null
+        ) {
+          const err = new Error(
+            `Algorand: recipient must optin asset: ${edgeTransaction.tokenId}`
+          )
+          err.name = 'ErrorAlgoRecipientNotActivated'
+          throw err
+        }
+      }
     }
 
     const keys = asAlgorandPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
