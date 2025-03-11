@@ -695,6 +695,30 @@ export class AlgorandEngine extends CurrencyEngine<
       Uint8Array.from(base16.parse(encodedTx))
     )
 
+    // If we are trying to send a token, check first if the recipient has
+    // activated/opted-in the asset
+    const { tokenId, spendTargets } = edgeTransaction
+    if (
+      tokenId != null &&
+      spendTargets != null &&
+      spendTargets[0].nativeAmount !== '0'
+    ) {
+      const { assets } = await this.fetchAccountInfo(
+        spendTargets[0].publicAddress
+      )
+      if (
+        assets.find(
+          asset => asset['asset-id'].toString() === edgeTransaction.tokenId
+        ) == null
+      ) {
+        const err = new Error(
+          `Algorand: recipient must optin asset: ${edgeTransaction.tokenId}`
+        )
+        err.name = 'ErrorAlgoRecipientNotActivated'
+        throw err
+      }
+    }
+
     if (recipient != null) {
       await this.checkRecipientMinimumBalance(
         this.getRecipientBalance,
