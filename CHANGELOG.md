@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (FTM) Rename depegged Multichain Bridged USDC as 'USDC-M'
+
 ## 4.39.0 (2025-03-10)
 
 - added: (ALGO) Throw if recipient did not activate the token being sent in `signTx` 

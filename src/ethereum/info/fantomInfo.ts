@@ -226,9 +226,9 @@ const builtinTokens: EdgeTokenMap = {
     }
   },
   '04068da6c83afcfa0e13ba15a6696662335d5b75': {
-    currencyCode: 'USDC',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000' }],
+    currencyCode: 'USDC-M',
+    displayName: 'Multichain Bridged USDC',
+    denominations: [{ name: 'USDC-M', multiplier: '1000000' }],
     networkLocation: {
       contractAddress: '0x04068da6c83afcfa0e13ba15a6696662335d5b75'
     }
