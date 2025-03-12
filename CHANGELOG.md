@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (FIO) Require apiToken for all calls to `buyAddressRequest`
+
 ## 4.40.0 (2025-03-11)
 
 - changed: (FTM) Rename depegged Multichain Bridged USDC as 'USDC-M'
