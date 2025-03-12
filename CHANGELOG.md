@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.40.0 (2025-03-11)
+
 - changed: (FTM) Rename depegged Multichain Bridged USDC as 'USDC-M'
 
 ## 4.39.0 (2025-03-10)
