@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: (Ripple) Rotate servers on unhandled errors
 - changed: (Sui) Enforce the arbitrary max spend limit
 - fixed: (Ripple) Fix race condition when setting up api connection
 
