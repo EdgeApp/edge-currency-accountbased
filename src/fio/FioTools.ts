@@ -57,6 +57,8 @@ export class FioTools implements EdgeCurrencyTools {
 
   fetchCors: EdgeFetchFunction
   fioRegApiToken: string
+  freeRegApiToken: string
+  freeRegRefCode: string
   tpid: string
 
   constructor(env: PluginEnvironment<FioNetworkInfo>) {
@@ -66,11 +68,17 @@ export class FioTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
-    const { tpid = 'finance@edge', fioRegApiToken = FIO_REG_SITE_API_KEY } =
-      initOptions
+    const {
+      tpid = 'finance@edge',
+      fioRegApiToken = FIO_REG_SITE_API_KEY,
+      freeRegApiToken = FIO_REG_SITE_API_KEY,
+      freeRegRefCode = 'edgeFree'
+    } = initOptions
 
     this.fetchCors = getFetchCors(env.io)
     this.fioRegApiToken = fioRegApiToken
+    this.freeRegApiToken = freeRegApiToken
+    this.freeRegRefCode = freeRegRefCode
     this.tpid = tpid
 
     // The sdk constructor will fetch and store abi definitions for future instances
@@ -372,16 +380,20 @@ export class FioTools implements EdgeCurrencyTools {
       address: string
       referralCode: string
       publicKey: string
-      apiToken?: string
     },
     isFree: boolean = false
   ): Promise<any> {
+    if (
+      (isFree && this.freeRegApiToken === '') ||
+      (!isFree && this.fioRegApiToken === '')
+    )
+      throw new Error(
+        'FIO: buyAddressRequest requires API tokens to be configured'
+      )
+
     const headers = {
       Accept: 'application/json',
       'Content-Type': 'application/json'
-    }
-    if (isFree) {
-      options.apiToken = this.fioRegApiToken
     }
     try {
       const result = await this.fetchCors(
@@ -389,7 +401,10 @@ export class FioTools implements EdgeCurrencyTools {
         {
           method: 'POST',
           headers,
-          body: JSON.stringify(options)
+          body: JSON.stringify({
+            ...options,
+            apiToken: isFree ? this.freeRegApiToken : this.fioRegApiToken
+          })
         }
       )
       if (!result.ok) {
