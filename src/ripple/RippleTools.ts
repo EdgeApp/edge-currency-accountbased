@@ -118,6 +118,20 @@ export class RippleTools implements EdgeCurrencyTools {
     }
   }
 
+  async reconnectApi(): Promise<void> {
+    const lastServer = this.rippleApi.url
+    this.rippleApi.disconnect().catch(() => {})
+    const funcs = this.networkInfo.rippledServers
+      .filter(server => server !== lastServer)
+      .map(server => async () => {
+        const api = new Client(server)
+        await api.connect()
+        return api
+      })
+    const result: Client = await asyncWaterfall(funcs)
+    this.rippleApi = result
+  }
+
   async importPrivateKey(input: string): Promise<JsonObject> {
     try {
       if (validateMnemonic(input)) {
