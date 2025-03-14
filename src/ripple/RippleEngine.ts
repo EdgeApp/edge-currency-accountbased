@@ -261,6 +261,7 @@ export class XrpEngine extends CurrencyEngine<
     // it contains the routine to check for unactivated tokens. This solves
     // a majority of race conditions when adding a new token and immediately
     // checking the unactivatedTokenIds on a wallet.
+    await this.tools.rippleApiPromise
     await this.checkAccountInnerLoop()
   }
 
@@ -276,6 +277,7 @@ export class XrpEngine extends CurrencyEngine<
           e
         )}. Using default fee.`
       )
+      await this.tools.reconnectApi()
       if (this.otherData.recommendedFee !== this.networkInfo.defaultFee) {
         this.otherData.recommendedFee = this.networkInfo.defaultFee
         this.walletLocalDataDirty = true
@@ -300,6 +302,7 @@ export class XrpEngine extends CurrencyEngine<
       }
     } catch (e: any) {
       this.error(`Error fetching height: `, e)
+      await this.tools.reconnectApi()
     }
   }
 
@@ -620,6 +623,7 @@ export class XrpEngine extends CurrencyEngine<
       this.updateOnAddressesChecked()
     } catch (e: any) {
       this.error(`Error fetching transactions: `, e)
+      await this.tools.reconnectApi()
     }
   }
 
@@ -719,6 +723,7 @@ export class XrpEngine extends CurrencyEngine<
         })
       } else {
         this.error(`Error fetching address info: `, e)
+        await this.tools.reconnectApi()
         return
       }
     }

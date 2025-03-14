@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- changed: (Ripple) Rotate servers on unhandled errors
+- fixed: (Ripple) Fix race condition when setting up api connection
+
 ## 4.40.0 (2025-03-11)
 
 - changed: (FTM) Rename depegged Multichain Bridged USDC as 'USDC-M'
