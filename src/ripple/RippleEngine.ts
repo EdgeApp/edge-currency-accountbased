@@ -261,6 +261,7 @@ export class XrpEngine extends CurrencyEngine<
     // it contains the routine to check for unactivated tokens. This solves
     // a majority of race conditions when adding a new token and immediately
     // checking the unactivatedTokenIds on a wallet.
+    await this.tools.rippleApiPromise
     await this.checkAccountInnerLoop()
   }
 

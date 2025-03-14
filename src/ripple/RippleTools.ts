@@ -46,6 +46,8 @@ export class RippleTools implements EdgeCurrencyTools {
   io: EdgeIo
   networkInfo: XrpNetworkInfo
 
+  rippleApiPromise: Promise<Client>
+  rippleApiResolver!: (client: Client) => void
   rippleApi!: Client
   rippleApiSubscribers: { [walletId: string]: boolean }
   accountTrustLineCache: Map<string, Set<string>>
@@ -58,6 +60,9 @@ export class RippleTools implements EdgeCurrencyTools {
     this.io = io
     this.networkInfo = networkInfo
 
+    this.rippleApiPromise = new Promise<Client>(resolve => {
+      this.rippleApiResolver = resolve
+    })
     this.rippleApiSubscribers = {}
     this.accountTrustLineCache = new Map()
     this.makeWallet = (privateKeys: RipplePrivateKeys) => {
@@ -87,6 +92,7 @@ export class RippleTools implements EdgeCurrencyTools {
 
   async connectApi(walletId: string): Promise<void> {
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
+      this.rippleApiSubscribers[walletId] = true
       const funcs = this.networkInfo.rippledServers.map(server => async () => {
         const api = new Client(server)
         await api.connect()
@@ -94,8 +100,10 @@ export class RippleTools implements EdgeCurrencyTools {
       })
       const result: Client = await asyncWaterfall(funcs)
       this.rippleApi = result
+      this.rippleApiResolver(result)
     }
     this.rippleApiSubscribers[walletId] = true
+    await this.rippleApiPromise
   }
 
   async disconnectApi(walletId: string): Promise<void> {
@@ -103,6 +111,9 @@ export class RippleTools implements EdgeCurrencyTools {
     delete this.rippleApiSubscribers[walletId]
     if (Object.keys(this.rippleApiSubscribers).length === 0) {
       await this.rippleApi.disconnect()
+      this.rippleApiPromise = new Promise<Client>(resolve => {
+        this.rippleApiResolver = resolve
+      })
       // this.rippleApi = undefined
     }
   }
