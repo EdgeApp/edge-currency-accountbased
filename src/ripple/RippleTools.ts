@@ -118,6 +118,16 @@ export class RippleTools implements EdgeCurrencyTools {
     }
   }
 
+  async reconnectApi(): Promise<void> {
+    const connectedWalletIds = Object.keys(this.rippleApiSubscribers)
+    for (const walletId of connectedWalletIds) {
+      await this.disconnectApi(walletId)
+    }
+    for (const walletId of connectedWalletIds) {
+      await this.connectApi(walletId)
+    }
+  }
+
   async importPrivateKey(input: string): Promise<JsonObject> {
     try {
       if (validateMnemonic(input)) {
