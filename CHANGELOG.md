@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.41.0 (2025-03-14)
+
 - changed: (FIO) Require apiToken for all calls to `buyAddressRequest`
 
 ## 4.40.0 (2025-03-11)
