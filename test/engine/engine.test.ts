@@ -122,7 +122,7 @@ describe('Engine', function () {
     })
 
     describe(`Create Plugin for Wallet type ${WALLET_TYPE}`, function () {
-      it('has correct currency code', async function () {
+      it(`has correct currency code ${WALLET_TYPE}`, async function () {
         expect(plugin.currencyInfo.currencyCode).equals(
           fixture['Test Currency code']
         )
@@ -130,7 +130,7 @@ describe('Engine', function () {
     })
 
     describe(`Make Engine for Wallet type ${WALLET_TYPE}`, function () {
-      it('Make Engine', async function () {
+      it(`Make Engine ${WALLET_TYPE}`, async function () {
         if (WALLET_TYPE === 'wallet:fio') this.timeout(60000)
         assert.equal(typeof engine.startEngine, 'function', 'startEngine')
         assert.equal(typeof engine.killEngine, 'function', 'killEngine')
@@ -164,8 +164,8 @@ describe('Engine', function () {
       })
     })
 
-    describe('Start engine', function () {
-      it('Get BlockHeight', function (done) {
+    describe(`Start engine ${WALLET_TYPE}`, function () {
+      it(`Get BlockHeight ${WALLET_TYPE}`, function (done) {
         engine.startEngine().catch(e => {
           console.log('startEngine error', e, e.message)
         })
@@ -189,9 +189,9 @@ describe('Engine', function () {
       })
     })
 
-    describe('Message signing', function () {
+    describe(`Message signing ${WALLET_TYPE}`, function () {
       if (fixture.messages == null) return
-      it('Should sign a hashed message', async function () {
+      it(`Should sign a hashed message ${WALLET_TYPE}`, async function () {
         if (engine == null) throw new Error('ErrorNoEngine')
         if (engine.signMessage == null) return
         const sig = await engine.signMessage(
@@ -201,7 +201,7 @@ describe('Engine', function () {
         )
         assert.equal(sig, fixture.messages.eth_sign.signature)
       })
-      it('Should sign a typed message', async function () {
+      it(`Should sign a typed message ${WALLET_TYPE}`, async function () {
         if (engine == null) throw new Error('ErrorNoEngine')
         if (engine.signMessage == null) return
         const sig = await engine.signMessage(
@@ -217,8 +217,8 @@ describe('Engine', function () {
       })
     })
 
-    describe('Stop the engine', function () {
-      it('Should stop the engine', function (done) {
+    describe(`Stop the engine ${WALLET_TYPE}`, function () {
+      it(`Should stop the engine ${WALLET_TYPE}`, function (done) {
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!engine) throw new Error('ErrorNoEngine')
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
