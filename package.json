@@ -31,7 +31,13 @@
     "/lib/",
     "/LICENSE",
     "/package.json",
-    "/README.md"
+    "/README.md",
+    "/rn-piratechain.d.ts",
+    "/rn-piratechain.js",
+    "/rn-zcash.d.ts",
+    "/rn-zcash.js",
+    "/rn.d.ts",
+    "/rn.js"
   ],
   "scripts": {
     "clean": "rimraf dist lib android/src/main/assets/edge-currency-accountbased",
