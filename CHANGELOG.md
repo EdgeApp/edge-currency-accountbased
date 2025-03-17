@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.42.0 (2025-03-17)
+
 - changed: Make Piratechain and Zcash optional.
 
 ## 4.41.0 (2025-03-14)
