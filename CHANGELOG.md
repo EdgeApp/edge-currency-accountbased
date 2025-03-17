@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Broken Zcash import path.
+
 ## 4.42.0 (2025-03-17)
 
 - changed: Make Piratechain and Zcash optional.
