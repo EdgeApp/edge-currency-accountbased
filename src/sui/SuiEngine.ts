@@ -272,6 +272,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       // can actually empty the wallet with upcoming makeMaxSpend API. For now
       // we leave 0.1 SUI behind.
       maxAmount = sub(balance, '100000000')
+      if (lt(maxAmount, '0')) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
     } else {
       maxAmount = balance
     }
