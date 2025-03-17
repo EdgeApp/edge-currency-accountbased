@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.42.1 (2025-03-17)
+
 - fixed: Broken Zcash import path.
 
 ## 4.42.0 (2025-03-17)
