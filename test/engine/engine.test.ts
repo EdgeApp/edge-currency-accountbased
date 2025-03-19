@@ -69,6 +69,7 @@ describe('Engine', function () {
         emitter.emit('onSeenTxCheckpoint', checkpoint)
       },
       onStakingStatusChanged() {},
+      onSubscribeAddresses() {},
       onNewTokens() {},
       onTokenBalanceChanged(tokenId, balance) {
         emitter.emit('onTokenBalanceChanged', tokenId, balance)
@@ -255,6 +256,7 @@ describe('Engine', function () {
       emitter.emit('onSeenTxCheckpoint', checkpoint)
     },
     onStakingStatusChanged() {},
+    onSubscribeAddresses() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)
