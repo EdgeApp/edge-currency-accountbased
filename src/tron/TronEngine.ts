@@ -480,6 +480,12 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
     if (retArray.length < 1) return out
 
+    const { contractRet: status, fee } = retArray[0]
+
+    const success = status === 'SUCCESS'
+    const feeNativeAmount = fee.toString()
+    const date = Math.floor(timestamp / 1000)
+
     const ourReceiveAddresses: string[] = []
 
     const memos: EdgeMemo[] = []
@@ -502,8 +508,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           }
         } = trxTransfer
 
-        const { contractRet: status, fee } = retArray[0]
-
         let feeNativeAmount = fee.toString()
 
         const from = hexToBase58Address(fromAddress)
@@ -520,13 +524,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
             // set amount to spent amount
             nativeAmount = mul(add(nativeAmount, feeNativeAmount), '-1')
           }
-          if (status !== 'SUCCESS') {
+          if (!success) {
             // Failed tx. Still need to record fee.
             nativeAmount = '0'
           }
         } else {
           // Receive
-          if (status !== 'SUCCESS') {
+          if (!success) {
             // Failed receive. Nothing to record.
             return out
           }
@@ -537,13 +541,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           isSend: nativeAmount.startsWith('-'),
           memos,
           nativeAmount,
           networkFee: feeNativeAmount,
           networkFees: [],
-          ourReceiveAddresses: ourReceiveAddresses,
+          ourReceiveAddresses,
           signedTx: '',
           tokenId: null,
           txid,
@@ -578,7 +582,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           isSend: true,
           memos,
           nativeAmount: mul(feeNativeAmount, '-1'),
@@ -610,7 +614,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           break
         }
 
-        const feeNativeAmount = retArray[0].fee.toString()
         const nativeAmount = add(frozenAmount.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
@@ -619,7 +622,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           },
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           isSend: true,
           memos,
           nativeAmount: mul(nativeAmount, '-1'),
@@ -652,7 +655,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           break
         }
 
-        const feeNativeAmount = retArray[0].fee.toString()
         const nativeAmount = sub(unfreezeAmount.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
@@ -661,7 +663,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           },
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           isSend: nativeAmount.startsWith('-'),
           memos,
           nativeAmount,
@@ -693,15 +695,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           break
         }
 
-        const feeNativeAmount = retArray[0].fee.toString()
-
         const edgeTransaction: EdgeTransaction = {
           assetAction: {
             assetActionType: 'stake'
           },
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           memos,
           isSend: true,
           nativeAmount: mul(feeNativeAmount, '-1'),
@@ -738,7 +738,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           break
         }
 
-        const feeNativeAmount = retArray[0].fee.toString()
         const nativeAmount = sub(unfreezeBalance.toString(), feeNativeAmount)
 
         const edgeTransaction: EdgeTransaction = {
@@ -747,7 +746,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           },
           blockHeight: blockNumber,
           currencyCode,
-          date: Math.floor(timestamp / 1000),
+          date,
           isSend: nativeAmount.startsWith('-'),
           memos,
           nativeAmount: `-${feeNativeAmount}`,
@@ -781,14 +780,12 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           break
         }
 
-        const feeNativeAmount = retArray[0].fee.toString()
-
         const edgeTransaction: EdgeTransaction = {
           assetAction: {
             assetActionType: 'unstake'
           },
           txid,
-          date: Math.floor(timestamp / 1000),
+          date,
           currencyCode,
           blockHeight: blockNumber,
           nativeAmount: `-${feeNativeAmount}`,
