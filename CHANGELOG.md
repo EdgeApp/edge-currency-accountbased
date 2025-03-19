@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Implement use of edge-change-server for network syncing.
+
 ## 4.43.1 (2025-04-02)
 
 - changed: Upgrade chain-registry package.

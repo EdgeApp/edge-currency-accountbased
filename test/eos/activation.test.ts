@@ -58,6 +58,7 @@ describe(`EOS activation`, function () {
       emitter.emit('onSeenTxCheckpoint', checkpoint)
     },
     onStakingStatusChanged() {},
+    onSubscribeAddresses() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChange', tokenId, balance)
