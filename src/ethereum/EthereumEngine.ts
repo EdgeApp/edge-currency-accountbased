@@ -6,6 +6,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeCurrencyInfo,
+  EdgeEngineSyncNetworkOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
   EdgeSignMessageOptions,
@@ -37,6 +38,7 @@ import {
   mergeDeeply,
   normalizeAddress,
   removeHexPrefix,
+  snooze,
   toHex,
   uint8ArrayToHex
 } from '../common/utils'
@@ -89,6 +91,11 @@ import {
   printFees
 } from './fees/feeProviders'
 import { RpcAdapter } from './networkAdapters/RpcAdapter'
+
+// How long to wait before retrying a network sync if the blockheight from
+// our querying hasn't exceeded the blockheight from the core:
+const RETRY_SYNC_NETWORK_INTERVAL = 2000
+const SYNC_NETWORK_INTERVAL = 20000
 
 export class EthereumEngine extends CurrencyEngine<
   EthereumTools,
@@ -762,6 +769,10 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
     await super.startEngine()
+
+    this.currencyEngineCallbacks.onSubscribeAddresses([
+      this.walletLocalData.publicKey
+    ])
   }
 
   async killEngine(): Promise<void> {
@@ -773,6 +784,41 @@ export class EthereumEngine extends CurrencyEngine<
     await this.killEngine()
     await this.clearBlockchainCache()
     await this.startEngine()
+  }
+
+  async syncNetwork(opts: EdgeEngineSyncNetworkOptions): Promise<number> {
+    const { subscribeParam } = opts
+
+    // Initial sync routine:
+    if (subscribeParam == null) {
+      await this.ethNetwork.acquireUpdates()
+      return SYNC_NETWORK_INTERVAL
+    }
+    // The blockheight from the network (change server)
+    const theirBlockheight =
+      subscribeParam.checkpoint != null
+        ? parseInt(subscribeParam.checkpoint)
+        : undefined
+
+    // Ignore updates that are from the mempoolmempool:
+    if (theirBlockheight == null) {
+      // TODO: Upgrade the network adapters for EVMs that support fetching
+      // mempool transactions. Then we can change this routine to query for
+      // the mempool until a transaction is found.
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    // Sync the network until the engine blockheight matches the checkpoint:
+    while (true) {
+      await this.ethNetwork.acquireUpdates()
+      if (theirBlockheight > this.walletLocalData.blockHeight) {
+        await snooze(RETRY_SYNC_NETWORK_INTERVAL)
+        continue
+      }
+      break
+    }
+
+    return SYNC_NETWORK_INTERVAL
   }
 
   async getFreshAddress(): Promise<EdgeFreshAddress> {

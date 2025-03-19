@@ -142,7 +142,7 @@ export const snoozeReject: Function = async (ms: number) =>
   await new Promise((resolve: Function, reject: Function) =>
     setTimeout(reject, ms)
   )
-export const snooze: Function = async (ms: number) =>
+export const snooze: Function = async (ms: number): Promise<void> =>
   await new Promise((resolve: Function) => setTimeout(resolve, ms))
 
 export function pickRandom<T>(list: T[], count: number): T[] {

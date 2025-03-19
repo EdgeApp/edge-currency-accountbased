@@ -30,8 +30,6 @@ import {
 const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const NEEDS_LOOP_INTERVAL = 1000
 const NONCE_POLL_MILLISECONDS = getRandomDelayMs(20000)
-const BAL_POLL_MILLISECONDS = getRandomDelayMs(20000)
-const TXS_POLL_MILLISECONDS = getRandomDelayMs(20000)
 
 const ADDRESS_QUERY_LOOKBACK_SEC = 2 * 60 // ~ 2 minutes
 
@@ -282,6 +280,7 @@ export class EthereumNetwork {
   stop(): void {
     this.needsLoopTask.stop()
     this.disconnectNetworkAdapters()
+    // TODO: Abort all in-flight network sync requests
   }
 
   acquireBlockHeight = makeThrottledFunction(
@@ -300,77 +299,64 @@ export class EthereumNetwork {
     }
   )
 
-  acquireTokenBalance = makeKeyBasedThrottledFunction(
-    BAL_POLL_MILLISECONDS,
-    async (currencyCode: string): Promise<void> => {
-      const update = await this.check('fetchTokenBalance', currencyCode)
-      return this.processEthereumNetworkUpdate(update)
+  acquireTokenBalance = async (currencyCode: string): Promise<void> => {
+    const update = await this.check('fetchTokenBalance', currencyCode)
+    return this.processEthereumNetworkUpdate(update)
+  }
+
+  acquireTokenBalances = async (): Promise<void> => {
+    const update = await this.check('fetchTokenBalances')
+    return this.processEthereumNetworkUpdate(update)
+  }
+
+  acquireTxs = async (currencyCode: string): Promise<void> => {
+    const lastTransactionQueryHeight =
+      this.ethEngine.walletLocalData.lastTransactionQueryHeight[currencyCode] ??
+      0
+    const lastTransactionDate =
+      this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] ?? 0
+    const addressQueryLookbackBlocks =
+      this.ethEngine.networkInfo.addressQueryLookbackBlocks
+    const params = {
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
+      startBlock: Math.max(
+        lastTransactionQueryHeight - addressQueryLookbackBlocks,
+        0
+      ),
+      // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
+      startDate: Math.max(lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC, 0),
+      currencyCode
     }
-  )
 
-  acquireTokenBalances = makeThrottledFunction(
-    BAL_POLL_MILLISECONDS,
-    async (): Promise<void> => {
-      const update = await this.check('fetchTokenBalances')
-      return this.processEthereumNetworkUpdate(update)
-    }
-  )
-
-  acquireTxs = makeKeyBasedThrottledFunction(
-    TXS_POLL_MILLISECONDS,
-    async (currencyCode: string): Promise<void> => {
-      const lastTransactionQueryHeight =
-        this.ethEngine.walletLocalData.lastTransactionQueryHeight[
-          currencyCode
-        ] ?? 0
-      const lastTransactionDate =
-        this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] ?? 0
-      const addressQueryLookbackBlocks =
-        this.ethEngine.networkInfo.addressQueryLookbackBlocks
-      const params = {
-        // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_BLOCKS from the last time we queried transactions
-        startBlock: Math.max(
-          lastTransactionQueryHeight - addressQueryLookbackBlocks,
-          0
-        ),
-        // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
-        startDate: Math.max(
-          lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC,
-          0
-        ),
-        currencyCode
-      }
-
-      // Send an empty tokenTxs network update if no network adapters
-      // qualify for 'fetchTxs':
-      if (
-        this.qualifyNetworkAdapters('fetchTxs').length === 0 ||
-        this.ethEngine.lightMode
-      ) {
-        const tokenTxs: {
-          [currencyCode: string]: EdgeTransactionsBlockHeightTuple
-        } = {
-          [this.ethEngine.currencyInfo.currencyCode]: {
-            blockHeight: params.startBlock,
-            edgeTransactions: []
-          }
+    // Send an empty tokenTxs network update if no network adapters
+    // qualify for 'fetchTxs':
+    if (
+      this.qualifyNetworkAdapters('fetchTxs').length === 0 ||
+      this.ethEngine.lightMode
+    ) {
+      const tokenTxs: {
+        [currencyCode: string]: EdgeTransactionsBlockHeightTuple
+      } = {
+        [this.ethEngine.currencyInfo.currencyCode]: {
+          blockHeight: params.startBlock,
+          edgeTransactions: []
         }
-        for (const token of Object.values(this.ethEngine.allTokensMap)) {
-          tokenTxs[token.currencyCode] = {
-            blockHeight: params.startBlock,
-            edgeTransactions: []
-          }
-        }
-        return this.processEthereumNetworkUpdate({
-          tokenTxs,
-          server: 'none'
-        })
       }
-
-      const update = await this.check('fetchTxs', params)
-      return this.processEthereumNetworkUpdate(update)
+      for (const token of Object.values(this.ethEngine.allTokensMap)) {
+        tokenTxs[token.currencyCode] = {
+          blockHeight: params.startBlock,
+          edgeTransactions: []
+        }
+      }
+      return this.processEthereumNetworkUpdate({
+        tokenTxs,
+        server: 'none'
+      })
     }
-  )
+
+    const update = await this.check('fetchTxs', params)
+    return this.processEthereumNetworkUpdate(update)
+  }
 
   needsLoop = async (): Promise<void> => {
     this.acquireBlockHeight().catch(error => {
@@ -382,7 +368,12 @@ export class EthereumNetwork {
       console.error(error)
       this.ethEngine.error('needsLoop acquireNonce', error)
     })
+  }
 
+  /**
+   * This function gets the balance and transaction updates from the network.
+   */
+  acquireUpdates = async (): Promise<void> => {
     // The engine supports token balances batch queries if an adapter provides
     // the functionality.
     const isFetchTokenBalancesSupported =
@@ -391,8 +382,6 @@ export class EthereumNetwork {
       ) != null
 
     if (
-      // Only check if the engine needs balances.
-      this.shouldCheckAndUpdateTxsOrBalances() &&
       // If this engine supports the batch token balance query, no need to check
       // each currencyCode individually.
       isFetchTokenBalancesSupported
@@ -412,24 +401,20 @@ export class EthereumNetwork {
 
     for (const currencyCode of currencyCodes) {
       if (
-        // Only check if the engine needs balances.
-        this.shouldCheckAndUpdateTxsOrBalances() &&
         // Only check each code individually if this engine does not support
         // batch token balance queries.
         !isFetchTokenBalancesSupported
       ) {
-        this.acquireTokenBalance(currencyCode)(currencyCode).catch(error => {
+        this.acquireTokenBalance(currencyCode).catch(error => {
           console.error(error)
           this.ethEngine.error('needsLoop acquireTokenBalance', error)
         })
       }
 
-      if (this.shouldCheckAndUpdateTxsOrBalances()) {
-        this.acquireTxs(currencyCode)(currencyCode).catch(error => {
-          console.error(error)
-          this.ethEngine.error('needsLoop acquireTxs', error)
-        })
-      }
+      this.acquireTxs(currencyCode).catch(error => {
+        console.error(error)
+        this.ethEngine.error('needsLoop acquireTxs', error)
+      })
     }
   }
 
@@ -437,33 +422,6 @@ export class EthereumNetwork {
     return [...this.adapterConnections.values()].some(
       status => status === 'connected'
     )
-  }
-
-  protected shouldCheckAndUpdateTxsOrBalances(): boolean {
-    if (!this.ethEngine.addressesChecked) {
-      // The wallet is still doing initial sync
-      return true
-    }
-
-    if (this.isAnAdapterConnected()) {
-      // Conditions only while the wallet is connected to a network adapter
-
-      if (this.ethNeeds.addressSync.needsInitialSync) {
-        // The wallet has no push-based syndication state:
-        return true
-      }
-
-      if (this.ethNeeds.addressSync.needsTxids.length > 0) {
-        // The wallet has txs that need to be checked:
-        return true
-      }
-
-      // The wallet has no checks needed:
-      return false
-    }
-
-    // The default is always to check
-    return true
   }
 
   processEthereumNetworkUpdate = (
@@ -483,10 +441,7 @@ export class EthereumNetwork {
       )
       const blockHeight = ethereumNetworkUpdate.blockHeight
       this.ethEngine.log(`Got block height ${blockHeight}`)
-      if (
-        typeof blockHeight === 'number' &&
-        this.ethEngine.walletLocalData.blockHeight !== blockHeight
-      ) {
+      if (this.ethEngine.walletLocalData.blockHeight !== blockHeight) {
         this.ethEngine.checkDroppedTransactionsThrottled()
         this.ethEngine.walletLocalData.blockHeight = blockHeight // Convert to decimal
         this.ethEngine.walletLocalDataDirty = true
@@ -677,16 +632,5 @@ function makeThrottledFunction<Args extends any[], Rtn>(
         }, timeRemaining)
       }
     })
-  }
-}
-
-function makeKeyBasedThrottledFunction<Args extends any[], Rtn>(
-  timeGap: number,
-  fn: (...args: Args) => Promise<Rtn>
-): (key: string) => (...args: Args) => Promise<Rtn> {
-  const fns: { [key: string]: () => Promise<Rtn> } = {}
-  return (key: string) => {
-    fns[key] = fns[key] ?? makeThrottledFunction(timeGap, fn)
-    return fns[key]
   }
 }
