@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Sui) Enforce the arbitrary max spend limit
+
 ## 4.42.1 (2025-03-17)
 
 - fixed: Broken Zcash import path.
