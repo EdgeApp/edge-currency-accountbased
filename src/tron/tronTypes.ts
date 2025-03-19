@@ -343,6 +343,7 @@ export const asTransaction = asObject({
   // energy_fee: asNumber, // 0
   // energy_usage_total: asNumber // 0
   raw_data: asObject({
+    data: asOptional(asString),
     contract: asArray(asUnknown)
     // ref_block_bytes: "302exp9",
     // ref_block_hash: "cf53f47765aeb938",

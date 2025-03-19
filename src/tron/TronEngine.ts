@@ -4,6 +4,7 @@ import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeStakingStatus,
   EdgeTransaction,
@@ -467,7 +468,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       blockNumber,
       ret: retArray,
       unfreeze_amount: unfreezeAmount,
-      raw_data: { contract: contractArray }
+      raw_data: { contract: contractArray, data }
     } = tx
 
     const out = { txid, timestamp }
@@ -480,6 +481,15 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     if (retArray.length < 1) return out
 
     const ourReceiveAddresses: string[] = []
+
+    const memos: EdgeMemo[] = []
+    if (data != null) {
+      memos.push({
+        type: 'text',
+        value: TronWeb.toUtf8(data),
+        memoName: 'note'
+      })
+    }
 
     // Find the relevant item in the array
     const { currencyCode } = this.currencyInfo
@@ -529,7 +539,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
-          memos: [],
+          memos,
           nativeAmount,
           networkFee: feeNativeAmount,
           networkFees: [],
@@ -570,7 +580,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: true,
-          memos: [],
+          memos,
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
           networkFees: [],
@@ -611,7 +621,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: true,
-          memos: [],
+          memos,
           nativeAmount: mul(nativeAmount, '-1'),
           networkFee: feeNativeAmount,
           networkFees: [],
@@ -653,7 +663,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
-          memos: [],
+          memos,
           nativeAmount,
           networkFee: feeNativeAmount,
           networkFees: [],
@@ -692,7 +702,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           blockHeight: blockNumber,
           currencyCode,
           date: Math.floor(timestamp / 1000),
-          memos: [],
+          memos,
           isSend: true,
           nativeAmount: mul(feeNativeAmount, '-1'),
           networkFee: feeNativeAmount,
@@ -739,7 +749,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           currencyCode,
           date: Math.floor(timestamp / 1000),
           isSend: nativeAmount.startsWith('-'),
-          memos: [],
+          memos,
           nativeAmount: `-${feeNativeAmount}`,
           networkFee: feeNativeAmount,
           networkFees: [],
@@ -783,7 +793,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
           blockHeight: blockNumber,
           nativeAmount: `-${feeNativeAmount}`,
           isSend: false,
-          memos: [],
+          memos,
           networkFee: feeNativeAmount,
           networkFees: [],
           ourReceiveAddresses,
