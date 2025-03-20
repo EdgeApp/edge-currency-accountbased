@@ -301,24 +301,28 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
-    const clients = this.tools.getOrbsClients()
-    const feeFuncs = clients.map(async client => {
-      return await client.estimateExternalMessageFee(this.wallet.address, {
-        body: transfer,
-        initCode: needsInit ? this.wallet.init.code : null,
-        initData: needsInit ? this.wallet.init.data : null,
-        ignoreSignature: false
+    let networkFee = '0'
+    if (nativeAmount !== '0') {
+      // Only estimate fee if we're sending something
+      const clients = this.tools.getOrbsClients()
+      const feeFuncs = clients.map(async client => {
+        return await client.estimateExternalMessageFee(this.wallet.address, {
+          body: transfer,
+          initCode: needsInit ? this.wallet.init.code : null,
+          initData: needsInit ? this.wallet.init.data : null,
+          ignoreSignature: false
+        })
       })
-    })
-    const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
-      await promiseAny(feeFuncs)
+      const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
+        await promiseAny(feeFuncs)
 
-    const totalFee =
-      fees.source_fees.fwd_fee +
-      fees.source_fees.gas_fee +
-      fees.source_fees.in_fwd_fee +
-      fees.source_fees.storage_fee
-    const networkFee = totalFee.toString()
+      const totalFee =
+        fees.source_fees.fwd_fee +
+        fees.source_fees.gas_fee +
+        fees.source_fees.in_fwd_fee +
+        fees.source_fees.storage_fee
+      networkFee = totalFee.toString()
+    }
 
     const total = add(nativeAmount, networkFee)
     const balance = this.getBalance({ tokenId })
