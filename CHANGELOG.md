@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (Sui) Enforce the arbitrary max spend limit
+- fixed: (Solana) Fix SOL amount handling for DEX transactions
 
 ## 4.42.1 (2025-03-17)
 
