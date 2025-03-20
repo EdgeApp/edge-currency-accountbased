@@ -1367,6 +1367,11 @@ export class EthereumEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction | null> {
     const { currencyCode, tokenId } = edgeTransaction
 
+    // Do not let any swap transactions be replaced
+    if (edgeTransaction.savedAction?.actionType === 'swap') {
+      return null
+    }
+
     const txOtherParams = asMaybe(asEthereumTxOtherParams)(
       edgeTransaction.otherParams
     )

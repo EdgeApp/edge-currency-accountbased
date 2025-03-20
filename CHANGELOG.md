@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Prevent acceleration for swap transactions.
+
 ## 4.41.0 (2025-03-14)
 
 - changed: (FIO) Require apiToken for all calls to `buyAddressRequest`
@@ -12,7 +14,7 @@
 
 ## 4.39.0 (2025-03-10)
 
-- added: (ALGO) Throw if recipient did not activate the token being sent in `signTx` 
+- added: (ALGO) Throw if recipient did not activate the token being sent in `signTx`
 
 ## 4.38.0 (2025-03-03)
 
