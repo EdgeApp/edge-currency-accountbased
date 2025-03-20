@@ -333,12 +333,10 @@ export class FilecoinEngine extends CurrencyEngine<
   //
 
   async checkBalance(): Promise<void> {
-    const response = await this.filRpc.walletBalance(this.address)
-    if ('error' in response) throw new Error(response.error.message)
-
-    const { result: balance } = response
-    this.availableAttoFil = balance
-    this.updateBalance(this.currencyInfo.currencyCode, balance)
+    const addressString = this.address.toString()
+    const response = await this.filfoxApi.getAccount(addressString)
+    this.availableAttoFil = response.balance
+    this.updateBalance(this.currencyInfo.currencyCode, response.balance)
     this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
     this.walletLocalDataDirty = true
