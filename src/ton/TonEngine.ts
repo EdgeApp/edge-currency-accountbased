@@ -87,11 +87,11 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
   async queryBalance(): Promise<void> {
     try {
       const clients = this.tools.getOrbsClients()
-      const funcs = clients.map(client => async () => {
+      const funcs = clients.map(async client => {
         return await client.getContractState(this.wallet.address)
       })
       const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
-        await asyncWaterfall(funcs)
+        await promiseAny(funcs)
 
       this.updateBalance(
         this.currencyInfo.currencyCode,
@@ -301,24 +301,28 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
-    const clients = this.tools.getOrbsClients()
-    const feeFuncs = clients.map(client => async () => {
-      return await client.estimateExternalMessageFee(this.wallet.address, {
-        body: transfer,
-        initCode: needsInit ? this.wallet.init.code : null,
-        initData: needsInit ? this.wallet.init.data : null,
-        ignoreSignature: false
+    let networkFee = '0'
+    if (nativeAmount !== '0') {
+      // Only estimate fee if we're sending something
+      const clients = this.tools.getOrbsClients()
+      const feeFuncs = clients.map(async client => {
+        return await client.estimateExternalMessageFee(this.wallet.address, {
+          body: transfer,
+          initCode: needsInit ? this.wallet.init.code : null,
+          initData: needsInit ? this.wallet.init.data : null,
+          ignoreSignature: false
+        })
       })
-    })
-    const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
-      await asyncWaterfall(feeFuncs)
+      const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
+        await promiseAny(feeFuncs)
 
-    const totalFee =
-      fees.source_fees.fwd_fee +
-      fees.source_fees.gas_fee +
-      fees.source_fees.in_fwd_fee +
-      fees.source_fees.storage_fee
-    const networkFee = totalFee.toString()
+      const totalFee =
+        fees.source_fees.fwd_fee +
+        fees.source_fees.gas_fee +
+        fees.source_fees.in_fwd_fee +
+        fees.source_fees.storage_fee
+      networkFee = totalFee.toString()
+    }
 
     const total = add(nativeAmount, networkFee)
     const balance = this.getBalance({ tokenId })
@@ -372,12 +376,12 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     const transferMessage = loadMessageRelaxed(messageSlice)
 
     const clients = this.tools.getOrbsClients()
-    const seqnoFuncs = clients.map(client => async () => {
+    const seqnoFuncs = clients.map(async client => {
       const contract = client.open(this.wallet)
       return await contract.getSeqno()
     })
     const seqno: Awaited<ReturnType<typeof this.wallet['getSeqno']>> =
-      await asyncWaterfall(seqnoFuncs)
+      await promiseAny(seqnoFuncs)
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
@@ -415,14 +419,14 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
         do {
           attempts++
           await snooze(1000)
-          const txidFuncs = clients.map(client => async () => {
+          const txidFuncs = clients.map(async client => {
             return await client.getTransactions(this.wallet.address, {
               limit: 50
             })
           })
           const transactions: Awaited<
             ReturnType<TonClient['getTransactions']>
-          > = await asyncWaterfall(txidFuncs)
+          > = await promiseAny(txidFuncs)
 
           const tx = transactions.find(tx => {
             return tx.oldStatus === 'uninitialized' && tx.endStatus === 'active'
