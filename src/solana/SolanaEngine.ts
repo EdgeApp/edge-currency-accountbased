@@ -340,15 +340,21 @@ export class SolanaEngine extends CurrencyEngine<
       ) != null
     const networkFee = fee.toString()
 
-    if (!isTokenTransaction) {
-      const solAmount = (postBalances[index] - preBalances[index]).toString()
-      const isSend = lt(solAmount, '0')
-      return [
-        {
-          amount: solAmount,
-          networkFee: isSend ? networkFee : '0'
-        }
-      ]
+    const out: ParsedTxAmount[] = []
+
+    const solAmount = (postBalances[index] - preBalances[index]).toString()
+    const isSend = index === 0
+    if (solAmount !== '0') {
+      let solFee = networkFee
+      if (isTokenTransaction && isSend) {
+        // we'll capture the fee using parentNetworkFee later
+        solFee = '0'
+      }
+      const amount = isSend ? sub(solAmount, solFee) : solAmount
+      out.push({
+        amount,
+        networkFee: solFee
+      })
     }
 
     const skip = (balObj: TokenBalance): boolean => {
@@ -375,12 +381,11 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    const out: ParsedTxAmount[] = []
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
       out.push({
         amount: balanceChange,
         networkFee: '0',
-        parentNetworkFee: lt(balanceChange, '0') ? networkFee : undefined,
+        parentNetworkFee: isSend ? networkFee : undefined,
         tokenId
       })
     })
