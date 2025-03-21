@@ -515,7 +515,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     if (data != null) {
       memos.push({
         type: 'text',
-        value: Buffer.from(base16.parse(data)).toString('ascii'),
+        value: TronWeb.toUtf8(data),
         memoName: 'note'
       })
     }
