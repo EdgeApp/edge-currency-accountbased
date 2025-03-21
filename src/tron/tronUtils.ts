@@ -22,12 +22,9 @@ export const hexToBase58Address = (addressHex: string): string => {
   return addressBase58
 }
 
-// Return TRC20 transfer parameters. Not currently used.
-// decodeTRC20Transfer isn't used currently
-const trc20TransferFunction = 'a9059cbb'
-export const decodeTRC20Transfer = (
-  data: string
-): [string, string] | undefined => {
+// Return TRC20 transfer parameters
+export const decodeTRC20Transfer = (data: string): [string, string] => {
+  const trc20TransferFunction = 'a9059cbb'
   if (!data.startsWith(trc20TransferFunction))
     throw new Error('Not a TRC20 data payload')
   const payload = data.replace(trc20TransferFunction, '')

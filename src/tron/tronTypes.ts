@@ -64,22 +64,11 @@ export const asTronWalletOtherData = asObject({
   // A one-time flag to re-process transactions to add new data
   txListReset: asMaybe(asBoolean, true),
 
-  txQueryCache: asMaybe(
-    asObject({
-      mainnet: asTxQueryCache,
-      trc20: asTxQueryCache
-    }),
-    () => ({
-      mainnet: {
-        txid: '',
-        timestamp: 0
-      },
-      trc20: {
-        txid: '',
-        timestamp: 0
-      }
-    })
-  )
+  trc20FirstQueryCache: asMaybe(asObject(asBoolean), () => ({})),
+  txQueryCache: asMaybe(asTxQueryCache, () => ({
+    txid: '',
+    timestamp: 0
+  }))
 })
 
 export type TronWalletOtherData = ReturnType<typeof asTronWalletOtherData>
@@ -343,6 +332,7 @@ export const asTransaction = asObject({
   // energy_fee: asNumber, // 0
   // energy_usage_total: asNumber // 0
   raw_data: asObject({
+    data: asOptional(asString),
     contract: asArray(asUnknown)
     // ref_block_bytes: "302exp9",
     // ref_block_hash: "cf53f47765aeb938",
@@ -366,15 +356,66 @@ export const asTRC20Transaction = asObject({
   type: asString, // "Transfer",
   value: asString // "1000"
 })
-
-export const asTRC20TransactionInfo = asObject({
-  // id: asString, // 'd0807adb3c5412aa150787b944c96ee898c997debdc27e2f6a643c771edb5933',
-  fee: asOptional(asNumber, 0), // 2790,
-  energy_penalty_total: asOptional(asNumber, 0),
-  blockNumber: asNumber // 5467102,
-  // blockTimeStamp: 1546455621000,
-  // contractResult: [''],
-  // receipt: { net_fee: 2790 }
+export const asTransactionInfoById = asObject({
+  // id: '7657448ab50db1d470cf48b519a91eb6b77e1f94143e28cc533ade7184c30f7e',
+  blockNumber: asNumber
+  // blockTimeStamp: 1742286609000,
+  // contractResult: [
+  //   '0000000000000000000000000000000000000000000000000000000000000001'
+  // ],
+  // contract_address: '4118fd0626daf3af02389aef3ed87db9c33f638ffa',
+  // receipt: {
+  //   energy_usage: 28532,
+  //   energy_usage_total: 28532,
+  //   net_usage: 346,
+  //   result: 'SUCCESS'
+  // },
+  // log: [
+  //   {
+  //     address: '18fd0626daf3af02389aef3ed87db9c33f638ffa',
+  //     topics: [
+  //       'ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+  //       '000000000000000000000000e07466e9a9faf48351f2d93ebd9d4a139a54ae8b',
+  //       '000000000000000000000000f615d248adf4d6941de111f6d7a098dc44266fbe'
+  //     ],
+  //     data: '000000000000000000000000000000000000000000000010396bb7e38e8fb400'
+  //   }
+  // ]
+})
+export const asTransactionById = asObject({
+  ret: asArray(
+    asObject({
+      contractRet: asString, // 'SUCCESS'
+      fee: asOptional(asNumber, 0) // 1100000
+    })
+  ),
+  // signature: [
+  //   'a0a5d0c012a6de298c12e88998b50e592a693c47700585a30983760fcff176b9d7c74b320e73e6f164a3dfc09da3ccc8594a7ea4dee0128aab485f0ab6221c0e01'
+  // ],
+  // txID: 'b2b8e32a745b7a9332ac9229086683907265e4328706c238bbf3232a134782a1',
+  raw_data: asObject({
+    data: asOptional(asString),
+    contract: asArray(asUnknown)
+    // contract: [
+    //   {
+    //     parameter: {
+    //       value: {
+    //         data: 'a9059cbb0000000000000000000000004398bb6f3da46edfa5a3bc5eb351babba441a5d1000000000000000000000000000000000000000000000001ccbe18194ef80000',
+    //         owner_address: '41f615d248adf4d6941de111f6d7a098dc44266fbe',
+    //         contract_address: '4118fd0626daf3af02389aef3ed87db9c33f638ffa'
+    //       },
+    //       type_url: 'type.googleapis.com/protocol.TriggerSmartContract'
+    //     },
+    //     type: 'TriggerSmartContract'
+    //   }
+    // ],
+    // ref_block_bytes: '6caf',
+    // ref_block_hash: '891a205051e56b23',
+    // expiration: 1742286957000,
+    // fee_limit: 1000000000,
+    // timestamp: 1742286657000
+  })
+  // raw_data_hex: '0a026caf2208891a205051e56b2340c8d394c3da32520877656e206e6f74655aae01081f12a9010a31747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e54726967676572536d617274436f6e747261637412740a1541f615d248adf4d6941de111f6d7a098dc44266fbe12154118fd0626daf3af02389aef3ed87db9c33f638ffa2244a9059cbb0000000000000000000000004398bb6f3da46edfa5a3bc5eb351babba441a5d1000000000000000000000000000000000000000000000001ccbe18194ef8000070e8ab82c3da3290018094ebdc03'
 })
 
 export const asTRXTransferContract = asObject({
