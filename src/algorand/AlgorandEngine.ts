@@ -461,12 +461,7 @@ export class AlgorandEngine extends CurrencyEngine<
       this.tokenCheckTransactionsStatus[cc] = 1
     }
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   // // ****************************************************************************
@@ -474,14 +469,9 @@ export class AlgorandEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactionParams', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -704,6 +694,30 @@ export class AlgorandEngine extends CurrencyEngine<
     const rawTx = decodeUnsignedTransaction(
       Uint8Array.from(base16.parse(encodedTx))
     )
+
+    // If we are trying to send a token, check first if the recipient has
+    // activated/opted-in the asset
+    const { tokenId, spendTargets } = edgeTransaction
+    if (
+      tokenId != null &&
+      spendTargets != null &&
+      spendTargets[0].nativeAmount !== '0'
+    ) {
+      const { assets } = await this.fetchAccountInfo(
+        spendTargets[0].publicAddress
+      )
+      if (
+        assets.find(
+          asset => asset['asset-id'].toString() === edgeTransaction.tokenId
+        ) == null
+      ) {
+        const err = new Error(
+          `Algorand: recipient must optin asset: ${edgeTransaction.tokenId}`
+        )
+        err.name = 'ErrorAlgoRecipientNotActivated'
+        throw err
+      }
+    }
 
     if (recipient != null) {
       await this.checkRecipientMinimumBalance(

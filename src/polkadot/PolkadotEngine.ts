@@ -14,6 +14,7 @@ import {
   EdgeTokenId,
   EdgeTokenMap,
   EdgeTransaction,
+  EdgeTxAmount,
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
@@ -373,7 +374,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     while (hasNextPage) {
       const meritsOperationName = 'Merits'
-      const meritsQuery = `query Merits($userId: String, $cursor: Cursor) {  
+      const meritsQuery = `query Merits($userId: String, $cursor: Cursor) {
         merits(
         filter: {or: [{fromId: {equalTo: $userId}}, {toId: {equalTo: $userId}}]}
         after: $cursor
@@ -468,12 +469,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   async queryTransactions(): Promise<void> {
@@ -551,12 +547,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   // // ****************************************************************************
@@ -564,25 +555,20 @@ export class PolkadotEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
     this.minimumAddressBalance =
       this.api.consts.balances.existentialDeposit.toString()
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.networkInfo.liberlandScanUrl != null) {
       this.addToLoop(
         'queryLiberlandTransactions',
         TRANSACTION_POLL_MILLISECONDS
-      ).catch(() => {})
+      )
     }
     if (this.networkInfo.subscanBaseUrl != null)
-      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-        () => {}
-      )
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -683,6 +669,8 @@ export class PolkadotEngine extends CurrencyEngine<
 
     let totalTxAmount
     let nativeNetworkFee
+    let parentNetworkFee
+    const networkFees: EdgeTxAmount[] = []
 
     if (edgeSpendInfo.tokenId == null) {
       const spendableBalance = sub(
@@ -711,6 +699,10 @@ export class PolkadotEngine extends CurrencyEngine<
           this.networkInfo.partialFeeOffsetMultiplier
         )
       )
+      networkFees.push({
+        nativeAmount: nativeNetworkFee,
+        tokenId: null
+      })
 
       totalTxAmount = add(nativeAmount, nativeNetworkFee)
 
@@ -733,13 +725,18 @@ export class PolkadotEngine extends CurrencyEngine<
       )
 
       // The fee returned from partial fee is always off by some length fee, because reasons
-      nativeNetworkFee = sub(
+      parentNetworkFee = sub(
         paymentInfo.partialFee.toString(),
         mul(
           this.networkInfo.lengthFeePerByte,
           this.networkInfo.partialFeeOffsetMultiplier
         )
       )
+      nativeNetworkFee = '0'
+      networkFees.push({
+        nativeAmount: parentNetworkFee,
+        tokenId: null
+      })
 
       const feeBalance = this.getBalance({
         tokenId: null
@@ -748,9 +745,9 @@ export class PolkadotEngine extends CurrencyEngine<
         feeBalance,
         this.api.consts.balances.existentialDeposit.toString()
       )
-      if (gt(nativeNetworkFee, spendableFeeBalance)) {
+      if (gt(parentNetworkFee, spendableFeeBalance)) {
         throw new InsufficientFundsError({
-          networkFee: nativeNetworkFee,
+          networkFee: parentNetworkFee,
           tokenId: null
         })
       }
@@ -770,7 +767,8 @@ export class PolkadotEngine extends CurrencyEngine<
       memos,
       nativeAmount: mul(totalTxAmount, '-1'),
       networkFee: nativeNetworkFee,
-      networkFees: [],
+      networkFees,
+      parentNetworkFee,
       otherParams,
       ourReceiveAddresses: [],
       signedTx: '',

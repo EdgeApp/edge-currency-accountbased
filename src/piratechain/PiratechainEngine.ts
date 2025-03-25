@@ -13,7 +13,6 @@ import {
 } from 'edge-core-js/types'
 import type {
   ConfirmedTransaction,
-  InitializerConfig,
   SpendInfo,
   StatusEvent
 } from 'react-native-piratechain'
@@ -22,13 +21,13 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs } from '../common/utils'
+import type { PiratechainIo, PiratechainSynchronizer } from './piratechainIo'
 import { PiratechainTools } from './PiratechainTools'
 import {
   asPiratechainPrivateKeys,
   asPiratechainWalletOtherData,
   asSafePiratechainWalletInfo,
   PiratechainNetworkInfo,
-  PiratechainSynchronizer,
   PiratechainWalletOtherData,
   SafePiratechainWalletInfo
 } from './piratechainTypes'
@@ -46,9 +45,7 @@ export class PiratechainEngine extends CurrencyEngine<
   birthdayHeight: number
   progressRatio!: number
   queryMutex: boolean
-  makeSynchronizer: (
-    config: InitializerConfig
-  ) => Promise<PiratechainSynchronizer>
+  makeSynchronizer: PiratechainIo['makeSynchronizer']
 
   // Synchronizer management
   started: boolean
@@ -63,7 +60,7 @@ export class PiratechainEngine extends CurrencyEngine<
     tools: PiratechainTools,
     walletInfo: SafePiratechainWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    makeSynchronizer: any
+    makeSynchronizer: PiratechainIo['makeSynchronizer']
   ) {
     super(env, tools, walletInfo, opts)
     const { networkInfo } = env
@@ -132,7 +129,7 @@ export class PiratechainEngine extends CurrencyEngine<
     try {
       await this.queryBalance()
       await this.queryTransactions()
-      this.onUpdateTransactions()
+      this.updateTransactionEvents()
     } catch (e: any) {}
     this.queryMutex = false
   }
@@ -144,13 +141,6 @@ export class PiratechainEngine extends CurrencyEngine<
       this.currencyEngineCallbacks.onBlockHeightChanged(
         this.walletLocalData.blockHeight
       )
-    }
-  }
-
-  onUpdateTransactions(): void {
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
     }
   }
 
@@ -183,7 +173,6 @@ export class PiratechainEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     this.started = true
     await super.startEngine()
   }
@@ -454,10 +443,14 @@ export class PiratechainEngine extends CurrencyEngine<
     try {
       const synchronizer = await this.synchronizerPromise
       const signedTx = await synchronizer.sendToAddress(txParams)
-      edgeTransaction.txid = signedTx.txId
-      edgeTransaction.signedTx = signedTx.raw
-      edgeTransaction.date = Date.now() / 1000
-      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      if ('txId' in signedTx) {
+        edgeTransaction.txid = signedTx.txId
+        edgeTransaction.signedTx = signedTx.raw
+        edgeTransaction.date = Date.now() / 1000
+        this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+      } else {
+        throw new Error(signedTx.errorMessage)
+      }
     } catch (e: any) {
       this.warn('FAILURE broadcastTx failed: ', e)
       throw e
@@ -496,15 +489,19 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafePiratechainWalletInfo(walletInfo)
-  const { makeSynchronizer } =
-    env.nativeIo['edge-currency-accountbased'].piratechain
+  const piratechainIo =
+    (env.nativeIo.piratechain as PiratechainIo) ??
+    env.nativeIo['edge-currency-accountbased']?.piratechain
+  if (piratechainIo == null) {
+    throw new Error('Need piratechain native IO')
+  }
 
   const engine = new PiratechainEngine(
     env,
     tools,
     safeWalletInfo,
     opts,
-    makeSynchronizer
+    piratechainIo.makeSynchronizer
   )
 
   // Do any async initialization necessary for the engine

@@ -130,10 +130,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       this.log.warn('queryTransactions to error:', e)
     }
 
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
 
     for (const token of this.enabledTokens) {
       this.tokenCheckTransactionsStatus[token] = 1
@@ -247,11 +244,8 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -278,6 +272,9 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
       // can actually empty the wallet with upcoming makeMaxSpend API. For now
       // we leave 0.1 SUI behind.
       maxAmount = sub(balance, '100000000')
+      if (lt(maxAmount, '0')) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
     } else {
       maxAmount = balance
     }

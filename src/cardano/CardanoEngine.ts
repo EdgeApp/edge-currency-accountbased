@@ -20,7 +20,7 @@ import { base16 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { promiseCast } from '../common/promiseUtils'
+import { formatAggregateError, promiseAny } from '../common/promiseUtils'
 import { trial } from '../common/trial'
 import { cleanTxLogs, getFetchCors } from '../common/utils'
 import { asStakingTxBody } from './asStakingTx'
@@ -191,10 +191,10 @@ export class CardanoEngine extends CurrencyEngine<
       )
     }
 
-    const { values } = await promiseCast([blockfrost(), koios(), maestro()])
-
-    // All results should be the same (the txid):
-    return values[0]
+    return await formatAggregateError(
+      promiseAny([blockfrost(), koios(), maestro()]),
+      'Broadcast failed:'
+    )
   }
 
   async queryBlockheight(): Promise<void> {
@@ -319,12 +319,7 @@ export class CardanoEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
-
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   // // ****************************************************************************
@@ -332,14 +327,9 @@ export class CardanoEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -509,18 +499,18 @@ export class CardanoEngine extends CurrencyEngine<
   async saveTx(edgeTransaction: EdgeTransaction): Promise<void> {
     await super.saveTx(edgeTransaction)
 
-    const tx = Cardano.Transaction.from_hex(edgeTransaction.signedTx)
-    const txHash = Cardano.hash_transaction(tx.body()).to_hex()
-    const txJson = tx.to_js_value()
+    const tx = Cardano.FixedTransaction.from_hex(edgeTransaction.signedTx)
+    const txHash = tx.transaction_hash().to_hex()
+    const txBody = tx.body().to_js_value()
 
     // Remove any spent utxos:
     this.removeUtxosByVouts(
-      txJson.body.inputs.map(input => `${input.transaction_id}_${input.index}`)
+      txBody.inputs.map(input => `${input.transaction_id}_${input.index}`)
     )
 
     // Add new utxos that our own:
     const ownAddress = this.walletInfo.keys.bech32Address
-    txJson.body.outputs.forEach((output, index) => {
+    txBody.outputs.forEach((output, index) => {
       if (output.address === ownAddress) {
         // Skip over multiasset outputs (we don't support spending from them):
         if (output.amount.multiasset != null) return
@@ -551,11 +541,12 @@ export class CardanoEngine extends CurrencyEngine<
 
     const paymentKey = accountKey.derive(0).derive(0)
 
-    const txBody = trial(
-      () => Cardano.TransactionBody.from_hex(unsignedTx),
-      () => Cardano.Transaction.from_hex(unsignedTx).body()
+    const tx = trial(
+      () =>
+        Cardano.FixedTransaction.new_from_body_bytes(base16.parse(unsignedTx)),
+      () => Cardano.FixedTransaction.from_hex(unsignedTx)
     )
-    const txHash = Cardano.hash_transaction(txBody)
+    const txHash = tx.transaction_hash()
     const witnesses = Cardano.TransactionWitnessSet.new()
     const vkeyWitnesses = Cardano.Vkeywitnesses.new()
 
@@ -575,14 +566,9 @@ export class CardanoEngine extends CurrencyEngine<
     }
 
     witnesses.set_vkeys(vkeyWitnesses)
+    tx.set_witness_set(witnesses.to_bytes())
 
-    const transaction = Cardano.Transaction.new(
-      txBody,
-      witnesses,
-      undefined // transaction metadata
-    )
-
-    edgeTransaction.signedTx = transaction.to_hex()
+    edgeTransaction.signedTx = tx.to_hex()
     return edgeTransaction
   }
 
@@ -671,23 +657,23 @@ export class CardanoEngine extends CurrencyEngine<
   decodeStakingTx = async (encodedTx: string): Promise<EdgeTransaction> => {
     const { bech32Address } = asSafeCardanoWalletInfo(this.walletInfo).keys
 
-    const tx = Cardano.Transaction.from_hex(encodedTx)
-    const txHash = Cardano.hash_transaction(tx.body())
+    const tx = Cardano.FixedTransaction.from_hex(encodedTx)
+    const txHash = tx.transaction_hash()
 
-    const txJson = tx.to_js_value()
+    const txBody = tx.body().to_js_value()
 
     // Validate the transaction is a staking transaction:
-    const validatedTxJson = asStakingTxBody(bech32Address)(txJson.body)
+    const validatedTxBody = asStakingTxBody(bech32Address)(txBody)
 
     // We'll consider the transaction a deposit (stake) if no rewards are withdrawn
-    const isDeposit = validatedTxJson.withdrawals == null
+    const isDeposit = validatedTxBody.withdrawals == null
 
     const otherParams: CardanoTxOtherParams = {
       isStakeTx: true,
       unsignedTx: tx.to_hex()
     }
 
-    const nativeNetworkFee = txJson.body.fee
+    const nativeNetworkFee = txBody.fee
 
     // Staking locks 2 ADA.
     const nativeAmount = isDeposit

@@ -81,7 +81,7 @@ import {
   XrpTransaction,
   XrpWalletOtherData
 } from './rippleTypes'
-import { convertCurrencyCodeToHex, makeTokenId } from './rippleUtils'
+import { makeTokenId } from './rippleUtils'
 
 type AccountTransaction = AccountTxResponse['result']['transactions'][number]
 
@@ -214,7 +214,7 @@ export class XrpEngine extends CurrencyEngine<
       const { currency, issuer } = asXrpNetworkLocation(networkLocation)
       return {
         value: div(nativeAmount, denominations[0].multiplier, DIVIDE_PRECISION),
-        currency: convertCurrencyCodeToHex(currency),
+        currency: currency,
         issuer
       }
     }
@@ -611,10 +611,7 @@ export class XrpEngine extends CurrencyEngine<
         if (transaction.tx == null) continue
         this.processRippleTransaction(transaction)
       }
-      if (this.transactionEvents.length > 0) {
-        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-        this.transactionEvents = []
-      }
+      this.updateTransactionEvents()
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
       this.enabledTokens.forEach(tokenCurrencyCode => {
@@ -745,11 +742,10 @@ export class XrpEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     try {
       await this.tools.connectApi(this.walletId)
-    } catch (e: any) {
-      this.error(`Error connecting to server `, e)
+    } catch (e: unknown) {
+      this.log.error(`Error connecting to server `, String(e))
       setTimeout(() => {
         if (this.engineOn) {
           this.startEngine().catch(e => console.log(e.message))
@@ -757,17 +753,9 @@ export class XrpEngine extends CurrencyEngine<
       }, 10000)
       return
     }
-    this.addToLoop(
-      'checkServerInfoInnerLoop',
-      BLOCKHEIGHT_POLL_MILLISECONDS
-    ).catch(e => console.log(e.message))
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      e => console.log(e.message)
-    )
-    this.addToLoop(
-      'checkTransactionsInnerLoop',
-      TRANSACTION_POLL_MILLISECONDS
-    ).catch(e => console.log(e.message))
+    this.addToLoop('checkServerInfoInnerLoop', BLOCKHEIGHT_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 

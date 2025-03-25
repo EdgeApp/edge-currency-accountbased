@@ -103,7 +103,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         ),
         server: 'etherscan'
       }
-    })
+    }, 'Broadcast failed:')
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {
@@ -215,12 +215,18 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         asEvmScanTransaction,
         { searchRegularTxs: true }
       )
-      const txsInternalResp = await this.getAllTxsEthscan(
-        startBlock,
-        currencyCode,
-        asEvmScanInternalTransaction,
-        { searchRegularTxs: false }
-      )
+      let txsInternalResp: GetEthscanAllTxsResponse = {
+        allTransactions: [],
+        server: ''
+      }
+      if (this.ethEngine.networkInfo.disableEvmScanInternal !== true) {
+        txsInternalResp = await this.getAllTxsEthscan(
+          startBlock,
+          currencyCode,
+          asEvmScanInternalTransaction,
+          { searchRegularTxs: false }
+        )
+      }
       server = txsRegularResp.server ?? txsInternalResp.server ?? ''
       allTransactions = mergeEdgeTransactions([
         ...txsRegularResp.allTransactions,

@@ -57,7 +57,7 @@ export class BlockbookAdapter extends NetworkAdapter<BlockbookAdapterConfig> {
         ),
         server: 'blockbook'
       }
-    })
+    }, 'Broadcast failed:')
   }
 
   fetchNonce = async (): Promise<EthereumNetworkUpdate> => {

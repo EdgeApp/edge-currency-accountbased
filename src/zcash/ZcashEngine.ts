@@ -13,7 +13,6 @@ import {
 } from 'edge-core-js/types'
 import type {
   CreateTransferOpts,
-  InitializerConfig,
   StatusEvent,
   Transaction
 } from 'react-native-zcash'
@@ -22,6 +21,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, getOtherParams } from '../common/utils'
+import type { ZcashIo, ZcashSynchronizer } from './zcashIo'
 import { ZcashTools } from './ZcashTools'
 import {
   asSafeZcashWalletInfo,
@@ -30,7 +30,6 @@ import {
   SafeZcashWalletInfo,
   ZcashBalances,
   ZcashNetworkInfo,
-  ZcashSynchronizer,
   ZcashWalletOtherData
 } from './zcashTypes'
 
@@ -52,7 +51,7 @@ export class ZcashEngine extends CurrencyEngine<
     lastUpdate: number
   }
 
-  makeSynchronizer: (config: InitializerConfig) => Promise<ZcashSynchronizer>
+  makeSynchronizer: ZcashIo['makeSynchronizer']
 
   // Synchronizer management
   stopSyncing?: (value: number | PromiseLike<number>) => void
@@ -70,7 +69,7 @@ export class ZcashEngine extends CurrencyEngine<
     tools: ZcashTools,
     walletInfo: SafeZcashWalletInfo,
     opts: EdgeCurrencyEngineOptions,
-    makeSynchronizer: any
+    makeSynchronizer: ZcashIo['makeSynchronizer']
   ) {
     super(env, tools, walletInfo, opts)
     const { networkInfo } = env
@@ -170,7 +169,7 @@ export class ZcashEngine extends CurrencyEngine<
 
         this.processTransaction(tx)
       })
-      this.onUpdateTransactions()
+      this.updateTransactionEvents()
     })
     this.synchronizer.on('error', async payload => {
       this.log.warn(`Synchronizer error: ${payload.message}`)
@@ -188,13 +187,6 @@ export class ZcashEngine extends CurrencyEngine<
       this.currencyEngineCallbacks.onBlockHeightChanged(
         this.walletLocalData.blockHeight
       )
-    }
-  }
-
-  onUpdateTransactions(): void {
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
     }
   }
 
@@ -236,11 +228,6 @@ export class ZcashEngine extends CurrencyEngine<
       this.warn(`${currencyCode}: token Address balance: ${balance}`)
       this.currencyEngineCallbacks.onBalanceChanged(currencyCode, balance)
     }
-  }
-
-  async startEngine(): Promise<void> {
-    this.engineOn = true
-    await super.startEngine()
   }
 
   isSynced(): boolean {
@@ -380,7 +367,7 @@ export class ZcashEngine extends CurrencyEngine<
             this.walletLocalDataDirty = true
 
             this.processTransaction(tx)
-            this.onUpdateTransactions()
+            this.updateTransactionEvents()
           })
           .catch(e => {
             this.autoshielding.createAutoshieldTx = false
@@ -545,6 +532,9 @@ export class ZcashEngine extends CurrencyEngine<
     try {
       const synchronizer = await this.synchronizerPromise
       const txid = await synchronizer.createTransfer(txParams)
+      if (typeof txid !== 'string') {
+        throw new Error(txid.errorMessage)
+      }
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
@@ -599,14 +589,19 @@ export async function makeCurrencyEngine(
   opts: EdgeCurrencyEngineOptions
 ): Promise<EdgeCurrencyEngine> {
   const safeWalletInfo = asSafeZcashWalletInfo(walletInfo)
-  const { makeSynchronizer } = env.nativeIo['edge-currency-accountbased'].zcash
+  const zcashIo =
+    (env.nativeIo.zcash as ZcashIo) ??
+    env.nativeIo['edge-currency-accountbased']?.zcash
+  if (zcashIo == null) {
+    throw new Error('Need zcash native IO')
+  }
 
   const engine = new ZcashEngine(
     env,
     tools,
     safeWalletInfo,
     opts,
-    makeSynchronizer
+    zcashIo.makeSynchronizer
   )
 
   // Do any async initialization necessary for the engine

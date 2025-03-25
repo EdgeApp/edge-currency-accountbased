@@ -28,8 +28,10 @@ import {
   shuffleArray
 } from '../common/utils'
 import {
+  asTonInitOptions,
   asTonPrivateKeys,
   TonInfoPayload,
+  TonInitOptions,
   TonNetworkInfo,
   wasTonPrivateKeys
 } from './tonTypes'
@@ -39,11 +41,12 @@ export class TonTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
   networkInfo: TonNetworkInfo
-  initOptions: JsonObject
+  initOptions: TonInitOptions
   log: EdgeLog
 
   fetchAdaptor: ReturnType<typeof createFetchAdapter>
-  getClients: () => TonClient[]
+  getTonCenterClients: () => TonClient[]
+  getOrbsClients: () => TonClient[]
 
   constructor(env: PluginEnvironment<TonNetworkInfo>) {
     const { builtinTokens, currencyInfo, initOptions, io } = env
@@ -51,7 +54,7 @@ export class TonTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
     this.networkInfo = env.networkInfo
-    this.initOptions = initOptions
+    this.initOptions = asTonInitOptions(initOptions)
     this.log = env.log
 
     // Barebones fetch adaptor to work specifically with the @ton/ton library
@@ -86,11 +89,19 @@ export class TonTools implements EdgeCurrencyTools {
       }
     })
 
-    this.getClients = () => {
-      const clients = [
-        this.networkInfo.tonCenterUrl,
-        ...env.networkInfo.tonOrbsServers
-      ].map(url => {
+    this.getTonCenterClients = () => {
+      const apiKeys = [undefined, ...this.initOptions.tonCenterApiKeys]
+      const clients = apiKeys.map(apiKey => {
+        return new TonClient({
+          apiKey,
+          endpoint: this.networkInfo.tonCenterUrl,
+          httpAdapter: this.fetchAdaptor
+        })
+      })
+      return clients
+    }
+    this.getOrbsClients = () => {
+      const clients = [...env.networkInfo.tonOrbsServers].map(url => {
         return new TonClient({
           endpoint: url,
           httpAdapter: this.fetchAdaptor

@@ -1,4 +1,4 @@
-import { getGasPriceStep } from '@chain-registry/utils'
+import { getGasPriceRangesFromChain } from '@chain-registry/utils'
 import {
   decodeSignature,
   encodeSecp256k1Pubkey,
@@ -553,11 +553,7 @@ export class CosmosEngine extends CurrencyEngine<
     }
     this.otherData.archivedTxLastCheckTime = Date.now()
     this.walletLocalDataDirty = true
-
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   async queryTransactionsInner(
@@ -805,7 +801,9 @@ export class CosmosEngine extends CurrencyEngine<
     // The simulate endpoint is imperfect and under-estimates. It's typical to use 1.5x the estimated amount
     const gasLimit = ceil(mul(gasInfo?.gasUsed.toString(), '1.5'), 0)
 
-    const { low, average, high } = getGasPriceStep(this.tools.chainData)
+    const { low, average, high } = getGasPriceRangesFromChain(
+      this.tools.chainData
+    )
 
     let gasPrice = average
     switch (opts.networkFeeOption) {
@@ -837,15 +835,10 @@ export class CosmosEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     await this.tools.connectClient()
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 

@@ -33,8 +33,9 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import {
   asyncWaterfall,
+  formatAggregateError,
   promiseAny,
-  promiseNy,
+  promisesAgree,
   timeout
 } from '../common/promiseUtils'
 import {
@@ -633,10 +634,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.tokenCheckTransactionsStatus.FIO = 1
       this.updateOnAddressesChecked()
     }
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   async requestHistory(
@@ -826,20 +824,23 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
           preparedTrx
         )}`
       )
-      res = await promiseAny(
-        shuffleArray(
-          this.networkInfo.apiUrls.map(
-            async apiUrl =>
-              await timeout(
-                this.executePreparedTrx(
-                  apiUrl,
-                  EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
-                  preparedTrx
-                ),
-                10000
-              )
+      res = await formatAggregateError(
+        promiseAny(
+          shuffleArray(
+            this.networkInfo.apiUrls.map(
+              async apiUrl =>
+                await timeout(
+                  this.executePreparedTrx(
+                    apiUrl,
+                    EndPoint[ACTIONS_TO_END_POINT_KEYS[actionName]],
+                    preparedTrx
+                  ),
+                  10000
+                )
+            )
           )
-        )
+        ),
+        'Broadcast failed:'
       )
       this.warn(
         `multicastServers res. actionName: ${actionName} - res: ${JSON.stringify(
@@ -850,7 +851,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         throw new Error('Service is unavailable')
       }
     } else if (actionName === 'getFioNames') {
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
@@ -871,7 +872,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       // Only the balance of the wallet will be returned and staked amounts will
       // appear as zero until the account is corrected. This can be removed once
       // all affected accounts are fixed.
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(
@@ -907,7 +908,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
         roe: '0'
       }
     } else if (actionName === 'getFioBalance') {
-      res = await promiseNy(
+      res = await promisesAgree(
         this.networkInfo.apiUrls.map(
           async apiUrl =>
             await timeout(this.fioApiRequest(apiUrl, actionName, params), 10000)
@@ -1295,18 +1296,9 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // This routine is called once a wallet needs to start querying the network
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop(
-      'checkBlockchainInnerLoop',
-      BLOCKCHAIN_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop(
-      'checkTransactionsInnerLoop',
-      TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
+    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -1805,9 +1797,11 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
     }
 
     const signedTx = asFioSignedTx(otherParams.signedTx)
-    const trx = asFioBroadcastResult(
-      await this.multicastServers(otherParams.action.name, signedTx)
+    const result = await this.multicastServers(
+      otherParams.action.name,
+      signedTx
     )
+    const trx = asFioBroadcastResult(result)
 
     edgeTransaction.metadata = {
       notes: trx.transaction_id

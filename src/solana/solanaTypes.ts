@@ -16,6 +16,7 @@ export interface SolanaNetworkInfo {
   rpcNodes: string[]
   rpcNodesArchival: string[]
   stakedConnectionRpcNodes: string[]
+  basePriorityFee: number
   commitment: 'confirmed' | 'finalized'
   txQueryLimit: number
   derivationPath: string
@@ -130,7 +131,9 @@ export const asSolanaSpendInfoOtherParams = asObject({
 })
 
 export const asSolanaTxOtherParams = asObject({
-  unsignedTx: asBase64
+  unsignedTx: asBase64,
+  blockhash: asString,
+  lastValidBlockHeight: asNumber
 })
 
 export const wasSolanaTxOtherParams = uncleaner(asSolanaTxOtherParams)

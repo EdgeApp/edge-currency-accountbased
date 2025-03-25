@@ -2,6 +2,79 @@
 
 ## Unreleased
 
+- changed: (Sui) Enforce the arbitrary max spend limit
+- fixed: (Solana) Fix SOL amount handling for DEX transactions
+
+## 4.42.1 (2025-03-17)
+
+- fixed: Broken Zcash import path.
+
+## 4.42.0 (2025-03-17)
+
+- changed: Make Piratechain and Zcash optional.
+
+## 4.41.0 (2025-03-14)
+
+- changed: (FIO) Require apiToken for all calls to `buyAddressRequest`
+
+## 4.40.0 (2025-03-11)
+
+- changed: (FTM) Rename depegged Multichain Bridged USDC as 'USDC-M'
+
+## 4.39.0 (2025-03-10)
+
+- added: (ALGO) Throw if recipient did not activate the token being sent in `signTx`
+
+## 4.38.0 (2025-03-03)
+
+- added: RLUSD on Ethereum and Ripple networks
+- added: SOLO on Ripple network
+- changed: Optimize Solana transaction query
+
+## 4.37.3 (2025-02-28)
+
+- changed: (Abstract) Ignore internal transactions
+
+## 4.37.2 (2025-02-24)
+
+- fixed: Regression in FioEngine causing failed broadcasts.
+
+## 4.37.1 (2025-02-17)
+
+- fixed: (Solana) Allow sending to Program Derived Address
+
+## 4.37.0 (2025-02-17)
+
+- added: Added `abstract` EVM-based plugin
+- fixed: (ETH) Added new USDS token contract and renamed "classic" to USDSC.
+
+## 4.36.3 (2025-02-17)
+
+- changed: If broadcasting fails, return an error with a better summary.
+
+## 4.36.2 (2025-02-12)
+
+- fixed: (Solana) Fix priority fee for undefined `networkFeeOption`
+
+## 4.36.1 (2025-02-04)
+
+- fixed: Correctly issue notifications for new incoming transactions.
+
+## 4.35.4 (2025-02-04)
+
+- fixed: Correctly issue notifications for new incoming transactions.
+
+## 4.36.0 (2025-01-30)
+
+- added: Add eip681 chainId detection
+- fixed: Correctly handle token transaction fees in PolkadotEngine
+
+## 4.35.3 (2025-01-28)
+
+- changed: (Solana) Implement transaction broadcast retry logic
+- changed: (Ton) Only use ton center for transaction query
+- fixed: (Ton) Fix `isSend` when processing transactions
+
 ## 4.35.1 (2025-01-22)
 
 - changed: (Solana) Replace fee, rent, and recentblockhash loops with cached queries where they are needed

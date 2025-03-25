@@ -5,6 +5,7 @@ import {
 } from '@solana/spl-token'
 import {
   AccountInfo,
+  BlockhashWithExpiryBlockHeight,
   ComputeBudgetProgram,
   ConfirmedSignatureInfo,
   Keypair,
@@ -16,17 +17,17 @@ import {
   TokenBalance,
   TransactionInstruction,
   TransactionResponse,
-  TransactionSignature,
   VersionedTransaction,
   VersionedTransactionResponse
 } from '@solana/web3.js'
 import { add, eq, gt, gte, lt, max, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { asMaybe, asString } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -38,8 +39,13 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny, timeout } from '../common/promiseUtils'
-import { cache, cleanTxLogs, getOtherParams } from '../common/utils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny,
+  timeout
+} from '../common/promiseUtils'
+import { cache, cleanTxLogs, getOtherParams, snooze } from '../common/utils'
 import { SolanaTools } from './SolanaTools'
 import {
   AccountBalance,
@@ -72,13 +78,14 @@ export class SolanaEngine extends CurrencyEngine<
   base58PublicKey: string
   feePerSignature: string
   getPriorityFee: () => Promise<string>
-  getRecentBlockhash: () => Promise<string>
+  getRecentBlockhash: () => Promise<BlockhashWithExpiryBlockHeight>
   chainCode: string
   otherData!: SolanaWalletOtherData
   fetch: EdgeFetchFunction
   progressRatio: number
   addressCache: Map<string, boolean>
   getMinimumAddressBalance: () => Promise<string>
+  usedTokenIdSet: Set<EdgeTokenId> = new Set()
 
   constructor(
     env: PluginEnvironment<SolanaNetworkInfo>,
@@ -102,6 +109,7 @@ export class SolanaEngine extends CurrencyEngine<
       this.queryMinimumBalance.bind(this),
       30000
     )
+    this.usedTokenIdSet = new Set()
   }
 
   setOtherData(raw: any): void {
@@ -167,6 +175,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
+      this.usedTokenIdSet.add(null)
 
       const tokenBalances = asTokenBalances(tokenBalsRaw).result.value
       const tokenBalMap = tokenBalances.reduce(
@@ -180,7 +189,11 @@ export class SolanaEngine extends CurrencyEngine<
 
       const detectedTokenIds: string[] = []
       for (const tokenId of Object.keys(this.allTokensMap)) {
-        const balance = tokenBalMap[tokenId] ?? '0'
+        let balance = '0'
+        if (tokenBalMap[tokenId] != null) {
+          this.usedTokenIdSet.add(tokenId)
+          balance = tokenBalMap[tokenId] ?? '0'
+        }
         this.updateBalance(this.allTokensMap[tokenId].currencyCode, balance)
 
         if (gt(balance, '0')) {
@@ -211,18 +224,27 @@ export class SolanaEngine extends CurrencyEngine<
     const funcs = this.tools.connections.map(connection => async () => {
       return await connection.getRecentPrioritizationFees()
     })
-    const recentPriorityFees: RecentPrioritizationFees[] = await asyncWaterfall(
-      funcs
+    const recentPriorityFeesRes: RecentPrioritizationFees[] =
+      await asyncWaterfall(funcs)
+
+    if (recentPriorityFeesRes.length === 0) {
+      return this.networkInfo.basePriorityFee.toString()
+    }
+
+    const recentPriorityFees = recentPriorityFeesRes.map(
+      fee => fee.prioritizationFee
     )
-    // if the array is empty, or request otherwise fails, it's ok to just use the default
-    const latestPriorityFee = recentPriorityFees.sort(
-      (a, b) => a.slot - b.slot
-    )[0]
-    const priorityFee = latestPriorityFee.prioritizationFee.toString()
-    return priorityFee
+    const averagePriorityFee =
+      recentPriorityFees.reduce((acc, num) => acc + num, 0) /
+      recentPriorityFees.length
+
+    return Math.max(
+      Math.ceil(averagePriorityFee),
+      this.networkInfo.basePriorityFee
+    ).toString()
   }
 
-  async queryBlockhash(): Promise<string> {
+  async queryBlockhash(): Promise<BlockhashWithExpiryBlockHeight> {
     const results = await Promise.allSettled(
       this.tools.connections.map(async connection => {
         return await timeout(
@@ -252,7 +274,10 @@ export class SolanaEngine extends CurrencyEngine<
       throw new Error('No valid blockhash found')
     }
 
-    return latest.value.blockhash
+    return {
+      blockhash: latest.value.blockhash,
+      lastValidBlockHeight: latest.value.lastValidBlockHeight
+    }
   }
 
   processSolanaTransaction(
@@ -315,15 +340,21 @@ export class SolanaEngine extends CurrencyEngine<
       ) != null
     const networkFee = fee.toString()
 
-    if (!isTokenTransaction) {
-      const solAmount = (postBalances[index] - preBalances[index]).toString()
-      const isSend = lt(solAmount, '0')
-      return [
-        {
-          amount: solAmount,
-          networkFee: isSend ? networkFee : '0'
-        }
-      ]
+    const out: ParsedTxAmount[] = []
+
+    const solAmount = (postBalances[index] - preBalances[index]).toString()
+    const isSend = index === 0
+    if (solAmount !== '0') {
+      let solFee = networkFee
+      if (isTokenTransaction && isSend) {
+        // we'll capture the fee using parentNetworkFee later
+        solFee = '0'
+      }
+      const amount = isSend ? sub(solAmount, solFee) : solAmount
+      out.push({
+        amount,
+        networkFee: solFee
+      })
     }
 
     const skip = (balObj: TokenBalance): boolean => {
@@ -350,12 +381,11 @@ export class SolanaEngine extends CurrencyEngine<
       )
     }
 
-    const out: ParsedTxAmount[] = []
     tokenBalanceChangeMap.forEach((balanceChange, tokenId) => {
       out.push({
         amount: balanceChange,
         networkFee: '0',
-        parentNetworkFee: lt(balanceChange, '0') ? networkFee : undefined,
+        parentNetworkFee: isSend ? networkFee : undefined,
         tokenId
       })
     })
@@ -364,25 +394,33 @@ export class SolanaEngine extends CurrencyEngine<
   }
 
   async queryTransactions(): Promise<void> {
-    const mainPubkey = new PublicKey(this.base58PublicKey)
-    const codePubkeyPairs = new Set<[string, PublicKey]>([
-      [this.currencyInfo.currencyCode, mainPubkey]
-    ])
-    for (const tokenId of this.enabledTokenIds) {
-      const pk = getAssociatedTokenAddressSync(
-        new PublicKey(tokenId),
-        mainPubkey,
-        false,
-        this.tools.tokenProgramPublicKey,
-        new PublicKey(this.networkInfo.associatedTokenPublicKey)
-      )
-      const cc = this.allTokensMap[tokenId].currencyCode
-      codePubkeyPairs.add([cc, pk])
+    if (this.usedTokenIdSet.size === 0) {
+      // queryBalance needs to run once before we lookup transactions
+      await this.queryBalance()
     }
 
-    for (const pair of codePubkeyPairs) {
-      const [currencyCode, pubkey] = pair
-      await this.queryTransactionsInner(currencyCode, pubkey)
+    const mainPubkey = new PublicKey(this.base58PublicKey)
+    await this.queryTransactionsInner(
+      this.currencyInfo.currencyCode,
+      mainPubkey
+    )
+    this.updateTransactionEvents()
+    this.updateTxStatus(this.currencyInfo.currencyCode, 1)
+
+    for (const tokenId of this.enabledTokenIds) {
+      const cc = this.allTokensMap[tokenId].currencyCode
+      if (this.usedTokenIdSet.has(tokenId)) {
+        const pk = getAssociatedTokenAddressSync(
+          new PublicKey(tokenId),
+          mainPubkey,
+          false,
+          this.tools.tokenProgramPublicKey,
+          new PublicKey(this.networkInfo.associatedTokenPublicKey)
+        )
+        await this.queryTransactionsInner(cc, pk)
+        this.updateTransactionEvents()
+      }
+      this.updateTxStatus(cc, 1)
     }
   }
 
@@ -493,12 +531,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     this.walletLocalDataDirty = true
-    this.updateTxStatus(currencyCode, 1)
-
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
   }
 
   updateTxStatus(currencyCode: string, progress: number): void {
@@ -511,19 +544,16 @@ export class SolanaEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
     await this.tools.connectClient()
 
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS).catch(() => {})
+    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     if (this.lightMode) {
       this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
       for (const edgeToken of Object.values(this.allTokensMap)) {
         this.tokenCheckTransactionsStatus[edgeToken.currencyCode] = 1
       }
     } else {
-      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-        () => {}
-      )
+      this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     }
     await super.startEngine()
   }
@@ -618,6 +648,7 @@ export class SolanaEngine extends CurrencyEngine<
       case 'low':
         microLamports = max('0', mul(priorityFee, '0.75'))
         break
+      case undefined:
       case 'standard':
         microLamports = priorityFee
         break
@@ -647,7 +678,7 @@ export class SolanaEngine extends CurrencyEngine<
       const associatedDestinationTokenAddrPayee = getAssociatedTokenAddressSync(
         TOKEN,
         payee,
-        false,
+        true, // payee may be a Program Derived Address
         tokenProgramId,
         associatedTokenProgramId
       )
@@ -756,7 +787,7 @@ export class SolanaEngine extends CurrencyEngine<
     const versionedMessage = MessageV0.compile({
       instructions,
       payerKey: payer,
-      recentBlockhash
+      recentBlockhash: recentBlockhash.blockhash
     })
     const versionedTx = new VersionedTransaction(versionedMessage)
 
@@ -764,7 +795,11 @@ export class SolanaEngine extends CurrencyEngine<
       asSolanaSpendInfoOtherParams(spendInfoOtherParams)?.unsignedTx ??
       versionedTx.serialize()
 
-    const otherParams = wasSolanaTxOtherParams({ unsignedTx })
+    const otherParams = wasSolanaTxOtherParams({
+      unsignedTx,
+      blockhash: recentBlockhash.blockhash,
+      lastValidBlockHeight: recentBlockhash.lastValidBlockHeight
+    })
 
     // **********************************
     // Create the unsigned EdgeTransaction
@@ -802,7 +837,8 @@ export class SolanaEngine extends CurrencyEngine<
     )
 
     const solTx = VersionedTransaction.deserialize(unsignedTx)
-    solTx.message.recentBlockhash = await this.queryBlockhash()
+    const recentBlockhash = await this.queryBlockhash()
+    solTx.message.recentBlockhash = recentBlockhash.blockhash
 
     const keypair = Keypair.fromSecretKey(
       base16.parse(solanaPrivateKeys.privateKey)
@@ -814,6 +850,11 @@ export class SolanaEngine extends CurrencyEngine<
       }
     ])
     edgeTransaction.signedTx = base64.stringify(solTx.serialize())
+    edgeTransaction.otherParams = wasSolanaTxOtherParams({
+      unsignedTx,
+      blockhash: recentBlockhash.blockhash,
+      lastValidBlockHeight: recentBlockhash.lastValidBlockHeight
+    })
     this.warn(`signTx\n${cleanTxLogs(edgeTransaction)}`)
 
     // Remove all false values from addressCache
@@ -829,16 +870,86 @@ export class SolanaEngine extends CurrencyEngine<
   ): Promise<EdgeTransaction> {
     if (edgeTransaction.signedTx == null) throw new Error('Missing signedTx')
 
+    const { blockhash, lastValidBlockHeight } = asSolanaTxOtherParams(
+      getOtherParams(edgeTransaction)
+    )
     const stakedConnections = this.tools.makeConnections(
       this.networkInfo.stakedConnectionRpcNodes
     )
-    const connections = [...this.tools.connections, ...stakedConnections]
+    const rpcConnections = this.tools.connections
+    const allConnections = [...this.tools.connections, ...stakedConnections]
+
+    const confirmationController = new AbortController()
+    const retryTxController = new AbortController()
+
+    const submitTx = async (): Promise<string> => {
+      const broadcastPromises = allConnections.map(async connection => {
+        const txid = await connection.sendEncodedTransaction(
+          edgeTransaction.signedTx,
+          { skipPreflight: true }
+        )
+        return txid
+      })
+      const txid = await formatAggregateError(
+        promiseAny(broadcastPromises),
+        'Broadcast failed:'
+      )
+      return txid
+    }
+
+    const checkBlockheight = async (): Promise<number> => {
+      const broadcastPromises = rpcConnections.map(async connection => {
+        const blockheight = await timeout(
+          connection.getBlockHeight('confirmed'),
+          1000
+        )
+        return blockheight
+      })
+      const blockheightResults = await Promise.allSettled(broadcastPromises)
+      const blockheights = blockheightResults
+        .filter(p => p.status === 'fulfilled')
+        .map(r => (r as PromiseFulfilledResult<number>).value)
+      const maxHeight = Math.max(...blockheights)
+      return maxHeight
+    }
+
+    const retryTxSubmission = async (): Promise<void> => {
+      while (!retryTxController.signal.aborted) {
+        await snooze(400) // pause for roughly a blocktime
+        const height = await checkBlockheight()
+        if (height < lastValidBlockHeight) {
+          await submitTx()
+        } else {
+          confirmationController.abort()
+          throw new Error('transaction expired')
+        }
+      }
+    }
 
     try {
-      const promises = connections.map(async connection => {
-        return await connection.sendEncodedTransaction(edgeTransaction.signedTx)
+      const txid = await submitTx()
+
+      const confirmPromises = rpcConnections.map(async connection => {
+        const confirmTxRes = await connection.confirmTransaction(
+          {
+            signature: txid,
+            blockhash,
+            lastValidBlockHeight,
+            abortSignal: confirmationController.signal
+          },
+          'confirmed'
+        )
+        const txError = asMaybe(asString)(confirmTxRes.value.err)
+        if (txError != null) {
+          throw new Error(txError)
+        }
+
+        // Confirmed!!
+        retryTxController.abort()
       })
-      const txid: TransactionSignature = await promiseAny(promises)
+
+      await Promise.race([retryTxSubmission(), ...confirmPromises])
+
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)

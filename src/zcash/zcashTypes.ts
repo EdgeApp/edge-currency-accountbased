@@ -12,21 +12,7 @@ import {
   Cleaner
 } from 'cleaners'
 import { EdgeAddress } from 'edge-core-js/types'
-import type {
-  Addresses,
-  BalanceEvent,
-  CreateTransferOpts,
-  ErrorEvent as ZcashErrorEvent,
-  InitializerConfig,
-  ProposalSuccess,
-  ProposeTransferOpts,
-  ShieldFundsInfo,
-  StatusEvent,
-  Transaction,
-  TransactionEvent,
-  UpdateEvent
-} from 'react-native-zcash'
-import type { Subscriber } from 'yaob'
+import type { BalanceEvent } from 'react-native-zcash'
 
 import { asWalletInfo } from '../common/types'
 
@@ -65,30 +51,9 @@ export const asZcashWalletOtherData = asObject({
 
 export type ZcashWalletOtherData = ReturnType<typeof asZcashWalletOtherData>
 
-export interface ZcashSynchronizer {
-  on: Subscriber<{
-    balanceChanged: BalanceEvent
-    statusChanged: StatusEvent
-    transactionsChanged: TransactionEvent
-    update: UpdateEvent
-    error: ZcashErrorEvent
-  }>
-  start: () => Promise<void>
-  stop: () => Promise<void>
-  deriveUnifiedAddress: () => Promise<Addresses>
-  rescan: () => Promise<void>
-  proposeTransfer: (arg: ProposeTransferOpts) => Promise<ProposalSuccess>
-  createTransfer: (arg: CreateTransferOpts) => Promise<string>
-  shieldFunds: (shieldFundsInfo: ShieldFundsInfo) => Promise<Transaction>
-}
-
-export type ZcashMakeSynchronizer = () => (
-  config: InitializerConfig
-) => Promise<ZcashSynchronizer>
-
 export type ZcashBalances = Omit<
-  Omit<BalanceEvent, 'availableZatoshi'>,
-  'totalZatoshi'
+  BalanceEvent,
+  'availableZatoshi' | 'totalZatoshi'
 >
 
 export const asZecPublicKey = asObject({

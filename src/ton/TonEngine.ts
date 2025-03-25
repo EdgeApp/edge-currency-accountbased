@@ -34,7 +34,11 @@ import { parse_tx } from 'ton-watcher/build/modules/txs/Transaction'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import { asSafeCommonWalletInfo, SafeCommonWalletInfo } from '../common/types'
 import { snooze } from '../common/utils'
 import { TonTools } from './TonTools'
@@ -82,12 +86,12 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   async queryBalance(): Promise<void> {
     try {
-      const clients = this.tools.getClients()
-      const funcs = clients.map(client => async () => {
+      const clients = this.tools.getOrbsClients()
+      const funcs = clients.map(async client => {
         return await client.getContractState(this.wallet.address)
       })
       const contractState: Awaited<ReturnType<TonClient['getContractState']>> =
-        await asyncWaterfall(funcs)
+        await promiseAny(funcs)
 
       this.updateBalance(
         this.currencyInfo.currencyCode,
@@ -105,7 +109,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
 
   async queryTransactions(): Promise<void> {
     // Transactions can only be queried newest to oldest.
-    const clients = this.tools.getClients()
+    const clients = this.tools.getTonCenterClients()
 
     // Both of these params must be included to filter results. They should be undefined to start at the most recent.
     let inLoopLogicalTime: string | undefined
@@ -121,7 +125,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
           lt: inLoopLogicalTime,
           hash: inLoopHash,
           inclusive: false,
-          archival: this.archiveTransactions
+          archival: true // must always be true, because ton center reasons
         })
       })
       try {
@@ -162,12 +166,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.otherData.mostRecentLogicalTime = mostRecentLogicalTime
     this.otherData.mostRecentHash = mostRecentHash
 
-    if (this.transactionEvents.length > 0) {
-      this.walletLocalDataDirty = true
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
-
+    this.updateTransactionEvents()
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
   }
@@ -202,9 +201,11 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       }
     }
 
+    let isSend = false
     const networkFee = tx.originalTx.totalFees.coins.toString()
     if (lt(nativeAmount, '0')) {
       nativeAmount = sub(nativeAmount, networkFee)
+      isSend = true
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -212,7 +213,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       confirmations: 'confirmed',
       currencyCode: this.currencyInfo.currencyCode,
       date: tx.now,
-      isSend: false,
+      isSend,
       nativeAmount: nativeAmount,
       networkFee,
       networkFees: [],
@@ -226,16 +227,17 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.addTransaction(this.currencyInfo.currencyCode, edgeTransaction)
   }
 
+  getTxCheckpoint(edgeTransaction: EdgeTransaction): string {
+    return edgeTransaction.date.toString()
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
@@ -299,24 +301,28 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     }
     const transfer = this.wallet.createTransfer(transferArgs)
 
-    const clients = this.tools.getClients()
-    const feeFuncs = clients.map(client => async () => {
-      return await client.estimateExternalMessageFee(this.wallet.address, {
-        body: transfer,
-        initCode: needsInit ? this.wallet.init.code : null,
-        initData: needsInit ? this.wallet.init.data : null,
-        ignoreSignature: false
+    let networkFee = '0'
+    if (nativeAmount !== '0') {
+      // Only estimate fee if we're sending something
+      const clients = this.tools.getOrbsClients()
+      const feeFuncs = clients.map(async client => {
+        return await client.estimateExternalMessageFee(this.wallet.address, {
+          body: transfer,
+          initCode: needsInit ? this.wallet.init.code : null,
+          initData: needsInit ? this.wallet.init.data : null,
+          ignoreSignature: false
+        })
       })
-    })
-    const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
-      await asyncWaterfall(feeFuncs)
+      const fees: Awaited<ReturnType<TonClient['estimateExternalMessageFee']>> =
+        await promiseAny(feeFuncs)
 
-    const totalFee =
-      fees.source_fees.fwd_fee +
-      fees.source_fees.gas_fee +
-      fees.source_fees.in_fwd_fee +
-      fees.source_fees.storage_fee
-    const networkFee = totalFee.toString()
+      const totalFee =
+        fees.source_fees.fwd_fee +
+        fees.source_fees.gas_fee +
+        fees.source_fees.in_fwd_fee +
+        fees.source_fees.storage_fee
+      networkFee = totalFee.toString()
+    }
 
     const total = add(nativeAmount, networkFee)
     const balance = this.getBalance({ tokenId })
@@ -369,13 +375,13 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     )[0].asSlice()
     const transferMessage = loadMessageRelaxed(messageSlice)
 
-    const clients = this.tools.getClients()
-    const seqnoFuncs = clients.map(client => async () => {
+    const clients = this.tools.getOrbsClients()
+    const seqnoFuncs = clients.map(async client => {
       const contract = client.open(this.wallet)
       return await contract.getSeqno()
     })
     const seqno: Awaited<ReturnType<typeof this.wallet['getSeqno']>> =
-      await asyncWaterfall(seqnoFuncs)
+      await promiseAny(seqnoFuncs)
 
     const transferArgs: Parameters<WalletContractV5R1['createTransfer']>[0] = {
       sendMode: SendMode.IGNORE_ERRORS + SendMode.PAY_GAS_SEPARATELY,
@@ -397,12 +403,15 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
       const txBoc = base64.parse(edgeTransaction.signedTx)
       const txCell = Cell.fromBoc(Buffer.from(txBoc))[0]
 
-      const clients = this.tools.getClients()
+      const clients = this.tools.getOrbsClients()
       const broadcastFuncs = clients.map(async client => {
         const contract = client.open(this.wallet)
         return await contract.send(txCell)
       })
-      await promiseAny(broadcastFuncs)
+      await formatAggregateError(
+        promiseAny(broadcastFuncs),
+        'Broadcast failed:'
+      )
 
       if (this.otherData.contractState === 'uninitialized') {
         // It's not possible to calculate the txid for a wallet's first send so we need to look for it once it's confirmed
@@ -410,14 +419,14 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
         do {
           attempts++
           await snooze(1000)
-          const txidFuncs = clients.map(client => async () => {
+          const txidFuncs = clients.map(async client => {
             return await client.getTransactions(this.wallet.address, {
               limit: 50
             })
           })
           const transactions: Awaited<
             ReturnType<TonClient['getTransactions']>
-          > = await asyncWaterfall(txidFuncs)
+          > = await promiseAny(txidFuncs)
 
           const tx = transactions.find(tx => {
             return tx.oldStatus === 'uninitialized' && tx.endStatus === 'active'

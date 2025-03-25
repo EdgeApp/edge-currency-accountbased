@@ -165,8 +165,8 @@ export class CardanoTools implements EdgeCurrencyTools {
 
     const address = Cardano.BaseAddress.new(
       this.networkInfo.networkId,
-      Cardano.StakeCredential.from_keyhash(addressKey.to_raw_key().hash()),
-      Cardano.StakeCredential.from_keyhash(stakeKey.to_raw_key().hash())
+      Cardano.Credential.from_keyhash(addressKey.to_raw_key().hash()),
+      Cardano.Credential.from_keyhash(stakeKey.to_raw_key().hash())
     )
 
     return {

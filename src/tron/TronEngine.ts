@@ -399,10 +399,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw e
     }
 
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
 
     for (const token of this.enabledTokens) {
       this.tokenCheckTransactionsStatus[token] = 1
@@ -1451,24 +1448,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
-    this.engineOn = true
-    this.addToLoop(
-      'checkBlockchainInnerLoop',
-      BLOCKCHAIN_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop(
-      'checkUpdateNetworkFees',
-      NETWORKFEES_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)
+    this.addToLoop('checkUpdateNetworkFees', NETWORKFEES_POLL_MILLISECONDS)
+    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 

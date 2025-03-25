@@ -16,48 +16,7 @@ import {
   makeEvmDefaultSettings
 } from './ethereumCommonInfo'
 
-const builtinTokens: EdgeTokenMap = {
-  '493257fd37edb34451f62edf8d2a0c418852ba4c': {
-    currencyCode: 'USDT',
-    displayName: 'USDT',
-    denominations: [{ name: 'USDT', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x493257fD37EDB34451f62EDf8D2a0C418852bA4C'
-    }
-  },
-  '4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656': {
-    currencyCode: 'DAI',
-    displayName: 'DAI',
-    denominations: [{ name: 'DAI', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x4B9eb6c0b6ea15176BBF62841C6B2A8a398cb656'
-    }
-  },
-  '5a7d6b2f92c77fad6ccabd7ee0624e64907eaf3e': {
-    currencyCode: 'ZK',
-    displayName: 'ZK',
-    denominations: [{ name: 'ZK', multiplier: '1000000000000000000' }],
-    networkLocation: {
-      contractAddress: '0x5A7d6b2F92C77FAD6CCaBd7EE0624E64907Eaf3E'
-    }
-  },
-  '3355df6d4c9c3035724fd0e3914de96a5a83aaf4': {
-    currencyCode: 'USDC.e',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC.e', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'
-    }
-  },
-  '1d17cbcf0d6d143135ae902365d2e5e2a16538d4': {
-    currencyCode: 'USDC',
-    displayName: 'USD Coin',
-    denominations: [{ name: 'USDC', multiplier: '1000000' }],
-    networkLocation: {
-      contractAddress: '0x1d17CBcF0D6D143135aE902365D2E5e2A16538D4'
-    }
-  }
-}
+const builtinTokens: EdgeTokenMap = {}
 
 // Fees are in Wei
 const networkFees: EthereumFees = {
@@ -88,30 +47,24 @@ const networkInfo: EthereumNetworkInfo = {
   networkAdapterConfigs: [
     {
       type: 'rpc',
-      servers: [
-        'https://mainnet.era.zksync.io',
-        'https://lb.drpc.org/ogrpc?network=zksync&dkey={{drpcApiKey}}'
-      ]
+      servers: ['https://api.mainnet.abs.xyz	']
     },
     {
       type: 'evmscan',
-      servers: [
-        'https://block-explorer-api.mainnet.zksync.io',
-        'https://api-era.zksync.network',
-        'https://zksync.blockscout.com/api'
-      ]
+      servers: ['https://api.abscan.org/']
     }
   ],
-  uriNetworks: ['zksync'],
+  uriNetworks: ['abstract'],
   ercTokenStandard: 'ERC20',
   chainParams: {
-    chainId: 324,
-    name: 'zkSync'
+    chainId: 2741,
+    name: 'abstract'
   },
+  disableEvmScanInternal: true,
   hdPathCoinType: 60,
   amberDataBlockchainId: '',
-  pluginMnemonicKeyName: 'zksyncMnemonic',
-  pluginRegularKeyName: 'zksyncKey',
+  pluginMnemonicKeyName: 'abstractMnemonic',
+  pluginRegularKeyName: 'abstractKey',
   ethGasStationUrl: null,
   networkFees
 }
@@ -121,15 +74,15 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'ETH',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  chainDisplayName: 'zkSync',
+  chainDisplayName: 'Abstract',
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
-  pluginId: 'zksync',
-  walletType: 'wallet:zksync',
+  pluginId: 'abstract',
+  walletType: 'wallet:abstract',
 
   // Explorers:
-  addressExplorer: 'https://explorer.zksync.io/address/%s',
-  transactionExplorer: 'https://explorer.zksync.io/tx/%s',
+  addressExplorer: 'https://abscan.org/address/%s',
+  transactionExplorer: 'https://abscan.org/tx/%s',
 
   denominations: [
     {
@@ -141,11 +94,11 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'zkSync',
+  displayName: 'Abstract',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
-export const zksync = makeOuterPlugin<
+export const abstract = makeOuterPlugin<
   EthereumNetworkInfo,
   EthereumTools,
   EthereumInfoPayload

@@ -701,6 +701,14 @@ export const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x221657776846890989a759BA2973e427DfF5C9bB'
     }
   },
+  '8292bb45bf1ee4d140127049757c2e0ff06317ed': {
+    currencyCode: 'RLUSD',
+    displayName: 'Ripple USD',
+    denominations: [{ name: 'RLUSD', multiplier: '1000000000000000000' }],
+    networkLocation: {
+      contractAddress: '0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD'
+    }
+  },
   fa5047c9c78b8877af97bdcb85db743fd7313d4a: {
     currencyCode: 'ROOK',
     displayName: 'Keeper DAO',
@@ -815,11 +823,19 @@ export const builtinTokens: EdgeTokenMap = {
     }
   },
   a4bdb11dc0a2bec88d24a3aa1e6bb17201112ebe: {
+    currencyCode: 'USDSC',
+    displayName: 'StableUSD Classic',
+    denominations: [{ name: 'USDSC', multiplier: '1000000' }],
+    networkLocation: {
+      contractAddress: '0xA4Bdb11dc0a2bEC88d24A3aa1E6Bb17201112eBe'
+    }
+  },
+  dc035d45d973e3ec169d2276ddab16f1e407384f: {
     currencyCode: 'USDS',
     displayName: 'StableUSD',
     denominations: [{ name: 'USDS', multiplier: '1000000' }],
     networkLocation: {
-      contractAddress: '0xA4Bdb11dc0a2bEC88d24A3aa1E6Bb17201112eBe'
+      contractAddress: '0xdC035D45d973E3EC169d2276DDab16f1e407384F'
     }
   },
   dac17f958d2ee523a2206206994597c13d831ec7: {

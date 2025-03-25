@@ -26,6 +26,7 @@ import {
 } from 'edge-core-js/types'
 
 import { PluginEnvironment } from './innerPlugin'
+import { makePeriodicTask, PeriodicTask } from './periodicTask'
 import {
   getTokenIdFromCurrencyCode,
   makeMetaTokens,
@@ -82,7 +83,16 @@ export class CurrencyEngine<
   tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
+
+  /** The official core new-tx checkpoint, saved to synced storage. */
   seenTxCheckpoint: string | undefined
+
+  /**
+   * The highest transaction checkpoint we have seen.
+   * This will be saved to `seenTxCheckpoint` once we finish syncing.
+   */
+  highestSeenCheckpoint: string | undefined
+
   transactionListDirty: boolean
   transactionsLoaded: boolean
   transactionList: TransactionList
@@ -91,7 +101,7 @@ export class CurrencyEngine<
   transactionEvents: EdgeTransactionEvent[] // Transaction events when new transactions are added or have changed
   currencyInfo: EdgeCurrencyInfo
   currentSettings: any
-  timers: any
+  private readonly tasks = new Map<string, PeriodicTask>()
   walletId: string
   log: EdgeLog
   warn: (message: string, e?: Error) => void
@@ -153,7 +163,6 @@ export class CurrencyEngine<
     this.walletInfo = walletInfo
     this.walletId = walletInfo.id
     this.currencyInfo = currencyInfo
-    this.timers = {}
     this.otherData = undefined
     this.minimumAddressBalance = '0'
 
@@ -273,6 +282,7 @@ export class CurrencyEngine<
       // Undefined seenTxCheckpoint means we're syncing for the very first time
       // and should not emit new transaction notifications.
       this.seenTxCheckpoint != null &&
+      // We want the tx checkpoint to be `>` our existing one, not `>=`:
       txCheckpoint !== this.seenTxCheckpoint
     ) {
       // Return true if the transaction's checkpoint is selected
@@ -347,6 +357,16 @@ export class CurrencyEngine<
       this.transactionList = transactionList ?? this.transactionList
       this.txIdList = txIdList ?? this.txIdList
       this.txIdMap = txIdMap ?? this.txIdMap
+
+      // But we do need to update our checkpoints:
+      for (const cc of Object.keys(this.transactionList)) {
+        for (const tx of this.transactionList[cc]) {
+          this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
+            this.highestSeenCheckpoint,
+            this.getTxCheckpoint(tx)
+          )
+        }
+      }
     } else if (transactionList != null) {
       // Manually add transactions via addTransaction()
       for (const cc of Object.keys(transactionList)) {
@@ -401,6 +421,18 @@ export class CurrencyEngine<
 
     this.doInitialBalanceCallback()
     this.doInitialUnactivatedTokenIdsCallback()
+
+    // If we have no checkpoint, load all transactions into memory.
+    // This will set up `highestSeenCheckpoint`, which gets copied to
+    // `seenTxCheckpoint` when the sync completes.
+    if (this.seenTxCheckpoint == null) {
+      await this.loadTransactions()
+      // We still need an initial checkpoint,
+      // even if we don't have any txs:
+      if (this.highestSeenCheckpoint == null) {
+        this.highestSeenCheckpoint = '0'
+      }
+    }
   }
 
   protected findTransaction(currencyCode: string, txid: string): number {
@@ -467,10 +499,11 @@ export class CurrencyEngine<
       this.transactionListDirty = true
       const isNew = this.isTransactionNew(edgeTransaction)
       this.transactionEvents.push({ isNew, transaction: edgeTransaction })
-      if (isNew) {
-        // Update the seenTxCheckpoint whenever there are new transactions added
-        this.updateSeenTxCheckpoint(this.getTxCheckpoint(edgeTransaction))
-      }
+      this.highestSeenCheckpoint = this.selectSeenTxCheckpoint(
+        this.getTxCheckpoint(edgeTransaction),
+        this.highestSeenCheckpoint
+      )
+      this.updateSeenTxCheckpoint()
       this.warn(`addTransaction new tx: ${edgeTransaction.txid}`)
     } else {
       // Already have this tx in the database. See if anything changed
@@ -699,21 +732,33 @@ export class CurrencyEngine<
     }
   }
 
-  protected async addToLoop(func: string, timer: number): Promise<boolean> {
-    try {
+  /**
+   * Schedule a periodic task.
+   * Names are unique. If we already have a task with the same name,
+   * scheduling another one won't do anything.
+   * If the callback is missing, it will default to calling `this[name]`.
+   */
+  protected addToLoop(
+    name: string,
+    msGap: number,
+    callback: () => Promise<void> | undefined = async () => {
       // @ts-expect-error
-      await this[func]()
-    } catch (e: any) {
-      this.error(`Error in Loop: ${func} `, e)
+      await this[name]()
     }
-    if (this.engineOn) {
-      this.timers[func] = setTimeout(() => {
-        if (this.engineOn) {
-          this.addToLoop(func, timer).catch(e => this.log(e.message))
-        }
-      }, timer)
+  ): void {
+    if (this.tasks.get(name) != null) return
+
+    const onError = (error: unknown): void => {
+      this.log(name + ': ' + String(error))
     }
-    return true
+    const task = makePeriodicTask(callback, msGap, { onError })
+    this.tasks.set(name, task)
+    if (this.engineOn) task.start()
+  }
+
+  protected removeFromLoop(name: string): void {
+    this.tasks.get(name)?.stop()
+    this.tasks.delete(name)
   }
 
   // Called by EthereumNetwork
@@ -763,6 +808,13 @@ export class CurrencyEngine<
     return checkpointB
   }
 
+  updateTransactionEvents(): void {
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
+    }
+  }
+
   // Called by EthereumNetwork
   updateOnAddressesChecked(): void {
     if (this.addressesChecked) {
@@ -793,18 +845,17 @@ export class CurrencyEngine<
     this.updateSeenTxCheckpoint()
   }
 
-  updateSeenTxCheckpoint(seenTxCheckpoint?: string): void {
-    // Update the seenTxCheckpoint using the max-algorithm:
-    this.seenTxCheckpoint = this.selectSeenTxCheckpoint(
-      seenTxCheckpoint,
-      this.seenTxCheckpoint
-    )
-
+  updateSeenTxCheckpoint(): void {
     // Only call the callback if the wallet is fully synced.
     // This ensure that all initial syncs, without a defined seenTxCheckpoint,
     // will not incorrectly update the seenTxCheckpoint in the middle of an
     // initial sync.
-    if (this.addressesChecked && this.seenTxCheckpoint != null) {
+    if (
+      this.addressesChecked &&
+      this.highestSeenCheckpoint != null &&
+      this.highestSeenCheckpoint !== this.seenTxCheckpoint
+    ) {
+      this.seenTxCheckpoint = this.highestSeenCheckpoint
       this.currencyEngineCallbacks.onSeenTxCheckpoint(this.seenTxCheckpoint)
     }
   }
@@ -830,19 +881,20 @@ export class CurrencyEngine<
   // *************************************
 
   async startEngine(): Promise<void> {
-    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS).catch(
-      () => {}
-    )
+    this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
+
+    this.engineOn = true
+    for (const [, task] of this.tasks) {
+      task.start()
+    }
   }
 
   async killEngine(): Promise<void> {
-    // Set status flag to false
     this.engineOn = false
-    // Clear Inner loops timers
-    for (const timer in this.timers) {
-      clearTimeout(this.timers[timer])
+
+    for (const [, task] of this.tasks) {
+      task.stop()
     }
-    this.timers = {}
   }
 
   async changeUserSettings(userSettings: Object): Promise<void> {

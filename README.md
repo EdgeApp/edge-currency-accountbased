@@ -49,15 +49,11 @@ and then adjust your script URL to http://localhost:8082/edge-currency-accountba
 
 ### React Native
 
-In addition to installing `edge-currency-accountbased`, you must also install
-Zcash and Pirate Chain React Native libraries as peer dependencies
-Follow the instructions in the [Zcash React Native](https://www.npmjs.com/package/react-native-zcash) and [Pirate Chain React Native](https://www.npmjs.com/package/react-native-piratechain) packages to install the required native dependencies.
-
-The `edge-currency-accountbased` package will automatically install itself using React Native autolinking.
-To integrate the plugins with edge-core-js, add its URI to the context component:
+The `edge-currency-accountbased` package will automatically install itself using React Native autolinking. To integrate the plugins with edge-core-js, add its URI to the context component:
 
 ```jsx
-import { pluginUri, makePluginIo } from 'edge-currency-accountbased'
+import { pluginUri, makePluginIo } from 'edge-currency-accountbased/rn'
+
 <MakeEdgeContext
   nativeIo={{
     'edge-currency-accountbased': makePluginIo()
@@ -68,6 +64,33 @@ import { pluginUri, makePluginIo } from 'edge-currency-accountbased'
 ```
 
 To debug this project, run `yarn start` to start a Webpack server, and then use `debugUri` instead of `pluginUri`.
+
+Notice the `/rn` suffix on the `import` statement. If you leave this off (which is deprecated), react-native-piratechain and react-native-zcash will both be mandatory, and the instructions below won't apply.
+
+#### Zcash / Piratechain
+
+These chains only work on React Native. To use them, first install the following packages using the instructions in their repos:
+
+- [react-native-piratechain](https://www.npmjs.com/package/react-native-piratechain)
+- [react-native-zcash](https://www.npmjs.com/package/react-native-zcash)
+
+Then, add the correct IO objects to the core:
+
+```jsx
+import { pluginUri, makePluginIo } from 'edge-currency-accountbased/rn'
+import { makePiratechainIo } from 'edge-currency-accountbased/rn-piratechain'
+import { makeZcashIo } from 'edge-currency-accountbased/rn-zcash'
+
+<MakeEdgeContext
+  nativeIo={{
+    'edge-currency-accountbased': makePluginIo()
+    piratechain: makePiratechainIo(),
+    zcash: makeZcashIo(),
+  }}
+  pluginUris={[pluginUri]}
+  // Plus other props as required...
+/>
+```
 
 ## Contributing
 

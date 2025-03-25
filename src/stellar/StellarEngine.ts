@@ -15,7 +15,11 @@ import stellarApi, { Transaction } from 'stellar-sdk'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
-import { asyncWaterfall, promiseAny } from '../common/promiseUtils'
+import {
+  asyncWaterfall,
+  formatAggregateError,
+  promiseAny
+} from '../common/promiseUtils'
 import {
   cleanTxLogs,
   getDenomination,
@@ -177,12 +181,15 @@ export class StellarEngine extends CurrencyEngine<
 
       // Functions that should multicast to all servers
       case 'submitTransaction':
-        out = await promiseAny(
-          this.tools.stellarApiServers.map(async serverApi => {
-            // @ts-expect-error
-            const result = await serverApi[func](...params)
-            return { server: serverApi.serverName, result }
-          })
+        out = await formatAggregateError(
+          promiseAny(
+            this.tools.stellarApiServers.map(async serverApi => {
+              // @ts-expect-error
+              const result = await serverApi[func](...params)
+              return { server: serverApi.serverName, result }
+            })
+          ),
+          'Broadcast failed:'
         )
         break
     }
@@ -339,10 +346,7 @@ export class StellarEngine extends CurrencyEngine<
         return
       }
     }
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.updateTransactionEvents()
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
       this.otherData.lastPagingToken = pagingToken
@@ -447,19 +451,10 @@ export class StellarEngine extends CurrencyEngine<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async startEngine() {
-    this.engineOn = true
-    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS).catch(() => {})
-    this.addToLoop(
-      'checkBlockchainInnerLoop',
-      BLOCKCHAIN_POLL_MILLISECONDS
-    ).catch(() => {})
-    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS).catch(
-      () => {}
-    )
-    this.addToLoop(
-      'checkTransactionsInnerLoop',
-      TRANSACTION_POLL_MILLISECONDS
-    ).catch(() => {})
+    this.addToLoop('queryFee', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
+    this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
+    this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)
     await super.startEngine()
   }
 
