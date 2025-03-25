@@ -463,6 +463,7 @@ export class CardanoEngine extends CurrencyEngine<
         const txBody = this.composeTransaction(publicAddress, nativeAmount)
         nativeNetworkFee = txBody.fee().to_str()
         otherParams.unsignedTx = txBody.to_hex()
+        otherParams.isSpendable = true
       } catch (e) {
         this.log.warn('composeTransaction error: ', e)
         if (e instanceof Error) throw e
@@ -668,8 +669,15 @@ export class CardanoEngine extends CurrencyEngine<
     // We'll consider the transaction a deposit (stake) if no rewards are withdrawn
     const isDeposit = validatedTxBody.withdrawals == null
 
+    // Determine if the transaction is spendable by comparing the wallet's utxos
+    // with the transaction's inputs:
+    const isSpendable = validatedTxBody.inputs.every(input =>
+      this.utxos.some(utxo => utxo.tx_hash === input.transaction_id)
+    )
+
     const otherParams: CardanoTxOtherParams = {
       isStakeTx: true,
+      isSpendable,
       unsignedTx: tx.to_hex()
     }
 

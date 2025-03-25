@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (ADA) Add `isSpendable` to `EdgeTransaction.otherParams`.
 - changed: (Ripple) Rotate servers on unhandled errors
 - changed: (Sui) Enforce the arbitrary max spend limit
 - changed: (Tron) Add note support to transaction query

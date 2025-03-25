@@ -200,10 +200,17 @@ export const asKoiosTransactionsRes = asArray(asKoiosTransaction)
 
 export interface CardanoTxOtherParams {
   isStakeTx?: boolean
+  /**
+   * Whether the transaction is spendable wallet by comparison of the wallet's
+   * utxos with the transaction's inputs. This can happen from decoding a tx
+   * template created externally form the engine (e.g. Kiln).
+   **/
+  isSpendable?: boolean
   unsignedTx: string
 }
 export const asCardanoTxOtherParams = asObject<CardanoTxOtherParams>({
   isStakeTx: asOptional(asBoolean),
+  isSpendable: asOptional(asBoolean),
   unsignedTx: asString
 })
 
