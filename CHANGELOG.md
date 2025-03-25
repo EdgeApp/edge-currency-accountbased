@@ -4,6 +4,8 @@
 
 - changed: (Sui) Enforce the arbitrary max spend limit
 - fixed: (Solana) Fix SOL amount handling for DEX transactions
+- added: (ZCHF) Frankencoin on Ethereum network
+- added: (FPS) Frankencoin Pool Shares on Ethereum network
 
 ## 4.42.1 (2025-03-17)
 
