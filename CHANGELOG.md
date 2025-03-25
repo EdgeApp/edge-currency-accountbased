@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.42.2 (2025-03-25)
+
 - added: (ADA) Add `isSpendable` to `EdgeTransaction.otherParams`.
 - changed: (Ripple) Rotate servers on unhandled errors
 - changed: (Sui) Enforce the arbitrary max spend limit
