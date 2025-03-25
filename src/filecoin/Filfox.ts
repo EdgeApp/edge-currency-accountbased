@@ -4,6 +4,7 @@ import {
   asJSON,
   asNumber,
   asObject,
+  asOptional,
   asString,
   Cleaner
 } from 'cleaners'
@@ -97,6 +98,31 @@ export const asFilfoxTransfer = asObject({
 })
 
 //
+// Account
+//
+
+export type FilfoxAccountResult = ReturnType<typeof asFilfoxAccountResult>
+export const asFilfoxAccountResult = asObject({
+  // id: asString,
+  // robust: asString,
+  // actor: asString,
+  // createHeight: asNumber,
+  // createTimestamp: asNumber,
+  // lastSeenHeight: asNumber,
+  // lastSeenTimestamp: asNumber,
+  balance: asOptional(asString, '0'),
+  // messageCount: asNumber,
+  // transferCount: asNumber,
+  // tokenTransferCount: asNumber,
+  // timestamp: asNumber,
+  // tokens: asNumber,
+  // ownedMiners: asArray(asString),
+  // workerMiners: asArray(asString),
+  // benefitedMiners: asArray(asString),
+  address: asString
+})
+
+//
 // Messages
 //
 
@@ -138,6 +164,23 @@ export class Filfox {
     this.fetch = fetchFn
   }
 
+  async getAccount(address: string): Promise<FilfoxAccountResult> {
+    const url = `${this.baseUrl}/address/${address}`
+    const response = await this.fetch(url, {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json'
+      }
+    })
+    const responseText = await response.text()
+    const responseBody = asFilfoxEnvelope(asFilfoxAccountResult)(responseText)
+    if ('error' in responseBody)
+      throw new Error(
+        `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
+      )
+    return responseBody
+  }
+
   async getAccountMessages(
     address: string,
     page: number,
@@ -157,12 +200,10 @@ export class Filfox {
     })
     const responseText = await response.text()
     const responseBody = asFilfoxEnvelope(asFilfoxMessagesResult)(responseText)
-
     if ('error' in responseBody)
       throw new Error(
         `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
       )
-
     return responseBody
   }
 
@@ -185,12 +226,10 @@ export class Filfox {
     })
     const responseText = await response.text()
     const responseBody = asFilfoxEnvelope(asFilfoxTransfersResult)(responseText)
-
     if ('error' in responseBody)
       throw new Error(
         `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
       )
-
     return responseBody
   }
 
@@ -207,12 +246,10 @@ export class Filfox {
     const responseBody = asFilfoxEnvelope(asFilfoxMessageDetailsResult)(
       responseText
     )
-
     if ('error' in responseBody)
       throw new Error(
         `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
       )
-
     return responseBody
   }
 }
