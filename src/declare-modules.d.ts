@@ -52,6 +52,7 @@ declare module 'react-native' {
 }
 
 declare module 'tronweb' {
+  export function toUtf8(input: string): string
   export const utils: {
     abi: {
       decodeParams: (
