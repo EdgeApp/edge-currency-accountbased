@@ -28,7 +28,7 @@ export const asEtherscanGetAccountNonce = asObject({
   result: asHexString
 })
 
-export const asEthGasStation = asObject({
+export const asEvmGasStation = asObject({
   safeLow: asNumber,
   average: asNumber,
   fast: asNumber,
