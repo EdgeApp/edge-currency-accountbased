@@ -211,7 +211,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'polygonMnemonic',
   pluginRegularKeyName: 'polygonKey',
-  evmGasStationUrl: 'https://gasstation-mainnet.matic.network/',
+  evmGasStationUrl: 'https://gasstation.polygon.technology/v2',
   networkFees
 }
 
