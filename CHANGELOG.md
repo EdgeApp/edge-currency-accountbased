@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Sonic Mainnet network support
+
 ## 4.42.3 (2025-03-28)
 
 - fixed: (FIL) Fixed error handling of Filecoin RPC errors.
