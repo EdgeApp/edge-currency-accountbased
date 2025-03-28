@@ -59,6 +59,7 @@ const networkInfo: EthereumNetworkInfo = {
       type: 'rpc',
       servers: [
         'https://api.node.glif.io/',
+        'https://rpc.ankr.com/filecoin',
         'https://lb.drpc.org/ogrpc?network=filecoin&dkey={{drpcApiKey}}'
       ]
     },

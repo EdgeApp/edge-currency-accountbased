@@ -11,6 +11,7 @@
 - changed: (Sui) Enforce the arbitrary max spend limit
 - changed: (Tron) Add note support to transaction query
 - fixed: (FIL) Fixed error handling of Filecoin RPC errors.
+- fixed: (FIL) Replace Glif RPC node with Ankr due to recent API key pricing changes.
 - fixed: (FIL) Use Filfox API for balance data
 - fixed: (Solana) Fix SOL amount handling for DEX transactions
 - fixed: (Ripple) Fix race condition when setting up api connection

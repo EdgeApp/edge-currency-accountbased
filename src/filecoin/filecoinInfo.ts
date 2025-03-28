@@ -15,7 +15,7 @@ const networkInfo: FilecoinNetworkInfo = {
   networkPrefix: 'Mainnet',
   rpcNode: {
     networkName: 'Mainnet',
-    url: 'https://api.node.glif.io/'
+    url: 'https://rpc.ankr.com/filecoin'
   }
 }
 
