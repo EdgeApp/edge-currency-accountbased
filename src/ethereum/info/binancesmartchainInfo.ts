@@ -163,7 +163,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'binancesmartchainMnemonic',
   pluginRegularKeyName: 'binancesmartchainKey',
-  ethGasStationUrl: null,
+  evmGasStationUrl: null,
   networkFees
 }
 

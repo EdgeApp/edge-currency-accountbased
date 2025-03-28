@@ -15,7 +15,7 @@ import {
   OPTIMAL_FEE_HIGH_MULTIPLIER,
   WEI_MULTIPLIER
 } from '../ethereumConsts'
-import { asEthGasStation } from '../ethereumSchema'
+import { asEvmGasStation } from '../ethereumSchema'
 import {
   asEthereumFees,
   asEvmScanGasResponseResult,
@@ -198,30 +198,19 @@ export const fetchFeesFromEvmGasStation = async (
   log: EdgeLog,
   networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
-  const { ethGasStationUrl } = networkInfo
+  const { evmGasStationUrl } = networkInfo
   const gasStationApiKey = getGasStationApiKey(initOptions, currencyInfo, log)
-  if (ethGasStationUrl == null || gasStationApiKey == null) return
+  if (evmGasStationUrl == null || gasStationApiKey == null) return
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
   const apiKeyParams = gasStationApiKey
     ? // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       `?api-key=${gasStationApiKey || ''}`
     : ''
-  const result = await fetch(`${ethGasStationUrl}${apiKeyParams}`)
+  const result = await fetch(`${evmGasStationUrl}${apiKeyParams}`)
   const jsonObj = await result.json()
 
-  const fees = asEthGasStation(jsonObj)
-  // Special case for POL fast and fastest being equivalent from gas station
-  if (currencyInfo.currencyCode === 'POL') {
-    // Since the later code assumes EthGasStation's
-    // greater-by-a-factor-of-ten gas prices, we need to multiply the GWEI
-    // from Polygon Gas Station by 10 so they conform.
-    fees.safeLow *= 10
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-    fees.average = ((jsonObj.fast + jsonObj.safeLow) / 2) * 10
-    fees.fast = jsonObj.standard * 10
-    fees.fastest *= 10
-  }
+  const fees = asEvmGasStation(currencyInfo.pluginId, jsonObj)
 
   // Sanity checks
   if (fees.safeLow <= 0 || fees.safeLow > GAS_PRICE_SANITY_CHECK) {

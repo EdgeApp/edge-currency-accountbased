@@ -74,7 +74,7 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 137,
   pluginMnemonicKeyName: 'rskMnemonic',
   pluginRegularKeyName: 'rskKey',
-  ethGasStationUrl: null,
+  evmGasStationUrl: null,
   networkFees
 }
 

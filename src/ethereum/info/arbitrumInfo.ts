@@ -172,7 +172,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'arbitrumMnemonic',
   pluginRegularKeyName: 'arbitrumKey',
-  ethGasStationUrl: null,
+  evmGasStationUrl: null,
   networkFees,
   supportsEIP1559: true
 }

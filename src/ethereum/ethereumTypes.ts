@@ -85,7 +85,7 @@ export interface EthereumNetworkInfo {
   }
   disableEvmScanInternal?: boolean
   ercTokenStandard: string
-  ethGasStationUrl: string | null
+  evmGasStationUrl: string | null
   hdPathCoinType: number
   networkFees: EthereumFees
   pluginMnemonicKeyName: string

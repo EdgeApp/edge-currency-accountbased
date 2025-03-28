@@ -28,11 +28,46 @@ export const asEtherscanGetAccountNonce = asObject({
   result: asHexString
 })
 
-export const asEthGasStation = asObject({
+interface EvmGasStation {
+  safeLow: number
+  average: number
+  fast: number
+  fastest: number
+}
+export const asEvmGasStation = (
+  pluginId: string,
+  raw: unknown
+): EvmGasStation => {
+  switch (pluginId) {
+    case 'polygon': {
+      const polygonFees = asPolygonGasStation(raw)
+      return {
+        safeLow: polygonFees.safeLow.maxPriorityFee,
+        average: polygonFees.standard.maxPriorityFee,
+        fast: polygonFees.fast.maxPriorityFee,
+        fastest: polygonFees.fast.maxPriorityFee * 1.25
+      }
+    }
+    default: {
+      return asEthereumGasStation(raw)
+    }
+  }
+}
+
+const asEthereumGasStation = asObject({
   safeLow: asNumber,
   average: asNumber,
   fast: asNumber,
   fastest: asNumber
+})
+
+const asPolygonGasStation = asObject({
+  safeLow: asObject({ maxPriorityFee: asNumber, maxFee: asNumber }),
+  standard: asObject({ maxPriorityFee: asNumber, maxFee: asNumber }),
+  fast: asObject({ maxPriorityFee: asNumber, maxFee: asNumber })
+  // estimatedBaseFee: asNumber,
+  // blockTime: asNumber,
+  // blockNumber: asNumber
 })
 
 export const asEIP712TypedData = asObject({

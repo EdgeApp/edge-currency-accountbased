@@ -71,7 +71,7 @@ const networkInfo: EthereumNetworkInfo = {
   amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'amoyMnemonic',
   pluginRegularKeyName: 'amoyKey',
-  ethGasStationUrl: '',
+  evmGasStationUrl: null,
   networkFees
 }
 
