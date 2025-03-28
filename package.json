@@ -98,7 +98,7 @@
     "@ton/core": "^0.59.0",
     "@ton/crypto": "^3.3.0",
     "@ton/ton": "^15.1.0",
-    "@zondax/izari-filecoin": "^1.2.0",
+    "@zondax/izari-filecoin": "^1.2.6",
     "algosdk": "^2.1.0",
     "biggystring": "^4.2.3",
     "bip39": "^3.0.2",
