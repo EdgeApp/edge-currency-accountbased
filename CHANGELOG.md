@@ -10,6 +10,7 @@
 - changed: (Ripple) Rotate servers on unhandled errors
 - changed: (Sui) Enforce the arbitrary max spend limit
 - changed: (Tron) Add note support to transaction query
+- fixed: (FIL) Fixed error handling of Filecoin RPC errors.
 - fixed: (FIL) Use Filfox API for balance data
 - fixed: (Solana) Fix SOL amount handling for DEX transactions
 - fixed: (Ripple) Fix race condition when setting up api connection

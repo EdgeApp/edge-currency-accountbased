@@ -1,0 +1,57 @@
+diff --git a/node_modules/@zondax/izari-filecoin/dist/cjs/rpc/index.js b/node_modules/@zondax/izari-filecoin/dist/cjs/rpc/index.js
+index e0c7528..d7885fb 100644
+--- a/node_modules/@zondax/izari-filecoin/dist/cjs/rpc/index.js
++++ b/node_modules/@zondax/izari-filecoin/dist/cjs/rpc/index.js
+@@ -253,8 +253,23 @@ class RPC {
+     handleError(e) {
+         if (axios_1.default.isAxiosError(e)) {
+             if (e.response) {
+-                if (e.response.data)
+-                    return e.response.data;
++                if (e.response.data) {
++                    if ('error' in e.response.data) {
++                        if (typeof e.response.data.error === 'string') {
++                            return { error: { message: e.response.data.error } };
++                        }
++                        else if ('message' in e.response.data.error) {
++                            return { error: { message: e.response.data.error.message } };
++                        }
++                        else {
++                            return { error: { message: 'unknown error' } };
++                        }
++                    }
++                    else if (typeof e.response.data === 'string') {
++                        return { error: { message: e.response.data } };
++                    }
++                    return { error: { message: 'unknown error' } };
++                }
+                 if (e.response.statusText)
+                     return { error: { message: `${e.response.status} - ${e.response.statusText}` } };
+             }
+diff --git a/node_modules/@zondax/izari-filecoin/dist/mjs/rpc/index.js b/node_modules/@zondax/izari-filecoin/dist/mjs/rpc/index.js
+index b1f9c2d..536574a 100644
+--- a/node_modules/@zondax/izari-filecoin/dist/mjs/rpc/index.js
++++ b/node_modules/@zondax/izari-filecoin/dist/mjs/rpc/index.js
+@@ -221,7 +221,21 @@ export class RPC {
+         if (axios.isAxiosError(e)) {
+             if (e.response) {
+                 if (e.response.data)
+-                    return e.response.data;
++                    if ('error' in e.response.data) {
++                        if (typeof e.response.data.error === 'string') {
++                            return { error: { message: e.response.data.error } };
++                        }
++                        else if ('message' in e.response.data.error) {
++                            return { error: { message: e.response.data.error.message } };
++                        }
++                        else {
++                            return { error: { message: 'unknown error' } };
++                        }
++                    }
++                    else if (typeof e.response.data === 'string') {
++                        return { error: { message: e.response.data } };
++                    }
++                    return { error: { message: 'unknown error' } };
+                 if (e.response.statusText)
+                     return { error: { message: `${e.response.status} - ${e.response.statusText}` } };
+             }
