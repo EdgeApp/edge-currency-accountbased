@@ -19,6 +19,7 @@ import { polygon } from './info/polygonInfo'
 import { pulsechain } from './info/pulsechainInfo'
 import { rsk } from './info/rskInfo'
 import { sepolia } from './info/sepoliaInfo'
+import { sonic } from './info/sonicInfo'
 import { zksync } from './info/zksyncInfo'
 
 export const ethereumPlugins = {
@@ -43,5 +44,6 @@ export const ethereumPlugins = {
   pulsechain,
   sepolia,
   rsk,
+  sonic,
   zksync
 }

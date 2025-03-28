@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Sonic Mainnet network support
+
 ## 4.42.2 (2025-03-25)
 
 - added: (ADA) Add `isSpendable` to `EdgeTransaction.otherParams`.
