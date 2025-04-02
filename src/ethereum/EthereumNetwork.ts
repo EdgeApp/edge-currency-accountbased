@@ -223,7 +223,7 @@ export class EthereumNetwork {
     return out
   }
 
-  getBaseFeePerGas = async (): Promise<string> => {
+  getBaseFeePerGas = async (): Promise<string | undefined> => {
     const promises = this.qualifyNetworkAdapters('getBaseFeePerGas').map(
       adapter => async () => await adapter.getBaseFeePerGas()
     )

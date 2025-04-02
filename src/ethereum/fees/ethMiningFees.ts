@@ -1,6 +1,6 @@
 import { Common } from '@ethereumjs/common'
 import { TransactionFactory } from '@ethereumjs/tx'
-import { add, div, gte, lt, lte, mul, sub } from 'biggystring'
+import { add, div, gte, lt, lte, min, mul, sub } from 'biggystring'
 import { EdgeSpendInfo, EdgeToken } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import { base16 } from 'rfc4648'
@@ -26,7 +26,8 @@ const WEI_MULTIPLIER = '1000000000'
 export function calcMiningFees(
   networkInfo: EthereumNetworkInfo,
   spendInfo: EdgeSpendInfo,
-  edgeToken: EdgeToken | null
+  edgeToken: EdgeToken | null,
+  currentBaseFeeWei: string | undefined
 ): EthereumMiningFees {
   let useGasLimitDefaults = true
   let customGasLimit, customGasPrice
@@ -50,8 +51,11 @@ export function calcMiningFees(
     }
 
     if (gasPrice != null && gasPrice !== '') {
-      const minGasPrice = networkInfo.networkFees.default.gasPrice?.minGasPrice
+      let minGasPrice = networkInfo.networkFees.default.gasPrice?.minGasPrice
       if (minGasPrice != null) {
+        if (currentBaseFeeWei != null) {
+          minGasPrice = min(minGasPrice, currentBaseFeeWei)
+        }
         const gasPriceInWei = mul(gasPrice, WEI_MULTIPLIER)
         if (lt(gasPriceInWei, minGasPrice) || /^\s*$/.test(gasPrice)) {
           const e = new Error(
@@ -307,7 +311,7 @@ export interface FeeParams {
 export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
-  baseFeePerGas: string
+  baseFeePerGas: string = gasPrice
 ): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice: mul('1', gasPrice, 16) }
