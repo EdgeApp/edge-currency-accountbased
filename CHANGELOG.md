@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.43.1 (2025-04-02)
+
+- changed: Upgrade chain-registry package.
+
 ## 4.43.0 (2025-04-01)
 
 - added: Sonic Mainnet network support
