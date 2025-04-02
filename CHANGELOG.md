@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Sonic Mainnet network support
+- changed: (EVM) Allow minimum custom gas price to go below default if detected network gas price is lower
 
 ## 4.42.3 (2025-03-28)
 
