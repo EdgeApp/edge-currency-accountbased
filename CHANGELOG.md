@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.43.0 (2025-04-01)
+
 - added: Sonic Mainnet network support
 
 ## 4.42.3 (2025-03-28)
