@@ -223,7 +223,11 @@ export class EthereumNetwork {
     return out
   }
 
-  getBaseFeePerGas = async (): Promise<string> => {
+  /*
+   * @returns Hex string representation of the base fee or undefined if
+   * the network does not support EIP-1559.
+   */
+  getBaseFeePerGas = async (): Promise<string | undefined> => {
     const promises = this.qualifyNetworkAdapters('getBaseFeePerGas').map(
       adapter => async () => await adapter.getBaseFeePerGas()
     )

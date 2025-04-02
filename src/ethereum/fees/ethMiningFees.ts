@@ -307,7 +307,7 @@ export interface FeeParams {
 export async function getFeeParamsByTransactionType(
   transactionType: number,
   gasPrice: string,
-  baseFeePerGas: string
+  baseFeePerGas: string = gasPrice
 ): Promise<FeeParams> {
   if (transactionType < 2) {
     return { gasPrice: mul('1', gasPrice, 16) }
