@@ -391,7 +391,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         this.walletLocalDataDirty = true
       }
       for (const tokenId of this.enabledTokenIds) {
-        if (this.allTokensMap[tokenId].currencyCode !== 'JST') continue
         if (!this.otherData.trc20FirstQueryCache[tokenId]) {
           await this.fetchFirstTrc20Transactions(tokenId)
         }
