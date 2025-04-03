@@ -813,7 +813,11 @@ export class EthereumEngine extends CurrencyEngine<
       spendInfo.spendTargets[0].nativeAmount = balance
 
       // Use our calcMiningFee function to calculate the fees:
-      const currentBaseFeeWei = await this.ethNetwork.getBaseFeePerGas()
+      const networkBaseFeeWeiHex = await this.ethNetwork.getBaseFeePerGas()
+      const currentBaseFeeWei =
+        networkBaseFeeWeiHex != null
+          ? hexToDecimal(networkBaseFeeWeiHex)
+          : undefined
       const miningFees = calcMiningFees(
         this.networkInfo,
         spendInfo,
