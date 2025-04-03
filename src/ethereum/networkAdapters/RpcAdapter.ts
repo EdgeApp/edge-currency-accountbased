@@ -291,89 +291,97 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   /**
    * Check the eth-balance-checker contract for balances
    */
-  // fetchTokenBalances is defined on this adapter only if ethBalCheckerContract is defined
-  fetchTokenBalances =
-    this.config.ethBalCheckerContract == null
-      ? null
-      : async (): Promise<EthereumNetworkUpdate> => {
-          const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
-            this.ethEngine
-          const { chainParams } = networkInfo
+  fetchTokenBalances = this.createTokenBalancesFetcher()
 
-          const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
-          const detectedTokenIds: string[] = []
-          const ethBalCheckerContract = this.config.ethBalCheckerContract
-          if (ethBalCheckerContract == null) return tokenBal
+  /**
+   * Factory method to create the token balances fetcher based on adapter configuration
+   */
+  private createTokenBalancesFetcher():
+    | (() => Promise<EthereumNetworkUpdate>)
+    | null {
+    // Only create a fetcher if ethBalCheckerContract is available
+    if (this.config.ethBalCheckerContract == null) {
+      return null
+    }
 
-          // Address for querying ETH balance on ETH network, POL on POL, etc.
-          const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
-          const balanceQueryAddrs = [mainnetAssetAddr]
-          for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {
-            const token = asMaybeContractLocation(rawToken.networkLocation)
-            if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
-          }
+    return async (): Promise<EthereumNetworkUpdate> => {
+      const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
+        this.ethEngine
+      const { chainParams } = networkInfo
 
-          const balances = await this.serialServers(async baseUrl => {
-            const ethProvider = new ethers.providers.JsonRpcProvider(
-              baseUrl,
-              chainParams.chainId
-            )
+      const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+      const detectedTokenIds: string[] = []
+      const ethBalCheckerContract = this.config.ethBalCheckerContract
+      if (ethBalCheckerContract == null) return tokenBal
 
-            const contract = new ethers.Contract(
-              ethBalCheckerContract,
-              ETH_BAL_CHECKER_ABI,
-              ethProvider
-            )
+      // Address for querying ETH balance on ETH network, POL on POL, etc.
+      const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
+      const balanceQueryAddrs = [mainnetAssetAddr]
+      for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {
+        const token = asMaybeContractLocation(rawToken.networkLocation)
+        if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
+      }
 
-            const contractCallRes = await contract.balances(
-              [walletLocalData.publicKey],
-              balanceQueryAddrs
-            )
-            if (contractCallRes.length !== balanceQueryAddrs.length) {
-              throw new Error('checkEthBalChecker balances length mismatch')
-            }
-            return contractCallRes
-          }).catch((e: any) => {
-            throw new Error(
-              `All rpc servers failed eth balance checks: ${String(e)}`
-            )
-          })
+      const balances = await this.serialServers(async baseUrl => {
+        const ethProvider = new ethers.providers.JsonRpcProvider(
+          baseUrl,
+          chainParams.chainId
+        )
 
-          // Parse data from smart contract call
-          for (let i = 0; i < balances.length; i++) {
-            const tokenAddr = balanceQueryAddrs[i].toLowerCase()
-            const balanceBn = ethers.BigNumber.from(balances[i])
+        const contract = new ethers.Contract(
+          ethBalCheckerContract,
+          ETH_BAL_CHECKER_ABI,
+          ethProvider
+        )
 
-            let balanceCurrencyCode
-            if (tokenAddr === mainnetAssetAddr) {
-              const { currencyCode } = currencyInfo
-              balanceCurrencyCode = currencyCode
-            } else {
-              const tokenId = tokenAddr.replace('0x', '')
-
-              // Notify the core that activity was detected on this token
-              if (balanceBn.gt(ethers.constants.Zero))
-                detectedTokenIds.push(tokenId)
-
-              const token = allTokensMap[tokenId]
-              if (token == null) {
-                this.logError(
-                  'checkEthBalChecker',
-                  new Error(
-                    `checkEthBalChecker missing builtinToken: ${tokenAddr}`
-                  )
-                )
-                continue
-              }
-              const { currencyCode } = token
-              balanceCurrencyCode = currencyCode
-            }
-
-            tokenBal[balanceCurrencyCode] = balanceBn.toString()
-          }
-
-          return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }
+        const contractCallRes = await contract.balances(
+          [walletLocalData.publicKey],
+          balanceQueryAddrs
+        )
+        if (contractCallRes.length !== balanceQueryAddrs.length) {
+          throw new Error('checkEthBalChecker balances length mismatch')
         }
+        return contractCallRes
+      }).catch((e: any) => {
+        throw new Error(
+          `All rpc servers failed eth balance checks: ${String(e)}`
+        )
+      })
+
+      // Parse data from smart contract call
+      for (let i = 0; i < balances.length; i++) {
+        const tokenAddr = balanceQueryAddrs[i].toLowerCase()
+        const balanceBn = ethers.BigNumber.from(balances[i])
+
+        let balanceCurrencyCode
+        if (tokenAddr === mainnetAssetAddr) {
+          const { currencyCode } = currencyInfo
+          balanceCurrencyCode = currencyCode
+        } else {
+          const tokenId = tokenAddr.replace('0x', '')
+
+          // Notify the core that activity was detected on this token
+          if (balanceBn.gt(ethers.constants.Zero))
+            detectedTokenIds.push(tokenId)
+
+          const token = allTokensMap[tokenId]
+          if (token == null) {
+            this.logError(
+              'checkEthBalChecker',
+              new Error(`checkEthBalChecker missing builtinToken: ${tokenAddr}`)
+            )
+            continue
+          }
+          const { currencyCode } = token
+          balanceCurrencyCode = currencyCode
+        }
+
+        tokenBal[balanceCurrencyCode] = balanceBn.toString()
+      }
+
+      return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }
+    }
+  }
 
   private addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
