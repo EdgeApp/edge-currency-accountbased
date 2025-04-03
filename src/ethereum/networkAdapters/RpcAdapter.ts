@@ -1,9 +1,12 @@
-import { add } from 'biggystring'
+import { add, gt } from 'biggystring'
 import { EdgeTransaction } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import parse from 'url-parse'
 
-import { asMaybeContractLocation } from '../../common/tokenHelpers'
+import {
+  asMaybeContractLocation,
+  asZksAccountBalances
+} from '../../common/tokenHelpers'
 import {
   hexToDecimal,
   isHex,
@@ -26,6 +29,8 @@ export interface RpcAdapterConfig {
   servers: string[]
   ethBalCheckerContract?: string
 }
+
+const MAINNET_ASSET_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   connect = null
@@ -289,30 +294,105 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   }
 
   /**
-   * Check the eth-balance-checker contract for balances
+   * Check the eth-balance-checker contract or `zks_getAllAccountBalances` for
+   * balances
    */
-  // fetchTokenBalances is defined on this adapter only if ethBalCheckerContract is defined
-  fetchTokenBalances =
-    this.config.ethBalCheckerContract == null
-      ? null
-      : async (): Promise<EthereumNetworkUpdate> => {
-          const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
-            this.ethEngine
-          const { chainParams } = networkInfo
+  fetchTokenBalances = this.createTokenBalancesFetcher()
 
-          const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
-          const detectedTokenIds: string[] = []
-          const ethBalCheckerContract = this.config.ethBalCheckerContract
-          if (ethBalCheckerContract == null) return tokenBal
+  /**
+   * Factory method to create the token balances fetcher based on adapter configuration
+   */
+  private createTokenBalancesFetcher():
+    | (() => Promise<EthereumNetworkUpdate>)
+    | null {
+    const { allTokensMap, networkInfo, walletLocalData, currencyInfo } =
+      this.ethEngine
+    const { chainParams } = networkInfo
+    const { chainId } = chainParams
+    const isZkSync = chainId === 324
 
-          // Address for querying ETH balance on ETH network, POL on POL, etc.
-          const mainnetAssetAddr = '0x0000000000000000000000000000000000000000'
-          const balanceQueryAddrs = [mainnetAssetAddr]
-          for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {
-            const token = asMaybeContractLocation(rawToken.networkLocation)
-            if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
+    // Only create a fetcher if ethBalCheckerContract or
+    // zks_getAllAccountBalances is supported
+    if (this.config.ethBalCheckerContract == null && !isZkSync) {
+      return null
+    }
+
+    return async (): Promise<EthereumNetworkUpdate> => {
+      const tokenBal: EthereumNetworkUpdate['tokenBal'] = {}
+      const detectedTokenIds: string[] = []
+
+      if (isZkSync) {
+        try {
+          const address = walletLocalData.publicKey
+          const { result, server } = await this.serialServers(async baseUrl => {
+            const result = await this.fetchPostRPC(
+              'zks_getAllAccountBalances',
+              [address],
+              chainId,
+              baseUrl
+            )
+
+            if (result.error != null) {
+              this.ethEngine.error(
+                `zks_getAllAccountBalances response error from ${baseUrl}: ${JSON.stringify(
+                  result.error
+                )}`
+              )
+              throw new Error(
+                'zks_getAllAccountBalances response included an error'
+              )
+            }
+
+            return { server: parse(baseUrl).hostname, result }
+          })
+
+          // Process zkSync balance results
+          // The result should be an object with token addresses as keys and balances as values
+          const balances = asZksAccountBalances(result.result)
+
+          if (balances != null) {
+            // Handle ERC20 token balances
+            for (const [tokenAddr, hexBalance] of Object.entries(balances)) {
+              // Ignore mainnet asset
+              if (tokenAddr === MAINNET_ASSET_ADDRESS) continue
+
+              const tokenId = tokenAddr.toLowerCase().replace('0x', '')
+              const token = allTokensMap[tokenId]
+
+              // Only process tokens that are defined in the token map
+              if (token != null && hexBalance != null) {
+                const { currencyCode } = token
+                const balance = hexToDecimal(hexBalance)
+                tokenBal[currencyCode] = balance
+
+                // Notify the core that activity was detected on this token
+                if (gt(balance, '0')) {
+                  detectedTokenIds.push(tokenId)
+                }
+              }
+            }
           }
 
+          return { tokenBal, detectedTokenIds, server }
+        } catch (e: any) {
+          this.ethEngine.error('zkSync fetchTokenBalances error:', e)
+          return {}
+        }
+      }
+
+      // For non-zkSync chains, use the ethBalCheckerContract if available
+      else {
+        const ethBalCheckerContract = this.config.ethBalCheckerContract
+        if (ethBalCheckerContract == null) return tokenBal
+
+        // Address for querying ETH balance on ETH network, POL on POL, etc.
+        const balanceQueryAddrs = [MAINNET_ASSET_ADDRESS]
+        for (const rawToken of Object.values(this.ethEngine.allTokensMap)) {
+          const token = asMaybeContractLocation(rawToken.networkLocation)
+          if (token != null) balanceQueryAddrs.unshift(token.contractAddress)
+        }
+
+        try {
           const balances = await this.serialServers(async baseUrl => {
             const ethProvider = new ethers.providers.JsonRpcProvider(
               baseUrl,
@@ -345,7 +425,7 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
             const balanceBn = ethers.BigNumber.from(balances[i])
 
             let balanceCurrencyCode
-            if (tokenAddr === mainnetAssetAddr) {
+            if (tokenAddr === MAINNET_ASSET_ADDRESS) {
               const { currencyCode } = currencyInfo
               balanceCurrencyCode = currencyCode
             } else {
@@ -373,7 +453,13 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
           }
 
           return { tokenBal, detectedTokenIds, server: 'ethBalChecker' }
+        } catch (e: any) {
+          this.ethEngine.error('ethBalChecker error:', e)
+          return {}
         }
+      }
+    }
+  }
 
   private addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
