@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (ZKSync) Add `zks_getAllAccountBalances` to `fetchTokenBalances`.
+
 ## 4.43.1 (2025-04-02)
 
 - changed: Upgrade chain-registry package.

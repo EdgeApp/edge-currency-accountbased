@@ -19,6 +19,8 @@ export const asMaybeContractLocation = asMaybe(
   })
 )
 
+export const asZksAccountBalances = asMaybe(asObject(asString))
+
 /**
  * Downgrades EdgeToken objects to the legacy EdgeMetaToken format.
  */
