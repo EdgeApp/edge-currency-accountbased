@@ -91,7 +91,8 @@ const networkInfo: EthereumNetworkInfo = {
       servers: [
         'https://mainnet.era.zksync.io',
         'https://lb.drpc.org/ogrpc?network=zksync&dkey={{drpcApiKey}}'
-      ]
+      ],
+      ethBalCheckerContract: '0xc0D6b7D8fFee371C4c17249A35cEB003D350d1a1'
     },
     {
       type: 'evmscan',
