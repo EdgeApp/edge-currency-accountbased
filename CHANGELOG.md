@@ -2,7 +2,10 @@
 
 ## Unreleased
 
+## 4.44.0 (2025-04-02)
+
 - added: (ZKSync) Add token detection contract
+- changed: (EVM) Allow custom gas price to go below default minimum value if network base fee has dipped below the minimum value
 
 ## 4.43.1 (2025-04-02)
 
