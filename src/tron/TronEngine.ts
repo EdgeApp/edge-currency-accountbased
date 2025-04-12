@@ -865,6 +865,10 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       if (getUnfreezeDelayDays?.value != null) {
         this.getUnfreezeDelayDays = getUnfreezeDelayDays.value
       }
+
+      // Clear energy estimate cache periodically to ensure we get fresh estimates
+      this.energyEstimateCache = {}
+      this.log('Cleared energy estimate cache during network fee update')
     } catch (e: any) {
       this.log.error('checkUpdateNetworkFees error: ', e)
     }
