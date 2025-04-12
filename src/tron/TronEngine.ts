@@ -93,6 +93,7 @@ const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const BLOCKCHAIN_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const NETWORKFEES_POLL_MILLISECONDS = getRandomDelayMs(60 * 60 * 1000) // 1 hour
+const DEFAULT_ENERGY_NO_BALANCE = 130000
 
 type TronFunction =
   | 'trx_blockNumber'
@@ -224,7 +225,9 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         ['address[]', 'address[]'],
         [
           [address.slice(2)],
-          tokenIds.map(address => base58ToHexAddress(address).slice(2))
+          tokenIds.map(tokenAddress =>
+            base58ToHexAddress(tokenAddress).slice(2)
+          )
         ]
       )
 
@@ -937,7 +940,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
   private async getDynamicEnergyFactor(
     contractAddress: string
-  ): Promise<number> {
+  ): Promise<{ factor: number; energyPenaltyRatio: number }> {
     const body = { value: base58ToHexAddress(contractAddress) }
     const res = await this.multicastServers(
       'trx_getBalance',
@@ -949,17 +952,30 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       // e.g., 10000 = factor of 1.0, 15000 = factor of 1.5
       const factor =
         parseFloat(res.contract_state.energy_factor.toString()) / 10000
-      return factor
+
+      this.log(`energy_factor ${res.contract_state.energy_factor.toString()}`)
+
+      // Calculate the penalty ratio (the portion that's above 1.0)
+      // This is used to determine how much of the energy is penalty
+      const energyPenaltyRatio = Math.max(factor - 1.0, 0)
+
+      this.log(
+        `Contract ${contractAddress} has energy factor ${factor} (penalty ratio: ${energyPenaltyRatio})`
+      )
+      return { factor, energyPenaltyRatio }
     }
     // If not found or no factor, return 1.0 (no penalty)
-    return 1.0
+    return { factor: 1.0, energyPenaltyRatio: 0 }
   }
 
-  // Determines how much TRX the tx will cost after accounting for bandwidth and energy
-  // TRX transfers to new accounts will consume TRX and bandwidth (or equivalent TRX)
-  // TRX transfers to existing accounts will bandwidth or TRX
-  // TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
-  // TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
+  /**
+   * Determines how much TRX the tx will cost after accounting for bandwidth and energy
+   *
+   * TRX transfers to new accounts will consume TRX and bandwidth (or equivalent TRX)
+   * TRX transfers to existing accounts will bandwidth or TRX
+   * TRC20 transfers to new (unknown to contract) will consume energy (consuming TRX to make up any free energy shortfall) and bandwidth (or equivalent TRX)
+   * TRC20 transfers to existing (known to contract) accounts will consume same bandwidth but less energy than above
+   */
   async calcTxFee(opts: CalcTxFeeOpts): Promise<string> {
     const { note, receiverAddress, tokenOpts, unsignedTxHex } = opts
 
@@ -970,74 +986,98 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     )
     if (denom == null) throw new Error('calcTxFee unknown denom')
 
-    /// /////////
-    // Energy //
-    /// /////////
-
-    // Energy is only needed for smart contract calls
+    // #region ========== Energy Estimation ==========
 
     let energyNeeded = 0
     let energyFactor = 1.0
+    let energyPenaltyRatio = 0
 
     if (tokenOpts != null && receiverAddress != null) {
-      const { contractAddress, data } = tokenOpts
+      const { contractAddress } = tokenOpts
 
-      if (
-        this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ==
-        null
-      ) {
-        // If we don't have this address/contract address combo in the cache, go query it
-        const body = {
+      const cacheKey = `${receiverAddress}:${contractAddress}`
+
+      let adjustedEnergy = DEFAULT_ENERGY_NO_BALANCE
+      if (this.energyEstimateCache[cacheKey] == null) {
+        const dryRunBody = {
           owner_address: base58ToHexAddress(this.walletLocalData.publicKey),
           contract_address: base58ToHexAddress(contractAddress),
           function_selector: 'transfer(address,uint256)',
-          parameter: data.slice(8) // Remove function id bytes
+          parameter: encodeParams(
+            ['address', 'uint256'],
+            [base58ToHexAddress(receiverAddress), '1']
+          ).slice(2)
         }
 
         try {
           const res = await this.multicastServers(
             'trx_estimateEnergy',
             '/wallet/triggerconstantcontract',
-            body
+            dryRunBody
           )
           const json = asEstimateEnergy(res)
           const status = json.transaction.ret[0]?.ret
 
-          // In practice, ret is an empty object if successful. Other methods return SUCCESS in this field so we're looking for either option.
+          // In practice, ret is an empty object if successful. Other methods
+          // return SUCCESS in this field so we're looking for either option.
           if (status != null && status !== 'SUCCESS') {
             throw new Error('calcTxFee Failed to estimate fee')
           }
 
-          this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] =
-            json.energy_used + json.energy_penalty
+          const energyUsed = json.energy_used
+
+          // Energy penalty is nonzero if the recipient has initialized a
+          // storage slot for this contract
+          const recipientInStorage = (json.energy_penalty ?? 0) === 0
+
+          if (recipientInStorage) {
+            adjustedEnergy = energyUsed
+
+            // Update the cache only if the recipient has initialized a storage
+            // slot for this contract, so we skip this check on future
+            // estimations
+            this.energyEstimateCache[cacheKey] = adjustedEnergy
+          } else {
+            // Apply a heuristic for first time recipients.
+            // https://www.reddit.com/r/Tronix/comments/rlhv90/tron_transaction_fee_is_different_than_predicted/
+            adjustedEnergy = energyUsed * 2.2
+          }
+
+          this.log(
+            `Energy estimate (${
+              recipientInStorage ? 'known' : 'new'
+            }): ${adjustedEnergy} (raw used: ${energyUsed}, penalty: ${
+              json.energy_penalty
+            })`
+          )
         } catch (e) {
-          this.log.warn('trx_estimateEnergy error. Using a high default.', e)
+          this.log.warn('trx_estimateEnergy error. Using a default.', e)
         }
+      } else {
+        adjustedEnergy = this.energyEstimateCache[cacheKey]
+        this.log(
+          `Using cached energy estimate for ${cacheKey}: ${this.energyEstimateCache[cacheKey]}`
+        )
       }
 
       // Get dynamic factor for the contract if available
-      energyFactor = await this.getDynamicEnergyFactor(contractAddress)
-
+      const energyFactorInfo = await this.getDynamicEnergyFactor(
+        contractAddress
+      )
+      energyFactor = energyFactorInfo.factor
+      energyPenaltyRatio = energyFactorInfo.energyPenaltyRatio
       energyNeeded = Math.max(
-        Math.floor(
-          (this.energyEstimateCache[`${receiverAddress}:${contractAddress}`] ??
-            100000) *
-            energyFactor -
-            this.accountResources.ENERGY
-        ),
+        Math.ceil(adjustedEnergy - this.accountResources.ENERGY),
         0
       )
     }
 
-    this.log('Account energy: ', this.accountResources.ENERGY)
-    this.log('Energy factor: ', energyFactor)
-    this.log('Energy needed: ', energyNeeded)
+    // #endregion
 
-    /// ////////////
-    // Bandwidth //
-    /// ////////////
+    // #region ========== Bandwidth ==========
 
-    // Bandwidth is dependent on size of final transaction unless a TRX transaction creates a new account and then it's 100
+    // Bandwidth is dependent on size of final transaction unless a TRX
+    // transaction creates a new account and then it's 100
 
     let bandwidthNeeded =
       unsignedTxHex.length / 2 + // hex2bytes
@@ -1086,38 +1126,25 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       bandwidthNeeded = 0
     }
 
-    this.log('Account bandwidth: ', this.accountResources.BANDWIDTH)
-    this.log('Bandwidth needed: ', bandwidthNeeded)
+    // #endregion
 
-    /// /////////////
-    // New Account //
-    /// /////////////
+    // #region ========== Create new account ==========
 
     let createNewAccountFee = 0
-
     if (
       tokenOpts == null &&
       receiverAddress != null &&
       !this.accountExistsCache[receiverAddress]
     ) {
-      // Fee is the variable create account fee plus 1 TRX
       createNewAccountFee =
         this.networkFees.getCreateAccountFee + parseInt(denom.multiplier)
     }
 
-    this.log('Create account fee: ', createNewAccountFee)
+    // #endregion
 
-    /// /////////////
-    // Note /////////
-    /// /////////////
+    // #region ========== Transaction note ==========
 
-    // Transaction notes always burn 1 TRX if it exists. In addition, it also contributes to the bandwidth cost but is already accounted for in unsignedTxHex
     const transactionNoteFee = note != null ? this.networkFees.getMemoFee : 0
-
-    this.log('Transaction note fee: ', transactionNoteFee)
-
-    // The fee isn't a transaction parameter so these calculations are to show the user ahead of time
-    // what the fee will be. Using a fallback value doesn't affect the actual transaction sent out.
 
     const totalSUN =
       energyNeeded * this.networkFees.getEnergyFee +
@@ -1125,7 +1152,18 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       createNewAccountFee +
       transactionNoteFee
 
+    // #endregion
+
+    this.log('Account energy: ', this.accountResources.ENERGY)
+    this.log('Energy factor: ', energyFactor)
+    this.log('Energy penalty ratio: ', energyPenaltyRatio)
+    this.log('Energy needed: ', energyNeeded)
+    this.log('Account bandwidth: ', this.accountResources.BANDWIDTH)
+    this.log('Bandwidth needed: ', bandwidthNeeded)
+    this.log('Create account fee: ', createNewAccountFee)
+    this.log('Transaction note fee: ', transactionNoteFee)
     this.log('Total fee in SUN: ', totalSUN)
+    this.log('Total fee in TRX: ', div(totalSUN, denom.multiplier))
 
     return totalSUN.toString()
   }
