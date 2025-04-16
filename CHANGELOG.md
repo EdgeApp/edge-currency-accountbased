@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Use XRPL as the network name.
+
 ## 4.44.0 (2025-04-02)
 
 - added: (ZKSync) Add token detection contract
