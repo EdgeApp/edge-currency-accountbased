@@ -240,9 +240,7 @@ export class EthereumNetwork {
       this.qualifyNetworkAdapters(method).map(
         adapter => async () => await adapter[method](...args)
       )
-    ).catch(e => {
-      return {}
-    })
+    )
   }
 
   /*
