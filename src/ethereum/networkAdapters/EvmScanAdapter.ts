@@ -36,7 +36,7 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapter } from './types'
+import { GetTxsParams, NetworkAdapter, RateLimitError } from './types'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
@@ -293,6 +293,13 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
     const data = await response.json()
     const cleanData = asEvmScanResponse(asUnknown)(data)
+    if (
+      cleanData.status === '0' &&
+      typeof cleanData.result === 'string' &&
+      cleanData.result.match(/Max calls|rate limit/) != null
+    ) {
+      throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
+    }
     return cleanData
   }
 
