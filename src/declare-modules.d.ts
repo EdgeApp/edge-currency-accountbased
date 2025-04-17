@@ -48,6 +48,7 @@ declare module 'react-native' {
         sourceUri: string
       }
     }
+    ZanoModule: NativeZanoModule
   }
 }
 

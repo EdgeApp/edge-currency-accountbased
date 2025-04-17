@@ -10,6 +10,8 @@ import {
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import type { NativeZanoModule } from 'react-native-zano'
+import { CppBridge } from 'react-native-zano/lib/src/CppBridge'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
@@ -17,15 +19,21 @@ import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { ZanoInfoPayload, ZanoNetworkInfo } from './zanoTypes'
 
 export class ZanoTools implements EdgeCurrencyTools {
+  zano: CppBridge
   io: EdgeIo
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
 
   constructor(env: PluginEnvironment<ZanoNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io } = env
+    const { builtinTokens, currencyInfo, io, nativeIo } = env
     this.io = io
     this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
+
+    // Grab the raw C++ API and wrap it in argument parsing:
+    const cppModule = nativeIo.zano as NativeZanoModule
+    if (cppModule == null) throw new Error('Need zano native IO')
+    this.zano = new CppBridge(cppModule)
   }
 
   async getDisplayPrivateKey(
@@ -50,6 +58,11 @@ export class ZanoTools implements EdgeCurrencyTools {
     throw new Error('unimplemented')
   }
 
+  async isValidAddress(address: string): Promise<boolean> {
+    const info = await this.zano.getAddressInfo(address)
+    return info.valid
+  }
+
   async parseUri(
     uri: string,
     currencyCode?: string,
@@ -67,6 +80,15 @@ export class ZanoTools implements EdgeCurrencyTools {
       customTokens
     })
 
+    let address = ''
+
+    if (edgeParsedUri.publicAddress != null) {
+      address = edgeParsedUri.publicAddress
+    }
+
+    const isValid = await this.isValidAddress(address)
+    if (!isValid) throw new Error('InvalidPublicAddressError')
+
     edgeParsedUri.uniqueIdentifier = parsedUri.query.memo
     return edgeParsedUri
   }
@@ -76,7 +98,10 @@ export class ZanoTools implements EdgeCurrencyTools {
     customTokens: EdgeMetaToken[] = []
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
-    const { nativeAmount, currencyCode } = obj
+    const { nativeAmount, currencyCode, publicAddress } = obj
+
+    const isValid = await this.isValidAddress(publicAddress)
+    if (!isValid) throw new Error('InvalidPublicAddressError')
 
     let amount
     if (typeof nativeAmount === 'string') {

@@ -17,7 +17,8 @@ const fakePluginOptions: EdgeCorePluginOptions = {
     'edge-currency-accountbased': {
       piratechain: {},
       zcash: {}
-    }
+    },
+    zano: {}
   },
   pluginDisklet: fakeIo.disklet
 }
