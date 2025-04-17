@@ -51,8 +51,8 @@
     "precommit": "lint-staged && npm-run-all types test",
     "prepare": "husky install && patch-package && npm-run-all clean node types webpack",
     "start": "webpack serve",
-    "test": "nyc mocha --exit 'test/**/*.test.ts'",
-    "nettest": "nyc mocha 'test/**/*.nettest.ts'",
+    "test": "nyc mocha",
+    "nettest": "nyc mocha --config .nettest.mocharc.json",
     "types": "tsc",
     "webpack": "webpack && cp -r android/src/main/assets/edge-currency-accountbased dist",
     "verify": "npm-run-all prepare lint types test"
