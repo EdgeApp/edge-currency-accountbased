@@ -257,9 +257,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       blockHeight: startBlock,
       edgeTransactions: allTransactions
     }
+    const maxBlockHeight = allTransactions.reduce((max, tx) => {
+      return Math.max(max, tx.blockHeight)
+    }, 0)
     return {
       tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple },
-      blockHeight: startBlock,
+      blockHeight: maxBlockHeight,
       server
     }
   }
