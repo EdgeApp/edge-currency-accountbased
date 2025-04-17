@@ -685,7 +685,7 @@ export const asEvmScanTransaction = asObject({
   gas: asString,
   gasUsed: asString,
   confirmations: asOptional(asString),
-  isError: asString
+  isError: asOptional(asString)
 })
 
 export type EvmScanInternalTransaction = ReturnType<
@@ -701,7 +701,7 @@ export const asEvmScanInternalTransaction = asObject({
   from: asString,
   to: asString,
   gas: asString,
-  isError: asString,
+  isError: asOptional(asString),
   contractAddress: asOptional(asString)
 })
 
@@ -722,7 +722,7 @@ export const asEvmScanTokenTransaction = asObject({
   gasUsed: asString,
   confirmations: asString,
   contractAddress: asString,
-  isError: asString,
+  isError: asOptional(asString),
   tokenName: asString,
   tokenSymbol: asString,
   tokenDecimal: asString
