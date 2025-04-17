@@ -13,7 +13,8 @@ const builtinTokens: EdgeTokenMap = {}
 
 const networkInfo: ZanoNetworkInfo = {
   nativeAssetId:
-    'd6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a'
+    'd6329b5b1f7c0805b5c345f4957554002a2f557845f64d7645dae0e051a6498a',
+  walletRpcAddress: 'http://37.27.100.59:10500'
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
@@ -54,6 +55,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     { type: 'hex', memoName: 'paymentId', maxBytes: 32 },
     { type: 'text', memoName: 'comment', maxLength: 1000 }
   ],
+
+  unsafeSyncNetwork: true,
 
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },

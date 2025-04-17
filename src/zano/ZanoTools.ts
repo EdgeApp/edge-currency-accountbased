@@ -1,9 +1,11 @@
 import { div } from 'biggystring'
+import { asString } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeIo,
+  EdgeLog,
   EdgeMetaToken,
   EdgeParsedUri,
   EdgeTokenMap,
@@ -12,23 +14,34 @@ import {
 } from 'edge-core-js/types'
 import type { NativeZanoModule } from 'react-native-zano'
 import { CppBridge } from 'react-native-zano/lib/src/CppBridge'
+import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
-import { ZanoInfoPayload, ZanoNetworkInfo } from './zanoTypes'
+import {
+  asSafeZanoWalletInfo,
+  asZanoPrivateKeys,
+  ZanoImportPrivateKeyOpts,
+  ZanoInfoPayload,
+  ZanoNetworkInfo
+} from './zanoTypes'
 
 export class ZanoTools implements EdgeCurrencyTools {
   zano: CppBridge
   io: EdgeIo
   builtinTokens: EdgeTokenMap
   currencyInfo: EdgeCurrencyInfo
+  log: EdgeLog
+  networkInfo: ZanoNetworkInfo
 
   constructor(env: PluginEnvironment<ZanoNetworkInfo>) {
-    const { builtinTokens, currencyInfo, io, nativeIo } = env
+    const { builtinTokens, currencyInfo, io, log, nativeIo, networkInfo } = env
     this.io = io
-    this.currencyInfo = currencyInfo
     this.builtinTokens = builtinTokens
+    this.currencyInfo = currencyInfo
+    this.log = log
+    this.networkInfo = networkInfo
 
     // Grab the raw C++ API and wrap it in argument parsing:
     const cppModule = nativeIo.zano as NativeZanoModule
@@ -39,23 +52,103 @@ export class ZanoTools implements EdgeCurrencyTools {
   async getDisplayPrivateKey(
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
-    throw new Error('unimplemented')
+    const { pluginId } = this.currencyInfo
+    const keys = asZanoPrivateKeys(pluginId)(privateWalletInfo.keys)
+    const passphraseStr =
+      keys.passphrase != null ? `\n\nPassphrase:\n${keys.passphrase}` : ''
+    return `Seed Phrase:\n${keys.mnemonic}${passphraseStr}`
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
-    throw new Error('unimplemented')
+    const { keys } = asSafeZanoWalletInfo(publicWalletInfo)
+    return keys.publicKey
   }
 
-  async importPrivateKey(input: string): Promise<JsonObject> {
-    throw new Error('unimplemented')
+  /**
+   * The storagePath isn't a private piece of information and just points to files
+   * stored locally on disk. We need something that persists across restarts and
+   * we don't have access to the address before needing to declare a storage path.
+   */
+  private createPath(): string {
+    const entropy = this.io.random(32)
+    return base16.stringify(entropy)
+  }
+
+  async importPrivateKey(
+    input: string,
+    opts: ZanoImportPrivateKeyOpts = {}
+  ): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
+
+    const out = {
+      [`${pluginId}Mnemonic`]: input
+    }
+
+    const { passphrase } = opts
+    let { storagePath } = opts
+    let seedPassword = ''
+
+    if (passphrase != null) {
+      seedPassword = asString(passphrase)
+      out[`${pluginId}Passphrase`] = seedPassword
+    }
+
+    if (storagePath == null) {
+      storagePath = this.createPath()
+    }
+    out[`${pluginId}StoragePath`] = storagePath
+
+    await this.zano.init(this.networkInfo.walletRpcAddress, -1)
+    const seedPhraseInfo = await this.zano.getSeedPhraseInfo(
+      input,
+      seedPassword
+    )
+
+    if (
+      seedPhraseInfo.error_code !== 'OK' ||
+      seedPhraseInfo.response_data.address === ''
+    ) {
+      throw new Error(`Unable to validate mnemonic`)
+    }
+
+    return out
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
-    throw new Error('unimplemented')
+    if (walletType !== this.currencyInfo.walletType) {
+      throw new Error('InvalidWalletType')
+    }
+
+    const storagePath = this.createPath()
+
+    await this.zano.init(this.networkInfo.walletRpcAddress, -1)
+    const generatedWallet = await this.zano.generateSeedPhrase(
+      this.networkInfo.walletRpcAddress,
+      storagePath,
+      ''
+    )
+
+    return await this.importPrivateKey(generatedWallet.seed, { storagePath })
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
-    throw new Error('unimplemented')
+    if (walletInfo.type !== this.currencyInfo.walletType) {
+      throw new Error('InvalidWalletType')
+    }
+
+    const { pluginId } = this.currencyInfo
+    const zanoPrivateKeys = asZanoPrivateKeys(pluginId)(walletInfo.keys)
+    const { mnemonic, passphrase = '' } = zanoPrivateKeys
+
+    await this.zano.init(this.networkInfo.walletRpcAddress, -1)
+    const seedPhraseInfo = await this.zano.getSeedPhraseInfo(
+      mnemonic,
+      passphrase
+    )
+
+    return {
+      publicKey: seedPhraseInfo.response_data.address
+    }
   }
 
   async isValidAddress(address: string): Promise<boolean> {
