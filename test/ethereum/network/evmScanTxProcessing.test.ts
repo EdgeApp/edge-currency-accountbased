@@ -4,14 +4,12 @@ import { EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import {
-  asEvmScanInternalTransaction,
-  asEvmScanTransaction
-} from '../../../src/ethereum/ethereumTypes'
-import {
   builtinTokens,
   currencyInfo
 } from '../../../src/ethereum/info/ethereumInfo'
 import {
+  asEvmScanInternalTransaction,
+  asEvmScanTransaction,
   processEvmScanTransaction,
   TransactionProcessingContext
 } from '../../../src/ethereum/networkAdapters/EvmScanAdapter'

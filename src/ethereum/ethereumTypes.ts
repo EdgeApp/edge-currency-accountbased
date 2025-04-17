@@ -201,65 +201,6 @@ export interface CalcOptimismRollupFeeParams extends OptimismRollupParams {
   chainParams: ChainParams
 }
 
-export const asEvmScancanTokenTransaction = asObject({
-  blockNumber: asString,
-  timeStamp: asString,
-  hash: asOptional(asString),
-  transactionHash: asOptional(asString),
-  to: asString,
-  from: asString,
-  value: asString,
-  nonce: asString,
-  gasPrice: asString,
-  gas: asString,
-  gasUsed: asString,
-  confirmations: asString,
-  contractAddress: asString,
-  tokenName: asString,
-  tokenSymbol: asString,
-  tokenDecimal: asString
-})
-
-export type EvmScanTokenTransaction = ReturnType<
-  typeof asEvmScancanTokenTransaction
->
-
-export const asEvmScanTransaction = asObject({
-  hash: asOptional(asString),
-  transactionHash: asOptional(asString),
-  blockNumber: asString,
-  timeStamp: asString,
-  gasPrice: asString,
-  gasUsed: asString,
-  value: asString,
-  nonce: asString,
-  from: asString,
-  to: asString,
-  gas: asString,
-  isError: asString,
-  confirmations: asOptional(asString)
-})
-
-export type EvmScanTransaction = ReturnType<typeof asEvmScanTransaction>
-
-export const asEvmScanInternalTransaction = asObject({
-  hash: asOptional(asString),
-  transactionHash: asOptional(asString),
-  blockNumber: asString,
-  timeStamp: asString,
-  gasUsed: asString,
-  value: asString,
-  from: asString,
-  to: asString,
-  gas: asString,
-  isError: asString,
-  contractAddress: asOptional(asString)
-})
-
-export type EvmScanInternalTransaction = ReturnType<
-  typeof asEvmScanInternalTransaction
->
-
 export const asEvmScanGasResponseResult = asObject({
   LastBlock: asString,
   SafeGasPrice: asString,
