@@ -75,16 +75,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           blockNumberUrlSyntax = `?module=block&action=eth_block_number`
         }
 
-        const result = await this.fetchGetEtherscan(
+        const response = await this.fetchGetEtherscan(
           server,
           blockNumberUrlSyntax
         )
-        if (typeof result.result !== 'string') {
-          const msg = `Invalid return value eth_blockNumber in ${server}`
-          this.ethEngine.error(msg)
-          throw new Error(msg)
+        if (response.status === '0') {
+          this.handledUnexpectedResponse(server, 'eth_blockNumber', response)
         }
-        return { server, result }
+        return { server, result: response }
       }
     )
 
@@ -98,10 +96,10 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return await this.parallelServers(async baseUrl => {
       // RSK also uses the "eth_sendRaw" syntax
       const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
-      const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
+      const response = await this.fetchGetEtherscan(baseUrl, urlSuffix)
       return {
         result: this.broadcastResponseHandler(
-          jsonObj,
+          response,
           baseUrl,
           edgeTransaction
         ),
@@ -114,26 +112,26 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const address = this.ethEngine.walletLocalData.publicKey
 
     const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
-    const { result: jsonObj, server } = await this.serialServers(
-      async server => {
-        // if falsy URL then error thrown
-        if (!server.includes('etherscan') && !server.includes('blockscout')) {
-          throw new Error(
-            `Unsupported command eth_getTransactionCount in ${server}`
-          )
-        }
-        const result = await this.fetchGetEtherscan(server, url)
-        if (typeof result.result !== 'string') {
-          const msg = `Invalid return value eth_getTransactionCount in ${server}`
-          this.ethEngine.error(msg)
-          throw new Error(msg)
-        }
-        return { server, result }
+    const response = await this.serialServers(async server => {
+      // if falsy URL then error thrown
+      if (!server.includes('etherscan') && !server.includes('blockscout')) {
+        throw new Error(
+          `Unsupported command eth_getTransactionCount in ${server}`
+        )
       }
-    )
+      const response = await this.fetchGetEtherscan(server, url)
+      if (response.status === '0') {
+        this.handledUnexpectedResponse(
+          server,
+          'eth_getTransactionCount',
+          response
+        )
+      }
+      return { server, result: response }
+    })
 
-    const clean = asEtherscanGetAccountNonce(jsonObj)
-    return { newNonce: clean.result, server }
+    const clean = asEtherscanGetAccountNonce(response.result)
+    return { newNonce: clean.result, server: response.server }
   }
 
   fetchTokenBalance = async (
@@ -148,14 +146,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
         response = await this.serialServers(async server => {
-          const result = await this.fetchGetEtherscan(server, url)
-          if (typeof result.result !== 'string' || result.result === '') {
-            const msg = `Invalid return value eth_getBalance in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
+          const response = await this.fetchGetEtherscan(server, url)
+          if (response.status === '0') {
+            this.handledUnexpectedResponse(server, 'eth_getBalance', response)
           }
-          asIntegerString(result.result)
-          return { server, result }
+          asIntegerString(response.result)
+          return { server, result: response }
         })
 
         jsonObj = response.result
@@ -170,13 +166,15 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
           const response = await this.serialServers(async server => {
-            const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'string' || result.result === '') {
-              const msg = `Invalid return value getTokenBalance in ${server}`
-              this.ethEngine.error(msg)
-              throw new Error(msg)
+            const response = await this.fetchGetEtherscan(server, url)
+            if (response.status === '0') {
+              this.handledUnexpectedResponse(
+                server,
+                'getTokenBalance',
+                response
+              )
             }
-            return { server, result }
+            return { server, result: response }
           })
 
           jsonObj = response.result
@@ -338,11 +336,15 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
             { response: { result: [] }, server: undefined }
           : await this.serialServers(async server => {
               const response = await this.fetchGetEtherscan(server, url)
-              if (response.status === '0') {
-                const msg = `Invalid return value getTransactions in ${server}`
-                if (response.result !== 'Max rate limit reached')
-                  this.ethEngine.error(msg)
-                throw new Error(msg)
+              if (
+                response.status === '0' &&
+                response.message !== 'No transactions found'
+              ) {
+                this.handledUnexpectedResponse(
+                  server,
+                  'getTransactions',
+                  response
+                )
               }
               return { server, response }
             })
@@ -403,15 +405,35 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       let json = asMaybe(asGetTransactionReceipt)(rpcResponse.result.result)
       if (json == null) {
         const path = `?module=proxy&action=eth_getTransactionReceipt&txhash=${txid}`
-        const evmScanResponse = await this.serialServers(
-          async server => await this.fetchGetEtherscan(server, path)
-        )
-        json = asGetTransactionReceipt(evmScanResponse.result)
+        const response = await this.serialServers(async server => {
+          const response = await this.fetchGetEtherscan(server, path)
+          if (response.status === '0') {
+            this.handledUnexpectedResponse(
+              server,
+              'eth_getTransactionReceipt',
+              response
+            )
+          }
+          return response
+        })
+        json = asGetTransactionReceipt(response.result)
       }
       l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
     }
 
     return l1RollupFee
+  }
+
+  private handledUnexpectedResponse(
+    server: string,
+    action: string,
+    response: EvmScanErrorResponse
+  ): never {
+    const message = `Unexpected response from ${server} for action '${action}': ${
+      response.status
+    } ${response.message} (results: ${typeof response.result})`
+    this.ethEngine.error(message)
+    throw new Error(message)
   }
 }
 
