@@ -1,4 +1,11 @@
-import { asCodec, asObject, asOptional, asString, Cleaner } from 'cleaners'
+import {
+  asCodec,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  Cleaner
+} from 'cleaners'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -9,6 +16,11 @@ export interface ZanoNetworkInfo {
 
 export type SafeZanoWalletInfo = ReturnType<typeof asSafeZanoWalletInfo>
 export const asSafeZanoWalletInfo = asSafeCommonWalletInfo
+
+export const asZanoWalletOtherData = asObject({
+  transactionQueryOffset: asOptional(asNumber, 0)
+})
+export type ZanoWalletOtherData = ReturnType<typeof asZanoWalletOtherData>
 
 export interface ZanoImportPrivateKeyOpts {
   passphrase?: string

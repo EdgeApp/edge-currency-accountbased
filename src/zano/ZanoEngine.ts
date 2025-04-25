@@ -1,12 +1,18 @@
+import { add, gt, lt, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
   EdgeEnginePrivateKeyOptions,
+  EdgeMemo,
   EdgeSpendInfo,
+  EdgeTokenId,
   EdgeTransaction,
+  EdgeTxAmount,
   EdgeWalletInfo,
   JsonObject
 } from 'edge-core-js/types'
+import type { RecentTransaction } from 'react-native-zano'
+import { CppBridge } from 'react-native-zano'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
@@ -15,8 +21,10 @@ import { ZanoTools } from './ZanoTools'
 import {
   asSafeZanoWalletInfo,
   asZanoPrivateKeys,
+  asZanoWalletOtherData,
   SafeZanoWalletInfo,
-  ZanoNetworkInfo
+  ZanoNetworkInfo,
+  ZanoWalletOtherData
 } from './zanoTypes'
 
 const SYNC_PROGRESS_WEIGHT = 0.6
@@ -25,8 +33,11 @@ const TRANSACTION_PROGRESS_WEIGHT = 0.3
 
 export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   networkInfo: ZanoNetworkInfo
+  otherData!: ZanoWalletOtherData
+
   zanoWalletId?: number
   calculateSyncProgress: (values: { [key: string]: number }) => number
+  unlockedBalanceMap: Map<EdgeTokenId, string>
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -43,14 +54,180 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       transaction: TRANSACTION_PROGRESS_WEIGHT,
       sync: SYNC_PROGRESS_WEIGHT
     })
+    this.unlockedBalanceMap = new Map()
+  }
+
+  setOtherData(raw: any): void {
+    this.otherData = asZanoWalletOtherData(raw)
   }
 
   async queryBalance(): Promise<void> {
-    throw new Error('unimplemented')
+    if (this.zanoWalletId == null) return
+
+    const balancesResponse = await this.tools.zano.getBalances(
+      this.zanoWalletId
+    )
+
+    const balances: {
+      [key: string]: Awaited<
+        ReturnType<CppBridge['getBalances']>
+      >['balances'][0]
+    } = {}
+    for (const balanceObj of balancesResponse.balances) {
+      balances[balanceObj.asset_info.asset_id] = balanceObj
+    }
+
+    const mainnetBalObj = balances[this.networkInfo.nativeAssetId]
+    this.updateBalance(
+      this.currencyInfo.currencyCode,
+      mainnetBalObj?.total.toString() ?? '0'
+    )
+    this.unlockedBalanceMap.set(null, mainnetBalObj?.unlocked.toString() ?? '0')
+
+    const detectedTokenIds: string[] = []
+    for (const tokenId of Object.keys(this.allTokensMap)) {
+      const tokenBalObj = balances[tokenId]
+      if (tokenBalObj == null) continue
+
+      const currencyCode = this.allTokensMap[tokenId].currencyCode
+      this.updateBalance(currencyCode, tokenBalObj.total.toString())
+      this.unlockedBalanceMap.set(
+        tokenId,
+        tokenBalObj?.unlocked.toString() ?? '0'
+      )
+
+      if (gt(tokenBalObj.total.toString(), '0')) {
+        detectedTokenIds.push(tokenId)
+      }
+    }
+
+    if (detectedTokenIds.length > 0) {
+      this.currencyEngineCallbacks.onNewTokens(detectedTokenIds)
+    }
+
+    this.updateProgress({ balance: 1 })
   }
 
   async queryTransactions(): Promise<void> {
-    throw new Error('unimplemented')
+    if (this.zanoWalletId == null) return
+
+    while (true) {
+      const offset = this.otherData.transactionQueryOffset
+      const transactions = await this.tools.zano.getTransactions(
+        this.zanoWalletId,
+        offset
+      )
+
+      if (offset !== transactions.last_item_index) {
+        this.otherData.transactionQueryOffset = transactions.last_item_index
+        this.walletLocalDataDirty = true
+      }
+
+      const transfers = transactions.transfers ?? []
+      transfers.forEach(this.processTransaction)
+
+      if (
+        transactions.total_transfers === 0 ||
+        transactions.total_transfers - transactions.last_item_index === 1
+      ) {
+        break
+      }
+      this.updateProgress({
+        transaction: transactions.total_transfers / transactions.last_item_index
+      })
+    }
+    if (this.transactionEvents.length > 0) {
+      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
+      this.transactionEvents = []
+    }
+    this.updateProgress({ transaction: 1 })
+  }
+
+  processTransaction = (tx: RecentTransaction): void => {
+    const { comment, fee, payment_id: paymentId } = tx
+
+    const memos: EdgeMemo[] = []
+    if (comment != null) {
+      memos.push({
+        memoName: 'Comment',
+        type: 'text',
+        value: comment
+      })
+    }
+    if (paymentId != null) {
+      memos.push({
+        memoName: 'Payment ID',
+        type: 'hex',
+        value: paymentId
+      })
+    }
+
+    const nativeAmountMap = new Map<string, string>()
+    for (const entry of tx.employed_entries.receive ?? []) {
+      const { asset_id: assetId, amount } = entry
+      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+      nativeAmountMap.set(assetId, add(currentAmount, amount.toFixed()))
+    }
+    for (const entry of tx.employed_entries.spent ?? []) {
+      // spent amounts include the fee
+      const { asset_id: assetId, amount } = entry
+      const currentAmount = nativeAmountMap.get(assetId) ?? '0'
+      nativeAmountMap.set(assetId, sub(currentAmount, amount.toFixed()))
+    }
+
+    for (const [assetId, nativeAmount] of nativeAmountMap.entries()) {
+      const ourReceiveAddresses: string[] = []
+
+      // Zano asset_id is analogous to Edge tokenId
+      const tokenId: EdgeTokenId =
+        assetId === this.networkInfo.nativeAssetId ? null : assetId
+      let currencyCode = this.currencyInfo.currencyCode
+      if (tokenId != null) {
+        const token = this.allTokensMap[assetId]
+        if (token == null) {
+          continue
+        }
+        currencyCode = token.currencyCode
+      }
+
+      const isSend = lt(nativeAmount, '0')
+      const isMainnet = tokenId == null
+      let networkFee = '0'
+      let parentNetworkFee: string | undefined
+      const networkFees: EdgeTxAmount[] = []
+
+      if (isSend) {
+        if (isMainnet) {
+          networkFee = fee.toFixed()
+          networkFees.push({ tokenId: null, nativeAmount: networkFee })
+        } else {
+          parentNetworkFee = fee.toFixed()
+          networkFees.push({ tokenId: null, nativeAmount: parentNetworkFee })
+        }
+      } else {
+        ourReceiveAddresses.push(this.walletInfo.keys.publicKey)
+      }
+
+      const edgeTransaction: EdgeTransaction = {
+        blockHeight: tx.height,
+        confirmations: this.walletLocalData.blockHeight - tx.height,
+        currencyCode,
+        date: tx.timestamp,
+        isSend,
+        memos,
+        nativeAmount,
+        networkFee,
+        networkFees,
+        ourReceiveAddresses,
+        parentNetworkFee,
+        signedTx: '',
+        tokenId,
+        txid: tx.tx_hash,
+        walletId: this.walletId
+      }
+
+      this.addTransaction(currencyCode, edgeTransaction)
+    }
   }
 
   async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
@@ -132,6 +309,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       await this.tools.zano.removeWallet(this.zanoWalletId)
     }
     this.zanoWalletId = undefined
+    this.unlockedBalanceMap.clear()
     await this.killEngine()
     this.updateProgress({ sync: 0, balance: 0, transaction: 0 })
     await this.clearBlockchainCache()
