@@ -1,6 +1,7 @@
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
+  EdgeEnginePrivateKeyOptions,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -9,19 +10,23 @@ import {
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { getRandomDelayMs } from '../common/network'
+import { createWeightedAverageCalculator } from '../common/utils'
 import { ZanoTools } from './ZanoTools'
 import {
   asSafeZanoWalletInfo,
+  asZanoPrivateKeys,
   SafeZanoWalletInfo,
   ZanoNetworkInfo
 } from './zanoTypes'
 
-const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
-const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
+const SYNC_PROGRESS_WEIGHT = 0.6
+const BALANCE_PROGRESS_WEIGHT = 0.1
+const TRANSACTION_PROGRESS_WEIGHT = 0.3
 
 export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   networkInfo: ZanoNetworkInfo
+  zanoWalletId?: number
+  calculateSyncProgress: (values: { [key: string]: number }) => number
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -31,6 +36,13 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   ) {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
+
+    this.zanoWalletId = undefined
+    this.calculateSyncProgress = createWeightedAverageCalculator({
+      balance: BALANCE_PROGRESS_WEIGHT,
+      transaction: TRANSACTION_PROGRESS_WEIGHT,
+      sync: SYNC_PROGRESS_WEIGHT
+    })
   }
 
   async queryBalance(): Promise<void> {
@@ -41,20 +53,90 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     throw new Error('unimplemented')
   }
 
+  async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
+    if (!this.engineOn) return 1000
+
+    if (this.zanoWalletId == null) {
+      await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
+
+      const zanoPrivateKeys = asZanoPrivateKeys(this.currencyInfo.pluginId)(
+        opts?.privateKeys
+      )
+      const response = await this.tools.zano.startWallet(
+        zanoPrivateKeys.mnemonic,
+        zanoPrivateKeys.passphrase ?? '',
+        zanoPrivateKeys.storagePath
+      )
+      this.zanoWalletId = response.wallet_id
+    }
+
+    const status = await this.tools.zano.walletStatus(this.zanoWalletId)
+    const blockheight = Math.max(
+      status.current_wallet_height,
+      status.current_daemon_height
+    )
+    if (blockheight > this.walletLocalData.blockHeight) {
+      this.walletLocalData.blockHeight = blockheight
+      this.walletLocalDataDirty = true
+    }
+
+    if (status.progress === 100 || status.wallet_state === 2) {
+      this.updateProgress({ sync: 1 })
+      await this.tools.zano.whitelistAssets(
+        this.zanoWalletId,
+        Object.keys(this.allTokensMap)
+      )
+      await this.queryBalance()
+      await this.queryTransactions()
+      return 20000
+    } else {
+      this.updateProgress({ sync: status.progress / 100 })
+      return 1000
+    }
+  }
+
+  private updateProgress(values: { [key: string]: number }): void {
+    const previousProgress = this.calculateSyncProgress({})
+    const newProgress = this.calculateSyncProgress(values)
+
+    // Update every 10% change
+    const flooredPrevProgress = Math.floor(previousProgress * 10)
+    const flooredNewProgress = Math.floor(newProgress * 10)
+
+    if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
+      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = newProgress
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        newProgress
+      for (const tokenId of this.enabledTokenIds) {
+        const token = this.allTokensMap[tokenId]
+        this.tokenCheckBalanceStatus[token.currencyCode] = newProgress
+        this.tokenCheckTransactionsStatus[token.currencyCode] = newProgress
+      }
+      this.updateOnAddressesChecked()
+    }
+  }
+
   // // ****************************************************************************
   // // Public methods
   // // ****************************************************************************
 
-  async startEngine(): Promise<void> {
-    this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
-    this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
-    await super.startEngine()
-  }
-
   async resyncBlockchain(): Promise<void> {
+    if (this.zanoWalletId != null) {
+      await this.tools.zano.removeWallet(this.zanoWalletId)
+    }
+    this.zanoWalletId = undefined
     await this.killEngine()
+    this.updateProgress({ sync: 0, balance: 0, transaction: 0 })
     await this.clearBlockchainCache()
     await this.startEngine()
+  }
+
+  async killEngine(): Promise<void> {
+    if (this.zanoWalletId != null) {
+      await this.tools.zano.stopWallet(this.zanoWalletId)
+    }
+    this.zanoWalletId = undefined
+    await super.killEngine()
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {

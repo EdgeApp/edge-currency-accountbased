@@ -390,3 +390,36 @@ export function cache<T>(
     return cachedValue
   }
 }
+
+/**
+ * Creates a function that calculates a weighted average of values
+ * based on the provided weights.
+ *
+ * @param weights - An object where keys are the values to average,
+ *                 and values are the corresponding weights.
+ */
+export const createWeightedAverageCalculator = (weights: {
+  [key: string]: number
+}): ((values: { [key: string]: number }) => number) => {
+  const weightMap = new Map<string, number>()
+  for (const [key, weight] of Object.entries(weights)) {
+    weightMap.set(key, weight)
+  }
+
+  const valueMap = new Map<string, number>()
+  for (const [key] of weightMap.entries()) {
+    valueMap.set(key, 0)
+  }
+
+  return (values: { [key: string]: number }) => {
+    for (const [key, value] of Object.entries(values)) {
+      valueMap.set(key, value)
+    }
+
+    let weightedSum = 0
+    for (const [key, weight] of weightMap.entries()) {
+      weightedSum += weight * (valueMap.get(key) ?? 0)
+    }
+    return weightedSum
+  }
+}
