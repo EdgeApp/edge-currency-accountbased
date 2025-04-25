@@ -9,7 +9,22 @@ import {
   ZanoNetworkInfo
 } from './zanoTypes'
 
-const builtinTokens: EdgeTokenMap = {}
+const builtinTokens: EdgeTokenMap = {
+  f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71: {
+    currencyCode: 'TALLY',
+    displayName: 'Tally Note',
+    denominations: [
+      {
+        name: 'TALLY',
+        multiplier: '1000000'
+      }
+    ],
+    networkLocation: {
+      contractAddress:
+        'f5413f195b3347a3822ea6100e4db70f10b34ea0b22822af0ba15258d139fb71' // Asset ID
+    }
+  }
+}
 
 const networkInfo: ZanoNetworkInfo = {
   nativeAssetId:

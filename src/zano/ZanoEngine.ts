@@ -53,6 +53,13 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     throw new Error('unimplemented')
   }
 
+  async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
+    if (this.zanoWalletId != null) {
+      await this.tools.zano.whitelistAssets(this.zanoWalletId, tokenIds)
+    }
+    await super.changeEnabledTokenIds(tokenIds)
+  }
+
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
