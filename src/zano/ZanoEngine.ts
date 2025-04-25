@@ -1,4 +1,4 @@
-import { add, gt, lt, sub } from 'biggystring'
+import { abs, add, eq, gt, lt, mul, sub } from 'biggystring'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -9,18 +9,21 @@ import {
   EdgeTransaction,
   EdgeTxAmount,
   EdgeWalletInfo,
-  JsonObject
+  InsufficientFundsError,
+  JsonObject,
+  NoAmountSpecifiedError
 } from 'edge-core-js/types'
-import type { RecentTransaction } from 'react-native-zano'
+import type { RecentTransaction, TransferParams } from 'react-native-zano'
 import { CppBridge } from 'react-native-zano'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
-import { createWeightedAverageCalculator } from '../common/utils'
+import { cleanTxLogs, createWeightedAverageCalculator } from '../common/utils'
 import { ZanoTools } from './ZanoTools'
 import {
   asSafeZanoWalletInfo,
   asZanoPrivateKeys,
+  asZanoTransferParams,
   asZanoWalletOtherData,
   SafeZanoWalletInfo,
   ZanoNetworkInfo,
@@ -324,21 +327,139 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     await super.killEngine()
   }
 
+  async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
+    const { tokenId } = edgeSpendInfo
+
+    const feeNumber = await this.tools.zano.getCurrentTxFee(2)
+    const networkFee = feeNumber.toFixed()
+    const zanoAvailableBalance = this.unlockedBalanceMap.get(null) ?? '0'
+
+    if (lt(zanoAvailableBalance, networkFee)) {
+      throw new InsufficientFundsError({ tokenId: null })
+    }
+
+    if (tokenId == null) {
+      return sub(zanoAvailableBalance, networkFee)
+    } else {
+      const assetAvailableBalance = this.unlockedBalanceMap.get(tokenId) ?? '0'
+      if (eq(assetAvailableBalance, '0')) {
+        throw new InsufficientFundsError({ tokenId })
+      }
+
+      return assetAvailableBalance
+    }
+  }
+
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
-    throw new Error('unimplemented')
+    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
+    const { memos = [], tokenId } = edgeSpendInfo
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const { publicAddress, nativeAmount } = spendTarget
+
+    if (publicAddress == null)
+      throw new Error('makeSpend Missing publicAddress')
+    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+
+    const availableBalance = this.unlockedBalanceMap.get(tokenId) ?? '0'
+    const availableZanoBalance = this.unlockedBalanceMap.get(null) ?? '0'
+
+    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
+
+    const feeNumber = await this.tools.zano.getCurrentTxFee(2)
+
+    let networkFee = feeNumber.toFixed()
+    let parentNetworkFee: string | undefined
+    let totalTxAmount = nativeAmount
+    if (tokenId == null) {
+      totalTxAmount = add(nativeAmount, networkFee)
+      if (gt(totalTxAmount, availableBalance)) {
+        throw new InsufficientFundsError({ tokenId })
+      }
+    } else {
+      parentNetworkFee = networkFee
+      networkFee = '0'
+      totalTxAmount = nativeAmount
+
+      if (gt(nativeAmount, availableBalance)) {
+        throw new InsufficientFundsError({ tokenId })
+      }
+      if (gt(parentNetworkFee, availableZanoBalance)) {
+        throw new InsufficientFundsError({ tokenId: null })
+      }
+    }
+
+    const comment = memos.find(memo => memo.memoName === 'comment')?.value
+    const paymentId = memos.find(memo => memo.memoName === 'paymentId')?.value
+
+    const assetId = tokenId != null ? tokenId : this.networkInfo.nativeAssetId
+
+    const otherParams: TransferParams = {
+      assetId,
+      fee: feeNumber,
+      nativeAmount: parseInt(abs(nativeAmount)),
+      recipient: publicAddress,
+
+      comment,
+      paymentId
+    }
+
+    // **********************************
+    // Create the unsigned EdgeTransaction
+
+    const txNativeAmount = mul(totalTxAmount, '-1')
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: 0,
+      currencyCode,
+      date: 0,
+      isSend: true,
+      memos,
+      nativeAmount: txNativeAmount,
+      networkFee,
+      networkFees: [
+        { tokenId: null, nativeAmount: parentNetworkFee ?? networkFee }
+      ],
+      parentNetworkFee,
+      otherParams,
+      ourReceiveAddresses: [],
+      signedTx: '',
+      tokenId,
+      txid: '',
+      walletId: this.walletId
+    }
+
+    return edgeTransaction
   }
 
   async signTx(
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
-    throw new Error('unimplemented')
+    // Transaction is signed and broadcast at the same time
+    return edgeTransaction
   }
 
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    throw new Error('unimplemented')
+    if (this.zanoWalletId == null) throw new Error('zanoWalletId is null')
+    const otherParams: TransferParams = asZanoTransferParams(
+      edgeTransaction.otherParams
+    )
+
+    try {
+      const txid = await this.tools.zano.transfer(
+        this.zanoWalletId,
+        otherParams
+      )
+      edgeTransaction.txid = txid
+      edgeTransaction.date = Date.now() / 1000
+      this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
+    } catch (e: any) {
+      this.warn('FAILURE broadcastTx failed: ', e)
+      throw e
+    }
+    return edgeTransaction
   }
 }
 

@@ -71,3 +71,13 @@ export const asZanoPrivateKeys = (
 
 export const asZanoInfoPayload = asObject({})
 export type ZanoInfoPayload = ReturnType<typeof asZanoInfoPayload>
+
+export const asZanoTransferParams = asObject({
+  assetId: asString,
+  fee: asNumber,
+  nativeAmount: asNumber,
+  recipient: asString,
+
+  comment: asOptional(asString),
+  paymentId: asOptional(asString)
+})
