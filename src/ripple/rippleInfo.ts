@@ -17,7 +17,7 @@ const networkInfo: XrpNetworkInfo = {
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'XRP',
   assetDisplayName: 'XRP',
-  chainDisplayName: 'XRP',
+  chainDisplayName: 'XRPL',
   pluginId: 'ripple',
   walletType: 'wallet:ripple',
 
@@ -42,7 +42,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   multipleMemos: true,
 
   // Deprecated:
-  displayName: 'XRP'
+  displayName: 'XRPL' // Matches chainDisplayName
 }
 
 export const builtinTokens: EdgeTokenMap = {
