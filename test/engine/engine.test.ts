@@ -70,6 +70,7 @@ for (const fixture of fixtures) {
       emitter.emit('onSeenTxCheckpoint', checkpoint)
     },
     onStakingStatusChanged() {},
+    onSubscribeAddresses() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)
@@ -264,6 +265,7 @@ const callbacks: EdgeCurrencyEngineCallbacks = {
     emitter.emit('onSeenTxCheckpoint', checkpoint)
   },
   onStakingStatusChanged() {},
+  onSubscribeAddresses() {},
   onNewTokens() {},
   onTokenBalanceChanged(tokenId, balance) {
     emitter.emit('onTokenBalanceChanged', tokenId, balance)

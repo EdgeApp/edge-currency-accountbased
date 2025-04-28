@@ -55,6 +55,7 @@ describe(`Tezos engine`, function () {
       emitter.emit('onSeenTxCheckpoint', checkpoint)
     },
     onStakingStatusChanged() {},
+    onSubscribeAddresses() {},
     onNewTokens() {},
     onTokenBalanceChanged(tokenId, balance) {
       emitter.emit('onTokenBalanceChanged', tokenId, balance)
