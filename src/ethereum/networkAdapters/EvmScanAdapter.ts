@@ -1,5 +1,14 @@
 import { add, max, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import {
+  asArray,
+  asMaybe,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown,
+  asValue,
+  Cleaner
+} from 'cleaners'
 import {
   EdgeConfirmationState,
   EdgeCurrencyInfo,
@@ -21,18 +30,13 @@ import {
   asEtherscanGetBlockHeight
 } from '../ethereumSchema'
 import {
-  asEvmScancanTokenTransaction,
-  asEvmScanInternalTransaction,
-  asEvmScanTransaction,
   asGetTransactionReceipt,
   asRpcResultString,
   EthereumTxOtherParams,
-  EvmScanInternalTransaction,
-  EvmScanTransaction,
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapter } from './types'
+import { GetTxsParams, NetworkAdapter, RateLimitError } from './types'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
@@ -71,16 +75,14 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           blockNumberUrlSyntax = `?module=block&action=eth_block_number`
         }
 
-        const result = await this.fetchGetEtherscan(
+        const response = await this.fetchGetEtherscan(
           server,
           blockNumberUrlSyntax
         )
-        if (typeof result.result !== 'string') {
-          const msg = `Invalid return value eth_blockNumber in ${server}`
-          this.ethEngine.error(msg)
-          throw new Error(msg)
+        if (response.status === '0') {
+          this.handledUnexpectedResponse(server, 'eth_blockNumber', response)
         }
-        return { server, result }
+        return { server, result: response }
       }
     )
 
@@ -94,10 +96,10 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     return await this.parallelServers(async baseUrl => {
       // RSK also uses the "eth_sendRaw" syntax
       const urlSuffix = `?module=proxy&action=eth_sendRawTransaction&hex=${edgeTransaction.signedTx}`
-      const jsonObj = await this.fetchGetEtherscan(baseUrl, urlSuffix)
+      const response = await this.fetchGetEtherscan(baseUrl, urlSuffix)
       return {
         result: this.broadcastResponseHandler(
-          jsonObj,
+          response,
           baseUrl,
           edgeTransaction
         ),
@@ -110,26 +112,26 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const address = this.ethEngine.walletLocalData.publicKey
 
     const url = `?module=proxy&action=eth_getTransactionCount&address=${address}&tag=latest`
-    const { result: jsonObj, server } = await this.serialServers(
-      async server => {
-        // if falsy URL then error thrown
-        if (!server.includes('etherscan') && !server.includes('blockscout')) {
-          throw new Error(
-            `Unsupported command eth_getTransactionCount in ${server}`
-          )
-        }
-        const result = await this.fetchGetEtherscan(server, url)
-        if (typeof result.result !== 'string') {
-          const msg = `Invalid return value eth_getTransactionCount in ${server}`
-          this.ethEngine.error(msg)
-          throw new Error(msg)
-        }
-        return { server, result }
+    const response = await this.serialServers(async server => {
+      // if falsy URL then error thrown
+      if (!server.includes('etherscan') && !server.includes('blockscout')) {
+        throw new Error(
+          `Unsupported command eth_getTransactionCount in ${server}`
+        )
       }
-    )
+      const response = await this.fetchGetEtherscan(server, url)
+      if (response.status === '0') {
+        this.handledUnexpectedResponse(
+          server,
+          'eth_getTransactionCount',
+          response
+        )
+      }
+      return { server, result: response }
+    })
 
-    const clean = asEtherscanGetAccountNonce(jsonObj)
-    return { newNonce: clean.result, server }
+    const clean = asEtherscanGetAccountNonce(response.result)
+    return { newNonce: clean.result, server: response.server }
   }
 
   fetchTokenBalance = async (
@@ -144,14 +146,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       if (currencyCode === this.ethEngine.currencyInfo.currencyCode) {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
         response = await this.serialServers(async server => {
-          const result = await this.fetchGetEtherscan(server, url)
-          if (typeof result.result !== 'string' || result.result === '') {
-            const msg = `Invalid return value eth_getBalance in ${server}`
-            this.ethEngine.error(msg)
-            throw new Error(msg)
+          const response = await this.fetchGetEtherscan(server, url)
+          if (response.status === '0') {
+            this.handledUnexpectedResponse(server, 'eth_getBalance', response)
           }
-          asIntegerString(result.result)
-          return { server, result }
+          asIntegerString(response.result)
+          return { server, result: response }
         })
 
         jsonObj = response.result
@@ -166,13 +166,15 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
           const response = await this.serialServers(async server => {
-            const result = await this.fetchGetEtherscan(server, url)
-            if (typeof result.result !== 'string' || result.result === '') {
-              const msg = `Invalid return value getTokenBalance in ${server}`
-              this.ethEngine.error(msg)
-              throw new Error(msg)
+            const response = await this.fetchGetEtherscan(server, url)
+            if (response.status === '0') {
+              this.handledUnexpectedResponse(
+                server,
+                'getTokenBalance',
+                response
+              )
             }
-            return { server, result }
+            return { server, result: response }
           })
 
           jsonObj = response.result
@@ -239,7 +241,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         const resp = await this.getAllTxsEthscan(
           startBlock,
           currencyCode,
-          asEvmScancanTokenTransaction,
+          asEvmScanTokenTransaction,
           { contractAddress }
         )
         server = resp.server ?? ''
@@ -253,14 +255,21 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       blockHeight: startBlock,
       edgeTransactions: allTransactions
     }
+    const maxBlockHeight = allTransactions.reduce((max, tx) => {
+      return Math.max(max, tx.blockHeight)
+    }, 0)
     return {
       tokenTxs: { [currencyCode]: edgeTransactionsBlockHeightTuple },
+      blockHeight: maxBlockHeight,
       server
     }
   }
 
   // TODO: Clean return type
-  private async fetchGetEtherscan(server: string, cmd: string): Promise<any> {
+  private async fetchGetEtherscan(
+    server: string,
+    cmd: string
+  ): Promise<EvmScanResponse<unknown>> {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
       this.ethEngine.currencyInfo,
@@ -280,13 +289,24 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
 
     const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
-    return await response.json()
+    const data = await response.json()
+    const cleanData = asEvmScanResponse(asUnknown)(data)
+    if (
+      cleanData.status === '0' &&
+      typeof cleanData.result === 'string' &&
+      cleanData.result.match(/Max calls|rate limit/) != null
+    ) {
+      throw new RateLimitError(`fetchGetEtherscan rate limit for ${server}`)
+    }
+    return cleanData
   }
 
   private async getAllTxsEthscan(
     startBlock: number,
     currencyCode: string,
-    cleanerFunc: Function,
+    asTransaction: Cleaner<
+      EvmScanTransaction | EvmScanInternalTransaction | EvmScanTokenTransaction
+    >,
     options: GetEthscanAllTxsOptions
   ): Promise<GetEthscanAllTxsResponse> {
     const { contractAddress, searchRegularTxs = false } = options
@@ -313,26 +333,27 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         this.config.servers.length === 0
           ? // HACK: If a currency doesn't have an etherscan API compatible
             // server we need to return an empty array
-            { result: { result: [] }, server: undefined }
+            { response: { result: [] }, server: undefined }
           : await this.serialServers(async server => {
-              const result = await this.fetchGetEtherscan(server, url)
+              const response = await this.fetchGetEtherscan(server, url)
               if (
-                typeof result.result !== 'object' ||
-                typeof result.result.length !== 'number'
+                response.status === '0' &&
+                response.message !== 'No transactions found'
               ) {
-                const msg = `Invalid return value getTransactions in ${server}`
-                if (result.result !== 'Max rate limit reached')
-                  this.ethEngine.error(msg)
-                throw new Error(msg)
+                this.handledUnexpectedResponse(
+                  server,
+                  'getTransactions',
+                  response
+                )
               }
-              return { server, result }
+              return { server, response }
             })
 
       server = response.server
-      const transactions = response.result.result
+      const transactions = asArray(asUnknown)(response.response.result)
       for (let i = 0; i < transactions.length; i++) {
         try {
-          const cleanedTx = cleanerFunc(transactions[i])
+          const cleanedTx = asTransaction(transactions[i])
           const l1RollupFee = await this.getL1RollupFee(cleanedTx)
           const tx = processEvmScanTransaction(
             {
@@ -348,11 +369,11 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           allTransactions = mergeEdgeTransactions([...allTransactions, tx])
         } catch (e: any) {
           this.ethEngine.error(
-            `getAllTxsEthscan ${cleanerFunc.name}\n${safeErrorMessage(
+            `getAllTxsEthscan ${asTransaction.name}\n${safeErrorMessage(
               e
             )}\n${JSON.stringify(transactions[i])}`
           )
-          throw new Error(`getAllTxsEthscan ${cleanerFunc.name} is invalid`)
+          throw new Error(`getAllTxsEthscan ${asTransaction.name} is invalid`)
         }
       }
       if (transactions.length === 0) {
@@ -365,7 +386,10 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
   }
 
   private async getL1RollupFee(
-    tx: EvmScanTransaction | EvmScanInternalTransaction
+    tx:
+      | EvmScanTransaction
+      | EvmScanInternalTransaction
+      | EvmScanTokenTransaction
   ): Promise<string> {
     const txid = tx.hash ?? tx.transactionHash
     const isSpend =
@@ -381,15 +405,35 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       let json = asMaybe(asGetTransactionReceipt)(rpcResponse.result.result)
       if (json == null) {
         const path = `?module=proxy&action=eth_getTransactionReceipt&txhash=${txid}`
-        const evmScanResponse = await this.serialServers(
-          async server => await this.fetchGetEtherscan(server, path)
-        )
-        json = asGetTransactionReceipt(evmScanResponse.result)
+        const response = await this.serialServers(async server => {
+          const response = await this.fetchGetEtherscan(server, path)
+          if (response.status === '0') {
+            this.handledUnexpectedResponse(
+              server,
+              'eth_getTransactionReceipt',
+              response
+            )
+          }
+          return response
+        })
+        json = asGetTransactionReceipt(response.result)
       }
       l1RollupFee = add(l1RollupFee, decimalToHex(json.l1Fee))
     }
 
     return l1RollupFee
+  }
+
+  private handledUnexpectedResponse(
+    server: string,
+    action: string,
+    response: EvmScanErrorResponse
+  ): never {
+    const message = `Unexpected response from ${server} for action '${action}': ${
+      response.status
+    } ${response.message} (results: ${typeof response.result})`
+    this.ethEngine.error(message)
+    throw new Error(message)
   }
 }
 
@@ -411,7 +455,7 @@ export interface TransactionProcessingContext {
 
 export function processEvmScanTransaction(
   context: TransactionProcessingContext,
-  tx: EvmScanTransaction | EvmScanInternalTransaction,
+  tx: EvmScanTransaction | EvmScanInternalTransaction | EvmScanTokenTransaction,
   l1RollupFee: string
 ): EdgeTransaction {
   const ourReceiveAddresses: string[] = []
@@ -589,3 +633,97 @@ export function mergeEdgeTransactions(
 
   return Array.from(txidToTransaction.values())
 }
+
+interface EvmScanErrorResponse {
+  status: '0'
+  message: string
+  result: unknown
+}
+const asEvmScanErrorResponse = asObject<EvmScanErrorResponse>({
+  status: asValue('0'),
+  message: asString,
+  result: asUnknown
+})
+
+interface EvmScanSuccessResponse<T> {
+  status: '1'
+  message: string
+  result: T
+}
+const asEvmScanSuccessResponse =
+  <T>(asT: Cleaner<T>): Cleaner<EvmScanSuccessResponse<T>> =>
+  (raw: unknown) => {
+    return asObject<EvmScanSuccessResponse<T>>({
+      status: asValue('1'),
+      message: asString,
+      result: asT
+    })(raw)
+  }
+
+type EvmScanResponse<T> = EvmScanSuccessResponse<T> | EvmScanErrorResponse
+const asEvmScanResponse =
+  <T>(
+    asT: Cleaner<T>
+  ): Cleaner<EvmScanSuccessResponse<T> | EvmScanErrorResponse> =>
+  (raw: unknown) => {
+    return (
+      asMaybe(asEvmScanErrorResponse)(raw) ?? asEvmScanSuccessResponse(asT)(raw)
+    )
+  }
+
+export type EvmScanTransaction = ReturnType<typeof asEvmScanTransaction>
+export const asEvmScanTransaction = asObject({
+  blockNumber: asString,
+  timeStamp: asString,
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  to: asString,
+  from: asString,
+  value: asString,
+  nonce: asString,
+  gasPrice: asString,
+  gas: asString,
+  gasUsed: asString,
+  confirmations: asOptional(asString),
+  isError: asOptional(asString)
+})
+
+export type EvmScanInternalTransaction = ReturnType<
+  typeof asEvmScanInternalTransaction
+>
+export const asEvmScanInternalTransaction = asObject({
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  blockNumber: asString,
+  timeStamp: asString,
+  gasUsed: asString,
+  value: asString,
+  from: asString,
+  to: asString,
+  gas: asString,
+  isError: asOptional(asString),
+  contractAddress: asOptional(asString)
+})
+
+export type EvmScanTokenTransaction = ReturnType<
+  typeof asEvmScanTokenTransaction
+>
+export const asEvmScanTokenTransaction = asObject({
+  blockNumber: asString,
+  timeStamp: asString,
+  hash: asOptional(asString),
+  transactionHash: asOptional(asString),
+  to: asString,
+  from: asString,
+  value: asString,
+  nonce: asString,
+  gasPrice: asString,
+  gas: asString,
+  gasUsed: asString,
+  confirmations: asString,
+  contractAddress: asString,
+  isError: asOptional(asString),
+  tokenName: asString,
+  tokenSymbol: asString,
+  tokenDecimal: asString
+})

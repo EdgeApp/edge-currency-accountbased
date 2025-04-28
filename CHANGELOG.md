@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Implement use of edge-change-server for network syncing.
 - changed: Use XRPL as the network name.
 
 ## 4.44.0 (2025-04-02)

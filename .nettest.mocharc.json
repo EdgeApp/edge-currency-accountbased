@@ -1,0 +1,5 @@
+{
+  "exit": true,
+  "require": "sucrase/register",
+  "spec": "test/**/*.nettest.ts"
+}

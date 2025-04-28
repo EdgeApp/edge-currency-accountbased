@@ -6,7 +6,12 @@ import {
   formatAggregateError,
   promiseAny
 } from '../../common/promiseUtils'
-import { cleanTxLogs, safeErrorMessage, shuffleArray } from '../../common/utils'
+import {
+  cleanTxLogs,
+  safeErrorMessage,
+  shuffleArray,
+  snooze
+} from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
 import { AmberdataAdapterConfig } from './AmberdataAdapter'
@@ -134,7 +139,17 @@ export abstract class NetworkAdapter<
     const funcs = (this.config.servers ?? []).map(
       server => async () => await fn(server)
     )
-    return await asyncWaterfall(shuffleArray(funcs))
+    try {
+      return await asyncWaterfall(shuffleArray(funcs))
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        this.ethEngine.warn(error.message)
+        // TODO: Implement exponential backoff
+        await snooze(2000)
+        return await this.serialServers(fn)
+      }
+      throw error
+    }
   }
 
   protected async parallelServers<T>(
@@ -146,7 +161,17 @@ export abstract class NetworkAdapter<
     const promises = (this.config.servers ?? []).map(
       async server => await fn(server)
     )
-    return await formatAggregateError(promiseAny(promises), title)
+    try {
+      return await formatAggregateError(promiseAny(promises), title)
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        this.ethEngine.warn(error.message)
+        // TODO: Implement exponential backoff
+        await snooze(2000)
+        return await this.parallelServers(fn, title)
+      }
+      throw error
+    }
   }
 
   // TODO: Convert to error types
@@ -165,5 +190,12 @@ export abstract class NetworkAdapter<
           `${funcName} The server returned error code ${res.status} for ${url}`
         )
     }
+  }
+}
+
+export class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'RateLimitError'
   }
 }
