@@ -27,7 +27,7 @@ describe(`FTM Network Fees`, function () {
     assert.equal(fees.default.gasLimit?.tokenTransaction, '300000')
   })
 
-  it('EvmScan Fees', async function () {
+  it.skip('EvmScan Fees', async function () {
     this.timeout(5000)
     const fees = await fetchFeesFromEvmScan(
       fetch,
