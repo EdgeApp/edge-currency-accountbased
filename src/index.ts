@@ -25,6 +25,7 @@ import { suitestnet } from './sui/suitestnetInfo'
 import { tezos } from './tezos/tezosInfo'
 import { ton } from './ton/tonInfo'
 import { tron } from './tron/tronInfo'
+import { zano } from './zano/zanoInfo'
 import { zcash } from './zcash/zcashInfo'
 
 const plugins = {
@@ -51,6 +52,7 @@ const plugins = {
   tezos,
   ton,
   tron,
+  zano,
   zcash
 }
 

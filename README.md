@@ -67,11 +67,12 @@ To debug this project, run `yarn start` to start a Webpack server, and then use 
 
 Notice the `/rn` suffix on the `import` statement. If you leave this off (which is deprecated), react-native-piratechain and react-native-zcash will both be mandatory, and the instructions below won't apply.
 
-#### Zcash / Piratechain
+#### Zcash / Piratechain / Zano
 
 These chains only work on React Native. To use them, first install the following packages using the instructions in their repos:
 
 - [react-native-piratechain](https://www.npmjs.com/package/react-native-piratechain)
+- [react-native-zano](https://www.npmjs.com/package/react-native-zano)
 - [react-native-zcash](https://www.npmjs.com/package/react-native-zcash)
 
 Then, add the correct IO objects to the core:
@@ -79,12 +80,14 @@ Then, add the correct IO objects to the core:
 ```jsx
 import { pluginUri, makePluginIo } from 'edge-currency-accountbased/rn'
 import { makePiratechainIo } from 'edge-currency-accountbased/rn-piratechain'
+import { makeZanoIo } from 'edge-currency-accountbased/rn-zano'
 import { makeZcashIo } from 'edge-currency-accountbased/rn-zcash'
 
 <MakeEdgeContext
   nativeIo={{
     'edge-currency-accountbased': makePluginIo()
     piratechain: makePiratechainIo(),
+    zano: makeZanoIo(),
     zcash: makeZcashIo(),
   }}
   pluginUris={[pluginUri]}
