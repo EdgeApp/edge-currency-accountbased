@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 4.45.0 (2025-04-28)
+
+- added: Add Zano
 - changed: Implement use of edge-change-server for network syncing.
 - changed: Use XRPL as the network name.
 
