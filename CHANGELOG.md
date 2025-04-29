@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 4.45.1 (2025-04-29)
+
+- fixed: (TRX) Energy estimations based on contract storage state
+
 ## 4.45.0 (2025-04-28)
 
 - added: Add Zano
