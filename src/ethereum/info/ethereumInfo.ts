@@ -1167,10 +1167,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: [
-        'https://api.etherscan.io'
-        // 'https://blockscout.com/eth/mainnet' // not reliable enough...
-      ]
+      servers: ['https://api.etherscan.io']
     },
     {
       type: 'blockbook',

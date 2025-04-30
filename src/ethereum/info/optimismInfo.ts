@@ -189,7 +189,10 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api-optimistic.etherscan.io']
+      servers: [
+        'https://api.etherscan.io',
+        'https://api-optimistic.etherscan.io'
+      ]
     }
   ],
   uriNetworks: ['optimism'],

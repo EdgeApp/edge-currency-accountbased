@@ -69,7 +69,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api.basescan.org']
+      servers: ['https://api.etherscan.io', 'https://api.basescan.org']
     },
     {
       type: 'blockchair',
