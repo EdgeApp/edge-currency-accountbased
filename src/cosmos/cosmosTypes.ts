@@ -1,3 +1,4 @@
+import type { Chain } from '@chain-registry/types'
 import type { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import type {
   AuthExtension,
@@ -66,6 +67,11 @@ export interface UpgradedRegistry {
   registry: Registry
 }
 
+export type CosmosChainData = Pick<
+  Chain,
+  'chain_name' | 'fees' | 'chain_type' | 'chain_id' | 'network_type'
+>
+
 export interface CosmosNetworkInfo {
   bech32AddressPrefix: string
   bip39Path: string
@@ -85,6 +91,7 @@ export interface CosmosNetworkInfo {
     }
     endpoint: HttpEndpoint
   }>
+  defaultChainData?: CosmosChainData
 }
 const asHttpEndpoint = asObject({
   url: asString,
