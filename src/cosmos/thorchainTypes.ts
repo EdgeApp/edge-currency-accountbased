@@ -1,5 +1,5 @@
 import { HttpEndpoint } from '@cosmjs/stargate'
-import { asArray, asMaybe, asObject, asString } from 'cleaners'
+import { asArray, asMaybe, asObject, asOptional, asString } from 'cleaners'
 
 import { PluginEnvironment } from '../common/innerPlugin'
 import { CosmosNetworkInfo } from './cosmosTypes'
@@ -15,7 +15,9 @@ export function isThorchainEnvironment(
 ): env is PluginEnvironment<ThorchainNetworkInfo> {
   return (
     (env as PluginEnvironment<ThorchainNetworkInfo>).currencyInfo.pluginId ===
-    'thorchainrune'
+      'thorchainrune' ||
+    (env as PluginEnvironment<ThorchainNetworkInfo>).currencyInfo.pluginId ===
+      'thorchainrunestagenet'
   )
 }
 
@@ -48,11 +50,14 @@ export const asMidgardActionsResponse = asObject({
       metadata: asObject(
         asObject({
           memo: asString,
-          networkFees: asArray(
-            asObject({
-              amount: asString,
-              asset: asString // 'THOR.RUNE'
-            })
+          networkFees: asOptional(
+            asArray(
+              asObject({
+                amount: asString,
+                asset: asString // 'THOR.RUNE'
+              })
+            ),
+            () => []
           )
         })
       ),
