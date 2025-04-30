@@ -124,17 +124,17 @@ export class ThorchainEngine extends CosmosEngine {
                 txidHex = action.txID
               }
               for (const coin of action.coins) {
-                if (coin.asset !== 'THOR.RUNE') continue
-
                 const typeValue =
                   type === 'coin_received' ? 'receiver' : 'spender'
+                const asset = coin.asset.split('.')[1]
+                if (asset == null) continue
 
                 events.push({
                   type,
                   attributes: [
                     {
                       key: 'amount',
-                      value: `${abs(coin.amount)}rune`
+                      value: `${abs(coin.amount)}${asset.toLowerCase()}`
                     },
                     {
                       key: typeValue,
