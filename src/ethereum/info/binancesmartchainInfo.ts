@@ -151,7 +151,7 @@ const networkInfo: EthereumNetworkInfo = {
       ],
       ethBalCheckerContract: '0x2352c63A83f9Fd126af8676146721Fa00924d7e4'
     },
-    { type: 'evmscan', servers: ['https://api.bscscan.com'] }
+    { type: 'evmscan', servers: ['https://api.etherscan.io'] }
   ],
   uriNetworks: ['smartchain'],
   ercTokenStandard: 'ERC20',
