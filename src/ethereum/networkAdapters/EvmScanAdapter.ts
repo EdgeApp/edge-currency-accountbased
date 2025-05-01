@@ -273,7 +273,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const scanApiKey = getEvmScanApiKey(
       this.ethEngine.initOptions,
       this.ethEngine.currencyInfo,
-      this.ethEngine.log
+      this.ethEngine.log,
+      server
     )
 
     // Quick hack to signal to use slower fetchCors over fetch from EdgeIo
@@ -285,7 +286,20 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
       : scanApiKey ?? ''
     const apiKeyParam = apiKey !== '' ? `&apikey=${apiKey}` : ''
 
-    const url = `${server}/api${cmd}`
+    // Get the chainId from the network info
+    const chainId = this.ethEngine.networkInfo.chainParams.chainId
+
+    // Determine if we should use v2 API
+    let url: string
+    if (server.includes('etherscan.io')) {
+      // For etherscan.io API - use v2 with chainId
+      url = `${server}/v2/api?chainid=${chainId}${
+        cmd.startsWith('?') ? cmd.replace('?', '&') : cmd
+      }`
+    } else {
+      // For non-etherscan APIs like blockscout, continue using the old format
+      url = `${server}/api${cmd}`
+    }
 
     const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
     if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)

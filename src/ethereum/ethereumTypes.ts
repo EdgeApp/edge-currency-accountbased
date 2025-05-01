@@ -28,6 +28,9 @@ export interface EthereumInitOptions {
   blockchairApiKey?: string
   blockcypherApiKey?: string
   drpcApiKey?: string
+  /** For Etherscan v2 API */
+  etherscanApiKey?: string | string[]
+  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan) */
   evmScanApiKey?: string | string[]
   gasStationApiKey?: string
   infuraProjectId?: string
@@ -42,6 +45,7 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   blockchairApiKey: asOptional(asString),
   blockcypherApiKey: asOptional(asString),
   drpcApiKey: asOptional(asString),
+  etherscanApiKey: asOptional(asEither(asString, asArray(asString))),
   evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
   gasStationApiKey: asOptional(asString),
   infuraProjectId: asOptional(asString),

@@ -75,7 +75,7 @@ const networkInfo: EthereumNetworkInfo = {
         'https://lb.drpc.org/ogrpc?network=celo&dkey={{drpcApiKey}}'
       ]
     },
-    { type: 'evmscan', servers: ['https://explorer.celo.org/mainnet'] }
+    { type: 'evmscan', servers: ['https://api.etherscan.io'] }
   ],
   uriNetworks: ['celo'],
   ercTokenStandard: 'ERC20',

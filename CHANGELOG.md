@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade to Etherscan V2 for supported networks
+
 ## 4.45.1 (2025-04-29)
 
 - fixed: (TRX) Energy estimations based on contract storage state
