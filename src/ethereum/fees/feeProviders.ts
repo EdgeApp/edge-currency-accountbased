@@ -273,13 +273,8 @@ export const getEvmScanApiKey = (
   info: EdgeCurrencyInfo,
   log: EdgeLog
 ): string | string[] | undefined => {
-  const {
-    evmScanApiKey,
-    etherscanApiKey,
-    ftmscanApiKey,
-    bscscanApiKey,
-    polygonscanApiKey
-  } = initOptions
+  const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
+    initOptions
   if (evmScanApiKey != null) return evmScanApiKey
   const { currencyCode } = info
   if (currencyCode === 'ETH' && etherscanApiKey != null) {
@@ -287,12 +282,6 @@ export const getEvmScanApiKey = (
       "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
     )
     return etherscanApiKey
-  }
-  if (currencyCode === 'FTM' && ftmscanApiKey != null) {
-    log.warn(
-      "INIT OPTION 'ftmscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
-    )
-    return ftmscanApiKey
   }
   if (currencyCode === 'BNB' && bscscanApiKey != null) {
     log.warn(
