@@ -295,10 +295,6 @@ const networkInfo: EthereumNetworkInfo = {
         'https://lb.drpc.org/ogrpc?network=fantom&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x07f697424abe762bb808c109860c04ea488ff92b'
-    },
-    {
-      type: 'evmscan',
-      servers: ['https://api.ftmscan.com']
     }
   ],
   uriNetworks: ['fantom'],
@@ -329,8 +325,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:fantom',
 
   // Explorers:
-  addressExplorer: 'https://ftmscan.com/address/%s',
-  transactionExplorer: 'https://ftmscan.com/tx/%s',
+  addressExplorer: 'https://ftmscout.com/address/%s',
+  transactionExplorer: 'https://ftmscout.com/tx/%s',
 
   denominations: [
     {
