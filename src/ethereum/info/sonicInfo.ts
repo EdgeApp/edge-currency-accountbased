@@ -144,7 +144,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api.etherscan.io']
+      servers: ['https://api.etherscan.io', 'https://api.sonicscan.org']
     }
   ],
   uriNetworks: ['sonic'],

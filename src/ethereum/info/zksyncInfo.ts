@@ -96,7 +96,11 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api.etherscan.io']
+      servers: [
+        'https://api.etherscan.io',
+        'https://block-explorer-api.mainnet.zksync.io',
+        'https://api-era.zksync.network'
+      ]
     }
   ],
   uriNetworks: ['zksync'],

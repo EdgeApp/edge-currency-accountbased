@@ -197,7 +197,10 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api.etherscan.io']
+      servers: [
+        'https://api.etherscan.io',
+        'https://api.avascan.info/v2/network/mainnet/evm/43114/etherscan'
+      ]
     }
   ],
   uriNetworks: ['avalanche'],
