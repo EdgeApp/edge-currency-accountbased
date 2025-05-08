@@ -338,7 +338,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
               const response = await this.fetchGetEtherscan(server, url)
               if (
                 response.status === '0' &&
-                response.message !== 'No transactions found'
+                response.message !== 'No transactions found' &&
+                response.message !== 'No internal transactions found'
               ) {
                 this.handledUnexpectedResponse(
                   server,

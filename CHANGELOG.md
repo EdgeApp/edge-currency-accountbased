@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (Fantom) Update explorer links
+- fixed: (EVM) Handle 'No internal transactions found' message from Blockscout servers
 - removed: (Fantom) Removed ftmscan from network adaptor config
 
 ## 4.45.1 (2025-04-29)
