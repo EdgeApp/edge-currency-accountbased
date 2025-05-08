@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`
+
 ## 4.47.0 (2025-05-12)
 
 - changed: Upgrade to Etherscan V2 for supported networks
