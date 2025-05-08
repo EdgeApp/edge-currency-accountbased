@@ -1,5 +1,7 @@
 # edge-currency-accountbased
 
+- fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`
+
 ## Unreleased
 
 ## 4.47.0 (2025-05-12)
