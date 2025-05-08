@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.46.0 (2025-05-08)
+
 - added: (Thorchain) Add TCY token
 - added: Add Thorchain Stagenet
 - changed: (Fantom) Update explorer links
