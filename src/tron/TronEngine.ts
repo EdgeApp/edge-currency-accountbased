@@ -1,5 +1,5 @@
-import { add, div, gt, lte, mul, sub } from 'biggystring'
-import { asMaybe } from 'cleaners'
+import { add, div, eq, gt, lt, lte, mul, sub } from 'biggystring'
+import { asMaybe, Cleaner } from 'cleaners'
 import {
   EdgeCurrencyEngine,
   EdgeCurrencyEngineOptions,
@@ -38,10 +38,9 @@ import {
   asFreezeV2BalanceContract,
   asSafeTronWalletInfo,
   asTransaction,
-  asTransactionById,
-  asTransactionInfoById,
   asTRC20Balance,
   asTRC20Transaction,
+  asTRC20TransactionInfo,
   asTriggerSmartContract,
   asTronBlockHeight,
   asTronFreezeV2Action,
@@ -74,7 +73,6 @@ import {
 } from './tronTypes'
 import {
   base58ToHexAddress,
-  decodeTRC20Transfer,
   encodeTRC20Transfer,
   hexToBase58Address
 } from './tronUtils'
@@ -147,6 +145,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     this.accountExistsCache = {} // Minimize calls to check recipient account resources (existence)
     this.energyEstimateCache = {} // Minimize calls to check energy estimate
     this.processTRXTransaction = this.processTRXTransaction.bind(this)
+    this.processTRC20Transaction = this.processTRC20Transaction.bind(this)
     this.stakingStatus = {
       stakedAmounts: [
         {
@@ -389,42 +388,65 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       if (this.otherData.txListReset) {
         // Clear out otherData.txQueryCache one time so we can re-process the
         // transactions and populate the txInfo
-        this.otherData.txQueryCache = asTronWalletOtherData({}).txQueryCache
+        this.otherData.txQueryCache.mainnet = asTronWalletOtherData(
+          {}
+        ).txQueryCache.mainnet
         this.otherData.txListReset = false
         this.walletLocalDataDirty = true
       }
-      for (const tokenId of this.enabledTokenIds) {
-        if (!this.otherData.trc20FirstQueryCache[tokenId]) {
-          await this.fetchFirstTrc20ReceiveTransactions(tokenId)
-        }
-        this.tokenCheckTransactionsStatus[tokenId] = 1
-        this.updateOnAddressesChecked()
-      }
-
-      let complete = false
-      while (!complete) {
-        complete = await this.fetchTransactions()
-      }
+      await this.fetchTrxTransactions()
+      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.updateOnAddressesChecked()
+      await this.fetchTrc20Transactions()
     } catch (e: any) {
       this.log.error(`Error checkTransactionsFetch fetchTrxTransactions: `, e)
       throw e
     }
 
     this.updateTransactionEvents()
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+
     for (const token of this.enabledTokens) {
       this.tokenCheckTransactionsStatus[token] = 1
     }
     this.updateOnAddressesChecked()
   }
 
-  async fetchTransactions(): Promise<boolean> {
-    const timestamp = this.otherData.txQueryCache.timestamp
+  async fetchTrxTransactions(): Promise<void> {
+    let complete = false
 
-    const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions?limit=200&order_by=block_timestamp,asc&min_timestamp=${timestamp}`
+    while (!complete) {
+      complete = await this.fetchTransactions(
+        'mainnet',
+        asTransaction,
+        this.processTRXTransaction
+      )
+    }
+  }
+
+  async fetchTrc20Transactions(): Promise<void> {
+    let complete = false
+
+    while (!complete) {
+      complete = await this.fetchTransactions(
+        'trc20',
+        asTRC20Transaction,
+        this.processTRC20Transaction
+      )
+    }
+  }
+
+  async fetchTransactions<T>(
+    type: 'mainnet' | 'trc20',
+    cleaner: Cleaner<T>,
+    processor: (tx: T) => Promise<TxQueryCache> | TxQueryCache
+  ): Promise<boolean> {
+    const typePath = type === 'trc20' ? type : ''
+    const timestamp = this.otherData.txQueryCache[type].timestamp
+
+    const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/${typePath}?limit=200&order_by=block_timestamp,asc&min_timestamp=${timestamp}`
     const res = await this.multicastServers('trx_getTransactions', url)
 
-    const { data, meta, success } = asTronQuery(asMaybe(asTransaction))(res)
+    const { data, meta, success } = asTronQuery(asMaybe(cleaner))(res)
     const isComplete = meta?.links?.next == null
 
     if (!success) {
@@ -433,78 +455,13 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
     for (const tx of data) {
       if (tx == null) continue
-      const { timestamp: newTimestamp, txid } =
-        await this.processTRXTransaction(tx)
-      this.otherData.txQueryCache.txid = txid
-      this.otherData.txQueryCache.timestamp = newTimestamp
+      const { timestamp: newTimestamp, txid } = await processor(tx)
+      this.otherData.txQueryCache[type].txid = txid
+      this.otherData.txQueryCache[type].timestamp = newTimestamp
       this.walletLocalDataDirty = true
     }
 
     return isComplete
-  }
-
-  // Page through trc20 transactions until we find a spend. Then the other routine can take over.
-  async fetchFirstTrc20ReceiveTransactions(
-    contractAddress: string
-  ): Promise<void> {
-    let fingerprintParam = ''
-    while (true) {
-      const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/trc20?limit=100&order_by=block_timestamp,asc&contract_address=${contractAddress}${fingerprintParam}`
-      const res1 = await this.multicastServers('trx_getTransactions', url)
-      const {
-        data,
-        success,
-        meta: { fingerprint }
-      } = asTronQuery(asMaybe(asTRC20Transaction))(res1)
-
-      if (!success) {
-        throw new Error('Failed to query TRC20 transaction')
-      }
-
-      for (const trc20Tx of data) {
-        if (trc20Tx == null) continue
-
-        if (trc20Tx.from === this.walletLocalData.publicKey) {
-          this.otherData.trc20FirstQueryCache[contractAddress] = true
-          this.walletLocalDataDirty = true
-          return
-        }
-
-        const txInfo = asTransactionInfoById(
-          await this.multicastServers(
-            'trx_getTransactionInfo',
-            '/wallet/gettransactioninfobyid',
-            {
-              value: trc20Tx.transaction_id
-            }
-          )
-        )
-        const tx = asTransactionById(
-          await this.multicastServers(
-            'trx_getTransactionInfo',
-            '/wallet/gettransactionbyid',
-            {
-              value: trc20Tx.transaction_id
-            }
-          )
-        )
-
-        this.processTRXTransaction({
-          block_timestamp: trc20Tx.block_timestamp,
-          blockNumber: txInfo.blockNumber,
-          raw_data: tx.raw_data,
-          ret: tx.ret,
-          txID: trc20Tx.transaction_id,
-          unfreeze_amount: undefined
-        })
-        this.walletLocalDataDirty = true
-      }
-
-      if (fingerprint == null) {
-        break
-      }
-      fingerprintParam = `&fingerprint=${fingerprint}`
-    }
   }
 
   processTRXTransaction(tx: ReturnType<typeof asTransaction>): TxQueryCache {
@@ -520,7 +477,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     const out = { txid, timestamp }
 
     // Already saw this one so we can exit early
-    if (txid === this.otherData.txQueryCache.txid) {
+    if (txid === this.otherData.txQueryCache.mainnet.txid) {
       return out
     }
 
@@ -610,52 +567,38 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       if (smartContractTransaction != null) {
         const {
           parameter: {
-            value: {
-              contract_address: contractAddressHex,
-              data,
-              owner_address: fromAddressHex
-            }
+            value: { owner_address: fromAddress }
           }
         } = smartContractTransaction
 
-        const contractAddress = hexToBase58Address(contractAddressHex)
-        const fromAddress = hexToBase58Address(fromAddressHex)
-
-        const isSend = fromAddress === this.walletLocalData.publicKey
-
-        const token = this.allTokensMap[contractAddress]
-        if (token == null) return out
-
-        let nativeAmount = '0'
-        let parentNetworkFee: string | undefined
-        if (success) {
-          nativeAmount = decodeTRC20Transfer(data)[1]
-          if (isSend) {
-            nativeAmount = `-${nativeAmount}`
-            ourReceiveAddresses.push(this.walletLocalData.publicKey)
-          } else {
-            parentNetworkFee = feeNativeAmount
-          }
+        if (
+          hexToBase58Address(fromAddress) !== this.walletLocalData.publicKey
+        ) {
+          break
         }
+
+        const feeNativeAmount = retArray[0].fee.toString()
+
+        // Don't create edgeTransaction for TRX if fee is zero
+        if (feeNativeAmount === '0') break
 
         const edgeTransaction: EdgeTransaction = {
           blockHeight: blockNumber,
-          currencyCode: token.currencyCode,
+          currencyCode,
           date,
-          isSend,
+          isSend: true,
           memos,
-          nativeAmount,
-          networkFee: '0',
+          nativeAmount: mul(feeNativeAmount, '-1'),
+          networkFee: feeNativeAmount,
           networkFees: [],
-          parentNetworkFee,
           ourReceiveAddresses,
           signedTx: '',
-          tokenId: contractAddress,
+          tokenId: null,
           txid,
           walletId: this.walletId
         }
 
-        this.addTransaction(token.currencyCode, edgeTransaction)
+        this.addTransaction(currencyCode, edgeTransaction)
         return out
       }
 
@@ -863,6 +806,85 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         return out
       }
     }
+    return out
+  }
+
+  // Parse the transfer and return the transaction txid and timestamp for caching
+  async processTRC20Transaction(
+    tx: ReturnType<typeof asTRC20Transaction>
+  ): Promise<TxQueryCache> {
+    const {
+      transaction_id: txid,
+      token_info: { address: contractAddress },
+      block_timestamp: timestamp,
+      from,
+      to,
+      type,
+      value
+    } = tx
+
+    const out = { txid, timestamp }
+
+    // Already saw this one so we can exit early
+    if (txid === this.otherData.txQueryCache.trc20.txid) {
+      return out
+    }
+
+    const res = await this.multicastServers(
+      'trx_getTransactionInfo',
+      '/wallet/gettransactioninfobyid',
+      {
+        value: txid
+      }
+    )
+
+    const {
+      blockNumber: blockHeight,
+      energy_penalty_total: energyPenaltyTotal,
+      fee
+    } = asTRC20TransactionInfo(res)
+
+    const token = this.allTokensMap[contractAddress]
+    if (type !== 'Transfer' || token == null) return out
+
+    const ourReceiveAddresses: string[] = []
+
+    let nativeAmount = value
+    const parentNetworkFee = (fee + energyPenaltyTotal).toString()
+
+    if (from === this.walletLocalData.publicKey) {
+      // Send
+      nativeAmount = mul(value, '-1')
+    } else if (to === this.walletLocalData.publicKey) {
+      // Receive
+      ourReceiveAddresses.push(this.walletLocalData.publicKey)
+    } else {
+      // Unknown
+      return out
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight,
+      currencyCode: token.currencyCode,
+      date: Math.floor(timestamp / 1000),
+      isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
+      networkFee: '0',
+      networkFees: [],
+      ourReceiveAddresses,
+      signedTx: '',
+      tokenId: contractAddress,
+      txid,
+      walletId: this.walletId
+    }
+
+    // Record the parentNetworkFee if it's a send and the fee isn't zero
+    if (lt(nativeAmount, '0') && !eq(parentNetworkFee, '0')) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
+    }
+
+    this.addTransaction(token.currencyCode, edgeTransaction)
     return out
   }
 

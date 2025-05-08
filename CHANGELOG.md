@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Revert Tron tx query optimizations
+
 ## 4.46.0 (2025-05-08)
 
 - added: (Thorchain) Add TCY token
