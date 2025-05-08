@@ -502,7 +502,6 @@ export interface TronGridQuery<T> {
   data: T[]
   success: boolean
   meta: {
-    fingerprint?: string
     links?: {
       next: string
     }
@@ -517,7 +516,6 @@ export const asTronQuery = <T>(
     data: asArray(cleaner),
     success: asBoolean,
     meta: asObject({
-      fingerprint: asOptional(asString),
       links: asOptional(
         asObject({
           next: asString // https://api.trongrid.io/v1/accounts/TTcGB9V76XyQUUFoU731mXsYhurrCTfSYy/transactions/?limit=200&min_timestamp=0&order_by=block_timestamp,asc&fingerprint=3wmN1yM3f1BnUF1W2s76jXwZG1cHT81ymdUTHjjhYytpdv4jJ5wzX9LVFPzzPj1nAewD3nmxwkUPK4E4M6cHtMVQeyTaycEgRqBj

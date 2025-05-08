@@ -395,7 +395,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       }
       for (const tokenId of this.enabledTokenIds) {
         if (!this.otherData.trc20FirstQueryCache[tokenId]) {
-          await this.fetchFirstTrc20ReceiveTransactions(tokenId)
+          await this.fetchFirstTrc20Transactions(tokenId)
         }
         this.tokenCheckTransactionsStatus[tokenId] = 1
         this.updateOnAddressesChecked()
@@ -443,68 +443,47 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return isComplete
   }
 
-  // Page through trc20 transactions until we find a spend. Then the other routine can take over.
-  async fetchFirstTrc20ReceiveTransactions(
-    contractAddress: string
-  ): Promise<void> {
-    let fingerprintParam = ''
-    while (true) {
-      const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/trc20?limit=100&order_by=block_timestamp,asc&contract_address=${contractAddress}${fingerprintParam}`
-      const res1 = await this.multicastServers('trx_getTransactions', url)
-      const {
-        data,
-        success,
-        meta: { fingerprint }
-      } = asTronQuery(asMaybe(asTRC20Transaction))(res1)
+  async fetchFirstTrc20Transactions(contractAddress: string): Promise<void> {
+    const url = `/v1/accounts/${this.walletLocalData.publicKey}/transactions/trc20?limit=1&order_by=block_timestamp,asc&contract_address=${contractAddress}`
+    const res1 = await this.multicastServers('trx_getTransactions', url)
+    const { data, success } = asTronQuery(asMaybe(asTRC20Transaction))(res1)
 
-      if (!success) {
-        throw new Error('Failed to query TRC20 transaction')
-      }
-
-      for (const trc20Tx of data) {
-        if (trc20Tx == null) continue
-
-        if (trc20Tx.from === this.walletLocalData.publicKey) {
-          this.otherData.trc20FirstQueryCache[contractAddress] = true
-          this.walletLocalDataDirty = true
-          return
-        }
-
-        const txInfo = asTransactionInfoById(
-          await this.multicastServers(
-            'trx_getTransactionInfo',
-            '/wallet/gettransactioninfobyid',
-            {
-              value: trc20Tx.transaction_id
-            }
-          )
-        )
-        const tx = asTransactionById(
-          await this.multicastServers(
-            'trx_getTransactionInfo',
-            '/wallet/gettransactionbyid',
-            {
-              value: trc20Tx.transaction_id
-            }
-          )
-        )
-
-        this.processTRXTransaction({
-          block_timestamp: trc20Tx.block_timestamp,
-          blockNumber: txInfo.blockNumber,
-          raw_data: tx.raw_data,
-          ret: tx.ret,
-          txID: trc20Tx.transaction_id,
-          unfreeze_amount: undefined
-        })
-        this.walletLocalDataDirty = true
-      }
-
-      if (fingerprint == null) {
-        break
-      }
-      fingerprintParam = `&fingerprint=${fingerprint}`
+    if (!success) {
+      throw new Error('Failed to query TRC20 transaction')
     }
+
+    const trc20Tx = data[0]
+    if (trc20Tx == null) return
+
+    const txInfo = asTransactionInfoById(
+      await this.multicastServers(
+        'trx_getTransactionInfo',
+        '/wallet/gettransactioninfobyid',
+        {
+          value: trc20Tx.transaction_id
+        }
+      )
+    )
+    const tx = asTransactionById(
+      await this.multicastServers(
+        'trx_getTransactionInfo',
+        '/wallet/gettransactionbyid',
+        {
+          value: trc20Tx.transaction_id
+        }
+      )
+    )
+
+    this.processTRXTransaction({
+      block_timestamp: trc20Tx.block_timestamp,
+      blockNumber: txInfo.blockNumber,
+      raw_data: tx.raw_data,
+      ret: tx.ret,
+      txID: trc20Tx.transaction_id,
+      unfreeze_amount: undefined
+    })
+    this.otherData.trc20FirstQueryCache[contractAddress] = true
+    this.walletLocalDataDirty = true
   }
 
   processTRXTransaction(tx: ReturnType<typeof asTransaction>): TxQueryCache {
