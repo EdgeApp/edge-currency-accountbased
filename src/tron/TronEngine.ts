@@ -981,36 +981,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     return out.result
   }
 
-  private async getDynamicEnergyFactor(
-    contractAddress: string
-  ): Promise<{ factor: number; energyPenaltyRatio: number }> {
-    const body = { value: base58ToHexAddress(contractAddress) }
-    const res = await this.multicastServers(
-      'trx_getBalance',
-      '/wallet/getcontractinfo',
-      body
-    )
-    if (res.contract_state?.energy_factor != null) {
-      // energy_factor is returned as a number representing factor * 10000 by default
-      // e.g., 10000 = factor of 1.0, 15000 = factor of 1.5
-      const factor =
-        parseFloat(res.contract_state.energy_factor.toString()) / 10000
-
-      this.log(`energy_factor ${res.contract_state.energy_factor.toString()}`)
-
-      // Calculate the penalty ratio (the portion that's above 1.0)
-      // This is used to determine how much of the energy is penalty
-      const energyPenaltyRatio = Math.max(factor - 1.0, 0)
-
-      this.log(
-        `Contract ${contractAddress} has energy factor ${factor} (penalty ratio: ${energyPenaltyRatio})`
-      )
-      return { factor, energyPenaltyRatio }
-    }
-    // If not found or no factor, return 1.0 (no penalty)
-    return { factor: 1.0, energyPenaltyRatio: 0 }
-  }
-
   /**
    * Determines how much TRX the tx will cost after accounting for bandwidth and energy
    *
@@ -1032,8 +1002,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     // #region ========== Energy Estimation ==========
 
     let energyNeeded = 0
-    let energyFactor = 1.0
-    let energyPenaltyRatio = 0
 
     if (tokenOpts != null && receiverAddress != null) {
       const { contractAddress } = tokenOpts
@@ -1067,31 +1035,62 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
             throw new Error('calcTxFee Failed to estimate fee')
           }
 
+          // Get energy values from the API response
           const energyUsed = json.energy_used
+          const energyPenalty = json.energy_penalty ?? 0
+          const totalEnergy = energyUsed + energyPenalty
 
-          // Energy penalty is nonzero if the recipient has initialized a
-          // storage slot for this contract
-          const recipientInStorage = (json.energy_penalty ?? 0) === 0
-
-          if (recipientInStorage) {
-            adjustedEnergy = energyUsed
-
-            // Update the cache only if the recipient has initialized a storage
-            // slot for this contract, so we skip this check on future
-            // estimations
-            this.energyEstimateCache[cacheKey] = adjustedEnergy
-          } else {
-            // Apply a heuristic for first time recipients.
-            // https://www.reddit.com/r/Tronix/comments/rlhv90/tron_transaction_fee_is_different_than_predicted/
-            adjustedEnergy = energyUsed * 2.2
+          // Calculate self-transfer energy as a baseline for recipient detection
+          const selfRunBody = {
+            ...dryRunBody,
+            parameter: encodeParams(
+              ['address', 'uint256'],
+              [base58ToHexAddress(this.walletLocalData.publicKey), '1']
+            ).slice(2)
           }
+
+          const selfRes = await this.multicastServers(
+            'trx_estimateEnergy',
+            '/wallet/triggerconstantcontract',
+            selfRunBody
+          )
+          const selfJson = asEstimateEnergy(selfRes)
+          const selfTotalEnergy =
+            selfJson.energy_used + (selfJson.energy_penalty ?? 0)
+          this.log(`Self-Transfer Energy Used: ${selfJson.energy_used}`)
+
+          // Determine if recipient has initialized a storage slot for this
+          // contract by comparing against the results of the dryrun of a
+          // transfer to ourselves. The sender should obviously have storage
+          // initialized since they're trying to send, so we are using it as the
+          // threshold to determine whether the recipient has initialized token
+          // storage based on the total energy required.
+          const recipientInStorage = totalEnergy <= selfTotalEnergy * 1.05 // Allow 5% margin
+
+          // For known recipients, only energy_used is actually consumed
+          // For new recipients, both energy_used and energy_penalty are consumed
+          if (recipientInStorage) {
+            // Known recipient - use only energy_used
+            adjustedEnergy = energyUsed
+          } else {
+            // New recipient - use full energy estimate
+            if (contractAddress === 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t') {
+              // USDT to new recipients - apply special heuristic to match observed costs
+              adjustedEnergy = Math.min(totalEnergy, 130285)
+              this.log('Using special heuristic for USDT to new recipient')
+            } else {
+              // Other tokens - use the full energy estimate
+              adjustedEnergy = totalEnergy
+            }
+          }
+
+          // Update the cache with the energy value for this recipient
+          this.energyEstimateCache[cacheKey] = adjustedEnergy
 
           this.log(
             `Energy estimate (${
               recipientInStorage ? 'known' : 'new'
-            }): ${adjustedEnergy} (raw used: ${energyUsed}, penalty: ${
-              json.energy_penalty
-            })`
+            } recipient): ${adjustedEnergy} (raw used: ${energyUsed}, penalty: ${energyPenalty}, self: ${selfTotalEnergy})`
           )
         } catch (e) {
           this.log.warn('trx_estimateEnergy error. Using a default.', e)
@@ -1103,12 +1102,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
         )
       }
 
-      // Get dynamic factor for the contract if available
-      const energyFactorInfo = await this.getDynamicEnergyFactor(
-        contractAddress
-      )
-      energyFactor = energyFactorInfo.factor
-      energyPenaltyRatio = energyFactorInfo.energyPenaltyRatio
       energyNeeded = Math.max(
         Math.ceil(adjustedEnergy - this.accountResources.ENERGY),
         0
@@ -1198,8 +1191,6 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
     // #endregion
 
     this.log('Account energy: ', this.accountResources.ENERGY)
-    this.log('Energy factor: ', energyFactor)
-    this.log('Energy penalty ratio: ', energyPenaltyRatio)
     this.log('Energy needed: ', energyNeeded)
     this.log('Account bandwidth: ', this.accountResources.BANDWIDTH)
     this.log('Bandwidth needed: ', bandwidthNeeded)
