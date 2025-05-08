@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.46.1 (2025-05-08)
+
 - changed: Revert Tron tx query optimizations
 
 ## 4.46.0 (2025-05-08)
