@@ -1,5 +1,4 @@
 import { ChainRegistryFetcher } from '@chain-registry/client'
-import type { Chain } from '@chain-registry/types'
 import { stringToPath } from '@cosmjs/crypto'
 import { fromBech32 } from '@cosmjs/encoding'
 import { DirectSecp256k1HdWallet, Registry } from '@cosmjs/proto-signing'
@@ -28,6 +27,7 @@ import { upgradeRegistryAndCreateMethods } from './cosmosRegistry'
 import {
   asCosmosPrivateKeys,
   asSafeCosmosWalletInfo,
+  CosmosChainData,
   CosmosClients,
   CosmosInfoPayload,
   CosmosMethods,
@@ -45,7 +45,7 @@ export class CosmosTools implements EdgeCurrencyTools {
   methods: CosmosMethods
   registry: Registry
   initOptions: JsonObject
-  chainData: Chain
+  chainData: CosmosChainData
 
   constructor(env: PluginEnvironment<CosmosNetworkInfo>) {
     const { builtinTokens, currencyInfo, initOptions, io, networkInfo } = env
@@ -61,10 +61,11 @@ export class CosmosTools implements EdgeCurrencyTools {
     this.methods = methods
     this.registry = registry
     const { chainName, url } = this.networkInfo.chainInfo
-    const chainData = chains.find(
-      chain =>
-        chain.chain_name === chainName && chain.network_type === 'mainnet'
-    )
+    const chainData =
+      chains.find(
+        chain =>
+          chain.chain_name === chainName && chain.network_type === 'mainnet'
+      ) ?? this.networkInfo.defaultChainData
     if (chainData == null) {
       throw new Error('Unknown chain')
     }

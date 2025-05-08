@@ -18,62 +18,54 @@ const builtinTokens: EdgeTokenMap = {
 }
 
 const networkInfo: ThorchainNetworkInfo = {
-  bech32AddressPrefix: 'thor',
+  bech32AddressPrefix: 'sthor',
   bip39Path: `m/44'/931'/0'/0/0`,
   chainInfo: {
-    chainName: 'thorchain',
+    chainName: 'thorchainstagenet',
     url: 'https://raw.githubusercontent.com/cosmos/chain-registry/master/thorchain/chain.json'
   },
-  defaultChainId: 'thorchain-mainnet-v1',
-  chainIdUpdateUrl: 'https://rpc.ninerealms.com/status',
+  defaultChainId: 'thorchain-stagenet-2',
+  chainIdUpdateUrl: 'https://stagenet-rpc.ninerealms.com/status',
+  defaultChainData: {
+    chain_name: 'thorchain',
+    chain_type: 'cosmos',
+    chain_id: 'thorchain-stagenet-2',
+    network_type: 'testnet',
+    fees: {
+      fee_tokens: [
+        {
+          denom: 'RUNE'
+        }
+      ]
+    }
+  },
   transactionFeeConnectionInfo: {
-    url: 'https://thornode.ninerealms.com/thorchain/network',
+    url: 'https://stagenet-thornode.ninerealms.com/thorchain/network',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   midgardConnctionInfo: {
-    url: 'https://midgard.ninerealms.com',
+    url: 'https://stagenet-midgard.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
   },
   nativeDenom: 'rune',
-  pluginMnemonicKeyName: 'thorchainruneMnemonic',
+  pluginMnemonicKeyName: 'thorchainrunestagenetMnemonic',
   rpcNode: {
-    url: 'https://rpc.ninerealms.com',
+    url: 'https://stagenet-rpc.ninerealms.com',
     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
-  },
-  archiveNodes: [
-    {
-      blockTimeRangeSeconds: {
-        start: 1647912564649 // 2022-03-22T01:29:24.649Z
-        // end: TBD
-      },
-      endpoint: {
-        url: 'https://rpc-v1.ninerealms.com',
-        headers: { 'x-client-id': '{{ninerealmsClientId}}' }
-      }
-    }
-    // {
-    //   blockTimeRangeSeconds: {
-    //     start: TBD
-    //   },
-    //   endpoint: {
-    //     url: 'https://rpc-v2.ninerealms.com',
-    //     headers: { 'x-client-id': '{{ninerealmsClientId}}' }
-    //   }
-    // }
-  ]
+  }
 }
 
 const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'RUNE',
   // customTokenTemplate: cosmosCustomTokenTemplate,
-  assetDisplayName: 'THORChain',
-  chainDisplayName: 'THORChain',
-  pluginId: 'thorchainrune',
-  walletType: 'wallet:thorchainrune',
+  assetDisplayName: 'THORChain Stagenet',
+  chainDisplayName: 'THORChain Stagenet',
+  pluginId: 'thorchainrunestagenet',
+  walletType: 'wallet:thorchainrunestagenet',
 
   // Explorers:
-  addressExplorer: 'https://viewblock.io/thorchain/address/%s',
-  transactionExplorer: 'https://viewblock.io/thorchain/tx/%s',
+  addressExplorer: 'https://viewblock.io/thorchain/address/%s?network=stagenet',
+  transactionExplorer: 'https://viewblock.io/thorchain/tx/%s?network=stagenet',
 
   denominations: [
     {
@@ -86,10 +78,10 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: [{ type: 'text', maxLength: 250 }],
 
   // Deprecated:
-  displayName: 'THORChain'
+  displayName: 'THORChain Stagenet'
 }
 
-export const thorchainrune = makeOuterPlugin<
+export const thorchainrunestagenet = makeOuterPlugin<
   ThorchainNetworkInfo,
   CosmosTools,
   CosmosInfoPayload
@@ -101,13 +93,13 @@ export const thorchainrune = makeOuterPlugin<
 
   checkEnvironment() {
     if (global.BigInt == null) {
-      throw new Error('Thorchain requires BigInt support')
+      throw new Error('Thorchain Stagenet requires BigInt support')
     }
   },
 
   async getInnerPlugin() {
     return await import(
-      /* webpackChunkName: "thorchainrune" */
+      /* webpackChunkName: "thorchainrunestagebet" */
       '../CosmosTools'
     )
   }

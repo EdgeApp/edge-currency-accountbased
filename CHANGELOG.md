@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Thorchain) Add TCY token
+- added: Add Thorchain Stagenet
 - changed: (Fantom) Update explorer links
 - fixed: (EVM) Handle 'No internal transactions found' message from Blockscout servers
 - removed: (Fantom) Removed ftmscan from network adaptor config
