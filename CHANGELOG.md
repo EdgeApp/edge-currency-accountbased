@@ -1,5 +1,8 @@
 # edge-currency-accountbased
 
+- fixed: (TRX) `recipientInStorage` check now based on a self spend for comparison
+- added: (TRX) USDT-specific energy heuristic
+
 ## Unreleased
 
 - changed: (Fantom) Update explorer links
