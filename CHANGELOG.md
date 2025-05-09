@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (Fantom) Updated down ftmscan explorer to https://explorer.fantom.network/
+
 ## 4.46.1 (2025-05-08)
 
 - changed: Revert Tron tx query optimizations

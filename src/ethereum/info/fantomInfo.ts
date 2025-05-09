@@ -325,8 +325,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:fantom',
 
   // Explorers:
-  addressExplorer: 'https://ftmscout.com/address/%s',
-  transactionExplorer: 'https://ftmscout.com/tx/%s',
+  addressExplorer: 'https://explorer.fantom.network/address/%s',
+  transactionExplorer: 'https://explorer.fantom.network/transactions/%s',
 
   denominations: [
     {
