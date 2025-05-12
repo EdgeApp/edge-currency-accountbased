@@ -146,15 +146,17 @@ export const fetchFeesFromEvmScan = async (
   if (evmScanConfig == null) return
 
   const evmScanApiServers = evmScanConfig.servers
-  const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log)
-  if (evmScanApiServers == null || scanApiKey == null) return
+  if (evmScanApiServers == null) return
+
+  // Select a server first so we can pass it to getEvmScanApiKey
+  const server = pickRandom(evmScanApiServers, 1)[0]
+  const scanApiKey = getEvmScanApiKey(initOptions, currencyInfo, log, server)
+  if (scanApiKey == null) return
 
   const apiKey = `&apikey=${
     Array.isArray(scanApiKey) ? pickRandom(scanApiKey, 1)[0] : scanApiKey ?? ''
   }`
-  const url = `${
-    pickRandom(evmScanApiServers, 1)[0]
-  }/api?module=gastracker&action=gasoracle${apiKey}`
+  const url = `${server}/api?module=gastracker&action=gasoracle${apiKey}`
 
   const fetchResponse = await fetch(url)
   if (!fetchResponse.ok)
@@ -267,16 +269,28 @@ export const fetchFeesFromInfoServer = async (
   return asEthereumFees(json)
 }
 
-// Backwards compatibility with deprecated etherscan api keys
+// Get API key for Etherscan v2 API or network-specific scan APIs
 export const getEvmScanApiKey = (
   initOptions: JsonObject,
   info: EdgeCurrencyInfo,
-  log: EdgeLog
+  log: EdgeLog,
+  serverUrl: string
 ): string | string[] | undefined => {
   const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
     initOptions
-  if (evmScanApiKey != null) return evmScanApiKey
+
   const { currencyCode } = info
+
+  // If we have a server URL and it's etherscan.io, use the Ethereum API key
+  if (serverUrl.includes('etherscan.io')) {
+    if (etherscanApiKey == null)
+      throw new Error(`Missing etherscanApiKey for etherscan.io`)
+    return etherscanApiKey
+  }
+
+  if (evmScanApiKey != null) return evmScanApiKey
+
+  // For networks that don't support Etherscan v2, fall back to network-specific keys
   if (currencyCode === 'ETH' && etherscanApiKey != null) {
     log.warn(
       "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"

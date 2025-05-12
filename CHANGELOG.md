@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade to Etherscan V2 for supported networks
+
 ## 4.46.1 (2025-05-08)
 
 - changed: Revert Tron tx query optimizations

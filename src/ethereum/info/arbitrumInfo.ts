@@ -151,7 +151,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api.arbiscan.io']
+      servers: ['https://api.etherscan.io', 'https://api.arbiscan.io']
     },
     {
       type: 'blockchair',
