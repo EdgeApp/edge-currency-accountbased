@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.47.0 (2025-05-12)
+
 - changed: Upgrade to Etherscan V2 for supported networks
 
 ## 4.46.1 (2025-05-08)
