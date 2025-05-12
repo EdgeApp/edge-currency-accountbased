@@ -6,7 +6,9 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
+import { EdgeToken } from 'edge-core-js/types'
 
+import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 
 export interface ZanoNetworkInfo {
@@ -81,3 +83,7 @@ export const asZanoTransferParams = asObject({
   comment: asOptional(asString),
   paymentId: asOptional(asString)
 })
+
+export const createZanoTokenId = (token: EdgeToken): string => {
+  return createTokenIdFromContractAddress(token).toLowerCase()
+}

@@ -5,6 +5,7 @@ import { makeMetaTokens } from '../common/tokenHelpers'
 import type { ZanoTools } from './ZanoTools'
 import {
   asZanoInfoPayload,
+  createZanoTokenId,
   ZanoInfoPayload,
   ZanoNetworkInfo
 } from './zanoTypes'
@@ -86,6 +87,7 @@ export const zano = makeOuterPlugin<
   ZanoInfoPayload
 >({
   builtinTokens,
+  createTokenId: createZanoTokenId,
   currencyInfo,
   asInfoPayload: asZanoInfoPayload,
   networkInfo,
