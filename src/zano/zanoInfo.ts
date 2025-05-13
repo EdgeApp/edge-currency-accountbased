@@ -70,6 +70,7 @@ const currencyInfo: EdgeCurrencyInfo = {
     { type: 'hex', memoName: 'paymentId', maxBytes: 32 },
     { type: 'text', memoName: 'comment', maxLength: 1000 }
   ],
+  multipleMemos: true,
 
   unsafeSyncNetwork: true,
 
