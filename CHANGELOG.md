@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.47.1 (2025-05-13)
+
 - fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`
 
 ## 4.47.0 (2025-05-12)
