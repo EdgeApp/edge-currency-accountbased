@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- changed: Improved change-server integration by usage of checkpoints.
 - fixed: Removed race conditions between `loadEngine` and `startEngine`.
 
 ## 4.47.1 (2025-05-13)
