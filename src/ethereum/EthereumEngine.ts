@@ -769,10 +769,22 @@ export class EthereumEngine extends CurrencyEngine<
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
     await super.startEngine()
+  }
 
+  async loadEngine(): Promise<void> {
+    await super.loadEngine()
+    // After loading the walletLocalData, we can subscribe to the addresses:
     this.currencyEngineCallbacks.onSubscribeAddresses([
-      this.walletLocalData.publicKey
+      {
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.blockHeight.toString()
+      }
     ])
+    // If we have a block height, that means we've synced before,
+    // so finish initial sync:
+    if (this.walletLocalData.blockHeight != null) {
+      this.currencyEngineCallbacks.onAddressesChecked(1)
+    }
   }
 
   async killEngine(): Promise<void> {
