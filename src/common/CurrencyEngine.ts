@@ -841,6 +841,21 @@ export class CurrencyEngine<
     if (this.addressesChecked) this.updateSeenTxCheckpoint()
   }
 
+  /**
+   * Sync the wallet to 100% no matter what.
+   */
+  syncTheWalletLikeLifeDependsOnIt(): void {
+    // We need to make sure the wallet state is updated so it never gets a
+    // sync ratio of less than 1 from updateOnAddressesChecked. This
+    // is coupled logic that you need to know about. Setting this.addressesChecked
+    // is all that's needed to short circuit the logic in updateOnAddressesChecked.
+    // Go read updateOnAddressesChecked to understand.
+    this.addressesChecked = true
+
+    // Need to sent the sync ratio up the core and to the client (GUI):
+    this.currencyEngineCallbacks.onAddressesChecked(1)
+  }
+
   updateSeenTxCheckpoint(): void {
     const bestCheckpoint = this.selectSeenTxCheckpoint(
       this.highestSeenCheckpoint,
