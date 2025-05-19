@@ -1,4 +1,5 @@
 import {
+  asArray,
   asCodec,
   asNumber,
   asObject,
@@ -7,6 +8,7 @@ import {
   Cleaner
 } from 'cleaners'
 import { EdgeToken } from 'edge-core-js/types'
+import type { TransferParams } from 'react-native-zano'
 
 import { createTokenIdFromContractAddress } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
@@ -74,13 +76,17 @@ export const asZanoPrivateKeys = (
 export const asZanoInfoPayload = asObject({})
 export type ZanoInfoPayload = ReturnType<typeof asZanoInfoPayload>
 
-export const asZanoTransferParams = asObject({
-  assetId: asString,
-  fee: asNumber,
-  nativeAmount: asNumber,
-  recipient: asString,
+export const asZanoTransferParams = asObject<TransferParams>({
+  transfers: asArray(
+    asObject({
+      assetId: asString,
+      nativeAmount: asNumber,
+      recipient: asString
+    })
+  ),
 
   comment: asOptional(asString),
+  fee: asNumber,
   paymentId: asOptional(asString)
 })
 
