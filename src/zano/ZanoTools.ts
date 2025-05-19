@@ -1,9 +1,10 @@
 import { div } from 'biggystring'
-import { asString } from 'cleaners'
+import { asMaybe, asString } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeGetTokenDetails,
   EdgeIo,
   EdgeLog,
   EdgeMetaToken,
@@ -23,6 +24,7 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeZanoWalletInfo,
+  asZanoAssetDetails,
   asZanoPrivateKeys,
   ZanoImportPrivateKeyOpts,
   ZanoInfoPayload,
@@ -213,6 +215,56 @@ export class ZanoTools implements EdgeCurrencyTools {
     }
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
+  }
+
+  async getTokenDetails(filter: EdgeGetTokenDetails): Promise<EdgeToken[]> {
+    const { contractAddress } = filter
+    if (contractAddress == null) return []
+
+    const opts = {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify({
+        method: 'get_asset_info',
+        params: { asset_id: contractAddress }
+      })
+    }
+
+    const response = await this.io.fetch(
+      `${this.networkInfo.walletRpcAddress}/json_rpc`,
+      opts
+    )
+
+    if (!response.ok) {
+      const message = await response.text()
+      this.log.warn('lookhere error message', message)
+      throw new Error(message)
+    }
+
+    const json: unknown = await response.json()
+
+    const assetDetails = asMaybe(asZanoAssetDetails)(json)
+    if (assetDetails == null) return []
+
+    const {
+      ticker,
+      full_name: displayName,
+      decimal_point: decimals
+    } = assetDetails.result.asset_descriptor
+    const out: EdgeToken = {
+      currencyCode: ticker,
+      denominations: [
+        {
+          name: ticker,
+          multiplier: '1' + '0'.repeat(decimals)
+        }
+      ],
+      displayName,
+      networkLocation: { contractAddress }
+    }
+    return [out]
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
