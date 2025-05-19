@@ -213,7 +213,6 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
 
       const edgeTransaction: EdgeTransaction = {
         blockHeight: tx.height,
-        confirmations: this.walletLocalData.blockHeight - tx.height,
         currencyCode,
         date: tx.timestamp,
         isSend,
