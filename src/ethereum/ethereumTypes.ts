@@ -28,9 +28,9 @@ export interface EthereumInitOptions {
   blockchairApiKey?: string
   blockcypherApiKey?: string
   drpcApiKey?: string
-  /** For Etherscan v2 API */
+  /** @deprecated use evmScanApiKey instead */
   etherscanApiKey?: string | string[]
-  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan) */
+  /** For Etherscan v1 or v2 APIs */
   evmScanApiKey?: string | string[]
   gasStationApiKey?: string
   infuraProjectId?: string
