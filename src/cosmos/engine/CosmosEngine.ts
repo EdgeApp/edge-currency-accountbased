@@ -23,7 +23,7 @@ import {
 } from '@cosmjs/stargate'
 import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
-import { ceil, gt, lt, mul, sub } from 'biggystring'
+import { add, ceil, gt, lt, mul, sub } from 'biggystring'
 import {
   AuthInfo,
   Fee,
@@ -74,6 +74,7 @@ import {
   txQueryStrings
 } from '../cosmosTypes'
 import {
+  assetFromString,
   checkAndValidateADR36AminoSignDoc,
   createCosmosClients,
   getIbcChannelAndPort,
@@ -176,6 +177,11 @@ export class CosmosEngine extends CurrencyEngine<
 
             const { assets, memo, metadata } = params
 
+            const memos: EdgeMemo[] = []
+            if (memo !== '') {
+              memos.push({ type: 'text', value: memo })
+            }
+
             const msg = this.tools.methods.deposit({
               assets,
               memo,
@@ -183,31 +189,61 @@ export class CosmosEngine extends CurrencyEngine<
             })
             const unsignedTxHex = this.createUnsignedTxHex([msg], memo)
 
-            const { gasFeeCoin, gasLimit, networkFee } =
-              await this.calculateFee({
-                messages: [msg],
-                memo
-              })
+            let { gasFeeCoin, gasLimit, networkFee } = await this.calculateFee({
+              messages: [msg],
+              memo
+            })
             const otherParams: CosmosTxOtherParams = {
               gasFeeCoin,
               gasLimit,
               unsignedTxHex
             }
 
+            let currencyCode = this.currencyInfo.currencyCode
+            let tokenId = null
+            let nativeAmount = `-${networkFee}`
+            let parentNetworkFee: string | undefined
+            // For one asset, we can make a pretty good guess at filling in the EdgeTransaction fields
+            if (assets.length === 1) {
+              const asset = assets[0]
+
+              currencyCode = assetFromString(asset.asset).ticker
+              if (currencyCode !== this.currencyInfo.currencyCode) {
+                const tokenObj = Object.entries(this.allTokensMap).find(
+                  ([_, token]) => {
+                    return token.currencyCode === currencyCode
+                  }
+                )
+                if (tokenObj != null) {
+                  tokenId = tokenObj[0]
+                } else {
+                  // if we don't know the asset, just let it continue as tokenId: null until we see it off the network.
+                }
+                nativeAmount = asset.amount
+                parentNetworkFee = networkFee
+                networkFee = '0'
+              } else {
+                nativeAmount = `-${add(asset.amount, networkFee)}`
+              }
+            }
+
             const out: EdgeTransaction = {
               blockHeight: 0, // blockHeight,
-              currencyCode: this.currencyInfo.currencyCode,
+              currencyCode,
               date: Date.now() / 1000,
               isSend: true,
-              memos: [],
+              memos,
               metadata,
-              nativeAmount: `-${networkFee}`,
+              nativeAmount,
               networkFee,
-              networkFees: [],
+              parentNetworkFee,
+              networkFees: [
+                { tokenId: null, nativeAmount: parentNetworkFee ?? networkFee }
+              ],
               otherParams,
               ourReceiveAddresses: [],
               signedTx: '',
-              tokenId: null,
+              tokenId,
               txid: '',
               walletId: this.walletId
             }
