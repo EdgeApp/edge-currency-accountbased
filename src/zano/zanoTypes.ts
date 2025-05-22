@@ -1,4 +1,5 @@
 import {
+  asArray,
   asCodec,
   asNumber,
   asObject,
@@ -6,6 +7,7 @@ import {
   asString,
   Cleaner
 } from 'cleaners'
+import { TransferParams } from 'react-native-zano'
 
 import { asSafeCommonWalletInfo } from '../common/types'
 
@@ -72,12 +74,16 @@ export const asZanoPrivateKeys = (
 export const asZanoInfoPayload = asObject({})
 export type ZanoInfoPayload = ReturnType<typeof asZanoInfoPayload>
 
-export const asZanoTransferParams = asObject({
-  assetId: asString,
-  fee: asNumber,
-  nativeAmount: asNumber,
-  recipient: asString,
+export const asZanoTransferParams = asObject<TransferParams>({
+  transfers: asArray(
+    asObject({
+      assetId: asString,
+      nativeAmount: asNumber,
+      recipient: asString
+    })
+  ),
 
   comment: asOptional(asString),
+  fee: asNumber,
   paymentId: asOptional(asString)
 })

@@ -5,6 +5,7 @@ import {
   EdgeEnginePrivateKeyOptions,
   EdgeMemo,
   EdgeSpendInfo,
+  EdgeSpendTarget,
   EdgeTokenId,
   EdgeTransaction,
   EdgeTxAmount,
@@ -213,7 +214,6 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
 
       const edgeTransaction: EdgeTransaction = {
         blockHeight: tx.height,
-        confirmations: this.walletLocalData.blockHeight - tx.height,
         currencyCode,
         date: tx.timestamp,
         isSend,
@@ -353,34 +353,45 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
     const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
-    const spendTarget = edgeSpendInfo.spendTargets[0]
-    const { publicAddress, nativeAmount } = spendTarget
 
-    if (publicAddress == null)
-      throw new Error('makeSpend Missing publicAddress')
-    if (nativeAmount == null) throw new NoAmountSpecifiedError()
+    let nativeAmountTotal = '0'
+    const cleanTargets: Array<
+      Required<Pick<EdgeSpendTarget, 'publicAddress' | 'nativeAmount'>>
+    > = []
+    for (const spendTarget of edgeSpendInfo.spendTargets) {
+      const { publicAddress, nativeAmount } = spendTarget
+
+      if (publicAddress == null)
+        throw new Error('makeSpend Missing publicAddress')
+      if (nativeAmount == null) throw new NoAmountSpecifiedError()
+      if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
+
+      cleanTargets.push({
+        publicAddress,
+        nativeAmount
+      })
+      nativeAmountTotal = add(nativeAmountTotal, nativeAmount)
+    }
+
+    const feeNumber = await this.tools.zano.getCurrentTxFee(2)
 
     const availableBalance = this.unlockedBalanceMap.get(tokenId) ?? '0'
     const availableZanoBalance = this.unlockedBalanceMap.get(null) ?? '0'
 
-    if (eq(nativeAmount, '0')) throw new NoAmountSpecifiedError()
-
-    const feeNumber = await this.tools.zano.getCurrentTxFee(2)
-
     let networkFee = feeNumber.toFixed()
     let parentNetworkFee: string | undefined
-    let totalTxAmount = nativeAmount
+    let totalTxAmount = nativeAmountTotal
     if (tokenId == null) {
-      totalTxAmount = add(nativeAmount, networkFee)
+      totalTxAmount = add(nativeAmountTotal, networkFee)
       if (gt(totalTxAmount, availableBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
     } else {
       parentNetworkFee = networkFee
       networkFee = '0'
-      totalTxAmount = nativeAmount
+      totalTxAmount = nativeAmountTotal
 
-      if (gt(nativeAmount, availableBalance)) {
+      if (gt(nativeAmountTotal, availableBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
       if (gt(parentNetworkFee, availableZanoBalance)) {
@@ -394,12 +405,14 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const assetId = tokenId != null ? tokenId : this.networkInfo.nativeAssetId
 
     const otherParams: TransferParams = {
-      assetId,
-      fee: feeNumber,
-      nativeAmount: parseInt(abs(nativeAmount)),
-      recipient: publicAddress,
+      transfers: cleanTargets.map(st => ({
+        assetId,
+        nativeAmount: parseInt(abs(st.nativeAmount)),
+        recipient: st.publicAddress
+      })),
 
       comment,
+      fee: feeNumber,
       paymentId
     }
 

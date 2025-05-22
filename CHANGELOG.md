@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Allow Zano to spend to multiple destinations
+
 ## 4.47.1 (2025-05-13)
 
 - fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`
