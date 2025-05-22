@@ -99,6 +99,8 @@ export function makeOuterPlugin<
       checkEnvironment = () => {}
     } = template
 
+    updateBuiltinTokens(env.infoPayload)
+
     const innerEnv: PluginEnvironment<NetworkInfo> = {
       ...env,
       builtinTokens,
@@ -135,12 +137,11 @@ export function makeOuterPlugin<
       return { plugin, tools }
     }
 
-    async function getBuiltinTokens(): Promise<EdgeTokenMap> {
+    function updateBuiltinTokens(payload: JsonObject = {}): void {
       if (createTokenId != null) {
-        const { infoServerTokens: rawInfoServerTokens = [] } =
-          asInfoServerTokens(env.infoPayload)
+        const { infoServerTokens = [] } = asInfoServerTokens(payload)
 
-        for (const rawToken of rawInfoServerTokens) {
+        for (const rawToken of infoServerTokens) {
           try {
             const edgeToken = asEdgeToken(rawToken)
             const tokenId = createTokenId(edgeToken)
@@ -159,7 +160,9 @@ export function makeOuterPlugin<
           } catch (e) {}
         }
       }
+    }
 
+    async function getBuiltinTokens(): Promise<EdgeTokenMap> {
       return builtinTokens
     }
 
@@ -186,6 +189,7 @@ export function makeOuterPlugin<
 
       const infoPayload = asInfoPayload(payload)
       await plugin.updateInfoPayload(innerEnv, infoPayload)
+      updateBuiltinTokens(payload)
     }
 
     return {
