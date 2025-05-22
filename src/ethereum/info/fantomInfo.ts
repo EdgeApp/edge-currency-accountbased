@@ -295,6 +295,10 @@ const networkInfo: EthereumNetworkInfo = {
         'https://lb.drpc.org/ogrpc?network=fantom&dkey={{drpcApiKey}}'
       ],
       ethBalCheckerContract: '0x07f697424abe762bb808c109860c04ea488ff92b'
+    },
+    {
+      type: 'evmscan',
+      servers: ['https://ftmscout.com/']
     }
   ],
   uriNetworks: ['fantom'],
