@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Fill in MakeTxDeposit Edge transaction data when sending one asset
+
 ## 4.47.1 (2025-05-13)
 
 - fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`
