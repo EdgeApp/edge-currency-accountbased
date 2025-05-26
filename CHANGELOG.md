@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (Zano) Support infoServerTokens
+- changed: Allow Zano to spend to multiple destinations
 - fixed: Update builtinTokens with infoServerPayload when creating tools
 
 ## 4.47.1 (2025-05-13)
