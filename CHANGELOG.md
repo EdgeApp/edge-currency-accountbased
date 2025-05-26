@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.48.0 (2025-05-26)
+
 - added: Implement `getTokenDetails` in Ethereum and Zano tools
 - added: (Zano) Support infoServerTokens
 - changed: Allow Zano to spend to multiple destinations
