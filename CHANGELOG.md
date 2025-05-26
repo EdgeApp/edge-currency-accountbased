@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Do not send duplicate new-transaction notifications.
+
 ## 4.48.0 (2025-05-26)
 
 - added: Implement `getTokenDetails` in Ethereum and Zano tools
