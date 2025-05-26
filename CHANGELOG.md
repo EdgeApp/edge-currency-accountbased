@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Implement `getTokenDetails` in Ethereum and Zano tools
 - added: (Zano) Support infoServerTokens
 - changed: Allow Zano to spend to multiple destinations
 - fixed: Update builtinTokens with infoServerPayload when creating tools

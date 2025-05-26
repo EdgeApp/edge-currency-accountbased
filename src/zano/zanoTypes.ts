@@ -93,3 +93,20 @@ export const asZanoTransferParams = asObject<TransferParams>({
 export const createZanoTokenId = (token: EdgeToken): string => {
   return createTokenIdFromContractAddress(token).toLowerCase()
 }
+
+export const asZanoAssetDetails = asObject({
+  result: asObject({
+    asset_descriptor: asObject({
+      // current_supply: 2100000000000000,
+      decimal_point: asNumber, // 8,
+      full_name: asString, // 'Get Edgy ',
+      // hidden_supply: false,
+      // meta_info: '',
+      // owner: '7e924fb7f5f6f7f6e683e3f210f9fa4047c9978f7b9e5aa19a10afea0249d8fe',
+      // owner_eth_pub_key: '',
+      ticker: asString // 'EDGE'
+      // total_max_supply: 2100000000000000
+    })
+    // status: 'OK'
+  })
+})

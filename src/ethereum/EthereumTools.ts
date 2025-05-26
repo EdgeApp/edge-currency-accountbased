@@ -5,6 +5,7 @@ import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
   EdgeEncodeUri,
+  EdgeGetTokenDetailsFilter,
   EdgeIo,
   EdgeMetaToken,
   EdgeParsedUri,
@@ -379,6 +380,79 @@ export class EthereumTools implements EdgeCurrencyTools {
 
   getSplittableTypes(walletInfo: EdgeWalletInfo): string[] {
     return Object.keys(ethereumPlugins).map(plugin => `wallet:${plugin}`)
+  }
+
+  async getTokenDetails(
+    filter: EdgeGetTokenDetailsFilter
+  ): Promise<EdgeToken[]> {
+    const { contractAddress } = filter
+    if (contractAddress == null) return []
+
+    const valid = EthereumUtil.isValidAddress(contractAddress)
+    if (!valid) return []
+
+    const { networkAdapterConfigs } = this.networkInfo
+
+    const networkAdapterConfig = networkAdapterConfigs.find(
+      (networkAdapterConfig): networkAdapterConfig is RpcAdapterConfig =>
+        networkAdapterConfig.type === 'rpc'
+    )
+
+    if (networkAdapterConfig == null) return []
+
+    const rpcServers = networkAdapterConfig.servers
+
+    const ethProviders: ethers.providers.JsonRpcProvider[] = rpcServers.map(
+      rpcServer =>
+        new ethers.providers.JsonRpcProvider(
+          rpcServer,
+          this.networkInfo.chainParams.chainId
+        )
+    )
+    const ERC20_ABI = [
+      'function name() view returns (string)',
+      'function symbol() view returns (string)',
+      'function decimals() view returns (uint8)'
+    ]
+
+    interface ERC20Details {
+      name: string
+      symbol: string
+      decimals: number
+    }
+
+    const details: ERC20Details | undefined = await multicastEthProviders<
+      ERC20Details,
+      ethers.providers.JsonRpcProvider
+    >({
+      func: async (ethProvider: ethers.providers.JsonRpcProvider) => {
+        const contract = new ethers.Contract(
+          contractAddress,
+          ERC20_ABI,
+          ethProvider
+        )
+        const [name, symbol, decimals] = await Promise.all([
+          contract.name(),
+          contract.symbol(),
+          contract.decimals()
+        ])
+        return { name, symbol, decimals }
+      },
+      providers: ethProviders
+    }).catch(() => undefined)
+    if (details == null) return []
+
+    const out: EdgeToken = {
+      currencyCode: details.symbol,
+      displayName: details.name,
+      networkLocation: {
+        contractAddress
+      },
+      denominations: [
+        { name: details.symbol, multiplier: '1' + '0'.repeat(details.decimals) }
+      ]
+    }
+    return [out]
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
