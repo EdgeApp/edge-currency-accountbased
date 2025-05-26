@@ -5,6 +5,7 @@
 - added: Implement `getTokenDetails` in Ethereum and Zano tools
 - added: (Zano) Support infoServerTokens
 - changed: Allow Zano to spend to multiple destinations
+- changed: Fill in MakeTxDeposit Edge transaction data when sending one asset
 - fixed: Update builtinTokens with infoServerPayload when creating tools
 
 ## 4.47.1 (2025-05-13)
