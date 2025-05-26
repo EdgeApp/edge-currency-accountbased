@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- fixed: Do not send duplicate new-transaction notifications.
+
+## 4.48.0 (2025-05-26)
+
+- added: Implement `getTokenDetails` in Ethereum and Zano tools
+- added: (Zano) Support infoServerTokens
+- changed: Allow Zano to spend to multiple destinations
+- changed: Fill in MakeTxDeposit Edge transaction data when sending one asset
+- fixed: Update builtinTokens with infoServerPayload when creating tools
+
 ## 4.47.1 (2025-05-13)
 
 - fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`

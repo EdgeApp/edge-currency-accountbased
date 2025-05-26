@@ -503,7 +503,6 @@ export class CurrencyEngine<
         this.getTxCheckpoint(edgeTransaction),
         this.highestSeenCheckpoint
       )
-      this.updateSeenTxCheckpoint()
       this.warn(`addTransaction new tx: ${edgeTransaction.txid}`)
     } else {
       // Already have this tx in the database. See if anything changed
@@ -801,6 +800,11 @@ export class CurrencyEngine<
     if (this.transactionEvents.length > 0) {
       this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
       this.transactionEvents = []
+
+      // Once we send transactions to the core, the user might see some
+      // notifications. We *never* want to show these notifications again,
+      // so update the core's last-seen checkpoint, ignoring sync status:
+      this.updateSeenTxCheckpoint()
     }
   }
 
@@ -830,17 +834,15 @@ export class CurrencyEngine<
     // note that sometimes callback does not get triggered on Android debug
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
 
-    // Send back syncTxCheckpoint after sync completes
-    this.updateSeenTxCheckpoint()
-  }
-
-  updateSeenTxCheckpoint(): void {
     // Only call the callback if the wallet is fully synced.
     // This ensure that all initial syncs, without a defined seenTxCheckpoint,
     // will not incorrectly update the seenTxCheckpoint in the middle of an
     // initial sync.
+    if (this.addressesChecked) this.updateSeenTxCheckpoint()
+  }
+
+  updateSeenTxCheckpoint(): void {
     if (
-      this.addressesChecked &&
       this.highestSeenCheckpoint != null &&
       this.highestSeenCheckpoint !== this.seenTxCheckpoint
     ) {
