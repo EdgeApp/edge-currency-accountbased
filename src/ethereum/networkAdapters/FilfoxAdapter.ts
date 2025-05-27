@@ -136,12 +136,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   }
 
   private onUpdateTransactions(): void {
-    if (this.ethEngine.transactionEvents.length > 0) {
-      this.ethEngine.currencyEngineCallbacks.onTransactions(
-        this.ethEngine.transactionEvents
-      )
-      this.ethEngine.transactionEvents = []
-    }
+    this.ethEngine.sendTransactionEvents()
   }
 
   private async scanTransactionsFromFilfox(

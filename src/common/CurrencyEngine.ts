@@ -575,10 +575,7 @@ export class CurrencyEngine<
       this.checkDroppedTransactions(now)
       this.walletLocalData.lastCheckedTxsDropped = now
       this.walletLocalDataDirty = true
-      if (this.transactionEvents.length > 0) {
-        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-        this.transactionEvents = []
-      }
+      this.sendTransactionEvents()
     }
   }
 
@@ -1106,9 +1103,7 @@ export class CurrencyEngine<
       )
     )
 
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-    }
+    this.sendTransactionEvents()
   }
 
   //

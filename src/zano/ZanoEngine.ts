@@ -139,10 +139,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
         transaction: transactions.total_transfers / transactions.last_item_index
       })
     }
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-      this.transactionEvents = []
-    }
+    this.sendTransactionEvents()
     this.updateProgress({ transaction: 1 })
   }
 
