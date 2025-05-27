@@ -169,7 +169,7 @@ export class ZcashEngine extends CurrencyEngine<
 
         this.processTransaction(tx)
       })
-      this.updateTransactionEvents()
+      this.sendTransactionEvents()
     })
     this.synchronizer.on('error', async payload => {
       this.log.warn(`Synchronizer error: ${payload.message}`)
@@ -367,7 +367,7 @@ export class ZcashEngine extends CurrencyEngine<
             this.walletLocalDataDirty = true
 
             this.processTransaction(tx)
-            this.updateTransactionEvents()
+            this.sendTransactionEvents()
           })
           .catch(e => {
             this.autoshielding.createAutoshieldTx = false

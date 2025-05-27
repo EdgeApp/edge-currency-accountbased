@@ -383,7 +383,7 @@ export class FilecoinEngine extends CurrencyEngine<
       }): void => {
         if (tx != null) {
           this.addTransaction(this.currencyInfo.currencyCode, tx)
-          this.updateTransactionEvents()
+          this.sendTransactionEvents()
 
           // Progress the block-height if the message's height is greater than
           // last poll for block-height.

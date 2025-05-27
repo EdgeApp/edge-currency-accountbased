@@ -319,7 +319,7 @@ export class CardanoEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   // // ****************************************************************************

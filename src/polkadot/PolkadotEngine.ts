@@ -469,7 +469,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[currencyCode] = 1
     this.updateOnAddressesChecked()
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   async queryTransactions(): Promise<void> {
@@ -547,7 +547,7 @@ export class PolkadotEngine extends CurrencyEngine<
 
     this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
     this.updateOnAddressesChecked()
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   // // ****************************************************************************

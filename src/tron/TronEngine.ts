@@ -403,7 +403,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       throw e
     }
 
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
 
     for (const token of this.enabledTokens) {
       this.tokenCheckTransactionsStatus[token] = 1
