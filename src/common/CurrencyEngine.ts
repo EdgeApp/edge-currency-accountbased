@@ -800,7 +800,7 @@ export class CurrencyEngine<
       : checkpointB
   }
 
-  updateTransactionEvents(): void {
+  sendTransactionEvents(): void {
     if (this.transactionEvents.length > 0) {
       this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
       this.transactionEvents = []

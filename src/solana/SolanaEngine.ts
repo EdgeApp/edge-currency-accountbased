@@ -404,7 +404,7 @@ export class SolanaEngine extends CurrencyEngine<
       this.currencyInfo.currencyCode,
       mainPubkey
     )
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
     this.updateTxStatus(this.currencyInfo.currencyCode, 1)
 
     for (const tokenId of this.enabledTokenIds) {
@@ -418,7 +418,7 @@ export class SolanaEngine extends CurrencyEngine<
           new PublicKey(this.networkInfo.associatedTokenPublicKey)
         )
         await this.queryTransactionsInner(cc, pk)
-        this.updateTransactionEvents()
+        this.sendTransactionEvents()
       }
       this.updateTxStatus(cc, 1)
     }
@@ -531,7 +531,7 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     this.walletLocalDataDirty = true
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   updateTxStatus(currencyCode: string, progress: number): void {

@@ -614,7 +614,7 @@ export class XrpEngine extends CurrencyEngine<
         if (transaction.tx == null) continue
         this.processRippleTransaction(transaction)
       }
-      this.updateTransactionEvents()
+      this.sendTransactionEvents()
       this.walletLocalData.lastAddressQueryHeight = blockHeight
       this.tokenCheckTransactionsStatus.XRP = 1
       this.enabledTokens.forEach(tokenCurrencyCode => {
