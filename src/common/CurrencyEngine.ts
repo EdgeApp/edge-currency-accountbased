@@ -790,22 +790,14 @@ export class CurrencyEngine<
     checkpointA?: string,
     checkpointB?: string
   ): string | undefined {
-    if (checkpointA != null) {
-      // Always pick the one that's defined:
-      if (checkpointB == null) {
-        return checkpointA
-      }
+    // If either is null, return the other one:
+    if (checkpointA == null) return checkpointB
+    if (checkpointB == null) return checkpointA
 
-      // Compare block heights and pick the largest:
-      const newSeenBlockHeight = parseInt(checkpointA)
-      const currentSeenBlockHeight = parseInt(checkpointB)
-      if (newSeenBlockHeight > currentSeenBlockHeight) {
-        return checkpointA
-      }
-    }
-
-    // Pick B because A didn't exist or was smaller:
-    return checkpointB
+    // Pick the bigger one:
+    return parseInt(checkpointA) > parseInt(checkpointB)
+      ? checkpointA
+      : checkpointB
   }
 
   updateTransactionEvents(): void {
