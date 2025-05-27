@@ -530,12 +530,7 @@ export class EthereumNetwork {
       }
     }
 
-    if (this.ethEngine.transactionEvents.length > 0) {
-      this.ethEngine.currencyEngineCallbacks.onTransactions(
-        this.ethEngine.transactionEvents
-      )
-      this.ethEngine.transactionEvents = []
-    }
+    this.ethEngine.sendTransactionEvents()
   }
 
   buildNetworkAdapters(settings: EthereumNetworkInfo): NetworkAdapter[] {

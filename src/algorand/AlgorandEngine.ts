@@ -461,7 +461,7 @@ export class AlgorandEngine extends CurrencyEngine<
       this.tokenCheckTransactionsStatus[cc] = 1
     }
     this.updateOnAddressesChecked()
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   // // ****************************************************************************

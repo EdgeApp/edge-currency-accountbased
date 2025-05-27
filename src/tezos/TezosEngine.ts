@@ -322,7 +322,7 @@ export class TezosEngine extends CurrencyEngine<
       for (const tx of txs) {
         this.processTezosTransaction(tx)
       }
-      this.updateTransactionEvents()
+      this.sendTransactionEvents()
       this.otherData.numberTransactions = num
       this.walletLocalDataDirty = true
     }

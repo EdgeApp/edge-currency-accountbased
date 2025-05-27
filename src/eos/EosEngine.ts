@@ -540,7 +540,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
 
       this.tokenCheckTransactionsStatus[token] = 1
       this.updateOnAddressesChecked()
-      this.updateTransactionEvents()
+      this.sendTransactionEvents()
     }
   }
 

@@ -588,7 +588,7 @@ export class CosmosEngine extends CurrencyEngine<
     }
     this.otherData.archivedTxLastCheckTime = Date.now()
     this.walletLocalDataDirty = true
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   async queryTransactionsInner(

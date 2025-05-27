@@ -503,7 +503,6 @@ export class CurrencyEngine<
         this.getTxCheckpoint(edgeTransaction),
         this.highestSeenCheckpoint
       )
-      this.updateSeenTxCheckpoint()
       this.warn(`addTransaction new tx: ${edgeTransaction.txid}`)
     } else {
       // Already have this tx in the database. See if anything changed
@@ -575,10 +574,7 @@ export class CurrencyEngine<
       this.checkDroppedTransactions(now)
       this.walletLocalData.lastCheckedTxsDropped = now
       this.walletLocalDataDirty = true
-      if (this.transactionEvents.length > 0) {
-        this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-        this.transactionEvents = []
-      }
+      this.sendTransactionEvents()
     }
   }
 
@@ -790,28 +786,25 @@ export class CurrencyEngine<
     checkpointA?: string,
     checkpointB?: string
   ): string | undefined {
-    if (checkpointA != null) {
-      // Always pick the one that's defined:
-      if (checkpointB == null) {
-        return checkpointA
-      }
+    // If either is null, return the other one:
+    if (checkpointA == null) return checkpointB
+    if (checkpointB == null) return checkpointA
 
-      // Compare block heights and pick the largest:
-      const newSeenBlockHeight = parseInt(checkpointA)
-      const currentSeenBlockHeight = parseInt(checkpointB)
-      if (newSeenBlockHeight > currentSeenBlockHeight) {
-        return checkpointA
-      }
-    }
-
-    // Pick B because A didn't exist or was smaller:
-    return checkpointB
+    // Pick the bigger one:
+    return parseInt(checkpointA) > parseInt(checkpointB)
+      ? checkpointA
+      : checkpointB
   }
 
-  updateTransactionEvents(): void {
+  sendTransactionEvents(): void {
     if (this.transactionEvents.length > 0) {
       this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
       this.transactionEvents = []
+
+      // Once we send transactions to the core, the user might see some
+      // notifications. We *never* want to show these notifications again,
+      // so update the core's last-seen checkpoint, ignoring sync status:
+      this.updateSeenTxCheckpoint()
     }
   }
 
@@ -841,23 +834,23 @@ export class CurrencyEngine<
     // note that sometimes callback does not get triggered on Android debug
     this.currencyEngineCallbacks.onAddressesChecked(totalStatus)
 
-    // Send back syncTxCheckpoint after sync completes
-    this.updateSeenTxCheckpoint()
-  }
-
-  updateSeenTxCheckpoint(): void {
     // Only call the callback if the wallet is fully synced.
     // This ensure that all initial syncs, without a defined seenTxCheckpoint,
     // will not incorrectly update the seenTxCheckpoint in the middle of an
     // initial sync.
-    if (
-      this.addressesChecked &&
-      this.highestSeenCheckpoint != null &&
-      this.highestSeenCheckpoint !== this.seenTxCheckpoint
-    ) {
-      this.seenTxCheckpoint = this.highestSeenCheckpoint
-      this.currencyEngineCallbacks.onSeenTxCheckpoint(this.seenTxCheckpoint)
-    }
+    if (this.addressesChecked) this.updateSeenTxCheckpoint()
+  }
+
+  updateSeenTxCheckpoint(): void {
+    const bestCheckpoint = this.selectSeenTxCheckpoint(
+      this.highestSeenCheckpoint,
+      this.seenTxCheckpoint
+    )
+    if (bestCheckpoint == null) return
+    if (bestCheckpoint === this.seenTxCheckpoint) return
+
+    this.seenTxCheckpoint = bestCheckpoint
+    this.currencyEngineCallbacks.onSeenTxCheckpoint(this.seenTxCheckpoint)
   }
 
   protected async clearBlockchainCache(): Promise<void> {
@@ -1114,9 +1107,7 @@ export class CurrencyEngine<
       )
     )
 
-    if (this.transactionEvents.length > 0) {
-      this.currencyEngineCallbacks.onTransactions(this.transactionEvents)
-    }
+    this.sendTransactionEvents()
   }
 
   //
