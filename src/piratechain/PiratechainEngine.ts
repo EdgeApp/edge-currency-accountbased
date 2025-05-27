@@ -129,7 +129,7 @@ export class PiratechainEngine extends CurrencyEngine<
     try {
       await this.queryBalance()
       await this.queryTransactions()
-      this.updateTransactionEvents()
+      this.sendTransactionEvents()
     } catch (e: any) {}
     this.queryMutex = false
   }

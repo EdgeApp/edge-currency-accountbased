@@ -346,7 +346,7 @@ export class StellarEngine extends CurrencyEngine<
         return
       }
     }
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (pagingToken) {
       this.otherData.lastPagingToken = pagingToken

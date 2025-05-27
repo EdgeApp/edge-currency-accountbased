@@ -209,7 +209,7 @@ export class ThorchainEngine extends CosmosEngine {
       code => (this.tokenCheckTransactionsStatus[code] = 1)
     )
     this.updateOnAddressesChecked()
-    this.updateTransactionEvents()
+    this.sendTransactionEvents()
   }
 
   async calculateFee(opts: { messages: EncodeObject[] }): Promise<CosmosFee> {
