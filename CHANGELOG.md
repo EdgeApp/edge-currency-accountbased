@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.46.2 (2025-05-27)
+
 - fixed: Do not send duplicate new-transaction notifications.
 
 ## 4.48.0 (2025-05-26)
