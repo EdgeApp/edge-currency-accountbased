@@ -842,13 +842,15 @@ export class CurrencyEngine<
   }
 
   updateSeenTxCheckpoint(): void {
-    if (
-      this.highestSeenCheckpoint != null &&
-      this.highestSeenCheckpoint !== this.seenTxCheckpoint
-    ) {
-      this.seenTxCheckpoint = this.highestSeenCheckpoint
-      this.currencyEngineCallbacks.onSeenTxCheckpoint(this.seenTxCheckpoint)
-    }
+    const bestCheckpoint = this.selectSeenTxCheckpoint(
+      this.highestSeenCheckpoint,
+      this.seenTxCheckpoint
+    )
+    if (bestCheckpoint == null) return
+    if (bestCheckpoint === this.seenTxCheckpoint) return
+
+    this.seenTxCheckpoint = bestCheckpoint
+    this.currencyEngineCallbacks.onSeenTxCheckpoint(this.seenTxCheckpoint)
   }
 
   protected async clearBlockchainCache(): Promise<void> {
