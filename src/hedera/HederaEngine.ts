@@ -183,16 +183,10 @@ export class HederaEngine extends CurrencyEngine<
         this.walletLocalDataDirty = true
       }
 
-      txs.forEach(tx => this.addTransaction(this.currencyInfo.currencyCode, tx))
-
-      this.currencyEngineCallbacks.onTransactions(
-        txs.map(tx => ({
-          // Not new because `addTransaction` would have already dispatched
-          // event with `isNew: true`
-          isNew: false,
-          transaction: tx
-        }))
-      )
+      for (const tx of txs) {
+        this.addTransaction(this.currencyInfo.currencyCode, tx)
+      }
+      this.sendTransactionEvents()
     }
   }
 
