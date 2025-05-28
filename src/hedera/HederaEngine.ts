@@ -208,11 +208,12 @@ export class HederaEngine extends CurrencyEngine<
       Date.now() / 1000
     )
     const endTimestamp = new Timestamp(endTimestampSeconds, 0)
+    const LIMIT = 25
 
     // we request transactions in ascending order by consensus timestamp
     const url = `${
       this.mirrorNodes[0]
-    }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
+    }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&limit=${LIMIT}&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
 
     const response = await this.fetchCors(url)
 
@@ -275,7 +276,7 @@ export class HederaEngine extends CurrencyEngine<
     // If there are 100 transactions in the response, start the next query with the timestamp from the latest transaction
     // Otherwise, use the calculated end timestamp
     const nextTimestamp =
-      json.transactions.length === 100
+      json.transactions.length === LIMIT
         ? latestTimestampFromTransaction
         : endTimestampSeconds - parseInt(startTimestampSeconds) === SIXTY_DAYS
         ? endTimestamp.toString()

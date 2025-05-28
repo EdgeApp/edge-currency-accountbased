@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: (Hedera) Save memo to queried transactions
+- fixed: (Hedera) Fix missing transactions by specifying query limit
 
 ## 4.48.1 (2025-05-27)
 
