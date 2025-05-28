@@ -14,6 +14,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -26,6 +27,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { utf8 } from '../common/utf8'
 import { getFetchCors } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
@@ -242,12 +244,20 @@ export class HederaEngine extends CurrencyEngine<
       const ourReceiveAddresses = []
       if (gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
 
+      const memos: EdgeMemo[] = []
+      if (tx.memo_base64 !== '') {
+        memos.push({
+          type: 'text',
+          value: utf8.stringify(base64.parse(tx.memo_base64))
+        })
+      }
+
       txs.push({
         blockHeight: 1, // blockHeight
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
         date,
         isSend: nativeAmount.startsWith('-'),
-        memos: [],
+        memos,
         nativeAmount,
         networkFee: tx.charged_tx_fee.toString(), // networkFee
         networkFees: [],

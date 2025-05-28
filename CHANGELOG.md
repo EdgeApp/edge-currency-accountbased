@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (Hedera) Save memo to queried transactions
+
 ## 4.48.1 (2025-05-27)
 
 - fixed: Do not send duplicate new-transaction notifications.
