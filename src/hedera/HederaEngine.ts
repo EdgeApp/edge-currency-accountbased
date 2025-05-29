@@ -14,6 +14,7 @@ import {
   EdgeCurrencyEngineOptions,
   EdgeFetchFunction,
   EdgeFreshAddress,
+  EdgeMemo,
   EdgeSpendInfo,
   EdgeTransaction,
   EdgeWalletInfo,
@@ -26,6 +27,7 @@ import { base16, base64 } from 'rfc4648'
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
+import { utf8 } from '../common/utf8'
 import { getFetchCors } from '../common/utils'
 import { HederaTools } from './HederaTools'
 import {
@@ -206,11 +208,12 @@ export class HederaEngine extends CurrencyEngine<
       Date.now() / 1000
     )
     const endTimestamp = new Timestamp(endTimestampSeconds, 0)
+    const LIMIT = 25
 
     // we request transactions in ascending order by consensus timestamp
     const url = `${
       this.mirrorNodes[0]
-    }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
+    }/api/v1/transactions?transactionType=CRYPTOTRANSFER&account.id=${accountIdStr}&order=asc&limit=${LIMIT}&timestamp=gt:${startTimestamp.toString()}&timestamp=lte:${endTimestamp.toString()}`
 
     const response = await this.fetchCors(url)
 
@@ -242,12 +245,20 @@ export class HederaEngine extends CurrencyEngine<
       const ourReceiveAddresses = []
       if (gt(nativeAmount, '0')) ourReceiveAddresses.push(accountIdStr)
 
+      const memos: EdgeMemo[] = []
+      if (tx.memo_base64 !== '') {
+        memos.push({
+          type: 'text',
+          value: utf8.stringify(base64.parse(tx.memo_base64))
+        })
+      }
+
       txs.push({
         blockHeight: 1, // blockHeight
         currencyCode: this.currencyInfo.currencyCode, // currencyCode
         date,
         isSend: nativeAmount.startsWith('-'),
-        memos: [],
+        memos,
         nativeAmount,
         networkFee: tx.charged_tx_fee.toString(), // networkFee
         networkFees: [],
@@ -265,7 +276,7 @@ export class HederaEngine extends CurrencyEngine<
     // If there are 100 transactions in the response, start the next query with the timestamp from the latest transaction
     // Otherwise, use the calculated end timestamp
     const nextTimestamp =
-      json.transactions.length === 100
+      json.transactions.length === LIMIT
         ? latestTimestampFromTransaction
         : endTimestampSeconds - parseInt(startTimestampSeconds) === SIXTY_DAYS
         ? endTimestamp.toString()
