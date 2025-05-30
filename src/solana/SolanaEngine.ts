@@ -634,10 +634,6 @@ export class SolanaEngine extends CurrencyEngine<
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
     const payee = new PublicKey(publicAddress)
-    const tokenProgramId = this.tools.tokenProgramPublicKey
-    const associatedTokenProgramId = new PublicKey(
-      this.networkInfo.associatedTokenPublicKey
-    )
 
     const instructions: TransactionInstruction[] = []
 
@@ -672,11 +668,15 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (isTokenTx) {
-      const TOKEN = new PublicKey(tokenId)
+      const tokenPubkey = new PublicKey(tokenId)
+      const tokenProgramId = this.tools.tokenProgramPublicKey
+      const associatedTokenProgramId = new PublicKey(
+        this.networkInfo.associatedTokenPublicKey
+      )
 
       // derive recipient address
       const associatedDestinationTokenAddrPayee = getAssociatedTokenAddressSync(
-        TOKEN,
+        tokenPubkey,
         payee,
         true, // payee may be a Program Derived Address
         tokenProgramId,
@@ -711,7 +711,7 @@ export class SolanaEngine extends CurrencyEngine<
             payer,
             associatedDestinationTokenAddrPayee,
             payee,
-            TOKEN,
+            tokenPubkey,
             tokenProgramId,
             associatedTokenProgramId
           )
@@ -737,7 +737,7 @@ export class SolanaEngine extends CurrencyEngine<
 
       // derive our address
       const associatedDestinationTokenAddrPayer = getAssociatedTokenAddressSync(
-        TOKEN,
+        tokenPubkey,
         payer,
         false,
         tokenProgramId,
