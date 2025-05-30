@@ -9,7 +9,11 @@ import {
   EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
-import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
+import {
+  evmCustomFeeTemplate,
+  evmMemoOptions,
+  makeEvmDefaultSettings
+} from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '690908f7fa93afc040cfbd9fe1ddd2c2668aa0e0': {
@@ -138,6 +142,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
+  defaultSettings: makeEvmDefaultSettings(networkInfo),
   displayName: 'Filecoin FEVM',
   metaTokens: makeMetaTokens(builtinTokens)
 }

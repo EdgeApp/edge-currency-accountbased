@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: Updated FEVM default gas price settings.
+- fixed: Include deprecated `defaultSettings` field in FEVM's EdgeCurrencyInfo for legacy support.
 
 ## 4.47.1 (2025-05-13)
 
