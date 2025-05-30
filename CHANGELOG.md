@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Removed race conditions between `loadEngine` and `startEngine`.
+
 ## 4.47.1 (2025-05-13)
 
 - fixed: (TRX) Fees simplified to use `wallet/triggerconstantcontract` `energy_used`

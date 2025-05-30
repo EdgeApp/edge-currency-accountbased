@@ -544,6 +544,7 @@ export class SolanaEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     await this.tools.connectClient()
 
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)

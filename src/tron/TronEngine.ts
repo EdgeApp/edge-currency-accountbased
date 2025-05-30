@@ -1435,6 +1435,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkTokenBalances', ACCOUNT_POLL_MILLISECONDS)

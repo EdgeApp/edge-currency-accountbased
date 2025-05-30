@@ -247,6 +247,7 @@ export class ThorchainEngine extends CosmosEngine {
   }
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.addToLoop('queryChainId', QUERY_POLL_MILLISECONDS)
     await super.startEngine()
   }

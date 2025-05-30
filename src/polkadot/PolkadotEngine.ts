@@ -555,6 +555,7 @@ export class PolkadotEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     await this.tools.connectApi(this.walletId)
     this.api = this.tools.polkadotApi
     this.minimumAddressBalance =

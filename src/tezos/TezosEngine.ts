@@ -380,8 +380,8 @@ export class TezosEngine extends CurrencyEngine<
   // Public methods
   // ****************************************************************************
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async startEngine() {
+  async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('checkTransactionsInnerLoop', TRANSACTION_POLL_MILLISECONDS)

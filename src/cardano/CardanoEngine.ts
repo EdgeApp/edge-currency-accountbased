@@ -327,6 +327,7 @@ export class CardanoEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.addToLoop('queryBlockheight', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)

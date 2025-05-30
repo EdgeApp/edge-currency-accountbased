@@ -747,6 +747,7 @@ export class XrpEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     try {
       await this.tools.connectApi(this.walletId)
     } catch (e: unknown) {

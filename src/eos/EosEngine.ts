@@ -936,6 +936,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
 
   // This routine is called once a wallet needs to start querying the network
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.accountNameChecked = this.otherData.accountName !== ''
     this.addToLoop('checkBlockchainInnerLoop', BLOCKCHAIN_POLL_MILLISECONDS)
     this.addToLoop('checkAccountInnerLoop', ADDRESS_POLL_MILLISECONDS)

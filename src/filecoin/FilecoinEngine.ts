@@ -118,6 +118,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.initData()
     this.addToLoop('checkBalance', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('checkBlockHeight', BLOCKCHAIN_POLL_MILLISECONDS)

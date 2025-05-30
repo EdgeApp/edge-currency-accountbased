@@ -835,6 +835,7 @@ export class CosmosEngine extends CurrencyEngine<
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     await this.tools.connectClient()
     this.addToLoop('queryBalance', ACCOUNT_POLL_MILLISECONDS)
     this.addToLoop('queryBlockheight', ACCOUNT_POLL_MILLISECONDS)

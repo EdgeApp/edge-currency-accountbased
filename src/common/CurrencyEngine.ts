@@ -47,7 +47,8 @@ import {
   getDenomination,
   matchJson,
   normalizeAddress,
-  safeErrorMessage
+  safeErrorMessage,
+  snooze
 } from './utils'
 import { validateMemos } from './validateMemos'
 
@@ -78,6 +79,7 @@ export class CurrencyEngine<
   currencyEngineCallbacks: EdgeCurrencyEngineCallbacks
   walletLocalDisklet: Disklet
   engineOn: boolean
+  isEngineLoaded: boolean = false
   addressesChecked: boolean
   tokenCheckBalanceStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
   tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
@@ -433,6 +435,8 @@ export class CurrencyEngine<
         this.highestSeenCheckpoint = '0'
       }
     }
+
+    this.isEngineLoaded = true
   }
 
   protected findTransaction(currencyCode: string, txid: string): number {
@@ -881,6 +885,8 @@ export class CurrencyEngine<
   // *************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
+
     this.addToLoop('saveWalletLoop', SAVE_DATASTORE_MILLISECONDS)
 
     this.engineOn = true
@@ -894,6 +900,12 @@ export class CurrencyEngine<
 
     for (const [, task] of this.tasks) {
       task.stop()
+    }
+  }
+
+  async waitForLoaded(): Promise<void> {
+    while (!this.isEngineLoaded) {
+      await snooze(100)
     }
   }
 

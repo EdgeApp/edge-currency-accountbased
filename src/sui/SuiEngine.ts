@@ -244,6 +244,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
   // // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
     this.addToLoop('queryBalance', ADDRESS_POLL_MILLISECONDS)
     this.addToLoop('queryTransactions', ADDRESS_POLL_MILLISECONDS)
     await super.startEngine()

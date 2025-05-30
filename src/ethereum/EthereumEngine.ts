@@ -739,6 +739,8 @@ export class EthereumEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    await this.waitForLoaded()
+
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
