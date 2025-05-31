@@ -220,6 +220,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: evmMemoOptions,
   pluginId: 'optimism',
   walletType: 'wallet:optimism',
+  fioChainCode: 'OPT',
 
   // Explorers:
   addressExplorer: 'https://optimistic.etherscan.io/address/%s',

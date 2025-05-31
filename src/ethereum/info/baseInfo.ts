@@ -101,6 +101,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: evmMemoOptions,
   pluginId: 'base',
   walletType: 'wallet:base',
+  fioChainCode: 'BASE',
 
   // Explorers:
   addressExplorer: 'https://basescan.org/address/%s',

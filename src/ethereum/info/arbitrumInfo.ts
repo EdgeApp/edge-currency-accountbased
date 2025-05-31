@@ -179,14 +179,17 @@ const networkInfo: EthereumNetworkInfo = {
 
 const currencyInfo: EdgeCurrencyInfo = {
   canReplaceByFee: true,
+  pluginId: 'arbitrum',
+  walletType: 'wallet:arbitrum',
   currencyCode: 'ETH',
+  displayName: 'Arbitrum',
+  chainCode: 'ETH',
+  fioChainCode: 'ARBITRUM',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   chainDisplayName: 'Arbitrum One',
   assetDisplayName: 'Ethereum',
   memoOptions: evmMemoOptions,
-  pluginId: 'arbitrum',
-  walletType: 'wallet:arbitrum',
 
   // Explorers:
   addressExplorer: 'https://arbiscan.io/address/%s',

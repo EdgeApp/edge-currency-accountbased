@@ -79,6 +79,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: evmMemoOptions,
   pluginId: 'abstract',
   walletType: 'wallet:abstract',
+  fioChainCode: 'ABSTRACT',
 
   // Explorers:
   addressExplorer: 'https://abscan.org/address/%s',

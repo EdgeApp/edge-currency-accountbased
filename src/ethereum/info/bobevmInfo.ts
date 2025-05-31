@@ -84,6 +84,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   memoOptions: evmMemoOptions,
   pluginId: 'bobevm',
   walletType: 'wallet:bobevm',
+  fioChainCode: 'BOBNETWORK',
 
   // Explorers:
   addressExplorer: 'https://explorer.gobob.xyz/address/%s',
