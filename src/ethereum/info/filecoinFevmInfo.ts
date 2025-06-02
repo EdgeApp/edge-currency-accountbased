@@ -9,7 +9,11 @@ import {
   EthereumInfoPayload,
   EthereumNetworkInfo
 } from '../ethereumTypes'
-import { evmCustomFeeTemplate, evmMemoOptions } from './ethereumCommonInfo'
+import {
+  evmCustomFeeTemplate,
+  evmMemoOptions,
+  makeEvmDefaultSettings
+} from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
   '690908f7fa93afc040cfbd9fe1ddd2c2668aa0e0': {
@@ -41,11 +45,11 @@ const networkFees: EthereumFees = {
     },
     gasPrice: {
       lowFee: '1000000001',
-      standardFeeLow: '40000000001',
-      standardFeeHigh: '300000000001',
+      standardFeeLow: '3000000001',
+      standardFeeHigh: '15000000001',
       standardFeeLowAmount: '100000000000000000',
       standardFeeHighAmount: '10000000000000000000',
-      highFee: '40000000001',
+      highFee: '30000000001',
       minGasPrice: '1000000000'
     },
     minPriorityFee: undefined
@@ -138,6 +142,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   ],
 
   // Deprecated:
+  defaultSettings: makeEvmDefaultSettings(networkInfo),
   displayName: 'Filecoin FEVM',
   metaTokens: makeMetaTokens(builtinTokens)
 }

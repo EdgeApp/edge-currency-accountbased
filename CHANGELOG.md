@@ -4,6 +4,8 @@
 
 - changed: (Hedera) Save memo to queried transactions
 - fixed: (Hedera) Fix missing transactions by specifying query limit
+- fixed: Updated FEVM default gas price settings.
+- fixed: Include deprecated `defaultSettings` field in FEVM's EdgeCurrencyInfo for legacy support.
 
 ## 4.48.1 (2025-05-27)
 
