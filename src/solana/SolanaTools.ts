@@ -27,12 +27,14 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
+import { asyncWaterfall } from '../common/promiseUtils'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeSolanaWalletInfo,
   asSolanaInitOptions,
+  asSolanaNetworkLocation,
   asSolanaPrivateKeys,
   SolanaInfoPayload,
   SolanaInitOptions,
@@ -50,6 +52,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   archiveConnections: Connection[]
   clientCount: number
   tokenProgramPublicKey: PublicKey
+  token2022ProgramPublicKey: PublicKey
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
@@ -63,6 +66,9 @@ export class SolanaTools implements EdgeCurrencyTools {
     this.archiveConnections = []
     this.clientCount = 0
     this.tokenProgramPublicKey = new PublicKey(networkInfo.tokenPublicKey)
+    this.token2022ProgramPublicKey = new PublicKey(
+      networkInfo.token2022PublicKey
+    )
   }
 
   async getDisplayPrivateKey(
@@ -265,14 +271,41 @@ export class SolanaTools implements EdgeCurrencyTools {
 
   async getTokenId(token: EdgeToken): Promise<string> {
     validateToken(token)
-    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    const cleanLocation = asSolanaNetworkLocation(token.networkLocation)
     if (
       cleanLocation == null ||
       !this.isValidAddress(cleanLocation.contractAddress)
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
-    return cleanLocation.contractAddress
+
+    const connections = (this.connections = this.makeConnections(
+      this.networkInfo.rpcNodes
+    ))
+    const funcs = connections.map(connection => async () => {
+      const info = await connection.getAccountInfo(
+        new PublicKey(cleanLocation.contractAddress)
+      )
+      if (info == null) {
+        throw new Error('ErrorInvalidContractAddress')
+      }
+      return info.owner.toBase58()
+    })
+    const owner: string = await asyncWaterfall(funcs)
+
+    // networkLocation doesn't need to set a tokenProgram if it's a normal token
+    if (
+      cleanLocation.tokenProgram == null &&
+      owner === this.networkInfo.tokenPublicKey
+    ) {
+      return cleanLocation.contractAddress
+    }
+    // If the tokenProgram is set, we need to check if matches the owner
+    if (cleanLocation.tokenProgram === owner) {
+      return cleanLocation.contractAddress
+    }
+
+    throw new Error('ErrorInvalidContractAddress')
   }
 }
 

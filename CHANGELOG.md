@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Solana) Token2022 support
+
 ## 4.48.3 (2025-06-06)
 
 - changed: Improved change-server integration by usage of checkpoints.
