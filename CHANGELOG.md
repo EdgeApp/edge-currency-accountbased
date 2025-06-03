@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (Solana) Token2022 support
+
 ## 4.49.0 (2025-06-16)
 
 - added: Added `resolveName` method to Zano `otherMethods` for Zano alias resolution.
