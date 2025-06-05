@@ -1,3 +1,5 @@
+import { getMetadataAccountDataSerializer } from '@metaplex-foundation/mpl-token-metadata'
+import { unpackMint } from '@solana/spl-token'
 import {
   Connection,
   ConnectionConfig,
@@ -15,6 +17,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeFetchFunction,
+  EdgeGetTokenDetailsFilter,
   EdgeIo,
   EdgeLog,
   EdgeMetaToken,
@@ -267,6 +270,93 @@ export class SolanaTools implements EdgeCurrencyTools {
       this.connections = []
       this.archiveConnections = []
     }
+  }
+
+  async getTokenDetails(
+    filter: EdgeGetTokenDetailsFilter
+  ): Promise<EdgeToken[]> {
+    const { contractAddress } = filter
+    if (contractAddress == null) return []
+
+    if (!this.isValidAddress(contractAddress)) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+
+    const connections = this.makeConnections(this.networkInfo.rpcNodes)
+
+    return await new Promise(resolve => {
+      const _getTokenDetails = async (): Promise<void> => {
+        const tokenProgramFuncs = connections.map(connection => async () => {
+          const info = await connection.getAccountInfo(
+            new PublicKey(contractAddress)
+          )
+          if (info == null) {
+            resolve([])
+            return
+          }
+
+          const unpackedMint = unpackMint(
+            new PublicKey(contractAddress),
+            info,
+            new PublicKey(info.owner)
+          )
+
+          return {
+            tokenProgram: info.owner.toBase58(),
+            decimals: unpackedMint.decimals
+          }
+        })
+
+        const mintPublicKey = new PublicKey(contractAddress)
+        const metadataPublicKey = new PublicKey(
+          'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+        )
+        const [metadataPDA] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from('metadata'),
+            metadataPublicKey.toBuffer(),
+            mintPublicKey.toBuffer()
+          ],
+          metadataPublicKey
+        )
+        const tokenNameAndSymbolFuncs = connections.map(
+          connection => async () => {
+            const accountInfo = await connection.getAccountInfo(metadataPDA)
+            if (accountInfo == null) {
+              resolve([])
+              return
+            }
+
+            const serializer = getMetadataAccountDataSerializer()
+            const [metadata] = serializer.deserialize(accountInfo.data)
+
+            return {
+              name: metadata.name,
+              symbol: metadata.symbol
+            }
+          }
+        )
+
+        const { tokenProgram, decimals } = await asyncWaterfall(
+          tokenProgramFuncs
+        )
+        const { name, symbol } = await asyncWaterfall(tokenNameAndSymbolFuncs)
+
+        const token: EdgeToken = {
+          currencyCode: symbol,
+          denominations: [
+            { name: symbol, multiplier: '1' + '0'.repeat(decimals) }
+          ],
+          displayName: name,
+          networkLocation: {
+            contractAddress,
+            tokenProgram
+          }
+        }
+        resolve([token])
+      }
+      _getTokenDetails().catch(() => resolve([]))
+    })
   }
 
   async getTokenId(token: EdgeToken): Promise<string> {
