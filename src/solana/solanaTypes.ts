@@ -22,6 +22,7 @@ export interface SolanaNetworkInfo {
   derivationPath: string
   memoPublicKey: string
   tokenPublicKey: string
+  token2022PublicKey: string
   associatedTokenPublicKey: string
 }
 
@@ -147,3 +148,8 @@ export const asSolanaInfoPayload = asObject({
   rpcNodesArchival: asOptional(asArray(asString))
 })
 export type SolanaInfoPayload = ReturnType<typeof asSolanaInfoPayload>
+
+export const asSolanaNetworkLocation = asObject({
+  contractAddress: asString,
+  tokenProgram: asOptional(asString)
+})

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: (Solana) Token2022 support
 - changed: (Hedera) Save memo to queried transactions
 - fixed: (Hedera) Fix missing transactions by specifying query limit
 - fixed: Updated FEVM default gas price settings.
