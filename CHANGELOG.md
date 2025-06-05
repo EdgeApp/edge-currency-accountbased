@@ -6,6 +6,7 @@
 - fixed: (Hedera) Fix missing transactions by specifying query limit
 - fixed: Updated FEVM default gas price settings.
 - fixed: Include deprecated `defaultSettings` field in FEVM's EdgeCurrencyInfo for legacy support.
+- fixed: (Optimism/Sepolia/Holesky) Remove defunct etherscan server URIs.
 
 ## 4.48.1 (2025-05-27)
 
