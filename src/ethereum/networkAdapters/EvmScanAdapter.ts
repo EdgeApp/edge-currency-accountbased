@@ -1,7 +1,9 @@
 import { add, max, mul, sub } from 'biggystring'
 import {
   asArray,
+  asEither,
   asMaybe,
+  asNumber,
   asObject,
   asOptional,
   asString,
@@ -79,7 +81,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           server,
           blockNumberUrlSyntax
         )
-        if (response.status === '0') {
+        if ('status' in response && response.status === '0') {
           this.handledUnexpectedResponse(server, 'eth_blockNumber', response)
         }
         return { server, result: response }
@@ -120,7 +122,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         )
       }
       const response = await this.fetchGetEtherscan(server, url)
-      if (response.status === '0') {
+      if ('status' in response && response.status === '0') {
         this.handledUnexpectedResponse(
           server,
           'eth_getTransactionCount',
@@ -147,7 +149,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         const url = `?module=account&action=balance&address=${address}&tag=latest`
         response = await this.serialServers(async server => {
           const response = await this.fetchGetEtherscan(server, url)
-          if (response.status === '0') {
+          if ('status' in response && response.status === '0') {
             this.handledUnexpectedResponse(server, 'eth_getBalance', response)
           }
           asIntegerString(response.result)
@@ -167,7 +169,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           const url = `?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest`
           const response = await this.serialServers(async server => {
             const response = await this.fetchGetEtherscan(server, url)
-            if (response.status === '0') {
+            if ('status' in response && response.status === '0') {
               this.handledUnexpectedResponse(
                 server,
                 'getTokenBalance',
@@ -306,6 +308,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     const data = await response.json()
     const cleanData = asEvmScanResponse(asUnknown)(data)
     if (
+      'status' in cleanData &&
       cleanData.status === '0' &&
       typeof cleanData.result === 'string' &&
       cleanData.result.match(/Max calls|rate limit/) != null
@@ -351,6 +354,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
           : await this.serialServers(async server => {
               const response = await this.fetchGetEtherscan(server, url)
               if (
+                'status' in response &&
                 response.status === '0' &&
                 response.message !== 'No transactions found' &&
                 response.message !== 'No internal transactions found'
@@ -422,7 +426,7 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
         const path = `?module=proxy&action=eth_getTransactionReceipt&txhash=${txid}`
         const response = await this.serialServers(async server => {
           const response = await this.fetchGetEtherscan(server, path)
-          if (response.status === '0') {
+          if ('status' in response && response.status === '0') {
             this.handledUnexpectedResponse(
               server,
               'eth_getTransactionReceipt',
@@ -675,15 +679,33 @@ const asEvmScanSuccessResponse =
     })(raw)
   }
 
-type EvmScanResponse<T> = EvmScanSuccessResponse<T> | EvmScanErrorResponse
-const asEvmScanResponse =
-  <T>(
-    asT: Cleaner<T>
-  ): Cleaner<EvmScanSuccessResponse<T> | EvmScanErrorResponse> =>
+interface EvmScanProxyResponse<T> {
+  jsonrpc: '2.0'
+  id: number
+  result: T
+}
+const asEvmScanProxyResponse =
+  <T>(asT: Cleaner<T>): Cleaner<EvmScanProxyResponse<T>> =>
   (raw: unknown) => {
-    return (
-      asMaybe(asEvmScanErrorResponse)(raw) ?? asEvmScanSuccessResponse(asT)(raw)
-    )
+    return asObject<EvmScanProxyResponse<T>>({
+      jsonrpc: asValue('2.0'),
+      id: asNumber,
+      result: asT
+    })(raw)
+  }
+
+type EvmScanResponse<T> =
+  | EvmScanSuccessResponse<T>
+  | EvmScanProxyResponse<T>
+  | EvmScanErrorResponse
+const asEvmScanResponse =
+  <T>(asT: Cleaner<T>): Cleaner<EvmScanResponse<T>> =>
+  (raw: unknown) => {
+    return asEither(
+      asEvmScanErrorResponse,
+      asEvmScanSuccessResponse(asT),
+      asEvmScanProxyResponse(asT)
+    )(raw)
   }
 
 export type EvmScanTransaction = ReturnType<typeof asEvmScanTransaction>

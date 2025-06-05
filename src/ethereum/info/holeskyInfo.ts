@@ -75,7 +75,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api-holesky.etherscan.io']
+      servers: ['https://api.etherscan.io']
     }
   ],
 

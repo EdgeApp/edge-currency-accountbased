@@ -73,7 +73,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
-      servers: ['https://api-sepolia.etherscan.io']
+      servers: ['https://api.etherscan.io']
     }
   ],
 
