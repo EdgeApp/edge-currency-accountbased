@@ -768,10 +768,14 @@ export class EthereumEngine extends CurrencyEngine<
       })
     this.addToLoop('updateOptimismRollupParams', ROLLUP_FEE_PARAMS)
     this.ethNetwork.start()
+
     await super.startEngine()
 
     this.currencyEngineCallbacks.onSubscribeAddresses([
-      this.walletLocalData.publicKey
+      {
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.blockHeight.toString()
+      }
     ])
   }
 
@@ -805,6 +809,17 @@ export class EthereumEngine extends CurrencyEngine<
       // TODO: Upgrade the network adapters for EVMs that support fetching
       // mempool transactions. Then we can change this routine to query for
       // the mempool until a transaction is found.
+      return SYNC_NETWORK_INTERVAL
+    }
+
+    // If our local block-height is ahead of the subscription event block-height
+    // then the local state is up-to-date. However, this may be the initial
+    // syncNetwork call by the core, so we must make sure the sync ratio is
+    // completed.
+    if (this.walletLocalData.blockHeight >= theirBlockheight) {
+      if (!this.addressesChecked) {
+        this.syncTheWalletLikeLifeDependsOnIt()
+      }
       return SYNC_NETWORK_INTERVAL
     }
 
