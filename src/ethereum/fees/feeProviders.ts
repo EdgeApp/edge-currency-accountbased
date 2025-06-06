@@ -11,7 +11,6 @@ import { fetchInfo } from '../../common/network'
 import { hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
-  GAS_STATION_WEI_MULTIPLIER,
   OPTIMAL_FEE_HIGH_MULTIPLIER,
   WEI_MULTIPLIER
 } from '../ethereumConsts'
@@ -238,10 +237,10 @@ export const fetchFeesFromEvmGasStation = async (
   let standardFeeHigh = ((fees.fast + fees.fastest) * 0.5 + fees.fastest) * 0.5
   let highFee = standardFeeHigh > fees.fastest ? standardFeeHigh : fees.fastest
 
-  lowFee = Math.round(lowFee) * GAS_STATION_WEI_MULTIPLIER
-  standardFeeLow = Math.round(standardFeeLow) * GAS_STATION_WEI_MULTIPLIER
-  standardFeeHigh = Math.round(standardFeeHigh) * GAS_STATION_WEI_MULTIPLIER
-  highFee = Math.round(highFee) * GAS_STATION_WEI_MULTIPLIER
+  lowFee = Math.round(lowFee) * WEI_MULTIPLIER
+  standardFeeLow = Math.round(standardFeeLow) * WEI_MULTIPLIER
+  standardFeeHigh = Math.round(standardFeeHigh) * WEI_MULTIPLIER
+  highFee = Math.round(highFee) * WEI_MULTIPLIER
 
   const out = {
     lowFee: lowFee.toString(),
