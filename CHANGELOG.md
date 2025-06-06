@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+## 4.48.3 (2025-06-06)
+
+- changed: Improved change-server integration by usage of checkpoints.
+- fixed: Remove gas station multiplier to fix gas-station calculations.
+
 ## 4.48.2 (2025-06-05)
 
 - changed: (Hedera) Save memo to queried transactions
-- changed: Improved change-server integration by usage of checkpoints.
 - fixed: (Hedera) Fix missing transactions by specifying query limit
 - fixed: Updated FEVM default gas price settings.
 - fixed: Include deprecated `defaultSettings` field in FEVM's EdgeCurrencyInfo for legacy support.
