@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: (EVM) Require unconfirmed transactions to be specified in `makeSpend` via `pendingTxs` parameter.
+
 ## 4.48.3 (2025-06-06)
 
 - changed: Improved change-server integration by usage of checkpoints.

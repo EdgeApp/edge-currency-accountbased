@@ -612,6 +612,18 @@ export class CurrencyEngine<
     this.walletLocalDataDirty = true
   }
 
+  protected getUnconfirmedTxs(): EdgeTransaction[] {
+    const transactions: EdgeTransaction[] = []
+    for (const currencyCode in this.transactionList) {
+      for (const tx of this.transactionList[currencyCode]) {
+        if (tx.blockHeight === 0) {
+          transactions.push(tx)
+        }
+      }
+    }
+    return transactions
+  }
+
   // Called by EthereumNetwork
   updateBalance(currencyCode: string, balance: string): void {
     const currentBalance = this.walletLocalData.totalBalances[currencyCode]
