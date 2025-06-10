@@ -16,7 +16,8 @@ import {
   EdgeWalletInfo,
   InsufficientFundsError,
   JsonObject,
-  NoAmountSpecifiedError
+  NoAmountSpecifiedError,
+  PendingFundsError
 } from 'edge-core-js/types'
 // eslint-disable-next-line camelcase
 import { signTypedData_v4 } from 'eth-sig-util'
@@ -1043,6 +1044,16 @@ export class EthereumEngine extends CurrencyEngine<
     const { memos = [] } = edgeSpendInfo
 
     const { pendingTxs = [], tokenId } = edgeSpendInfo
+    const unconfirmedTxs = this.getUnconfirmedTxs()
+
+    // If we have pending transactions, that are not in the pendingTxs array,
+    // then throw an error:
+    const unexpectedUnconfirmedTxs = unconfirmedTxs.filter(
+      tx => !pendingTxs.some(ptx => ptx.txid === tx.txid)
+    )
+    if (unexpectedUnconfirmedTxs.length > 0) {
+      throw new PendingFundsError('Unexpected pending transactions')
+    }
 
     // Ethereum can only have one output
     if (edgeSpendInfo.spendTargets.length !== 1) {
@@ -1091,14 +1102,17 @@ export class EthereumEngine extends CurrencyEngine<
     let nonceUsed: string | undefined
 
     // Determine the nonce to use from the number of pending transactions
-    if (pendingTxs.length > 0) {
+    const unsavedPendingTxs = pendingTxs.filter(
+      tx => !unconfirmedTxs.some(ptx => ptx.txid === tx.txid)
+    )
+    if (unsavedPendingTxs.length > 0) {
       // @ts-expect-error
       const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
       const baseNonce =
         this.walletLocalData.numUnconfirmedSpendTxs > 0
           ? otherData.unconfirmedNextNonce
           : otherData.nextNonce
-      nonceUsed = add(baseNonce, pendingTxs.length.toString())
+      nonceUsed = add(baseNonce, unsavedPendingTxs.length.toString())
     }
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
