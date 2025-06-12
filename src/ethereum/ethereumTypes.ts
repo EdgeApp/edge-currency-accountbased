@@ -22,21 +22,35 @@ import {
 } from '../common/types'
 import type { NetworkAdapterConfig } from './networkAdapters/types'
 
+const asServiceKeys = asObject(asEither(asString, asArray(asString)))
+
 export interface EthereumInitOptions {
+  /** @deprecated use serviceKeys */
   alchemyApiKey?: string
+  /** @deprecated use serviceKeys */
   amberdataApiKey?: string
+  /** @deprecated use serviceKeys */
   blockchairApiKey?: string
+  /** @deprecated use serviceKeys */
   blockcypherApiKey?: string
+  /** @deprecated use serviceKeys */
   drpcApiKey?: string
   /** For Etherscan v2 API */
   etherscanApiKey?: string | string[]
-  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan) */
+  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan)
+   * @deprecated use serviceKeys
+   */
   evmScanApiKey?: string | string[]
+  /** @deprecated use serviceKeys */
   gasStationApiKey?: string
   infuraProjectId?: string
+  /** @deprecated use serviceKeys */
   nowNodesApiKey?: string
+  /** @deprecated use serviceKeys */
   poktPortalApiKey?: string
+  /** @deprecated use serviceKeys */
   quiknodeApiKey?: string
+  serviceKeys?: Record<string, string | string[]>
 }
 
 export const asEthereumInitOptions = asObject<EthereumInitOptions>({
@@ -51,7 +65,8 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   infuraProjectId: asOptional(asString),
   nowNodesApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString),
-  quiknodeApiKey: asOptional(asString)
+  quiknodeApiKey: asOptional(asString),
+  serviceKeys: asOptional(asServiceKeys)
 })
 
 function isKeyOfEthereumInitOptions(
