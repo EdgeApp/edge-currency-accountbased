@@ -1,6 +1,6 @@
 import {
   createAssociatedTokenAccountInstruction,
-  createTransferInstruction,
+  createTransferCheckedInstruction,
   getAssociatedTokenAddressSync
 } from '@solana/spl-token'
 import {
@@ -53,6 +53,7 @@ import {
   asBlocktime,
   asSafeSolanaWalletInfo,
   asSolanaCustomFee,
+  asSolanaNetworkLocation,
   asSolanaPrivateKeys,
   asSolanaSpendInfoOtherParams,
   asSolanaTxOtherParams,
@@ -165,19 +166,33 @@ export class SolanaEngine extends CurrencyEngine<
             { programId: this.networkInfo.tokenPublicKey },
             { encoding: 'jsonParsed' }
           ]
+        },
+        {
+          method: 'getTokenAccountsByOwner',
+          params: [
+            this.base58PublicKey,
+            { programId: this.networkInfo.token2022PublicKey },
+            { encoding: 'jsonParsed' }
+          ]
         }
       ]
 
       const balances: any = await this.fetchRpcBulk(requests)
 
-      const [mainnetBal, tokenBalsRaw]: [AccountBalance, TokenAmount[]] =
-        balances
+      const [mainnetBal, tokenBalsRaw, token2022BalsRaw]: [
+        AccountBalance,
+        TokenAmount[],
+        TokenAmount[]
+      ] = balances
 
       const balance = asAccountBalance(mainnetBal)
       this.updateBalance(this.chainCode, balance.result.value.toString())
       this.usedTokenIdSet.add(null)
 
-      const tokenBalances = asTokenBalances(tokenBalsRaw).result.value
+      const tokenBalances = [
+        ...asTokenBalances(tokenBalsRaw).result.value,
+        ...asTokenBalances(token2022BalsRaw).result.value
+      ].flat()
       const tokenBalMap = tokenBalances.reduce(
         (acc: { [key: string]: string }, tokenBal) => {
           acc[tokenBal.account.data.parsed.info.mint] =
@@ -335,8 +350,10 @@ export class SolanaEngine extends CurrencyEngine<
     const preTokenBalances = maybePreTokenBalances ?? []
     const postTokenBalances = maybePostTokenBalancesRaw ?? []
     const isTokenTransaction =
-      tx.transaction.message.staticAccountKeys.find(pk =>
-        pk.equals(this.tools.tokenProgramPublicKey)
+      tx.transaction.message.staticAccountKeys.find(
+        pk =>
+          pk.equals(this.tools.tokenProgramPublicKey) ||
+          pk.equals(this.tools.token2022ProgramPublicKey)
       ) != null
     const networkFee = fee.toString()
 
@@ -408,19 +425,26 @@ export class SolanaEngine extends CurrencyEngine<
     this.updateTxStatus(this.currencyInfo.currencyCode, 1)
 
     for (const tokenId of this.enabledTokenIds) {
-      const cc = this.allTokensMap[tokenId].currencyCode
+      const { currencyCode, networkLocation } = this.allTokensMap[tokenId]
       if (this.usedTokenIdSet.has(tokenId)) {
+        const { tokenProgram } = asSolanaNetworkLocation(networkLocation)
+
+        const tokenPubkey =
+          tokenProgram === this.networkInfo.token2022PublicKey
+            ? this.tools.token2022ProgramPublicKey
+            : this.tools.tokenProgramPublicKey
+
         const pk = getAssociatedTokenAddressSync(
           new PublicKey(tokenId),
           mainPubkey,
           false,
-          this.tools.tokenProgramPublicKey,
+          tokenPubkey,
           new PublicKey(this.networkInfo.associatedTokenPublicKey)
         )
-        await this.queryTransactionsInner(cc, pk)
+        await this.queryTransactionsInner(currencyCode, pk)
         this.sendTransactionEvents()
       }
-      this.updateTxStatus(cc, 1)
+      this.updateTxStatus(currencyCode, 1)
     }
   }
 
@@ -634,10 +658,6 @@ export class SolanaEngine extends CurrencyEngine<
     // pubkeys
     const payer = new PublicKey(this.base58PublicKey)
     const payee = new PublicKey(publicAddress)
-    const tokenProgramId = this.tools.tokenProgramPublicKey
-    const associatedTokenProgramId = new PublicKey(
-      this.networkInfo.associatedTokenPublicKey
-    )
 
     const instructions: TransactionInstruction[] = []
 
@@ -672,11 +692,20 @@ export class SolanaEngine extends CurrencyEngine<
     }
 
     if (isTokenTx) {
-      const TOKEN = new PublicKey(tokenId)
+      const tokenPubkey = new PublicKey(tokenId)
+      const token = this.allTokensMap[tokenId]
+      const { tokenProgram = this.networkInfo.tokenPublicKey } =
+        asSolanaNetworkLocation(token.networkLocation)
+      const decimals =
+        token.denominations[0].multiplier.match(/0/g)?.length ?? 0
+      const tokenProgramId = new PublicKey(tokenProgram)
+      const associatedTokenProgramId = new PublicKey(
+        this.networkInfo.associatedTokenPublicKey
+      )
 
       // derive recipient address
       const associatedDestinationTokenAddrPayee = getAssociatedTokenAddressSync(
-        TOKEN,
+        tokenPubkey,
         payee,
         true, // payee may be a Program Derived Address
         tokenProgramId,
@@ -711,7 +740,7 @@ export class SolanaEngine extends CurrencyEngine<
             payer,
             associatedDestinationTokenAddrPayee,
             payee,
-            TOKEN,
+            tokenPubkey,
             tokenProgramId,
             associatedTokenProgramId
           )
@@ -737,17 +766,19 @@ export class SolanaEngine extends CurrencyEngine<
 
       // derive our address
       const associatedDestinationTokenAddrPayer = getAssociatedTokenAddressSync(
-        TOKEN,
+        tokenPubkey,
         payer,
         false,
         tokenProgramId,
         associatedTokenProgramId
       )
-      const tokenTransferInstruction = createTransferInstruction(
+      const tokenTransferInstruction = createTransferCheckedInstruction(
         associatedDestinationTokenAddrPayer,
+        new PublicKey(tokenId),
         associatedDestinationTokenAddrPayee,
         payer,
         BigInt(nativeAmount),
+        decimals,
         [],
         tokenProgramId
       )
