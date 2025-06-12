@@ -8,7 +8,8 @@ import {
   hexToDecimal,
   isHex,
   padHex,
-  removeHexPrefix
+  removeHexPrefix,
+  pickRandom
 } from '../../common/utils'
 import ETH_BAL_CHECKER_ABI from '../abi/ETH_BAL_CHECKER_ABI.json'
 import { EthereumEngine } from '../EthereumEngine'
@@ -378,15 +379,35 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
   private addRpcApiKey(url: string): string {
     const regex = /{{(.*?)}}/g
     const match = regex.exec(url)
+
     if (match != null) {
       const key = match[1]
-      const cleanKey = asEthereumInitKeys(key)
-      const apiKey = this.ethEngine.initOptions[cleanKey]
+      let apiKey: string | string[] | null = null
+
+      // try service keys first
+      const serviceKey = this.ethEngine.initOptions.serviceKeys?.[url]
+      if (serviceKey != null)
+        apiKey = Array.isArray(serviceKey)
+          ? pickRandom(serviceKey, 1)[0]
+          : serviceKey ?? ''
+
+      // fall back to deprecated keys
+      if (apiKey == null) {
+        const cleanKey = asEthereumInitKeys(key)
+        const cleanApiKey = this.ethEngine.initOptions[cleanKey]
+        if (cleanApiKey === 'string') {
+          apiKey = cleanApiKey
+          this.ethEngine.log.warn(
+            `INIT OPTION '${cleanKey}' IS DEPRECATED. USE 'serviceKeys' INSTEAD`
+          )
+        }
+      }
+
       if (typeof apiKey === 'string') {
         url = url.replace(match[0], apiKey)
       } else if (apiKey == null) {
         throw new Error(
-          `Missing ${cleanKey} in 'initOptions' for ${this.ethEngine.currencyInfo.pluginId}`
+          `Missing service key in 'initOptions.serviceKeys' for ${this.ethEngine.currencyInfo.pluginId}`
         )
       } else {
         throw new Error('Incorrect apikey type for RPC')

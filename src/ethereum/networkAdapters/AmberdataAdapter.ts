@@ -1,5 +1,6 @@
 import parse from 'url-parse'
 
+import { pickRandom } from '../../common/utils'
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
@@ -52,27 +53,39 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
     method: string,
     params: string[] = []
   ): Promise<any> {
-    const { amberdataApiKey = '' } = this.ethEngine.initOptions
+    const { amberdataApiKey = '', serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async baseUrl => {
-      const url = `${this.config.servers[0]}`
+      const serviceKey = serviceKeys?.[baseUrl]
+
+      let apiKey = Array.isArray(serviceKey)
+        ? pickRandom(serviceKey, 1)[0]
+        : serviceKey ?? ''
+
+      if (amberdataApiKey != null) {
+        this.ethEngine.log.warn(
+          "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+        )
+        apiKey = amberdataApiKey
+      }
+
       const body = {
         jsonrpc: '2.0',
         method: method,
         params: params,
         id: 1
       }
-      const response = await this.ethEngine.fetchCors(url, {
+      const response = await this.ethEngine.fetchCors(baseUrl, {
         headers: {
           'x-amberdata-blockchain-id':
             this.ethEngine.networkInfo.amberDataBlockchainId,
-          'x-api-key': amberdataApiKey,
+          'x-api-key': apiKey,
           'Content-Type': 'application/json'
         },
         method: 'POST',
         body: JSON.stringify(body)
       })
-      const parsedUrl = parse(url, {}, true)
+      const parsedUrl = parse(baseUrl, {}, true)
       if (!response.ok) {
         // @ts-expect-error
         this.throwError(response, 'fetchPostAmberdataRpc', parsedUrl)
@@ -84,15 +97,28 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
 
   // TODO: Clean return type
   private async fetchGetAmberdataApi(path: string): Promise<any> {
-    const { amberdataApiKey = '' } = this.ethEngine.initOptions
+    const { amberdataApiKey = '', serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async baseUrl => {
+      const serviceKey = serviceKeys?.[baseUrl]
+
+      let apiKey = Array.isArray(serviceKey)
+        ? pickRandom(serviceKey, 1)[0]
+        : serviceKey ?? ''
+
+      if (amberdataApiKey != null) {
+        this.ethEngine.log.warn(
+          "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+        )
+        apiKey = amberdataApiKey
+      }
+
       const url = `${base58ToHexAddress}${path}`
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
           'x-amberdata-blockchain-id':
             this.ethEngine.networkInfo.amberDataBlockchainId,
-          'x-api-key': amberdataApiKey
+          'x-api-key': apiKey
         }
       })
       if (!response.ok) {

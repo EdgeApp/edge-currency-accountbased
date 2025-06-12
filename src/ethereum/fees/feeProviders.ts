@@ -275,10 +275,16 @@ export const getEvmScanApiKey = (
   log: EdgeLog,
   serverUrl: string
 ): string | string[] | undefined => {
-  const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
-    initOptions
+  const {
+    evmScanApiKey,
+    etherscanApiKey,
+    bscscanApiKey,
+    polygonscanApiKey,
+    serviceKeys
+  } = initOptions
 
   const { currencyCode } = info
+  const serviceKey = serviceKeys[serverUrl]
 
   // If we have a server URL and it's etherscan.io, use the Ethereum API key
   if (serverUrl.includes('etherscan.io')) {
@@ -287,24 +293,31 @@ export const getEvmScanApiKey = (
     return etherscanApiKey
   }
 
-  if (evmScanApiKey != null) return evmScanApiKey
+  if (serviceKey != null) return serviceKey
+
+  if (evmScanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'evmScanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+    )
+    return evmScanApiKey
+  }
 
   // For networks that don't support Etherscan v2, fall back to network-specific keys
   if (currencyCode === 'ETH' && etherscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return etherscanApiKey
   }
   if (currencyCode === 'BNB' && bscscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'bscscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'bscscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return bscscanApiKey
   }
   if (currencyCode === 'POL' && polygonscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return polygonscanApiKey
   }
