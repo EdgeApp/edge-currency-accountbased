@@ -79,7 +79,8 @@ export const testCases: TestCase[] = [
         gas: '500000',
         gasPrice: '5088740116',
         gasUsed: '48668',
-        isFromMakeSpend: false
+        isFromMakeSpend: false,
+        nonceUsed: '0'
       },
       ourReceiveAddresses: [],
       signedTx: '',
@@ -143,7 +144,8 @@ export const testCases: TestCase[] = [
         gas: '500000',
         gasPrice: '5088740116',
         gasUsed: '48668',
-        isFromMakeSpend: false
+        isFromMakeSpend: false,
+        nonceUsed: '0'
       },
       ourReceiveAddresses: [],
       signedTx: '',
@@ -207,7 +209,8 @@ export const testCases: TestCase[] = [
         gas: '500000',
         gasPrice: '5088740116',
         gasUsed: '48668',
-        isFromMakeSpend: false
+        isFromMakeSpend: false,
+        nonceUsed: '0'
       },
       ourReceiveAddresses: [],
       signedTx: '',
@@ -271,7 +274,8 @@ export const testCases: TestCase[] = [
         gas: '500000',
         gasPrice: '5088740116',
         gasUsed: '48668',
-        isFromMakeSpend: false
+        isFromMakeSpend: false,
+        nonceUsed: '0'
       },
       ourReceiveAddresses: [],
       signedTx: '',

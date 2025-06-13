@@ -150,7 +150,8 @@ export class PulsechainScanAdapter extends NetworkAdapter<PulsechainScanAdapterC
       gas: scanTx.gas_limit,
       gasPrice: gasPrice ?? '',
       gasUsed: scanTx.gas_used,
-      isFromMakeSpend: false
+      isFromMakeSpend: false,
+      nonceUsed: scanTx.nonce.toString()
     }
 
     let blockHeight = scanTx.block
@@ -234,11 +235,11 @@ const asPulsechainScanAddressTransaction = asObject({
   gas_price: asString,
   // base_fee_per_gas: asOptional(asString),
   gas_used: asString,
-  value: asString
+  value: asString,
   // actions: asArray(asNull),
   // tx_types: asArray(asString),
   // position: asNumber,
-  // nonce: asNumber,
+  nonce: asNumber
   // has_error_in_internal_txs: asBoolean,
   // confirmation_duration: asArray(asNumber)
 })
