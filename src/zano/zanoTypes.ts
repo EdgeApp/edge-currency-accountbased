@@ -110,3 +110,7 @@ export const asZanoAssetDetails = asObject({
     // status: 'OK'
   })
 })
+
+export interface ZanoOtherMethods {
+  resolveName: (alias: string) => Promise<string>
+}

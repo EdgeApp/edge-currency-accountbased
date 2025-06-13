@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added `resolveName` method to Zano `otherMethods` for Zano alias resolution.
+
 ## 4.48.3 (2025-06-06)
 
 - changed: Improved change-server integration by usage of checkpoints.
