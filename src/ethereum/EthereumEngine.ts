@@ -1099,21 +1099,13 @@ export class EthereumEngine extends CurrencyEngine<
     // Nonce:
     //
 
-    let nonceUsed: string | undefined
-
-    // Determine the nonce to use from the number of pending transactions
-    const unsavedPendingTxs = pendingTxs.filter(
-      tx => !unconfirmedTxs.some(ptx => ptx.txid === tx.txid)
+    // Increment the nonce by the number of pending transactions always
+    // this is the only supported way for the EVM plugin to handle more than
+    // one pending transaction broadcast.
+    const nonceUsed: string = add(
+      this.otherData.nextNonce,
+      pendingTxs.length.toString()
     )
-    if (unsavedPendingTxs.length > 0) {
-      // @ts-expect-error
-      const otherData: EthereumWalletOtherData = this.walletLocalData.otherData
-      const baseNonce =
-        this.walletLocalData.numUnconfirmedSpendTxs > 0
-          ? otherData.unconfirmedNextNonce
-          : otherData.nextNonce
-      nonceUsed = add(baseNonce, unsavedPendingTxs.length.toString())
-    }
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
       edgeSpendInfo,
@@ -1355,22 +1347,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Nonce:
 
-    let nonce: string | undefined = otherParams.nonceUsed
-    if (nonce == null) {
-      // Use an unconfirmed nonce if
-      // 1. We have unconfirmed spending txs in the transaction list
-      // 2. It is greater than the confirmed nonce
-      // Otherwise, use the next nonce
-      if (
-        this.walletLocalData.numUnconfirmedSpendTxs != null &&
-        gt(this.otherData.unconfirmedNextNonce, this.otherData.nextNonce)
-      ) {
-        nonce = this.otherData.unconfirmedNextNonce
-        this.walletLocalDataDirty = true
-      } else {
-        nonce = this.otherData.nextNonce
-      }
-    }
+    const nonce = otherParams.nonceUsed
     // Convert nonce to hex for tsParams
     const nonceHex = toHex(nonce)
 

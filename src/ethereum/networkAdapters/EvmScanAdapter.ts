@@ -540,7 +540,8 @@ export function processEvmScanTransaction(
     gas: tx.gas,
     gasPrice: gasPrice ?? '',
     gasUsed: tx.gasUsed,
-    isFromMakeSpend: false
+    isFromMakeSpend: false,
+    nonceUsed: tx.nonce
   }
 
   let blockHeight = parseInt(tx.blockNumber)
@@ -735,6 +736,7 @@ export const asEvmScanInternalTransaction = asObject({
   timeStamp: asString,
   gasUsed: asString,
   value: asString,
+  nonce: asString,
   from: asString,
   to: asString,
   gas: asString,
