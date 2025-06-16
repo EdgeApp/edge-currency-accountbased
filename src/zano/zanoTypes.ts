@@ -110,3 +110,16 @@ export const asZanoAssetDetails = asObject({
     // status: 'OK'
   })
 })
+
+export const asGetAliasDetailsResponse = asObject({
+  jsonrpc: asString,
+  result: asObject({
+    alias_details: asObject({
+      address: asString
+    })
+  })
+})
+
+export interface ZanoOtherMethods {
+  resolveName: (alias: string) => Promise<string>
+}

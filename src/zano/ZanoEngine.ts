@@ -22,12 +22,14 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { cleanTxLogs, createWeightedAverageCalculator } from '../common/utils'
 import { ZanoTools } from './ZanoTools'
 import {
+  asGetAliasDetailsResponse,
   asSafeZanoWalletInfo,
   asZanoPrivateKeys,
   asZanoTransferParams,
   asZanoWalletOtherData,
   SafeZanoWalletInfo,
   ZanoNetworkInfo,
+  ZanoOtherMethods,
   ZanoWalletOtherData
 } from './zanoTypes'
 
@@ -470,6 +472,42 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       throw e
     }
     return edgeTransaction
+  }
+
+  /**
+   * Resolve Zano aliases, for example: "@bob"
+   */
+  private async resolveName(alias: string): Promise<string> {
+    const { walletRpcAddress } = this.networkInfo
+
+    if (!alias.startsWith('@')) {
+      throw new Error('Invalid Zano alias: ' + alias)
+    }
+
+    // Remove the @ prefix
+    const aliasParam = alias.replace('@', '')
+
+    const response = await this.tools.io.fetch(`${walletRpcAddress}/json_rpc`, {
+      method: 'POST',
+      body: JSON.stringify({
+        method: 'get_alias_details',
+        params: { alias: aliasParam }
+      })
+    })
+
+    if (!response.ok) {
+      const message = await response.text()
+      throw new Error(message)
+    }
+
+    const json: unknown = await response.json()
+    const data = asGetAliasDetailsResponse(json)
+
+    return data.result.alias_details.address
+  }
+
+  otherMethods: ZanoOtherMethods = {
+    resolveName: this.resolveName.bind(this)
   }
 }
 

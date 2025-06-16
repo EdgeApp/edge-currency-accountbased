@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- added: Added `resolveName` method to Zano `otherMethods` for Zano alias resolution.
 - changed: (EVM) Require unconfirmed transactions to be specified in `makeSpend` via `pendingTxs` parameter.
 
 ## 4.48.3 (2025-06-06)
