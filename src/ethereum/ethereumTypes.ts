@@ -238,7 +238,7 @@ export interface EthereumTxOtherParams {
   gasUsed: string
   minerTip?: string
   tokenRecipientAddress?: string
-  nonceUsed?: string
+  nonceUsed: string
   replacedTxid?: string
   data?: string | null
   isFromMakeSpend: boolean
@@ -251,7 +251,7 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
   gasUsed: asString,
   minerTip: asOptional(asString),
   tokenRecipientAddress: asOptional(asString),
-  nonceUsed: asOptional(asString),
+  nonceUsed: asString,
   replacedTxid: asOptional(asString),
   data: asOptional(asEither(asString, asNull)),
   isFromMakeSpend: asOptional(asBoolean, false)
@@ -259,6 +259,7 @@ export const asEthereumTxOtherParams = asObject<EthereumTxOtherParams>({
 
 export const asEthereumWalletOtherData = asObject({
   nextNonce: asMaybe(asString, '0'),
+  /** @deprecated use nextNonce and count the observed pending transactions instead */
   unconfirmedNextNonce: asMaybe(asString, '0'),
 
   // hacks
