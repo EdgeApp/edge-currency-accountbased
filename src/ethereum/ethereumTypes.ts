@@ -22,7 +22,13 @@ import {
 } from '../common/types'
 import type { NetworkAdapterConfig } from './networkAdapters/types'
 
+const asServiceKeys = asObject(asArray(asString))
+
 export interface EthereumInitOptions {
+  serviceKeys: Record<string, string[]>
+  infuraProjectId?: string
+
+  // Deprecated:
   alchemyApiKey?: string
   amberdataApiKey?: string
   blockchairApiKey?: string
@@ -33,7 +39,6 @@ export interface EthereumInitOptions {
   /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan) */
   evmScanApiKey?: string | string[]
   gasStationApiKey?: string
-  infuraProjectId?: string
   nowNodesApiKey?: string
   poktPortalApiKey?: string
   quiknodeApiKey?: string
@@ -51,7 +56,8 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   infuraProjectId: asOptional(asString),
   nowNodesApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString),
-  quiknodeApiKey: asOptional(asString)
+  quiknodeApiKey: asOptional(asString),
+  serviceKeys: asOptional(asServiceKeys, () => ({}))
 })
 
 function isKeyOfEthereumInitOptions(
