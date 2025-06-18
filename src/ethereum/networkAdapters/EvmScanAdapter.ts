@@ -357,7 +357,8 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
                 'status' in response &&
                 response.status === '0' &&
                 response.message !== 'No transactions found' &&
-                response.message !== 'No internal transactions found'
+                response.message !== 'No internal transactions found' &&
+                response.message !== 'No token transfers found'
               ) {
                 this.handledUnexpectedResponse(
                   server,

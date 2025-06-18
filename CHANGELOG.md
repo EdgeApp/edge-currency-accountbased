@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (EVM) Broken token tx query causing stalled syncing when no token transfers found.
+
 ## 4.48.3 (2025-06-06)
 
 - changed: Improved change-server integration by usage of checkpoints.
