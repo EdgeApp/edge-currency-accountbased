@@ -6,6 +6,7 @@
 
 - added: Added `resolveName` method to Zano `otherMethods` for Zano alias resolution.
 - changed: (EVM) Require unconfirmed transactions to be specified in `makeSpend` via `pendingTxs` parameter.
+- fixed: (EVM) Broken token tx query causing stalled syncing when no token transfers found.
 
 ## 4.48.3 (2025-06-06)
 
