@@ -856,7 +856,7 @@ export class CurrencyEngine<
   /**
    * Sync the wallet to 100% no matter what.
    */
-  syncTheWalletLikeLifeDependsOnIt(): void {
+  setOneHundoSyncRatio(): void {
     // We need to make sure the wallet state is updated so it never gets a
     // sync ratio of less than 1 from updateOnAddressesChecked. This
     // is coupled logic that you need to know about. Setting this.addressesChecked

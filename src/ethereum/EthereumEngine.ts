@@ -805,7 +805,7 @@ export class EthereumEngine extends CurrencyEngine<
         ? parseInt(subscribeParam.checkpoint)
         : undefined
 
-    // Ignore updates that are from the mempoolmempool:
+    // Ignore updates that are from the mempool:
     if (theirBlockheight == null) {
       // TODO: Upgrade the network adapters for EVMs that support fetching
       // mempool transactions. Then we can change this routine to query for
@@ -819,12 +819,14 @@ export class EthereumEngine extends CurrencyEngine<
     // completed.
     if (this.walletLocalData.blockHeight >= theirBlockheight) {
       if (!this.addressesChecked) {
-        this.syncTheWalletLikeLifeDependsOnIt()
+        this.setOneHundoSyncRatio()
       }
       return SYNC_NETWORK_INTERVAL
     }
 
-    // Sync the network until the engine blockheight matches the checkpoint:
+    // Sync the network on a loop until the engine blockheight matches the
+    // checkpoint: e.g. waiting on Etherscan or some other adapter to reflect
+    // the new block
     while (true) {
       await this.ethNetwork.acquireUpdates()
       if (theirBlockheight > this.walletLocalData.blockHeight) {
