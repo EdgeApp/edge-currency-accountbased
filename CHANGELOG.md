@@ -2,13 +2,15 @@
 
 ## Unreleased
 
+## 4.50.0 (2025-06-19)
+
 - added: (Solana) Token2022 support
+- fixed: (EVM) Broken token tx query causing stalled syncing when no token transfers found.
 
 ## 4.49.0 (2025-06-16)
 
 - added: Added `resolveName` method to Zano `otherMethods` for Zano alias resolution.
 - changed: (EVM) Require unconfirmed transactions to be specified in `makeSpend` via `pendingTxs` parameter.
-- fixed: (EVM) Broken token tx query causing stalled syncing when no token transfers found.
 
 ## 4.48.3 (2025-06-06)
 
