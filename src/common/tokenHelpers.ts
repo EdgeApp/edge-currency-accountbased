@@ -80,10 +80,11 @@ export const validateToken = (token: EdgeToken): void => {
 
 /**
  * Validates a currency code.
- * Some weird but valid examples include: T, BUSD.e, xBOO, 1INCH, BADGER, BSC-USD
+ * Some weird but valid examples include:
+ * T, BUSD.e, xBOO, 1INCH, BADGER, BSC-USD, $CWIF
  */
 export const isCurrencyCode = (code: string): boolean => {
-  return /^[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)?$/.test(code)
+  return /^\$?[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)?$/.test(code)
 }
 
 export const createTokenIdFromContractAddress = (token: EdgeToken): string => {

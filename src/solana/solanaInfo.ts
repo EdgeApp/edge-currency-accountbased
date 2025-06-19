@@ -12,13 +12,35 @@ import {
   SolanaNetworkInfo
 } from './solanaTypes'
 
+const tokenPublicKey = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
+const token2022PublicKey = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
+
 const builtinTokens: EdgeTokenMap = {
+  '7atgF8KQo4wJrD5ATGX7t1V2zVvykPJbFfNeVf1icFv1': {
+    currencyCode: '$CWIF',
+    displayName: 'catwifhat',
+    denominations: [{ name: '$CWIF', multiplier: '100' }],
+    networkLocation: {
+      contractAddress: '7atgF8KQo4wJrD5ATGX7t1V2zVvykPJbFfNeVf1icFv1',
+      tokenProgram: token2022PublicKey
+    }
+  },
+  bioJ9JTqW62MLz7UKHU69gtKhPpGi1BQhccj2kmSvUJ: {
+    currencyCode: 'BIO',
+    displayName: 'BIO',
+    denominations: [{ name: 'BIO', multiplier: '1000000000' }],
+    networkLocation: {
+      contractAddress: 'bioJ9JTqW62MLz7UKHU69gtKhPpGi1BQhccj2kmSvUJ',
+      tokenProgram: token2022PublicKey
+    }
+  },
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
     currencyCode: 'BONK',
     displayName: 'Bonk',
     denominations: [{ name: 'BONK', multiplier: '100000' }],
     networkLocation: {
-      contractAddress: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'
+      contractAddress: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      tokenProgram: tokenPublicKey
     }
   },
   kshrEkxuc7zPAvLxvabxoERKxK6BfariPcjBoiHvM7B: {
@@ -202,7 +224,8 @@ const networkInfo: SolanaNetworkInfo = {
   txQueryLimit: 1000, // RPC default is 1000
   derivationPath: "m/44'/501'/0'/0'",
   memoPublicKey: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
-  tokenPublicKey: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  tokenPublicKey,
+  token2022PublicKey,
   associatedTokenPublicKey: 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
 }
 
@@ -228,6 +251,11 @@ const currencyInfo: EdgeCurrencyInfo = {
     {
       displayName: 'Token Address',
       key: 'contractAddress',
+      type: 'string'
+    },
+    {
+      displayName: 'Token Program Address',
+      key: 'tokenProgram',
       type: 'string'
     }
   ],

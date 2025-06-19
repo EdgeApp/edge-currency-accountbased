@@ -1,3 +1,5 @@
+import { getMetadataAccountDataSerializer } from '@metaplex-foundation/mpl-token-metadata'
+import { unpackMint } from '@solana/spl-token'
 import {
   Connection,
   ConnectionConfig,
@@ -15,6 +17,7 @@ import {
   EdgeCurrencyTools,
   EdgeEncodeUri,
   EdgeFetchFunction,
+  EdgeGetTokenDetailsFilter,
   EdgeIo,
   EdgeLog,
   EdgeMetaToken,
@@ -27,25 +30,19 @@ import {
 import { base16 } from 'rfc4648'
 
 import { PluginEnvironment } from '../common/innerPlugin'
-import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
+import { asyncWaterfall } from '../common/promiseUtils'
+import { validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
   asSafeSolanaWalletInfo,
   asSolanaInitOptions,
+  asSolanaNetworkLocation,
   asSolanaPrivateKeys,
   SolanaInfoPayload,
   SolanaInitOptions,
   SolanaNetworkInfo
 } from './solanaTypes'
-
-export const isValidAddress = (address: string): boolean => {
-  try {
-    PublicKey.isOnCurve(new PublicKey(address).toBytes())
-    return true
-  } catch (e) {}
-  return false
-}
 
 export class SolanaTools implements EdgeCurrencyTools {
   builtinTokens: EdgeTokenMap
@@ -58,6 +55,7 @@ export class SolanaTools implements EdgeCurrencyTools {
   archiveConnections: Connection[]
   clientCount: number
   tokenProgramPublicKey: PublicKey
+  token2022ProgramPublicKey: PublicKey
 
   constructor(env: PluginEnvironment<SolanaNetworkInfo>) {
     const { builtinTokens, currencyInfo, io, log, networkInfo } = env
@@ -71,6 +69,9 @@ export class SolanaTools implements EdgeCurrencyTools {
     this.archiveConnections = []
     this.clientCount = 0
     this.tokenProgramPublicKey = new PublicKey(networkInfo.tokenPublicKey)
+    this.token2022ProgramPublicKey = new PublicKey(
+      networkInfo.token2022PublicKey
+    )
   }
 
   async getDisplayPrivateKey(
@@ -137,6 +138,14 @@ export class SolanaTools implements EdgeCurrencyTools {
     return { publicKey: keys.publicKey.toString() }
   }
 
+  private readonly isValidAddress = (address: string): boolean => {
+    try {
+      PublicKey.isOnCurve(new PublicKey(address).toBytes())
+      return true
+    } catch (e) {}
+    return false
+  }
+
   async parseUri(
     uri: string,
     currencyCode?: string,
@@ -161,7 +170,7 @@ export class SolanaTools implements EdgeCurrencyTools {
 
     if (
       edgeParsedUri.publicAddress != null &&
-      !isValidAddress(edgeParsedUri.publicAddress)
+      !this.isValidAddress(edgeParsedUri.publicAddress)
     ) {
       throw new Error('InvalidPublicAddressError')
     }
@@ -177,7 +186,7 @@ export class SolanaTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const { nativeAmount, currencyCode, publicAddress } = obj
 
-    if (!isValidAddress(publicAddress))
+    if (!this.isValidAddress(publicAddress))
       throw new Error('InvalidPublicAddressError')
 
     let amount
@@ -263,16 +272,131 @@ export class SolanaTools implements EdgeCurrencyTools {
     }
   }
 
+  async getTokenDetails(
+    filter: EdgeGetTokenDetailsFilter
+  ): Promise<EdgeToken[]> {
+    const { contractAddress } = filter
+    if (contractAddress == null) return []
+
+    if (!this.isValidAddress(contractAddress)) {
+      throw new Error('ErrorInvalidContractAddress')
+    }
+
+    const connections = this.makeConnections(this.networkInfo.rpcNodes)
+
+    return await new Promise(resolve => {
+      const _getTokenDetails = async (): Promise<void> => {
+        const tokenProgramFuncs = connections.map(connection => async () => {
+          const info = await connection.getAccountInfo(
+            new PublicKey(contractAddress)
+          )
+          if (info == null) {
+            resolve([])
+            return
+          }
+
+          const unpackedMint = unpackMint(
+            new PublicKey(contractAddress),
+            info,
+            new PublicKey(info.owner)
+          )
+
+          return {
+            tokenProgram: info.owner.toBase58(),
+            decimals: unpackedMint.decimals
+          }
+        })
+
+        const mintPublicKey = new PublicKey(contractAddress)
+        const metadataPublicKey = new PublicKey(
+          'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+        )
+        const [metadataPDA] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from('metadata'),
+            metadataPublicKey.toBuffer(),
+            mintPublicKey.toBuffer()
+          ],
+          metadataPublicKey
+        )
+        const tokenNameAndSymbolFuncs = connections.map(
+          connection => async () => {
+            const accountInfo = await connection.getAccountInfo(metadataPDA)
+            if (accountInfo == null) {
+              resolve([])
+              return
+            }
+
+            const serializer = getMetadataAccountDataSerializer()
+            const [metadata] = serializer.deserialize(accountInfo.data)
+
+            return {
+              name: metadata.name,
+              symbol: metadata.symbol
+            }
+          }
+        )
+
+        const { tokenProgram, decimals } = await asyncWaterfall(
+          tokenProgramFuncs
+        )
+        const { name, symbol } = await asyncWaterfall(tokenNameAndSymbolFuncs)
+
+        const token: EdgeToken = {
+          currencyCode: symbol,
+          denominations: [
+            { name: symbol, multiplier: '1' + '0'.repeat(decimals) }
+          ],
+          displayName: name,
+          networkLocation: {
+            contractAddress,
+            tokenProgram
+          }
+        }
+        resolve([token])
+      }
+      _getTokenDetails().catch(() => resolve([]))
+    })
+  }
+
   async getTokenId(token: EdgeToken): Promise<string> {
     validateToken(token)
-    const cleanLocation = asMaybeContractLocation(token.networkLocation)
+    const cleanLocation = asSolanaNetworkLocation(token.networkLocation)
     if (
       cleanLocation == null ||
-      !isValidAddress(cleanLocation.contractAddress)
+      !this.isValidAddress(cleanLocation.contractAddress)
     ) {
       throw new Error('ErrorInvalidContractAddress')
     }
     return cleanLocation.contractAddress
+  }
+
+  getTokenOwnerPublicKey(token: EdgeToken): PublicKey {
+    const cleanLocation = asSolanaNetworkLocation(token.networkLocation)
+    const { tokenProgram = this.networkInfo.tokenPublicKey } = cleanLocation
+
+    return tokenProgram === this.networkInfo.tokenPublicKey
+      ? this.tokenProgramPublicKey
+      : tokenProgram === this.networkInfo.token2022PublicKey
+      ? this.token2022ProgramPublicKey
+      : new PublicKey(tokenProgram)
+
+    // TODO: If the key is undefined, look it up on the network,
+    // but with some sort of cache so we don't hit this endlessly:
+    // const connections = (this.connections = this.makeConnections(
+    //   this.networkInfo.rpcNodes
+    // ))
+    // const funcs = connections.map(connection => async () => {
+    //   const info = await connection.getAccountInfo(
+    //     new PublicKey(cleanLocation.contractAddress)
+    //   )
+    //   if (info == null) {
+    //     throw new Error('ErrorInvalidContractAddress')
+    //   }
+    //   return info.owner.toBase58()
+    // })
+    // const owner: string = await asyncWaterfall(funcs)
+    // return new PublicKey(owner)
   }
 }
 

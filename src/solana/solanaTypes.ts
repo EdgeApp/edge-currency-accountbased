@@ -22,6 +22,7 @@ export interface SolanaNetworkInfo {
   derivationPath: string
   memoPublicKey: string
   tokenPublicKey: string
+  token2022PublicKey: string
   associatedTokenPublicKey: string
 }
 
@@ -147,3 +148,16 @@ export const asSolanaInfoPayload = asObject({
   rpcNodesArchival: asOptional(asArray(asString))
 })
 export type SolanaInfoPayload = ReturnType<typeof asSolanaInfoPayload>
+
+export const asSolanaNetworkLocation = asObject({
+  contractAddress: asString,
+
+  /**
+   * The owner contract for the token.
+   * Defaults to `SolanaNetworkInfo.tokenPublicKey` if missing.
+   *
+   * TODO: This information is available off the network,
+   * so it would be better to just do the lookup if missing.
+   */
+  tokenProgram: asOptional(asString)
+})
