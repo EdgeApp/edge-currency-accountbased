@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 4.48.4 (2025-06-20)
+
+- added: (Solana) Token2022 support
+- fixed: (EVM) Broken token tx query causing stalled syncing when no token transfers found.
+
 ## 4.50.0 (2025-06-19)
 
 - added: (Solana) Token2022 support
