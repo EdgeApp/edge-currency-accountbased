@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.51.0 (2025-06-24)
+
 - changed: Osmosis archive node urls
 
 ## 4.48.4 (2025-06-20)
