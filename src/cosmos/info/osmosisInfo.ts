@@ -41,7 +41,7 @@ const networkInfo: CosmosNetworkInfo = {
         start: 0
       },
       endpoint: {
-        url: 'https://osmosisarchive-rpc.quickapi.com:443',
+        url: 'https://skilled-neat-forest.osmosis-mainnet.quiknode.pro/{quiknodeApiKey}',
         headers: {}
       }
     }
