@@ -12,7 +12,7 @@ import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
 
 import { EthereumNetworkUpdate, getFeeRateUsed } from '../EthereumNetwork'
 import { EthereumTxOtherParams } from '../ethereumTypes'
-import { GetTxsParams, NetworkAdapter } from './types'
+import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
 
 export interface PulsechainScanAdapterConfig {
   type: 'pulsechain-scan'

@@ -20,7 +20,7 @@ import {
   asSafeCommonWalletInfo,
   WalletConnectPayload
 } from '../common/types'
-import type { NetworkAdapterConfig } from './networkAdapters/types'
+import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
 export interface EthereumInitOptions {
   alchemyApiKey?: string

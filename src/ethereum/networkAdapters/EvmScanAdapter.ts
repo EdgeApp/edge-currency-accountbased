@@ -38,7 +38,11 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapter, RateLimitError } from './types'
+import {
+  GetTxsParams,
+  NetworkAdapter,
+  RateLimitError
+} from './networkAdapterTypes'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
