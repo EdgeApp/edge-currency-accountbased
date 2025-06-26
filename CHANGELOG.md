@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+added: Support Zano deeplink URI parsing (e.g. zano: addresses).
+
 ## 4.51.0 (2025-06-24)
 
 - changed: Osmosis archive node urls
