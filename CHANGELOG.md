@@ -3,6 +3,7 @@
 ## Unreleased
 
 - fixed: (EVM) Added exponential backoff function to etherscan/evmscan API call retries.
+- fixed: (EVM) Fixed regression with internal transaction queries.
 
 ## 4.51.0 (2025-06-24)
 
