@@ -5,7 +5,7 @@ import { makePeriodicTask, PeriodicTask } from '../../common/periodicTask'
 import { pickRandomOne } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { EthereumInitOptions } from '../ethereumTypes'
-import { ConnectionChangeHandler, NetworkAdapter } from './types'
+import { ConnectionChangeHandler, NetworkAdapter } from './networkAdapterTypes'
 
 export interface BlockbookWsAdapterConfig {
   type: 'blockbook-ws'

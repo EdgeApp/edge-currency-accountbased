@@ -6,7 +6,7 @@ import {
   asCheckTokenBalBlockchair,
   CheckTokenBalBlockchair
 } from '../ethereumTypes'
-import { NetworkAdapter } from './types'
+import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface BlockchairAdapterConfig {
   type: 'blockchair'

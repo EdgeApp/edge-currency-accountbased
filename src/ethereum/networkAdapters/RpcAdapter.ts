@@ -19,7 +19,7 @@ import {
   asRpcResultString,
   RpcResultString
 } from '../ethereumTypes'
-import { NetworkAdapter } from './types'
+import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface RpcAdapterConfig {
   type: 'rpc'

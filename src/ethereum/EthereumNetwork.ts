@@ -19,13 +19,13 @@ import { BlockchairAdapter } from './networkAdapters/BlockchairAdapter'
 import { BlockcypherAdapter } from './networkAdapters/BlockcypherAdapter'
 import { EvmScanAdapter } from './networkAdapters/EvmScanAdapter'
 import { FilfoxAdapter } from './networkAdapters/FilfoxAdapter'
-import { PulsechainScanAdapter } from './networkAdapters/PulsechainScanAdapter'
-import { RpcAdapter } from './networkAdapters/RpcAdapter'
 import {
   NetworkAdapter,
   NetworkAdapterConfig,
   NetworkAdapterUpdateMethod
-} from './networkAdapters/types'
+} from './networkAdapters/networkAdapterTypes'
+import { PulsechainScanAdapter } from './networkAdapters/PulsechainScanAdapter'
+import { RpcAdapter } from './networkAdapters/RpcAdapter'
 
 const BLOCKHEIGHT_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const NEEDS_LOOP_INTERVAL = 1000
