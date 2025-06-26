@@ -238,7 +238,7 @@ export interface EthereumTxOtherParams {
   gasUsed: string
   minerTip?: string
   tokenRecipientAddress?: string
-  nonceUsed: string
+  nonceUsed?: string
   replacedTxid?: string
   data?: string | null
   isFromMakeSpend: boolean

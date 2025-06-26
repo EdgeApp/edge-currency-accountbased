@@ -1350,6 +1350,11 @@ export class EthereumEngine extends CurrencyEngine<
     // Nonce:
 
     const nonce = otherParams.nonceUsed
+
+    if (nonce == null) {
+      throw new Error('Invalid transaction. Nonce is required for signing.')
+    }
+
     // Convert nonce to hex for tsParams
     const nonceHex = toHex(nonce)
 

@@ -741,7 +741,7 @@ export const asEvmScanInternalTransaction = asObject({
   timeStamp: asString,
   gasUsed: asString,
   value: asString,
-  nonce: asString,
+  nonce: asOptional(asString),
   from: asString,
   to: asString,
   gas: asString,
