@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Changed Fantom's block explorer to 'explorer.fantom.network'.
+
 ## 4.51.0 (2025-06-24)
 
 - changed: Osmosis archive node urls
