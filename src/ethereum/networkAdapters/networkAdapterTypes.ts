@@ -8,9 +8,9 @@ import {
 } from '../../common/promiseUtils'
 import {
   cleanTxLogs,
+  exponentialBackoff,
   safeErrorMessage,
-  shuffleArray,
-  snooze
+  shuffleArray
 } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { BroadcastResults, EthereumNetworkUpdate } from '../EthereumNetwork'
@@ -134,19 +134,22 @@ export abstract class NetworkAdapter<
   protected async serialServers<T>(
     fn: (server: string) => Promise<T>
   ): Promise<T> {
-    if (!('servers' in this.config))
-      throw new Error(`No servers for config type ${this.config.type}`)
-    const funcs = (this.config.servers ?? []).map(
-      server => async () => await fn(server)
-    )
-    try {
+    const callServers = async (): Promise<T> => {
+      if (!('servers' in this.config))
+        throw new Error(`No servers for config type ${this.config.type}`)
+      const funcs = (this.config.servers ?? []).map(
+        server => async () => await fn(server)
+      )
+
       return await asyncWaterfall(shuffleArray(funcs))
+    }
+
+    try {
+      return await callServers()
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        // TODO: Implement exponential backoff
-        await snooze(2000)
-        return await this.serialServers(fn)
+        return await exponentialBackoff(async () => await callServers())
       }
       throw error
     }
@@ -156,19 +159,20 @@ export abstract class NetworkAdapter<
     fn: (server: string) => Promise<T>,
     title: string
   ): Promise<T> {
-    if (!('servers' in this.config))
-      throw new Error(`No servers for config type ${this.config.type}`)
-    const promises = (this.config.servers ?? []).map(
-      async server => await fn(server)
-    )
-    try {
+    const callServers = async (): Promise<T> => {
+      if (!('servers' in this.config))
+        throw new Error(`No servers for config type ${this.config.type}`)
+      const promises = (this.config.servers ?? []).map(
+        async server => await fn(server)
+      )
       return await formatAggregateError(promiseAny(promises), title)
+    }
+    try {
+      return await callServers()
     } catch (error) {
       if (error instanceof RateLimitError) {
         this.ethEngine.warn(error.message)
-        // TODO: Implement exponential backoff
-        await snooze(2000)
-        return await this.parallelServers(fn, title)
+        return await exponentialBackoff(async () => await callServers())
       }
       throw error
     }
