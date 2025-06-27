@@ -1,4 +1,4 @@
-import { div } from 'biggystring'
+import { div, mul, toFixed } from 'biggystring'
 import { asMaybe, asString } from 'cleaners'
 import {
   EdgeCurrencyInfo,
@@ -22,6 +22,7 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
+import { parseZanoDeeplink } from './parseZanoDeeplink'
 import {
   asSafeZanoWalletInfo,
   asZanoAssetDetails,
@@ -168,6 +169,54 @@ export class ZanoTools implements EdgeCurrencyTools {
     const { pluginId } = this.currencyInfo
     const networks = { [pluginId]: true }
 
+    // Handle Zano Deeplink URIs:
+    if (uri.startsWith('zano:')) {
+      const zanoDeeplink = parseZanoDeeplink(uri)
+      if (zanoDeeplink.action !== 'send') {
+        throw new Error('Invalid Zano URI: only send action is supported')
+      }
+      if (!(await this.isValidAddress(zanoDeeplink.address))) {
+        throw new Error('InvalidPublicAddressError')
+      }
+      const edgeParsedUri: EdgeParsedUri = {
+        publicAddress: zanoDeeplink.address
+      }
+      if (zanoDeeplink.comment != null) {
+        edgeParsedUri.uniqueIdentifier = zanoDeeplink.comment
+      }
+      const amountStr = zanoDeeplink.amount
+      if (amountStr != null && typeof amountStr === 'string') {
+        // Validate that the currency in the deeplink matches the requested
+        // currency code:
+        let deeplinkCurrencyCode: string | undefined
+        if (zanoDeeplink.asset_id != null) {
+          deeplinkCurrencyCode =
+            this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
+        }
+        const requestCurrencyCode =
+          currencyCode ?? deeplinkCurrencyCode ?? this.currencyInfo.currencyCode
+        if (deeplinkCurrencyCode !== currencyCode) {
+          throw new Error('InvalidCurrencyCodeError')
+        }
+        const denom = getLegacyDenomination(
+          requestCurrencyCode,
+          this.currencyInfo,
+          customTokens ?? [],
+          this.builtinTokens
+        )
+        if (denom == null) {
+          throw new Error('InternalErrorInvalidCurrencyCode')
+        }
+        let nativeAmount = mul(amountStr, denom.multiplier)
+        nativeAmount = toFixed(nativeAmount, 0, 0)
+
+        edgeParsedUri.nativeAmount = nativeAmount
+        edgeParsedUri.currencyCode = requestCurrencyCode
+      }
+      return edgeParsedUri
+    }
+
+    // Handle standard URIs:
     const { parsedUri, edgeParsedUri } = await parseUriCommon({
       currencyInfo: this.currencyInfo,
       uri,
