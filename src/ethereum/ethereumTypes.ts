@@ -20,7 +20,7 @@ import {
   asSafeCommonWalletInfo,
   WalletConnectPayload
 } from '../common/types'
-import type { NetworkAdapterConfig } from './networkAdapters/types'
+import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
 export interface EthereumInitOptions {
   alchemyApiKey?: string
@@ -238,7 +238,7 @@ export interface EthereumTxOtherParams {
   gasUsed: string
   minerTip?: string
   tokenRecipientAddress?: string
-  nonceUsed: string
+  nonceUsed?: string
   replacedTxid?: string
   data?: string | null
   isFromMakeSpend: boolean

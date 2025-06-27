@@ -7,7 +7,7 @@ import {
   asBlockbookTokenBalance,
   BlockbookAddress
 } from '../ethereumTypes'
-import { NetworkAdapter } from './types'
+import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface BlockbookAdapterConfig {
   type: 'blockbook'
