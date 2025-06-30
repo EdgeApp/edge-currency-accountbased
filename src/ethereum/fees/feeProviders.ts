@@ -7,6 +7,7 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
+import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
 import { fetchInfo } from '../../common/network'
 import { hexToDecimal, pickRandom } from '../../common/utils'
 import {
@@ -275,36 +276,54 @@ export const getEvmScanApiKey = (
   log: EdgeLog,
   serverUrl: string
 ): string | string[] | undefined => {
-  const { evmScanApiKey, etherscanApiKey, bscscanApiKey, polygonscanApiKey } =
-    initOptions
+  const {
+    evmScanApiKey,
+    etherscanApiKey,
+    bscscanApiKey,
+    polygonscanApiKey,
+    serviceKeys
+  } = initOptions
 
   const { currencyCode } = info
+  const serviceKeyIndex = getServiceKeyIndex(serverUrl)
+  const serviceKey =
+    serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : undefined
+
+  if (serviceKey != null) return serviceKey
 
   // If we have a server URL and it's etherscan.io, use the Ethereum API key
   if (serverUrl.includes('etherscan.io')) {
     if (etherscanApiKey == null)
       throw new Error(`Missing etherscanApiKey for etherscan.io`)
+    log.warn(
+      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+    )
     return etherscanApiKey
   }
 
-  if (evmScanApiKey != null) return evmScanApiKey
+  if (evmScanApiKey != null) {
+    log.warn(
+      "INIT OPTION 'evmScanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+    )
+    return evmScanApiKey
+  }
 
   // For networks that don't support Etherscan v2, fall back to network-specific keys
   if (currencyCode === 'ETH' && etherscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'etherscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return etherscanApiKey
   }
   if (currencyCode === 'BNB' && bscscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'bscscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'bscscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return bscscanApiKey
   }
   if (currencyCode === 'POL' && polygonscanApiKey != null) {
     log.warn(
-      "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'evmScanApiKey' INSTEAD"
+      "INIT OPTION 'polygonscanApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
     )
     return polygonscanApiKey
   }
