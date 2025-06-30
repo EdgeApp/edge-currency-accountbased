@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.52.0 (2025-06-30)
+
 added: Support Zano deeplink URI parsing (e.g. zano: addresses).
 
 ## 4.51.0 (2025-06-24)
