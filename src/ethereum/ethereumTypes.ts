@@ -18,29 +18,50 @@ import { EdgeSpendInfo } from 'edge-core-js/types'
 import {
   asIntegerString,
   asSafeCommonWalletInfo,
+  asServiceKeys,
+  ServiceKeys,
   WalletConnectPayload
 } from '../common/types'
 import { FeeAlgorithmConfig } from './feeAlgorithms/feeAlgorithmTypes'
 import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
 export interface EthereumInitOptions {
-  alchemyApiKey?: string
-  amberdataApiKey?: string
-  blockchairApiKey?: string
-  blockcypherApiKey?: string
-  drpcApiKey?: string
-  /** For Etherscan v2 API */
-  etherscanApiKey?: string | string[]
-  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan) */
-  evmScanApiKey?: string | string[]
-  gasStationApiKey?: string
+  serviceKeys: ServiceKeys
   infuraProjectId?: string
+
+  /** @deprecated Use serviceKeys instead */
+  alchemyApiKey?: string
+  /** @deprecated Use serviceKeys instead */
+  amberdataApiKey?: string
+  /** @deprecated Use serviceKeys instead */
+  blockchairApiKey?: string
+  /** @deprecated Use serviceKeys instead */
+  blockcypherApiKey?: string
+  /** @deprecated Use serviceKeys instead */
+  drpcApiKey?: string
+  /** For Etherscan v2 API
+   * @deprecated Use serviceKeys instead
+   */
+  etherscanApiKey?: string | string[]
+  /** For bespoke scan APIs unsupported by Etherscan v2 API (e.g. fantomscan)
+   * @deprecated Use serviceKeys instead
+   */
+  evmScanApiKey?: string | string[]
+  /** @deprecated Use serviceKeys instead */
+  gasStationApiKey?: string
+  /** @deprecated Use serviceKeys instead */
   nowNodesApiKey?: string
+  /** @deprecated Use serviceKeys instead */
   poktPortalApiKey?: string
+  /** @deprecated Use serviceKeys instead */
   quiknodeApiKey?: string
 }
 
 export const asEthereumInitOptions = asObject<EthereumInitOptions>({
+  serviceKeys: asOptional(asServiceKeys, () => ({})),
+  infuraProjectId: asOptional(asString),
+
+  // Deprecated:
   alchemyApiKey: asOptional(asString),
   amberdataApiKey: asOptional(asString),
   blockchairApiKey: asOptional(asString),
@@ -49,7 +70,6 @@ export const asEthereumInitOptions = asObject<EthereumInitOptions>({
   etherscanApiKey: asOptional(asEither(asString, asArray(asString))),
   evmScanApiKey: asOptional(asEither(asString, asArray(asString))),
   gasStationApiKey: asOptional(asString),
-  infuraProjectId: asOptional(asString),
   nowNodesApiKey: asOptional(asString),
   poktPortalApiKey: asOptional(asString),
   quiknodeApiKey: asOptional(asString)

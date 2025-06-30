@@ -1,6 +1,10 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 import parse from 'url-parse'
 
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { BroadcastResults } from '../EthereumNetwork'
 import { NetworkAdapter } from './networkAdapterTypes'
 
@@ -50,13 +54,21 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
     body: any,
     baseUrl: string
   ): Promise<any> {
-    const { blockcypherApiKey } = this.ethEngine.initOptions
-    let apiKey = ''
-    if (blockcypherApiKey != null && blockcypherApiKey.length > 5) {
-      apiKey = '&token=' + blockcypherApiKey
+    const { blockcypherApiKey, serviceKeys } = this.ethEngine.initOptions
+    let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
+
+    if (
+      apiKey == null &&
+      blockcypherApiKey != null &&
+      blockcypherApiKey.length > 5
+    ) {
+      apiKey = blockcypherApiKey
+      this.ethEngine.log.warn(
+        "INIT OPTION 'blockcypherApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
+      )
     }
 
-    const url = `${baseUrl}/${cmd}${apiKey}`
+    const url = `${baseUrl}/${cmd}${apiKey != null ? `&token=${apiKey}` : ''}`
     const response = await this.ethEngine.fetchCors(url, {
       headers: {
         Accept: 'application/json',
