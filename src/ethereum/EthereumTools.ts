@@ -29,6 +29,7 @@ import {
 } from '../common/utils'
 import { ethereumPlugins } from './ethereumInfos'
 import {
+  asEthereumInitOptions,
   asEthereumPrivateKeys,
   asSafeEthWalletInfo,
   EthereumInfoPayload,
@@ -50,7 +51,7 @@ export class EthereumTools implements EdgeCurrencyTools {
     this.currencyInfo = currencyInfo
     this.io = io
     this.networkInfo = networkInfo
-    this.initOptions = initOptions
+    this.initOptions = asEthereumInitOptions(initOptions)
   }
 
   async getDisplayPrivateKey(
