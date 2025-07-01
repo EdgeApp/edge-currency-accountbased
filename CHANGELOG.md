@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.52.1 (2025-07-01)
+
 - changed: Changed Fantom's block explorer to 'explorer.fantom.network'.
 
 ## 4.52.0 (2025-06-30)
