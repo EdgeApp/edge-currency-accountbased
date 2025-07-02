@@ -10,13 +10,19 @@ import {
 
 const networkInfo: KaspaNetworkInfo = {
   kaspaServers: [
-    'mainnet-dnsseed-1.kaspanet.org:16111',
-    'mainnet-dnsseed-2.kaspanet.org:16111',
-    'mainnet-dnsseed-3.kaspanet.org:16111'
+    // RPC endpoints for direct node connections
+    'mainnet-dnsseed-1.kaspanet.org:18110', // wRPC JSON
+    'mainnet-dnsseed-2.kaspanet.org:18110',
+    'mainnet-dnsseed-3.kaspanet.org:18110',
+    // Alternative RPC endpoints
+    'kas.fyi:18110',
+    'kaspa.aspectron.org:18110'
   ],
   kaspaExplorerServers: [
     'https://explorer.kaspa.org',
-    'https://kas.fyi'
+    'https://kas.fyi',
+    'https://kaspalytics.com',
+    'https://kaspagames.org/api'
   ]
 }
 
