@@ -85,6 +85,7 @@
   "dependencies": {
     "@chain-registry/client": "^1.53.59",
     "@cosmjs/stargate": "^0.32.3",
+    "@kaspa/wallet": "^1.4.27",
     "@emurgo/cardano-serialization-lib-nodejs": "^14.1.1",
     "@ethereumjs/common": "^4.0.0",
     "@ethereumjs/tx": "^5.0.0",
