@@ -1,7 +1,9 @@
 import parse from 'url-parse'
 
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
-import { pickRandom } from '../../common/utils'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
 import { NetworkAdapter } from './networkAdapterTypes'
@@ -56,16 +58,17 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
     const { amberdataApiKey, serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async url => {
-      const serviceKeyIndex = getServiceKeyIndex(url)
-      const serviceKey =
-        serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : []
-      let apiKey: string | undefined = pickRandom(serviceKey, 1)[0]
+      let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(url))
 
       if (apiKey === null && amberdataApiKey != null) {
         this.ethEngine.log.warn(
           "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
         )
         apiKey = amberdataApiKey
+      }
+
+      if (apiKey == null) {
+        throw new Error('Missing API key')
       }
 
       const body = {
@@ -99,16 +102,17 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
     const { amberdataApiKey, serviceKeys } = this.ethEngine.initOptions
 
     return await this.serialServers(async baseUrl => {
-      const serviceKeyIndex = getServiceKeyIndex(baseUrl)
-      const serviceKey =
-        serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : []
-      let apiKey: string | undefined = pickRandom(serviceKey, 1)[0]
+      let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
 
       if (apiKey == null && amberdataApiKey != null) {
         this.ethEngine.log.warn(
           "INIT OPTION 'amberdataApiKey' IS DEPRECATED. USE 'serviceKeys' INSTEAD"
         )
         apiKey = amberdataApiKey
+      }
+
+      if (apiKey == null) {
+        throw new Error('Missing API key')
       }
 
       const url = `${baseUrl}${path}`

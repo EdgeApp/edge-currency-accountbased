@@ -1,9 +1,12 @@
 import { asBoolean, asJSON, asMaybe, asObject, asString } from 'cleaners'
 import WebSocket from 'isomorphic-ws'
 
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
 import { makePeriodicTask, PeriodicTask } from '../../common/periodicTask'
-import { pickRandom, pickRandomOne } from '../../common/utils'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
+import { pickRandomOne } from '../../common/utils'
 import { EthereumEngine } from '../EthereumEngine'
 import { EthereumInitOptions } from '../ethereumTypes'
 import { ConnectionChangeHandler, NetworkAdapter } from './networkAdapterTypes'
@@ -208,15 +211,12 @@ export class BlockbookWsAdapter extends NetworkAdapter<BlockbookWsAdapterConfig>
 
     while (servers.length > 0) {
       const server = pickRandomOne(this.servers)
-      const serviceKeyIndex = getServiceKeyIndex(server.url)
-      const serviceKey =
-        serviceKeyIndex != null
-          ? this.ethEngine.initOptions.serviceKeys[serviceKeyIndex]
-          : []
+      let apiKey = getRandomServiceKey(
+        this.ethEngine.initOptions.serviceKeys,
+        getServiceKeyIndex(server.url)
+      )
 
       if (server.keyType != null) {
-        let apiKey: string | undefined = pickRandom(serviceKey, 1)[0]
-
         if (apiKey == null) {
           apiKey = this.ethEngine.initOptions[server.keyType]
           if (apiKey !== null)

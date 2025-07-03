@@ -7,8 +7,11 @@ import {
   JsonObject
 } from 'edge-core-js/types'
 
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
 import { fetchInfo } from '../../common/network'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { hexToDecimal, pickRandom } from '../../common/utils'
 import {
   GAS_PRICE_SANITY_CHECK,
@@ -285,9 +288,10 @@ export const getEvmScanApiKey = (
   } = initOptions
 
   const { currencyCode } = info
-  const serviceKeyIndex = getServiceKeyIndex(serverUrl)
-  const serviceKey =
-    serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : undefined
+  const serviceKey = getRandomServiceKey(
+    serviceKeys,
+    getServiceKeyIndex(serverUrl)
+  )
 
   if (serviceKey != null) return serviceKey
 

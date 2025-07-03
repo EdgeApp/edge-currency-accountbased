@@ -3,13 +3,15 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import { ethers } from 'ethers'
 import parse from 'url-parse'
 
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { asMaybeContractLocation } from '../../common/tokenHelpers'
 import {
   hexToDecimal,
   isHex,
   padHex,
-  pickRandom,
   removeHexPrefix
 } from '../../common/utils'
 import ETH_BAL_CHECKER_ABI from '../abi/ETH_BAL_CHECKER_ABI.json'
@@ -386,11 +388,10 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
 
       // try service keys first
       const serviceKeyIndex = getServiceKeyIndex(url)
-      const serviceKey =
-        serviceKeyIndex != null
-          ? this.ethEngine.initOptions.serviceKeys[serviceKeyIndex]
-          : []
-      let apiKey: string | undefined = pickRandom(serviceKey, 1)[0]
+      let apiKey = getRandomServiceKey(
+        this.ethEngine.initOptions.serviceKeys,
+        serviceKeyIndex
+      )
 
       // fall back to deprecated keys
       if (apiKey == null) {
