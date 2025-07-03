@@ -2,13 +2,15 @@
 
 ## Unreleased
 
+- fixed: Zano deeplink parsing bug when scanning for native ZANO currency.
+
 ## 4.52.1 (2025-07-01)
 
 - changed: Changed Fantom's block explorer to 'explorer.fantom.network'.
 
 ## 4.52.0 (2025-06-30)
 
-added: Support Zano deeplink URI parsing (e.g. zano: addresses).
+- added: Support Zano deeplink URI parsing (e.g. zano: addresses).
 
 ## 4.51.0 (2025-06-24)
 

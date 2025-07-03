@@ -189,7 +189,9 @@ export class ZanoTools implements EdgeCurrencyTools {
         // Validate that the currency in the deeplink matches the requested
         // currency code:
         let deeplinkCurrencyCode: string | undefined
-        if (zanoDeeplink.asset_id != null) {
+        if (zanoDeeplink.asset_id == null) {
+          deeplinkCurrencyCode = this.currencyInfo.currencyCode
+        } else {
           deeplinkCurrencyCode =
             this.builtinTokens[zanoDeeplink.asset_id]?.currencyCode
         }
