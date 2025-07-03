@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.52.2 (2025-07-03)
+
 - fixed: (EVM) Added exponential backoff function to etherscan/evmscan API call retries.
 - fixed: (EVM) Fixed regression with internal transaction queries.
 - fixed: Zano deeplink parsing bug when scanning for native ZANO currency.
