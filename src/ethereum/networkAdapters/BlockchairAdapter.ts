@@ -1,5 +1,8 @@
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
-import { pickRandom, safeErrorMessage } from '../../common/utils'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
+import { safeErrorMessage } from '../../common/utils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {
   asBlockChairAddress,
@@ -94,10 +97,7 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
       let apiKey: string | undefined
 
       if (includeKey) {
-        const serviceKeyIndex = getServiceKeyIndex(baseUrl)
-        const serviceKey =
-          serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : []
-        apiKey = pickRandom(serviceKey, 1)[0] as string | undefined
+        apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
 
         if (apiKey == null && blockchairApiKey != null) {
           this.ethEngine.log.warn(

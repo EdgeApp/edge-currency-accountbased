@@ -1,8 +1,10 @@
 import { EdgeTransaction } from 'edge-core-js/types'
 import parse from 'url-parse'
 
-import { getServiceKeyIndex } from '../../common/getServiceKeyIndex'
-import { pickRandom } from '../../common/utils'
+import {
+  getRandomServiceKey,
+  getServiceKeyIndex
+} from '../../common/serviceKeys'
 import { BroadcastResults } from '../EthereumNetwork'
 import { NetworkAdapter } from './networkAdapterTypes'
 
@@ -52,11 +54,7 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
     baseUrl: string
   ): Promise<any> {
     const { blockcypherApiKey, serviceKeys } = this.ethEngine.initOptions
-    const serviceKeyIndex = getServiceKeyIndex(baseUrl)
-    const serviceKey =
-      serviceKeyIndex != null ? serviceKeys[serviceKeyIndex] : []
-
-    let apiKey: string | undefined = pickRandom(serviceKey, 1)[0]
+    let apiKey = getRandomServiceKey(serviceKeys, getServiceKeyIndex(baseUrl))
 
     if (
       apiKey == null &&

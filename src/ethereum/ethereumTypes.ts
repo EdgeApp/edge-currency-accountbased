@@ -18,15 +18,15 @@ import { EdgeSpendInfo } from 'edge-core-js/types'
 import {
   asIntegerString,
   asSafeCommonWalletInfo,
+  asServiceKeys,
+  ServiceKeys,
   WalletConnectPayload
 } from '../common/types'
 import { FeeAlgorithmConfig } from './feeAlgorithms/feeAlgorithmTypes'
 import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
-const asServiceKeys = asObject(asArray(asString))
-
 export interface EthereumInitOptions {
-  serviceKeys: Record<string, string[]>
+  serviceKeys: ServiceKeys
   infuraProjectId?: string
 
   /** @deprecated Use serviceKeys instead */
