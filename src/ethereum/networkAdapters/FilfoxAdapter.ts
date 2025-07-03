@@ -5,7 +5,7 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import { Filfox, FilfoxMessageDetails } from '../../filecoin/Filfox'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {} from '../ethereumSchema'
-import { GetTxsParams, NetworkAdapter } from './types'
+import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
 
 export interface FilfoxAdapterConfig {
   type: 'filfox'

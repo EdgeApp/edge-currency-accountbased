@@ -423,3 +423,30 @@ export const createWeightedAverageCalculator = (weights: {
     return weightedSum
   }
 }
+
+/**
+ * Retries the provided async function with exponential backoff on failure.
+ * @param fn The async function to execute.
+ * @param maxRetries Maximum number of retries (default: 5). If undefined, retries forever.
+ * @param baseDelay Initial delay in ms (default: 1000)
+ * @param factor Exponential factor (default: 2)
+ * @returns The result of the function if successful, otherwise throws the last error (if maxRetries is reached).
+ */
+export async function exponentialBackoff<T>(
+  fn: () => Promise<T>,
+  baseDelay = 1000,
+  factor = 2,
+  maxRetries: number = Infinity
+): Promise<T> {
+  let attempt = 0
+  let delay = baseDelay
+  while (true) {
+    try {
+      return await fn()
+    } catch (error) {
+      if (attempt++ >= maxRetries) throw error
+      await snooze(delay)
+      delay *= factor
+    }
+  }
+}

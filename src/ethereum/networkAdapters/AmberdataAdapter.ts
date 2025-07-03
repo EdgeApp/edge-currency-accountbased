@@ -3,7 +3,7 @@ import parse from 'url-parse'
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
-import { NetworkAdapter } from './types'
+import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface AmberdataAdapterConfig {
   type: 'amberdata-rpc'

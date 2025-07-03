@@ -2,7 +2,7 @@ import { EdgeTransaction } from 'edge-core-js/types'
 import parse from 'url-parse'
 
 import { BroadcastResults } from '../EthereumNetwork'
-import { NetworkAdapter } from './types'
+import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface BlockcypherAdapterConfig {
   type: 'blockcypher'

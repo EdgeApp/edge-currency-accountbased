@@ -38,7 +38,11 @@ import {
   RpcResultString
 } from '../ethereumTypes'
 import { getEvmScanApiKey } from '../fees/feeProviders'
-import { GetTxsParams, NetworkAdapter, RateLimitError } from './types'
+import {
+  GetTxsParams,
+  NetworkAdapter,
+  RateLimitError
+} from './networkAdapterTypes'
 
 interface GetEthscanAllTxsOptions {
   contractAddress?: string
@@ -737,7 +741,7 @@ export const asEvmScanInternalTransaction = asObject({
   timeStamp: asString,
   gasUsed: asString,
   value: asString,
-  nonce: asString,
+  nonce: asOptional(asString),
   from: asString,
   to: asString,
   gas: asString,
