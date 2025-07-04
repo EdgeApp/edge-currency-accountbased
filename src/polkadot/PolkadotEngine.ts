@@ -608,10 +608,14 @@ export class PolkadotEngine extends CurrencyEngine<
       return balance
     }
 
-    const spendableBalance = sub(
-      balance,
+    const existentialDeposit =
+      // Reserve the user-defined existentialDeposit (for fully draining the
+      // wallet)
+      spendInfo.otherParams?.existentialDeposit ??
+      // Or use the engine's minimum address balance
       this.api.consts.balances.existentialDeposit.toString()
-    )
+
+    const spendableBalance = sub(balance, existentialDeposit)
 
     const tempSpendTarget = [
       {
@@ -673,19 +677,31 @@ export class PolkadotEngine extends CurrencyEngine<
     const networkFees: EdgeTxAmount[] = []
 
     if (edgeSpendInfo.tokenId == null) {
-      const spendableBalance = sub(
-        balance,
+      const existentialDeposit =
+        // Reserve the user-defined existentialDeposit (for fully draining the
+        // wallet)
+        edgeSpendInfo.otherParams?.existentialDeposit ??
+        // Or use the engine's minimum address balance
         this.api.consts.balances.existentialDeposit.toString()
-      )
+      const spendableBalance = sub(balance, existentialDeposit)
 
       if (gt(nativeAmount, spendableBalance)) {
         throw new InsufficientFundsError({ tokenId })
       }
 
-      const transfer = await this.api.tx.balances.transferKeepAlive(
-        publicAddress,
-        nativeAmount
-      )
+      // Use transferAllowDeath when existentialDeposit is overridden (e.g., '0' for full wallet draining)
+      // Use transferKeepAlive when using default existential deposit to preserve account
+      const isCustomExistentialDeposit =
+        edgeSpendInfo.otherParams?.existentialDeposit != null
+      const transfer = isCustomExistentialDeposit
+        ? await this.api.tx.balances.transferAllowDeath(
+            publicAddress,
+            nativeAmount
+          )
+        : await this.api.tx.balances.transferKeepAlive(
+            publicAddress,
+            nativeAmount
+          )
 
       const paymentInfo = await transfer.paymentInfo(
         this.walletInfo.keys.publicKey
@@ -741,10 +757,13 @@ export class PolkadotEngine extends CurrencyEngine<
       const feeBalance = this.getBalance({
         tokenId: null
       })
-      const spendableFeeBalance = sub(
-        feeBalance,
+      const existentialDeposit =
+        // Reserve the user-defined existentialDeposit (i.e. '0' for fully
+        // draining the wallet)
+        edgeSpendInfo.otherParams?.existentialDeposit ??
+        // Or use the engine's minimum address balance
         this.api.consts.balances.existentialDeposit.toString()
-      )
+      const spendableFeeBalance = sub(feeBalance, existentialDeposit)
       if (gt(parentNetworkFee, spendableFeeBalance)) {
         throw new InsufficientFundsError({
           networkFee: parentNetworkFee,
