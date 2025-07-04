@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: (DOT) Mismatching fee calculations between `makeSpend` and `getMaxSpendable`
+
 ## 4.52.1 (2025-07-01)
 
 - changed: Changed Fantom's block explorer to 'explorer.fantom.network'.

@@ -28,7 +28,6 @@ import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
   cleanTxLogs,
-  decimalToHex,
   getDenomination,
   getFetchCors,
   getOtherParams,
@@ -591,6 +590,7 @@ export class PolkadotEngine extends CurrencyEngine<
       throw new Error('Missing public address')
 
     const { tokenId } = spendInfo
+    const publicAddress = spendInfo.spendTargets[0].publicAddress // Safe after validation
 
     const balance = this.getBalance({
       tokenId
@@ -623,31 +623,39 @@ export class PolkadotEngine extends CurrencyEngine<
     const tx = await this.makeSpend(maxSpendInfo)
     const fee = tx.networkFee
 
-    const getMax = (min: string, max: string): string => {
+    const getMax = async (min: string, max: string): Promise<string> => {
       const diff = sub(max, min)
       if (lte(diff, '1')) {
         return min
       }
       const mid = add(min, div(diff, '2'))
 
-      // Get length fee for mid amount
-      const hex = decimalToHex(mid).replace('0x', '')
-      const paddedHex = hex.length % 2 === 1 ? `0${hex}` : hex
-      const lengthFee = mul(
-        div(paddedHex.length.toString(), '2'),
-        this.networkInfo.lengthFeePerByte
+      // Use actual paymentInfo fee calculation to match makeSpend
+      const transfer = await this.api.tx.balances.transferKeepAlive(
+        publicAddress,
+        mid
+      )
+      const paymentInfo = await transfer.paymentInfo(
+        this.walletInfo.keys.publicKey
+      )
+      const actualFee = sub(
+        paymentInfo.partialFee.toString(),
+        mul(
+          this.networkInfo.lengthFeePerByte,
+          this.networkInfo.partialFeeOffsetMultiplier
+        )
       )
 
-      const totalAmount = add(add(lengthFee, fee), mid)
+      const totalAmount = add(add(actualFee, fee), mid)
 
       if (gt(totalAmount, spendableBalance)) {
-        return getMax(min, mid)
+        return await getMax(min, mid)
       } else {
-        return getMax(mid, max)
+        return await getMax(mid, max)
       }
     }
 
-    return getMax('0', add(spendableBalance, '1'))
+    return await getMax('0', add(spendableBalance, '1'))
   }
 
   async makeSpend(edgeSpendInfoIn: EdgeSpendInfo): Promise<EdgeTransaction> {
