@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Added Botanix EVM currency.
+- added: Added HyperEVM EVM currency.
 
 ## 4.54.0 (2025-07-18)
 

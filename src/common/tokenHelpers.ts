@@ -80,11 +80,12 @@ export const validateToken = (token: EdgeToken): void => {
 
 /**
  * Validates a currency code.
+ * Accepts any non-empty string that does not contain leading or trailing whitespace.
  * Some weird but valid examples include:
- * T, BUSD.e, xBOO, 1INCH, BADGER, BSC-USD, $CWIF
+ * T, BUSD.e, xBOO, 1INCH, BADGER, BSC-USD, $CWIF, DOGE MEME, etc.
  */
 export const isCurrencyCode = (code: string): boolean => {
-  return /^\$?[a-zA-Z0-9]+([.-][a-zA-Z0-9]+)?$/.test(code)
+  return typeof code === 'string' && code.length > 0 && code.trim() === code
 }
 
 export const createTokenIdFromContractAddress = (token: EdgeToken): string => {
