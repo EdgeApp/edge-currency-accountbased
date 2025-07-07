@@ -1163,6 +1163,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'amberdata-rpc',
+      amberdataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
       servers: ['https://rpc.web3api.io']
     },
     {
@@ -1206,7 +1207,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  amberDataBlockchainId: '1c9c969065fcd1cf', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumMnemonic',
   pluginRegularKeyName: 'ethereumKey',
   evmGasStationUrl: null,

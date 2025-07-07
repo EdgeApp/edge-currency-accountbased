@@ -84,7 +84,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: true,
   hdPathCoinType: 60,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'baseMnemonic',
   pluginRegularKeyName: 'baseKey',
   evmGasStationUrl: null,

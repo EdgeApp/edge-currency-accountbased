@@ -163,7 +163,6 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Binance Smart Chain'
   },
   hdPathCoinType: 60,
-  amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'binancesmartchainMnemonic',
   pluginRegularKeyName: 'binancesmartchainKey',
   evmGasStationUrl: null,
