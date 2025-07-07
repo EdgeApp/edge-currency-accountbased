@@ -169,7 +169,6 @@ const networkInfo: EthereumNetworkInfo = {
     nodeInterfaceAddress: '0x00000000000000000000000000000000000000C8'
   },
   hdPathCoinType: 60,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'arbitrumMnemonic',
   pluginRegularKeyName: 'arbitrumKey',
   evmGasStationUrl: null,

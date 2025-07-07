@@ -76,7 +76,6 @@ const networkInfo: EthereumNetworkInfo = {
   hdPathCoinType: 461,
   feeUpdateFrequencyMs: 20000,
   supportsEIP1559: true,
-  amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'filecoinfevmcalibrationMnemonic',
   pluginRegularKeyName: 'filecoinfevmcalibrationKey',
   evmGasStationUrl: null,

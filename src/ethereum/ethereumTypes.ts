@@ -80,7 +80,6 @@ export interface EthereumNetworkInfo {
   addressQueryLookbackBlocks: number
   networkAdapterConfigs: NetworkAdapterConfig[]
   feeUpdateFrequencyMs?: number
-  amberDataBlockchainId: string
   chainParams: ChainParams
   supportsEIP1559?: boolean
   optimismRollup?: boolean

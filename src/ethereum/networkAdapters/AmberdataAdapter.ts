@@ -7,6 +7,7 @@ import { NetworkAdapter } from './networkAdapterTypes'
 
 export interface AmberdataAdapterConfig {
   type: 'amberdata-rpc'
+  amberdataBlockchainId: string
   servers: string[]
 }
 
@@ -64,8 +65,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
       }
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
-          'x-amberdata-blockchain-id':
-            this.ethEngine.networkInfo.amberDataBlockchainId,
+          'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
           'x-api-key': amberdataApiKey,
           'Content-Type': 'application/json'
         },
@@ -90,8 +90,7 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
       const url = `${base58ToHexAddress}${path}`
       const response = await this.ethEngine.fetchCors(url, {
         headers: {
-          'x-amberdata-blockchain-id':
-            this.ethEngine.networkInfo.amberDataBlockchainId,
+          'x-amberdata-blockchain-id': this.config.amberdataBlockchainId,
           'x-api-key': amberdataApiKey
         }
       })

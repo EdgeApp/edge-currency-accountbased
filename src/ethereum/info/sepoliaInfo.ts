@@ -85,7 +85,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'sepoliaMnemonic',
   pluginRegularKeyName: 'sepoliaKey',
   evmGasStationUrl: null,

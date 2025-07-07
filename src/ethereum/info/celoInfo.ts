@@ -87,7 +87,6 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Celo Mainnet'
   },
   hdPathCoinType: 52752,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'celoMnemonic',
   pluginRegularKeyName: 'celoKey',
   evmGasStationUrl: null,
