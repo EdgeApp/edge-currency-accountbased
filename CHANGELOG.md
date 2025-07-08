@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.53.0 (2025-07-07)
+
 - added: (Zano) `getDisplayPublicSeed` in `ZanoEngine` to return the private view key
 - fixed: (DOT) Mismatching fee calculations between `makeSpend` and `getMaxSpendable`
 - removed: (Zano) `getDisplayPublicKey` which was returning the public address instead of the private view key
