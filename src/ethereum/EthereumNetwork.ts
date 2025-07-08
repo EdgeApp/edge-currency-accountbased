@@ -384,10 +384,7 @@ export class EthereumNetwork {
       // each currencyCode individually.
       isFetchTokenBalancesSupported
     ) {
-      this.acquireTokenBalances().catch(error => {
-        console.error(error)
-        this.ethEngine.error('needsLoop acquireTokenBalances', error)
-      })
+      await this.acquireTokenBalances()
     }
 
     const { currencyCode } = this.ethEngine.currencyInfo
@@ -403,16 +400,10 @@ export class EthereumNetwork {
         // batch token balance queries.
         !isFetchTokenBalancesSupported
       ) {
-        this.acquireTokenBalance(currencyCode).catch(error => {
-          console.error(error)
-          this.ethEngine.error('needsLoop acquireTokenBalance', error)
-        })
+        await this.acquireTokenBalance(currencyCode)
       }
 
-      this.acquireTxs(currencyCode).catch(error => {
-        console.error(error)
-        this.ethEngine.error('needsLoop acquireTxs', error)
-      })
+      await this.acquireTxs(currencyCode)
     }
   }
 
