@@ -24,7 +24,6 @@ import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import { parseZanoDeeplink } from './parseZanoDeeplink'
 import {
-  asSafeZanoWalletInfo,
   asZanoAssetDetails,
   asZanoPrivateKeys,
   ZanoImportPrivateKeyOpts,
@@ -62,11 +61,6 @@ export class ZanoTools implements EdgeCurrencyTools {
     const passphraseStr =
       keys.passphrase != null ? `\n\nPassphrase:\n${keys.passphrase}` : ''
     return `Seed Phrase:\n${keys.mnemonic}${passphraseStr}`
-  }
-
-  async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
-    const { keys } = asSafeZanoWalletInfo(publicWalletInfo)
-    return keys.publicKey
   }
 
   /**

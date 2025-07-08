@@ -326,6 +326,27 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     await super.killEngine()
   }
 
+  getDisplayPublicSeed(): string {
+    /** Return the private view key */
+    const realGetDisplayPublicSeed = async (): Promise<string> => {
+      if (this.zanoWalletId == null) throw new Error('zanoWalletId not found')
+
+      try {
+        const walletInfo = await this.tools.zano.getWalletInfo(
+          this.zanoWalletId
+        )
+        return walletInfo.wi_extended.view_private_key
+      } catch (error: unknown) {
+        throw new Error('Failed to get wallet info: ' + JSON.stringify(error))
+      }
+    }
+
+    // HACK: We implemented `getDisplayPublicSeed` as an async fn.
+    // This is OK because the core currently calls that method with an await.
+    // @ts-expect-error
+    return realGetDisplayPublicSeed()
+  }
+
   async getMaxSpendable(edgeSpendInfo: EdgeSpendInfo): Promise<string> {
     const { tokenId } = edgeSpendInfo
 
