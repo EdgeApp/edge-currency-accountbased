@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: (Zano) `getDisplayPublicSeed` in `ZanoEngine` to return the private view key
+- removed: (Zano) `getDisplayPublicKey` which was returning the public address instead of the private view key
+
 ## 4.52.2 (2025-07-03)
 
 - fixed: (EVM) Added exponential backoff function to etherscan/evmscan API call retries.
