@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added Botanix EVM currency.
+
 ## 4.52.2 (2025-07-03)
 
 - fixed: (EVM) Added exponential backoff function to etherscan/evmscan API call retries.
