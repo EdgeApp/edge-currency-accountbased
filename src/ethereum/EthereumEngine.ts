@@ -796,7 +796,9 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Initial sync routine:
     if (subscribeParam == null) {
-      await this.ethNetwork.acquireUpdates()
+      await this.ethNetwork.acquireUpdates().catch(error => {
+        this.error('syncNetwork acquireUpdates', error)
+      })
       return SYNC_NETWORK_INTERVAL
     }
     // The blockheight from the network (change server)
@@ -828,7 +830,14 @@ export class EthereumEngine extends CurrencyEngine<
     // checkpoint: e.g. waiting on Etherscan or some other adapter to reflect
     // the new block
     while (true) {
-      await this.ethNetwork.acquireUpdates()
+      const success = await this.ethNetwork.acquireUpdates().then(
+        () => true,
+        error => {
+          this.error('syncNetwork acquireUpdates failed:', error)
+          return false
+        }
+      )
+      if (!success) break
       if (theirBlockheight > this.walletLocalData.blockHeight) {
         await snooze(RETRY_SYNC_NETWORK_INTERVAL)
         continue
