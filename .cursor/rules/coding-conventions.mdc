@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- `yarn` must be used to install dependencies and run scripts
+- `yarn test` is used to run the mocha tests
+- `yarn lint` and `yarn tsc` is used to run eslint and type-checking
+- `yarn verify` can be run to check if the current state of the repo has any issues (linter, type checking, or tests failures).
+- `yarn precommit` is run by husky (`.husky/` directory). Precommit hooks must be run be for each commit and must pass before commit. Otherwise include "WIP" in the commit message.
