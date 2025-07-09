@@ -16,10 +16,10 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
 import {
-  KaspaInfoPayload,
-  KaspaNetworkInfo,
   asKaspaPrivateKeys,
-  asSafeKaspaWalletInfo
+  asSafeKaspaWalletInfo,
+  KaspaInfoPayload,
+  KaspaNetworkInfo
 } from './kaspaTypes'
 
 // Kaspa address validation regex
@@ -52,7 +52,7 @@ export class KaspaTools implements EdgeCurrencyTools {
 
   async importPrivateKey(input: string): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
-    
+
     // Validate private key format (64 hex chars)
     if (!/^[0-9a-fA-F]{64}$/.test(input)) {
       throw new Error('Invalid private key format')
@@ -76,7 +76,7 @@ export class KaspaTools implements EdgeCurrencyTools {
     // Generate random 32 bytes for private key
     const privateKeyBytes = this.io.random(32)
     const privateKey = base16.stringify(privateKeyBytes).toLowerCase()
-    
+
     // TODO: Derive public key from private key
     const publicKey = 'placeholder_public_key'
 
@@ -92,14 +92,14 @@ export class KaspaTools implements EdgeCurrencyTools {
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
-    
+
     const keys = asKaspaPrivateKeys(pluginId)(walletInfo.keys)
-    
+
     // TODO: Derive public key and address from private key
     // This needs proper Kaspa cryptography implementation
-    
-    return { 
-      publicKey: keys.publicKey 
+
+    return {
+      publicKey: keys.publicKey
     }
   }
 
@@ -158,7 +158,7 @@ export class KaspaTools implements EdgeCurrencyTools {
       }
       amount = (parseInt(nativeAmount) / parseInt(denom.multiplier)).toString()
     }
-    
+
     const encodedUri = encodeUriCommon(obj, pluginId, amount)
     return encodedUri
   }

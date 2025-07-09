@@ -2,21 +2,15 @@ import {
   asArray,
   asBoolean,
   asCodec,
-  asEither,
   asMaybe,
   asNumber,
   asObject,
   asOptional,
   asString,
-  asValue,
   Cleaner
 } from 'cleaners'
 
-import {
-  asIntegerString,
-  asSafeCommonWalletInfo,
-  WalletConnectPayload
-} from '../common/types'
+import { asSafeCommonWalletInfo } from '../common/types'
 
 // Kaspa Wallet Other Data
 export const asKaspaWalletOtherData = asObject({
@@ -56,32 +50,38 @@ export type KaspaUtxo = ReturnType<typeof asKaspaUtxo>
 // Kaspa Transaction
 export const asKaspaTransaction = asObject({
   transactionId: asString,
-  inputs: asArray(asObject({
-    previousOutpoint: asObject({
-      transactionId: asString,
-      index: asNumber
-    }),
-    signatureScript: asString,
-    sigOpCount: asNumber
-  })),
-  outputs: asArray(asObject({
-    amount: asString,
-    scriptPublicKey: asObject({
-      scriptPublicKey: asString
+  inputs: asArray(
+    asObject({
+      previousOutpoint: asObject({
+        transactionId: asString,
+        index: asNumber
+      }),
+      signatureScript: asString,
+      sigOpCount: asNumber
     })
-  })),
+  ),
+  outputs: asArray(
+    asObject({
+      amount: asString,
+      scriptPublicKey: asObject({
+        scriptPublicKey: asString
+      })
+    })
+  ),
   lockTime: asString,
   subnetworkId: asString,
   gas: asString,
   payload: asString,
   mass: asString,
-  verboseData: asOptional(asObject({
-    transactionId: asString,
-    hash: asString,
-    mass: asString,
-    blockHash: asString,
-    blockTime: asString
-  }))
+  verboseData: asOptional(
+    asObject({
+      transactionId: asString,
+      hash: asString,
+      mass: asString,
+      blockHash: asString,
+      blockTime: asString
+    })
+  )
 })
 
 export type KaspaTransaction = ReturnType<typeof asKaspaTransaction>
@@ -98,23 +98,27 @@ export const asKaspaTransactionsResponse = asObject({
   transactions: asArray(asKaspaTransaction)
 })
 
-export type KaspaTransactionsResponse = ReturnType<typeof asKaspaTransactionsResponse>
+export type KaspaTransactionsResponse = ReturnType<
+  typeof asKaspaTransactionsResponse
+>
 
 // Kaspa UTXO Response
 export const asKaspaUtxosResponse = asObject({
-  entries: asArray(asObject({
-    address: asString,
-    outpoint: asObject({
-      transactionId: asString,
-      index: asNumber  
-    }),
-    utxoEntry: asObject({
-      amount: asString,
-      scriptPublicKey: asString,
-      blockDaaScore: asString,
-      isCoinbase: asBoolean
+  entries: asArray(
+    asObject({
+      address: asString,
+      outpoint: asObject({
+        transactionId: asString,
+        index: asNumber
+      }),
+      utxoEntry: asObject({
+        amount: asString,
+        scriptPublicKey: asString,
+        blockDaaScore: asString,
+        isCoinbase: asBoolean
+      })
     })
-  }))
+  )
 })
 
 export type KaspaUtxosResponse = ReturnType<typeof asKaspaUtxosResponse>
@@ -129,7 +133,9 @@ export interface KaspaPrivateKeys {
   publicKey: string
 }
 
-export const asKaspaPrivateKeys = (pluginId: string): Cleaner<KaspaPrivateKeys> => {
+export const asKaspaPrivateKeys = (
+  pluginId: string
+): Cleaner<KaspaPrivateKeys> => {
   const asKeys = asObject({
     [`${pluginId}Key`]: asString,
     [`${pluginId}PublicKey`]: asString
@@ -175,9 +181,9 @@ export interface KaspaNetworkUpdate {
 }
 
 // RPC Method types
-export type KaspaRpcMethod = 
+export type KaspaRpcMethod =
   | 'getBlockDagInfo'
-  | 'getBlock' 
+  | 'getBlock'
   | 'getBlocks'
   | 'getUtxosByAddresses'
   | 'getBalanceByAddress'

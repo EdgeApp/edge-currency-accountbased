@@ -1,15 +1,16 @@
 import { KaspaEngine } from '../KaspaEngine'
 import {
-  KaspaBalanceResponse,
-  KaspaNetworkUpdate,
-  KaspaTransaction,
-  KaspaTransactionsResponse,
-  KaspaUtxo,
-  KaspaUtxosResponse,
   asKaspaBalanceResponse,
   asKaspaTransactionsResponse,
-  asKaspaUtxosResponse
+  asKaspaUtxosResponse,
+  KaspaNetworkUpdate,
+  KaspaUtxo
 } from '../kaspaTypes'
+
+export interface KaspaApiAdapterConfig {
+  type: 'api'
+  servers: string[]
+}
 
 export class KaspaApiAdapter {
   kaspaEngine: KaspaEngine
@@ -26,7 +27,7 @@ export class KaspaApiAdapter {
       const response = await this.kaspaEngine.fetchCors(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          Accept: 'application/json'
         }
       })
 
@@ -36,7 +37,7 @@ export class KaspaApiAdapter {
 
       const data = await response.json()
       const clean = asKaspaUtxosResponse(data)
-      
+
       // Transform API response to our UTXO format
       const utxos: KaspaUtxo[] = clean.entries.map(entry => ({
         transactionId: entry.outpoint.transactionId,
@@ -57,7 +58,9 @@ export class KaspaApiAdapter {
         server: this.baseUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaApiAdapter fetchUtxos error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaApiAdapter fetchUtxos error: ${error.message}`
+      )
       throw error
     }
   }
@@ -68,7 +71,7 @@ export class KaspaApiAdapter {
       const response = await this.kaspaEngine.fetchCors(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          Accept: 'application/json'
         }
       })
 
@@ -86,7 +89,9 @@ export class KaspaApiAdapter {
         server: this.baseUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaApiAdapter fetchBalance error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaApiAdapter fetchBalance error: ${error.message}`
+      )
       throw error
     }
   }
@@ -97,7 +102,7 @@ export class KaspaApiAdapter {
       const response = await this.kaspaEngine.fetchCors(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          Accept: 'application/json'
         }
       })
 
@@ -113,7 +118,9 @@ export class KaspaApiAdapter {
         server: this.baseUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaApiAdapter fetchTransactions error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaApiAdapter fetchTransactions error: ${error.message}`
+      )
       throw error
     }
   }
@@ -124,7 +131,7 @@ export class KaspaApiAdapter {
       const response = await this.kaspaEngine.fetchCors(url, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json'
+          Accept: 'application/json'
         }
       })
 
@@ -133,10 +140,10 @@ export class KaspaApiAdapter {
       }
 
       const data = await response.json()
-      
+
       // Kaspa uses DAA score instead of traditional block height
-      const daaScore = data.virtualDaaScore || 0
-      
+      const daaScore = data.virtualDaaScore ?? 0
+
       // Update otherData with DAA score
       if (this.kaspaEngine.otherData != null) {
         this.kaspaEngine.otherData.virtualDaaScore = daaScore
@@ -148,7 +155,9 @@ export class KaspaApiAdapter {
         server: this.baseUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaApiAdapter fetchBlockHeight error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaApiAdapter fetchBlockHeight error: ${error.message}`
+      )
       throw error
     }
   }
@@ -159,7 +168,7 @@ export class KaspaApiAdapter {
       const response = await this.kaspaEngine.fetchCors(url, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -173,12 +182,14 @@ export class KaspaApiAdapter {
       }
 
       const data = await response.json()
-      
+
       return {
         txid: data.transactionId
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaApiAdapter broadcastTx error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaApiAdapter broadcastTx error: ${error.message}`
+      )
       throw error
     }
   }

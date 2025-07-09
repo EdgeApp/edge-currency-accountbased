@@ -1,10 +1,10 @@
 import { KaspaEngine } from '../KaspaEngine'
-import {
-  KaspaNetworkUpdate,
-  KaspaRpcMethod,
-  KaspaTransaction,
-  KaspaUtxo
-} from '../kaspaTypes'
+import { KaspaNetworkUpdate, KaspaRpcMethod, KaspaUtxo } from '../kaspaTypes'
+
+export interface KaspaRpcAdapterConfig {
+  type: 'rpc'
+  servers: string[]
+}
 
 export class KaspaRpcAdapter {
   kaspaEngine: KaspaEngine
@@ -19,7 +19,7 @@ export class KaspaRpcAdapter {
   async fetchUtxos(address: string): Promise<KaspaNetworkUpdate> {
     try {
       const result = await this.multicastRpc('getUtxosByAddresses', [[address]])
-      
+
       if (result == null || result.entries == null) {
         return { utxos: [], server: this.rpcUrl }
       }
@@ -40,7 +40,9 @@ export class KaspaRpcAdapter {
         server: this.rpcUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaRpcAdapter fetchUtxos error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaRpcAdapter fetchUtxos error: ${error.message}`
+      )
       throw error
     }
   }
@@ -48,7 +50,9 @@ export class KaspaRpcAdapter {
   async fetchTransactions(address: string): Promise<KaspaNetworkUpdate> {
     // Note: Kaspa RPC doesn't directly support fetching transactions by address
     // This would need to be implemented differently, possibly using an indexer
-    this.kaspaEngine.log.warn('KaspaRpcAdapter: fetchTransactions not implemented for RPC')
+    this.kaspaEngine.log.warn(
+      'KaspaRpcAdapter: fetchTransactions not implemented for RPC'
+    )
     return {
       transactions: [],
       server: this.rpcUrl
@@ -58,13 +62,13 @@ export class KaspaRpcAdapter {
   async fetchBlockHeight(): Promise<KaspaNetworkUpdate> {
     try {
       const result = await this.multicastRpc('getBlockDagInfo', [])
-      
+
       if (result == null || result.virtualDaaScore == null) {
         throw new Error('Invalid block DAG info response')
       }
 
       const blockHeight = parseInt(result.virtualDaaScore)
-      
+
       // Update otherData with virtual DAA score
       if (this.kaspaEngine.otherData != null) {
         this.kaspaEngine.otherData.virtualDaaScore = blockHeight
@@ -76,18 +80,22 @@ export class KaspaRpcAdapter {
         server: this.rpcUrl
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaRpcAdapter fetchBlockHeight error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaRpcAdapter fetchBlockHeight error: ${error.message}`
+      )
       throw error
     }
   }
 
   async broadcastTx(signedTx: string): Promise<{ txid: string }> {
     try {
-      const result = await this.multicastRpc('submitTransaction', [{
-        transaction: signedTx,
-        allowOrphan: false
-      }])
-      
+      const result = await this.multicastRpc('submitTransaction', [
+        {
+          transaction: signedTx,
+          allowOrphan: false
+        }
+      ])
+
       if (result == null || result.transactionId == null) {
         throw new Error('Invalid broadcast response')
       }
@@ -96,7 +104,9 @@ export class KaspaRpcAdapter {
         txid: result.transactionId
       }
     } catch (error: any) {
-      this.kaspaEngine.log.warn(`KaspaRpcAdapter broadcastTx error: ${error.message}`)
+      this.kaspaEngine.log.warn(
+        `KaspaRpcAdapter broadcastTx error: ${error.message}`
+      )
       throw error
     }
   }
@@ -105,9 +115,9 @@ export class KaspaRpcAdapter {
     // TODO: Implement WebSocket RPC connection
     // For now, this is a placeholder
     // Actual implementation would use WebSocket connection to Kaspa nodes
-    
+
     throw new Error('WebSocket RPC not yet implemented')
-    
+
     // Example of what the implementation might look like:
     // const ws = new WebSocket(this.rpcUrl)
     // const request = {
