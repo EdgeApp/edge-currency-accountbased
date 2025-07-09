@@ -190,6 +190,7 @@ export class CurrencyEngine<
     }
     this.walletLocalData = {
       blockHeight: 0,
+      highestTxBlockHeight: 0,
       lastAddressQueryHeight: 0,
       lastTransactionQueryHeight: {},
       lastTransactionDate: {},
