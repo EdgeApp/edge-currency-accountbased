@@ -740,6 +740,13 @@ export class EthereumEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    this.currencyEngineCallbacks.onSubscribeAddresses([
+      {
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      }
+    ])
+
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
@@ -771,13 +778,6 @@ export class EthereumEngine extends CurrencyEngine<
     this.ethNetwork.start()
 
     await super.startEngine()
-
-    this.currencyEngineCallbacks.onSubscribeAddresses([
-      {
-        address: this.walletLocalData.publicKey,
-        checkpoint: this.walletLocalData.blockHeight.toString()
-      }
-    ])
   }
 
   async killEngine(): Promise<void> {
@@ -819,7 +819,7 @@ export class EthereumEngine extends CurrencyEngine<
     // then the local state is up-to-date. However, this may be the initial
     // syncNetwork call by the core, so we must make sure the sync ratio is
     // completed.
-    if (this.walletLocalData.blockHeight >= theirBlockheight) {
+    if (this.walletLocalData.highestTxBlockHeight >= theirBlockheight) {
       if (!this.addressesChecked) {
         this.setOneHundoSyncRatio()
       }
@@ -838,7 +838,7 @@ export class EthereumEngine extends CurrencyEngine<
         }
       )
       if (!success) break
-      if (theirBlockheight > this.walletLocalData.blockHeight) {
+      if (theirBlockheight > this.walletLocalData.highestTxBlockHeight) {
         await snooze(RETRY_SYNC_NETWORK_INTERVAL)
         continue
       }

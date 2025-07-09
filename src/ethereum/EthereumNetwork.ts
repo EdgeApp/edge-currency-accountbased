@@ -478,6 +478,7 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
+      let highestTxBlockHeight = 0
       for (const currencyCode of Object.keys(tokenTxs)) {
         this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 1
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
@@ -488,7 +489,13 @@ export class EthereumNetwork {
           currencyCode
         ] = preUpdateBlockHeight
         this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] = now
+        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
       }
+      this.ethEngine.walletLocalData.highestTxBlockHeight = Math.max(
+        this.ethEngine.walletLocalData.highestTxBlockHeight,
+        highestTxBlockHeight
+      )
+      this.ethEngine.walletLocalDataDirty = true
       this.ethEngine.updateOnAddressesChecked()
 
       // Update addressSync state:
