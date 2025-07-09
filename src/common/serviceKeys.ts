@@ -11,6 +11,6 @@ export function getRandomServiceKey(
 }
 
 export function getServiceKeyIndex(url: string): string {
-  const host = new URL(url).host
+  const host = new URL(url, `https://${url}`).host
   return host
 }
