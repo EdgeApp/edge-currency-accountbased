@@ -151,6 +151,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  usesChangeServer: true,
+
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
   displayName: 'Dev Ethereum',

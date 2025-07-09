@@ -135,6 +135,8 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  usesChangeServer: true,
+
   // Deprecated:
   displayName: 'Filecoin FEVM (Calibration Testnet)',
   metaTokens: makeMetaTokens(builtinTokens)
