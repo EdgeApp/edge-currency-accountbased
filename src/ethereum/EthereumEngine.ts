@@ -819,7 +819,15 @@ export class EthereumEngine extends CurrencyEngine<
     // then the local state is up-to-date. However, this may be the initial
     // syncNetwork call by the core, so we must make sure the sync ratio is
     // completed.
-    if (this.walletLocalData.highestTxBlockHeight >= theirBlockheight) {
+    if (
+      this.walletLocalData.highestTxBlockHeight >= theirBlockheight &&
+      // This is a special case for initial sync. This is a workaround becuase
+      // the change server does not send a block-height on initial subscriptions
+      // and instead the core sends the checkpoint from the engine as the latest
+      // checkpoint. A real fix would be to have the change server send the
+      // block-height on initial subscriptions when sending a `2` SubscribeResult.
+      this.walletLocalData.highestTxBlockHeight !== 0
+    ) {
       if (!this.addressesChecked) {
         this.setOneHundoSyncRatio()
       }

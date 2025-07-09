@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- fixed: Sync accuracy, reliability, and resync bugs.
+- fixed: Network thrashing when transaction fetching fails from an unknown error.
+
 ## 4.52.2 (2025-07-03)
 
 - fixed: (EVM) Added exponential backoff function to etherscan/evmscan API call retries.
