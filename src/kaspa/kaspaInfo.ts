@@ -76,6 +76,9 @@ const currencyInfo: EdgeCurrencyInfo = {
     }
   ],
 
+  // Kaspa doesn't support replace-by-fee due to its DAG structure
+  canReplaceByFee: false,
+
   // Deprecated:
   defaultSettings: { customFeeSettings: ['fee'] },
   displayName: 'Kaspa',

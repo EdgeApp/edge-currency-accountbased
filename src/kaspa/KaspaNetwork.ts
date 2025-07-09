@@ -119,9 +119,12 @@ export class KaspaNetwork {
       throw new Error('No RPC adapters available')
     }
 
-    const promises = adapters.map(
-      adapter => async () => await adapter.multicastRpc!(method, params)
-    )
+    const promises = adapters.map(adapter => async () => {
+      if (adapter.multicastRpc != null) {
+        return await adapter.multicastRpc(method, params)
+      }
+      throw new Error('Adapter does not support multicast RPC')
+    })
 
     return await asyncWaterfall(promises)
   }

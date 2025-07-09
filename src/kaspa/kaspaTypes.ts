@@ -161,6 +161,8 @@ export const asKaspaPrivateKeys = (
 // Kaspa Other Methods
 export interface KaspaOtherMethods {
   // Future WalletConnect support can be added here
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any
 }
 
 // Kaspa Info Payload
