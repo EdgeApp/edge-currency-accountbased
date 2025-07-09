@@ -1,0 +1,3 @@
+{
+  "install": "yarn && yarn prepare"
+}
