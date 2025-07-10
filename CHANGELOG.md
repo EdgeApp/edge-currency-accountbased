@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Zano deeplink parsing bug when scanning for unknown currency.
+
 ## 4.53.0 (2025-07-07)
 
 - added: (Zano) `getDisplayPublicSeed` in `ZanoEngine` to return the private view key
