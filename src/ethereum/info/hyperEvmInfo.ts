@@ -17,7 +17,7 @@ import {
 } from './ethereumCommonInfo'
 
 const builtinTokens: EdgeTokenMap = {
-  a320D9f65ec992EfF38622c63627856382Db726c: {
+  a320d9f65ec992eff38622c63627856382db726c: {
     currencyCode: 'HFUN',
     displayName: 'Hypurr Fun',
     denominations: [
@@ -31,7 +31,7 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0xa320D9f65ec992EfF38622c63627856382Db726c'
     }
   },
-  '1Ecd15865D7F8019D546f76d095d9c93cc34eDFa': {
+  '1ecd15865d7f8019d546f76d095d9c93cc34edfa': {
     currencyCode: 'LIQD',
     displayName: 'LiquidLaunch',
     denominations: [
@@ -45,7 +45,7 @@ const builtinTokens: EdgeTokenMap = {
       contractAddress: '0x1Ecd15865D7F8019D546f76d095d9c93cc34eDFa'
     }
   },
-  '1bEe6762F0B522c606DC2Ffb106C0BB391b2E309': {
+  '1bee6762f0b522c606dc2ffb106c0bb391b2e309': {
     currencyCode: 'PiP',
     displayName: 'PiP',
     denominations: [
