@@ -4,7 +4,6 @@ import { EdgeTransaction } from 'edge-core-js/types'
 
 import { Filfox, FilfoxMessageDetails } from '../../filecoin/Filfox'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
-import {} from '../ethereumSchema'
 import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
 
 export interface FilfoxAdapterConfig {
@@ -51,6 +50,10 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     const { publicAddress: addressString } =
       await this.ethEngine.getFreshAddress()
 
+    // Initialize sync status for all enabled tokens since FilfoxAdapter doesn't
+    // support separate token balance/transaction checking
+    this.initializeSyncStatusForAllTokens()
+
     const handleScanProgress = (progress: number): void => {
       const currentProgress =
         this.ethEngine.tokenCheckTransactionsStatus[
@@ -67,6 +70,12 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         this.ethEngine.tokenCheckTransactionsStatus[
           this.ethEngine.currencyInfo.currencyCode
         ] = newProgress
+
+        // If main sync is complete, set all tokens to complete
+        if (newProgress >= 1) {
+          this.setSyncStatusForAllTokens(1)
+        }
+
         this.ethEngine.updateOnAddressesChecked()
       }
     }
@@ -137,6 +146,29 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
   private onUpdateTransactions(): void {
     this.ethEngine.sendTransactionEvents()
+  }
+
+  // Initialize sync status for all enabled tokens to 0
+  private initializeSyncStatusForAllTokens(): void {
+    for (const currencyCode of this.ethEngine.enabledTokens) {
+      // Initialize to 0 if not already set
+      if (this.ethEngine.tokenCheckBalanceStatus[currencyCode] === undefined) {
+        this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
+      }
+      if (
+        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] === undefined
+      ) {
+        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+      }
+    }
+  }
+
+  // Set sync status for all enabled tokens to the specified value
+  private setSyncStatusForAllTokens(status: number): void {
+    for (const currencyCode of this.ethEngine.enabledTokens) {
+      this.ethEngine.tokenCheckBalanceStatus[currencyCode] = status
+      this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = status
+    }
   }
 
   private async scanTransactionsFromFilfox(

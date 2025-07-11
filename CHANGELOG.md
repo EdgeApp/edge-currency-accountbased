@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- fixed: Filecoin FEVM syncing with tokens enabled
 - fixed: Zano deeplink parsing bug when scanning for unknown currency.
 
 ## 4.53.0 (2025-07-07)
