@@ -93,6 +93,7 @@
     "@greymass/eosio-resources": "^0.7.0",
     "@hashgraph/sdk": "^2.44.0",
     "@haverstack/axios-fetch-adapter": "^0.12.0",
+    "@kaspa/wallet": "^1.4.27",
     "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@metaplex-foundation/umi": "^1.2.0",
     "@mysten/sui": "^1.18.0",
