@@ -1,10 +1,13 @@
 import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeMetaToken, EdgeTransaction } from 'edge-core-js/types'
 
-import { Filfox, FilfoxMessageDetails } from '../../filecoin/Filfox'
+import {
+  Filfox,
+  FilfoxMessageDetails,
+  FilfoxTokenTransfer
+} from '../../filecoin/Filfox'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
-import {} from '../ethereumSchema'
 import { GetTxsParams, NetworkAdapter } from './networkAdapterTypes'
 
 export interface FilfoxAdapterConfig {
@@ -37,7 +40,10 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       const update = await this.currentScan
       return update
     } catch (error) {
-      console.error(error)
+      this.logError(
+        'FilfoxAdapter fetchTxs failed',
+        error instanceof Error ? error : new Error(String(error))
+      )
       throw error
     } finally {
       this.currentScan = undefined
@@ -51,11 +57,25 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     const { publicAddress: addressString } =
       await this.ethEngine.getFreshAddress()
 
-    const handleScanProgress = (progress: number): void => {
+    this.logError(
+      `FilfoxAdapter: Starting checkTransactions for ${currencyCode} at address ${addressString}, startBlock: ${startBlock}`,
+      undefined
+    )
+
+    // Track the highest block height of transactions processed
+    let highestProcessedBlockHeight = startBlock
+
+    // Initialize sync status for all enabled tokens
+    this.initializeSyncStatusForAllTokens()
+
+    const handleScanProgress = (
+      progress: number,
+      tokenCurrencyCode?: string
+    ): void => {
+      const targetCurrencyCode =
+        tokenCurrencyCode ?? this.ethEngine.currencyInfo.currencyCode
       const currentProgress =
-        this.ethEngine.tokenCheckTransactionsStatus[
-          this.ethEngine.currencyInfo.currencyCode
-        ]
+        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode]
       const newProgress = progress
 
       if (
@@ -64,23 +84,30 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         // Avoid thrashing
         (newProgress >= 1 || newProgress > currentProgress * 1.1)
       ) {
-        this.ethEngine.tokenCheckTransactionsStatus[
-          this.ethEngine.currencyInfo.currencyCode
-        ] = newProgress
+        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode] =
+          newProgress
         this.ethEngine.updateOnAddressesChecked()
       }
     }
 
     const handleScan = ({
       tx,
-      progress
+      progress,
+      tokenCurrencyCode
     }: {
       tx: EdgeTransaction | undefined
       progress: number
+      tokenCurrencyCode?: string
     }): void => {
       if (tx != null) {
-        this.ethEngine.addTransaction(currencyCode, tx)
+        const targetCurrencyCode = tx.currencyCode
+        this.ethEngine.addTransaction(targetCurrencyCode, tx)
         this.onUpdateTransactions()
+
+        // Track the highest block height processed
+        if (tx.blockHeight > highestProcessedBlockHeight) {
+          highestProcessedBlockHeight = tx.blockHeight
+        }
 
         // Progress the block-height if the message's height is greater than
         // last poll for block-height.
@@ -89,12 +116,23 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         }
       }
 
-      handleScanProgress(progress)
+      handleScanProgress(progress, tokenCurrencyCode)
     }
 
     const scanners = [
-      // this.scanTransactionsFromFilscan(addressString, handleScan),
-      this.scanTransactionsFromFilfox(addressString, handleScan)
+      // Scan native FIL transactions
+      this.scanTransactionsFromFilfox(addressString, event =>
+        handleScan({
+          ...event,
+          tokenCurrencyCode: this.ethEngine.currencyInfo.currencyCode
+        })
+      ),
+      // Scan token transactions
+      this.scanTokenTransactionsFromFilfox(
+        addressString,
+        startBlock,
+        handleScan
+      )
     ]
 
     // Run scanners:
@@ -105,13 +143,13 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       this.ethEngine.walletLocalData.blockHeight
     this.ethEngine.walletLocalDataDirty = true
 
-    // Make sure the sync progress is 100%
-    handleScanProgress(1)
+    // Make sure the sync progress is 100% for main currency
+    handleScanProgress(1, this.ethEngine.currencyInfo.currencyCode)
 
     return {
       tokenTxs: {
         [currencyCode]: {
-          blockHeight: startBlock,
+          blockHeight: highestProcessedBlockHeight,
           // This adapter manages transaction processing, so return an empty set
           // each time the query finishes.
           edgeTransactions: []
@@ -137,6 +175,197 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
   private onUpdateTransactions(): void {
     this.ethEngine.sendTransactionEvents()
+  }
+
+  // Initialize sync status for all enabled tokens to 0
+  private initializeSyncStatusForAllTokens(): void {
+    this.logError(
+      `FilfoxAdapter: Initializing sync status for tokens: ${this.ethEngine.enabledTokens.join(
+        ', '
+      )}`,
+      undefined
+    )
+
+    for (const currencyCode of this.ethEngine.enabledTokens) {
+      // Reset to 0 for fresh scan (even if previously completed)
+      this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
+      this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+    }
+  }
+
+  private async scanTokenTransactionsFromFilfox(
+    addressString: string,
+    startBlock: number,
+    onScan: (event: {
+      tx: EdgeTransaction | undefined
+      progress: number
+      tokenCurrencyCode?: string
+    }) => void
+  ): Promise<void> {
+    // Get all enabled tokens except the main currency
+    const tokenCurrencyCodesOnly = this.ethEngine.enabledTokens.filter(
+      code => code !== this.ethEngine.currencyInfo.currencyCode
+    )
+
+    // If no tokens are enabled, complete sync for all tokens immediately
+    if (tokenCurrencyCodesOnly.length === 0) return
+
+    try {
+      // Initial request to get the totalCount for token transfers
+      const initialResponse = await this.serialServers(
+        async baseUrl =>
+          await this.makeFilfoxApi(baseUrl).getAccountTokenTransfers(
+            addressString,
+            0,
+            1
+          )
+      )
+      const tokenTransferCount = initialResponse.totalCount
+      if (tokenTransferCount === 0) {
+        // No token transfers found, mark all tokens as complete
+        for (const tokenCode of tokenCurrencyCodesOnly) {
+          onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+        }
+        return
+      }
+
+      // Calculate total pages and set a reasonable transfersPerPage
+      const transfersPerPage = 20
+      const totalPages = Math.ceil(tokenTransferCount / transfersPerPage)
+      let transfersChecked = 0
+      for (
+        let currentPageIndex = totalPages - 1;
+        currentPageIndex >= 0;
+        currentPageIndex--
+      ) {
+        const tokenTransfersResponse = await this.serialServers(
+          async baseUrl =>
+            await this.makeFilfoxApi(baseUrl).getAccountTokenTransfers(
+              addressString,
+              currentPageIndex,
+              transfersPerPage
+            )
+        )
+
+        // Process token transfers
+        const tokenTransfers = tokenTransfersResponse.transfers
+        for (let i = tokenTransfers.length - 1; i >= 0; i--) {
+          // Exit early if the engine has been stopped
+          if (!this.ethEngine.engineOn) return
+
+          const tokenTransfer = tokenTransfers[i]
+
+          // Check if this token is enabled
+          const tokenInfo = this.ethEngine.getTokenInfo(tokenTransfer.token)
+
+          if (tokenInfo == null) {
+            // Try converting f4 address to Ethereum hex format
+            const ethAddress = this.convertF4ToEthAddress(tokenTransfer.token)
+            if (ethAddress != null) {
+              // Find token by contract address (case-insensitive)
+              const tokenInfoEth = this.findTokenByContractAddress(ethAddress)
+              if (tokenInfoEth != null) {
+                // Skip transfers prior to the startBlock (avoids reprocessing during resync)
+                if (tokenTransfer.height <= startBlock) {
+                  transfersChecked++
+                  continue
+                }
+
+                // Skip transfers prior to the last sync height
+                if (
+                  tokenTransfer.height <
+                  this.ethEngine.walletLocalData.lastAddressQueryHeight
+                ) {
+                  transfersChecked++
+                  continue
+                }
+
+                // Process the transaction using the Ethereum address tokenInfo
+                const tx = this.filfoxTokenTransferToEdgeTransaction(
+                  addressString,
+                  tokenTransfer,
+                  tokenInfoEth
+                )
+
+                transfersChecked++
+
+                // Calculate progress based on transfers processed
+                const progress = transfersChecked / tokenTransferCount
+
+                onScan({
+                  tx,
+                  progress,
+                  tokenCurrencyCode: tokenInfoEth.currencyCode
+                })
+                continue
+              }
+            }
+            transfersChecked++
+            continue
+          }
+
+          // Skip transfers prior to the startBlock (avoids reprocessing during resync)
+          if (tokenTransfer.height <= startBlock) {
+            transfersChecked++
+            continue
+          }
+
+          // Skip transfers prior to the last sync height
+          if (
+            tokenTransfer.height <
+            this.ethEngine.walletLocalData.lastAddressQueryHeight
+          ) {
+            transfersChecked++
+            continue
+          }
+
+          // Progress the last query height
+          if (
+            tokenTransfer.height >
+            this.ethEngine.walletLocalData.lastAddressQueryHeight
+          ) {
+            this.ethEngine.walletLocalData.lastAddressQueryHeight =
+              tokenTransfer.height
+            this.ethEngine.walletLocalDataDirty = true
+          }
+
+          // Create EdgeTransaction for token transfer
+          const tx = this.filfoxTokenTransferToEdgeTransaction(
+            addressString,
+            tokenTransfer,
+            tokenInfo
+          )
+
+          // Calculate the progress
+          const progress =
+            tokenTransferCount === 0
+              ? 1
+              : ++transfersChecked / tokenTransferCount
+
+          // Trigger scan progress event
+          onScan({ tx, progress, tokenCurrencyCode: tokenInfo.currencyCode })
+        }
+      }
+      // Mark all enabled tokens as complete
+      for (const tokenCode of tokenCurrencyCodesOnly) {
+        onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+      }
+    } catch (error) {
+      this.logError(
+        'FilfoxAdapter token transfers scanning failed',
+        error instanceof Error ? error : new Error(String(error))
+      )
+      // If token transfer scanning fails, mark all tokens as complete to avoid blocking sync
+      for (const tokenCode of tokenCurrencyCodesOnly) {
+        this.logError(
+          `FilfoxAdapter: Error recovery - marking token ${tokenCode} as complete`,
+          undefined
+        )
+        onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+      }
+      // Don't re-throw the error as this would break the entire sync process
+      // The main currency sync will still work fine
+    }
   }
 
   private async scanTransactionsFromFilfox(
@@ -315,5 +544,114 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     }
 
     return edgeTransaction
+  }
+
+  private readonly filfoxTokenTransferToEdgeTransaction = (
+    addressString: string,
+    tokenTransfer: FilfoxTokenTransfer,
+    tokenInfo: EdgeMetaToken
+  ): EdgeTransaction => {
+    const ourReceiveAddresses = []
+
+    // Token transfers don't have network fees in the same way as regular messages
+    const networkFee = '0'
+
+    // Infer the network prefix from the tokenTransfer:
+    const fromAddress = Address.fromString(tokenTransfer.from)
+    const networkPrefix = fromAddress.getNetworkPrefix()
+
+    // Use the network prefix and the addressString to create a formatted address:
+    const ownFilecoinFormattedAddress = Address.fromEthAddress(
+      networkPrefix,
+      addressString
+    ).toString()
+
+    // Handle native amount:
+    let nativeAmount: string
+    if (tokenTransfer.from === ownFilecoinFormattedAddress) {
+      // For token spends, network fee is 0 and amount is negative
+      nativeAmount = `-${tokenTransfer.value}`
+    } else {
+      // For token receives, amount is positive
+      nativeAmount = tokenTransfer.value
+      ourReceiveAddresses.push(addressString)
+    }
+
+    const edgeTransaction: EdgeTransaction = {
+      blockHeight: tokenTransfer.height,
+      currencyCode: tokenInfo.currencyCode,
+      date: tokenTransfer.timestamp,
+      isSend: nativeAmount.startsWith('-'),
+      memos: [],
+      nativeAmount,
+      networkFee,
+      networkFees: [],
+      otherParams: {},
+      ourReceiveAddresses,
+      signedTx: '',
+      tokenId:
+        tokenInfo.contractAddress?.toLowerCase().replace(/^0x/, '') ?? null,
+      txid: tokenTransfer.message, // Use message CID as txid for token transfers
+      walletId: this.ethEngine.walletId
+    }
+
+    return edgeTransaction
+  }
+
+  /**
+   * Finds a token by contract address (case-insensitive)
+   * @param contractAddress - The contract address to search for
+   * @returns EdgeMetaToken if found, null otherwise
+   */
+  private findTokenByContractAddress(
+    contractAddress: string
+  ): EdgeMetaToken | null {
+    // Search through all enabled tokens to find one with matching contract address
+    for (const currencyCode of this.ethEngine.enabledTokens) {
+      const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
+      if (tokenInfo != null && typeof tokenInfo.contractAddress === 'string') {
+        if (
+          tokenInfo.contractAddress.toLowerCase() ===
+          contractAddress.toLowerCase()
+        ) {
+          return tokenInfo
+        }
+      }
+    }
+    return null
+  }
+
+  /**
+   * Converts a Filecoin f4 address to Ethereum hex format
+   * @param f4Address - The Filecoin f4 address (e.g., f410...)
+   * @returns Ethereum hex address (e.g., 0x...) or null if conversion fails
+   */
+  private convertF4ToEthAddress(f4Address: string): string | null {
+    try {
+      // f410 addresses are Ethereum addresses on Filecoin FEVM
+      if (!f4Address.startsWith('f410')) {
+        this.logError(
+          `FilfoxAdapter: Address ${f4Address} is not an Ethereum f410 address`,
+          undefined
+        )
+        return null
+      }
+
+      // Use the izari-filecoin library to properly convert f4 address to Ethereum format
+      const filecoinAddress = Address.fromString(f4Address)
+      // For f410 addresses (Ethereum addresses), the payload contains the Ethereum address bytes
+      const payload = filecoinAddress.getPayload()
+
+      // Extract only the last 20 bytes for the Ethereum address (payload may have prefix bytes)
+      const ethAddressBytes = payload.slice(-20)
+      const ethAddress = `0x${Buffer.from(ethAddressBytes).toString('hex')}`
+      return ethAddress
+    } catch (error) {
+      this.logError(
+        `FilfoxAdapter: Failed to convert f4 address ${f4Address} to Ethereum format`,
+        error instanceof Error ? error : new Error(String(error))
+      )
+      return null
+    }
   }
 }
