@@ -19,6 +19,10 @@ import { CppBridge } from 'react-native-zano'
 
 import { CurrencyEngine } from '../common/CurrencyEngine'
 import { PluginEnvironment } from '../common/innerPlugin'
+import {
+  LifecycleManager,
+  makeLifecycleManager
+} from '../common/lifecycleManager'
 import { cleanTxLogs, createWeightedAverageCalculator } from '../common/utils'
 import { ZanoTools } from './ZanoTools'
 import {
@@ -30,6 +34,7 @@ import {
   SafeZanoWalletInfo,
   ZanoNetworkInfo,
   ZanoOtherMethods,
+  ZanoPrivateKeys,
   ZanoWalletOtherData
 } from './zanoTypes'
 
@@ -41,9 +46,10 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   networkInfo: ZanoNetworkInfo
   otherData!: ZanoWalletOtherData
 
-  zanoWalletId?: number
   calculateSyncProgress: (values: { [key: string]: number }) => number
   unlockedBalanceMap: Map<EdgeTokenId, string>
+  private readonly nativeId: LifecycleManager<number>
+  private sendKeysToNative?: (keys: ZanoPrivateKeys) => void
 
   constructor(
     env: PluginEnvironment<ZanoNetworkInfo>,
@@ -54,13 +60,76 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     super(env, tools, walletInfo, opts)
     this.networkInfo = env.networkInfo
 
-    this.zanoWalletId = undefined
     this.calculateSyncProgress = createWeightedAverageCalculator({
       balance: BALANCE_PROGRESS_WEIGHT,
       transaction: TRANSACTION_PROGRESS_WEIGHT,
       sync: SYNC_PROGRESS_WEIGHT
     })
     this.unlockedBalanceMap = new Map()
+
+    // This will receive the private keys on the first network sync:
+    const keysPromise = new Promise<ZanoPrivateKeys>(resolve => {
+      this.sendKeysToNative = resolve
+    })
+
+    // Initialize wallet lifecycle manager
+    this.nativeId = makeLifecycleManager({
+      onStart: async () => {
+        // Block startup until the keys are ready:
+        const keys = await keysPromise
+
+        try {
+          await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
+          const response = await this.tools.zano.startWallet(
+            keys.mnemonic,
+            keys.passphrase ?? '',
+            keys.storagePath
+          )
+          return response.wallet_id
+        } catch (error: unknown) {
+          if (!(error instanceof Error)) throw error
+          if (!error.message.includes('ALREADY_EXISTS')) throw error
+
+          this.log(
+            `initializeWallet: wallet already exists, finding existing wallet`
+          )
+
+          // Get all opened wallets and find ours by storage path
+          const openedWalletsResponse = await this.tools.zano.getOpenedWallets()
+          if (
+            !('result' in openedWalletsResponse) ||
+            openedWalletsResponse.result == null
+          ) {
+            throw new Error(
+              'initializeWallet: Failed to retrieve opened wallets'
+            )
+          }
+
+          // Find the wallet that matches our storage path
+          const existingWallet = openedWalletsResponse.result.find(
+            info => info.name === keys.storagePath
+          )
+          if (existingWallet?.wallet_id == null) {
+            throw new Error(
+              'initializeWallet: Wallet already exists but could not be found'
+            )
+          }
+
+          this.log(
+            `initializeWallet: found existing wallet with ID ${existingWallet.wallet_id}`
+          )
+          return existingWallet.wallet_id
+        }
+      },
+
+      onStop: async (nativeId: number) => {
+        await this.tools.zano.stopWallet(nativeId)
+      },
+
+      onError: error => {
+        this.log.error('Wallet lifecycle error:', String(error))
+      }
+    })
   }
 
   setOtherData(raw: any): void {
@@ -68,11 +137,10 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   }
 
   async queryBalance(): Promise<void> {
-    if (this.zanoWalletId == null) return
+    const nativeId = await this.nativeId.get()
+    if (nativeId == null) return
 
-    const balancesResponse = await this.tools.zano.getBalances(
-      this.zanoWalletId
-    )
+    const balancesResponse = await this.tools.zano.getBalances(nativeId)
 
     const balances: {
       [key: string]: Awaited<
@@ -115,12 +183,13 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   }
 
   async queryTransactions(): Promise<void> {
-    if (this.zanoWalletId == null) return
+    const nativeId = await this.nativeId.get()
+    if (nativeId == null) return
 
     while (true) {
       const offset = this.otherData.transactionQueryOffset
       const transactions = await this.tools.zano.getTransactions(
-        this.zanoWalletId,
+        nativeId,
         offset
       )
 
@@ -233,8 +302,9 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   }
 
   async changeEnabledTokenIds(tokenIds: string[]): Promise<void> {
-    if (this.zanoWalletId != null) {
-      await this.tools.zano.whitelistAssets(this.zanoWalletId, tokenIds)
+    const nativeId = await this.nativeId.get()
+    if (nativeId != null) {
+      await this.tools.zano.whitelistAssets(nativeId, tokenIds)
     }
     await super.changeEnabledTokenIds(tokenIds)
   }
@@ -242,21 +312,15 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   async syncNetwork(opts: EdgeEnginePrivateKeyOptions): Promise<number> {
     if (!this.engineOn) return 1000
 
-    if (this.zanoWalletId == null) {
-      await this.tools.zano.init(this.networkInfo.walletRpcAddress, -1)
-
-      const zanoPrivateKeys = asZanoPrivateKeys(this.currencyInfo.pluginId)(
-        opts?.privateKeys
+    if (this.sendKeysToNative != null) {
+      this.sendKeysToNative(
+        asZanoPrivateKeys(this.currencyInfo.pluginId)(opts.privateKeys)
       )
-      const response = await this.tools.zano.startWallet(
-        zanoPrivateKeys.mnemonic,
-        zanoPrivateKeys.passphrase ?? '',
-        zanoPrivateKeys.storagePath
-      )
-      this.zanoWalletId = response.wallet_id
     }
+    const nativeId = await this.nativeId.get()
+    if (nativeId == null) return 1000
 
-    const status = await this.tools.zano.walletStatus(this.zanoWalletId)
+    const status = await this.tools.zano.walletStatus(nativeId)
     const blockheight = Math.max(
       status.current_wallet_height,
       status.current_daemon_height
@@ -269,7 +333,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     if (status.progress === 100 || status.wallet_state === 2) {
       this.updateProgress({ sync: 1 })
       await this.tools.zano.whitelistAssets(
-        this.zanoWalletId,
+        nativeId,
         Object.keys(this.allTokensMap)
       )
       await this.queryBalance()
@@ -307,10 +371,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   // // ****************************************************************************
 
   async resyncBlockchain(): Promise<void> {
-    if (this.zanoWalletId != null) {
-      await this.tools.zano.removeWallet(this.zanoWalletId)
-    }
-    this.zanoWalletId = undefined
+    this.nativeId.stop()
     this.unlockedBalanceMap.clear()
     await this.killEngine()
     this.updateProgress({ sync: 0, balance: 0, transaction: 0 })
@@ -319,22 +380,20 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   }
 
   async killEngine(): Promise<void> {
-    if (this.zanoWalletId != null) {
-      await this.tools.zano.stopWallet(this.zanoWalletId)
-    }
-    this.zanoWalletId = undefined
+    this.nativeId.stop()
     await super.killEngine()
   }
 
   getDisplayPublicSeed(): string {
     /** Return the private view key */
     const realGetDisplayPublicSeed = async (): Promise<string> => {
-      if (this.zanoWalletId == null) throw new Error('zanoWalletId not found')
-
       try {
-        const walletInfo = await this.tools.zano.getWalletInfo(
-          this.zanoWalletId
-        )
+        const nativeId = await this.nativeId.get()
+        if (nativeId == null) {
+          throw new Error('Wallet is not running, cannot get view key')
+        }
+
+        const walletInfo = await this.tools.zano.getWalletInfo(nativeId)
         return walletInfo.wi_extended.view_private_key
       } catch (error: unknown) {
         throw new Error('Failed to get wallet info: ' + JSON.stringify(error))
@@ -475,16 +534,15 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
   async broadcastTx(
     edgeTransaction: EdgeTransaction
   ): Promise<EdgeTransaction> {
-    if (this.zanoWalletId == null) throw new Error('zanoWalletId is null')
+    const nativeId = await this.nativeId.get()
+    if (nativeId == null) throw new Error('Wallet is not running')
+
     const otherParams: TransferParams = asZanoTransferParams(
       edgeTransaction.otherParams
     )
 
     try {
-      const txid = await this.tools.zano.transfer(
-        this.zanoWalletId,
-        otherParams
-      )
+      const txid = await this.tools.zano.transfer(nativeId, otherParams)
       edgeTransaction.txid = txid
       edgeTransaction.date = Date.now() / 1000
       this.warn(`SUCCESS broadcastTx\n${cleanTxLogs(edgeTransaction)}`)
