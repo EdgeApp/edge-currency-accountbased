@@ -151,6 +151,35 @@ export const asFilfoxTransfersResult = asObject({
   totalCount: asNumber
 })
 
+export type FilfoxTokenTransfer = ReturnType<typeof asFilfoxTokenTransfer>
+export const asFilfoxTokenTransfer = asObject({
+  height: asNumber,
+  timestamp: asNumber,
+  message: asString,
+  evmMethod: asString,
+  from: asString,
+  to: asString,
+  token: asString, // Contract address
+  value: asString,
+  type: asString,
+  name: asString, // Token name
+  symbol: asString, // Token symbol
+  decimals: asNumber // Token decimals
+})
+
+//
+// Token Transfers
+//
+
+export type FilfoxTokenTransfersResult = ReturnType<
+  typeof asFilfoxTokenTransfersResult
+>
+export const asFilfoxTokenTransfersResult = asObject({
+  transfers: asOptional(asArray(asFilfoxTokenTransfer), []),
+  totalCount: asNumber,
+  types: asOptional(asArray(asString), [])
+})
+
 // -----------------------------------------------------------------------------
 // Implementation
 // -----------------------------------------------------------------------------
@@ -244,6 +273,35 @@ export class Filfox {
     })
     const responseText = await response.text()
     const responseBody = asFilfoxEnvelope(asFilfoxMessageDetailsResult)(
+      responseText
+    )
+    if ('error' in responseBody)
+      throw new Error(
+        `Error response code ${responseBody.statusCode}: ${responseBody.message} ${responseBody.error}`
+      )
+    return responseBody
+  }
+
+  async getAccountTokenTransfers(
+    address: string,
+    page: number,
+    pageSize: number = 20
+  ): Promise<FilfoxTokenTransfersResult> {
+    const url = new URL(`${this.baseUrl}/address/${address}/token-transfers`)
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString()
+    })
+    url.search = searchParams.toString()
+    const response = await this.fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json'
+      }
+    })
+    const responseText = await response.text()
+
+    const responseBody = asFilfoxEnvelope(asFilfoxTokenTransfersResult)(
       responseText
     )
     if ('error' in responseBody)
