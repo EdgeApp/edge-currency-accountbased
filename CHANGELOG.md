@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.54.0 (2025-07-18)
+
 - changed: (Zano) `getDisplayPublicSeed` waits for wallet initialization before returning instead of throwing
 - fixed: (Zano) Deeplink parsing bug when scanning for unknown currency.
 - fixed: (Zano) Wallet initialization failure when the wallet exists in the sdk
