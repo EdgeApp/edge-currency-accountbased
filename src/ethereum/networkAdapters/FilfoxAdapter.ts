@@ -1,6 +1,10 @@
 import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
-import { EdgeMetaToken, EdgeTransaction } from 'edge-core-js/types'
+import {
+  EdgeMetaToken,
+  EdgeTransaction,
+  EdgeTxAmount
+} from 'edge-core-js/types'
 
 import {
   Filfox,
@@ -56,11 +60,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     const { startBlock, currencyCode } = params
     const { publicAddress: addressString } =
       await this.ethEngine.getFreshAddress()
-
-    this.logError(
-      `FilfoxAdapter: Starting checkTransactions for ${currencyCode} at address ${addressString}, startBlock: ${startBlock}`,
-      undefined
-    )
 
     // Track the highest block height of transactions processed
     let highestProcessedBlockHeight = startBlock
@@ -179,13 +178,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
   // Initialize sync status for all enabled tokens to 0
   private initializeSyncStatusForAllTokens(): void {
-    this.logError(
-      `FilfoxAdapter: Initializing sync status for tokens: ${this.ethEngine.enabledTokens.join(
-        ', '
-      )}`,
-      undefined
-    )
-
     for (const currencyCode of this.ethEngine.enabledTokens) {
       // Reset to 0 for fresh scan (even if previously completed)
       this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
@@ -255,55 +247,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
           const tokenTransfer = tokenTransfers[i]
 
-          // Check if this token is enabled
-          const tokenInfo = this.ethEngine.getTokenInfo(tokenTransfer.token)
-
-          if (tokenInfo == null) {
-            // Try converting f4 address to Ethereum hex format
-            const ethAddress = this.convertF4ToEthAddress(tokenTransfer.token)
-            if (ethAddress != null) {
-              // Find token by contract address (case-insensitive)
-              const tokenInfoEth = this.findTokenByContractAddress(ethAddress)
-              if (tokenInfoEth != null) {
-                // Skip transfers prior to the startBlock (avoids reprocessing during resync)
-                if (tokenTransfer.height <= startBlock) {
-                  transfersChecked++
-                  continue
-                }
-
-                // Skip transfers prior to the last sync height
-                if (
-                  tokenTransfer.height <
-                  this.ethEngine.walletLocalData.lastAddressQueryHeight
-                ) {
-                  transfersChecked++
-                  continue
-                }
-
-                // Process the transaction using the Ethereum address tokenInfo
-                const tx = this.filfoxTokenTransferToEdgeTransaction(
-                  addressString,
-                  tokenTransfer,
-                  tokenInfoEth
-                )
-
-                transfersChecked++
-
-                // Calculate progress based on transfers processed
-                const progress = transfersChecked / tokenTransferCount
-
-                onScan({
-                  tx,
-                  progress,
-                  tokenCurrencyCode: tokenInfoEth.currencyCode
-                })
-                continue
-              }
-            }
-            transfersChecked++
-            continue
-          }
-
           // Skip transfers prior to the startBlock (avoids reprocessing during resync)
           if (tokenTransfer.height <= startBlock) {
             transfersChecked++
@@ -319,6 +262,26 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
             continue
           }
 
+          // Check if this token is enabled
+          let tokenInfo = this.ethEngine.getTokenInfo(tokenTransfer.token)
+
+          if (tokenInfo == null) {
+            // Try converting f4 address to Ethereum hex format
+            const ethAddress = this.convertF4ToEthAddress(tokenTransfer.token)
+            if (ethAddress != null) {
+              // Find token by contract address (case-insensitive)
+              const foundTokenInfo = this.findTokenByContractAddress(ethAddress)
+              if (foundTokenInfo != null) {
+                tokenInfo = foundTokenInfo
+              }
+            }
+
+            if (tokenInfo == null) {
+              transfersChecked++
+              continue
+            }
+          }
+
           // Progress the last query height
           if (
             tokenTransfer.height >
@@ -330,17 +293,16 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           }
 
           // Create EdgeTransaction for token transfer
-          const tx = this.filfoxTokenTransferToEdgeTransaction(
+          const tx = await this.filfoxTokenTransferToEdgeTransaction(
             addressString,
             tokenTransfer,
             tokenInfo
           )
 
+          transfersChecked++
+
           // Calculate the progress
-          const progress =
-            tokenTransferCount === 0
-              ? 1
-              : ++transfersChecked / tokenTransferCount
+          const progress = transfersChecked / tokenTransferCount
 
           // Trigger scan progress event
           onScan({ tx, progress, tokenCurrencyCode: tokenInfo.currencyCode })
@@ -357,10 +319,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       )
       // If token transfer scanning fails, mark all tokens as complete to avoid blocking sync
       for (const tokenCode of tokenCurrencyCodesOnly) {
-        this.logError(
-          `FilfoxAdapter: Error recovery - marking token ${tokenCode} as complete`,
-          undefined
-        )
         onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
       }
       // Don't re-throw the error as this would break the entire sync process
@@ -474,9 +432,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           )
         }
 
+        transfersChecked++
+
         // Calculate the progress
         const progress =
-          transferCount === 0 ? 1 : ++transfersChecked / transferCount
+          transferCount === 0 ? 1 : transfersChecked / transferCount
 
         // Trigger scan progress event
         onScan({ tx, progress })
@@ -546,15 +506,34 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     return edgeTransaction
   }
 
-  private readonly filfoxTokenTransferToEdgeTransaction = (
+  /**
+   * Calculates the gas fee from a Filecoin message details
+   * Uses the same pattern as regular FIL transactions
+   */
+  private calculateGasFeeFromMessage(
+    messageDetails: FilfoxMessageDetails
+  ): string {
+    // Use the same pattern as filfoxMessageToEdgeTransaction for regular FIL transactions
+    const networkFee = messageDetails.transfers
+      .filter(
+        transfer =>
+          transfer.type === 'miner-fee' || transfer.type === 'burner-fee'
+      )
+      .reduce((sum, transfer) => add(sum, transfer.value), '0')
+    return networkFee
+  }
+
+  private readonly filfoxTokenTransferToEdgeTransaction = async (
     addressString: string,
     tokenTransfer: FilfoxTokenTransfer,
     tokenInfo: EdgeMetaToken
-  ): EdgeTransaction => {
+  ): Promise<EdgeTransaction> => {
     const ourReceiveAddresses = []
 
-    // Token transfers don't have network fees in the same way as regular messages
-    const networkFee = '0'
+    // For token transfers, the gas fee is paid in FIL (native currency)
+    const networkFee = '0' // Token transfers don't show fees for the token itself
+    let parentNetworkFee: string | undefined
+    const networkFees: EdgeTxAmount[] = []
 
     // Infer the network prefix from the tokenTransfer:
     const fromAddress = Address.fromString(tokenTransfer.from)
@@ -569,10 +548,37 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     // Handle native amount:
     let nativeAmount: string
     if (tokenTransfer.from === ownFilecoinFormattedAddress) {
-      // For token spends, network fee is 0 and amount is negative
+      // For token spends, amount is negative and we need to get the gas fee
       nativeAmount = `-${tokenTransfer.value}`
+
+      // Fetch the message details to get the actual gas fee
+      try {
+        const messageDetails = await this.serialServers(
+          async baseUrl =>
+            await this.makeFilfoxApi(baseUrl).getMessageDetails(
+              tokenTransfer.message
+            )
+        )
+        const gasFee = this.calculateGasFeeFromMessage(messageDetails)
+
+        // Set deprecated field for backwards compatibility
+        parentNetworkFee = gasFee
+
+        // Set modern networkFees array - this is what the GUI should use
+        networkFees.push({
+          tokenId: null, // null = parent currency (FIL)
+          nativeAmount: gasFee
+        })
+      } catch (error) {
+        // If we can't get the message details, don't block the transaction
+        // Just log the error and continue without the fee information
+        this.logError(
+          'Failed to fetch message details for token transfer gas fee',
+          error instanceof Error ? error : new Error(String(error))
+        )
+      }
     } else {
-      // For token receives, amount is positive
+      // For token receives, amount is positive and no fee is paid by the receiver
       nativeAmount = tokenTransfer.value
       ourReceiveAddresses.push(addressString)
     }
@@ -585,7 +591,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       memos: [],
       nativeAmount,
       networkFee,
-      networkFees: [],
+      networkFees,
       otherParams: {},
       ourReceiveAddresses,
       signedTx: '',
@@ -593,6 +599,12 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         tokenInfo.contractAddress?.toLowerCase().replace(/^0x/, '') ?? null,
       txid: tokenTransfer.message, // Use message CID as txid for token transfers
       walletId: this.ethEngine.walletId
+    }
+
+    // Use conditional assignment pattern like EthereumEngine for deprecated field
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    if (parentNetworkFee) {
+      edgeTransaction.parentNetworkFee = parentNetworkFee
     }
 
     return edgeTransaction
@@ -630,10 +642,6 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     try {
       // f410 addresses are Ethereum addresses on Filecoin FEVM
       if (!f4Address.startsWith('f410')) {
-        this.logError(
-          `FilfoxAdapter: Address ${f4Address} is not an Ethereum f410 address`,
-          undefined
-        )
         return null
       }
 
