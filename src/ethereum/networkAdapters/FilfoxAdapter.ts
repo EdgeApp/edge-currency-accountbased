@@ -64,8 +64,8 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     // Track the highest block height of transactions processed
     let highestProcessedBlockHeight = startBlock
 
-    // Initialize sync status for all enabled tokens
-    this.initializeSyncStatusForAllTokens()
+    // Initialize sync status only for tokens that don't have status yet
+    this.initializeSyncStatusForNewTokens()
 
     const handleScanProgress = (
       progress: number,
@@ -176,12 +176,15 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     this.ethEngine.sendTransactionEvents()
   }
 
-  // Initialize sync status for all enabled tokens to 0
-  private initializeSyncStatusForAllTokens(): void {
+  // Initialize sync status only for tokens that don't have status yet (undefined)
+  // This preserves existing progress for tokens already syncing or completed
+  private initializeSyncStatusForNewTokens(): void {
     for (const currencyCode of this.ethEngine.enabledTokens) {
-      // Reset to 0 for fresh scan (even if previously completed)
-      this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
-      this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+      // Only initialize if the status is undefined (never been set)
+      if (this.ethEngine.tokenCheckTransactionsStatus[currencyCode] == null) {
+        this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
+        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+      }
     }
   }
 
@@ -247,13 +250,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
           const tokenTransfer = tokenTransfers[i]
 
-          // Skip transfers prior to the startBlock (avoids reprocessing during resync)
-          if (tokenTransfer.height <= startBlock) {
-            transfersChecked++
-            continue
-          }
-
-          // Skip transfers prior to the last sync height
+          // Use consolidated condition consistent with native FIL scanning
           if (
             tokenTransfer.height <
             this.ethEngine.walletLocalData.lastAddressQueryHeight
@@ -545,15 +542,19 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       addressString
     ).toString()
 
+    // Fetch the message details to get gas fee and consistent txid
+    let messageDetails: FilfoxMessageDetails | undefined
+    let ethTransactionHash = tokenTransfer.message // Fallback to message CID if fetch fails
+
     // Handle native amount:
     let nativeAmount: string
     if (tokenTransfer.from === ownFilecoinFormattedAddress) {
       // For token spends, amount is negative and we need to get the gas fee
       nativeAmount = `-${tokenTransfer.value}`
 
-      // Fetch the message details to get the actual gas fee
+      // Fetch the message details to get the actual gas fee and ethTransactionHash
       try {
-        const messageDetails = await this.serialServers(
+        messageDetails = await this.serialServers(
           async baseUrl =>
             await this.makeFilfoxApi(baseUrl).getMessageDetails(
               tokenTransfer.message
@@ -569,6 +570,9 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           tokenId: null, // null = parent currency (FIL)
           nativeAmount: gasFee
         })
+
+        // Use ethTransactionHash for consistency with native FIL transactions
+        ethTransactionHash = messageDetails.ethTransactionHash
       } catch (error) {
         // If we can't get the message details, don't block the transaction
         // Just log the error and continue without the fee information
@@ -581,6 +585,25 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       // For token receives, amount is positive and no fee is paid by the receiver
       nativeAmount = tokenTransfer.value
       ourReceiveAddresses.push(addressString)
+
+      // Still fetch message details for consistent txid, but don't require gas fee info
+      try {
+        messageDetails = await this.serialServers(
+          async baseUrl =>
+            await this.makeFilfoxApi(baseUrl).getMessageDetails(
+              tokenTransfer.message
+            )
+        )
+        // Use ethTransactionHash for consistency with native FIL transactions
+        ethTransactionHash = messageDetails.ethTransactionHash
+      } catch (error) {
+        // If we can't get the message details, just log the error
+        // The fallback txid (message CID) will be used
+        this.logError(
+          'Failed to fetch message details for token transfer txid',
+          error instanceof Error ? error : new Error(String(error))
+        )
+      }
     }
 
     const edgeTransaction: EdgeTransaction = {
@@ -597,7 +620,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       signedTx: '',
       tokenId:
         tokenInfo.contractAddress?.toLowerCase().replace(/^0x/, '') ?? null,
-      txid: tokenTransfer.message, // Use message CID as txid for token transfers
+      txid: ethTransactionHash, // Use ethTransactionHash for consistency with native FIL transactions
       walletId: this.ethEngine.walletId
     }
 
