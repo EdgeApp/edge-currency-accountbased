@@ -186,3 +186,8 @@ export const asEdgeToken = asObject({
 export const asInfoServerTokens = asObject({
   infoServerTokens: asMaybe(asArray(asUnknown))
 })
+
+export interface ServiceKeys {
+  [host: string]: string[]
+}
+export const asServiceKeys: Cleaner<ServiceKeys> = asObject(asArray(asString))
