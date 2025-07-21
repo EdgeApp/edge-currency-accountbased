@@ -740,6 +740,13 @@ export class EthereumEngine extends CurrencyEngine<
   // ****************************************************************************
 
   async startEngine(): Promise<void> {
+    this.currencyEngineCallbacks.onSubscribeAddresses([
+      {
+        address: this.walletLocalData.publicKey,
+        checkpoint: this.walletLocalData.highestTxBlockHeight.toString()
+      }
+    ])
+
     const feeUpdateFrequencyMs =
       this.networkInfo.feeUpdateFrequencyMs ?? NETWORK_FEES_POLL_MILLISECONDS
     // Fetch the static fees from the info server only once to avoid overwriting live values.
@@ -771,13 +778,6 @@ export class EthereumEngine extends CurrencyEngine<
     this.ethNetwork.start()
 
     await super.startEngine()
-
-    this.currencyEngineCallbacks.onSubscribeAddresses([
-      {
-        address: this.walletLocalData.publicKey,
-        checkpoint: this.walletLocalData.blockHeight.toString()
-      }
-    ])
   }
 
   async killEngine(): Promise<void> {
@@ -796,7 +796,9 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Initial sync routine:
     if (subscribeParam == null) {
-      await this.ethNetwork.acquireUpdates()
+      await this.ethNetwork.acquireUpdates().catch(error => {
+        this.error('syncNetwork acquireUpdates', error)
+      })
       return SYNC_NETWORK_INTERVAL
     }
     // The blockheight from the network (change server)
@@ -817,7 +819,15 @@ export class EthereumEngine extends CurrencyEngine<
     // then the local state is up-to-date. However, this may be the initial
     // syncNetwork call by the core, so we must make sure the sync ratio is
     // completed.
-    if (this.walletLocalData.blockHeight >= theirBlockheight) {
+    if (
+      this.walletLocalData.highestTxBlockHeight >= theirBlockheight &&
+      // This is a special case for initial sync. This is a workaround becuase
+      // the change server does not send a block-height on initial subscriptions
+      // and instead the core sends the checkpoint from the engine as the latest
+      // checkpoint. A real fix would be to have the change server send the
+      // block-height on initial subscriptions when sending a `2` SubscribeResult.
+      this.walletLocalData.highestTxBlockHeight !== 0
+    ) {
       if (!this.addressesChecked) {
         this.setOneHundoSyncRatio()
       }
@@ -828,8 +838,15 @@ export class EthereumEngine extends CurrencyEngine<
     // checkpoint: e.g. waiting on Etherscan or some other adapter to reflect
     // the new block
     while (true) {
-      await this.ethNetwork.acquireUpdates()
-      if (theirBlockheight > this.walletLocalData.blockHeight) {
+      const success = await this.ethNetwork.acquireUpdates().then(
+        () => true,
+        error => {
+          this.error('syncNetwork acquireUpdates failed:', error)
+          return false
+        }
+      )
+      if (!success) break
+      if (theirBlockheight > this.walletLocalData.highestTxBlockHeight) {
         await snooze(RETRY_SYNC_NETWORK_INTERVAL)
         continue
       }

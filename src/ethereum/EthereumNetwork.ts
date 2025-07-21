@@ -384,10 +384,7 @@ export class EthereumNetwork {
       // each currencyCode individually.
       isFetchTokenBalancesSupported
     ) {
-      this.acquireTokenBalances().catch(error => {
-        console.error(error)
-        this.ethEngine.error('needsLoop acquireTokenBalances', error)
-      })
+      await this.acquireTokenBalances()
     }
 
     const { currencyCode } = this.ethEngine.currencyInfo
@@ -403,16 +400,10 @@ export class EthereumNetwork {
         // batch token balance queries.
         !isFetchTokenBalancesSupported
       ) {
-        this.acquireTokenBalance(currencyCode).catch(error => {
-          console.error(error)
-          this.ethEngine.error('needsLoop acquireTokenBalance', error)
-        })
+        await this.acquireTokenBalance(currencyCode)
       }
 
-      this.acquireTxs(currencyCode).catch(error => {
-        console.error(error)
-        this.ethEngine.error('needsLoop acquireTxs', error)
-      })
+      await this.acquireTxs(currencyCode)
     }
   }
 
@@ -487,6 +478,7 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
+      let highestTxBlockHeight = 0
       for (const currencyCode of Object.keys(tokenTxs)) {
         this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 1
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
@@ -497,7 +489,13 @@ export class EthereumNetwork {
           currencyCode
         ] = preUpdateBlockHeight
         this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] = now
+        highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
       }
+      this.ethEngine.walletLocalData.highestTxBlockHeight = Math.max(
+        this.ethEngine.walletLocalData.highestTxBlockHeight,
+        highestTxBlockHeight
+      )
+      this.ethEngine.walletLocalDataDirty = true
       this.ethEngine.updateOnAddressesChecked()
 
       // Update addressSync state:

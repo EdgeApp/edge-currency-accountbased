@@ -4,6 +4,8 @@
 
 - added: Added Botanix EVM currency.
 - added: Added HyperEVM EVM currency.
+- fixed: Sync accuracy, reliability, and resync bugs.
+- fixed: Network thrashing when transaction fetching fails from an unknown error.
 
 ## 4.54.0 (2025-07-18)
 

@@ -57,6 +57,7 @@ export interface TransactionList {
 
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),
+  highestTxBlockHeight: asMaybe(asNumber, 0),
   lastAddressQueryHeight: asMaybe(asNumber, 0),
   lastTransactionQueryHeight: asMaybe(asObject(asNumber), () => ({})),
   lastTransactionDate: asMaybe(asObject(asNumber), () => ({})),
