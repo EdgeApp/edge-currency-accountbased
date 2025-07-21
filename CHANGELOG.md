@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.0 (2025-07-21)
+
 - added: Added Botanix EVM currency.
 - added: Added HyperEVM EVM currency.
 - fixed: Sync accuracy, reliability, and resync bugs.
