@@ -67,7 +67,6 @@ const networkInfo: EthereumNetworkInfo = {
   optimismRollup: true,
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'bobevmMnemonic',
   pluginRegularKeyName: 'bobevmKey',
   evmGasStationUrl: null,

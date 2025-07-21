@@ -5,6 +5,7 @@ import { avalanche } from './info/avalancheInfo'
 import { base } from './info/baseInfo'
 import { binancesmartchain } from './info/binancesmartchainInfo'
 import { bobevm } from './info/bobevmInfo'
+import { botanix } from './info/botanixInfo'
 import { celo } from './info/celoInfo'
 import { ethDev } from './info/ethDevInfo'
 import { ethereumclassic } from './info/ethereumclassicInfo'
@@ -14,6 +15,7 @@ import { fantom } from './info/fantomInfo'
 import { filecoinfevmcalibration } from './info/filecoinFevmCalibrationInfo'
 import { filecoinfevm } from './info/filecoinFevmInfo'
 import { holesky } from './info/holeskyInfo'
+import { hyperevm } from './info/hyperEvmInfo'
 import { optimism } from './info/optimismInfo'
 import { polygon } from './info/polygonInfo'
 import { pulsechain } from './info/pulsechainInfo'
@@ -30,6 +32,7 @@ export const ethereumPlugins = {
   base,
   binancesmartchain,
   bobevm,
+  botanix,
   celo,
   ethDev,
   ethereum,
@@ -39,6 +42,7 @@ export const ethereumPlugins = {
   filecoinfevm,
   filecoinfevmcalibration,
   holesky,
+  hyperevm,
   optimism,
   polygon,
   pulsechain,

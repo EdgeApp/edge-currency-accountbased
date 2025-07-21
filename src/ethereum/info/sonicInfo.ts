@@ -155,7 +155,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60, // Using Ethereum's coin type as it's an EVM chain
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'sonicMnemonic',
   pluginRegularKeyName: 'sonicKey',
   evmGasStationUrl: null,

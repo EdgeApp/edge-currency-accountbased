@@ -108,7 +108,6 @@ const networkInfo: EthereumNetworkInfo = {
     name: 'Ethereum Classic'
   },
   hdPathCoinType: 61,
-  amberDataBlockchainId: '', // ETH mainnet
   pluginMnemonicKeyName: 'ethereumclassicMnemonic',
   pluginRegularKeyName: 'ethereumclassicKey',
   evmGasStationUrl: null,

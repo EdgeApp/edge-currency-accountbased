@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- added: Added Botanix EVM currency.
+- added: Added HyperEVM EVM currency.
+
 ## 4.54.0 (2025-07-18)
 
 - changed: (Zano) `getDisplayPublicSeed` waits for wallet initialization before returning instead of throwing

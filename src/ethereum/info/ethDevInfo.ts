@@ -117,7 +117,6 @@ const networkInfo: EthereumNetworkInfo = {
   },
   supportsEIP1559: true,
   hdPathCoinType: 60,
-  amberDataBlockchainId: '',
   pluginMnemonicKeyName: 'ethDevMnemonic',
   pluginRegularKeyName: 'ethDevKey',
   evmGasStationUrl: null,
