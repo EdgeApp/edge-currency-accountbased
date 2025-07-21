@@ -177,9 +177,6 @@ export class ZanoTools implements EdgeCurrencyTools {
       const edgeParsedUri: EdgeParsedUri = {
         publicAddress: zanoDeeplink.address
       }
-      if (zanoDeeplink.comment != null) {
-        edgeParsedUri.uniqueIdentifier = zanoDeeplink.comment
-      }
       const amountStr = zanoDeeplink.amount
       if (amountStr != null && typeof amountStr === 'string') {
         // Validate that the currency in the deeplink matches the requested

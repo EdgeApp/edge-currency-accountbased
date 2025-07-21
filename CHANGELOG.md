@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Fixed incorrect assumptions of Zano deeplink comment parsing.
+
 ## 4.55.0 (2025-07-21)
 
 - added: Added Botanix EVM currency.
