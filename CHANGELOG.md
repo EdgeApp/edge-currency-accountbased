@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.1 (2025-07-21)
+
 - fixed: Fixed incorrect assumptions of Zano deeplink comment parsing.
 
 ## 4.55.0 (2025-07-21)
