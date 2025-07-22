@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.2 (2025-07-22)
+
 - changed: Upgrade chain-registry package.
 
 ## 4.55.1 (2025-07-21)
