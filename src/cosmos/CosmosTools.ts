@@ -64,7 +64,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     const chainData =
       chains.find(
         chain =>
-          chain.chain_name === chainName && chain.network_type === 'mainnet'
+          chain.chainName === chainName && chain.networkType === 'mainnet'
       ) ?? this.networkInfo.defaultChainData
     if (chainData == null) {
       throw new Error('Unknown chain')
@@ -74,7 +74,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     chainUpdater
       .fetch(url)
       .then(() => {
-        this.chainData = chainUpdater.getChain(this.chainData.chain_name)
+        this.chainData = chainUpdater.getChain(this.chainData.chainName)
       })
       .catch(e => {
         // failure is ok
@@ -155,7 +155,7 @@ export class CosmosTools implements EdgeCurrencyTools {
     try {
       const pubkey = fromBech32(address)
       const matchingChain = chains.find(
-        chain => chain.bech32_prefix === pubkey.prefix
+        chain => chain.bech32Prefix === pubkey.prefix
       )
       if (matchingChain != null) return true
     } catch (e) {}

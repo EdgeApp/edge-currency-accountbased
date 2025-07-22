@@ -1,4 +1,4 @@
-import type { Chain } from '@chain-registry/types'
+import { Chain } from '@chain-registry/types'
 import type { EncodeObject, Registry } from '@cosmjs/proto-signing'
 import type {
   AuthExtension,
@@ -69,7 +69,7 @@ export interface UpgradedRegistry {
 
 export type CosmosChainData = Pick<
   Chain,
-  'chain_name' | 'fees' | 'chain_type' | 'chain_id' | 'network_type'
+  'chainName' | 'fees' | 'chainType' | 'chainId' | 'networkType'
 >
 
 export interface CosmosNetworkInfo {

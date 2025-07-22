@@ -217,33 +217,29 @@
   dependencies:
     "@noble/curves" "^1.7.0"
 
-"@chain-registry/client@^1.53.59":
-  version "1.53.59"
-  resolved "https://registry.yarnpkg.com/@chain-registry/client/-/client-1.53.59.tgz#3d2898408be0ce5a810a4da62a0698ad52bb9297"
-  integrity sha512-l0fZWT1R5ZTc9lLRF/oB+1Y+CLrRu+lu/wgLsh5Wjz825C9grE6Eknc0H8O9sn1x98FLt0xImIiLrws0FDNJfw==
+"@chain-registry/client@^2.0.28":
+  version "2.0.28"
+  resolved "https://registry.yarnpkg.com/@chain-registry/client/-/client-2.0.28.tgz#39c8685c50c9fe23b090790b4a63e424d527c2c5"
+  integrity sha512-f8bDqJKjADqsGFDwkbdgTQ6Pw2jDJ1C0PqNbpwI6NDIUcR9KysX+y0H0FIHUOl7ODo+ZCyInikuqIz33/lk9EQ==
   dependencies:
-    "@chain-registry/types" "^0.50.59"
-    "@chain-registry/utils" "^1.51.59"
+    "@chain-registry/types" "^2.0.28"
+    "@chain-registry/utils" "^2.0.28"
     bfs-path "^1.0.2"
     cross-fetch "^3.1.5"
 
-"@chain-registry/types@^0.50.150":
-  version "0.50.150"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-0.50.150.tgz#11fd3661afda320cac33782bcb562297874cbde9"
-  integrity sha512-Fs+GPqyFeRmFyIQ4lPO88LEOjGQwLgI5qq1hgyjMrXPAAw8Hq4taFFWo9AjSJ14mo5LXpE2ef8nraVq51qbAeg==
+"@chain-registry/types@^2.0.28":
+  version "2.0.28"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.28.tgz#c8be322cdcbc5c573443c6e71da64eb31a8aa195"
+  integrity sha512-o8SKdXEj40HtjF6erOikpn8nj7lOO7/peU5tKK62JjCv2BtMnlxuCeU5q/GmjLZwhRQ93u3/AHtU892DPIA3IA==
 
-"@chain-registry/types@^0.50.59":
-  version "0.50.94"
-  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-0.50.94.tgz#9c9cdeb45b122dae116f19ba04418ad6a183e154"
-  integrity sha512-D9PvO09UTjdKD+MmHFNSP//vfWXVEt1ILXOBGvZfi9kBy1a5xM4tCLuH/DH6kX5hjZHGxFmcBUwvYwh1kUJc7w==
-
-"@chain-registry/utils@^1.51.59":
-  version "1.51.59"
-  resolved "https://registry.yarnpkg.com/@chain-registry/utils/-/utils-1.51.59.tgz#1880770c1ae402e422a25d0a0bbc585188a61e85"
-  integrity sha512-13KyabWP4+KuVuWlCukT7dxYRaB5nedozE1elNpqj+BzbjE9UfxNCZAme0g02ESGI2ueqczICRn2HedWlaf7DA==
+"@chain-registry/utils@^2.0.28":
+  version "2.0.28"
+  resolved "https://registry.yarnpkg.com/@chain-registry/utils/-/utils-2.0.28.tgz#c208791fee905c7c71e4b2395e583e52ae523a59"
+  integrity sha512-HW8E2k/tr0wzeCb2bkgadcqGoiEpgxNtc1+rTzUzq2cV06fYoBwFlvpQQ8AG35JIB96YAqGrHz5PDbU4FWtfaw==
   dependencies:
-    "@chain-registry/types" "^0.50.59"
+    "@chain-registry/types" "^2.0.28"
     bignumber.js "9.1.2"
+    chain-registry "^2.0.28"
     sha.js "^2.4.11"
 
 "@confio/ics23@^0.6.8":
@@ -3281,12 +3277,12 @@ chai@^4.2.0:
     pathval "^1.1.1"
     type-detect "^4.0.5"
 
-chain-registry@^1.69.241:
-  version "1.69.241"
-  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-1.69.241.tgz#c27cfb71d6a060462a3b10b543cacbb3e235ef9c"
-  integrity sha512-4oqmpGcH/G93my6t1g9fp1yemmr6nlVCpD9THLt+HXrFGh5dCRlUz9+Sowoe97seyTynWp85FI3P00YWqowLHA==
+chain-registry@^2.0.28:
+  version "2.0.28"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.28.tgz#8f75e0481aaf7de66df59f0b20deb5337e0f92a3"
+  integrity sha512-+QggaB7fpB+bpgo/CCa1CMZooLqRDq24k25adXAFar7dOTFIGEE+9DC8BWChCtJngCz8fV093uCsEcFhOXJf4g==
   dependencies:
-    "@chain-registry/types" "^0.50.150"
+    "@chain-registry/types" "^2.0.28"
 
 chalk@^2.4.1, chalk@^2.4.2:
   version "2.4.2"

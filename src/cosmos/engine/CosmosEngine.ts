@@ -957,7 +957,7 @@ export class CosmosEngine extends CurrencyEngine<
       this.networkInfo.bech32AddressPrefix !== fromBech32(publicAddress).prefix
     ) {
       const channelInfo = getIbcChannelAndPort(
-        this.tools.chainData.chain_name,
+        this.tools.chainData.chainName,
         publicAddress
       )
       await this.validateTransfer(publicAddress, tokenId, channelInfo)

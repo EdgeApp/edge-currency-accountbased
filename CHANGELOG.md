@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade chain-registry package.
+
 ## 4.55.1 (2025-07-21)
 
 - fixed: Fixed incorrect assumptions of Zano deeplink comment parsing.

@@ -27,12 +27,12 @@ const networkInfo: ThorchainNetworkInfo = {
   defaultChainId: 'thorchain-stagenet-2',
   chainIdUpdateUrl: 'https://stagenet-rpc.ninerealms.com/status',
   defaultChainData: {
-    chain_name: 'thorchain',
-    chain_type: 'cosmos',
-    chain_id: 'thorchain-stagenet-2',
-    network_type: 'testnet',
+    chainName: 'thorchain',
+    chainType: 'cosmos',
+    chainId: 'thorchain-stagenet-2',
+    networkType: 'testnet',
     fees: {
-      fee_tokens: [
+      feeTokens: [
         {
           denom: 'RUNE'
         }
