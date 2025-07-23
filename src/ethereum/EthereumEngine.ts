@@ -1062,15 +1062,20 @@ export class EthereumEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 
-    const { pendingTxs = [], tokenId } = edgeSpendInfo
+    const {
+      pendingTxs = [],
+      tokenId,
+      allowChainedPending = false
+    } = edgeSpendInfo
     const unconfirmedTxs = this.getUnconfirmedTxs()
 
     // If we have pending transactions, that are not in the pendingTxs array,
-    // then throw an error:
+    // then throw an error UNLESS allowChainedPending is true:
     const unexpectedUnconfirmedTxs = unconfirmedTxs.filter(
       tx => !pendingTxs.some(ptx => ptx.txid === tx.txid)
     )
-    if (unexpectedUnconfirmedTxs.length > 0) {
+
+    if (unexpectedUnconfirmedTxs.length > 0 && !allowChainedPending) {
       throw new PendingFundsError('Unexpected pending transactions')
     }
 
@@ -1118,13 +1123,20 @@ export class EthereumEngine extends CurrencyEngine<
     // Nonce:
     //
 
-    // Increment the nonce by the number of pending transactions always
-    // this is the only supported way for the EVM plugin to handle more than
-    // one pending transaction broadcast.
-    const nonceUsed: string = add(
-      this.otherData.nextNonce,
-      pendingTxs.length.toString()
-    )
+    // Check if a nonce was provided in the RPC params (e.g., from WalletConnect)
+    let nonceUsed: string
+    const providedNonce = spendTarget.otherParams?.nonce
+    if (providedNonce != null) {
+      // Use the provided nonce (convert from hex if needed)
+      nonceUsed = isHex(providedNonce)
+        ? hexToDecimal(providedNonce)
+        : providedNonce
+    } else {
+      // Increment the nonce by the number of pending transactions always
+      // this is the only supported way for the EVM plugin to handle more than
+      // one pending transaction broadcast.
+      nonceUsed = add(this.otherData.nextNonce, pendingTxs.length.toString())
+    }
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
       edgeSpendInfo,
