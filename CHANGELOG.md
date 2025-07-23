@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (EVM) `allowChainedPending` support in EthereumEngine to allow transactions with pending transactions when explicitly requested, including proper nonce handling from RPC parameters
+
 ## 4.55.2 (2025-07-22)
 
 - changed: Upgrade chain-registry package.
