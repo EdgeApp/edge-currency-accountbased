@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (EVM) Accept transactions with a provided `otherParams.nonce` even if pending transactions exist
+
 ## 4.55.7 (2025-08-01)
 
 - fixed: Fix Botanix display name and chain name.

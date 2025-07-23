@@ -1066,11 +1066,17 @@ export class EthereumEngine extends CurrencyEngine<
     const unconfirmedTxs = this.getUnconfirmedTxs()
 
     // If we have pending transactions, that are not in the pendingTxs array,
-    // then throw an error:
+    // then throw an error UNLESS allowChainedPending is true:
     const unexpectedUnconfirmedTxs = unconfirmedTxs.filter(
       tx => !pendingTxs.some(ptx => ptx.txid === tx.txid)
     )
-    if (unexpectedUnconfirmedTxs.length > 0) {
+
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const { publicAddress, otherParams: spendTargetOtherParams } = spendTarget
+    let { nativeAmount } = spendTarget
+    const providedNonce = spendTargetOtherParams?.nonce
+
+    if (unexpectedUnconfirmedTxs.length > 0 && providedNonce == null) {
       throw new PendingFundsError('Unexpected pending transactions')
     }
 
@@ -1078,10 +1084,6 @@ export class EthereumEngine extends CurrencyEngine<
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    const spendTarget = edgeSpendInfo.spendTargets[0]
-    const { publicAddress } = spendTarget
-    let { nativeAmount } = spendTarget
 
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -1118,13 +1120,19 @@ export class EthereumEngine extends CurrencyEngine<
     // Nonce:
     //
 
-    // Increment the nonce by the number of pending transactions always
-    // this is the only supported way for the EVM plugin to handle more than
-    // one pending transaction broadcast.
-    const nonceUsed: string = add(
-      this.otherData.nextNonce,
-      pendingTxs.length.toString()
-    )
+    // Check if a nonce was provided in the RPC params (e.g., from WalletConnect)
+    let nonceUsed: string
+    if (providedNonce != null) {
+      // Use the provided nonce (convert from hex if needed)
+      nonceUsed = isHex(providedNonce)
+        ? hexToDecimal(providedNonce)
+        : providedNonce
+    } else {
+      // Increment the nonce by the number of pending transactions always
+      // this is the only supported way for the EVM plugin to handle more than
+      // one pending transaction broadcast.
+      nonceUsed = add(this.otherData.nextNonce, pendingTxs.length.toString())
+    }
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
       edgeSpendInfo,
