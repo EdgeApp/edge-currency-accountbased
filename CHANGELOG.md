@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.3 (2025-07-24)
+
 - changed: HyperEVM block explorer links changed from hyperliquid.xyz to hyperevmscan.io.
 
 ## 4.55.2 (2025-07-22)
