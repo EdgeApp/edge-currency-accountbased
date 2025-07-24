@@ -161,8 +161,8 @@ const currencyInfo: EdgeCurrencyInfo = {
   walletType: 'wallet:hyperevm',
 
   // Explorers:
-  addressExplorer: 'https://app.hyperliquid.xyz/explorer/address/%s',
-  transactionExplorer: 'https://app.hyperliquid.xyz/explorer/tx/%s',
+  addressExplorer: 'https://hyperevmscan.io/address/%s',
+  transactionExplorer: 'https://hyperevmscan.io/tx/%s',
 
   denominations: [
     {

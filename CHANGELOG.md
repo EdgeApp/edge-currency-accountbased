@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: HyperEVM block explorer links changed from hyperliquid.xyz to hyperevmscan.io.
+
 ## 4.55.2 (2025-07-22)
 
 - changed: Upgrade chain-registry package.
