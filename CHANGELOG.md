@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.4 (2025-07-25)
+
 - fixed: Add xrp network support to RippleTools parseUri networks
 
 ## 4.55.3 (2025-07-24)
