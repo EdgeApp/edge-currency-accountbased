@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: (COSMOS) Add DEX tx support
+
 ## 4.55.6 (2025-07-31)
 
 - fixed: (EVM) Fix missing rate-limit error detection
