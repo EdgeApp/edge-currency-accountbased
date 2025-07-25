@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Add xrp network support to RippleTools parseUri networks
+
 ## 4.55.3 (2025-07-24)
 
 - changed: HyperEVM block explorer links changed from hyperliquid.xyz to hyperevmscan.io.
