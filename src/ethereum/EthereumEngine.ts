@@ -1062,11 +1062,7 @@ export class EthereumEngine extends CurrencyEngine<
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [] } = edgeSpendInfo
 
-    const {
-      pendingTxs = [],
-      tokenId,
-      allowChainedPending = false
-    } = edgeSpendInfo
+    const { pendingTxs = [], tokenId } = edgeSpendInfo
     const unconfirmedTxs = this.getUnconfirmedTxs()
 
     // If we have pending transactions, that are not in the pendingTxs array,
@@ -1075,7 +1071,12 @@ export class EthereumEngine extends CurrencyEngine<
       tx => !pendingTxs.some(ptx => ptx.txid === tx.txid)
     )
 
-    if (unexpectedUnconfirmedTxs.length > 0 && !allowChainedPending) {
+    const spendTarget = edgeSpendInfo.spendTargets[0]
+    const { publicAddress, otherParams: spendTargetOtherParams } = spendTarget
+    let { nativeAmount } = spendTarget
+    const providedNonce = spendTargetOtherParams?.nonce
+
+    if (unexpectedUnconfirmedTxs.length > 0 && providedNonce == null) {
       throw new PendingFundsError('Unexpected pending transactions')
     }
 
@@ -1083,10 +1084,6 @@ export class EthereumEngine extends CurrencyEngine<
     if (edgeSpendInfo.spendTargets.length !== 1) {
       throw new Error('Error: only one output allowed')
     }
-
-    const spendTarget = edgeSpendInfo.spendTargets[0]
-    const { publicAddress } = spendTarget
-    let { nativeAmount } = spendTarget
 
     if (publicAddress == null)
       throw new Error('makeSpend Missing publicAddress')
@@ -1125,7 +1122,6 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Check if a nonce was provided in the RPC params (e.g., from WalletConnect)
     let nonceUsed: string
-    const providedNonce = spendTarget.otherParams?.nonce
     if (providedNonce != null) {
       // Use the provided nonce (convert from hex if needed)
       nonceUsed = isHex(providedNonce)

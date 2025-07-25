@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- added: (EVM) `allowChainedPending` support in EthereumEngine to allow transactions with pending transactions when explicitly requested, including proper nonce handling from RPC parameters
+- added: (EVM) Accept transactions with a provided `otherParams.nonce` even if pending transactions exist
 
 ## 4.55.2 (2025-07-22)
 
