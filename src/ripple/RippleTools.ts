@@ -173,7 +173,8 @@ export class RippleTools implements EdgeCurrencyTools {
   async parseUri(uri: string): Promise<EdgeParsedUri> {
     const networks = {
       ripple: true,
-      'xrp-ledger': true
+      'xrp-ledger': true,
+      xrp: true
     }
     const RIPPLE_DOT_COM_URI_PREFIX = 'https://ripple.com//send'
 
