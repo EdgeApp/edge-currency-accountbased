@@ -25,6 +25,17 @@ import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
 import { add, ceil, gt, lt, mul, sub } from 'biggystring'
 import {
+  asArray,
+  asEither,
+  asJSON,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown
+} from 'cleaners'
+import { MsgSend } from 'cosmjs-types/cosmos/bank/v1beta1/tx'
+import {
   AuthInfo,
   Fee,
   SignDoc,
@@ -32,6 +43,7 @@ import {
   TxRaw
 } from 'cosmjs-types/cosmos/tx/v1beta1/tx'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
+import { Any } from 'cosmjs-types/google/protobuf/any'
 import { MsgTransfer } from 'cosmjs-types/ibc/applications/transfer/v1/tx'
 import {
   EdgeCurrencyEngineOptions,
@@ -89,6 +101,28 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
 const TXS_PER_PAGE = 50
+
+const asCosmosSwapTransactionData = asObject({
+  chainId: asString,
+  account_number: asEither(asNumber, asString),
+  sequence: asEither(asNumber, asString),
+  msgs: asArray(asUnknown),
+  protoMsgs: asOptional(asArray(asUnknown)),
+  memo: asOptional(asString),
+  fee: asObject({
+    gas: asString,
+    amount: asArray(
+      asObject({
+        denom: asString,
+        amount: asString
+      })
+    )
+  }),
+  signType: asOptional(asString),
+  rpcUrl: asOptional(asString)
+})
+
+const asCosmosSwapTransactionDataFromJson = asJSON(asCosmosSwapTransactionData)
 
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
@@ -247,6 +281,100 @@ export class CosmosEngine extends CurrencyEngine<
               walletId: this.walletId
             }
             return out
+          }
+          case 'MakeTxDexSwap': {
+            const { fromTokenId, fromNativeAmount, metadata, txData } = params
+
+            if (txData == null) {
+              throw new Error(
+                'Cosmos MakeTxDexSwap requires swapData with txData'
+              )
+            }
+
+            const memos: EdgeMemo[] = []
+
+            let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
+            let gasLimit = '200000' // Default gas limit for swaps
+            let networkFee = '0'
+            let swapMemo: string | undefined
+
+            try {
+              const swapTxData = asCosmosSwapTransactionDataFromJson(txData)
+
+              // Extract memo - critical for cross-chain routing
+              if (swapTxData.memo != null && swapTxData.memo !== '') {
+                swapMemo = swapTxData.memo
+                memos.push({ type: 'text', value: swapMemo })
+                this.log(`DEX swap memo: ${swapMemo}`)
+              }
+
+              // Extract fee information from swap transaction data
+              if (swapTxData.fee.amount.length > 0) {
+                const feeAmount = swapTxData.fee.amount[0]
+                networkFee = feeAmount.amount
+                gasFeeCoin = coin(networkFee, feeAmount.denom)
+              }
+
+              gasLimit = swapTxData.fee.gas
+            } catch (e) {
+              // Fall back to defaults if parsing fails
+              this.warn(
+                'Cosmos MakeTxDexSwap: Could not parse transaction data, using defaults'
+              )
+              networkFee = '5000' // Default network fee
+              gasFeeCoin = coin(networkFee, this.networkInfo.nativeDenom)
+            }
+
+            const otherParams: CosmosTxOtherParams = {
+              gasFeeCoin,
+              gasLimit,
+              unsignedTxHex: txData // Store the original JSON string
+            }
+
+            // Determine which asset we're spending
+            let currencyCode = this.currencyInfo.currencyCode
+            const tokenId = fromTokenId ?? null
+            let nativeAmount = `-${fromNativeAmount}`
+            let parentNetworkFee: string | undefined
+
+            if (fromTokenId != null) {
+              // Token swap - network fee comes from main currency
+              parentNetworkFee = networkFee
+              networkFee = '0'
+              const token = this.allTokensMap[fromTokenId]
+              if (token != null) {
+                currencyCode = token.currencyCode
+              }
+            } else {
+              // Native currency swap - include network fee in amount
+              nativeAmount = `-${add(fromNativeAmount, networkFee)}`
+            }
+
+            const edgeTransaction: EdgeTransaction = {
+              blockHeight: 0,
+              currencyCode,
+              date: Date.now() / 1000,
+              isSend: true,
+              memos,
+              metadata,
+              nativeAmount,
+              networkFee,
+              parentNetworkFee,
+              networkFees: [
+                {
+                  tokenId: null,
+                  nativeAmount: parentNetworkFee ?? networkFee
+                }
+              ],
+              otherParams,
+              ourReceiveAddresses: [],
+              signedTx: '',
+              tokenId,
+              txid: '',
+              walletId: this.walletId
+            }
+
+            return edgeTransaction
           }
           default: {
             throw new Error(`Invalid type: ${params.type}`)
@@ -1142,8 +1270,78 @@ export class CosmosEngine extends CurrencyEngine<
       edgeTransaction.otherParams
     )
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-    const txRawBytes = base16.parse(unsignedTxHex)
-    const { bodyBytes } = TxRaw.decode(txRawBytes)
+
+    let bodyBytes: Uint8Array
+
+    // Check if this is cosmos DEX swap transaction data or traditional hex
+    if (unsignedTxHex.startsWith('{')) {
+      // This is DEX swap transaction data - validate format first
+      try {
+        const swapTxData = asCosmosSwapTransactionDataFromJson(unsignedTxHex)
+        this.log(
+          `DEX swap data: chainId=${swapTxData.chainId}, msgCount=${
+            swapTxData.msgs?.length ?? 0
+          }, protoMsgCount=${swapTxData.protoMsgs?.length ?? 0}`
+        )
+
+        // Use protoMsgs if available (preferred), otherwise fall back to msgs
+        const rawMessages = swapTxData.protoMsgs ?? swapTxData.msgs
+
+        const messages = rawMessages.map((msg: any, index: number) => {
+          // Rango provides messages with type_url and value (as byte array)
+          if (msg.type_url != null && Array.isArray(msg.value)) {
+            const anyMsg = Any.fromPartial({
+              typeUrl: msg.type_url, // Convert type_url to typeUrl
+              value: new Uint8Array(msg.value)
+            })
+            this.log(
+              `DEX swap message[${index}]: typeUrl=${anyMsg.typeUrl}, valueLength=${anyMsg.value.length}`
+            )
+
+            // Try to decode MsgSend to see recipient
+            if (anyMsg.typeUrl === '/cosmos.bank.v1beta1.MsgSend') {
+              try {
+                // Decode the MsgSend to inspect recipient
+                const msgSend = MsgSend.decode(anyMsg.value)
+                this.log(
+                  `DEX swap MsgSend: from=${msgSend.fromAddress}, to=${
+                    msgSend.toAddress
+                  }, amount=${JSON.stringify(msgSend.amount)}`
+                )
+              } catch (e) {
+                this.warn(
+                  `Failed to decode MsgSend: ${
+                    e instanceof Error ? e.message : String(e)
+                  }`
+                )
+              }
+            }
+
+            return anyMsg
+          }
+          // Fallback for other message formats
+          this.warn(`DEX swap message[${index}] in unexpected format:`, msg)
+          return msg
+        })
+
+        // Convert messages to bodyBytes using the same pattern as createUnsignedTxHex
+        const body = TxBody.fromPartial({
+          messages,
+          memo: swapTxData.memo ?? ''
+        })
+        this.log(`DEX swap TxBody memo: "${swapTxData.memo}"`)
+        bodyBytes = TxBody.encode(body).finish()
+      } catch (e) {
+        throw new Error(
+          `Invalid cosmos DEX swap transaction data format: ${String(e)}`
+        )
+      }
+    } else {
+      // Traditional hex-encoded unsigned transaction
+      const txRawBytes = base16.parse(unsignedTxHex)
+      const decoded = TxRaw.decode(txRawBytes)
+      bodyBytes = decoded.bodyBytes
+    }
 
     const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
     const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
