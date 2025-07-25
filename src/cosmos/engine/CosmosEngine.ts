@@ -248,6 +248,101 @@ export class CosmosEngine extends CurrencyEngine<
             }
             return out
           }
+          case 'MakeTxDexSwap': {
+            const { fromTokenId, fromNativeAmount, swapData, metadata } = params
+
+            // For DEX swaps, we create a transaction using the swap data
+            // According to Rango API docs, the cosmos transaction data is in JSON format
+            const memos: EdgeMemo[] = []
+            if (swapData?.orderId != null) {
+              let rangoTxData: any
+              let gasFeeCoin = coin('0', this.networkInfo.nativeDenom)
+              let gasLimit = '200000' // Default gas limit for swaps
+              let networkFee = '0'
+
+              try {
+                // Parse Rango's cosmos transaction data
+                rangoTxData = JSON.parse(swapData.orderId)
+
+                // Extract fee information from Rango's transaction data
+                if (
+                  rangoTxData.fee?.amount != null &&
+                  rangoTxData.fee.amount.length > 0
+                ) {
+                  const feeAmount = rangoTxData.fee.amount[0]
+                  networkFee = feeAmount.amount
+                  gasFeeCoin = coin(networkFee, feeAmount.denom)
+                }
+
+                if (rangoTxData.fee?.gas != null) {
+                  gasLimit = rangoTxData.fee.gas
+                }
+              } catch (e) {
+                // Fall back to defaults if parsing fails
+                this.warn(
+                  'Could not parse Rango cosmos transaction data, using defaults'
+                )
+                networkFee = '5000' // Default network fee
+                gasFeeCoin = coin(networkFee, this.networkInfo.nativeDenom)
+              }
+
+              // For Rango DEX swaps, encode their transaction data as the unsignedTxHex
+              // The cosmos engine will need to handle this Rango transaction format
+              const otherParams: CosmosTxOtherParams = {
+                gasFeeCoin,
+                gasLimit,
+                // Encode the Rango transaction data as JSON for the cosmos engine to process
+                unsignedTxHex: JSON.stringify(rangoTxData ?? {})
+              }
+
+              // Determine which asset we're spending
+              let currencyCode = this.currencyInfo.currencyCode
+              const tokenId = fromTokenId ?? null
+              let nativeAmount = `-${fromNativeAmount}`
+              let parentNetworkFee: string | undefined
+
+              if (fromTokenId != null) {
+                // Token swap - network fee comes from main currency
+                parentNetworkFee = networkFee
+                networkFee = '0'
+                const token = this.allTokensMap[fromTokenId]
+                if (token != null) {
+                  currencyCode = token.currencyCode
+                }
+              } else {
+                // Native currency swap - include network fee in amount
+                nativeAmount = `-${add(fromNativeAmount, networkFee)}`
+              }
+
+              const edgeTransaction: EdgeTransaction = {
+                blockHeight: 0,
+                currencyCode,
+                date: Date.now() / 1000,
+                isSend: true,
+                memos,
+                metadata,
+                nativeAmount,
+                networkFee,
+                parentNetworkFee,
+                networkFees: [
+                  {
+                    tokenId: null,
+                    nativeAmount: parentNetworkFee ?? networkFee
+                  }
+                ],
+                otherParams,
+                ourReceiveAddresses: [],
+                signedTx: '',
+                tokenId,
+                txid: '',
+                walletId: this.walletId
+              }
+
+              return edgeTransaction
+            }
+
+            throw new Error('MakeTxDexSwap requires swapData with orderId')
+          }
           default: {
             throw new Error(`Invalid type: ${params.type}`)
           }
@@ -1142,8 +1237,22 @@ export class CosmosEngine extends CurrencyEngine<
       edgeTransaction.otherParams
     )
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-    const txRawBytes = base16.parse(unsignedTxHex)
-    const { bodyBytes } = TxRaw.decode(txRawBytes)
+
+    let bodyBytes: Uint8Array
+
+    // Check if this is Rango JSON transaction data or traditional hex
+    if (unsignedTxHex.startsWith('{')) {
+      // This is Rango JSON transaction data - we need to construct the transaction
+      // For now, throw an error since we need more cosmos engine work to support Rango format
+      throw new Error(
+        'Rango cosmos transaction format not yet fully supported in cosmos engine'
+      )
+    } else {
+      // Traditional hex-encoded unsigned transaction
+      const txRawBytes = base16.parse(unsignedTxHex)
+      const decoded = TxRaw.decode(txRawBytes)
+      bodyBytes = decoded.bodyBytes
+    }
 
     const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
     const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
