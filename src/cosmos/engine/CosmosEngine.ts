@@ -25,6 +25,17 @@ import { longify } from '@cosmjs/stargate/build/queryclient'
 import { fromRfc3339WithNanoseconds, toSeconds } from '@cosmjs/tendermint-rpc'
 import { add, ceil, gt, lt, mul, sub } from 'biggystring'
 import {
+  asArray,
+  asEither,
+  asJSON,
+  asMaybe,
+  asNumber,
+  asObject,
+  asOptional,
+  asString,
+  asUnknown
+} from 'cleaners'
+import {
   AuthInfo,
   Fee,
   SignDoc,
@@ -76,6 +87,7 @@ import {
 import {
   assetFromString,
   checkAndValidateADR36AminoSignDoc,
+  coerceToBytes,
   createCosmosClients,
   getIbcChannelAndPort,
   reduceCoinEventsForAddress,
@@ -89,6 +101,37 @@ const TRANSACTION_POLL_MILLISECONDS = getRandomDelayMs(20000)
 const TWO_WEEKS = 1000 * 60 * 60 * 24 * 14
 const TWO_MINUTES = 1000 * 60 * 2
 const TXS_PER_PAGE = 50
+
+// RANGO-specific provider payload cleaner (provider-shaped Cosmos tx payloads)
+const asRangoProviderTxData = asObject({
+  chainId: asString,
+  account_number: asEither(asNumber, asString),
+  sequence: asEither(asNumber, asString),
+  memo: asOptional(asString, ''),
+  fee: asOptional(
+    asObject({
+      gas: asEither(asNumber, asString),
+      amount: asArray(
+        asObject({
+          denom: asString,
+          amount: asString
+        })
+      )
+    })
+  ),
+  // Rango uses protoMsgs with type_url and value bytes; also sometimes amino msgs
+  protoMsgs: asOptional(
+    asArray(
+      asObject({
+        type_url: asString,
+        value: asUnknown
+      })
+    )
+  ),
+  msgs: asOptional(asArray(asUnknown))
+})
+
+const asRangoProviderTxDataFromJson = asJSON(asRangoProviderTxData)
 
 export class CosmosEngine extends CurrencyEngine<
   CosmosTools,
@@ -248,6 +291,109 @@ export class CosmosEngine extends CurrencyEngine<
             }
             return out
           }
+          case 'MakeTxDexSwap': {
+            const { fromTokenId, fromNativeAmount, metadata, txData } = params
+
+            if (txData == null)
+              throw new Error('Cosmos MakeTxDexSwap requires txData')
+
+            const memos: EdgeMemo[] = []
+
+            // Accept only Rango provider-shaped payload for DEX swaps
+            const rango = asRangoProviderTxDataFromJson(txData)
+
+            // Build TxBody from Rango protoMsgs or msgs
+            let messages: EncodeObject[] = []
+            if (rango.protoMsgs != null && rango.protoMsgs.length > 0) {
+              messages = rango.protoMsgs.map((m: any) => {
+                const valueBytes = coerceToBytes(m.value)
+                if (valueBytes == null)
+                  throw new Error('Rango txData: message value is not bytes')
+                return { typeUrl: String(m.type_url), value: valueBytes }
+              })
+            } else if (rango.msgs != null && rango.msgs.length > 0) {
+              const aminoTypes = new AminoTypes({
+                ...createBankAminoConverters(),
+                ...createIbcAminoConverters()
+              })
+              messages = rango.msgs.map((aminoMsg: any) =>
+                aminoTypes.fromAmino(aminoMsg)
+              )
+            } else {
+              throw new Error('Rango txData has no messages')
+            }
+
+            // Estimate gas and compute fee using chain gas price (high) for safety
+            const { queryClient } = this.getClients()
+            const { gasInfo } = await queryClient.tx.simulate(
+              messages,
+              rango.memo,
+              encodeSecp256k1Pubkey(
+                base16.parse(this.walletInfo.keys.publicKey)
+              ),
+              this.getSequence()
+            )
+            if (gasInfo?.gasUsed == null)
+              throw new Error(`simulate didn't return gasUsed `)
+            const gasLimit = ceil(mul(gasInfo.gasUsed.toString(), '1.5'), 0)
+            const { high } = getGasPriceRangesFromChain(this.tools.chainData)
+            const feeDenom = this.networkInfo.nativeDenom
+            const gasFee = ceil(mul(gasLimit, high.toString()), 0)
+            const gasFeeCoin = coin(gasFee, feeDenom)
+            const networkFee = gasFeeCoin.amount
+
+            // Memo (for routing/debugging)
+            if (rango.memo !== '') {
+              memos.push({ type: 'text', value: rango.memo })
+            }
+
+            const otherParams: CosmosTxOtherParams = {
+              gasFeeCoin,
+              gasLimit,
+              unsignedTxHex: txData
+            }
+
+            // Determine which asset we're spending for amount validation/display
+            let currencyCode = this.currencyInfo.currencyCode
+            const tokenId = fromTokenId ?? null
+            if (fromTokenId != null) {
+              const token = this.allTokensMap[fromTokenId]
+              if (token != null) currencyCode = token.currencyCode
+            }
+
+            const amounts = this.makeEdgeTransactionAmounts(
+              fromNativeAmount,
+              networkFee,
+              tokenId
+            )
+            this.checkBalances(amounts, tokenId)
+
+            const edgeTransaction: EdgeTransaction = {
+              blockHeight: 0,
+              currencyCode,
+              date: Date.now() / 1000,
+              isSend: true,
+              memos,
+              metadata,
+              nativeAmount: amounts.nativeAmount,
+              networkFee: amounts.networkFee,
+              parentNetworkFee: amounts.parentNetworkFee,
+              networkFees: [
+                {
+                  tokenId: null,
+                  nativeAmount: amounts.parentNetworkFee ?? amounts.networkFee
+                }
+              ],
+              otherParams,
+              ourReceiveAddresses: [],
+              signedTx: '',
+              tokenId,
+              txid: '',
+              walletId: this.walletId
+            }
+
+            return edgeTransaction
+          }
           default: {
             throw new Error(`Invalid type: ${params.type}`)
           }
@@ -337,7 +483,12 @@ export class CosmosEngine extends CurrencyEngine<
               }
             }
             default: {
-              throw new Error(`Invalid method: ${rawPayload?.method}`)
+              // Gracefully handle unknown methods for estimation purposes
+              return {
+                nativeAmount: '0',
+                networkFee: '0',
+                tokenId: null
+              }
             }
           }
         } catch (e: any) {
@@ -1142,41 +1293,108 @@ export class CosmosEngine extends CurrencyEngine<
       edgeTransaction.otherParams
     )
     const keys = asCosmosPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-    const txRawBytes = base16.parse(unsignedTxHex)
-    const { bodyBytes } = TxRaw.decode(txRawBytes)
 
-    const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
-    const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
-    const authInfoBytes = makeAuthInfoBytes(
-      [{ pubkey: encodePubkey(senderPubkey), sequence: this.getSequence() }],
-      [gasFeeCoin], // fee, but for thorchain the fee doesn't need to be defined and is automatically pulled from account
-      parseInt(gasLimit), // gasLimit
-      undefined, // feeGranter
-      undefined, // feePayer (defaults to first signer)
-      1 // signMode
-    )
+    // Detect potential Rango JSON payload (DEX flow)
+    const rangoData = asMaybe(asRangoProviderTxDataFromJson)(unsignedTxHex)
+    if (rangoData != null) {
+      // Build messages from Rango protoMsgs or msgs
+      let messages: EncodeObject[] = []
+      if (rangoData.protoMsgs != null && rangoData.protoMsgs.length > 0) {
+        messages = rangoData.protoMsgs.map((m: any) => {
+          const valueBytes = coerceToBytes(m.value)
+          if (valueBytes == null)
+            throw new Error('Rango txData: message value is not bytes')
+          return { typeUrl: String(m.type_url), value: valueBytes }
+        })
+      } else if (rangoData.msgs != null && rangoData.msgs.length > 0) {
+        const aminoTypes = new AminoTypes({
+          ...createBankAminoConverters(),
+          ...createIbcAminoConverters()
+        })
+        messages = rangoData.msgs.map((aminoMsg: any) =>
+          aminoTypes.fromAmino(aminoMsg)
+        )
+      } else {
+        throw new Error('Rango txData has no messages')
+      }
 
-    const signDoc = SignDoc.fromPartial({
-      accountNumber: longify(this.accountNumber),
-      authInfoBytes,
-      bodyBytes,
-      chainId: this.chainId
-    })
-    const signer = await this.tools.createSigner(keys.mnemonic)
-    const signResponse = await signer.signDirect(
-      this.walletInfo.keys.bech32Address,
-      signDoc
-    )
-    const decodedSignature = decodeSignature(signResponse.signature)
-    const signedTxRaw = TxRaw.fromPartial({
-      authInfoBytes,
-      bodyBytes,
-      signatures: [decodedSignature.signature]
-    })
-    const signedTxBytes = TxRaw.encode(signedTxRaw).finish()
-    const signedTxHex = base16.stringify(signedTxBytes)
-    edgeTransaction.signedTx = signedTxHex
-    return edgeTransaction
+      const body = TxBody.fromPartial({
+        messages: messages as any,
+        memo: rangoData.memo
+      })
+      const bodyBytesDirect = TxBody.encode(body).finish()
+
+      const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
+      const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
+      const authInfoBytesDirect = makeAuthInfoBytes(
+        [{ pubkey: encodePubkey(senderPubkey), sequence: this.getSequence() }],
+        [gasFeeCoin],
+        parseInt(gasLimit),
+        undefined,
+        undefined,
+        1
+      )
+
+      const signDoc = SignDoc.fromPartial({
+        accountNumber: longify(this.accountNumber),
+        authInfoBytes: authInfoBytesDirect,
+        bodyBytes: bodyBytesDirect,
+        chainId: this.chainId
+      })
+      const signer = await this.tools.createSigner(keys.mnemonic)
+      const signResponse = await signer.signDirect(
+        this.walletInfo.keys.bech32Address,
+        signDoc
+      )
+      const decodedSignature = decodeSignature(signResponse.signature)
+      const signedTxRaw = TxRaw.fromPartial({
+        authInfoBytes: signDoc.authInfoBytes,
+        bodyBytes: signDoc.bodyBytes,
+        signatures: [decodedSignature.signature]
+      })
+      const signedTxBytes = TxRaw.encode(signedTxRaw).finish()
+      const signedTxHex = base16.stringify(signedTxBytes)
+      edgeTransaction.signedTx = signedTxHex
+      return edgeTransaction
+    } else {
+      // Hex-encoded unsigned transaction path (non-DEX flows)
+      const txRawBytes = base16.parse(unsignedTxHex)
+      const decoded = TxRaw.decode(txRawBytes)
+      const bodyBytes = decoded.bodyBytes
+
+      const senderPubkeyBytes = base16.parse(this.walletInfo.keys.publicKey)
+      const senderPubkey = encodeSecp256k1Pubkey(senderPubkeyBytes)
+      const authInfoBytes = makeAuthInfoBytes(
+        [{ pubkey: encodePubkey(senderPubkey), sequence: this.getSequence() }],
+        [gasFeeCoin],
+        parseInt(gasLimit),
+        undefined,
+        undefined,
+        1
+      )
+
+      const signDoc = SignDoc.fromPartial({
+        accountNumber: longify(this.accountNumber),
+        authInfoBytes,
+        bodyBytes,
+        chainId: this.chainId
+      })
+      const signer = await this.tools.createSigner(keys.mnemonic)
+      const signResponse = await signer.signDirect(
+        this.walletInfo.keys.bech32Address,
+        signDoc
+      )
+      const decodedSignature = decodeSignature(signResponse.signature)
+      const signedTxRaw = TxRaw.fromPartial({
+        authInfoBytes,
+        bodyBytes,
+        signatures: [decodedSignature.signature]
+      })
+      const signedTxBytes = TxRaw.encode(signedTxRaw).finish()
+      const signedTxHex = base16.stringify(signedTxBytes)
+      edgeTransaction.signedTx = signedTxHex
+      return edgeTransaction
+    }
   }
 
   async broadcastTx(
