@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: Added exponential backoff for syncNetwork "retriable" errors.
+- added: (COSMOS) Add DEX tx support
 
 ## 4.59.2 (2025-09-09)
 
@@ -44,7 +45,6 @@
 ## 4.55.7 (2025-08-01)
 
 - fixed: Fix Botanix display name and chain name.
-
 ## 4.55.6 (2025-07-31)
 
 - fixed: (EVM) Fix missing rate-limit error detection
