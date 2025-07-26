@@ -68,6 +68,10 @@ const networkInfo: EthereumNetworkInfo = {
   },
   optimismRollup: false,
   supportsEIP1559: true,
+  feeAlgorithm: {
+    type: 'eth_feeHistory',
+    blocksToAnalyze: 12 // 2 minutes
+  },
   hdPathCoinType: 60,
   pluginMnemonicKeyName: 'botanixMnemonic',
   pluginRegularKeyName: 'botanixKey',

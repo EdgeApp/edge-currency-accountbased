@@ -20,6 +20,7 @@ import {
   asSafeCommonWalletInfo,
   WalletConnectPayload
 } from '../common/types'
+import { FeeAlgorithmConfig } from './feeAlgorithms/feeAlgorithmTypes'
 import type { NetworkAdapterConfig } from './networkAdapters/networkAdapterTypes'
 
 export interface EthereumInitOptions {
@@ -82,6 +83,7 @@ export interface EthereumNetworkInfo {
   feeUpdateFrequencyMs?: number
   chainParams: ChainParams
   supportsEIP1559?: boolean
+  feeAlgorithm?: FeeAlgorithmConfig
   optimismRollup?: boolean
   arbitrumRollupParams?: {
     nodeInterfaceAddress: string
