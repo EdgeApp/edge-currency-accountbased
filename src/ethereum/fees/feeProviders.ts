@@ -25,11 +25,11 @@ import {
   EthereumNetworkInfo,
   EvmScanGasResponse
 } from '../ethereumTypes'
+import { calculateFeeForPriority } from '../feeAlgorithms/ethFeeHistory'
 import { EvmScanAdapterConfig } from '../networkAdapters/EvmScanAdapter'
 import { RpcAdapterConfig } from '../networkAdapters/RpcAdapter'
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const printFees = (log: EdgeLog, fees: Object) => {
+export const printFees = (log: EdgeLog, fees: EthereumBaseMultiplier): void => {
   const keys = Object.keys(fees)
   for (const key of keys) {
     // @ts-expect-error
@@ -55,6 +55,7 @@ export const FeeProviders = (
   networkInfo: EthereumNetworkInfo
 ): FeeProviderMap => {
   const providerFns = [
+    fetchFeesFromFeeHistory,
     fetchFeesFromEvmScan,
     fetchFeesFromEvmGasStation,
     fetchFeesFromRpc
@@ -70,10 +71,71 @@ export const FeeProviders = (
   }
 }
 
+export const fetchFeesFromFeeHistory = async (
+  fetch: EdgeFetchFunction,
+  currencyInfo: EdgeCurrencyInfo,
+  _initOptions: EthereumInitOptions,
+  log: EdgeLog,
+  networkInfo: EthereumNetworkInfo
+): Promise<EthereumBaseMultiplier | undefined> => {
+  const { feeAlgorithm } = networkInfo
+  if (feeAlgorithm?.type !== 'eth_feeHistory') return
+
+  // Require EIP1559 to be enabled (the algorithm only works for EIP1559 chains
+  // currently). TODO: Add support for non-EIP1559 chains (simply omit priority
+  // fee calculations).
+  if (networkInfo.supportsEIP1559 !== true) return
+
+  const rpcConfig = networkInfo.networkAdapterConfigs.find(
+    (config): config is RpcAdapterConfig => config.type === 'rpc'
+  )
+  if (rpcConfig == null) return
+
+  try {
+    // Calculate fees for each priority level using percentile-based approach
+    const [lowResult, standardResult, highResult] = await Promise.all([
+      calculateFeeForPriority(
+        10,
+        fetch,
+        rpcConfig.servers,
+        log,
+        feeAlgorithm.blocksToAnalyze
+      ),
+      calculateFeeForPriority(
+        50,
+        fetch,
+        rpcConfig.servers,
+        log,
+        feeAlgorithm.blocksToAnalyze
+      ),
+      calculateFeeForPriority(
+        90,
+        fetch,
+        rpcConfig.servers,
+        log,
+        feeAlgorithm.blocksToAnalyze
+      )
+    ])
+
+    const out = {
+      lowFee: lowResult.maxFeePerGas,
+      standardFeeLow: standardResult.maxFeePerGas,
+      standardFeeHigh: standardResult.maxFeePerGas,
+      highFee: highResult.maxFeePerGas
+    }
+
+    log(`fetchFeesFromFeeHistory: ${currencyInfo.currencyCode}`)
+    printFees(log, out)
+    return out
+  } catch (error) {
+    log.warn(`fetchFeesFromFeeHistory failed: ${String(error)}`)
+  }
+}
+
 export const fetchFeesFromRpc = async (
   fetch: EdgeFetchFunction,
   currencyInfo: EdgeCurrencyInfo,
-  initOptions: EthereumInitOptions,
+  _initOptions: EthereumInitOptions,
   log: EdgeLog,
   networkInfo: EthereumNetworkInfo
 ): Promise<EthereumBaseMultiplier | undefined> => {
