@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.5 (2025-07-28)
+
 - added: Implement ethFeeHistory fee algorithm for EIP-1559 chains with percentile-based priority fee estimation, initially enabled for Botanix network
 
 ## 4.55.4 (2025-07-25)
