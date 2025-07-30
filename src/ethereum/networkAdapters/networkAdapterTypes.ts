@@ -1,3 +1,4 @@
+import { asMaybe, asNumber, asObject, asString } from 'cleaners'
 import { EdgeTransaction, JsonObject } from 'edge-core-js/types'
 import { FetchResponse } from 'serverlet'
 
@@ -182,17 +183,28 @@ export abstract class NetworkAdapter<
   protected throwError(
     res: FetchResponse,
     funcName: string,
-    url: string
+    url: string,
+    resBody: string
   ): void {
+    const throwDefaultError = (): never => {
+      throw new Error(
+        `${funcName} The server returned error code ${res.status} for ${url}`
+      )
+    }
     switch (res.status) {
-      case 402: // blockchair
-      case 429: // amberdata
-      case 432: // blockchair
-        throw new Error('rateLimited')
-      default:
-        throw new Error(
-          `${funcName} The server returned error code ${res.status} for ${url}`
-        )
+      case 402:
+      case 429:
+      case 432: {
+        throw new RateLimitError(`Rate limit exceeded for ${url}`)
+      }
+      default: {
+        // amberdata
+        // alchemy
+        if (isRateLimitError(resBody)) {
+          throw new RateLimitError(`Rate limit exceeded for ${url}`)
+        }
+        throwDefaultError()
+      }
     }
   }
 }
@@ -201,5 +213,30 @@ export class RateLimitError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'RateLimitError'
+  }
+}
+
+/**
+ * Detects if an RPC error response indicates a rate limit error
+ */
+function isRateLimitError(error: any): boolean {
+  // Define cleaner for RPC error structure
+  const asRpcError = asObject({
+    code: asNumber,
+    message: asString
+  })
+  try {
+    const rpcError = asMaybe(asRpcError)(error)
+    if (rpcError == null) return false
+    // Check for rate limit error codes and messages
+    if (rpcError.message.toLowerCase().includes('too many request')) {
+      return true
+    }
+    if (rpcError.message.toLowerCase().includes('capacity limit exceeded')) {
+      return true
+    }
+    return false
+  } catch {
+    return false
   }
 }

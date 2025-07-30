@@ -1,5 +1,3 @@
-import parse from 'url-parse'
-
 import { base58ToHexAddress } from '../../tron/tronUtils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import { asRpcResultString } from '../ethereumTypes'
@@ -72,10 +70,9 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
         method: 'POST',
         body: JSON.stringify(body)
       })
-      const parsedUrl = parse(url, {}, true)
       if (!response.ok) {
-        // @ts-expect-error
-        this.throwError(response, 'fetchPostAmberdataRpc', parsedUrl)
+        const resBody = await response.text()
+        this.throwError(response, 'fetchPostAmberdataRpc', url, resBody)
       }
       const jsonObj = await response.json()
       return jsonObj
@@ -95,7 +92,8 @@ export class AmberdataAdapter extends NetworkAdapter<AmberdataAdapterConfig> {
         }
       })
       if (!response.ok) {
-        this.throwError(response, 'fetchGetAmberdata', url)
+        const resBody = await response.text()
+        this.throwError(response, 'fetchGetAmberdata', url, resBody)
       }
       return await response.json()
     })

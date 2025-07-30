@@ -308,7 +308,12 @@ export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
     }
 
     const response = await this.ethEngine.fetchCors(`${url}${apiKeyParam}`)
-    if (!response.ok) this.throwError(response, 'fetchGetEtherscan', url)
+
+    if (!response.ok) {
+      const resBody = await response.text()
+      this.throwError(response, 'fetchGetEtherscan', url, resBody)
+    }
+
     const data = await response.json()
     const cleanData = asEvmScanResponse(asUnknown)(data)
     if (
