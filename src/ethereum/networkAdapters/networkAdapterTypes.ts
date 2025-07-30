@@ -220,14 +220,20 @@ export class RateLimitError extends Error {
  * Detects if an RPC error response indicates a rate limit error
  */
 function isRateLimitError(error: any): boolean {
-  // Define cleaner for RPC error structure
+  // Define cleaner for RPC error structure with optional data field
   const asRpcError = asObject({
     code: asNumber,
-    message: asString
+    message: asString,
+    data: asMaybe(
+      asObject({
+        retryable: asMaybe(asString)
+      })
+    )
   })
   try {
     const rpcError = asMaybe(asRpcError)(error)
     if (rpcError == null) return false
+
     // Check for rate limit error codes and messages
     if (rpcError.message.toLowerCase().includes('too many request')) {
       return true
@@ -235,6 +241,18 @@ function isRateLimitError(error: any): boolean {
     if (rpcError.message.toLowerCase().includes('capacity limit exceeded')) {
       return true
     }
+    if (rpcError.message.toLowerCase().includes('high load')) {
+      return true
+    }
+    if (rpcError.message.toLowerCase().includes('try again')) {
+      return true
+    }
+
+    // Check if data.retryable is "true"
+    if (rpcError.data?.retryable === 'true') {
+      return true
+    }
+
     return false
   } catch {
     return false
