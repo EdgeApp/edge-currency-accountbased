@@ -94,6 +94,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: true,
       servers: ['https://etc.blockscout.com']
     },
     {

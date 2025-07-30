@@ -51,6 +51,7 @@ export const currencyInfoFixture: EdgeCurrencyInfo = {
         },
         {
           type: 'evmscan',
+          gastrackerSupport: true,
           servers: ['https://api.etherscan.io']
         },
         {

@@ -61,6 +61,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: false,
       servers: ['https://blockscout.com/rsk/mainnet']
     }
   ],

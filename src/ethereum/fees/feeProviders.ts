@@ -202,7 +202,8 @@ export const fetchFeesFromEvmScan = async (
   const { networkAdapterConfigs } = networkInfo
 
   const evmScanConfig = networkAdapterConfigs.find(
-    (config): config is EvmScanAdapterConfig => config.type === 'evmscan'
+    (config): config is EvmScanAdapterConfig =>
+      config.type === 'evmscan' && config.gastrackerSupport === true
   )
   if (evmScanConfig == null) return
 

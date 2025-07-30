@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { describe, it } from 'mocha'
 
+import { EthereumNetworkInfo } from '../../../src/ethereum/ethereumTypes'
 import { calculateFeeForPriority } from '../../../src/ethereum/feeAlgorithms/ethFeeHistory'
 import { fetchFeesFromFeeHistory } from '../../../src/ethereum/fees/feeProviders'
 
@@ -262,11 +263,12 @@ describe('fetchFeesFromFeeHistory integration', function () {
   })
 
   it('should return undefined when no RPC config is available', async function () {
-    const noRpcNetworkInfo = {
+    const noRpcNetworkInfo: EthereumNetworkInfo = {
       ...mockNetworkInfo,
       networkAdapterConfigs: [
         {
           type: 'evmscan',
+          gastrackerSupport: true,
           servers: ['https://api.etherscan.io']
         }
       ]

@@ -298,6 +298,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: false,
       servers: ['https://ftmscout.com/']
     }
   ],

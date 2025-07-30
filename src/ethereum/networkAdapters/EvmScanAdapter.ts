@@ -59,6 +59,9 @@ const NUM_TRANSACTIONS_TO_QUERY = 50
 export interface EvmScanAdapterConfig {
   type: 'evmscan'
   servers: string[]
+
+  /** Whether the API supports gastracker module */
+  gastrackerSupport?: boolean
 }
 
 export class EvmScanAdapter extends NetworkAdapter<EvmScanAdapterConfig> {
