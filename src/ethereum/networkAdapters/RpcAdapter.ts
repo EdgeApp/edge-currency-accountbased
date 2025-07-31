@@ -422,7 +422,8 @@ export class RpcAdapter extends NetworkAdapter<RpcAdapterConfig> {
 
     const parsedUrl = parse(url, {}, true)
     if (!response.ok) {
-      this.throwError(response, 'fetchPostRPC', parsedUrl.hostname)
+      const resBody = await response.text()
+      this.throwError(response, 'fetchPostRPC', parsedUrl.hostname, resBody)
     }
     return await response.json()
   }

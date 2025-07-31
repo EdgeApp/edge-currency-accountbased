@@ -63,6 +63,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: true,
       servers: [
         // TODO:
       ]

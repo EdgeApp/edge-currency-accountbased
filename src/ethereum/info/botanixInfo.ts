@@ -55,6 +55,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: true,
       servers: [
         'https://api.routescan.io/v2/network/mainnet/evm/3637/etherscan'
       ]

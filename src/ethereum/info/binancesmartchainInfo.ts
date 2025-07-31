@@ -153,6 +153,7 @@ const networkInfo: EthereumNetworkInfo = {
     },
     {
       type: 'evmscan',
+      gastrackerSupport: true,
       servers: ['https://api.etherscan.io', 'https://api.bscscan.com']
     }
   ],

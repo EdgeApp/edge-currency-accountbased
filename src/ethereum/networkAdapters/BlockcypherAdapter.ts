@@ -66,7 +66,13 @@ export class BlockcypherAdapter extends NetworkAdapter<BlockcypherAdapterConfig>
     })
     const parsedUrl = parse(url, {}, true)
     if (!response.ok) {
-      this.throwError(response, 'fetchPostBlockcypher', parsedUrl.hostname)
+      const resBody = await response.text()
+      this.throwError(
+        response,
+        'fetchPostBlockcypher',
+        parsedUrl.hostname,
+        resBody
+      )
     }
     return await response.json()
   }
