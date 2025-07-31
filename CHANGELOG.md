@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.6 (2025-07-31)
+
 - fixed: (EVM) Fix missing rate-limit error detection
 - added: (EVM) Add gastrackerSupport flag to evmscan adapter config
 - added: (EVM) Include more cases to RateLimitError
