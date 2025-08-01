@@ -86,7 +86,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
   assetDisplayName: 'BTC',
-  chainDisplayName: 'BTC',
+  chainDisplayName: 'Botanix',
   memoOptions: evmMemoOptions,
   pluginId: 'botanix',
   walletType: 'wallet:botanix',
@@ -105,7 +105,7 @@ const currencyInfo: EdgeCurrencyInfo = {
 
   // Deprecated:
   defaultSettings: makeEvmDefaultSettings(networkInfo),
-  displayName: 'BTC',
+  displayName: 'Botanix Bitcoin',
   metaTokens: makeMetaTokens(builtinTokens)
 }
 
