@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.7 (2025-08-01)
+
 - fixed: Fix Botanix display name and chain name.
 
 ## 4.55.6 (2025-07-31)
