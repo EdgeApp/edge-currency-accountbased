@@ -3,6 +3,7 @@
 ## Unreleased
 
 - added: (EVM) Accept transactions with a provided `otherParams.nonce` even if pending transactions exist
+- fixed: (EVM) Update blockHeight immediately when receiving transactions to prevent them from appearing as "syncing"
 
 ## 4.55.8 (2025-08-01)
 
