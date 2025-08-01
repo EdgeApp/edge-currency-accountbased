@@ -85,7 +85,7 @@ const currencyInfo: EdgeCurrencyInfo = {
   currencyCode: 'BTC',
   customFeeTemplate: evmCustomFeeTemplate,
   customTokenTemplate: evmCustomTokenTemplate,
-  assetDisplayName: 'BTC',
+  assetDisplayName: 'Bitcoin',
   chainDisplayName: 'Botanix',
   memoOptions: evmMemoOptions,
   pluginId: 'botanix',
