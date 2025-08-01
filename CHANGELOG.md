@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.55.8 (2025-08-01)
+
 - fixed: Fix Botanix asset display name.
 
 ## 4.55.7 (2025-08-01)
