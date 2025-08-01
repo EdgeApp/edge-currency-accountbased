@@ -270,14 +270,14 @@ export class EthereumNetwork {
   }
 
   start(): void {
-    this.connectNetworkAdapters()
-    this.setupAdapterSubscriptions()
+    // this.connectNetworkAdapters()
+    // this.setupAdapterSubscriptions()
     this.needsLoopTask.start()
   }
 
   stop(): void {
     this.needsLoopTask.stop()
-    this.disconnectNetworkAdapters()
+    // this.disconnectNetworkAdapters()
     // TODO: Abort all in-flight network sync requests
   }
 
