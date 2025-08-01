@@ -495,6 +495,19 @@ export class EthereumNetwork {
         this.ethEngine.walletLocalData.highestTxBlockHeight,
         highestTxBlockHeight
       )
+
+      // Update the main blockHeight if we received transactions with a higher blockHeight
+      if (highestTxBlockHeight > this.ethEngine.walletLocalData.blockHeight) {
+        this.ethEngine.log(
+          `Updating blockHeight from transactions: ${this.ethEngine.walletLocalData.blockHeight} -> ${highestTxBlockHeight}`
+        )
+        this.ethEngine.checkDroppedTransactionsThrottled()
+        this.ethEngine.walletLocalData.blockHeight = highestTxBlockHeight
+        this.ethEngine.currencyEngineCallbacks.onBlockHeightChanged(
+          this.ethEngine.walletLocalData.blockHeight
+        )
+      }
+
       this.ethEngine.walletLocalDataDirty = true
       this.ethEngine.updateOnAddressesChecked()
 
