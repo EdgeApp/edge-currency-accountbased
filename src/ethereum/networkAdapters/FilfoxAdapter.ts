@@ -6,6 +6,7 @@ import {
   EdgeTxAmount
 } from 'edge-core-js/types'
 
+import { exponentialBackoff } from '../../common/utils'
 import {
   Filfox,
   FilfoxMessageDetails,
@@ -205,7 +206,8 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     // If no tokens are enabled, complete sync for all tokens immediately
     if (tokenCurrencyCodesOnly.length === 0) return
 
-    try {
+    // Define the core scanning logic that will be retried
+    const performTokenScan = async (): Promise<void> => {
       // Initial request to get the totalCount for token transfers
       const initialResponse = await this.serialServers(
         async baseUrl =>
@@ -309,18 +311,9 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       for (const tokenCode of tokenCurrencyCodesOnly) {
         onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
       }
-    } catch (error) {
-      this.logError(
-        'FilfoxAdapter token transfers scanning failed',
-        error instanceof Error ? error : new Error(String(error))
-      )
-      // If token transfer scanning fails, mark all tokens as complete to avoid blocking sync
-      for (const tokenCode of tokenCurrencyCodesOnly) {
-        onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
-      }
-      // Don't re-throw the error as this would break the entire sync process
-      // The main currency sync will still work fine
     }
+
+    await exponentialBackoff(performTokenScan)
   }
 
   private async scanTransactionsFromFilfox(
