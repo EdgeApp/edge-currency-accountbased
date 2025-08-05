@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 4.57.0 (2025-08-04)
+
 - added: Filecoin FEVM token support
 - changed: Require the environment to support es2015 & `async` functions.
 
