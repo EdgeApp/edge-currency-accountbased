@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Upgrade chain-registry package.
+
 ## 4.57.0 (2025-08-04)
 
 - added: Filecoin FEVM token support

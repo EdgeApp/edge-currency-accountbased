@@ -232,6 +232,11 @@
   resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.28.tgz#c8be322cdcbc5c573443c6e71da64eb31a8aa195"
   integrity sha512-o8SKdXEj40HtjF6erOikpn8nj7lOO7/peU5tKK62JjCv2BtMnlxuCeU5q/GmjLZwhRQ93u3/AHtU892DPIA3IA==
 
+"@chain-registry/types@^2.0.37":
+  version "2.0.37"
+  resolved "https://registry.yarnpkg.com/@chain-registry/types/-/types-2.0.37.tgz#7dd4910bada9180ba526213bed7b6af670ac3d64"
+  integrity sha512-WQAhjBb/ANX/FCtO7hdk2H+h5OKcLOyAAD63I4BBunSFCfAH2SdKRv/GvLL0P1XYgo44jZNoRqOE6OQ7MwID9w==
+
 "@chain-registry/utils@^2.0.28":
   version "2.0.28"
   resolved "https://registry.yarnpkg.com/@chain-registry/utils/-/utils-2.0.28.tgz#c208791fee905c7c71e4b2395e583e52ae523a59"
@@ -3283,6 +3288,13 @@ chain-registry@^2.0.28:
   integrity sha512-+QggaB7fpB+bpgo/CCa1CMZooLqRDq24k25adXAFar7dOTFIGEE+9DC8BWChCtJngCz8fV093uCsEcFhOXJf4g==
   dependencies:
     "@chain-registry/types" "^2.0.28"
+
+chain-registry@^2.0.37:
+  version "2.0.37"
+  resolved "https://registry.yarnpkg.com/chain-registry/-/chain-registry-2.0.37.tgz#1d4cacf729b6fdbb7f6b5b56571f32f270f8191e"
+  integrity sha512-TP/crv0ueT84+JY92y9t9BWs4M2WjC7/Pq0SJ6BxpCMFLV6VUdmv/v5cfMTG+fh20lhinG9b09KnB5A8R5ykWg==
+  dependencies:
+    "@chain-registry/types" "^2.0.37"
 
 chalk@^2.4.1, chalk@^2.4.2:
   version "2.4.2"
