@@ -33,7 +33,7 @@ module.exports = {
         test: /\.ts$/,
         use: {
           loader: 'esbuild-loader',
-          options: { loader: 'ts' }
+          options: { loader: 'ts', target: 'chrome55' }
         }
       }
     ]

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- changed: Require the environment to support es2015 & `async` functions.
+
 ## 4.56.8 (2025-08-04)
 
 - added: (EVM) Accept transactions with a provided `otherParams.nonce` even if pending transactions exist
