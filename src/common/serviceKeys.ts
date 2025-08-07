@@ -10,7 +10,7 @@ export function getRandomServiceKey(
   return pickRandom(keys, 1)[0]
 }
 
-export function getServiceKeyIndex(url: string): string {
-  const host = new URL(url, `https://${url}`).host
-  return host
+export function getServiceKeyIndex(urlString: string): string {
+  const url = new URL(urlString, `https://${urlString}`)
+  return url.host
 }
