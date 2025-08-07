@@ -1,24 +1,27 @@
+// Force asm.js crypto on RN to avoid WASM crash paths
+import '@polkadot/wasm-crypto/initOnlyAsm'
 import '@polkadot/api-augment/polkadot'
 
 import { ApiPromise, Keyring } from '@polkadot/api'
+import { cryptoWaitReady } from '@polkadot/util-crypto'
 import { Option } from '@polkadot/types/codec'
 import { PalletAssetsAssetAccount } from '@polkadot/types/lookup'
 import { abs, add, div, gt, lte, mul, sub } from 'biggystring'
 import {
-  EdgeCurrencyEngine,
-  EdgeCurrencyEngineOptions,
-  EdgeCurrencyInfo,
-  EdgeFetchFunction,
-  EdgeFreshAddress,
-  EdgeSpendInfo,
-  EdgeTokenId,
-  EdgeTokenMap,
-  EdgeTransaction,
-  EdgeTxAmount,
-  EdgeWalletInfo,
-  InsufficientFundsError,
-  JsonObject,
-  NoAmountSpecifiedError
+    EdgeCurrencyEngine,
+    EdgeCurrencyEngineOptions,
+    EdgeCurrencyInfo,
+    EdgeFetchFunction,
+    EdgeFreshAddress,
+    EdgeSpendInfo,
+    EdgeTokenId,
+    EdgeTokenMap,
+    EdgeTransaction,
+    EdgeTxAmount,
+    EdgeWalletInfo,
+    InsufficientFundsError,
+    JsonObject,
+    NoAmountSpecifiedError
 } from 'edge-core-js/types'
 import { base16 } from 'rfc4648'
 
@@ -27,28 +30,28 @@ import { PluginEnvironment } from '../common/innerPlugin'
 import { getRandomDelayMs } from '../common/network'
 import { asMaybeContractLocation } from '../common/tokenHelpers'
 import {
-  cleanTxLogs,
-  getDenomination,
-  getFetchCors,
-  getOtherParams,
-  makeMutex
+    cleanTxLogs,
+    getDenomination,
+    getFetchCors,
+    getOtherParams,
+    makeMutex
 } from '../common/utils'
 import { PolkadotTools } from './PolkadotTools'
 import {
-  asLiberlandMeritsResponse,
-  asLiberlandTransfersResponse,
-  asPolkadotWalletOtherData,
-  asPolkapolkadotPrivateKeys,
-  asSafePolkadotWalletInfo,
-  asSubscanResponse,
-  asTransactions,
-  asTransfer,
-  LiberlandTransfer,
-  PolkadotNetworkInfo,
-  PolkadotWalletOtherData,
-  SafePolkadotWalletInfo,
-  SubscanResponse,
-  SubscanTx
+    asLiberlandMeritsResponse,
+    asLiberlandTransfersResponse,
+    asPolkadotWalletOtherData,
+    asPolkapolkadotPrivateKeys,
+    asSafePolkadotWalletInfo,
+    asSubscanResponse,
+    asTransactions,
+    asTransfer,
+    LiberlandTransfer,
+    PolkadotNetworkInfo,
+    PolkadotWalletOtherData,
+    SafePolkadotWalletInfo,
+    SubscanResponse,
+    SubscanTx
 } from './polkadotTypes'
 
 const ACCOUNT_POLL_MILLISECONDS = getRandomDelayMs(20000)
@@ -792,6 +795,7 @@ export class PolkadotEngine extends CurrencyEngine<
     edgeTransaction: EdgeTransaction,
     privateKeys: JsonObject
   ): Promise<EdgeTransaction> {
+    await cryptoWaitReady()
     const polkadotPrivateKeys = asPolkapolkadotPrivateKeys(
       this.currencyInfo.pluginId
     )(privateKeys)
@@ -848,8 +852,10 @@ export class PolkadotEngine extends CurrencyEngine<
       if (polkadotPrivateKeys.mnemonic != null) {
         this.keypair.addFromUri(polkadotPrivateKeys.mnemonic)
       } else {
-        const uint8Array = base16.parse(polkadotPrivateKeys.privateKey)
-        this.keypair.addFromSeed(uint8Array)
+        const hex = polkadotPrivateKeys.privateKey.replace(/^0x/i, '')
+        const bytes = base16.parse(hex)
+        const seed = bytes.length === 32 ? bytes : bytes.subarray(0, 32)
+        this.keypair.addFromSeed(seed)
       }
     }
 

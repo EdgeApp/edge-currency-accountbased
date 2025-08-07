@@ -24,23 +24,29 @@ export type SuiWalletOtherData = ReturnType<typeof asSuiWalletOtherData>
 //
 
 export interface SuiPrivateKeys {
-  mnemonic: string
+  mnemonic?: string
+  privateKey?: string
 }
 export const asSuiPrivateKeys = (pluginId: string): Cleaner<SuiPrivateKeys> => {
   const asKeys = asObject({
-    [`${pluginId}Mnemonic`]: asString
+    [`${pluginId}Mnemonic`]: asOptional(asString),
+    [`${pluginId}Key`]: asOptional(asString)
   })
 
   return asCodec(
     raw => {
       const from = asKeys(raw)
       return {
-        mnemonic: from[`${pluginId}Mnemonic`]
+        mnemonic: from[`${pluginId}Mnemonic`],
+        privateKey: from[`${pluginId}Key`]
       }
     },
     clean => {
       return {
-        [`${pluginId}Mnemonic`]: clean.mnemonic
+        [`${pluginId}Mnemonic`]: clean.mnemonic,
+        ...(clean.privateKey != null
+          ? { [`${pluginId}Key`]: clean.privateKey }
+          : {})
       }
     }
   )

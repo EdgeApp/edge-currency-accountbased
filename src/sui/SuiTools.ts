@@ -1,9 +1,9 @@
+import { fromBech32, toBech32 } from '@cosmjs/encoding'
 import { getFullnodeUrl, SuiClient, SuiHTTPTransport } from '@mysten/sui/client'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { isValidSuiAddress, parseStructTag } from '@mysten/sui/utils'
 import { div } from 'biggystring'
 import { entropyToMnemonic, validateMnemonic } from 'bip39'
-import { uncleaner } from 'cleaners'
 import {
   EdgeCurrencyInfo,
   EdgeCurrencyTools,
@@ -23,7 +23,7 @@ import { asMaybeContractLocation, validateToken } from '../common/tokenHelpers'
 import { asSafeCommonWalletInfo } from '../common/types'
 import { encodeUriCommon, parseUriCommon } from '../common/uriHelpers'
 import { getLegacyDenomination, mergeDeeply } from '../common/utils'
-import { asSuiPrivateKeys, SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
+import { SuiInfoPayload, SuiNetworkInfo } from './suiTypes'
 
 export class SuiTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -55,8 +55,23 @@ export class SuiTools implements EdgeCurrencyTools {
     privateWalletInfo: EdgeWalletInfo
   ): Promise<string> {
     const { pluginId } = this.currencyInfo
-    const keys = asSuiPrivateKeys(pluginId)(privateWalletInfo.keys)
-    return keys.mnemonic
+    const mnemonic: unknown = privateWalletInfo.keys[`${pluginId}Mnemonic`]
+    if (typeof mnemonic === 'string') return mnemonic
+
+    const hexKey: unknown = privateWalletInfo.keys[`${pluginId}Key`]
+    if (typeof hexKey === 'string') {
+      const hex = hexKey.replace(/^0x/i, '').toLowerCase()
+      const keyBytes = Buffer.from(hex, 'hex')
+      if (keyBytes.length !== 32) {
+        throw new Error('InvalidPrivateKey')
+      }
+      const data = new Uint8Array(1 + keyBytes.length)
+      data[0] = 0x00 // ed25519 scheme flag
+      data.set(keyBytes, 1)
+      return toBech32('suiprivkey', data)
+    }
+
+    throw new Error('NoPrivateKey')
   }
 
   async getDisplayPublicKey(publicWalletInfo: EdgeWalletInfo): Promise<string> {
@@ -65,14 +80,77 @@ export class SuiTools implements EdgeCurrencyTools {
   }
 
   async importPrivateKey(input: string): Promise<JsonObject> {
-    const isValid = validateMnemonic(input)
-    if (!isValid) throw new Error('Invalid mnemonic')
+    const { pluginId } = this.currencyInfo
 
-    // test mnemonic
-    Ed25519Keypair.deriveKeypair(input)
+    const isMnemonic = validateMnemonic(input)
 
-    const wasKeys = uncleaner(asSuiPrivateKeys(this.currencyInfo.pluginId))
-    return wasKeys({ mnemonic: input })
+    if (isMnemonic) {
+      // Derive keypair to validate the mnemonic and to obtain the secret key bytes
+      const keyPair = Ed25519Keypair.deriveKeypair(input)
+      const secretKeyHex = Buffer.from(keyPair.getSecretKey()).toString('hex')
+
+      return {
+        [`${pluginId}Mnemonic`]: input,
+        [`${pluginId}Key`]: secretKeyHex
+      }
+    }
+
+    // Handle Bech32 encoded private key (suiprivkey1...)
+    if (input.startsWith('suiprivkey1')) {
+      try {
+        const decoded = fromBech32(input)
+        if (decoded.prefix === 'suiprivkey' && decoded.data.length === 33) {
+          const schemeFlag = decoded.data[0]
+          if (schemeFlag !== 0x00) throw new Error('UnsupportedKeyScheme')
+          const privateKeyBytes = decoded.data.slice(1)
+          if (privateKeyBytes.length !== 32)
+            throw new Error('InvalidPrivateKey')
+          const secretKeyHex = Buffer.from(privateKeyBytes).toString('hex')
+          return {
+            [`${pluginId}Key`]: secretKeyHex
+          }
+        }
+      } catch (error) {
+        // Fall through to error below
+      }
+    }
+
+    // If the input is ASCII-hex of a Bech32 string (common copy issue), detect & decode:
+    if (/^(?:0x)?[0-9a-fA-F]{2,}$/.test(input)) {
+      try {
+        const hexAscii = input.replace(/^0x/i, '')
+        const ascii = Buffer.from(hexAscii, 'hex').toString('ascii')
+        if (ascii.startsWith('suiprivkey1')) {
+          const decoded = fromBech32(ascii)
+          if (decoded.prefix === 'suiprivkey' && decoded.data.length === 33) {
+            const schemeFlag = decoded.data[0]
+            if (schemeFlag !== 0x00) throw new Error('UnsupportedKeyScheme')
+            const privateKeyBytes = decoded.data.slice(1)
+            if (privateKeyBytes.length !== 32)
+              throw new Error('InvalidPrivateKey')
+            const secretKeyHex = Buffer.from(privateKeyBytes).toString('hex')
+            return { [`${pluginId}Key`]: secretKeyHex }
+          }
+        }
+      } catch (error) {
+        // Ignore and fall through to other formats
+      }
+    }
+
+    // Fallback: allow importing a raw hex private key (64 or 32 bytes)
+    if (
+      /^(?:0x)?[0-9a-fA-F]{64}$/.test(input) ||
+      /^(?:0x)?[0-9a-fA-F]{128}$/.test(input)
+    ) {
+      // Ensure the input represents bytes
+      return {
+        [`${pluginId}Key`]: input.replace(/^0x/i, '').toLowerCase()
+      }
+    }
+
+    throw new Error(
+      'Invalid mnemonic or private key format. Expected mnemonic, hex, or suiprivkey1... bech32 format.'
+    )
   }
 
   async createPrivateKey(walletType: string): Promise<JsonObject> {
@@ -87,14 +165,29 @@ export class SuiTools implements EdgeCurrencyTools {
   }
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
+    const { pluginId } = this.currencyInfo
     if (walletInfo.type !== this.currencyInfo.walletType) {
       throw new Error('InvalidWalletType')
     }
-    const { mnemonic } = asSuiPrivateKeys(this.currencyInfo.pluginId)(
-      walletInfo.keys
-    )
 
-    const keyPair = Ed25519Keypair.deriveKeypair(mnemonic)
+    const privateKeyInput =
+      (walletInfo.keys as any)[`${pluginId}Mnemonic`] ??
+      (walletInfo.keys as any)[`${pluginId}Key`]
+
+    if (privateKeyInput == null) {
+      throw new Error('SUI: No private key found in wallet')
+    }
+
+    // Normalize via importPrivateKey to handle mnemonic, hex, or bech32
+    const keys = await this.importPrivateKey(String(privateKeyInput))
+    const privateKeyHex = (keys as any)[`${pluginId}Key`]
+    if (privateKeyHex == null) {
+      throw new Error('SUI: importPrivateKey did not return a private key')
+    }
+
+    const keyPair = Ed25519Keypair.fromSecretKey(
+      Buffer.from(privateKeyHex, 'hex')
+    )
     const publicKey = keyPair.getPublicKey()
     const publicKeyBytes = publicKey.toRawBytes()
 
@@ -115,8 +208,13 @@ export class SuiTools implements EdgeCurrencyTools {
       networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
+      customTokens,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
+    }
 
     let address = ''
 
