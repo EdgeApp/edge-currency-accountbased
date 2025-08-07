@@ -428,7 +428,15 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
     const tx = Transaction.from(unsignedBase64)
 
     const keys = asSuiPrivateKeys(this.currencyInfo.pluginId)(privateKeys)
-    const pair = Ed25519Keypair.deriveKeypair(keys.mnemonic)
+    let pair: Ed25519Keypair
+    if (keys.mnemonic != null) {
+      pair = Ed25519Keypair.deriveKeypair(keys.mnemonic)
+    } else if (keys.privateKey != null) {
+      const secretKey = Buffer.from(keys.privateKey.replace(/^0x/i, ''), 'hex')
+      pair = Ed25519Keypair.fromSecretKey(secretKey)
+    } else {
+      throw new Error('SUI: Missing keys for signing')
+    }
     const res = await tx.sign({ signer: pair })
     edgeTransaction.signedTx = JSON.stringify(res)
     edgeTransaction.txid = await tx.getDigest()
