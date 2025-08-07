@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- added: (Sui) Support Bech32 `suiprivkey1...` private key import and ASCII‑hex Bech32 inputs; normalize derive/sign to accept mnemonic or hex
+- added: (Solana) Add 64‑byte hex private key import; unify public key derivation across mnemonic/base58/hex
+- added: (FIO) Detect private keys in `parseUri` and return early to support sweeping
+- added: (DOT) Enable 32/64‑byte hex private key import; derive SS58 from mnemonic or 32‑byte seed
+- fixed: (DOT) Prevent React Native WASM runtime errors during sweep by forcing asm backend and awaiting crypto initialization
+
 ## 4.56.8 (2025-08-04)
 
 - added: (EVM) Accept transactions with a provided `otherParams.nonce` even if pending transactions exist
