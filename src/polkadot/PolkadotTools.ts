@@ -1,3 +1,5 @@
+// Force asm.js crypto on RN to avoid WASM crash paths
+import '@polkadot/wasm-crypto/initOnlyAsm'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api'
 import * as utilCrypto from '@polkadot/util-crypto'
 import { div } from 'biggystring'
@@ -27,7 +29,13 @@ import {
   PolkadotNetworkInfo
 } from './polkadotTypes'
 
-const { ed25519PairFromSeed, isAddress, mnemonicToMiniSecret } = utilCrypto
+const {
+  ed25519PairFromSeed,
+  isAddress,
+  mnemonicToMiniSecret,
+  encodeAddress,
+  cryptoWaitReady
+} = utilCrypto
 
 export class PolkadotTools implements EdgeCurrencyTools {
   io: EdgeIo
@@ -64,6 +72,7 @@ export class PolkadotTools implements EdgeCurrencyTools {
 
   async importPrivateKey(userInput: string): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
+    await cryptoWaitReady()
     if (validateMnemonic(userInput)) {
       const miniSecret = mnemonicToMiniSecret(userInput)
       const { secretKey } = ed25519PairFromSeed(miniSecret)
@@ -72,8 +81,10 @@ export class PolkadotTools implements EdgeCurrencyTools {
         [`${pluginId}Key`]: Buffer.from(secretKey).toString('hex')
       }
     } else if (isHex(userInput)) {
+      const hex = userInput.replace(/^0x/i, '')
+      if (hex.length !== 64 && hex.length !== 128) throw new Error('InvalidPrivateKey')
       return {
-        [`${pluginId}Key`]: userInput
+        [`${pluginId}Key`]: hex
       }
     } else {
       throw new Error('InvalidPrivateKey')
@@ -92,11 +103,27 @@ export class PolkadotTools implements EdgeCurrencyTools {
 
   async derivePublicKey(walletInfo: EdgeWalletInfo): Promise<JsonObject> {
     const { pluginId } = this.currencyInfo
+    await cryptoWaitReady()
     const keyring = new Keyring({ ss58Format: this.networkInfo.ss58Format })
-    const pair = keyring.addFromUri(walletInfo.keys[`${pluginId}Mnemonic`])
-    return {
-      publicKey: pair.address
+
+    const mnemonic = walletInfo.keys[`${pluginId}Mnemonic`]
+    const privateKeyHex = walletInfo.keys[`${pluginId}Key`]
+
+    if (typeof mnemonic === 'string') {
+      const pair = keyring.addFromUri(mnemonic)
+      return { publicKey: pair.address }
     }
+
+    if (typeof privateKeyHex === 'string') {
+      const hex = privateKeyHex.replace(/^0x/i, '')
+      const bytes = Buffer.from(hex, 'hex')
+      const seed = bytes.length === 32 ? bytes : bytes.subarray(0, 32)
+      const { publicKey } = ed25519PairFromSeed(seed)
+      const address = encodeAddress(publicKey, this.networkInfo.ss58Format)
+      return { publicKey: address }
+    }
+
+    throw new Error('InvalidWalletKeys')
   }
 
   async parseUri(
@@ -113,8 +140,13 @@ export class PolkadotTools implements EdgeCurrencyTools {
       networks,
       builtinTokens: this.builtinTokens,
       currencyCode: currencyCode ?? this.currencyInfo.currencyCode,
-      customTokens
+      customTokens,
+      testPrivateKeys: this.importPrivateKey.bind(this)
     })
+
+    if (edgeParsedUri.privateKeys != null) {
+      return edgeParsedUri
+    }
     const address = edgeParsedUri.publicAddress ?? ''
 
     if (!isAddress(address) || address.toLowerCase().startsWith('0x')) {
