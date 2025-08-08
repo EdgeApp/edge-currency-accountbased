@@ -218,7 +218,11 @@ export const fetchFeesFromEvmScan = async (
   const apiKey = `&apikey=${
     Array.isArray(scanApiKey) ? pickRandom(scanApiKey, 1)[0] : scanApiKey ?? ''
   }`
-  const url = `${server}/api?module=gastracker&action=gasoracle${apiKey}`
+  // Use Etherscan v2 API when targeting etherscan.io, otherwise use the network-specific scan API format
+  const chainId = networkInfo.chainParams.chainId
+  const url = server.includes('etherscan.io')
+    ? `${server}/v2/api?chainid=${chainId}&module=gastracker&action=gasoracle${apiKey}`
+    : `${server}/api?module=gastracker&action=gasoracle${apiKey}`
 
   const fetchResponse = await fetch(url)
   if (!fetchResponse.ok)
