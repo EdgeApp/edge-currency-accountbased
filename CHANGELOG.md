@@ -3,6 +3,7 @@
 ## Unreleased
 
 - changed: Upgrade chain-registry package.
+- changed: (EVM) Use Etherscan V2 for `etherscan.io` gas oracle calls
 
 ## 4.57.0 (2025-08-04)
 
