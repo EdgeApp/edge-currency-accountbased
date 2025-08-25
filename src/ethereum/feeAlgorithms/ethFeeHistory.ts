@@ -146,14 +146,23 @@ export async function calculateFeeForPriority(
     const maxPriorityFeePerGas = avgPriorityFee
     const maxFeePerGas = add(adjustedBaseFee, maxPriorityFeePerGas)
 
-    log(`eth_feeHistory priority ${priority}:`)
-    log(`  blocks analyzed: ${rewards.length}`)
-    log(`  nextBaseFee: ${div(nextBaseFee, '1000000000', 18)} gwei`)
     log(
-      `  adjustedBaseFee (2x): ${div(adjustedBaseFee, '1000000000', 18)} gwei`
+      `eth_feeHistory priority ${priority}:\n  blocks analyzed: ${
+        rewards.length
+      }\n  nextBaseFee: ${div(
+        nextBaseFee,
+        '1000000000',
+        18
+      )} gwei\n  adjustedBaseFee (2x): ${div(
+        adjustedBaseFee,
+        '1000000000',
+        18
+      )} gwei\n  avgPriorityFee: ${div(
+        avgPriorityFee,
+        '1000000000',
+        18
+      )} gwei\n  maxFeePerGas: ${div(maxFeePerGas, '1000000000', 18)} gwei`
     )
-    log(`  avgPriorityFee: ${div(avgPriorityFee, '1000000000', 18)} gwei`)
-    log(`  maxFeePerGas: ${div(maxFeePerGas, '1000000000', 18)} gwei`)
 
     return {
       maxFeePerGas,

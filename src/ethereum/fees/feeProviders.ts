@@ -31,11 +31,15 @@ import { RpcAdapterConfig } from '../networkAdapters/RpcAdapter'
 
 export const printFees = (log: EdgeLog, fees: EthereumBaseMultiplier): void => {
   const keys = Object.keys(fees)
+  const feeLines: string[] = []
   for (const key of keys) {
     // @ts-expect-error
     const value = fees[key]
     if (typeof value === 'string')
-      log(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
+      feeLines.push(`  ${key}: ${div(value, '1000000000', 18)} gwei`)
+  }
+  if (feeLines.length > 0) {
+    log(feeLines.join('\n'))
   }
 }
 
