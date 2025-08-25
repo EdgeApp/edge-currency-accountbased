@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- added: Added exponential backoff for syncNetwork "retriable" errors.
+
 ## 4.58.0 (2025-08-12)
 
 - changed: Upgrade chain-registry package.
