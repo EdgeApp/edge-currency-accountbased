@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- fixed: Avoid deprecated Gradle syntax.
+
 ## 4.58.0 (2025-08-12)
 
 - changed: Upgrade chain-registry package.
