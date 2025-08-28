@@ -328,7 +328,7 @@ export class SolanaEngine extends CurrencyEngine<
       txid: tx.transaction.signatures[0],
       walletId: this.walletId
     }
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
   }
 
   parseTxAmounts(
@@ -444,12 +444,11 @@ export class SolanaEngine extends CurrencyEngine<
     tokenId: EdgeTokenId,
     pubkey: PublicKey
   ): Promise<void> {
-    const currencyCode =
-      tokenId != null ? this.allTokensMap[tokenId].currencyCode : this.chainCode
+    const safeTokenId = tokenId ?? ''
     let before: string | undefined
     const until =
-      this.otherData.newestTxid[currencyCode] !== ''
-        ? this.otherData.newestTxid[currencyCode]
+      this.otherData.newestTxid[safeTokenId] !== ''
+        ? this.otherData.newestTxid[safeTokenId]
         : undefined
     let txids: ConfirmedSignatureInfo[] = []
     try {
@@ -536,7 +535,7 @@ export class SolanaEngine extends CurrencyEngine<
         amounts.forEach(amount => {
           this.processSolanaTransaction(txResponse[i], amount, timestamp, memos)
         })
-        this.otherData.newestTxid[currencyCode] =
+        this.otherData.newestTxid[safeTokenId] =
           txResponse[i].transaction.signatures[0]
 
         // Update progress

@@ -1,5 +1,5 @@
 import { assert } from 'chai'
-import { EdgeTransaction } from 'edge-core-js'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js'
 import { describe, it } from 'mocha'
 
 import {
@@ -12,20 +12,21 @@ import fioactions from '../fixtures/fioactions.json'
 
 describe(`Fio engine`, function () {
   it('parseAction', function () {
-    const transactions: Record<string, EdgeTransaction[]> = { FIO: [] }
+    const transactions: Record<string, EdgeTransaction[]> = { '': [] }
     const findTransaction: FindTransaction = (
-      currencyCode: string,
+      tokenId: EdgeTokenId,
       txid: string
-    ) => transactions.FIO.findIndex(tx => tx.txid === txid)
+    ) => transactions[tokenId ?? ''].findIndex(tx => tx.txid === txid)
 
-    const getTransactionList: GetTransactionList = (currencyCode: string) =>
-      transactions[currencyCode]
+    const getTransactionList: GetTransactionList = (tokenId: EdgeTokenId) =>
+      transactions[tokenId ?? '']
 
     for (const rawAction of fioactions.input) {
       const action = asFioHistoryNodeAction(rawAction)
       const result = parseAction({
         action,
         actor: 'wpvee4fsdbvu',
+        tokenId: null,
         currencyCode: 'FIO',
         denom: {
           name: 'FIO',
@@ -40,7 +41,7 @@ describe(`Fio engine`, function () {
       })
       const { transaction } = result
       if (transaction != null) {
-        transactions.FIO.push(transaction)
+        transactions[''].push(transaction)
       }
     }
 

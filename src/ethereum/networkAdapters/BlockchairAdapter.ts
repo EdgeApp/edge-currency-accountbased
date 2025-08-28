@@ -1,3 +1,5 @@
+import { EdgeTokenId } from 'edge-core-js/types'
+
 import { safeErrorMessage } from '../../common/utils'
 import { EthereumNetworkUpdate } from '../EthereumNetwork'
 import {
@@ -55,22 +57,15 @@ export class BlockchairAdapter extends NetworkAdapter<BlockchairAdapterConfig> {
       this.logError('checkTokenBalBlockchair', e)
       throw new Error('checkTokenBalBlockchair response is invalid')
     }
-    const response = {
-      [this.ethEngine.currencyInfo.currencyCode]:
-        cleanedResponseObj.data[address].address.balance
-    }
+    const response = new Map<EdgeTokenId, string>()
+    response.set(null, cleanedResponseObj.data[address].address.balance)
     for (const tokenData of cleanedResponseObj.data[address].layer_2.erc_20) {
       try {
         const cleanTokenData = asBlockChairAddress(tokenData)
         const balance = cleanTokenData.balance
         const tokenAddress = cleanTokenData.token_address
-        const tokenSymbol = cleanTokenData.token_symbol
-        const tokenInfo = this.ethEngine.getTokenInfo(tokenSymbol)
-        if (tokenInfo != null && tokenInfo.contractAddress === tokenAddress) {
-          response[tokenSymbol] = balance
-        } else {
-          // Do nothing, eg: Old DAI token balance is ignored
-        }
+        const tokenId = tokenAddress.toLowerCase().replace('0x', '')
+        response.set(tokenId, balance)
       } catch (e: any) {
         this.ethEngine.error(
           `checkTokenBalBlockchair tokenData ${safeErrorMessage(

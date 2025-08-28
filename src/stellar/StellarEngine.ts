@@ -342,7 +342,7 @@ export class StellarEngine extends CurrencyEngine<
     if (edgeTransaction.blockHeight > this.tools.highestTxHeight) {
       this.tools.highestTxHeight = edgeTransaction.blockHeight
     }
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(null, edgeTransaction)
     return tx.paging_token
   }
 

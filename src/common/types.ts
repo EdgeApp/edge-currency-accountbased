@@ -18,7 +18,6 @@ import {
   EdgeToken,
   EdgeTokenId,
   EdgeTokenInfo,
-  EdgeTransaction,
   EdgeTxAction,
   EdgeTxSwap
 } from 'edge-core-js/types'
@@ -46,16 +45,6 @@ export interface BooleanMap {
   readonly [key: string]: boolean
 }
 export type CustomToken = EdgeTokenInfo & EdgeToken
-
-export interface TxIdMap {
-  [currencyCode: string]: { [txid: string]: number }
-}
-export interface TxIdList {
-  [currencyCode: string]: string[]
-}
-export interface TransactionList {
-  [currencyCode: string]: EdgeTransaction[]
-}
 
 export const asWalletLocalData = asObject({
   blockHeight: asMaybe(asNumber, 0),

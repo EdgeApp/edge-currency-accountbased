@@ -305,7 +305,7 @@ export class CardanoEngine extends CurrencyEngine<
           tx,
           walletId: this.walletId
         })
-        this.addTransaction(this.currencyInfo.currencyCode, edgeTx)
+        this.addTransaction(null, edgeTx)
         this.otherData.latestQueryTransactionsBlockHeight = tx.block_height
         this.otherData.latestQueryTransactionsTxid = tx.tx_hash
         progressCurrent++

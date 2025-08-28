@@ -567,7 +567,7 @@ export class XrpEngine extends CurrencyEngine<
             ourReceiveAddresses.push(publicAddress)
           }
           // Parent currency like XRP
-          this.addTransaction(currency, {
+          this.addTransaction(null, {
             assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode: currency,
@@ -606,7 +606,7 @@ export class XrpEngine extends CurrencyEngine<
             ourReceiveAddresses.push(publicAddress)
           }
 
-          this.addTransaction(currencyCode, {
+          this.addTransaction(tokenId, {
             assetAction: this.processRippleDexTx(accountTx),
             blockHeight: tx.ledger_index ?? -1,
             currencyCode,

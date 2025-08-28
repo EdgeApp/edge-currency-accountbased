@@ -12,6 +12,7 @@ import {
   EdgeSignMessageOptions,
   EdgeSpendInfo,
   EdgeSpendTarget,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeWalletInfo,
   InsufficientFundsError,
@@ -974,7 +975,7 @@ export class EthereumEngine extends CurrencyEngine<
   }
 
   async getMaxSpendable(spendInfo: EdgeSpendInfo): Promise<string> {
-    const { edgeSpendInfo, currencyCode } = this.makeSpendCheck(spendInfo)
+    const { edgeSpendInfo } = this.makeSpendCheck(spendInfo)
     const { tokenId } = edgeSpendInfo
 
     const balance = this.getBalance({
@@ -1008,7 +1009,7 @@ export class EthereumEngine extends CurrencyEngine<
     }
     const { contractAddress, data } = this.getTxParameterInformation(
       edgeSpendInfo,
-      currencyCode,
+      tokenId,
       this.currencyInfo
     )
 
@@ -1193,7 +1194,7 @@ export class EthereumEngine extends CurrencyEngine<
 
   getTxParameterInformation(
     edgeSpendInfo: EdgeSpendInfo,
-    currencyCode: string,
+    tokenId: EdgeTokenId,
     currencyInfo: EdgeCurrencyInfo
   ): EthereumTxParameterInformation {
     const { memos = [] } = edgeSpendInfo
@@ -1209,7 +1210,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     // Get contractAddress and/or value:
     let value: string | undefined
-    if (currencyCode === currencyInfo.currencyCode) {
+    if (tokenId == null) {
       value = nativeAmount == null ? undefined : decimalToHex(nativeAmount)
       return {
         data,
@@ -1220,17 +1221,17 @@ export class EthereumEngine extends CurrencyEngine<
       if (data != null) {
         contractAddress = publicAddress
       } else {
-        const tokenInfo = this.getTokenInfo(currencyCode)
+        const tokenInfo = this.getTokenInfo(tokenId)
         if (
           tokenInfo == null ||
-          typeof tokenInfo.contractAddress !== 'string'
+          typeof tokenInfo.networkLocation?.contractAddress !== 'string'
         ) {
           throw new Error(
             'Error: Token not supported or invalid contract address'
           )
         }
 
-        contractAddress = tokenInfo.contractAddress
+        contractAddress = tokenInfo.networkLocation?.contractAddress
 
         // Derive the data from a ERC-20 token transfer smart-contract call:
         const dataArray = abi.simpleEncode(
@@ -1349,7 +1350,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     const { contractAddress, data, value } = this.getTxParameterInformation(
       edgeSpendInfo,
-      currencyCode,
+      tokenId,
       this.currencyInfo
     )
 
@@ -1741,7 +1742,7 @@ export class EthereumEngine extends CurrencyEngine<
 
     let replacedTxid = edgeTransaction.txid
     let replacedTxIndex = await this.findTransaction(
-      currencyCode,
+      edgeTransaction.tokenId,
       normalizeAddress(replacedTxid)
     )
     if (replacedTxIndex === -1) {
@@ -1753,7 +1754,7 @@ export class EthereumEngine extends CurrencyEngine<
         // replacement transaction itself
         replacedTxid = txOtherParams.replacedTxid
         replacedTxIndex = await this.findTransaction(
-          currencyCode,
+          edgeTransaction.tokenId,
           normalizeAddress(replacedTxid)
         )
       }
@@ -1764,7 +1765,7 @@ export class EthereumEngine extends CurrencyEngine<
       }
     }
     const replacedTx: EdgeTransaction =
-      this.transactionList[currencyCode][replacedTxIndex]
+      this.transactionList[tokenId ?? ''][replacedTxIndex]
 
     const replacedTxOtherParams = asMaybe(asEthereumTxOtherParams)(
       replacedTx.otherParams
@@ -1869,13 +1870,12 @@ export class EthereumEngine extends CurrencyEngine<
 
     // We must check if this transaction replaces another transaction
     if (txOtherParams?.replacedTxid != null) {
-      const { currencyCode } = edgeTransaction
       const txid = normalizeAddress(txOtherParams.replacedTxid)
-      const index = this.findTransaction(currencyCode, txid)
+      const index = this.findTransaction(edgeTransaction.tokenId, txid)
 
       if (index !== -1) {
         const replacedEdgeTransaction =
-          this.transactionList[currencyCode][index]
+          this.transactionList[edgeTransaction.tokenId ?? ''][index]
 
         // Use the RBF metadata because metadata for replaced transaction is not
         // present in edge-currency-accountbased state
@@ -1888,7 +1888,10 @@ export class EthereumEngine extends CurrencyEngine<
           blockHeight: -1
         }
 
-        this.addTransaction(currencyCode, updatedEdgeTransaction)
+        this.addTransaction(
+          updatedEdgeTransaction.tokenId,
+          updatedEdgeTransaction
+        )
       }
     }
 

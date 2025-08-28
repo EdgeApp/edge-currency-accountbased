@@ -290,7 +290,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       walletId: this.walletId
     }
 
-    this.addTransaction(currencyCode, edgeTransaction)
+    this.addTransaction(tokenId, edgeTransaction)
     return edgeTransaction.blockHeight
   }
 
@@ -383,7 +383,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         walletId: this.walletId
       }
 
-      this.addTransaction(currencyCode, edgeTransaction)
+      this.addTransaction(tokenId, edgeTransaction)
     }
     return blockHeight
   }
@@ -971,9 +971,9 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
       this.makeSpendCheck(edgeSpendInfoIn)
     const { memos = [], tokenId } = edgeSpendInfo
 
-    const tokenInfo = this.getTokenInfo(currencyCode)
+    const tokenInfo = this.getTokenInfo(tokenId)
     if (tokenInfo == null) throw new Error('Unable to find token info')
-    const { contractAddress = 'eosio.token' } = tokenInfo
+    const { contractAddress = 'eosio.token' } = tokenInfo.networkLocation ?? {}
     const nativeDenomination = getDenomination(
       currencyCode,
       this.currencyInfo,

@@ -1,6 +1,6 @@
 import { add, div } from 'biggystring'
 import { asArray, asObject, asOptional, asString } from 'cleaners'
-import { EdgeTransaction } from 'edge-core-js/types'
+import { EdgeTokenId, EdgeTransaction } from 'edge-core-js/types'
 
 import { getRandomDelayMs } from '../common/network'
 import { makePeriodicTask, PeriodicTask } from '../common/periodicTask'
@@ -9,7 +9,6 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
-import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
@@ -63,8 +62,8 @@ export interface EdgeTransactionsBlockHeightTuple {
 export interface EthereumNetworkUpdate {
   blockHeight?: number
   newNonce?: string
-  tokenBal?: { [currencyCode: string]: string }
-  tokenTxs?: { [currencyCode: string]: EdgeTransactionsBlockHeightTuple }
+  tokenBal?: Map<EdgeTokenId, string>
+  tokenTxs?: Map<EdgeTokenId, EdgeTransactionsBlockHeightTuple>
   detectedTokenIds?: string[]
   server?: string
 }
@@ -260,32 +259,6 @@ export class EthereumNetwork {
     )
   }
 
-  /*
-   * @returns The currencyCode of the token or undefined if
-   * the token is not enabled for this user.
-   */
-  getTokenCurrencyCode(txnContractAddress: string): string | undefined {
-    const address = this.ethEngine.walletLocalData.publicKey
-    if (txnContractAddress.toLowerCase() === address.toLowerCase()) {
-      return this.ethEngine.currencyInfo.currencyCode
-    } else {
-      for (const currencyCode of this.ethEngine.enabledTokens) {
-        const tokenInfo = this.ethEngine.getTokenInfo(currencyCode)
-        if (tokenInfo != null) {
-          const tokenContractAddress = tokenInfo.contractAddress
-          if (
-            txnContractAddress != null &&
-            typeof tokenContractAddress === 'string' &&
-            tokenContractAddress.toLowerCase() ===
-              txnContractAddress.toLowerCase()
-          ) {
-            return currencyCode
-          }
-        }
-      }
-    }
-  }
-
   start(): void {
     // this.connectNetworkAdapters()
     // this.setupAdapterSubscriptions()
@@ -314,8 +287,8 @@ export class EthereumNetwork {
     }
   )
 
-  acquireTokenBalance = async (currencyCode: string): Promise<void> => {
-    const update = await this.check('fetchTokenBalance', currencyCode)
+  acquireTokenBalance = async (tokenId: EdgeTokenId): Promise<void> => {
+    const update = await this.check('fetchTokenBalance', tokenId)
     return this.processEthereumNetworkUpdate(update)
   }
 
@@ -324,12 +297,13 @@ export class EthereumNetwork {
     return this.processEthereumNetworkUpdate(update)
   }
 
-  acquireTxs = async (currencyCode: string): Promise<void> => {
+  acquireTxs = async (tokenId: EdgeTokenId): Promise<void> => {
+    const safeTokenId = tokenId ?? ''
     const lastTransactionQueryHeight =
-      this.ethEngine.walletLocalData.lastTransactionQueryHeight[currencyCode] ??
+      this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] ??
       0
     const lastTransactionDate =
-      this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] ?? 0
+      this.ethEngine.walletLocalData.lastTransactionDate[safeTokenId] ?? 0
     const addressQueryLookbackBlocks =
       this.ethEngine.networkInfo.addressQueryLookbackBlocks
     const params = {
@@ -340,7 +314,7 @@ export class EthereumNetwork {
       ),
       // Only query for transactions as far back as ADDRESS_QUERY_LOOKBACK_SEC from the last time we queried transactions
       startDate: Math.max(lastTransactionDate - ADDRESS_QUERY_LOOKBACK_SEC, 0),
-      currencyCode
+      tokenId
     }
 
     // Send an empty tokenTxs network update if no network adapters
@@ -349,19 +323,17 @@ export class EthereumNetwork {
       this.qualifyNetworkAdapters('fetchTxs').length === 0 ||
       this.ethEngine.lightMode
     ) {
-      const tokenTxs: {
-        [currencyCode: string]: EdgeTransactionsBlockHeightTuple
-      } = {
-        [this.ethEngine.currencyInfo.currencyCode]: {
+      const tokenTxs: Map<EdgeTokenId, EdgeTransactionsBlockHeightTuple> =
+        new Map()
+      tokenTxs.set(null, {
+        blockHeight: params.startBlock,
+        edgeTransactions: []
+      })
+      for (const tid of Object.keys(this.ethEngine.allTokensMap)) {
+        tokenTxs.set(tid, {
           blockHeight: params.startBlock,
           edgeTransactions: []
-        }
-      }
-      for (const token of Object.values(this.ethEngine.allTokensMap)) {
-        tokenTxs[token.currencyCode] = {
-          blockHeight: params.startBlock,
-          edgeTransactions: []
-        }
+        })
       }
       return this.processEthereumNetworkUpdate({
         tokenTxs,
@@ -404,23 +376,17 @@ export class EthereumNetwork {
       await this.acquireTokenBalances()
     }
 
-    const { currencyCode } = this.ethEngine.currencyInfo
-    const currencyCodes = this.ethEngine.enabledTokens
-
-    if (!currencyCodes.includes(currencyCode)) {
-      currencyCodes.push(currencyCode)
-    }
-
-    for (const currencyCode of currencyCodes) {
+    const tokenIds: EdgeTokenId[] = [null, ...this.ethEngine.enabledTokenIds]
+    for (const tokenId of tokenIds) {
       if (
         // Only check each code individually if this engine does not support
         // batch token balance queries.
         !isFetchTokenBalancesSupported
       ) {
-        await this.acquireTokenBalance(currencyCode)
+        await this.acquireTokenBalance(tokenId)
       }
 
-      await this.acquireTxs(currencyCode)
+      await this.acquireTxs(tokenId)
     }
   }
 
@@ -478,14 +444,8 @@ export class EthereumNetwork {
           ethereumNetworkUpdate.server ?? 'no server'
         } won`
       )
-      for (const currencyCode of Object.keys(tokenBal)) {
-        const tokenId = getTokenIdFromCurrencyCode(
-          currencyCode,
-          this.ethEngine.currencyInfo.currencyCode,
-          this.ethEngine.allTokensMap
-        )
-        if (tokenId === undefined) continue
-        this.ethEngine.updateBalance(tokenId, tokenBal[currencyCode])
+      for (const [tokenId, bal] of tokenBal) {
+        this.ethEngine.updateBalance(tokenId, bal)
       }
       this.ethEngine.currencyEngineCallbacks.onNewTokens(
         ethereumNetworkUpdate.detectedTokenIds ?? []
@@ -502,22 +462,16 @@ export class EthereumNetwork {
         } won`
       )
       let highestTxBlockHeight = 0
-      for (const currencyCode of Object.keys(tokenTxs)) {
-        const tokenId = getTokenIdFromCurrencyCode(
-          currencyCode,
-          this.ethEngine.currencyInfo.currencyCode,
-          this.ethEngine.allTokensMap
-        )
+      for (const [tokenId, tuple] of tokenTxs) {
         if (tokenId == null) continue
         this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 1)
-        const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
         for (const tx of tuple.edgeTransactions) {
-          this.ethEngine.addTransaction(currencyCode, tx)
+          this.ethEngine.addTransaction(tokenId, tx)
         }
-        this.ethEngine.walletLocalData.lastTransactionQueryHeight[
-          currencyCode
-        ] = preUpdateBlockHeight
-        this.ethEngine.walletLocalData.lastTransactionDate[currencyCode] = now
+        const safeTokenId = tokenId ?? ''
+        this.ethEngine.walletLocalData.lastTransactionQueryHeight[safeTokenId] =
+          preUpdateBlockHeight
+        this.ethEngine.walletLocalData.lastTransactionDate[safeTokenId] = now
         highestTxBlockHeight = Math.max(highestTxBlockHeight, tuple.blockHeight)
       }
       this.ethEngine.walletLocalData.highestTxBlockHeight = Math.max(
@@ -550,15 +504,14 @@ export class EthereumNetwork {
         const updatedNeedsTxIds = this.ethNeeds.addressSync.needsTxids.filter(
           txid => {
             const txidNormal = normalizeAddress(txid)
-            const hasTxidBeenProcessed = Object.keys(tokenTxs).some(
-              currencyCode => {
-                const txIndex =
-                  this.ethEngine.txIdMap[currencyCode][txidNormal] ?? -1
-                const edgeTx =
-                  this.ethEngine.transactionList[currencyCode][txIndex]
-                return edgeTx?.blockHeight > 0
-              }
-            )
+            const hasTxidBeenProcessed = [...tokenTxs.keys()].some(tokenId => {
+              const safeTokenId = tokenId ?? ''
+              const txIndex =
+                this.ethEngine.txIdMap[safeTokenId][txidNormal] ?? -1
+              const edgeTx =
+                this.ethEngine.transactionList[safeTokenId][txIndex]
+              return edgeTx?.blockHeight > 0
+            })
             return !hasTxidBeenProcessed
           }
         )
