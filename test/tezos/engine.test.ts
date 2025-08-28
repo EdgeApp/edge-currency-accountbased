@@ -123,10 +123,7 @@ describe(`Tezos engine`, function () {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (engine) {
       await engine.checkAccountInnerLoop()
-      assert.equal(
-        gte(engine.walletLocalData.totalBalances.XTZ ?? '0', '0'),
-        true
-      )
+      assert.equal(gte(engine.getBalance({ tokenId: null }), '0'), true)
     } else {
       assert.equal(0, 1)
     }

@@ -691,7 +691,7 @@ export class XrpEngine extends CurrencyEngine<
         ledger_index: 'current'
       })
       const { Balance, Sequence } = accountInfo.result.account_data
-      this.updateBalance(this.currencyInfo.currencyCode, Balance)
+      this.updateBalance(null, Balance)
       this.nonce = Sequence
 
       const detectedTokenIds: string[] = []
@@ -704,7 +704,7 @@ export class XrpEngine extends CurrencyEngine<
           const multiplier = edgeToken.denominations[0].multiplier
           if (multiplier == null) return
           const assetAmount = toFixed(mul(value, multiplier), 0, 0)
-          this.updateBalance(edgeToken.currencyCode, assetAmount)
+          this.updateBalance(tokenId, assetAmount)
 
           if (gt(assetAmount, '0') && !this.enabledTokenIds.includes(tokenId)) {
             detectedTokenIds.push(tokenId)
@@ -758,20 +758,13 @@ export class XrpEngine extends CurrencyEngine<
     } catch (e: any) {
       if (e?.data?.error === 'actNotFound' || e?.data?.error_code === 19) {
         this.log('Account not found. Probably not activated w/minimum XRP')
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
-        this.enabledTokens.forEach(tokenCurrencyCode => {
-          if (tokenCurrencyCode !== this.currencyInfo.currencyCode) {
-            // All tokens are not activated if this address is not activated
-            const tokenId = getTokenIdFromCurrencyCode(
-              tokenCurrencyCode,
-              this.currencyInfo.currencyCode,
-              this.allTokensMap
-            )
-            if (tokenId != null) {
-              newUnactivatedTokenIds.push(tokenId)
-            }
-            this.updateBalance(tokenCurrencyCode, '0')
+        this.updateBalance(null, '0')
+        this.enabledTokenIds.forEach(tokenId => {
+          // All tokens are not activated if this address is not activated
+          if (tokenId != null) {
+            newUnactivatedTokenIds.push(tokenId)
           }
+          this.updateBalance(tokenId, '0')
         })
       } else {
         this.error(`Error fetching address info: `, e)
@@ -929,8 +922,7 @@ export class XrpEngine extends CurrencyEngine<
       // Tokens
       if (gt(nativeAmount, nativeBalance))
         throw new InsufficientFundsError({ tokenId })
-      const parentBalance =
-        this.walletLocalData.totalBalances[parentCurrencyCode] ?? '0'
+      const parentBalance = this.getBalance({ tokenId: null })
 
       if (gt(parentNetworkFee, parentBalance)) {
         throw new InsufficientFundsError({

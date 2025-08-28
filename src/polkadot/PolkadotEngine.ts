@@ -152,10 +152,7 @@ export class PolkadotEngine extends CurrencyEngine<
       this.walletInfo.keys.publicKey
     )
     this.nonce = accountBalanceRes.nonce.toNumber()
-    this.updateBalance(
-      this.currencyInfo.currencyCode,
-      accountBalanceRes.data.free.toString()
-    )
+    this.updateBalance(null, accountBalanceRes.data.free.toString())
 
     for (const tokenId of this.enabledTokenIds) {
       const token = this.allTokensMap[tokenId]
@@ -171,7 +168,7 @@ export class PolkadotEngine extends CurrencyEngine<
       if (tokenBalanceRes.isSome) {
         tokenBalance = tokenBalanceRes.unwrap().balance.toString()
       }
-      this.updateBalance(token.currencyCode, tokenBalance)
+      this.updateBalance(tokenId, tokenBalance)
     }
   }
 

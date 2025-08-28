@@ -155,10 +155,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     }
 
     const mainnetBalObj = balances[this.networkInfo.nativeAssetId]
-    this.updateBalance(
-      this.currencyInfo.currencyCode,
-      mainnetBalObj?.total.toString() ?? '0'
-    )
+    this.updateBalance(null, mainnetBalObj?.total.toString() ?? '0')
     this.unlockedBalanceMap.set(null, mainnetBalObj?.unlocked.toString() ?? '0')
 
     const detectedTokenIds: string[] = []
@@ -166,8 +163,7 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
       const tokenBalObj = balances[tokenId]
       if (tokenBalObj == null) continue
 
-      const currencyCode = this.allTokensMap[tokenId].currencyCode
-      this.updateBalance(currencyCode, tokenBalObj.total.toString())
+      this.updateBalance(tokenId, tokenBalObj.total.toString())
       this.unlockedBalanceMap.set(
         tokenId,
         tokenBalObj?.unlocked.toString() ?? '0'

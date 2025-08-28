@@ -802,22 +802,20 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     try {
       // If account name still doesn't exist, set new wallet default values and return
       if (this.otherData.accountName === '') {
-        for (const token of this.allTokens) {
-          this.updateBalance(token.currencyCode, '0')
+        for (const tokenId of [null, ...this.enabledTokenIds]) {
+          this.updateBalance(tokenId, '0')
         }
         return
       }
 
       // Check balance on account
-      for (const token of this.allTokens) {
-        if (this.enabledTokens.includes(token.currencyCode)) {
-          const results: Asset[] = await this.multicastServers(
-            'getCurrencyBalance',
-            token.contractAddress
-          )
-          const nativeAmount = results[0]?.units?.toString() ?? '0'
-          this.updateBalance(token.currencyCode, nativeAmount)
-        }
+      for (const tokenId of [null, ...this.enabledTokenIds]) {
+        const results: Asset[] = await this.multicastServers(
+          'getCurrencyBalance',
+          tokenId ?? 'eosio.token'
+        )
+        const nativeAmount = results[0]?.units?.toString() ?? '0'
+        this.updateBalance(tokenId, nativeAmount)
       }
 
       // Check available resources on account

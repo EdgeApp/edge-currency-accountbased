@@ -138,7 +138,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         const { coinType, totalBalance } = bal
 
         if (coinType === SUI_TYPE_ARG) {
-          this.updateBalance(this.currencyInfo.currencyCode, totalBalance)
+          this.updateBalance(null, totalBalance)
           continue
         }
 
@@ -146,7 +146,7 @@ export class SuiEngine extends CurrencyEngine<SuiTools, SafeCommonWalletInfo> {
         const edgeToken = this.allTokensMap[tokenId]
         if (edgeToken == null) continue
 
-        this.updateBalance(edgeToken.currencyCode, totalBalance)
+        this.updateBalance(tokenId, totalBalance)
         if (!this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
         }

@@ -1077,15 +1077,6 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
 
   // Check all account balance and other relevant info
   async checkAccountInnerLoop(): Promise<void> {
-    const currencyCode = this.currencyInfo.currencyCode
-
-    // Initialize balance
-    if (
-      typeof this.walletLocalData.totalBalances[currencyCode] === 'undefined'
-    ) {
-      this.updateBalance(currencyCode, '0')
-    }
-
     // Balance
     try {
       const balances = { staked: '0', locked: '0' }
@@ -1119,7 +1110,7 @@ export class FioEngine extends CurrencyEngine<FioTools, SafeFioWalletInfo> {
       this.otherData.srps = srps
       this.otherData.stakingRoe = roe
 
-      this.updateBalance(currencyCode, nativeAmount)
+      this.updateBalance(null, nativeAmount)
 
       if (
         balances.staked !== this.otherData.lockedBalances.staked ||

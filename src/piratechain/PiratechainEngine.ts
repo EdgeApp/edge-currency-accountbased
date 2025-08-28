@@ -194,10 +194,10 @@ export class PiratechainEngine extends CurrencyEngine<
       const balances = await this.synchronizer.getBalance()
       if (balances.totalZatoshi === '-1') return
       this.availableZatoshi = balances.availableZatoshi
-      this.updateBalance(this.currencyInfo.currencyCode, balances.totalZatoshi)
+      this.updateBalance(null, balances.totalZatoshi)
     } catch (e: any) {
       this.warn('Failed to update balances', e)
-      this.updateBalance(this.currencyInfo.currencyCode, '0')
+      this.updateBalance(null, '0')
     }
   }
 
@@ -377,13 +377,7 @@ export class PiratechainEngine extends CurrencyEngine<
 
     const totalTxAmount = add(nativeAmount, this.networkInfo.defaultNetworkFee)
 
-    if (
-      gt(
-        totalTxAmount,
-        this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ??
-          '0'
-      )
-    ) {
+    if (gt(totalTxAmount, this.getBalance({ tokenId: null }))) {
       throw new InsufficientFundsError({ tokenId })
     }
 

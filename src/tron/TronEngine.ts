@@ -251,8 +251,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       for (let i = 0; i < tokenIds.length; i++) {
         const tokenId = tokenIds[i]
         const balance = hexToDecimal(decoded[0][i]._hex)
-        const { currencyCode } = this.allTokensMap[tokenId]
-        this.updateBalance(currencyCode, balance)
+        this.updateBalance(tokenId, balance)
 
         if (gt(balance, '0') && !this.enabledTokenIds.includes(tokenId)) {
           detectedTokenIds.push(tokenId)
@@ -280,14 +279,11 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
 
       if (balances == null) {
         // New accounts return an empty {} response
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
+        this.updateBalance(null, '0')
         return
       }
 
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        balances.balance.toString()
-      )
+      this.updateBalance(null, balances.balance.toString())
 
       const {
         frozen: frozenBalanceForBandwidth,
@@ -1621,8 +1617,7 @@ export class TronEngine extends CurrencyEngine<TronTools, SafeTronWalletInfo> {
       transactionCostSUN = edgeNativeAmount
     }
 
-    const balanceSUN =
-      this.walletLocalData.totalBalances[this.currencyInfo.currencyCode] ?? '0'
+    const balanceSUN = this.getBalance({ tokenId: null })
     if (gt(transactionCostSUN, balanceSUN)) {
       throw new InsufficientFundsError({
         networkFee: totalFeeSUN,

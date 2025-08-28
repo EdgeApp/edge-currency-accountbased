@@ -89,7 +89,7 @@ export class HederaEngine extends CurrencyEngine<
         this.currencyEngineCallbacks.onAddressChanged()
         this.startActiveAccountLoops()
       } else {
-        this.updateBalance(this.currencyInfo.currencyCode, '0')
+        this.updateBalance(null, '0')
         this.tokenCheckTransactionsStatus.set(null, 1)
         this.tokenCheckBalanceStatus.set(null, 1)
         this.updateOnAddressesChecked()
@@ -121,10 +121,7 @@ export class HederaEngine extends CurrencyEngine<
       if (balanceObj == null)
         throw new Error('Unable to find matching balanceObj')
 
-      this.updateBalance(
-        this.currencyInfo.currencyCode,
-        balanceObj.balance.toString()
-      )
+      this.updateBalance(null, balanceObj.balance.toString())
     } catch (e: any) {
       this.warn('queryBalance error checking balance:', e)
     }
@@ -337,9 +334,7 @@ export class HederaEngine extends CurrencyEngine<
     const networkFee = txnFee.toTinybars().toString()
     nativeAmount = add(nativeAmount, networkFee)
 
-    if (
-      gt(nativeAmount, this.walletLocalData.totalBalances[currencyCode] ?? '0')
-    ) {
+    if (gt(nativeAmount, this.getBalance({ tokenId }))) {
       throw new InsufficientFundsError({ tokenId })
     }
 
