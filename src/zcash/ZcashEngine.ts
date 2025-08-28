@@ -198,10 +198,8 @@ export class ZcashEngine extends CurrencyEngine<
 
     // Balance and transaction querying is handled during the sync therefore we can treat them the same.
 
-    this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-      scanProgress / 100
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-      scanProgress / 100
+    this.tokenCheckBalanceStatus.set(null, scanProgress / 100)
+    this.tokenCheckTransactionsStatus.set(null, scanProgress / 100)
 
     if (
       scanProgress > this.progressRatio.percent &&

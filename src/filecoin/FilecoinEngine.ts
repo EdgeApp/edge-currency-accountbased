@@ -102,7 +102,7 @@ export class FilecoinEngine extends CurrencyEngine<
   }
 
   initData(): void {
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 0
+    this.tokenCheckTransactionsStatus.set(null, 0)
     // Engine variables
     this.availableAttoFil = '0'
   }
@@ -337,7 +337,7 @@ export class FilecoinEngine extends CurrencyEngine<
     const response = await this.filfoxApi.getAccount(addressString)
     this.availableAttoFil = response.balance
     this.updateBalance(this.currencyInfo.currencyCode, response.balance)
-    this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckBalanceStatus.set(null, 1)
     this.updateOnAddressesChecked()
     this.walletLocalDataDirty = true
   }
@@ -358,8 +358,7 @@ export class FilecoinEngine extends CurrencyEngine<
       const addressString = this.address.toString()
 
       const handleScanProgress = (progress: number): void => {
-        const currentProgress =
-          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode]
+        const currentProgress = this.tokenCheckTransactionsStatus.get(null) ?? 0
         const newProgress = progress
 
         if (
@@ -368,8 +367,7 @@ export class FilecoinEngine extends CurrencyEngine<
           // Avoid thrashing
           (newProgress >= 1 || newProgress > currentProgress * 1.1)
         ) {
-          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-            newProgress
+          this.tokenCheckTransactionsStatus.set(null, newProgress)
           this.updateOnAddressesChecked()
         }
       }

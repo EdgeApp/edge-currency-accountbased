@@ -2,6 +2,7 @@ import { Address } from '@zondax/izari-filecoin'
 import { add, sub } from 'biggystring'
 import {
   EdgeMetaToken,
+  EdgeTokenId,
   EdgeTransaction,
   EdgeTxAmount
 } from 'edge-core-js/types'
@@ -71,12 +72,10 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
 
     const handleScanProgress = (
       progress: number,
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     ): void => {
-      const targetCurrencyCode =
-        tokenCurrencyCode ?? this.ethEngine.currencyInfo.currencyCode
       const currentProgress =
-        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode]
+        this.ethEngine.tokenCheckTransactionsStatus.get(tokenId) ?? 0
       const newProgress = progress
 
       if (
@@ -85,8 +84,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         // Avoid thrashing
         (newProgress >= 1 || newProgress > currentProgress * 1.1)
       ) {
-        this.ethEngine.tokenCheckTransactionsStatus[targetCurrencyCode] =
-          newProgress
+        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, newProgress)
         this.ethEngine.updateOnAddressesChecked()
       }
     }
@@ -94,11 +92,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     const handleScan = ({
       tx,
       progress,
-      tokenCurrencyCode
+      tokenId
     }: {
       tx: EdgeTransaction | undefined
       progress: number
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     }): void => {
       if (tx != null) {
         const targetCurrencyCode = tx.currencyCode
@@ -117,7 +115,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
         }
       }
 
-      handleScanProgress(progress, tokenCurrencyCode)
+      handleScanProgress(progress, tokenId)
     }
 
     const scanners = [
@@ -125,7 +123,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       this.scanTransactionsFromFilfox(addressString, event =>
         handleScan({
           ...event,
-          tokenCurrencyCode: this.ethEngine.currencyInfo.currencyCode
+          tokenId: null
         })
       ),
       // Scan token transactions
@@ -145,7 +143,7 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     this.ethEngine.walletLocalDataDirty = true
 
     // Make sure the sync progress is 100% for main currency
-    handleScanProgress(1, this.ethEngine.currencyInfo.currencyCode)
+    handleScanProgress(1, null)
 
     return {
       tokenTxs: {
@@ -181,11 +179,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
   // Initialize sync status only for tokens that don't have status yet (undefined)
   // This preserves existing progress for tokens already syncing or completed
   private initializeSyncStatusForNewTokens(): void {
-    for (const currencyCode of this.ethEngine.enabledTokens) {
+    for (const tokenId of this.ethEngine.enabledTokenIds) {
       // Only initialize if the status is undefined (never been set)
-      if (this.ethEngine.tokenCheckTransactionsStatus[currencyCode] == null) {
-        this.ethEngine.tokenCheckBalanceStatus[currencyCode] = 0
-        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 0
+      if (!this.ethEngine.tokenCheckTransactionsStatus.has(tokenId)) {
+        this.ethEngine.tokenCheckBalanceStatus.set(tokenId, 0)
+        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 0)
       }
     }
   }
@@ -196,16 +194,11 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
     onScan: (event: {
       tx: EdgeTransaction | undefined
       progress: number
-      tokenCurrencyCode?: string
+      tokenId: EdgeTokenId
     }) => void
   ): Promise<void> {
-    // Get all enabled tokens except the main currency
-    const tokenCurrencyCodesOnly = this.ethEngine.enabledTokens.filter(
-      code => code !== this.ethEngine.currencyInfo.currencyCode
-    )
-
     // If no tokens are enabled, complete sync for all tokens immediately
-    if (tokenCurrencyCodesOnly.length === 0) return
+    if (this.ethEngine.enabledTokenIds.length === 0) return
 
     // Define the core scanning logic that will be retried
     const performTokenScan = async (): Promise<void> => {
@@ -221,8 +214,8 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
       const tokenTransferCount = initialResponse.totalCount
       if (tokenTransferCount === 0) {
         // No token transfers found, mark all tokens as complete
-        for (const tokenCode of tokenCurrencyCodesOnly) {
-          onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+        for (const tokenId of this.ethEngine.enabledTokenIds) {
+          onScan({ tx: undefined, progress: 1, tokenId })
         }
         return
       }
@@ -305,12 +298,12 @@ export class FilfoxAdapter extends NetworkAdapter<FilfoxAdapterConfig> {
           const progress = transfersChecked / tokenTransferCount
 
           // Trigger scan progress event
-          onScan({ tx, progress, tokenCurrencyCode: tokenInfo.currencyCode })
+          onScan({ tx, progress, tokenId: tokenTransfer.token })
         }
       }
       // Mark all enabled tokens as complete
-      for (const tokenCode of tokenCurrencyCodesOnly) {
-        onScan({ tx: undefined, progress: 1, tokenCurrencyCode: tokenCode })
+      for (const tokenId of this.ethEngine.enabledTokenIds) {
+        onScan({ tx: undefined, progress: 1, tokenId })
       }
     }
 

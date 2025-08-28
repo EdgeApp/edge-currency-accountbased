@@ -165,10 +165,8 @@ export class PiratechainEngine extends CurrencyEngine<
 
       const balanceProgress = downloadProgress * 0.99
       const txProgress = downloadProgress * 0.8
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] =
-        balanceProgress
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        txProgress
+      this.tokenCheckBalanceStatus.set(null, balanceProgress)
+      this.tokenCheckTransactionsStatus.set(null, txProgress)
 
       const totalProgress = (balanceProgress + txProgress) / 2
 
@@ -219,7 +217,7 @@ export class PiratechainEngine extends CurrencyEngine<
         if (last === this.walletLocalData.blockHeight) {
           first = this.walletLocalData.blockHeight
           this.walletLocalDataDirty = true
-          this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+          this.tokenCheckTransactionsStatus.set(null, 1)
           this.updateOnAddressesChecked()
           break
         }

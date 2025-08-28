@@ -523,10 +523,14 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
     }
     const acct = this.otherData.accountName
 
-    for (const token of this.enabledTokens) {
+    for (const tokenId of [null, ...this.enabledTokenIds]) {
+      const currencyCode =
+        tokenId == null
+          ? this.currencyInfo.currencyCode
+          : this.allTokensMap[tokenId].currencyCode
       try {
-        await this.checkIncomingTransactions(acct, token)
-        await this.checkOutgoingTransactions(acct, token)
+        await this.checkIncomingTransactions(acct, currencyCode)
+        await this.checkOutgoingTransactions(acct, currencyCode)
       } catch (e: any) {
         // Unactivated accounts can continue to update status
         if (acct !== '') {
@@ -538,7 +542,7 @@ export class EosEngine extends CurrencyEngine<EosTools, SafeEosWalletInfo> {
         }
       }
 
-      this.tokenCheckTransactionsStatus[token] = 1
+      this.tokenCheckTransactionsStatus.set(tokenId, 1)
       this.updateOnAddressesChecked()
       this.sendTransactionEvents()
     }

@@ -80,8 +80,8 @@ export class CurrencyEngine<
   walletLocalDisklet: Disklet
   engineOn: boolean
   addressesChecked: boolean
-  tokenCheckBalanceStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
-  tokenCheckTransactionsStatus: { [currencyCode: string]: number } // Each currency code can be a 0-1 value
+  tokenCheckBalanceStatus: Map<EdgeTokenId, number> // Each tokenId can be a 0-1 value
+  tokenCheckTransactionsStatus: Map<EdgeTokenId, number> // Each tokenId code can be a 0-1 value
   walletLocalData: WalletLocalData
   walletLocalDataDirty: boolean
 
@@ -152,8 +152,8 @@ export class CurrencyEngine<
     this.error = (message, e?) => this.log.error(message + safeErrorMessage(e))
     this.engineOn = false
     this.addressesChecked = false
-    this.tokenCheckBalanceStatus = {}
-    this.tokenCheckTransactionsStatus = {}
+    this.tokenCheckBalanceStatus = new Map()
+    this.tokenCheckTransactionsStatus = new Map()
     this.walletLocalDataDirty = false
     this.seenTxCheckpoint = opts.seenTxCheckpoint
     // Sync in-memory decoy addresses with what core has saved
@@ -389,7 +389,6 @@ export class CurrencyEngine<
   // Called by engine startup code
   async loadEngine(): Promise<void> {
     const { walletInfo } = this
-    const { currencyCode } = this.currencyInfo
 
     if (this.walletInfo.keys.publicKey == null) {
       this.walletInfo.keys.publicKey = walletInfo.keys.publicKey
@@ -421,8 +420,8 @@ export class CurrencyEngine<
     )
 
     // Add the native token currency
-    this.tokenCheckBalanceStatus[currencyCode] = 0
-    this.tokenCheckTransactionsStatus[currencyCode] = 0
+    this.tokenCheckBalanceStatus.set(null, 0)
+    this.tokenCheckTransactionsStatus.set(null, 0)
 
     this.doInitialBalanceCallback()
     this.doInitialUnactivatedTokenIdsCallback()
@@ -635,19 +634,19 @@ export class CurrencyEngine<
     if (this.walletLocalData.totalBalances[currencyCode] == null) {
       this.walletLocalData.totalBalances[currencyCode] = '0'
     }
+    const tokenId = getTokenIdFromCurrencyCode(
+      currencyCode,
+      this.currencyInfo.currencyCode,
+      this.allTokensMap
+    )
+    if (tokenId === undefined) return
     if (currentBalance == null || !eq(balance, currentBalance)) {
       this.walletLocalData.totalBalances[currencyCode] = balance
       this.walletLocalDataDirty = true
       this.warn(`${currencyCode}: token Address balance: ${balance}`)
-      const tokenId = getTokenIdFromCurrencyCode(
-        currencyCode,
-        this.currencyInfo.currencyCode,
-        this.allTokensMap
-      )
-      if (tokenId === undefined) return
       this.currencyEngineCallbacks.onTokenBalanceChanged(tokenId, balance)
     }
-    this.tokenCheckBalanceStatus[currencyCode] = 1
+    this.tokenCheckBalanceStatus.set(tokenId, 1)
     this.updateOnAddressesChecked()
   }
 
@@ -831,19 +830,19 @@ export class CurrencyEngine<
       return
     }
 
-    const activeTokens = this.enabledTokens
-    const perTokenSlice = 1 / activeTokens.length
+    const activeTokenIds = this.enabledTokenIds
+    const perTokenSlice = 1 / activeTokenIds.length
     let totalStatus = 0
     let numComplete = 0
-    for (const token of activeTokens) {
-      const balanceStatus = this.tokenCheckBalanceStatus[token] ?? 0
-      const txStatus = this.tokenCheckTransactionsStatus[token] ?? 0
+    for (const tokenId of activeTokenIds) {
+      const balanceStatus = this.tokenCheckBalanceStatus.get(tokenId) ?? 0
+      const txStatus = this.tokenCheckTransactionsStatus.get(tokenId) ?? 0
       totalStatus += ((balanceStatus + txStatus) / 2) * perTokenSlice
       if (balanceStatus === 1 && txStatus === 1) {
         numComplete++
       }
     }
-    if (numComplete === activeTokens.length) {
+    if (numComplete === activeTokenIds.length) {
       totalStatus = 1
       this.addressesChecked = true
     }
@@ -891,8 +890,8 @@ export class CurrencyEngine<
     })
     this.walletLocalDataDirty = true
     this.addressesChecked = false
-    this.tokenCheckBalanceStatus = {}
-    this.tokenCheckTransactionsStatus = {}
+    this.tokenCheckBalanceStatus = new Map()
+    this.tokenCheckTransactionsStatus = new Map()
     this.transactionList = {}
     this.txIdList = {}
     this.txIdMap = {}

@@ -9,6 +9,7 @@ import {
   formatAggregateError,
   promiseAny
 } from '../common/promiseUtils'
+import { getTokenIdFromCurrencyCode } from '../common/tokenHelpers'
 import { normalizeAddress } from '../common/utils'
 import { WEI_MULTIPLIER } from './ethereumConsts'
 import { EthereumEngine } from './EthereumEngine'
@@ -496,7 +497,13 @@ export class EthereumNetwork {
       )
       let highestTxBlockHeight = 0
       for (const currencyCode of Object.keys(tokenTxs)) {
-        this.ethEngine.tokenCheckTransactionsStatus[currencyCode] = 1
+        const tokenId = getTokenIdFromCurrencyCode(
+          currencyCode,
+          this.ethEngine.currencyInfo.currencyCode,
+          this.ethEngine.allTokensMap
+        )
+        if (tokenId == null) continue
+        this.ethEngine.tokenCheckTransactionsStatus.set(tokenId, 1)
         const tuple: EdgeTransactionsBlockHeightTuple = tokenTxs[currencyCode]
         for (const tx of tuple.edgeTransactions) {
           this.ethEngine.addTransaction(currencyCode, tx)

@@ -167,7 +167,7 @@ export class TonEngine extends CurrencyEngine<TonTools, SafeCommonWalletInfo> {
     this.otherData.mostRecentHash = mostRecentHash
 
     this.sendTransactionEvents()
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
   }
 

@@ -352,8 +352,10 @@ export class PolkadotEngine extends CurrencyEngine<
         const totalCount = cleanTransfersResponse.data.transfers.totalCount
         processedCount += transfers.length
 
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          null,
           totalCount === 0 ? 1 : processedCount / totalCount
+        )
         this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
@@ -361,7 +363,7 @@ export class PolkadotEngine extends CurrencyEngine<
       }
     }
 
-    this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
 
     // LLM Transfers. Endpoint only handles specifically the LLM token
@@ -456,8 +458,10 @@ export class PolkadotEngine extends CurrencyEngine<
         // Update progress
         processedCount += meritTransfers.length
 
-        this.tokenCheckTransactionsStatus[currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          tokenId,
           totalCount === 0 ? 1 : processedCount / totalCount
+        )
         this.updateOnAddressesChecked()
       } catch (e: any) {
         this.warn(`Error fetching Liberland transactions: ${e.message}`)
@@ -465,7 +469,7 @@ export class PolkadotEngine extends CurrencyEngine<
       }
     }
 
-    this.tokenCheckTransactionsStatus[currencyCode] = 1
+    this.tokenCheckTransactionsStatus.set(tokenId, 1)
     this.updateOnAddressesChecked()
     this.sendTransactionEvents()
   }
@@ -506,7 +510,7 @@ export class PolkadotEngine extends CurrencyEngine<
         await this.queryTransactionsInner(subscanBaseUrl, isActiveChain)
       }
 
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
       this.sendTransactionEvents()
     })
@@ -569,13 +573,15 @@ export class PolkadotEngine extends CurrencyEngine<
 
       // Only update txCount and progress for the current chain
       if (isActiveChain) {
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
+        this.tokenCheckTransactionsStatus.set(
+          null,
           Math.min(
             1,
             count === 0
               ? 1
               : this.otherData.subscanUrlMap[subscanBaseUrl].txCount / count
           )
+        )
         this.updateOnAddressesChecked()
       }
 
@@ -603,8 +609,8 @@ export class PolkadotEngine extends CurrencyEngine<
     if (this.networkInfo.subscanBaseUrls.length > 0) {
       this.addToLoop('queryTransactions', TRANSACTION_POLL_MILLISECONDS)
     } else {
-      for (const currencyCode of this.enabledTokens) {
-        this.tokenCheckTransactionsStatus[currencyCode] = 1
+      for (const tokenId of this.enabledTokenIds) {
+        this.tokenCheckTransactionsStatus.set(tokenId, 1)
       }
       this.updateOnAddressesChecked()
     }

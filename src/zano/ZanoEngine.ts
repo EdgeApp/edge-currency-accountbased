@@ -357,13 +357,11 @@ export class ZanoEngine extends CurrencyEngine<ZanoTools, SafeZanoWalletInfo> {
     const flooredNewProgress = Math.floor(newProgress * 10)
 
     if (newProgress === 1 || flooredNewProgress > flooredPrevProgress) {
-      this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = newProgress
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-        newProgress
+      this.tokenCheckBalanceStatus.set(null, newProgress)
+      this.tokenCheckTransactionsStatus.set(null, newProgress)
       for (const tokenId of this.enabledTokenIds) {
-        const token = this.allTokensMap[tokenId]
-        this.tokenCheckBalanceStatus[token.currencyCode] = newProgress
-        this.tokenCheckTransactionsStatus[token.currencyCode] = newProgress
+        this.tokenCheckBalanceStatus.set(tokenId, newProgress)
+        this.tokenCheckTransactionsStatus.set(tokenId, newProgress)
       }
       this.updateOnAddressesChecked()
     }

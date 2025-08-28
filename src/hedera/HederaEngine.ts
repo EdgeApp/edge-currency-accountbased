@@ -90,8 +90,8 @@ export class HederaEngine extends CurrencyEngine<
         this.startActiveAccountLoops()
       } else {
         this.updateBalance(this.currencyInfo.currencyCode, '0')
-        this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
-        this.tokenCheckBalanceStatus[this.currencyInfo.currencyCode] = 1
+        this.tokenCheckTransactionsStatus.set(null, 1)
+        this.tokenCheckBalanceStatus.set(null, 1)
         this.updateOnAddressesChecked()
       }
     } catch (e: any) {
@@ -148,13 +148,11 @@ export class HederaEngine extends CurrencyEngine<
 
           // Report progress in 10% increments
           const currentProgress =
-            this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] ??
-            0
+            this.tokenCheckTransactionsStatus.get(null) ?? 0
           const newProgress =
             1 - (startingTimestamp - parseInt(timestamp)) / startingProgressDiff
           if (newProgress - currentProgress > 0.1) {
-            this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] =
-              newProgress
+            this.tokenCheckTransactionsStatus.set(null, newProgress)
             this.updateOnAddressesChecked()
           }
         } else {
@@ -165,7 +163,7 @@ export class HederaEngine extends CurrencyEngine<
           break
         }
       }
-      this.tokenCheckTransactionsStatus[this.currencyInfo.currencyCode] = 1
+      this.tokenCheckTransactionsStatus.set(null, 1)
       this.updateOnAddressesChecked()
     } catch (e: any) {
       this.warn('getNewTransactions error getting transactions:', e)

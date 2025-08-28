@@ -398,7 +398,7 @@ export class StellarEngine extends CurrencyEngine<
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (e.response && e.response.title === 'Resource Missing') {
           this.log('Account not found. Probably not activated w/minimum XLM')
-          this.tokenCheckTransactionsStatus.XLM = 1
+          this.tokenCheckTransactionsStatus.set(null, 1)
           this.updateOnAddressesChecked()
         } else {
           this.error(
@@ -416,7 +416,7 @@ export class StellarEngine extends CurrencyEngine<
       this.walletLocalDataDirty = true
     }
     this.walletLocalData.lastAddressQueryHeight = blockHeight
-    this.tokenCheckTransactionsStatus.XLM = 1
+    this.tokenCheckTransactionsStatus.set(null, 1)
     this.updateOnAddressesChecked()
   }
 
@@ -458,7 +458,7 @@ export class StellarEngine extends CurrencyEngine<
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (e.response && e.response.title === 'Resource Missing') {
         this.log('Account not found. Probably not activated w/minimum XLM')
-        this.tokenCheckBalanceStatus.XLM = 1
+        this.tokenCheckBalanceStatus.set(null, 1)
         this.updateOnAddressesChecked()
       } else {
         this.error(`checkAccountInnerLoop Error fetching address info: `, e)
